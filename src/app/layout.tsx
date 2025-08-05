@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "CleanPro Management",
+  title: "ARIS Management", // Geändert von CleanPro Management
   description: "Management-Plattform für Reinigungsunternehmen",
 };
 
@@ -25,7 +25,7 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const supabase = await createClient(); // await hinzugefügt
+  const supabase = await createClient();
   const { data: { session } } = await supabase.auth.getSession();
 
   return (

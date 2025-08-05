@@ -35,14 +35,14 @@ export function TaskForm({ initialData, onSubmit, submitButtonText, onSuccess }:
   const form = useForm<TaskFormValues>({
     resolver: zodResolver(taskSchema),
     defaultValues: {
-      title: initialData?.title || "",
-      description: initialData?.description || undefined, // null zu undefined konvertieren
+      title: initialData?.title ?? "",
+      description: initialData?.description ?? undefined,
       dueDate: initialData?.dueDate ? new Date(initialData.dueDate) : undefined,
-      status: (initialData?.status ?? "pending") as TaskFormValues["status"], // FIX: Sicherstellen, dass der Status immer ein gültiger Enum-Wert ist
+      status: initialData?.status ?? "pending", // FIX: Stellt sicher, dass der Status immer ein gültiger Enum-Wert ist
     },
   });
 
-  const handleFormSubmit = async (data: TaskFormValues): Promise<void> => { // FIX: Explizite Rückgabe von Promise<void>
+  const handleFormSubmit = async (data: TaskFormValues): Promise<void> => {
     const result = await onSubmit(data);
 
     if (result.success) {

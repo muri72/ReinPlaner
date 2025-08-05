@@ -2,7 +2,7 @@ import React from "react";
 import Link from "next/link";
 import { Home, ListTodo, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { signOut } from "@/app/dashboard/actions"; // Importiere die signOut-Aktion
+import { signOut } from "@/app/dashboard/actions";
 
 export default function DashboardLayout({
   children,
@@ -14,7 +14,7 @@ export default function DashboardLayout({
       {/* Sidebar */}
       <aside className="w-64 bg-sidebar text-sidebar-foreground border-r border-sidebar-border p-4 flex flex-col">
         <div className="flex-grow">
-          <h2 className="text-2xl font-bold mb-6 text-sidebar-primary-foreground">CleanPro</h2>
+          <h2 className="text-2xl font-bold mb-6 text-sidebar-primary-foreground">ARIS</h2> {/* Geändert von CleanPro */}
           <nav className="space-y-2">
             <Link href="/dashboard" passHref>
               <Button variant="ghost" className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
