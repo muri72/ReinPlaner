@@ -16,13 +16,14 @@ export default function LoginPage() {
       async (event, session) => {
         if (event === "SIGNED_IN" || event === "USER_UPDATED") {
           if (session) {
-            router.push("/dashboard"); // Redirect authenticated users to dashboard
+            router.push("/dashboard"); // Authentifizierte Benutzer zum Dashboard umleiten
           }
         } else if (event === "SIGNED_OUT") {
           toast.info("Sie wurden abgemeldet.");
-        } else if (event === "AUTH_ERROR") {
-          toast.error("Authentifizierungsfehler: " + session); // session here is actually the error message
         }
+        // Der "AUTH_ERROR"-Event-Typ existiert nicht in onAuthStateChange.
+        // Fehlerbehandlung für die Auth-Komponente erfolgt normalerweise über den onError-Prop,
+        // aber gemäß den Anweisungen wird dieser nicht verwendet.
       }
     );
 
@@ -49,7 +50,7 @@ export default function LoginPage() {
               },
             },
           }}
-          theme="light" // Use light theme as per design system
+          theme="light" // Verwende helles Theme gemäß Designsystem
           redirectTo={`${process.env.NEXT_PUBLIC_BASE_URL}/auth/callback`}
         />
       </div>

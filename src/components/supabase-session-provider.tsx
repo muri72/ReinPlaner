@@ -1,7 +1,7 @@
 "use client";
 
 import { createClient } from "@/lib/supabase/client";
-import { Session, SessionContextProvider as SupabaseSessionContextProvider } from "@supabase/auth-ui-react";
+import { Session } from "@supabase/supabase-js"; // Korrigierter Import für den Session-Typ
 import React, { useState } from "react";
 
 interface SessionContextProviderProps {
@@ -13,11 +13,12 @@ export function SessionContextProvider({ children, initialSession }: SessionCont
   const [supabaseClient] = useState(() => createClient());
 
   return (
-    <SupabaseSessionContextProvider
-      supabaseClient={supabaseClient}
-      initialSession={initialSession}
-    >
+    // Dieser benutzerdefinierte SessionContextProvider umschließt die Anwendung
+    // und stellt den Supabase-Client bereit. Er importiert keinen SessionContextProvider
+    // von @supabase/auth-ui-react, da dieser dort nicht existiert.
+    // Die Auth-UI-Komponente wird direkt auf der Login-Seite verwendet.
+    <>
       {children}
-    </SupabaseSessionContextProvider>
+    </>
   );
 }

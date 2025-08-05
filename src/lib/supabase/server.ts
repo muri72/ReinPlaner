@@ -1,8 +1,8 @@
 import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
+import { cookies, ReadonlyRequestCookies } from 'next/headers'
 
 export function createClient() {
-  const cookieStore = cookies()
+  const cookieStore: ReadonlyRequestCookies = cookies()
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -14,7 +14,7 @@ export function createClient() {
         },
         set(name: string, value: string, options: any) {
           try {
-            cookieStore.set({ name, value, ...options })
+            cookieStore.set(name, value, options)
           } catch (error) {
             // The `cookies().set()` method can only be called from a Server Component or Server Action.
             // This error is typically ignored if we're in a Client Component.
@@ -22,7 +22,7 @@ export function createClient() {
         },
         remove(name: string, options: any) {
           try {
-            cookieStore.set({ name, value: '', ...options })
+            cookieStore.delete(name)
           } catch (error) {
             // The `cookies().delete()` method can only be called from a Server Component or Server Action.
             // This error is typically ignored if we're in a Client Component.
