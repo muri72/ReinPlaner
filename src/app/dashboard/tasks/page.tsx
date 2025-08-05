@@ -53,7 +53,12 @@ export default async function TasksPage() {
                 <CardTitle className="text-lg font-medium">{task.title}</CardTitle>
                 <div className="flex items-center space-x-2">
                   <TaskEditDialog task={task} /> {/* Bearbeiten-Button */}
-                  <form action={deleteTask}>
+                  <form action={async (formData) => { // FIX: deleteTask als async-Funktion aufrufen
+                    const result = await deleteTask(formData);
+                    // Hier könnte man eine clientseitige Toast-Nachricht anzeigen, falls nötig
+                    // Da deleteTask jetzt ein { success, message } Objekt zurückgibt
+                    // if (result.success) { toast.success(result.message); } else { toast.error(result.message); }
+                  }}>
                     <input type="hidden" name="taskId" value={task.id} />
                     <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/80">
                       <Trash2 className="h-4 w-4" />
