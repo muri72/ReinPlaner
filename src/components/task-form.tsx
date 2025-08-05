@@ -8,51 +8,56 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { createTask } from "@/app/dashboard/tasks/actions.ts"; // Pfad korrigiert
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-const taskSchema = z.object({
+export const taskSchema = z.object({
   title: z.string().min(1, "Titel ist erforderlich").max(100, "Titel ist zu lang"),
   description: z.string().max(500, "Beschreibung ist zu lang").optional(),
   dueDate: z.date().optional().nullable(),
+  status: z.enum(["pending", "in_progress", "completed"]).default("pending"),
 });
 
-type TaskFormValues = z.infer<typeof taskSchema>;
+export type TaskFormValues = z.infer<typeof taskSchema>;
 
-export function TaskForm() {
+interface TaskFormProps {
+  initialData?: Partial<TaskFormValues>;
+  onSubmit: (data: TaskFormValues) => Promise<{ success: boolean; message: string }>;
+  submitButtonText: string;
+  onSuccess?: () => void;
+}
+
+export function TaskForm({ initialData, onSubmit, submitButtonText, onSuccess }: TaskFormProps) {
   const form = useForm<TaskFormValues>({
     resolver: zodResolver(taskSchema),
     defaultValues: {
-      title: "",
-      description: "",
-      dueDate: undefined,
+      title: initialData?.title || "",
+      description: initialData?.description || undefined, // null zu undefined konvertieren
+      dueDate: initialData?.dueDate ? new Date(initialData.dueDate) : undefined,
+      status: (initialData?.status ?? "pending") as TaskFormValues["status"], // FIX: Sicherstellen, dass der Status immer ein gültiger Enum-Wert ist
     },
   });
 
-  const onSubmit = async (data: TaskFormValues) => {
-    const formData = new FormData();
-    formData.append('title', data.title);
-    formData.append('description', data.description || '');
-    if (data.dueDate) {
-      formData.append('dueDate', data.dueDate.toISOString());
-    }
-
-    const result = await createTask(formData);
+  const handleFormSubmit = async (data: TaskFormValues): Promise<void> => { // FIX: Explizite Rückgabe von Promise<void>
+    const result = await onSubmit(data);
 
     if (result.success) {
       toast.success(result.message);
-      form.reset(); // Formular zurücksetzen nach erfolgreicher Erstellung
+      if (!initialData) { // Nur zurücksetzen, wenn es ein neues Formular ist (nicht Bearbeiten)
+        form.reset();
+      }
+      onSuccess?.();
     } else {
       toast.error(result.message);
     }
   };
 
   return (
-    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 w-full max-w-md">
+    <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 w-full max-w-md">
       <div>
         <Label htmlFor="title">Titel der Aufgabe</Label>
         <Input
@@ -74,6 +79,22 @@ export function TaskForm() {
         />
         {form.formState.errors.description && (
           <p className="text-red-500 text-sm mt-1">{form.formState.errors.description.message}</p>
+        )}
+      </div>
+      <div>
+        <Label htmlFor="status">Status</Label>
+        <Select onValueChange={(value) => form.setValue("status", value as "pending" | "in_progress" | "completed")} value={form.watch("status")}>
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="Status auswählen" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="pending">Ausstehend</SelectItem>
+            <SelectItem value="in_progress">In Bearbeitung</SelectItem>
+            <SelectItem value="completed">Abgeschlossen</SelectItem>
+          </SelectContent>
+        </Select>
+        {form.formState.errors.status && (
+          <p className="text-red-500 text-sm mt-1">{form.formState.errors.status.message}</p>
         )}
       </div>
       <div>
@@ -105,7 +126,7 @@ export function TaskForm() {
         )}
       </div>
       <Button type="submit" disabled={form.formState.isSubmitting}>
-        {form.formState.isSubmitting ? "Aufgabe hinzufügen..." : "Aufgabe hinzufügen"}
+        {form.formState.isSubmitting ? `${submitButtonText}...` : submitButtonText}
       </Button>
     </form>
   );
