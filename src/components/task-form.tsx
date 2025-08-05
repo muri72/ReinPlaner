@@ -32,17 +32,18 @@ interface TaskFormProps {
 }
 
 export function TaskForm({ initialData, onSubmit, submitButtonText, onSuccess }: TaskFormProps) {
-  // FIX: Explizite Typisierung des defaultValues-Objekts
+  // Sicherstellen, dass der Status immer ein gültiger Enum-Wert ist
   const defaultValues: TaskFormValues = {
     title: initialData?.title ?? "",
     description: initialData?.description ?? undefined,
     dueDate: initialData?.dueDate ? new Date(initialData.dueDate) : undefined,
-    status: (initialData?.status as TaskFormValues["status"]) ?? "pending", 
+    // FIX: Explizite Typumwandlung, um sicherzustellen, dass der Status immer ein gültiger Enum-Wert ist
+    status: (initialData?.status ?? "pending") as TaskFormValues["status"], 
   };
 
   const form = useForm<TaskFormValues>({
     resolver: zodResolver(taskSchema),
-    defaultValues: defaultValues, // Verwende das explizit typisierte Objekt
+    defaultValues: defaultValues,
   });
 
   const handleFormSubmit = async (data: TaskFormValues): Promise<void> => {
@@ -50,7 +51,7 @@ export function TaskForm({ initialData, onSubmit, submitButtonText, onSuccess }:
 
     if (result.success) {
       toast.success(result.message);
-      if (!initialData) { // Nur zurücksetzen, wenn es ein neues Formular ist (nicht Bearbeiten)
+      if (!initialData) {
         form.reset();
       }
       onSuccess?.();
@@ -60,7 +61,7 @@ export function TaskForm({ initialData, onSubmit, submitButtonText, onSuccess }:
   };
 
   return (
-    <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 w-full max-w-md">
+    <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 w-full max-w-md" suppressHydrationWarning>
       <div>
         <Label htmlFor="title">Titel der Aufgabe</Label>
         <Input
