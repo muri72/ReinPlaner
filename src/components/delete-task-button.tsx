@@ -1,20 +1,20 @@
 "use client";
 
-import { useFormState, useFormStatus } from "react-dom";
 import { useEffect } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Trash2 } from "lucide-react";
 import { deleteTask } from "@/app/dashboard/tasks/actions"; // Importiere die Server-Aktion
+import { useActionState, useFormStatus } from "react-dom"; // FIX: Import von "react" zu "react-dom" geändert
 
 interface DeleteTaskButtonProps {
   taskId: string;
 }
 
 export function DeleteTaskButton({ taskId }: DeleteTaskButtonProps) {
-  // useFormState nimmt die Server-Aktion und einen initialen Zustand entgegen.
+  // useActionState nimmt die Server-Aktion und einen initialen Zustand entgegen.
   // Es gibt [state, formAction] zurück.
-  const [state, formAction] = useFormState(deleteTask, { success: false, message: "" });
+  const [state, formAction] = useActionState(deleteTask, { success: false, message: "" });
   const { pending } = useFormStatus(); // Um den Ladezustand anzuzeigen
 
   useEffect(() => {
