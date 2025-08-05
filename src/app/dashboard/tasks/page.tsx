@@ -7,6 +7,7 @@ import { Trash2 } from "lucide-react";
 import { deleteTask, createTask } from "./actions"; // createTask auch importieren
 import { TaskEditDialog } from "@/components/task-edit-dialog"; // Importiere die neue Komponente
 import { Badge } from "@/components/ui/badge"; // Importiere Badge für Statusanzeige
+import { DeleteTaskButton } from "@/components/delete-task-button"; // Importiere die neue Komponente
 
 export default async function TasksPage() {
   const supabase = await createClient();
@@ -53,17 +54,8 @@ export default async function TasksPage() {
                 <CardTitle className="text-lg font-medium">{task.title}</CardTitle>
                 <div className="flex items-center space-x-2">
                   <TaskEditDialog task={task} /> {/* Bearbeiten-Button */}
-                  <form action={async (formData) => { // FIX: deleteTask als async-Funktion aufrufen
-                    const result = await deleteTask(formData);
-                    // Hier könnte man eine clientseitige Toast-Nachricht anzeigen, falls nötig
-                    // Da deleteTask jetzt ein { success, message } Objekt zurückgibt
-                    // if (result.success) { toast.success(result.message); } else { toast.error(result.message); }
-                  }}>
-                    <input type="hidden" name="taskId" value={task.id} />
-                    <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/80">
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </form>
+                  {/* Verwende die neue Client-Komponente für den Lösch-Button */}
+                  <DeleteTaskButton taskId={task.id} />
                 </div>
               </CardHeader>
               <CardContent>

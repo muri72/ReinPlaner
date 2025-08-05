@@ -61,7 +61,8 @@ export async function updateTask(taskId: string, data: TaskFormValues) {
   return { success: true, message: "Aufgabe erfolgreich aktualisiert!" };
 }
 
-export async function deleteTask(formData: FormData): Promise<{ success: boolean; message: string }> { // FIX: Rückgabetyp ist jetzt Promise<{ success: boolean; message: string }>
+// Passt die Signatur an useFormState an: prevState als erstes Argument
+export async function deleteTask(prevState: { success: boolean; message: string }, formData: FormData): Promise<{ success: boolean; message: string }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
