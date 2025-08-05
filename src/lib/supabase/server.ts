@@ -1,8 +1,10 @@
 import { createServerClient } from '@supabase/ssr'
-import { cookies, ReadonlyRequestCookies } from 'next/headers'
+import { cookies } from 'next/headers'
 
 export function createClient() {
-  const cookieStore: ReadonlyRequestCookies = cookies()
+  // The `cookies()` function returns a Promise in Next.js 15, so we need to await it.
+  // Mark the function as async to use await.
+  const cookieStore = cookies()
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
