@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { MadeWithDyad } from "@/components/made-with-dyad";
 
 export default async function DashboardPage() {
-  const supabase = createClient();
+  const supabase = await createClient(); // await hinzugefügt
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
@@ -13,7 +13,7 @@ export default async function DashboardPage() {
 
   const signOut = async () => {
     "use server";
-    const supabase = createClient();
+    const supabase = await createClient(); // await hinzugefügt
     await supabase.auth.signOut();
     redirect("/login");
   };

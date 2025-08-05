@@ -25,7 +25,7 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const supabase = createClient();
+  const supabase = await createClient(); // await hinzugefügt
   const { data: { session } } = await supabase.auth.getSession();
 
   return (
