@@ -1,6 +1,6 @@
 import React from "react";
 import Link from "next/link";
-import { Home, ListTodo, User } from "lucide-react";
+import { Home, ListTodo, User, Users } from "lucide-react"; // Users-Icon importieren
 import { Button } from "@/components/ui/button";
 import { signOut } from "@/app/dashboard/actions";
 
@@ -14,7 +14,7 @@ export default function DashboardLayout({
       {/* Sidebar */}
       <aside className="w-64 bg-sidebar text-sidebar-foreground border-r border-sidebar-border p-4 flex flex-col">
         <div className="flex-grow">
-          <h2 className="text-2xl font-bold mb-6 text-sidebar-primary-foreground">ARIS</h2> {/* Geändert von CleanPro */}
+          <h2 className="text-2xl font-bold mb-6 text-sidebar-primary-foreground">ARIS</h2>
           <nav className="space-y-2">
             <Link href="/dashboard" passHref>
               <Button variant="ghost" className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
@@ -26,6 +26,12 @@ export default function DashboardLayout({
               <Button variant="ghost" className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
                 <ListTodo className="mr-2 h-4 w-4" />
                 Aufgaben
+              </Button>
+            </Link>
+            <Link href="/dashboard/customers" passHref> {/* Neuer Link für Kunden */}
+              <Button variant="ghost" className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
+                <Users className="mr-2 h-4 w-4" /> {/* Users-Icon */}
+                Kunden
               </Button>
             </Link>
             <Link href="/dashboard/profile" passHref>
