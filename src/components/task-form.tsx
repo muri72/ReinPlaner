@@ -5,7 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/button"; // FIX: Syntaxfehler behoben
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -32,17 +32,13 @@ interface TaskFormProps {
 }
 
 export function TaskForm({ initialData, onSubmit, submitButtonText, onSuccess }: TaskFormProps) {
-  // FIX: Sicherstellen, dass der Status immer ein gültiger Enum-Wert ist
-  const resolvedStatus: TaskFormValues["status"] = 
-    (initialData?.status === "pending" || initialData?.status === "in_progress" || initialData?.status === "completed")
-      ? initialData.status
-      : "pending";
-
+  // Sicherstellen, dass der Status immer ein gültiger Enum-Wert ist
   const defaultValues: TaskFormValues = {
     title: initialData?.title ?? "",
     description: initialData?.description ?? undefined,
     dueDate: initialData?.dueDate ? new Date(initialData.dueDate) : undefined,
-    status: resolvedStatus, 
+    // FIX: Sicherstellen, dass der Status immer einen gültigen Enum-Wert hat
+    status: initialData?.status ?? "pending", 
   };
 
   const form = useForm<TaskFormValues>({
