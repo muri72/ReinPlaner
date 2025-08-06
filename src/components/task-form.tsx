@@ -19,7 +19,6 @@ export const taskSchema = z.object({
   title: z.string().min(1, "Titel ist erforderlich").max(100, "Titel ist zu lang"),
   description: z.string().max(500, "Beschreibung ist zu lang").optional(),
   dueDate: z.date().optional().nullable(),
-  // FIX: Markiere den Status explizit als optional, bevor .default() angewendet wird
   status: z.enum(["pending", "in_progress", "completed"]).optional().default("pending"),
 });
 
@@ -33,17 +32,20 @@ interface TaskFormProps {
 }
 
 export function TaskForm({ initialData, onSubmit, submitButtonText, onSuccess }: TaskFormProps) {
-  const defaultValues: TaskFormValues = {
+  // Konstruiere Standardwerte, die Partial<TaskFormValues> entsprechen
+  // und stelle sicher, dass 'status' immer ein gültiger Enum-String ist.
+  const defaultValues: Partial<TaskFormValues> = {
     title: initialData?.title ?? "",
     description: initialData?.description ?? undefined,
     dueDate: initialData?.dueDate ? new Date(initialData.dueDate) : undefined,
-    // Der Status kann hier direkt zugewiesen werden, da das Schema ihn nun korrekt als optional im Input behandelt
-    status: initialData?.status ?? "pending", 
+    status: (initialData?.status && ["pending", "in_progress", "completed"].includes(initialData.status))
+      ? initialData.status
+      : "pending", // Stelle sicher, dass es immer ein gültiger Enum-String ist
   };
 
   const form = useForm<TaskFormValues>({
     resolver: zodResolver(taskSchema),
-    defaultValues: defaultValues,
+    defaultValues: defaultValues, // Dies sollte nun mit Partial<TaskFormValues> kompatibel sein
   });
 
   const handleFormSubmit = async (data: TaskFormValues): Promise<void> => {
