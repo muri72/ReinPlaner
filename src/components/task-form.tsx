@@ -39,8 +39,9 @@ export function TaskForm({ initialData, onSubmit, submitButtonText, onSuccess }:
       title: initialData?.title ?? "",
       description: initialData?.description ?? undefined,
       dueDate: initialData?.dueDate ? new Date(initialData.dueDate) : undefined,
-      status: initialData?.status ?? "pending",
-    } as TaskFormValues, // Explizite Typumwandlung des gesamten defaultValues-Objekts
+      // Korrigiert: Explizite Prüfung auf undefined, um die Typinferenz zu verbessern
+      status: initialData?.status !== undefined ? initialData.status : "pending",
+    },
   });
 
   const [displayDate, setDisplayDate] = useState<string | undefined>(undefined);
