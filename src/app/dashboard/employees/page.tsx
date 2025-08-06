@@ -7,8 +7,11 @@ import { EmployeeEditDialog } from "@/components/employee-edit-dialog";
 import { DeleteEmployeeButton } from "@/components/delete-employee-button";
 import { Mail, Phone, CalendarDays, UserRoundCheck, UserRoundX, UserRoundMinus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { SearchInput } from "@/components/search-input"; // Importiere die SearchInput Komponente
 
-export default async function EmployeesPage() {
+export default async function EmployeesPage({
+  searchParams,
+}: any) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -16,11 +19,22 @@ export default async function EmployeesPage() {
     redirect("/login");
   }
 
-  const { data: employees, error } = await supabase
+  const query = typeof searchParams?.query === 'string' ? searchParams.query : '';
+
+  let employeesQuery = supabase
     .from('employees')
     .select('*')
     .eq('user_id', user.id)
     .order('last_name', { ascending: true });
+
+  if (query) {
+    // Suche nach Vorname, Nachname, E-Mail oder Telefonnummer
+    employeesQuery = employeesQuery.or(
+      `first_name.ilike.%${query}%,last_name.ilike.%${query}%,email.ilike.%${query}%,phone.ilike.%${query}%`
+    );
+  }
+
+  const { data: employees, error } = await employeesQuery;
 
   if (error) {
     console.error("Fehler beim Laden der Mitarbeiter:", error);
@@ -57,9 +71,15 @@ export default async function EmployeesPage() {
     <div className="p-8 space-y-8">
       <h1 className="text-3xl font-bold">Ihre Mitarbeiter</h1>
 
+      <div className="mb-4">
+        <SearchInput placeholder="Mitarbeiter suchen..." />
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {employees.length === 0 ? (
-          <p className="col-span-full text-center text-muted-foreground">Noch keine Mitarbeiter vorhanden. Fügen Sie einen hinzu!</p>
+          <p className="col-span-full text-center text-muted-foreground">
+            {query ? "Keine Mitarbeiter gefunden, die Ihrer Suche entsprechen." : "Noch keine Mitarbeiter vorhanden. Fügen Sie einen hinzu!"}
+          </p>
         ) : (
           employees.map((employee) => (
             <Card key={employee.id}>
