@@ -32,14 +32,15 @@ interface TaskFormProps {
 }
 
 export function TaskForm({ initialData, onSubmit, submitButtonText, onSuccess }: TaskFormProps) {
-  // FIX: Sicherstellen, dass der Status immer ein gültiger Enum-Wert ist
+  // Sicherstellen, dass defaultValues dem TaskFormValues-Typ entsprechen
   const defaultValues: TaskFormValues = {
     title: initialData?.title ?? "",
     description: initialData?.description ?? undefined,
-    dueDate: initialData?.dueDate ? new Date(initialData.dueDate) : undefined,
-    status: (initialData?.status && ["pending", "in_progress", "completed"].includes(initialData.status))
-      ? initialData.status
-      : "pending",
+    // Wenn initialData.dueDate undefined ist, setzen wir es auf undefined, da z.optional() dies erlaubt.
+    // Wenn es null sein soll, müsste es explizit auf null gesetzt werden.
+    dueDate: initialData?.dueDate ? new Date(initialData.dueDate) : undefined, 
+    // Sicherstellen, dass der Status immer einen gültigen Enum-Wert hat
+    status: initialData?.status ?? "pending", 
   };
 
   const form = useForm<TaskFormValues>({
