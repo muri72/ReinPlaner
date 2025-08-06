@@ -22,7 +22,7 @@ export const taskSchema = z.object({
   status: z.enum(["pending", "in_progress", "completed"]).optional().default("pending"),
 });
 
-export type TaskFormValues = z.infer<typeof taskSchema>;
+export type TaskFormValues = z.infer<typeof taskSchema>; // Dies ist der Ausgabetyp des Schemas
 
 interface TaskFormProps {
   initialData?: Partial<TaskFormValues>;
@@ -32,20 +32,17 @@ interface TaskFormProps {
 }
 
 export function TaskForm({ initialData, onSubmit, submitButtonText, onSuccess }: TaskFormProps) {
-  // Konstruiere Standardwerte, die Partial<TaskFormValues> entsprechen
-  // und stelle sicher, dass 'status' immer ein gültiger Enum-String ist.
-  const defaultValues: Partial<TaskFormValues> = {
+  // FIX: defaultValues explizit als z.input<typeof taskSchema> typisieren
+  const defaultValues: z.input<typeof taskSchema> = {
     title: initialData?.title ?? "",
     description: initialData?.description ?? undefined,
     dueDate: initialData?.dueDate ? new Date(initialData.dueDate) : undefined,
-    status: (initialData?.status && ["pending", "in_progress", "completed"].includes(initialData.status))
-      ? initialData.status
-      : "pending", // Stelle sicher, dass es immer ein gültiger Enum-String ist
+    status: initialData?.status, // Hier kann status undefined sein, was für z.input in Ordnung ist
   };
 
-  const form = useForm<TaskFormValues>({
+  const form = useForm<TaskFormValues>({ // TFieldValues ist TaskFormValues (Ausgabetyp)
     resolver: zodResolver(taskSchema),
-    defaultValues: defaultValues, // Dies sollte nun mit Partial<TaskFormValues> kompatibel sein
+    defaultValues: defaultValues,
   });
 
   const handleFormSubmit = async (data: TaskFormValues): Promise<void> => {
