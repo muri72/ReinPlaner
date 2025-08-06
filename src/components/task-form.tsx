@@ -22,9 +22,6 @@ export const taskSchema = z.object({
   status: z.enum(["pending", "in_progress", "completed"]).default("pending"),
 });
 
-// Definiere den Input-Typ des Zod-Schemas
-type TaskFormInput = z.input<typeof taskSchema>;
-// Definiere den Output-Typ des Zod-Schemas (dies ist der Typ, den onSubmit erhält)
 export type TaskFormValues = z.infer<typeof taskSchema>;
 
 interface TaskFormProps {
@@ -35,31 +32,26 @@ interface TaskFormProps {
 }
 
 export function TaskForm({ initialData, onSubmit, submitButtonText, onSuccess }: TaskFormProps) {
-  // Erstelle defaultValues basierend auf dem Input-Typ des Schemas
-  const defaultValues: TaskFormInput = {
+  // Sicherstellen, dass der Status immer ein gültiger Enum-Wert ist
+  const defaultValues: TaskFormValues = {
     title: initialData?.title ?? "",
     description: initialData?.description ?? undefined,
     dueDate: initialData?.dueDate ? new Date(initialData.dueDate) : undefined,
-    status: initialData?.status, // Hier kann status undefined sein, was vom Input-Typ erlaubt ist
+    // FIX: Explizite Typumwandlung, um sicherzustellen, dass der Status immer ein gültiger Enum-Wert ist
+    status: (initialData?.status ?? "pending") as TaskFormValues["status"], 
   };
 
-  // Der generische Typ von useForm sollte TaskFormInput sein, da dies der Typ der Formularfelder ist
-  const form = useForm<TaskFormInput>({
+  const form = useForm<TaskFormValues>({
     resolver: zodResolver(taskSchema),
     defaultValues: defaultValues,
   });
 
-  // FIX: handleFormSubmit erhält Daten vom Typ TaskFormInput
-  const handleFormSubmit = async (data: TaskFormInput): Promise<void> => {
-    // Die Daten werden hier explizit in den Output-Typ des Schemas umgewandelt
-    // (z.B. wird der Standardwert für 'status' angewendet)
-    const parsedData = taskSchema.parse(data);
-
-    const result = await onSubmit(parsedData); // onSubmit erwartet TaskFormValues
+  const handleFormSubmit = async (data: TaskFormValues): Promise<void> => {
+    const result = await onSubmit(data);
 
     if (result.success) {
       toast.success(result.message);
-      if (!initialData) { // Nur zurücksetzen, wenn es ein neues Formular ist (nicht Bearbeiten)
+      if (!initialData) {
         form.reset();
       }
       onSuccess?.();
@@ -95,9 +87,7 @@ export function TaskForm({ initialData, onSubmit, submitButtonText, onSuccess }:
       </div>
       <div>
         <Label htmlFor="status">Status</Label>
-        {/* Der Wert für Select muss immer ein String sein. Wenn form.watch("status") undefined ist, 
-            verwenden wir "pending" als Fallback, da dies der Standardwert im Schema ist. */}
-        <Select onValueChange={(value) => form.setValue("status", value as TaskFormValues["status"])} value={form.watch("status") ?? "pending"}>
+        <Select onValueChange={(value) => form.setValue("status", value as "pending" | "in_progress" | "completed")} value={form.watch("status")}>
           <SelectTrigger className="w-full">
             <SelectValue placeholder="Status auswählen" />
           </SelectTrigger>
