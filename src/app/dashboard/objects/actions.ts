@@ -12,7 +12,34 @@ export async function createObject(data: ObjectFormValues) {
     return { success: false, message: "Benutzer nicht authentifiziert." };
   }
 
-  const { name, address, description, customerId } = data;
+  const {
+    name,
+    address,
+    description,
+    customerId,
+    mondayStartTime,
+    mondayEndTime,
+    tuesdayStartTime,
+    tuesdayEndTime,
+    wednesdayStartTime,
+    wednesdayEndTime,
+    thursdayStartTime,
+    thursdayEndTime,
+    fridayStartTime,
+    fridayEndTime,
+    saturdayStartTime,
+    saturdayEndTime,
+    sundayStartTime,
+    sundayEndTime,
+    defaultNotes,
+    defaultPriority,
+    defaultTimeOfDay,
+    accessMethod,
+    pin,
+    isAlarmSecured,
+    alarmPassword,
+    securityCodeWord,
+  } = data;
 
   const { error } = await supabase
     .from('objects')
@@ -22,6 +49,28 @@ export async function createObject(data: ObjectFormValues) {
       address,
       description,
       customer_id: customerId,
+      monday_start_time: mondayStartTime,
+      monday_end_time: mondayEndTime,
+      tuesday_start_time: tuesdayStartTime,
+      tuesday_end_time: tuesdayEndTime,
+      wednesday_start_time: wednesdayStartTime,
+      wednesday_end_time: wednesdayEndTime,
+      thursday_start_time: thursdayStartTime,
+      thursday_end_time: thursdayEndTime,
+      friday_start_time: fridayStartTime,
+      friday_end_time: fridayEndTime,
+      saturday_start_time: saturdayStartTime,
+      saturday_end_time: saturdayEndTime,
+      sunday_start_time: sundayStartTime,
+      sunday_end_time: sundayEndTime,
+      default_notes: defaultNotes,
+      default_priority: defaultPriority,
+      default_time_of_day: defaultTimeOfDay,
+      access_method: accessMethod,
+      pin,
+      is_alarm_secured: isAlarmSecured,
+      alarm_password: alarmPassword,
+      security_code_word: securityCodeWord,
     });
 
   if (error) {
@@ -48,6 +97,28 @@ export async function updateObject(objectId: string, data: ObjectFormValues) {
       address: data.address,
       description: data.description,
       customer_id: data.customerId,
+      monday_start_time: data.mondayStartTime,
+      monday_end_time: data.mondayEndTime,
+      tuesday_start_time: data.tuesdayStartTime,
+      tuesday_end_time: data.tuesdayEndTime,
+      wednesday_start_time: data.wednesdayStartTime,
+      wednesday_end_time: data.wednesdayEndTime,
+      thursday_start_time: data.thursdayStartTime,
+      thursday_end_time: data.thursdayEndTime,
+      friday_start_time: data.fridayStartTime,
+      friday_end_time: data.fridayEndTime,
+      saturday_start_time: data.saturdayStartTime,
+      saturday_end_time: data.saturdayEndTime,
+      sunday_start_time: data.sundayStartTime,
+      sunday_end_time: data.sundayEndTime,
+      default_notes: data.defaultNotes,
+      default_priority: data.defaultPriority,
+      default_time_of_day: data.defaultTimeOfDay,
+      access_method: data.accessMethod,
+      pin: data.pin,
+      is_alarm_secured: data.isAlarmSecured,
+      alarm_password: data.alarmPassword,
+      security_code_word: data.securityCodeWord,
     })
     .eq('id', objectId)
     .eq('user_id', user.id);
