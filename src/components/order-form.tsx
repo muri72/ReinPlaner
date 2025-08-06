@@ -167,12 +167,12 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
       </div>
       <div>
         <Label htmlFor="employeeId">Zugewiesener Mitarbeiter (optional)</Label>
-        <Select onValueChange={(value) => form.setValue("employeeId", value || null)} value={form.watch("employeeId") || ""}>
+        <Select onValueChange={(value) => form.setValue("employeeId", value === "unassigned" ? null : value)} value={form.watch("employeeId") || "unassigned"}>
           <SelectTrigger className="w-full">
             <SelectValue placeholder="Mitarbeiter auswählen" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Kein Mitarbeiter zugewiesen</SelectItem>
+            <SelectItem value="unassigned">Kein Mitarbeiter zugewiesen</SelectItem> {/* Wert geändert */}
             {employees.map(employee => (
               <SelectItem key={employee.id} value={employee.id}>{employee.first_name} {employee.last_name}</SelectItem>
             ))}
