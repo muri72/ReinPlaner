@@ -24,6 +24,15 @@ export const taskSchema = z.object({
 
 export type TaskFormValues = z.infer<typeof taskSchema>;
 
+// Eine separate Typdefinition für die defaultValues, die 'status' als optional erlaubt.
+// Dies hilft, die Typkompatibilität mit zodResolver zu gewährleisten, wenn z.default() verwendet wird.
+type DefaultFormValues = {
+  title: string;
+  description?: string;
+  dueDate?: Date | null;
+  status?: "pending" | "in_progress" | "completed";
+};
+
 interface TaskFormProps {
   initialData?: Partial<TaskFormValues>;
   onSubmit: (data: TaskFormValues) => Promise<{ success: boolean; message: string }>;
@@ -32,18 +41,17 @@ interface TaskFormProps {
 }
 
 export function TaskForm({ initialData, onSubmit, submitButtonText, onSuccess }: TaskFormProps) {
-  // Sicherstellen, dass der Status immer ein gültiger Enum-Wert ist
-  const defaultValues: TaskFormValues = {
+  const defaultValues: DefaultFormValues = {
     title: initialData?.title ?? "",
     description: initialData?.description ?? undefined,
     dueDate: initialData?.dueDate ? new Date(initialData.dueDate) : undefined,
-    // FIX: Explizite Typumwandlung, um sicherzustellen, dass der Status immer ein gültiger Enum-Wert ist
-    status: (initialData?.status ?? "pending") as TaskFormValues["status"], 
+    status: initialData?.status, // initialData.status kann undefined sein, Zod's .default() wird es behandeln
   };
 
   const form = useForm<TaskFormValues>({
     resolver: zodResolver(taskSchema),
-    defaultValues: defaultValues,
+    // FIX: defaultValues als TaskFormValues casten, um Typkonflikte zu lösen
+    defaultValues: defaultValues as TaskFormValues, 
   });
 
   const handleFormSubmit = async (data: TaskFormValues): Promise<void> => {

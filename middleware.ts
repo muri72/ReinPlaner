@@ -10,6 +10,15 @@ export async function middleware(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
 
+  // FIX: Handle root path '/'
+  if (pathname === '/') {
+    if (session) {
+      return NextResponse.redirect(new URL('/dashboard', request.url));
+    } else {
+      return NextResponse.redirect(new URL('/login', request.url));
+    }
+  }
+
   // Allow access to auth pages without authentication
   if (pathname.startsWith('/login') || pathname.startsWith('/auth/callback')) {
     if (session) {
