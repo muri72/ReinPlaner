@@ -1,6 +1,6 @@
 "use client";
 
-import { useForm, SubmitHandler } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Input } from "@/components/ui/input";
@@ -13,8 +13,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } => "@/components/ui/select";
-import { useState, useEffect } from "react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export const taskSchema = z.object({
   title: z.string().min(1, "Titel ist erforderlich").max(100, "Titel ist zu lang"),
@@ -33,27 +32,21 @@ interface TaskFormProps {
 }
 
 export function TaskForm({ initialData, onSubmit, submitButtonText, onSuccess }: TaskFormProps) {
+  // Sicherstellen, dass der Status immer ein gültiger Enum-Wert ist
+  const defaultValues: TaskFormValues = {
+    title: initialData?.title ?? "",
+    description: initialData?.description ?? undefined,
+    dueDate: initialData?.dueDate ? new Date(initialData.dueDate) : undefined,
+    // FIX: Explizite Typumwandlung, um sicherzustellen, dass der Status immer ein gültiger Enum-Wert ist
+    status: (initialData?.status ?? "pending") as TaskFormValues["status"], 
+  };
+
   const form = useForm<TaskFormValues>({
-    resolver: zodResolver<TaskFormValues>(taskSchema), // Explizite Typisierung des Resolvers
-    defaultValues: {
-      title: initialData?.title ?? "",
-      description: initialData?.description ?? undefined,
-      dueDate: initialData?.dueDate ? new Date(initialData.dueDate) : undefined,
-      status: initialData?.status ?? "pending",
-    },
+    resolver: zodResolver(taskSchema),
+    defaultValues: defaultValues,
   });
 
-  const [displayDate, setDisplayDate] = useState<string | undefined>(undefined);
-
-  useEffect(() => {
-    if (form.watch("dueDate")) {
-      setDisplayDate(format(form.watch("dueDate")!, "PPP"));
-    } else {
-      setDisplayDate(undefined);
-    }
-  }, [form.watch("dueDate")]);
-
-  const handleFormSubmit: SubmitHandler<TaskFormValues> = async (data, event) => {
+  const handleFormSubmit = async (data: TaskFormValues): Promise<void> => {
     const result = await onSubmit(data);
 
     if (result.success) {
@@ -120,7 +113,7 @@ export function TaskForm({ initialData, onSubmit, submitButtonText, onSuccess }:
               )}
             >
               <CalendarIcon className="mr-2 h-4 w-4" />
-              {displayDate ? displayDate : <span>Datum auswählen</span>}
+              {form.watch("dueDate") ? format(form.watch("dueDate")!, "PPP") : <span>Datum auswählen</span>}
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-auto p-0">

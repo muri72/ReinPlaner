@@ -84,7 +84,6 @@ export default function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              suppressHydrationWarning // Hydrationswarnung unterdrücken
             />
           </div>
           <div>
@@ -96,7 +95,6 @@ export default function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              suppressHydrationWarning // Hydrationswarnung unterdrücken
             />
           </div>
           <Button type="submit" className="w-full" disabled={loading}>
