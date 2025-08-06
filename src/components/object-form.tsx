@@ -420,7 +420,7 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
                   <Label htmlFor={`${day}Hours`}>Stunden</Label>
                   <Input
                     id={`${day}Hours`}
-                    type="number"
+                    type="text" // Changed to text to allow comma input
                     step="0.01"
                     placeholder="Stunden"
                     value={dayHoursInputs[day]}
