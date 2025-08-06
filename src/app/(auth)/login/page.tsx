@@ -1,15 +1,19 @@
 "use client";
 
-import { Auth } from "@supabase/auth-ui-react";
-import { ThemeSupa } from "@supabase/auth-ui-shared";
 import { createClient } from "@/lib/supabase/client";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 
 export default function LoginPage() {
   const supabase = createClient();
   const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -27,71 +31,88 @@ export default function LoginPage() {
     return () => subscription.unsubscribe();
   }, [router, supabase.auth]);
 
+  const handleDemoLogin = async () => {
+    setLoading(true);
+    const demoEmail = "admin@reinigung-aris.de";
+    const demoPassword = "admin123";
+
+    const { error } = await supabase.auth.signInWithPassword({
+      email: demoEmail,
+      password: demoPassword,
+    });
+
+    if (error) {
+      toast.error(`Anmeldung fehlgeschlagen: ${error.message}. Bitte stellen Sie sicher, dass der Demo-Benutzer in Supabase existiert.`);
+    } else {
+      toast.success("Erfolgreich als Demo-Benutzer angemeldet!");
+      // Die Weiterleitung wird durch onAuthStateChange gehandhabt
+    }
+    setLoading(false);
+  };
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      toast.error(`Anmeldung fehlgeschlagen: ${error.message}`);
+    } else {
+      toast.success("Erfolgreich angemeldet!");
+      // Die Weiterleitung wird durch onAuthStateChange gehandhabt
+    }
+    setLoading(false);
+  };
+
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow-md dark:bg-gray-800">
-        <Auth
-          supabaseClient={supabase}
-          providers={[]} // Keine externen Anbieter wie Google, GitHub usw.
-          appearance={{
-            theme: ThemeSupa,
-            variables: {
-              default: {
-                colors: {
-                  brand: 'hsl(var(--primary))', // Supabase Brand-Farbe an Primary anpassen
-                  brandAccent: 'hsl(var(--primary-foreground))', // Akzentfarbe an Primary-Foreground anpassen
-                },
-              },
-            },
-          }}
-          theme="light" // Standardmäßig helles Theme
-          redirectTo={`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/auth/callback`}
-          localization={{
-            variables: {
-              sign_in: {
-                email_label: 'E-Mail-Adresse',
-                password_label: 'Passwort',
-                email_input_placeholder: 'Ihre E-Mail-Adresse',
-                password_input_placeholder: 'Ihr Passwort',
-                button_label: 'Anmelden',
-                social_provider_text: 'Mit {{provider}} anmelden',
-                link_text: 'Sie haben bereits ein Konto? Anmelden',
-              },
-              sign_up: {
-                email_label: 'E-Mail-Adresse',
-                password_label: 'Passwort',
-                email_input_placeholder: 'Ihre E-Mail-Adresse',
-                password_input_placeholder: 'Ihr Passwort',
-                button_label: 'Registrieren',
-                social_provider_text: 'Mit {{provider}} registrieren',
-                link_text: 'Sie haben noch kein Konto? Registrieren',
-              },
-              forgotten_password: {
-                email_label: 'E-Mail-Adresse',
-                button_label: 'Passwort zurücksetzen', // Korrigiert: password_reset_button_label zu button_label
-                link_text: 'Passwort vergessen?',
-                email_input_placeholder: 'Ihre E-Mail-Adresse',
-              },
-              update_password: {
-                password_label: 'Neues Passwort',
-                password_input_placeholder: 'Ihr neues Passwort',
-                button_label: 'Passwort aktualisieren',
-              },
-              magic_link: {
-                email_input_placeholder: 'Ihre E-Mail-Adresse',
-                button_label: 'Magic Link senden',
-                link_text: 'Einen Magic Link senden',
-              },
-              verify_otp: {
-                email_input_placeholder: 'Ihre E-Mail-Adresse',
-                phone_input_placeholder: 'Ihre Telefonnummer',
-                token_input_placeholder: 'OTP-Token',
-                button_label: 'Bestätigen',
-                // Entfernt: link_text, da es in diesem Kontext nicht existiert
-              },
-            },
-          }}
-        />
+        <h2 className="text-2xl font-bold text-center text-gray-900 dark:text-white">
+          Anmelden
+        </h2>
+        <form onSubmit={handleLogin} className="space-y-4">
+          <div>
+            <Label htmlFor="email">E-Mail</Label>
+            <Input
+              id="email"
+              type="email"
+              placeholder="Ihre E-Mail-Adresse"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+          </div>
+          <div>
+            <Label htmlFor="password">Passwort</Label>
+            <Input
+              id="password"
+              type="password"
+              placeholder="Ihr Passwort"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+          </div>
+          <Button type="submit" className="w-full" disabled={loading}>
+            {loading ? "Anmelden..." : "Anmelden"}
+          </Button>
+        </form>
+        <div className="relative flex justify-center text-xs uppercase">
+          <span className="bg-white dark:bg-gray-800 px-2 text-muted-foreground">
+            Oder
+          </span>
+        </div>
+        <Button
+          onClick={handleDemoLogin}
+          className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+          disabled={loading}
+        >
+          {loading ? "Demo-Anmeldung..." : "Als Demo-Benutzer anmelden"}
+        </Button>
       </div>
     </div>
   );
