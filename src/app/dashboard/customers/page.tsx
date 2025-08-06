@@ -5,9 +5,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { createCustomer } from "./actions";
 import { CustomerEditDialog } from "@/components/customer-edit-dialog";
 import { DeleteCustomerButton } from "@/components/delete-customer-button";
-import { Mail, Phone, MapPin } from "lucide-react"; // Icons für Kontaktdaten
+import { Mail, Phone, MapPin } from "lucide-react";
+import { SearchInput } from "@/components/search-input";
 
-export default async function CustomersPage() {
+export default async function CustomersPage({
+  searchParams,
+}: {
+  searchParams?: { [key: string]: string | string[] | undefined };
+}) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -15,11 +20,21 @@ export default async function CustomersPage() {
     redirect("/login");
   }
 
-  const { data: customers, error } = await supabase
+  const query = typeof searchParams?.query === 'string' ? searchParams.query : '';
+
+  let customersQuery = supabase
     .from('customers')
     .select('*')
     .eq('user_id', user.id)
     .order('name', { ascending: true });
+
+  if (query) {
+    customersQuery = customersQuery.or(
+      `name.ilike.%${query}%,address.ilike.%${query}%,contact_email.ilike.%${query}%,contact_phone.ilike.%${query}%`
+    );
+  }
+
+  const { data: customers, error } = await customersQuery;
 
   if (error) {
     console.error("Fehler beim Laden der Kunden:", error);
@@ -30,9 +45,15 @@ export default async function CustomersPage() {
     <div className="p-8 space-y-8">
       <h1 className="text-3xl font-bold">Ihre Kunden</h1>
 
+      <div className="mb-4">
+        <SearchInput placeholder="Kunden suchen..." />
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {customers.length === 0 ? (
-          <p className="col-span-full text-center text-muted-foreground">Noch keine Kunden vorhanden. Fügen Sie einen hinzu!</p>
+          <p className="col-span-full text-center text-muted-foreground">
+            {query ? "Keine Kunden gefunden, die Ihrer Suche entsprechen." : "Noch keine Kunden vorhanden. Fügen Sie einen hinzu!"}
+          </p>
         ) : (
           customers.map((customer) => (
             <Card key={customer.id}>
