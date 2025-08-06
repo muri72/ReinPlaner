@@ -1,6 +1,6 @@
 "use client";
 
-import { useForm, SubmitHandler } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Input } from "@/components/ui/input";
@@ -14,13 +14,13 @@ import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useState, useEffect } from "react";
 
 export const taskSchema = z.object({
   title: z.string().min(1, "Titel ist erforderlich").max(100, "Titel ist zu lang"),
   description: z.string().max(500, "Beschreibung ist zu lang").optional(),
   dueDate: z.date().optional().nullable(),
-  status: z.enum(["pending", "in_progress", "completed"]).default("pending"),
+  // FIX: Markiere den Status explizit als optional, bevor .default() angewendet wird
+  status: z.enum(["pending", "in_progress", "completed"]).optional().default("pending"),
 });
 
 export type TaskFormValues = z.infer<typeof taskSchema>;
@@ -33,27 +33,20 @@ interface TaskFormProps {
 }
 
 export function TaskForm({ initialData, onSubmit, submitButtonText, onSuccess }: TaskFormProps) {
+  const defaultValues: TaskFormValues = {
+    title: initialData?.title ?? "",
+    description: initialData?.description ?? undefined,
+    dueDate: initialData?.dueDate ? new Date(initialData.dueDate) : undefined,
+    // Der Status kann hier direkt zugewiesen werden, da das Schema ihn nun korrekt als optional im Input behandelt
+    status: initialData?.status ?? "pending", 
+  };
+
   const form = useForm<TaskFormValues>({
-    resolver: zodResolver(taskSchema), // FIX: Entfernt die explizite Typisierung hier
-    defaultValues: {
-      title: initialData?.title ?? "",
-      description: initialData?.description ?? undefined,
-      dueDate: initialData?.dueDate ? new Date(initialData.dueDate) : undefined,
-      status: initialData?.status !== undefined ? initialData.status : "pending",
-    },
+    resolver: zodResolver(taskSchema),
+    defaultValues: defaultValues,
   });
 
-  const [displayDate, setDisplayDate] = useState<string | undefined>(undefined);
-
-  useEffect(() => {
-    if (form.watch("dueDate")) {
-      setDisplayDate(format(form.watch("dueDate")!, "PPP"));
-    } else {
-      setDisplayDate(undefined);
-    }
-  }, [form.watch("dueDate")]);
-
-  const handleFormSubmit: SubmitHandler<TaskFormValues> = async (data, event) => {
+  const handleFormSubmit = async (data: TaskFormValues): Promise<void> => {
     const result = await onSubmit(data);
 
     if (result.success) {
@@ -120,7 +113,7 @@ export function TaskForm({ initialData, onSubmit, submitButtonText, onSuccess }:
               )}
             >
               <CalendarIcon className="mr-2 h-4 w-4" />
-              {displayDate ? displayDate : <span>Datum auswählen</span>}
+              {form.watch("dueDate") ? format(form.watch("dueDate")!, "PPP") : <span>Datum auswählen</span>}
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-auto p-0">
