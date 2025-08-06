@@ -19,9 +19,12 @@ export const taskSchema = z.object({
   title: z.string().min(1, "Titel ist erforderlich").max(100, "Titel ist zu lang"),
   description: z.string().max(500, "Beschreibung ist zu lang").optional(),
   dueDate: z.date().optional().nullable(),
-  status: z.enum(["pending", "in_progress", "completed"]).optional().default("pending"),
+  status: z.enum(["pending", "in_progress", "completed"]).default("pending"),
 });
 
+// Definiere den Input-Typ des Zod-Schemas
+type TaskFormInput = z.input<typeof taskSchema>;
+// Definiere den Output-Typ des Zod-Schemas (dies ist der Typ, den onSubmit erhält)
 export type TaskFormValues = z.infer<typeof taskSchema>;
 
 interface TaskFormProps {
@@ -32,23 +35,21 @@ interface TaskFormProps {
 }
 
 export function TaskForm({ initialData, onSubmit, submitButtonText, onSuccess }: TaskFormProps) {
-  // Definiere einen Typ für die Eingabe des Formulars, der einen optionalen Status haben kann.
-  // Dies entspricht dem Typ, den zodResolver für seine Eingabe erwartet.
-  type FormInput = z.input<typeof taskSchema>;
-
-  // Erstelle defaultValues, die dem FormInput-Typ entsprechen
-  const defaultValues: FormInput = {
+  // Erstelle defaultValues basierend auf dem Input-Typ des Schemas
+  const defaultValues: TaskFormInput = {
     title: initialData?.title ?? "",
     description: initialData?.description ?? undefined,
     dueDate: initialData?.dueDate ? new Date(initialData.dueDate) : undefined,
-    status: initialData?.status, // Erlaube, dass der Status hier undefined ist; Zod's .default() wird es behandeln
+    status: initialData?.status, // Hier kann status undefined sein, was vom Input-Typ erlaubt ist
   };
 
-  const form = useForm<TaskFormValues>({ // Verwende weiterhin TaskFormValues für den Ausgabetyp des Formulars
+  // FIX: Ändere den generischen Typ von useForm auf TaskFormInput
+  const form = useForm<TaskFormInput>({
     resolver: zodResolver(taskSchema),
-    defaultValues: defaultValues, // Übergebe hier den FormInput-Typ
+    defaultValues: defaultValues,
   });
 
+  // handleFormSubmit erhält Daten vom Typ TaskFormValues, da handleSubmit die Zod-Transformationen anwendet
   const handleFormSubmit = async (data: TaskFormValues): Promise<void> => {
     const result = await onSubmit(data);
 
@@ -90,7 +91,9 @@ export function TaskForm({ initialData, onSubmit, submitButtonText, onSuccess }:
       </div>
       <div>
         <Label htmlFor="status">Status</Label>
-        <Select onValueChange={(value) => form.setValue("status", value as "pending" | "in_progress" | "completed")} value={form.watch("status")}>
+        {/* Der Wert für Select muss immer ein String sein. Wenn form.watch("status") undefined ist, 
+            verwenden wir "pending" als Fallback, da dies der Standardwert im Schema ist. */}
+        <Select onValueChange={(value) => form.setValue("status", value as TaskFormValues["status"])} value={form.watch("status") ?? "pending"}>
           <SelectTrigger className="w-full">
             <SelectValue placeholder="Status auswählen" />
           </SelectTrigger>
