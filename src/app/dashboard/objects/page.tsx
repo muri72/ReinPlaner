@@ -8,13 +8,21 @@ import { DeleteObjectButton } from "@/components/delete-object-button";
 import { MapPin, FileText } from "lucide-react";
 import { SearchInput } from "@/components/search-input";
 
+// Definieren Sie die Schnittstelle für die Objekt-Daten, wie sie auf dieser Seite verwendet werden
+interface DisplayObject {
+  id: string;
+  user_id: string | null;
+  customer_id: string;
+  name: string;
+  address: string;
+  description: string | null;
+  created_at: string | null;
+  customer_name: string | null; // Dieses Feld kommt entweder vom RPC oder vom Join
+}
+
 export default async function ObjectsPage({
   searchParams,
-}: // Entferne die explizite Typisierung hier
-// {
-//   searchParams?: { [key: string]: string | string[] | undefined };
-// }
-any) { // Verwende 'any' als temporäre Lösung, um den Fehler zu umgehen
+}: any) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -24,23 +32,41 @@ any) { // Verwende 'any' als temporäre Lösung, um den Fehler zu umgehen
 
   const query = typeof searchParams?.query === 'string' ? searchParams.query : '';
 
-  let objectsQuery = supabase
-    .from('objects')
-    .select(`
-      *,
-      customers ( name )
-    `)
-    .eq('user_id', user.id)
-    .order('name', { ascending: true });
+  let objects: DisplayObject[] | null; // Typ für die Objekte deklarieren
+  let error: any; // Typ für Fehler deklarieren
 
   if (query) {
-    // Suche nach Name, Adresse, Beschreibung oder Kundenname
-    objectsQuery = objectsQuery.or(
-      `name.ilike.%${query}%,address.ilike.%${query}%,description.ilike.%${query}%,customers.name.ilike.%${query}%`
-    );
-  }
+    // Verwende die neue RPC-Funktion für die Suche
+    const { data, error: rpcError } = await supabase.rpc('search_objects', {
+      search_query: query,
+      user_id_param: user.id,
+    });
+    objects = data as DisplayObject[] | null; // Daten zu DisplayObject[] casten
+    error = rpcError;
+  } else {
+    // Normale Abfrage, wenn kein Suchbegriff vorhanden ist
+    const { data, error: selectError } = await supabase
+      .from('objects')
+      .select(`
+        *,
+        customers ( name )
+      `)
+      .eq('user_id', user.id)
+      .order('name', { ascending: true });
 
-  const { data: objects, error } = await objectsQuery;
+    // Daten mappen, um sie an die DisplayObject-Schnittstelle anzupassen
+    objects = data?.map(obj => ({
+      id: obj.id,
+      user_id: obj.user_id,
+      customer_id: obj.customer_id,
+      name: obj.name,
+      address: obj.address,
+      description: obj.description,
+      created_at: obj.created_at,
+      customer_name: obj.customers?.name || null, // Zugriff auf den Namen des Kunden
+    })) || null;
+    error = selectError;
+  }
 
   if (error) {
     console.error("Fehler beim Laden der Objekte:", error);
@@ -56,12 +82,12 @@ any) { // Verwende 'any' als temporäre Lösung, um den Fehler zu umgehen
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {objects.length === 0 ? (
+        {objects && objects.length === 0 ? ( // Überprüfen, ob objects nicht null ist
           <p className="col-span-full text-center text-muted-foreground">
             {query ? "Keine Objekte gefunden, die Ihrer Suche entsprechen." : "Noch keine Objekte vorhanden. Fügen Sie eines hinzu!"}
           </p>
         ) : (
-          objects.map((object) => (
+          objects?.map((object) => ( // 'object' ist jetzt typisiert
             <Card key={object.id}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-lg font-medium">{object.name}</CardTitle>
@@ -71,8 +97,8 @@ any) { // Verwende 'any' als temporäre Lösung, um den Fehler zu umgehen
                 </div>
               </CardHeader>
               <CardContent className="space-y-2">
-                {object.customers && (
-                  <p className="text-sm text-muted-foreground">Kunde: {object.customers.name}</p>
+                {object.customer_name && (
+                  <p className="text-sm text-muted-foreground">Kunde: {object.customer_name}</p>
                 )}
                 {object.address && (
                   <div className="flex items-center text-sm text-muted-foreground">
