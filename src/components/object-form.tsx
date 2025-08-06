@@ -9,10 +9,11 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useState, useEffect, useMemo, useRef } from "react"; // Import useRef
+import { useState, useEffect, useMemo, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useDebouncedCallback } from "use-debounce"; // Import useDebouncedCallback
 
 // Helper to calculate hours between two time strings (HH:MM)
 const calculateHours = (start: string | null, end: string | null): number | null => {
@@ -176,6 +177,24 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
 
   // Watch defaultTimeOfDay for changes
   const defaultTimeOfDay = form.watch("defaultTimeOfDay");
+
+  // Debounced function to update time fields based on hours input
+  const debouncedUpdateTimes = useDebouncedCallback((day: string, hoursValue: string, timeOfDay: ObjectFormValues['defaultTimeOfDay']) => {
+    const parsedHours = parseFloat(hoursValue);
+    const startTimeField = getDayTimeFieldName(day, 'StartTime');
+    const endTimeField = getDayTimeFieldName(day, 'EndTime');
+
+    if (!isNaN(parsedHours) && parsedHours > 0) {
+      isUpdatingFromHoursInputRef.current[day] = true; // Mark that change came from debounced hours input
+      const { startTime, endTime } = generateTimesFromHours(parsedHours, timeOfDay);
+      form.setValue(startTimeField, startTime);
+      form.setValue(endTimeField, endTime);
+    } else {
+      isUpdatingFromHoursInputRef.current[day] = true; // Mark that change came from debounced hours input
+      form.setValue(startTimeField, null);
+      form.setValue(endTimeField, null);
+    }
+  }, 500); // Debounce for 500ms
 
   // Effect to synchronize hours input with time inputs
   useEffect(() => {
@@ -429,18 +448,7 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
                       // Replace comma with dot for parsing
                       value = value.replace(',', '.');
                       setDayHoursInputs(prev => ({ ...prev, [day]: value }));
-
-                      const parsedHours = parseFloat(value);
-                      if (!isNaN(parsedHours) && parsedHours > 0) {
-                        isUpdatingFromHoursInputRef.current[day] = true; // Mark that change came from hours input
-                        const { startTime, endTime } = generateTimesFromHours(parsedHours, defaultTimeOfDay);
-                        form.setValue(startTimeField, startTime);
-                        form.setValue(endTimeField, endTime);
-                      } else {
-                        isUpdatingFromHoursInputRef.current[day] = true; // Mark that change came from hours input
-                        form.setValue(startTimeField, null);
-                        form.setValue(endTimeField, null);
-                      }
+                      debouncedUpdateTimes(day, value, defaultTimeOfDay); // Call debounced function
                     }}
                   />
                   {/* No error message for hours input as it's derived */}
