@@ -32,20 +32,18 @@ interface TaskFormProps {
 }
 
 export function TaskForm({ initialData, onSubmit, submitButtonText, onSuccess }: TaskFormProps) {
-  // Sicherstellen, dass defaultValues dem TaskFormValues-Typ entsprechen
-  const defaultValues: TaskFormValues = {
+  // Erstelle ein Objekt für die Standardwerte
+  const defaultValues = {
     title: initialData?.title ?? "",
     description: initialData?.description ?? undefined,
-    // Wenn initialData.dueDate undefined ist, setzen wir es auf undefined, da z.optional() dies erlaubt.
-    // Wenn es null sein soll, müsste es explizit auf null gesetzt werden.
     dueDate: initialData?.dueDate ? new Date(initialData.dueDate) : undefined, 
-    // Sicherstellen, dass der Status immer einen gültigen Enum-Wert hat
-    status: initialData?.status ?? "pending", 
+    status: initialData?.status ?? "pending", // Zod's .default() wird undefined in 'pending' umwandeln
   };
 
   const form = useForm<TaskFormValues>({
     resolver: zodResolver(taskSchema),
-    defaultValues: defaultValues,
+    // FIX: defaultValues explizit als TaskFormValues casten, um Typkonflikte zu lösen
+    defaultValues: defaultValues as TaskFormValues,
   });
 
   const handleFormSubmit = async (data: TaskFormValues): Promise<void> => {
