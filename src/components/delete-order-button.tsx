@@ -4,13 +4,13 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Trash2 } from "lucide-react";
-import { deleteTask } from "@/app/dashboard/tasks/actions"; // Importiere die Server-Aktion
+import { deleteOrder } from "@/app/dashboard/orders/actions"; // Korrigierter Import
 
-interface DeleteTaskButtonProps {
-  taskId: string;
+interface DeleteOrderButtonProps { // DeleteTaskButtonProps zu DeleteOrderButtonProps
+  orderId: string; // taskId zu orderId
 }
 
-export function DeleteTaskButton({ taskId }: DeleteTaskButtonProps) {
+export function DeleteOrderButton({ orderId }: DeleteOrderButtonProps) { // taskId zu orderId
   const [loading, setLoading] = useState(false);
 
   const handleDelete = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -18,7 +18,7 @@ export function DeleteTaskButton({ taskId }: DeleteTaskButtonProps) {
     setLoading(true);
     const formData = new FormData(event.currentTarget);
 
-    const result = await deleteTask(formData);
+    const result = await deleteOrder(formData); // deleteTask zu deleteOrder
 
     if (result.success) {
       toast.success(result.message);
@@ -30,14 +30,14 @@ export function DeleteTaskButton({ taskId }: DeleteTaskButtonProps) {
 
   return (
     <form onSubmit={handleDelete}>
-      <input type="hidden" name="taskId" value={taskId} />
+      <input type="hidden" name="orderId" value={orderId} /> {/* taskId zu orderId */}
       <Button
         variant="ghost"
         size="icon"
         className="text-destructive hover:text-destructive/80"
         type="submit"
         disabled={loading}
-      > {/* FIX: disabled-Zustand basierend auf loading */}
+      >
         <Trash2 className="h-4 w-4" />
       </Button>
     </form>
