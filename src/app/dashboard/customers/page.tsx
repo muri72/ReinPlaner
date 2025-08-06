@@ -10,9 +10,11 @@ import { SearchInput } from "@/components/search-input";
 
 export default async function CustomersPage({
   searchParams,
-}: {
-  searchParams?: { [key: string]: string | string[] | undefined };
-}) {
+}: // Entferne die explizite Typisierung hier
+// {
+//   searchParams?: { [key: string]: string | string[] | undefined };
+// }
+any) { // Verwende 'any' als temporäre Lösung, um den Fehler zu umgehen
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 

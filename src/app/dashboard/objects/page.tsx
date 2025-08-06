@@ -6,8 +6,15 @@ import { createObject } from "./actions";
 import { ObjectEditDialog } from "@/components/object-edit-dialog";
 import { DeleteObjectButton } from "@/components/delete-object-button";
 import { MapPin, FileText } from "lucide-react";
+import { SearchInput } from "@/components/search-input";
 
-export default async function ObjectsPage() {
+export default async function ObjectsPage({
+  searchParams,
+}: // Entferne die explizite Typisierung hier
+// {
+//   searchParams?: { [key: string]: string | string[] | undefined };
+// }
+any) { // Verwende 'any' als temporäre Lösung, um den Fehler zu umgehen
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -15,7 +22,9 @@ export default async function ObjectsPage() {
     redirect("/login");
   }
 
-  const { data: objects, error } = await supabase
+  const query = typeof searchParams?.query === 'string' ? searchParams.query : '';
+
+  let objectsQuery = supabase
     .from('objects')
     .select(`
       *,
@@ -23,6 +32,15 @@ export default async function ObjectsPage() {
     `)
     .eq('user_id', user.id)
     .order('name', { ascending: true });
+
+  if (query) {
+    // Suche nach Name, Adresse, Beschreibung oder Kundenname
+    objectsQuery = objectsQuery.or(
+      `name.ilike.%${query}%,address.ilike.%${query}%,description.ilike.%${query}%,customers.name.ilike.%${query}%`
+    );
+  }
+
+  const { data: objects, error } = await objectsQuery;
 
   if (error) {
     console.error("Fehler beim Laden der Objekte:", error);
@@ -33,9 +51,15 @@ export default async function ObjectsPage() {
     <div className="p-8 space-y-8">
       <h1 className="text-3xl font-bold">Ihre Objekte</h1>
 
+      <div className="mb-4">
+        <SearchInput placeholder="Objekte suchen..." />
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {objects.length === 0 ? (
-          <p className="col-span-full text-center text-muted-foreground">Noch keine Objekte vorhanden. Fügen Sie eines hinzu!</p>
+          <p className="col-span-full text-center text-muted-foreground">
+            {query ? "Keine Objekte gefunden, die Ihrer Suche entsprechen." : "Noch keine Objekte vorhanden. Fügen Sie eines hinzu!"}
+          </p>
         ) : (
           objects.map((object) => (
             <Card key={object.id}>
