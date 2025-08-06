@@ -19,7 +19,7 @@ export const taskSchema = z.object({
   title: z.string().min(1, "Titel ist erforderlich").max(100, "Titel ist zu lang"),
   description: z.string().max(500, "Beschreibung ist zu lang").optional(),
   dueDate: z.date().optional().nullable(),
-  status: z.enum(["pending", "in_progress", "completed"]).default("pending"),
+  status: z.enum(["pending", "in_progress", "completed"]).optional().default("pending"),
 });
 
 export type TaskFormValues = z.infer<typeof taskSchema>;
@@ -32,18 +32,21 @@ interface TaskFormProps {
 }
 
 export function TaskForm({ initialData, onSubmit, submitButtonText, onSuccess }: TaskFormProps) {
-  // Erstelle ein Objekt für die Standardwerte
-  const defaultValues = {
+  // Definiere einen Typ für die Eingabe des Formulars, der einen optionalen Status haben kann.
+  // Dies entspricht dem Typ, den zodResolver für seine Eingabe erwartet.
+  type FormInput = z.input<typeof taskSchema>;
+
+  // Erstelle defaultValues, die dem FormInput-Typ entsprechen
+  const defaultValues: FormInput = {
     title: initialData?.title ?? "",
     description: initialData?.description ?? undefined,
-    dueDate: initialData?.dueDate ? new Date(initialData.dueDate) : undefined, 
-    status: initialData?.status ?? "pending", // Zod's .default() wird undefined in 'pending' umwandeln
+    dueDate: initialData?.dueDate ? new Date(initialData.dueDate) : undefined,
+    status: initialData?.status, // Erlaube, dass der Status hier undefined ist; Zod's .default() wird es behandeln
   };
 
-  const form = useForm<TaskFormValues>({
+  const form = useForm<TaskFormValues>({ // Verwende weiterhin TaskFormValues für den Ausgabetyp des Formulars
     resolver: zodResolver(taskSchema),
-    // FIX: defaultValues explizit als TaskFormValues casten, um Typkonflikte zu lösen
-    defaultValues: defaultValues as TaskFormValues,
+    defaultValues: defaultValues, // Übergebe hier den FormInput-Typ
   });
 
   const handleFormSubmit = async (data: TaskFormValues): Promise<void> => {
