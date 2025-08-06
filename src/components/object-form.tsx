@@ -227,6 +227,54 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
         )}
       </div>
 
+      <h3 className="text-lg font-semibold mt-6">Standard-Auftragseinstellungen für dieses Objekt</h3>
+      <div>
+        <Label htmlFor="defaultNotes">Standard-Notizen für Aufträge (optional)</Label>
+        <Textarea
+          id="defaultNotes"
+          {...form.register("defaultNotes")}
+          placeholder="Standard-Notizen, die in neue Aufträge übernommen werden..."
+          rows={3}
+        />
+        {form.formState.errors.defaultNotes && (
+          <p className="text-red-500 text-sm mt-1">{form.formState.errors.defaultNotes.message}</p>
+        )}
+      </div>
+      <div>
+        <Label htmlFor="defaultPriority">Standard-Priorität</Label>
+        <Select onValueChange={(value) => form.setValue("defaultPriority", value as "low" | "medium" | "high")} value={form.watch("defaultPriority")}>
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="Priorität auswählen" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="low">Niedrig</SelectItem>
+            <SelectItem value="medium">Mittel</SelectItem>
+            <SelectItem value="high">Hoch</SelectItem>
+          </SelectContent>
+        </Select>
+        {form.formState.errors.defaultPriority && (
+          <p className="text-red-500 text-sm mt-1">{form.formState.errors.defaultPriority.message}</p>
+        )}
+      </div>
+      {/* Moved defaultTimeOfDay here */}
+      <div>
+        <Label htmlFor="defaultTimeOfDay">Standard-Tageszeit</Label>
+        <Select onValueChange={(value) => form.setValue("defaultTimeOfDay", value as "morning" | "noon" | "afternoon" | "any")} value={form.watch("defaultTimeOfDay")}>
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="Tageszeit auswählen" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="any">Beliebig</SelectItem>
+            <SelectItem value="morning">Vormittags</SelectItem>
+            <SelectItem value="noon">Mittags</SelectItem>
+            <SelectItem value="afternoon">Nachmittags</SelectItem>
+          </SelectContent>
+        </Select>
+        {form.formState.errors.defaultTimeOfDay && (
+          <p className="text-red-500 text-sm mt-1">{form.formState.errors.defaultTimeOfDay.message}</p>
+        )}
+      </div>
+
       <h3 className="text-lg font-semibold mt-6">Standard-Arbeitszeiten pro Wochentag</h3>
       {dayNames.map(day => {
         const startTimeField = getDayTimeFieldName(day, 'StartTime');
@@ -286,53 +334,6 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
           </div>
         );
       })}
-
-      <h3 className="text-lg font-semibold mt-6">Standard-Auftragseinstellungen für dieses Objekt</h3>
-      <div>
-        <Label htmlFor="defaultNotes">Standard-Notizen für Aufträge (optional)</Label>
-        <Textarea
-          id="defaultNotes"
-          {...form.register("defaultNotes")}
-          placeholder="Standard-Notizen, die in neue Aufträge übernommen werden..."
-          rows={3}
-        />
-        {form.formState.errors.defaultNotes && (
-          <p className="text-red-500 text-sm mt-1">{form.formState.errors.defaultNotes.message}</p>
-        )}
-      </div>
-      <div>
-        <Label htmlFor="defaultPriority">Standard-Priorität</Label>
-        <Select onValueChange={(value) => form.setValue("defaultPriority", value as "low" | "medium" | "high")} value={form.watch("defaultPriority")}>
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Priorität auswählen" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="low">Niedrig</SelectItem>
-            <SelectItem value="medium">Mittel</SelectItem>
-            <SelectItem value="high">Hoch</SelectItem>
-          </SelectContent>
-        </Select>
-        {form.formState.errors.defaultPriority && (
-          <p className="text-red-500 text-sm mt-1">{form.formState.errors.defaultPriority.message}</p>
-        )}
-      </div>
-      <div>
-        <Label htmlFor="defaultTimeOfDay">Standard-Tageszeit</Label>
-        <Select onValueChange={(value) => form.setValue("defaultTimeOfDay", value as "morning" | "noon" | "afternoon" | "any")} value={form.watch("defaultTimeOfDay")}>
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Tageszeit auswählen" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="any">Beliebig</SelectItem>
-            <SelectItem value="morning">Vormittags</SelectItem>
-            <SelectItem value="noon">Mittags</SelectItem>
-            <SelectItem value="afternoon">Nachmittags</SelectItem>
-          </SelectContent>
-        </Select>
-        {form.formState.errors.defaultTimeOfDay && (
-          <p className="text-red-500 text-sm mt-1">{form.formState.errors.defaultTimeOfDay.message}</p>
-        )}
-      </div>
 
       <h3 className="text-lg font-semibold mt-6">Zugangsinformationen</h3>
       <div>
