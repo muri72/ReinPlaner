@@ -84,7 +84,7 @@ export default function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              suppressHydrationWarning // Hinzugefügt
+              suppressHydrationWarning
             />
           </div>
           <div>
@@ -96,10 +96,10 @@ export default function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              suppressHydrationWarning // Hinzugefügt
+              suppressHydrationWarning
             />
           </div>
-          <Button type="submit" className="w-full" disabled={loading}>
+          <Button type="submit" className="w-full" disabled={loading} suppressHydrationWarning>
             {loading ? "Anmelden..." : "Anmelden"}
           </Button>
         </form>
@@ -112,6 +112,7 @@ export default function LoginPage() {
           onClick={handleDemoLogin}
           className="w-full bg-blue-600 hover:bg-blue-700 text-white"
           disabled={loading}
+          suppressHydrationWarning
         >
           {loading ? "Demo-Anmeldung..." : "Als Demo-Benutzer anmelden"}
         </Button>
