@@ -9,9 +9,28 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useState, useEffect } from "react";
-import { createClient } from "@/lib/supabase/client"; // Importiere Supabase Client
-import { Switch } from "@/components/ui/switch"; // Importiere Switch Komponente
+import { useState, useEffect, useMemo } from "react";
+import { createClient } from "@/lib/supabase/client";
+import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
+
+// Helper to calculate hours between two time strings (HH:MM)
+const calculateHours = (start: string | null, end: string | null): number | null => {
+  if (!start || !end) return null;
+  const [startH, startM] = start.split(':').map(Number);
+  const [endH, endM] = end.split(':').map(Number);
+
+  const startDate = new Date(0, 0, 0, startH, startM);
+  let endDate = new Date(0, 0, 0, endH, endM);
+
+  // If end time is earlier than start time, assume it's the next day
+  if (endDate < startDate) {
+    endDate.setDate(endDate.getDate() + 1);
+  }
+
+  const diffMs = endDate.getTime() - startDate.getTime();
+  return diffMs / (1000 * 60 * 60); // Convert milliseconds to hours
+};
 
 export const objectSchema = z.object({
   name: z.string().min(1, "Name ist erforderlich").max(100, "Name ist zu lang"),
@@ -19,29 +38,30 @@ export const objectSchema = z.object({
   description: z.string().max(500, "Beschreibung ist zu lang").optional().nullable(),
   customerId: z.string().uuid("Ungültige Kunden-ID").min(1, "Kunde ist erforderlich"),
   // Neue Felder für Wochentags-Start-/Endzeiten
-  mondayStartTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Ungültiges Zeitformat (HH:MM)").optional().nullable(),
-  mondayEndTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Ungültiges Zeitformat (HH:MM)").optional().nullable(),
-  tuesdayStartTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Ungültiges Zeitformat (HH:MM)").optional().nullable(),
-  tuesdayEndTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Ungültiges Zeitformat (HH:MM)").optional().nullable(),
-  wednesdayStartTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Ungültiges Zeitformat (HH:MM)").optional().nullable(),
-  wednesdayEndTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Ungültiges Zeitformat (HH:MM)").optional().nullable(),
-  thursdayStartTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Ungültiges Zeitformat (HH:MM)").optional().nullable(),
-  thursdayEndTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Ungültiges Zeitformat (HH:MM)").optional().nullable(),
-  fridayStartTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Ungültiges Zeitformat (HH:MM)").optional().nullable(),
-  fridayEndTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Ungültiges Zeitformat (HH:MM)").optional().nullable(),
-  saturdayStartTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Ungültiges Zeitformat (HH:MM)").optional().nullable(),
-  saturdayEndTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Ungültiges Zeitformat (HH:MM)").optional().nullable(),
-  sundayStartTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Ungültiges Zeitformat (HH:MM)").optional().nullable(),
-  sundayEndTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Ungültiges Zeitformat (HH:MM)").optional().nullable(),
+  mondayStartTime: z.union([z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Ungültiges Zeitformat (HH:MM)"), z.null()]).optional(),
+  mondayEndTime: z.union([z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Ungültiges Zeitformat (HH:MM)"), z.null()]).optional(),
+  tuesdayStartTime: z.union([z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Ungültiges Zeitformat (HH:MM)"), z.null()]).optional(),
+  tuesdayEndTime: z.union([z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Ungültiges Zeitformat (HH:MM)"), z.null()]).optional(),
+  wednesdayStartTime: z.union([z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Ungültiges Zeitformat (HH:MM)"), z.null()]).optional(),
+  wednesdayEndTime: z.union([z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Ungültiges Zeitformat (HH:MM)"), z.null()]).optional(),
+  thursdayStartTime: z.union([z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Ungültiges Zeitformat (HH:MM)"), z.null()]).optional(),
+  thursdayEndTime: z.union([z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Ungültiges Zeitformat (HH:MM)"), z.null()]).optional(),
+  fridayStartTime: z.union([z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Ungültiges Zeitformat (HH:MM)"), z.null()]).optional(),
+  fridayEndTime: z.union([z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Ungültiges Zeitformat (HH:MM)"), z.null()]).optional(),
+  saturdayStartTime: z.union([z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Ungültiges Zeitformat (HH:MM)"), z.null()]).optional(),
+  saturdayEndTime: z.union([z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Ungültiges Zeitformat (HH:MM)"), z.null()]).optional(),
+  sundayStartTime: z.union([z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Ungültiges Zeitformat (HH:MM)"), z.null()]).optional(),
+  sundayEndTime: z.union([z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Ungültiges Zeitformat (HH:MM)"), z.null()]).optional(),
   // Bestehende Felder
   defaultNotes: z.string().max(500, "Standard-Notizen sind zu lang").optional().nullable(),
   defaultPriority: z.enum(["low", "medium", "high"]).default("low"),
   defaultTimeOfDay: z.enum(["morning", "noon", "afternoon", "any"]).default("any"),
   accessMethod: z.enum(["key", "card", "other"]).default("key"),
   pin: z.string().max(50, "PIN ist zu lang").optional().nullable(),
-  // Neues Feld für Alarmgesichert
+  // Neue Felder für Alarmgesichert und Codewort
   isAlarmSecured: z.boolean().default(false),
   alarmPassword: z.string().max(50, "Alarmkennwort ist zu lang").optional().nullable(),
+  securityCodeWord: z.string().max(50, "Codewort ist zu lang").optional().nullable(),
 });
 
 export type ObjectFormInput = z.input<typeof objectSchema>;
@@ -60,11 +80,18 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
 
   const dayNames = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 
+  // State to manage which days are active (checkboxes)
+  const [activeDays, setActiveDays] = useState<Record<string, boolean>>(() => {
+    const initialActiveDays: Record<string, boolean> = {};
+    dayNames.forEach(day => {
+      const startTimeKey = `${day}StartTime` as keyof ObjectFormInput;
+      initialActiveDays[day] = !!initialData?.[startTimeKey];
+    });
+    return initialActiveDays;
+  });
+
   // Helper function to get the correct field name type for form.register
-  // This ensures TypeScript knows the exact string literal type
   const getDayTimeFieldName = (day: string, type: 'StartTime' | 'EndTime'): keyof ObjectFormValues => {
-    // This cast is safe because we know 'day' is one of the dayNames and 'type' is 'StartTime' or 'EndTime'
-    // and the schema defines all combinations (e.g., 'mondayStartTime', 'mondayEndTime')
     return `${day}${type}` as keyof ObjectFormValues;
   };
 
@@ -96,6 +123,7 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
     pin: initialData?.pin ?? null,
     isAlarmSecured: initialData?.isAlarmSecured ?? false,
     alarmPassword: initialData?.alarmPassword ?? null,
+    securityCodeWord: initialData?.securityCodeWord ?? null, // Initialwert für neues Feld
   };
 
   const form = useForm<ObjectFormValues>({
@@ -114,12 +142,27 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
   }, [supabase]);
 
   const handleFormSubmit: SubmitHandler<ObjectFormValues> = async (data) => {
-    const result = await onSubmit(data);
+    // Create a mutable copy of data
+    const dataToSubmit: ObjectFormValues = { ...data };
+
+    dayNames.forEach(day => {
+      const startTimeField = getDayTimeFieldName(day, 'StartTime');
+      const endTimeField = getDayTimeFieldName(day, 'EndTime');
+      if (!activeDays[day]) {
+        // Explicitly cast the property to its expected type to allow null assignment
+        (dataToSubmit[startTimeField] as ObjectFormValues[typeof startTimeField]) = null;
+        (dataToSubmit[endTimeField] as ObjectFormValues[typeof endTimeField]) = null;
+      }
+    });
+
+    const result = await onSubmit(dataToSubmit);
 
     if (result.success) {
       toast.success(result.message);
       if (!initialData) {
         form.reset();
+        // Reset active days state as well
+        setActiveDays(dayNames.reduce((acc, day) => ({ ...acc, [day]: false }), {}));
       }
       onSuccess?.();
     } else {
@@ -185,32 +228,64 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
       </div>
 
       <h3 className="text-lg font-semibold mt-6">Standard-Arbeitszeiten pro Wochentag</h3>
-      {dayNames.map(day => (
-        <div key={day} className="grid grid-cols-2 gap-4">
-          <div>
-            <Label htmlFor={getDayTimeFieldName(day, 'StartTime')}>{day.charAt(0).toUpperCase() + day.slice(1)} Start</Label>
-            <Input
-              id={getDayTimeFieldName(day, 'StartTime')}
-              type="time"
-              {...form.register(getDayTimeFieldName(day, 'StartTime'))}
-            />
-            {form.formState.errors[getDayTimeFieldName(day, 'StartTime')] && (
-              <p className="text-red-500 text-sm mt-1">{form.formState.errors[getDayTimeFieldName(day, 'StartTime')]?.message}</p>
+      {dayNames.map(day => {
+        const startTimeField = getDayTimeFieldName(day, 'StartTime');
+        const endTimeField = getDayTimeFieldName(day, 'EndTime');
+        // Explicitly cast to string | null to match calculateHours signature
+        const currentStartTime = form.watch(startTimeField) as string | null;
+        const currentEndTime = form.watch(endTimeField) as string | null;
+        const calculatedHours = useMemo(() => calculateHours(currentStartTime, currentEndTime), [currentStartTime, currentEndTime]);
+
+        return (
+          <div key={day} className="space-y-2 border p-3 rounded-md">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id={`${day}Active`}
+                checked={activeDays[day]}
+                onCheckedChange={(checked) => {
+                  setActiveDays(prev => ({ ...prev, [day]: !!checked }));
+                  if (!checked) {
+                    form.setValue(startTimeField, null);
+                    form.setValue(endTimeField, null);
+                  }
+                }}
+              />
+              <Label htmlFor={`${day}Active`}>{day.charAt(0).toUpperCase() + day.slice(1)}</Label>
+            </div>
+            {activeDays[day] && (
+              <div className="grid grid-cols-2 gap-4 mt-2">
+                <div>
+                  <Label htmlFor={startTimeField}>Start</Label>
+                  <Input
+                    id={startTimeField}
+                    type="time"
+                    {...form.register(startTimeField)}
+                  />
+                  {form.formState.errors[startTimeField] && (
+                    <p className="text-red-500 text-sm mt-1">{form.formState.errors[startTimeField]?.message}</p>
+                  )}
+                </div>
+                <div>
+                  <Label htmlFor={endTimeField}>Ende</Label>
+                  <Input
+                    id={endTimeField}
+                    type="time"
+                    {...form.register(endTimeField)}
+                  />
+                  {form.formState.errors[endTimeField] && (
+                    <p className="text-red-500 text-sm mt-1">{form.formState.errors[endTimeField]?.message}</p>
+                  )}
+                </div>
+                {calculatedHours !== null && (
+                  <p className="col-span-2 text-sm text-muted-foreground mt-1">
+                    Arbeitszeit: {calculatedHours.toFixed(2)} Stunden
+                  </p>
+                )}
+              </div>
             )}
           </div>
-          <div>
-            <Label htmlFor={getDayTimeFieldName(day, 'EndTime')}>{day.charAt(0).toUpperCase() + day.slice(1)} Ende</Label>
-            <Input
-              id={getDayTimeFieldName(day, 'EndTime')}
-              type="time"
-              {...form.register(getDayTimeFieldName(day, 'EndTime'))}
-            />
-            {form.formState.errors[getDayTimeFieldName(day, 'EndTime')] && (
-              <p className="text-red-500 text-sm mt-1">{form.formState.errors[getDayTimeFieldName(day, 'EndTime')]?.message}</p>
-            )}
-          </div>
-        </div>
-      ))}
+        );
+      })}
 
       <h3 className="text-lg font-semibold mt-6">Standard-Auftragseinstellungen für dieses Objekt</h3>
       <div>
@@ -301,17 +376,30 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
       </div>
 
       {isAlarmSecured && (
-        <div>
-          <Label htmlFor="alarmPassword">Alarmkennwort (optional)</Label>
-          <Input
-            id="alarmPassword"
-            {...form.register("alarmPassword")}
-            placeholder="Alarmkennwort"
-          />
-          {form.formState.errors.alarmPassword && (
-            <p className="text-red-500 text-sm mt-1">{form.formState.errors.alarmPassword.message}</p>
-          )}
-        </div>
+        <>
+          <div>
+            <Label htmlFor="alarmPassword">Alarmkennwort (optional)</Label>
+            <Input
+              id="alarmPassword"
+              {...form.register("alarmPassword")}
+              placeholder="Alarmkennwort"
+            />
+            {form.formState.errors.alarmPassword && (
+              <p className="text-red-500 text-sm mt-1">{form.formState.errors.alarmPassword.message}</p>
+            )}
+          </div>
+          <div>
+            <Label htmlFor="securityCodeWord">Codewort für Security (optional)</Label>
+            <Input
+              id="securityCodeWord"
+              {...form.register("securityCodeWord")}
+              placeholder="Codewort für Security"
+            />
+            {form.formState.errors.securityCodeWord && (
+              <p className="text-red-500 text-sm mt-1">{form.formState.errors.securityCodeWord.message}</p>
+            )}
+          </div>
+        </>
       )}
 
       <Button type="submit" disabled={form.formState.isSubmitting}>
