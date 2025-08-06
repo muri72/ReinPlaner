@@ -13,7 +13,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } => "@/components/ui/select";
 import { useState, useEffect } from "react";
 
 export const taskSchema = z.object({
@@ -34,13 +34,12 @@ interface TaskFormProps {
 
 export function TaskForm({ initialData, onSubmit, submitButtonText, onSuccess }: TaskFormProps) {
   const form = useForm<TaskFormValues>({
-    resolver: zodResolver(taskSchema),
+    resolver: zodResolver<TaskFormValues>(taskSchema), // Explizite Typisierung des Resolvers
     defaultValues: {
       title: initialData?.title ?? "",
       description: initialData?.description ?? undefined,
       dueDate: initialData?.dueDate ? new Date(initialData.dueDate) : undefined,
-      // Korrigiert: Explizite Prüfung auf undefined, um die Typinferenz zu verbessern
-      status: initialData?.status !== undefined ? initialData.status : "pending",
+      status: initialData?.status ?? "pending",
     },
   });
 
