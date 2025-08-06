@@ -425,7 +425,9 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
                     placeholder="Stunden"
                     value={dayHoursInputs[day]}
                     onChange={(e) => {
-                      const value = e.target.value;
+                      let value = e.target.value;
+                      // Replace comma with dot for parsing
+                      value = value.replace(',', '.');
                       setDayHoursInputs(prev => ({ ...prev, [day]: value }));
 
                       const parsedHours = parseFloat(value);
