@@ -24,15 +24,6 @@ export const taskSchema = z.object({
 
 export type TaskFormValues = z.infer<typeof taskSchema>;
 
-// Eine separate Typdefinition für die defaultValues, die 'status' als optional erlaubt.
-// Dies hilft, die Typkompatibilität mit zodResolver zu gewährleisten, wenn z.default() verwendet wird.
-type DefaultFormValues = {
-  title: string;
-  description?: string;
-  dueDate?: Date | null;
-  status?: "pending" | "in_progress" | "completed";
-};
-
 interface TaskFormProps {
   initialData?: Partial<TaskFormValues>;
   onSubmit: (data: TaskFormValues) => Promise<{ success: boolean; message: string }>;
@@ -41,17 +32,22 @@ interface TaskFormProps {
 }
 
 export function TaskForm({ initialData, onSubmit, submitButtonText, onSuccess }: TaskFormProps) {
-  const defaultValues: DefaultFormValues = {
+  // FIX: Sicherstellen, dass der Status immer ein gültiger Enum-Wert ist
+  const resolvedStatus: TaskFormValues["status"] = 
+    (initialData?.status === "pending" || initialData?.status === "in_progress" || initialData?.status === "completed")
+      ? initialData.status
+      : "pending";
+
+  const defaultValues: TaskFormValues = {
     title: initialData?.title ?? "",
     description: initialData?.description ?? undefined,
     dueDate: initialData?.dueDate ? new Date(initialData.dueDate) : undefined,
-    status: initialData?.status, // initialData.status kann undefined sein, Zod's .default() wird es behandeln
+    status: resolvedStatus, 
   };
 
   const form = useForm<TaskFormValues>({
     resolver: zodResolver(taskSchema),
-    // FIX: defaultValues als TaskFormValues casten, um Typkonflikte zu lösen
-    defaultValues: defaultValues as TaskFormValues, 
+    defaultValues: defaultValues,
   });
 
   const handleFormSubmit = async (data: TaskFormValues): Promise<void> => {
@@ -59,7 +55,7 @@ export function TaskForm({ initialData, onSubmit, submitButtonText, onSuccess }:
 
     if (result.success) {
       toast.success(result.message);
-      if (!initialData) {
+      if (!initialData) { // Nur zurücksetzen, wenn es ein neues Formular ist (nicht Bearbeiten)
         form.reset();
       }
       onSuccess?.();
