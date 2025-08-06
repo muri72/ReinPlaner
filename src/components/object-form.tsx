@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react"; // Import useRef
 import { createClient } from "@/lib/supabase/client";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -30,6 +30,32 @@ const calculateHours = (start: string | null, end: string | null): number | null
 
   const diffMs = endDate.getTime() - startDate.getTime();
   return diffMs / (1000 * 60 * 60); // Convert milliseconds to hours
+};
+
+// Helper to generate times from hours and timeOfDay
+const generateTimesFromHours = (hours: number, timeOfDay: ObjectFormValues['defaultTimeOfDay']): { startTime: string, endTime: string } => {
+  let startHour: number;
+  switch (timeOfDay) {
+    case 'morning': startHour = 8; break; // 8 AM
+    case 'noon': startHour = 12; break; // 12 PM
+    case 'afternoon': startHour = 16; break; // 4 PM
+    case 'any': default: startHour = 9; break; // Default to 9 AM for 'any'
+  }
+
+  const totalMinutes = hours * 60;
+  const endHour = startHour + Math.floor(totalMinutes / 60);
+  const endMinute = Math.round(totalMinutes % 60);
+
+  const formatTime = (h: number, m: number) => {
+    const date = new Date();
+    date.setHours(h, m, 0, 0);
+    return date.toTimeString().slice(0, 5); // "HH:MM"
+  };
+
+  return {
+    startTime: formatTime(startHour, 0),
+    endTime: formatTime(endHour, endMinute),
+  };
 };
 
 export const objectSchema = z.object({
@@ -90,6 +116,23 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
     return initialActiveDays;
   });
 
+  // Local state for hours input for each day
+  const [dayHoursInputs, setDayHoursInputs] = useState<Record<string, string>>(() => {
+    const initialHours: Record<string, string> = {};
+    dayNames.forEach(day => {
+      // Explicitly cast to string | null to resolve the TypeScript error
+      const startTime = (initialData?.[`${day}StartTime` as keyof ObjectFormInput] ?? null) as string | null;
+      const endTime = (initialData?.[`${day}EndTime` as keyof ObjectFormInput] ?? null) as string | null;
+      const hours = calculateHours(startTime, endTime);
+      initialHours[day] = hours !== null ? hours.toFixed(2) : '';
+    });
+    return initialHours;
+  });
+
+  // Ref to track if the change originated from the hours input to prevent infinite loops
+  const isUpdatingFromHoursInputRef = useRef<Record<string, boolean>>({});
+  dayNames.forEach(day => isUpdatingFromHoursInputRef.current[day] = false);
+
   // Helper function to get the correct field name type for form.register
   const getDayTimeFieldName = (day: string, type: 'StartTime' | 'EndTime'): keyof ObjectFormValues => {
     return `${day}${type}` as keyof ObjectFormValues;
@@ -131,6 +174,46 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
     defaultValues: resolvedDefaultValues,
   });
 
+  // Watch defaultTimeOfDay for changes
+  const defaultTimeOfDay = form.watch("defaultTimeOfDay");
+
+  // Effect to synchronize hours input with time inputs
+  useEffect(() => {
+    dayNames.forEach(day => {
+      const startTimeField = getDayTimeFieldName(day, 'StartTime');
+      const endTimeField = getDayTimeFieldName(day, 'EndTime');
+
+      const currentStartTime = form.getValues(startTimeField) as string | null;
+      const currentEndTime = form.getValues(endTimeField) as string | null;
+
+      // Only update hours input if the change didn't originate from the hours input itself
+      if (!isUpdatingFromHoursInputRef.current[day]) {
+        const calculated = calculateHours(currentStartTime, currentEndTime);
+        const newHoursValue = calculated !== null ? calculated.toFixed(2) : '';
+        if (newHoursValue !== dayHoursInputs[day]) {
+          setDayHoursInputs(prev => ({ ...prev, [day]: newHoursValue }));
+        }
+      }
+      // Reset the ref flag after a short delay to allow form.setValue to complete
+      if (isUpdatingFromHoursInputRef.current[day]) {
+        setTimeout(() => {
+          isUpdatingFromHoursInputRef.current[day] = false;
+        }, 50); // Small delay to ensure form.setValue has propagated
+      }
+    });
+  }, [
+    form.watch('mondayStartTime'), form.watch('mondayEndTime'),
+    form.watch('tuesdayStartTime'), form.watch('tuesdayEndTime'),
+    form.watch('wednesdayStartTime'), form.watch('wednesdayEndTime'),
+    form.watch('thursdayStartTime'), form.watch('thursdayEndTime'),
+    form.watch('fridayStartTime'), form.watch('fridayEndTime'),
+    form.watch('saturdayStartTime'), form.watch('saturdayEndTime'),
+    form.watch('sundayStartTime'), form.watch('sundayEndTime'),
+    dayHoursInputs, // Include dayHoursInputs to ensure effect re-runs if its state changes externally
+    dayNames,
+  ]);
+
+
   // Kunden für Dropdown laden
   useEffect(() => {
     const fetchCustomers = async () => {
@@ -163,6 +246,7 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
         form.reset();
         // Reset active days state as well
         setActiveDays(dayNames.reduce((acc, day) => ({ ...acc, [day]: false }), {}));
+        setDayHoursInputs(dayNames.reduce((acc, day) => ({ ...acc, [day]: '' }), {})); // Reset hours inputs
       }
       onSuccess?.();
     } else {
@@ -279,7 +363,6 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
       {dayNames.map(day => {
         const startTimeField = getDayTimeFieldName(day, 'StartTime');
         const endTimeField = getDayTimeFieldName(day, 'EndTime');
-        // Explicitly cast to string | null to match calculateHours signature
         const currentStartTime = form.watch(startTimeField) as string | null;
         const currentEndTime = form.watch(endTimeField) as string | null;
         const calculatedHours = useMemo(() => calculateHours(currentStartTime, currentEndTime), [currentStartTime, currentEndTime]);
@@ -295,19 +378,24 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
                   if (!checked) {
                     form.setValue(startTimeField, null);
                     form.setValue(endTimeField, null);
+                    setDayHoursInputs(prev => ({ ...prev, [day]: '' })); // Clear hours input as well
                   }
                 }}
               />
               <Label htmlFor={`${day}Active`}>{day.charAt(0).toUpperCase() + day.slice(1)}</Label>
             </div>
             {activeDays[day] && (
-              <div className="grid grid-cols-2 gap-4 mt-2">
+              <div className="grid grid-cols-3 gap-4 mt-2 items-end"> {/* Changed to 3 columns */}
                 <div>
                   <Label htmlFor={startTimeField}>Start</Label>
                   <Input
                     id={startTimeField}
                     type="time"
-                    {...form.register(startTimeField)}
+                    {...form.register(startTimeField, {
+                      onChange: () => {
+                        isUpdatingFromHoursInputRef.current[day] = false; // Mark that change came from time input
+                      }
+                    })}
                   />
                   {form.formState.errors[startTimeField] && (
                     <p className="text-red-500 text-sm mt-1">{form.formState.errors[startTimeField]?.message}</p>
@@ -318,17 +406,43 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
                   <Input
                     id={endTimeField}
                     type="time"
-                    {...form.register(endTimeField)}
+                    {...form.register(endTimeField, {
+                      onChange: () => {
+                        isUpdatingFromHoursInputRef.current[day] = false; // Mark that change came from time input
+                      }
+                    })}
                   />
                   {form.formState.errors[endTimeField] && (
                     <p className="text-red-500 text-sm mt-1">{form.formState.errors[endTimeField]?.message}</p>
                   )}
                 </div>
-                {calculatedHours !== null && (
-                  <p className="col-span-2 text-sm text-muted-foreground mt-1">
-                    Arbeitszeit: {calculatedHours.toFixed(2)} Stunden
-                  </p>
-                )}
+                <div>
+                  <Label htmlFor={`${day}Hours`}>Stunden</Label>
+                  <Input
+                    id={`${day}Hours`}
+                    type="number"
+                    step="0.01"
+                    placeholder="Stunden"
+                    value={dayHoursInputs[day]}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setDayHoursInputs(prev => ({ ...prev, [day]: value }));
+
+                      const parsedHours = parseFloat(value);
+                      if (!isNaN(parsedHours) && parsedHours > 0) {
+                        isUpdatingFromHoursInputRef.current[day] = true; // Mark that change came from hours input
+                        const { startTime, endTime } = generateTimesFromHours(parsedHours, defaultTimeOfDay);
+                        form.setValue(startTimeField, startTime);
+                        form.setValue(endTimeField, endTime);
+                      } else {
+                        isUpdatingFromHoursInputRef.current[day] = true; // Mark that change came from hours input
+                        form.setValue(startTimeField, null);
+                        form.setValue(endTimeField, null);
+                      }
+                    }}
+                  />
+                  {/* No error message for hours input as it's derived */}
+                </div>
               </div>
             )}
           </div>
