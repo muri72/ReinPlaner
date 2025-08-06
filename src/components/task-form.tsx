@@ -5,7 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
+import { Button } => "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -38,12 +38,12 @@ export function TaskForm({ initialData, onSubmit, submitButtonText, onSuccess }:
   const resolvedDefaultValues: TaskFormValues = {
     title: initialData?.title ?? "",
     description: initialData?.description ?? undefined,
-    dueDate: initialData?.dueDate ? new Date(initialData.dueDate) : null, // dueDate kann null sein
+    dueDate: initialData?.dueDate ? new Date(initialData.dueDate) : undefined, // FIX: undefined statt null für optionales Datum
     status: initialData?.status ?? "pending", // status ist immer ein gültiger Enum-Wert
   };
 
   const form = useForm<TaskFormValues>({
-    resolver: zodResolver(taskSchema),
+    resolver: zodResolver(taskSchema as z.ZodSchema<TaskFormValues>), // FIX: Explizite Typumwandlung des Schemas
     defaultValues: resolvedDefaultValues, // Verwende die explizit typisierten Standardwerte
   });
 
