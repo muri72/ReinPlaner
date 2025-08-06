@@ -2,8 +2,10 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { MadeWithDyad } from "@/components/made-with-dyad";
-import { ProfileUpdateForm } from "@/components/profile-update-form"; // Importiere die neue Komponente
-import { signOut } from "@/app/dashboard/actions"; // Importiere die Server-Aktion
+import { ProfileUpdateForm } from "@/components/profile-update-form";
+import { signOut } from "@/app/dashboard/actions";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Users, Building, UsersRound, Briefcase, Clock } from "lucide-react"; // Neue Icons
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -20,36 +22,102 @@ export default async function DashboardPage() {
     .eq('id', user.id)
     .single();
 
-  if (profileError && profileError.code !== 'PGRST116') { // PGRST116 bedeutet "keine Zeilen gefunden"
+  if (profileError && profileError.code !== 'PGRST116') {
     console.error("Fehler beim Laden des Profils:", profileError);
-    // Hier könnte man eine Toast-Nachricht hinzufügen, aber Server-Komponenten können keine Toasts direkt anzeigen.
-    // Die Fehlerbehandlung für das Laden des Profils ist eher für das Debugging gedacht.
   }
 
+  // Daten für das Dashboard abrufen
+  const { count: customerCount, error: customerError } = await supabase
+    .from('customers')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', user.id);
+
+  const { count: objectCount, error: objectError } = await supabase
+    .from('objects')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', user.id);
+
+  const { count: employeeCount, error: employeeError } = await supabase
+    .from('employees')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', user.id);
+
+  const { count: pendingOrderCount, error: pendingOrderError } = await supabase
+    .from('orders')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', user.id)
+    .eq('status', 'pending');
+
+  if (customerError) console.error("Fehler beim Laden der Kundenzahl:", customerError);
+  if (objectError) console.error("Fehler beim Laden der Objektzahl:", objectError);
+  if (employeeError) console.error("Fehler beim Laden der Mitarbeiterzahl:", employeeError);
+  if (pendingOrderError) console.error("Fehler beim Laden der ausstehenden Aufträge:", pendingOrderError);
+
   return (
-    <div className="grid grid-rows-[1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-1 items-center sm:items-start">
-        <h1 className="text-3xl font-bold">
-          Willkommen im Dashboard, {profile?.first_name || user.email}!
-        </h1>
-        {profile?.first_name && profile?.last_name && (
-          <p className="text-lg">
-            Ihr vollständiger Name: {profile.first_name} {profile.last_name}
-          </p>
-        )}
+    <div className="p-8 space-y-8">
+      <h1 className="text-3xl font-bold">
+        Willkommen im Dashboard, {profile?.first_name || user.email}!
+      </h1>
 
-        <h2 className="text-2xl font-bold mt-8">Profil aktualisieren</h2>
-        <ProfileUpdateForm
-          initialData={{
-            firstName: profile?.first_name || null,
-            lastName: profile?.last_name || null,
-          }}
-        />
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Gesamtkunden</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{customerCount ?? 0}</div>
+            <p className="text-xs text-muted-foreground">Kunden in Ihrem System</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Gesamtobjekte</CardTitle>
+            <Building className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{objectCount ?? 0}</div>
+            <p className="text-xs text-muted-foreground">Objekte, die Sie verwalten</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Gesamte Mitarbeiter</CardTitle>
+            <UsersRound className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{employeeCount ?? 0}</div>
+            <p className="text-xs text-muted-foreground">Mitarbeiter in Ihrem Team</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Ausstehende Aufträge</CardTitle>
+            <Briefcase className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{pendingOrderCount ?? 0}</div>
+            <p className="text-xs text-muted-foreground">Aufträge, die noch bearbeitet werden müssen</p>
+          </CardContent>
+        </Card>
+      </div>
 
-        <form action={signOut} className="mt-8">
-          <Button type="submit">Abmelden</Button>
-        </form>
-      </main>
+      <h2 className="text-2xl font-bold mt-8">Ihr Profil</h2>
+      {profile?.first_name && profile?.last_name && (
+        <p className="text-lg">
+          Ihr vollständiger Name: {profile.first_name} {profile.last_name}
+        </p>
+      )}
+      <ProfileUpdateForm
+        initialData={{
+          firstName: profile?.first_name || null,
+          lastName: profile?.last_name || null,
+        }}
+      />
+
+      <form action={signOut} className="mt-8">
+        <Button type="submit">Abmelden</Button>
+      </form>
       <MadeWithDyad />
     </div>
   );
