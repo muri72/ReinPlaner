@@ -43,15 +43,19 @@ export function TaskForm({ initialData, onSubmit, submitButtonText, onSuccess }:
     status: initialData?.status, // Hier kann status undefined sein, was vom Input-Typ erlaubt ist
   };
 
-  // FIX: Ändere den generischen Typ von useForm auf TaskFormInput
+  // Der generische Typ von useForm sollte TaskFormInput sein, da dies der Typ der Formularfelder ist
   const form = useForm<TaskFormInput>({
     resolver: zodResolver(taskSchema),
     defaultValues: defaultValues,
   });
 
-  // handleFormSubmit erhält Daten vom Typ TaskFormValues, da handleSubmit die Zod-Transformationen anwendet
-  const handleFormSubmit = async (data: TaskFormValues): Promise<void> => {
-    const result = await onSubmit(data);
+  // FIX: handleFormSubmit erhält Daten vom Typ TaskFormInput
+  const handleFormSubmit = async (data: TaskFormInput): Promise<void> => {
+    // Die Daten werden hier explizit in den Output-Typ des Schemas umgewandelt
+    // (z.B. wird der Standardwert für 'status' angewendet)
+    const parsedData = taskSchema.parse(data);
+
+    const result = await onSubmit(parsedData); // onSubmit erwartet TaskFormValues
 
     if (result.success) {
       toast.success(result.message);
