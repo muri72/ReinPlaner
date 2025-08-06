@@ -1,0 +1,75 @@
+import { createClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
+import { CustomerForm } from "@/components/customer-form";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { createCustomer } from "./actions";
+import { CustomerEditDialog } from "@/components/customer-edit-dialog";
+import { DeleteCustomerButton } from "@/components/delete-customer-button";
+import { Mail, Phone, MapPin } from "lucide-react"; // Icons für Kontaktdaten
+
+export default async function CustomersPage() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  const { data: customers, error } = await supabase
+    .from('customers')
+    .select('*')
+    .eq('user_id', user.id)
+    .order('name', { ascending: true });
+
+  if (error) {
+    console.error("Fehler beim Laden der Kunden:", error);
+    return <div className="p-8">Fehler beim Laden der Kunden.</div>;
+  }
+
+  return (
+    <div className="p-8 space-y-8">
+      <h1 className="text-3xl font-bold">Ihre Kunden</h1>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {customers.length === 0 ? (
+          <p className="col-span-full text-center text-muted-foreground">Noch keine Kunden vorhanden. Fügen Sie einen hinzu!</p>
+        ) : (
+          customers.map((customer) => (
+            <Card key={customer.id}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-lg font-medium">{customer.name}</CardTitle>
+                <div className="flex items-center space-x-2">
+                  <CustomerEditDialog customer={customer} />
+                  <DeleteCustomerButton customerId={customer.id} />
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {customer.address && (
+                  <div className="flex items-center text-sm text-muted-foreground">
+                    <MapPin className="mr-2 h-4 w-4 flex-shrink-0" />
+                    <span>{customer.address}</span>
+                  </div>
+                )}
+                {customer.contact_email && (
+                  <div className="flex items-center text-sm text-muted-foreground">
+                    <Mail className="mr-2 h-4 w-4 flex-shrink-0" />
+                    <span>{customer.contact_email}</span>
+                  </div>
+                )}
+                {customer.contact_phone && (
+                  <div className="flex items-center text-sm text-muted-foreground">
+                    <Phone className="mr-2 h-4 w-4 flex-shrink-0" />
+                    <span>{customer.contact_phone}</span>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ))
+        )}
+      </div>
+
+      <h2 className="text-2xl font-bold mt-8">Neuen Kunden hinzufügen</h2>
+      <CustomerForm onSubmit={createCustomer} submitButtonText="Kunden hinzufügen" />
+    </div>
+  );
+}
