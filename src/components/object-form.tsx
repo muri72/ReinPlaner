@@ -240,7 +240,7 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
         <Input
           id="name"
           {...form.register("name")}
-          placeholder="Z.B. Hauptgebäude"
+          placeholder="Z.B. Firmenname GmbH"
         />
         {form.formState.errors.name && (
           <p className="text-red-500 text-sm mt-1">{form.formState.errors.name.message}</p>
