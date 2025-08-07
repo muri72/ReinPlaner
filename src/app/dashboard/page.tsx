@@ -5,7 +5,8 @@ import { MadeWithDyad } from "@/components/made-with-dyad";
 import { ProfileUpdateForm } from "@/components/profile-update-form";
 import { signOut } from "@/app/dashboard/actions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Building, UsersRound, Briefcase, Clock } from "lucide-react"; // Neue Icons
+import { Users, Building, UsersRound, Briefcase, Clock } from "lucide-react";
+import { OrderStatusChart } from "@/components/order-status-chart"; // Neuer Import
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -48,10 +49,29 @@ export default async function DashboardPage() {
     .eq('user_id', user.id)
     .eq('status', 'pending');
 
+  // Daten für die Auftragsstatus-Grafik abrufen
+  const { data: ordersData, error: ordersError } = await supabase
+    .from('orders')
+    .select('status')
+    .eq('user_id', user.id);
+
   if (customerError) console.error("Fehler beim Laden der Kundenzahl:", customerError);
   if (objectError) console.error("Fehler beim Laden der Objektzahl:", objectError);
   if (employeeError) console.error("Fehler beim Laden der Mitarbeiterzahl:", employeeError);
   if (pendingOrderError) console.error("Fehler beim Laden der ausstehenden Aufträge:", pendingOrderError);
+  if (ordersError) console.error("Fehler beim Laden der Auftragsstatusdaten:", ordersError);
+
+  // Auftragsstatus-Zählungen für die Grafik aufbereiten
+  const statusCounts = ordersData?.reduce((acc, order) => {
+    acc[order.status] = (acc[order.status] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>) || {};
+
+  const chartData = [
+    { name: 'Ausstehend', value: statusCounts['pending'] || 0 },
+    { name: 'In Bearbeitung', value: statusCounts['in_progress'] || 0 },
+    { name: 'Abgeschlossen', value: statusCounts['completed'] || 0 },
+  ];
 
   return (
     <div className="p-8 space-y-8">
@@ -100,6 +120,11 @@ export default async function DashboardPage() {
             <p className="text-xs text-muted-foreground">Aufträge, die noch bearbeitet werden müssen</p>
           </CardContent>
         </Card>
+      </div>
+
+      {/* Neue Sektion für die Grafik */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2 mt-8">
+        <OrderStatusChart data={chartData} />
       </div>
 
       <h2 className="text-2xl font-bold mt-8">Ihr Profil</h2>
