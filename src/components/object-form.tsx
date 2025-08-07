@@ -236,7 +236,7 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
   return (
     <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 w-full max-w-md">
       <div>
-        <Label htmlFor="name">Objektname</Label>
+        <Label htmlFor="name">Name</Label> {/* Hier geändert */}
         <Input
           id="name"
           {...form.register("name")}
