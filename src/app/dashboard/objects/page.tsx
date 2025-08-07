@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { createObject } from "./actions";
 import { ObjectEditDialog } from "@/components/object-edit-dialog";
 import { DeleteObjectButton } from "@/components/delete-object-button";
-import { MapPin, FileText, Clock, Key, Lock, ShieldCheck } from "lucide-react"; // Neue Icons
+import { MapPin, FileText, Clock, Key, Lock, ShieldCheck, UserRound } from "lucide-react"; // Neue Icons
 import { SearchInput } from "@/components/search-input";
 import { Badge } from "@/components/ui/badge";
 
@@ -19,6 +19,9 @@ interface DisplayObject {
   description: string | null;
   created_at: string | null;
   customer_name: string | null;
+  customer_contact_id: string | null; // Neues Feld
+  object_leader_first_name: string | null; // Name des Objektleiters
+  object_leader_last_name: string | null; // Name des Objektleiters
   // Neue Felder
   notes: string | null;
   priority: string;
@@ -88,7 +91,8 @@ export default async function ObjectsPage({
       .from('objects')
       .select(`
         *,
-        customers ( name )
+        customers ( name ),
+        customer_contacts ( first_name, last_name )
       `)
       .eq('user_id', user.id)
       .order('name', { ascending: true });
@@ -102,6 +106,9 @@ export default async function ObjectsPage({
       description: obj.description,
       created_at: obj.created_at,
       customer_name: obj.customers?.name || null,
+      customer_contact_id: obj.customer_contact_id, // Neues Feld
+      object_leader_first_name: obj.customer_contacts?.first_name || null, // Name des Objektleiters
+      object_leader_last_name: obj.customer_contacts?.last_name || null, // Name des Objektleiters
       // Neue Felder mappen
       notes: obj.notes,
       priority: obj.priority,
@@ -162,6 +169,12 @@ export default async function ObjectsPage({
               <CardContent className="space-y-2">
                 {object.customer_name && (
                   <p className="text-sm text-muted-foreground">Kunde: {object.customer_name}</p>
+                )}
+                {object.object_leader_first_name && object.object_leader_last_name && (
+                  <div className="flex items-center text-sm text-muted-foreground">
+                    <UserRound className="mr-2 h-4 w-4 flex-shrink-0" />
+                    <span>Objektleiter: {object.object_leader_first_name} {object.object_leader_last_name}</span>
+                  </div>
                 )}
                 {object.address && (
                   <div className="flex items-center text-sm text-muted-foreground">

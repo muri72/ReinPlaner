@@ -64,6 +64,7 @@ export const objectSchema = z.object({
   address: z.string().min(1, "Adresse ist erforderlich").max(255, "Adresse ist zu lang"),
   description: z.string().max(500, "Beschreibung ist zu lang").optional().nullable(),
   customerId: z.string().uuid("Ungültige Kunden-ID").min(1, "Kunde ist erforderlich"),
+  customerContactId: z.string().uuid("Ungültige Kontakt-ID").optional().nullable(), // Neues Feld
   // Neue Felder für Wochentags-Start-/Endzeiten
   mondayStartTime: z.union([z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Ungültiges Zeitformat (HH:MM)"), z.null()]).optional(),
   mondayEndTime: z.union([z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Ungültiges Zeitformat (HH:MM)"), z.null()]).optional(),
@@ -104,6 +105,7 @@ interface ObjectFormProps {
 export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess }: ObjectFormProps) {
   const supabase = createClient();
   const [customers, setCustomers] = useState<{ id: string; name: string }[]>([]);
+  const [customerContacts, setCustomerContacts] = useState<{ id: string; first_name: string; last_name: string; customer_id: string }[]>([]); // State für Kundenkontakte
 
   const dayNames = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 
@@ -139,6 +141,7 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
     address: initialData?.address ?? "",
     description: initialData?.description ?? null,
     customerId: initialData?.customerId ?? "",
+    customerContactId: initialData?.customerContactId ?? null, // Initialwert für neues Feld
     // Initialwerte für neue Zeitfelder
     mondayStartTime: initialData?.mondayStartTime ?? null,
     mondayEndTime: initialData?.mondayEndTime ?? null,
@@ -170,8 +173,9 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
     defaultValues: resolvedDefaultValues,
   });
 
-  // Watch timeOfDay for changes
+  // Watch timeOfDay and customerId for changes
   const timeOfDay = form.watch("timeOfDay");
+  const selectedCustomerId = form.watch("customerId");
 
   // Debounced function to update time fields based on hours input
   const debouncedUpdateTimes = useDebouncedCallback((day: string, hoursValue: string, timeOfDay: ObjectFormValues['timeOfDay']) => {
@@ -190,15 +194,35 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
   }, 500); // Debounce for 500ms
 
 
-  // Kunden für Dropdown laden
+  // Kunden und Kundenkontakte für Dropdowns laden
   useEffect(() => {
-    const fetchCustomers = async () => {
-      const { data, error } = await supabase.from('customers').select('id, name').order('name', { ascending: true });
-      if (data) setCustomers(data);
-      if (error) console.error("Fehler beim Laden der Kunden:", error);
+    const fetchData = async () => {
+      const { data: customersData, error: customersError } = await supabase.from('customers').select('id, name').order('name', { ascending: true });
+      if (customersData) setCustomers(customersData);
+      if (customersError) console.error("Fehler beim Laden der Kunden:", customersError);
     };
-    fetchCustomers();
+    fetchData();
   }, [supabase]);
+
+  // Kundenkontakte laden, wenn sich der ausgewählte Kunde ändert
+  useEffect(() => {
+    const fetchCustomerContacts = async () => {
+      if (selectedCustomerId) {
+        const { data: contactsData, error: contactsError } = await supabase
+          .from('customer_contacts')
+          .select('id, first_name, last_name, customer_id')
+          .eq('customer_id', selectedCustomerId)
+          .order('last_name', { ascending: true });
+        if (contactsData) setCustomerContacts(contactsData);
+        if (contactsError) console.error("Fehler beim Laden der Kundenkontakte:", contactsError);
+      } else {
+        setCustomerContacts([]); // Kontakte leeren, wenn kein Kunde ausgewählt ist
+        form.setValue("customerContactId", null); // Objektleiter zurücksetzen
+      }
+    };
+    fetchCustomerContacts();
+  }, [selectedCustomerId, supabase, form]);
+
 
   const handleFormSubmit: SubmitHandler<ObjectFormValues> = async (data) => {
     // Create a mutable copy of data
@@ -236,7 +260,7 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
   return (
     <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 w-full max-w-md">
       <div>
-        <Label htmlFor="name">Name</Label> {/* Hier geändert */}
+        <Label htmlFor="name">Name</Label>
         <Input
           id="name"
           {...form.register("name")}
@@ -284,6 +308,23 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
         </Select>
         {form.formState.errors.customerId && (
           <p className="text-red-500 text-sm mt-1">{form.formState.errors.customerId.message}</p>
+        )}
+      </div>
+      <div>
+        <Label htmlFor="customerContactId">Objektleiter (Kundenkontakt, optional)</Label>
+        <Select onValueChange={(value) => form.setValue("customerContactId", value === "unassigned" ? null : value)} value={form.watch("customerContactId") || "unassigned"} disabled={!selectedCustomerId}>
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="Objektleiter auswählen" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="unassigned">Kein Objektleiter zugewiesen</SelectItem>
+            {customerContacts.map(contact => (
+              <SelectItem key={contact.id} value={contact.id}>{contact.first_name} {contact.last_name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {form.formState.errors.customerContactId && (
+          <p className="text-red-500 text-sm mt-1">{form.formState.errors.customerContactId.message}</p>
         )}
       </div>
 

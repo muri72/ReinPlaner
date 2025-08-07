@@ -14,6 +14,7 @@ interface ObjectEditDialogProps {
     address: string;
     description: string | null;
     customer_id: string;
+    customer_contact_id: string | null; // Neues Feld
     // Neue Felder
     notes: string | null;
     priority: string;
@@ -68,6 +69,7 @@ export function ObjectEditDialog({ object }: ObjectEditDialogProps) {
             address: object.address,
             description: object.description,
             customerId: object.customer_id,
+            customerContactId: object.customer_contact_id, // Neues Feld
             notes: object.notes,
             priority: object.priority as ObjectFormValues["priority"],
             timeOfDay: object.time_of_day as ObjectFormValues["timeOfDay"],

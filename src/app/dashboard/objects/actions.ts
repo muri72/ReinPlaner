@@ -17,6 +17,7 @@ export async function createObject(data: ObjectFormValues) {
     address,
     description,
     customerId,
+    customerContactId, // Neues Feld
     mondayStartTime,
     mondayEndTime,
     tuesdayStartTime,
@@ -31,9 +32,9 @@ export async function createObject(data: ObjectFormValues) {
     saturdayEndTime,
     sundayStartTime,
     sundayEndTime,
-    notes, // Geändert von defaultNotes
-    priority, // Geändert von defaultPriority
-    timeOfDay, // Geändert von defaultTimeOfDay
+    notes,
+    priority,
+    timeOfDay,
     accessMethod,
     pin,
     isAlarmSecured,
@@ -49,6 +50,7 @@ export async function createObject(data: ObjectFormValues) {
       address,
       description,
       customer_id: customerId,
+      customer_contact_id: customerContactId, // Neues Feld
       monday_start_time: mondayStartTime,
       monday_end_time: mondayEndTime,
       tuesday_start_time: tuesdayStartTime,
@@ -63,9 +65,9 @@ export async function createObject(data: ObjectFormValues) {
       saturday_end_time: saturdayEndTime,
       sunday_start_time: sundayStartTime,
       sunday_end_time: sundayEndTime,
-      notes: notes, // Geändert von default_notes
-      priority: priority, // Geändert von default_priority
-      time_of_day: timeOfDay, // Geändert von default_time_of_day
+      notes: notes,
+      priority: priority,
+      time_of_day: timeOfDay,
       access_method: accessMethod,
       pin,
       is_alarm_secured: isAlarmSecured,
@@ -97,6 +99,7 @@ export async function updateObject(objectId: string, data: ObjectFormValues) {
       address: data.address,
       description: data.description,
       customer_id: data.customerId,
+      customer_contact_id: data.customerContactId, // Neues Feld
       monday_start_time: data.mondayStartTime,
       monday_end_time: data.mondayEndTime,
       tuesday_start_time: data.tuesdayStartTime,
@@ -111,9 +114,9 @@ export async function updateObject(objectId: string, data: ObjectFormValues) {
       saturday_end_time: data.saturdayEndTime,
       sunday_start_time: data.sundayStartTime,
       sunday_end_time: data.sundayEndTime,
-      notes: data.notes, // Geändert von default_notes
-      priority: data.priority, // Geändert von default_priority
-      time_of_day: data.timeOfDay, // Geändert von default_time_of_day
+      notes: data.notes,
+      priority: data.priority,
+      time_of_day: data.timeOfDay,
       access_method: data.accessMethod,
       pin: data.pin,
       is_alarm_secured: data.isAlarmSecured,
