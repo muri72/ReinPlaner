@@ -12,7 +12,7 @@ export async function createEmployee(data: EmployeeFormValues) {
     return { success: false, message: "Benutzer nicht authentifiziert." };
   }
 
-  const { firstName, lastName, email, phone, hireDate, status } = data;
+  const { firstName, lastName, email, phone, hireDate, status, contractType, hourlyRate, startDate } = data;
 
   const { error } = await supabase
     .from('employees')
@@ -24,6 +24,9 @@ export async function createEmployee(data: EmployeeFormValues) {
       phone,
       hire_date: hireDate ? hireDate.toISOString() : null,
       status,
+      contract_type: contractType,
+      hourly_rate: hourlyRate,
+      start_date: startDate ? startDate.toISOString().split('T')[0] : null, // Nur Datum speichern
     });
 
   if (error) {
@@ -52,6 +55,9 @@ export async function updateEmployee(employeeId: string, data: EmployeeFormValue
       phone: data.phone,
       hire_date: data.hireDate ? data.hireDate.toISOString() : null,
       status: data.status,
+      contract_type: data.contractType,
+      hourly_rate: data.hourlyRate,
+      start_date: data.startDate ? data.startDate.toISOString().split('T')[0] : null, // Nur Datum speichern
     })
     .eq('id', employeeId)
     .eq('user_id', user.id);

@@ -16,6 +16,10 @@ interface EmployeeEditDialogProps {
     phone: string | null;
     hire_date: string | null;
     status: string;
+    // Neue Felder
+    contract_type: string | null;
+    hourly_rate: number | null;
+    start_date: string | null;
   };
 }
 
@@ -49,6 +53,10 @@ export function EmployeeEditDialog({ employee }: EmployeeEditDialogProps) {
             phone: employee.phone,
             hireDate: employee.hire_date ? new Date(employee.hire_date) : undefined,
             status: employee.status as EmployeeFormValues["status"],
+            // Neue Felder übergeben
+            contractType: employee.contract_type as EmployeeFormValues["contractType"],
+            hourlyRate: employee.hourly_rate,
+            startDate: employee.start_date ? new Date(employee.start_date) : undefined,
           }}
           onSubmit={handleUpdate}
           submitButtonText="Änderungen speichern"

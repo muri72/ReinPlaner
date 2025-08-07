@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { createEmployee } from "./actions";
 import { EmployeeEditDialog } from "@/components/employee-edit-dialog";
 import { DeleteEmployeeButton } from "@/components/delete-employee-button";
-import { Mail, Phone, CalendarDays, UserRoundCheck, UserRoundX, UserRoundMinus } from "lucide-react";
+import { Mail, Phone, CalendarDays, UserRoundCheck, UserRoundX, UserRoundMinus, Briefcase, DollarSign } from "lucide-react"; // Neue Icons
 import { Badge } from "@/components/ui/badge";
 import { SearchInput } from "@/components/search-input"; // Importiere die SearchInput Komponente
 
@@ -107,6 +107,24 @@ export default async function EmployeesPage({
                   <div className="flex items-center text-sm text-muted-foreground">
                     <CalendarDays className="mr-2 h-4 w-4 flex-shrink-0" />
                     <span>Einstellungsdatum: {new Date(employee.hire_date).toLocaleDateString()}</span>
+                  </div>
+                )}
+                {employee.start_date && (
+                  <div className="flex items-center text-sm text-muted-foreground">
+                    <CalendarDays className="mr-2 h-4 w-4 flex-shrink-0" />
+                    <span>Vertragsstart: {new Date(employee.start_date).toLocaleDateString()}</span>
+                  </div>
+                )}
+                {employee.contract_type && (
+                  <div className="flex items-center text-sm text-muted-foreground">
+                    <Briefcase className="mr-2 h-4 w-4 flex-shrink-0" />
+                    <span>Vertragsart: <Badge variant="secondary">{employee.contract_type}</Badge></span>
+                  </div>
+                )}
+                {employee.hourly_rate !== null && employee.hourly_rate !== undefined && (
+                  <div className="flex items-center text-sm text-muted-foreground">
+                    <DollarSign className="mr-2 h-4 w-4 flex-shrink-0" />
+                    <span>Stundenlohn: {employee.hourly_rate.toFixed(2)} €</span>
                   </div>
                 )}
                 <div className="flex items-center text-sm text-muted-foreground">

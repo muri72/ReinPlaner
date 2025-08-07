@@ -22,6 +22,13 @@ export const employeeSchema = z.object({
   phone: z.string().max(50, "Telefonnummer ist zu lang").optional().nullable(),
   hireDate: z.date().optional().nullable(),
   status: z.enum(["active", "inactive", "on_leave"]).default("active"),
+  // Neue Felder
+  contractType: z.enum(["minijob", "part_time", "full_time", "fixed_term"]).default("full_time"),
+  hourlyRate: z.preprocess(
+    (val) => (val === "" ? null : Number(val)),
+    z.nullable(z.number().min(0, "Stundenlohn muss positiv sein").max(9999.99, "Stundenlohn ist zu hoch")).optional()
+  ),
+  startDate: z.date().optional().nullable(),
 });
 
 export type EmployeeFormInput = z.input<typeof employeeSchema>;
@@ -42,6 +49,10 @@ export function EmployeeForm({ initialData, onSubmit, submitButtonText, onSucces
     phone: initialData?.phone ?? null,
     hireDate: initialData?.hireDate ? new Date(initialData.hireDate) : null,
     status: initialData?.status ?? "active",
+    // Neue Initialwerte
+    contractType: initialData?.contractType ?? "full_time",
+    hourlyRate: typeof initialData?.hourlyRate === 'number' ? initialData.hourlyRate : null, // Korrektur hier
+    startDate: initialData?.startDate ? new Date(initialData.startDate) : null,
   };
 
   const form = useForm<EmployeeFormValues>({
@@ -49,15 +60,24 @@ export function EmployeeForm({ initialData, onSubmit, submitButtonText, onSucces
     defaultValues: resolvedDefaultValues,
   });
 
-  const [displayDate, setDisplayDate] = useState<string | undefined>(undefined);
+  const [displayHireDate, setDisplayHireDate] = useState<string | undefined>(undefined);
+  const [displayStartDate, setDisplayStartDate] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     if (form.watch("hireDate")) {
-      setDisplayDate(format(form.watch("hireDate")!, "PPP"));
+      setDisplayHireDate(format(form.watch("hireDate")!, "PPP"));
     } else {
-      setDisplayDate(undefined);
+      setDisplayHireDate(undefined);
     }
   }, [form.watch("hireDate")]);
+
+  useEffect(() => {
+    if (form.watch("startDate")) {
+      setDisplayStartDate(format(form.watch("startDate")!, "PPP"));
+    } else {
+      setDisplayStartDate(undefined);
+    }
+  }, [form.watch("startDate")]);
 
   const handleFormSubmit: SubmitHandler<EmployeeFormValues> = async (data) => {
     const result = await onSubmit(data);
@@ -133,7 +153,7 @@ export function EmployeeForm({ initialData, onSubmit, submitButtonText, onSucces
               )}
             >
               <CalendarIcon className="mr-2 h-4 w-4" />
-              {displayDate ? displayDate : <span>Datum auswählen</span>}
+              {displayHireDate ? displayHireDate : <span>Datum auswählen</span>}
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-auto p-0">
@@ -165,6 +185,67 @@ export function EmployeeForm({ initialData, onSubmit, submitButtonText, onSucces
           <p className="text-red-500 text-sm mt-1">{form.formState.errors.status.message}</p>
         )}
       </div>
+
+      {/* Neue Felder */}
+      <div>
+        <Label htmlFor="contractType">Vertragsart</Label>
+        <Select onValueChange={(value) => form.setValue("contractType", value as "minijob" | "part_time" | "full_time" | "fixed_term")} value={form.watch("contractType")}>
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="Vertragsart auswählen" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="minijob">Minijob</SelectItem>
+            <SelectItem value="part_time">Teilzeit</SelectItem>
+            <SelectItem value="full_time">Vollzeit</SelectItem>
+            <SelectItem value="fixed_term">Befristet</SelectItem>
+          </SelectContent>
+        </Select>
+        {form.formState.errors.contractType && (
+          <p className="text-red-500 text-sm mt-1">{form.formState.errors.contractType.message}</p>
+        )}
+      </div>
+      <div>
+        <Label htmlFor="hourlyRate">Stundenlohn (optional)</Label>
+        <Input
+          id="hourlyRate"
+          type="number"
+          step="0.01"
+          {...form.register("hourlyRate", { valueAsNumber: true })}
+          placeholder="Z.B. 12.50"
+        />
+        {form.formState.errors.hourlyRate && (
+          <p className="text-red-500 text-sm mt-1">{form.formState.errors.hourlyRate.message}</p>
+        )}
+      </div>
+      <div>
+        <Label htmlFor="startDate">Vertragsstart (optional)</Label>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant={"outline"}
+              className={cn(
+                "w-full justify-start text-left font-normal",
+                !form.watch("startDate") && "text-muted-foreground"
+              )}
+            >
+              <CalendarIcon className="mr-2 h-4 w-4" />
+              {displayStartDate ? displayStartDate : <span>Datum auswählen</span>}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0">
+            <Calendar
+              mode="single"
+              selected={form.watch("startDate") || undefined}
+              onSelect={(date) => form.setValue("startDate", date || null)}
+              initialFocus
+            />
+          </PopoverContent>
+        </Popover>
+        {form.formState.errors.startDate && (
+          <p className="text-red-500 text-sm mt-1">{form.formState.errors.startDate.message}</p>
+        )}
+      </div>
+
       <Button type="submit" disabled={form.formState.isSubmitting}>
         {form.formState.isSubmitting ? `${submitButtonText}...` : submitButtonText}
       </Button>
