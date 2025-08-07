@@ -7,14 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
-import { CalendarIcon } from "lucide-react";
-import { format } from "date-fns";
-import { cn } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useEffect, useState } from "react";
 import { Textarea } from "@/components/ui/textarea";
+import { DatePicker } from "@/components/date-picker"; // Importiere die neue DatePicker Komponente
 
 export const employeeSchema = z.object({
   firstName: z.string().min(1, "Vorname ist erforderlich").max(100, "Vorname ist zu lang"),
@@ -64,7 +60,6 @@ export function EmployeeForm({ initialData, onSubmit, submitButtonText, onSucces
     jobTitle: initialData?.jobTitle ?? null,
     department: initialData?.department ?? null,
     notes: initialData?.notes ?? null,
-    // Neue Initialwerte
     address: initialData?.address ?? null,
     dateOfBirth: initialData?.dateOfBirth ? new Date(initialData.dateOfBirth) : null,
     socialSecurityNumber: initialData?.socialSecurityNumber ?? null,
@@ -76,34 +71,6 @@ export function EmployeeForm({ initialData, onSubmit, submitButtonText, onSucces
     resolver: zodResolver(employeeSchema as z.ZodSchema<EmployeeFormValues>),
     defaultValues: resolvedDefaultValues,
   });
-
-  const [displayHireDate, setDisplayHireDate] = useState<string | undefined>(undefined);
-  const [displayStartDate, setDisplayStartDate] = useState<string | undefined>(undefined);
-  const [displayDateOfBirth, setDisplayDateOfBirth] = useState<string | undefined>(undefined); // Neues State für Geburtsdatum
-
-  useEffect(() => {
-    if (form.watch("hireDate")) {
-      setDisplayHireDate(format(form.watch("hireDate")!, "PPP"));
-    } else {
-      setDisplayHireDate(undefined);
-    }
-  }, [form.watch("hireDate")]);
-
-  useEffect(() => {
-    if (form.watch("startDate")) {
-      setDisplayStartDate(format(form.watch("startDate")!, "PPP"));
-    } else {
-      setDisplayStartDate(undefined);
-    }
-  }, [form.watch("startDate")]);
-
-  useEffect(() => {
-    if (form.watch("dateOfBirth")) {
-      setDisplayDateOfBirth(format(form.watch("dateOfBirth")!, "PPP"));
-    } else {
-      setDisplayDateOfBirth(undefined);
-    }
-  }, [form.watch("dateOfBirth")]);
 
   const handleFormSubmit: SubmitHandler<EmployeeFormValues> = async (data) => {
     const result = await onSubmit(data);
@@ -167,34 +134,12 @@ export function EmployeeForm({ initialData, onSubmit, submitButtonText, onSucces
           <p className="text-red-500 text-sm mt-1">{form.formState.errors.phone.message}</p>
         )}
       </div>
-      <div>
-        <Label htmlFor="hireDate">Einstellungsdatum (optional)</Label>
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              variant={"outline"}
-              className={cn(
-                "w-full justify-start text-left font-normal",
-                !form.watch("hireDate") && "text-muted-foreground"
-              )}
-            >
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              {displayHireDate ? displayHireDate : <span>Datum auswählen</span>}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0">
-            <Calendar
-              mode="single"
-              selected={form.watch("hireDate") || undefined}
-              onSelect={(date) => form.setValue("hireDate", date || null)}
-              initialFocus
-            />
-          </PopoverContent>
-        </Popover>
-        {form.formState.errors.hireDate && (
-          <p className="text-red-500 text-sm mt-1">{form.formState.errors.hireDate.message}</p>
-        )}
-      </div>
+      <DatePicker
+        label="Einstellungsdatum (optional)"
+        value={form.watch("hireDate")}
+        onChange={(date) => form.setValue("hireDate", date)}
+        error={form.formState.errors.hireDate?.message}
+      />
       <div>
         <Label htmlFor="status">Status</Label>
         <Select onValueChange={(value) => form.setValue("status", value as "active" | "inactive" | "on_leave")} value={form.watch("status")}>
@@ -242,34 +187,12 @@ export function EmployeeForm({ initialData, onSubmit, submitButtonText, onSucces
           <p className="text-red-500 text-sm mt-1">{form.formState.errors.hourlyRate.message}</p>
         )}
       </div>
-      <div>
-        <Label htmlFor="startDate">Vertragsstart (optional)</Label>
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              variant={"outline"}
-              className={cn(
-                "w-full justify-start text-left font-normal",
-                !form.watch("startDate") && "text-muted-foreground"
-              )}
-            >
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              {displayStartDate ? displayStartDate : <span>Datum auswählen</span>}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0">
-            <Calendar
-              mode="single"
-              selected={form.watch("startDate") || undefined}
-              onSelect={(date) => form.setValue("startDate", date || null)}
-              initialFocus
-            />
-          </PopoverContent>
-        </Popover>
-        {form.formState.errors.startDate && (
-          <p className="text-red-500 text-sm mt-1">{form.formState.errors.startDate.message}</p>
-        )}
-      </div>
+      <DatePicker
+        label="Vertragsstart (optional)"
+        value={form.watch("startDate")}
+        onChange={(date) => form.setValue("startDate", date)}
+        error={form.formState.errors.startDate?.message}
+      />
 
       {/* Neue HR-Felder */}
       <div>
@@ -320,34 +243,12 @@ export function EmployeeForm({ initialData, onSubmit, submitButtonText, onSucces
           <p className="text-red-500 text-sm mt-1">{form.formState.errors.address.message}</p>
         )}
       </div>
-      <div>
-        <Label htmlFor="dateOfBirth">Geburtsdatum (optional)</Label>
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              variant={"outline"}
-              className={cn(
-                "w-full justify-start text-left font-normal",
-                !form.watch("dateOfBirth") && "text-muted-foreground"
-              )}
-            >
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              {displayDateOfBirth ? displayDateOfBirth : <span>Datum auswählen</span>}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0">
-            <Calendar
-              mode="single"
-              selected={form.watch("dateOfBirth") || undefined}
-              onSelect={(date) => form.setValue("dateOfBirth", date || null)}
-              initialFocus
-            />
-          </PopoverContent>
-        </Popover>
-        {form.formState.errors.dateOfBirth && (
-          <p className="text-red-500 text-sm mt-1">{form.formState.errors.dateOfBirth.message}</p>
-        )}
-      </div>
+      <DatePicker
+        label="Geburtsdatum (optional)"
+        value={form.watch("dateOfBirth")}
+        onChange={(date) => form.setValue("dateOfBirth", date)}
+        error={form.formState.errors.dateOfBirth?.message}
+      />
       <div>
         <Label htmlFor="socialSecurityNumber">Sozialversicherungsnummer (optional)</Label>
         <Input

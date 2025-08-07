@@ -8,18 +8,15 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
-import { CalendarIcon, PlusCircle } from "lucide-react";
-import { format } from "date-fns";
-import { cn } from "@/lib/utils";
+import { PlusCircle } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { ObjectForm, ObjectFormValues } from "@/components/object-form";
 import { createObject } from "@/app/dashboard/objects/actions";
-import { CustomerContactCreateDialog } from "@/components/customer-contact-create-dialog"; // Importiere den neuen Dialog
+import { CustomerContactCreateDialog } from "@/components/customer-contact-create-dialog";
+import { DatePicker } from "@/components/date-picker"; // Importiere die neue DatePicker Komponente
 
 // Definierte Liste der Dienstleistungen
 const availableServices = [
@@ -91,34 +88,6 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     resolver: zodResolver(orderSchema as z.ZodSchema<OrderFormValues>),
     defaultValues: resolvedDefaultValues,
   });
-
-  const [displayDueDate, setDisplayDueDate] = useState<string | undefined>(undefined);
-  const [displayRecurringStartDate, setDisplayRecurringStartDate] = useState<string | undefined>(undefined);
-  const [displayRecurringEndDate, setDisplayRecurringEndDate] = useState<string | undefined>(undefined);
-
-  useEffect(() => {
-    if (form.watch("dueDate")) {
-      setDisplayDueDate(format(form.watch("dueDate")!, "PPP"));
-    } else {
-      setDisplayDueDate(undefined);
-    }
-  }, [form.watch("dueDate")]);
-
-  useEffect(() => {
-    if (form.watch("recurringStartDate")) {
-      setDisplayRecurringStartDate(format(form.watch("recurringStartDate")!, "PPP"));
-    } else {
-      setDisplayRecurringStartDate(undefined);
-    }
-  }, [form.watch("recurringStartDate")]);
-
-  useEffect(() => {
-    if (form.watch("recurringEndDate")) {
-      setDisplayRecurringEndDate(format(form.watch("recurringEndDate")!, "PPP"));
-    } else {
-      setDisplayRecurringEndDate(undefined);
-    }
-  }, [form.watch("recurringEndDate")]);
 
   const orderType = form.watch("orderType");
   const selectedCustomerId = form.watch("customerId");
@@ -376,95 +345,29 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
       </div>
 
       {orderType === "one_time" && (
-        <div>
-          <Label htmlFor="dueDate">Fälligkeitsdatum (optional)</Label>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant={"outline"}
-                className={cn(
-                  "w-full justify-start text-left font-normal",
-                  !form.watch("dueDate") && "text-muted-foreground"
-                )}
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {displayDueDate ? displayDueDate : <span>Datum auswählen</span>}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0">
-              <Calendar
-                mode="single"
-                selected={form.watch("dueDate") || undefined}
-                onSelect={(date) => form.setValue("dueDate", date || null)}
-                initialFocus
-              />
-            </PopoverContent>
-          </Popover>
-          {form.formState.errors.dueDate && (
-            <p className="text-red-500 text-sm mt-1">{form.formState.errors.dueDate.message}</p>
-          )}
-        </div>
+        <DatePicker
+          label="Fälligkeitsdatum (optional)"
+          value={form.watch("dueDate")}
+          onChange={(date) => form.setValue("dueDate", date)}
+          error={form.formState.errors.dueDate?.message}
+        />
       )}
 
       {(orderType === "recurring" || orderType === "substitution" || orderType === "permanent") && (
         <>
-          <div>
-            <Label htmlFor="recurringStartDate">Startdatum</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant={"outline"}
-                  className={cn(
-                    "w-full justify-start text-left font-normal",
-                    !form.watch("recurringStartDate") && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {displayRecurringStartDate ? displayRecurringStartDate : <span>Datum auswählen</span>}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-                <Calendar
-                  mode="single"
-                  selected={form.watch("recurringStartDate") || undefined}
-                  onSelect={(date) => form.setValue("recurringStartDate", date || null)}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
-            {form.formState.errors.recurringStartDate && (
-              <p className="text-red-500 text-sm mt-1">{form.formState.errors.recurringStartDate.message}</p>
-            )}
-          </div>
+          <DatePicker
+            label="Startdatum"
+            value={form.watch("recurringStartDate")}
+            onChange={(date) => form.setValue("recurringStartDate", date)}
+            error={form.formState.errors.recurringStartDate?.message}
+          />
           {orderType !== "permanent" && (
-            <div>
-              <Label htmlFor="recurringEndDate">Enddatum (optional)</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant={"outline"}
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !form.watch("recurringEndDate") && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {displayRecurringEndDate ? displayRecurringEndDate : <span>Datum auswählen</span>}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={form.watch("recurringEndDate") || undefined}
-                    onSelect={(date) => form.setValue("recurringEndDate", date || null)}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-              {form.formState.errors.recurringEndDate && (
-                <p className="text-red-500 text-sm mt-1">{form.formState.errors.recurringEndDate.message}</p>
-              )}
-            </div>
+            <DatePicker
+              label="Enddatum (optional)"
+              value={form.watch("recurringEndDate")}
+              onChange={(date) => form.setValue("recurringEndDate", date)}
+              error={form.formState.errors.recurringEndDate?.message}
+            />
           )}
         </>
       )}
