@@ -46,6 +46,7 @@ export const orderSchema = z.object({
   ),
   notes: z.string().max(500, "Notizen sind zu lang").optional().nullable(),
   serviceType: z.enum(availableServices).optional().nullable(),
+  requestStatus: z.enum(["pending", "approved", "rejected"]).default("approved"), // Neues Feld
 });
 
 export type OrderFormInput = z.input<typeof orderSchema>;
@@ -82,6 +83,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     estimatedHours: (initialData?.estimatedHours as number | null | undefined) ?? null,
     notes: initialData?.notes ?? null,
     serviceType: initialData?.serviceType ?? null,
+    requestStatus: initialData?.requestStatus ?? "approved", // Initialwert für neues Feld
   };
 
   const form = useForm<OrderFormValues>({
@@ -427,6 +429,22 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
         </Select>
         {form.formState.errors.status && (
           <p className="text-red-500 text-sm mt-1">{form.formState.errors.status.message}</p>
+        )}
+      </div>
+      <div>
+        <Label htmlFor="requestStatus">Anfragestatus</Label>
+        <Select onValueChange={(value) => form.setValue("requestStatus", value as "pending" | "approved" | "rejected")} value={form.watch("requestStatus")}>
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="Anfragestatus auswählen" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="pending">Ausstehend</SelectItem>
+            <SelectItem value="approved">Genehmigt</SelectItem>
+            <SelectItem value="rejected">Abgelehnt</SelectItem>
+          </SelectContent>
+        </Select>
+        {form.formState.errors.requestStatus && (
+          <p className="text-red-500 text-sm mt-1">{form.formState.errors.requestStatus.message}</p>
         )}
       </div>
       <Button type="submit" disabled={form.formState.isSubmitting}>

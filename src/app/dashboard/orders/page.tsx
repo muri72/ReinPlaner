@@ -36,7 +36,7 @@ interface DisplayOrder {
   priority: string;
   estimated_hours: number | null;
   notes: string | null;
-  request_status: string;
+  request_status: string; // Neues Feld
   service_type: string | null; // Neues Feld
 }
 
@@ -103,7 +103,7 @@ export default async function OrdersPage({
       priority: order.priority,
       estimated_hours: order.estimated_hours,
       notes: order.notes,
-      request_status: order.request_status,
+      request_status: order.request_status, // Neues Feld
       service_type: order.service_type, // Neues Feld
     })) || null;
     error = selectError;
@@ -135,6 +135,19 @@ export default async function OrdersPage({
       case 'low':
       default:
         return 'secondary';
+    }
+  };
+
+  const getRequestStatusBadgeVariant = (requestStatus: string) => {
+    switch (requestStatus) {
+      case 'approved':
+        return 'default';
+      case 'pending':
+        return 'secondary';
+      case 'rejected':
+        return 'destructive';
+      default:
+        return 'outline';
     }
   };
 
@@ -188,6 +201,7 @@ export default async function OrdersPage({
                   <Badge variant={getStatusBadgeVariant(order.status)}>{order.status}</Badge>
                   <Badge variant="outline">{order.order_type}</Badge>
                   <Badge variant={getPriorityBadgeVariant(order.priority)}>Priorität: {order.priority}</Badge>
+                  <Badge variant={getRequestStatusBadgeVariant(order.request_status)}>Anfrage: {order.request_status}</Badge>
                 </div>
                 {order.estimated_hours && (
                   <div className="flex items-center text-xs text-muted-foreground mt-1">

@@ -35,6 +35,7 @@ interface OrderEditDialogProps {
     estimated_hours: number | null;
     notes: string | null;
     service_type: string | null; // Neues Feld
+    request_status: string; // Neues Feld
   };
 }
 
@@ -85,6 +86,7 @@ export function OrderEditDialog({ order }: OrderEditDialogProps) {
             estimatedHours: order.estimated_hours,
             notes: order.notes,
             serviceType: getServiceTypeForForm(order.service_type), // Korrigierte Zuweisung
+            requestStatus: order.request_status as OrderFormValues["requestStatus"], // Neues Feld
           }}
           onSubmit={handleUpdate}
           submitButtonText="Änderungen speichern"

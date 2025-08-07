@@ -28,6 +28,7 @@ export async function createOrder(data: OrderFormValues) {
     estimatedHours,
     notes,
     serviceType, // Neues Feld
+    requestStatus, // Neues Feld
   } = data;
 
   const { error } = await supabase
@@ -49,7 +50,7 @@ export async function createOrder(data: OrderFormValues) {
       estimated_hours: estimatedHours,
       notes,
       service_type: serviceType, // Neues Feld
-      request_status: 'approved', // Standardmäßig 'approved' für vom Admin erstellte Aufträge
+      request_status: requestStatus, // Anfragestatus verwenden
     });
 
   if (error) {
@@ -87,7 +88,7 @@ export async function updateOrder(orderId: string, data: OrderFormValues) {
       estimated_hours: data.estimatedHours,
       notes: data.notes,
       service_type: data.serviceType, // Neues Feld
-      // request_status wird hier nicht aktualisiert, da dies ein separater Workflow ist
+      request_status: data.requestStatus, // Anfragestatus aktualisieren
     })
     .eq('id', orderId)
     .eq('user_id', user.id); // Sicherstellen, dass nur eigene Aufträge aktualisiert werden können
