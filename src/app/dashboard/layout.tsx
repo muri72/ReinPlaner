@@ -1,6 +1,6 @@
 import React from "react";
 import Link from "next/link";
-import { Home, ListTodo, User, Users, Briefcase, UsersRound, Building } from "lucide-react"; // Building-Icon für Objekte
+import { Home, ListTodo, User, Users, Briefcase, UsersRound, Building, ContactRound } from "lucide-react"; // Building-Icon für Objekte, ContactRound für Kundenkontakte
 import { Button } from "@/components/ui/button";
 import { signOut } from "@/app/dashboard/actions";
 
@@ -34,9 +34,15 @@ export default function DashboardLayout({
                 Kunden
               </Button>
             </Link>
-            <Link href="/dashboard/objects" passHref> {/* Neuer Link für Objekte */}
+            <Link href="/dashboard/customer-contacts" passHref> {/* Neuer Link für Kundenkontakte */}
               <Button variant="ghost" className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
-                <Building className="mr-2 h-4 w-4" /> {/* Icon für Objekte */}
+                <ContactRound className="mr-2 h-4 w-4" /> {/* Icon für Kundenkontakte */}
+                Kundenkontakte
+              </Button>
+            </Link>
+            <Link href="/dashboard/objects" passHref>
+              <Button variant="ghost" className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
+                <Building className="mr-2 h-4 w-4" />
                 Objekte
               </Button>
             </Link>
