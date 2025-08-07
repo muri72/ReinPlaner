@@ -287,9 +287,9 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
         )}
       </div>
 
-      <h3 className="text-lg font-semibold mt-6">Standard-Auftragseinstellungen für dieses Objekt</h3>
+      <h3 className="text-lg font-semibold mt-6">Auftragseinstellungen für dieses Objekt</h3>
       <div>
-        <Label htmlFor="defaultNotes">Standard-Notizen für Aufträge (optional)</Label>
+        <Label htmlFor="defaultNotes">Notizen für Aufträge (optional)</Label>
         <Textarea
           id="defaultNotes"
           {...form.register("defaultNotes")}
@@ -301,7 +301,7 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
         )}
       </div>
       <div>
-        <Label htmlFor="defaultPriority">Standard-Priorität</Label>
+        <Label htmlFor="defaultPriority">Priorität</Label>
         <Select onValueChange={(value) => form.setValue("defaultPriority", value as "low" | "medium" | "high")} value={form.watch("defaultPriority")}>
           <SelectTrigger className="w-full">
             <SelectValue placeholder="Priorität auswählen" />
@@ -318,7 +318,7 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
       </div>
       {/* Moved defaultTimeOfDay here */}
       <div>
-        <Label htmlFor="defaultTimeOfDay">Standard-Tageszeit</Label>
+        <Label htmlFor="defaultTimeOfDay">Tageszeit</Label>
         <Select onValueChange={(value) => form.setValue("defaultTimeOfDay", value as "morning" | "noon" | "afternoon" | "any")} value={form.watch("defaultTimeOfDay")}>
           <SelectTrigger className="w-full">
             <SelectValue placeholder="Tageszeit auswählen" />
@@ -335,12 +335,13 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
         )}
       </div>
 
-      <h3 className="text-lg font-semibold mt-6">Standard-Arbeitszeiten pro Wochentag</h3>
+      <h3 className="text-lg font-semibold mt-6">Arbeitszeiten pro Wochentag</h3>
       {dayNames.map(day => {
         const startTimeField = getDayTimeFieldName(day, 'StartTime');
         const endTimeField = getDayTimeFieldName(day, 'EndTime');
-        // Removed useMemo for calculatedHours as it's no longer directly displayed in the input value
-        // const calculatedHours = useMemo(() => calculateHours(currentStartTime, currentEndTime), [currentStartTime, currentEndTime]);
+        const currentStartTime = form.watch(startTimeField) as string | null;
+        const currentEndTime = form.watch(endTimeField) as string | null;
+        const calculatedHours = useMemo(() => calculateHours(currentStartTime, currentEndTime), [currentStartTime, currentEndTime]);
 
         return (
           <div key={day} className="space-y-2 border p-3 rounded-md">

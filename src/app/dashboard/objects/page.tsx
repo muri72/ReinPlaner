@@ -179,7 +179,7 @@ export default async function ObjectsPage({
                 {object.default_notes && (
                   <div className="flex items-center text-sm text-muted-foreground">
                     <FileText className="mr-2 h-4 w-4 flex-shrink-0" />
-                    <span>Standard-Notizen: {object.default_notes}</span>
+                    <span>Notizen: {object.default_notes}</span>
                   </div>
                 )}
                 <div className="flex items-center text-sm text-muted-foreground">
