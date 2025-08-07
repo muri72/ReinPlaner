@@ -10,12 +10,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, PlusCircle } from "lucide-react"; // PlusCircle-Icon hinzugefügt
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client"; // Importiere Supabase Client
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"; // Dialog-Komponenten
+import { ObjectForm, ObjectFormValues } from "@/components/object-form"; // ObjectForm importieren
+import { createObject } from "@/app/dashboard/objects/actions"; // createObject-Aktion importieren
 
 // Definierte Liste der Dienstleistungen
 const availableServices = [
@@ -62,6 +65,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
   const [customers, setCustomers] = useState<{ id: string; name: string }[]>([]);
   const [objects, setObjects] = useState<{ id: string; name: string; customer_id: string }[]>([]);
   const [employees, setEmployees] = useState<{ id: string; first_name: string; last_name: string }[]>([]);
+  const [isNewObjectDialogOpen, setIsNewObjectDialogOpen] = useState(false); // State für Dialog
 
   const resolvedDefaultValues: OrderFormValues = {
     title: initialData?.title ?? "",
@@ -153,6 +157,26 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     }
   };
 
+  // Handler für die Objekterstellung im Dialog
+  const handleCreateObject = async (data: ObjectFormValues) => {
+    const result = await createObject(data);
+    if (result.success) {
+      // Objektliste neu laden und neues Objekt auswählen
+      const { data: newObjectsData, error: newObjectsError } = await supabase.from('objects').select('id, name, customer_id');
+      if (newObjectsData) {
+        setObjects(newObjectsData);
+        // Versuche, das neu erstellte Objekt im Dropdown auszuwählen
+        const newObject = newObjectsData.find(obj => obj.name === data.name && obj.customer_id === data.customerId);
+        if (newObject) {
+          form.setValue("objectId", newObject.id);
+        }
+      }
+      if (newObjectsError) console.error("Fehler beim Neuladen der Objekte:", newObjectsError);
+      setIsNewObjectDialogOpen(false); // Dialog schließen
+    }
+    return result;
+  };
+
   return (
     <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 w-full max-w-md" suppressHydrationWarning>
       <div>
@@ -213,21 +237,48 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
           <p className="text-red-500 text-sm mt-1">{form.formState.errors.customerId.message}</p>
         )}
       </div>
-      <div>
-        <Label htmlFor="objectId">Objekt</Label>
-        <Select onValueChange={(value) => form.setValue("objectId", value)} value={form.watch("objectId")} disabled={!form.watch("customerId")}>
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Objekt auswählen" />
-          </SelectTrigger>
-          <SelectContent>
-            {filteredObjects.map(obj => (
-              <SelectItem key={obj.id} value={obj.id}>{obj.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {form.formState.errors.objectId && (
-          <p className="text-red-500 text-sm mt-1">{form.formState.errors.objectId.message}</p>
-        )}
+      <div className="flex items-end gap-2"> {/* Flex-Container für Label, Select und Button */}
+        <div className="flex-grow">
+          <Label htmlFor="objectId">Objekt</Label>
+          <Select onValueChange={(value) => form.setValue("objectId", value)} value={form.watch("objectId")} disabled={!form.watch("customerId")}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Objekt auswählen" />
+            </SelectTrigger>
+            <SelectContent>
+              {filteredObjects.map(obj => (
+                <SelectItem key={obj.id} value={obj.id}>{obj.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {form.formState.errors.objectId && (
+            <p className="text-red-500 text-sm mt-1">{form.formState.errors.objectId.message}</p>
+          )}
+        </div>
+        <Dialog open={isNewObjectDialogOpen} onOpenChange={setIsNewObjectDialogOpen}>
+          <DialogTrigger asChild>
+            <Button
+              type="button" // Wichtig, damit es das Formular nicht absendet
+              variant="outline"
+              size="icon"
+              className="mb-1" // Kleiner Abstand nach unten
+              disabled={!form.watch("customerId")} // Deaktivieren, wenn kein Kunde ausgewählt ist
+              title={!form.watch("customerId") ? "Bitte zuerst einen Kunden auswählen" : "Neues Objekt für diesen Kunden erstellen"}
+            >
+              <PlusCircle className="h-4 w-4" />
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Neues Objekt erstellen</DialogTitle>
+            </DialogHeader>
+            <ObjectForm
+              initialData={{ customerId: form.watch("customerId") }} // Kunden-ID übergeben
+              onSubmit={handleCreateObject}
+              submitButtonText="Objekt erstellen"
+              onSuccess={() => setIsNewObjectDialogOpen(false)} // Dialog schließen bei Erfolg
+            />
+          </DialogContent>
+        </Dialog>
       </div>
       <div>
         <Label htmlFor="employeeId">Zugewiesener Mitarbeiter (optional)</Label>
