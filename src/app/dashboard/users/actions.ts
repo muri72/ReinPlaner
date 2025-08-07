@@ -1,11 +1,11 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createAdminClient } from "@/lib/supabase/server"; // Importiere createAdminClient
 import { revalidatePath } from "next/cache";
 import { UserFormValues } from "@/components/user-form";
 
 export async function registerUser(data: UserFormValues) {
-  const supabase = await createClient();
+  const supabase = await createClient(); // Für die Überprüfung des aktuellen Benutzers
   const { data: { user: adminUser } } = await supabase.auth.getUser();
 
   if (!adminUser) {
@@ -31,7 +31,8 @@ export async function registerUser(data: UserFormValues) {
   }
 
   // Benutzer in Supabase Auth registrieren
-  const { data: newUser, error: authError } = await supabase.auth.admin.createUser({
+  const supabaseAdmin = await createAdminClient(); // Verwende den Admin Client
+  const { data: newUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
     email,
     password,
     email_confirm: true, // Bestätigt die E-Mail automatisch
@@ -53,7 +54,7 @@ export async function registerUser(data: UserFormValues) {
   if (profileUpdateError) {
     console.error("Fehler beim Aktualisieren des Benutzerprofils:", profileUpdateError);
     // Optional: Benutzer in Auth löschen, wenn Profil-Update fehlschlägt
-    await supabase.auth.admin.deleteUser(newUser.user?.id!);
+    await supabaseAdmin.auth.admin.deleteUser(newUser.user?.id!); // Verwende den Admin Client
     return { success: false, message: profileUpdateError.message };
   }
 
@@ -62,7 +63,7 @@ export async function registerUser(data: UserFormValues) {
 }
 
 export async function updateUser(userId: string, data: Partial<UserFormValues>) {
-  const supabase = await createClient();
+  const supabase = await createClient(); // Für die Überprüfung des aktuellen Benutzers
   const { data: { user: adminUser } } = await supabase.auth.getUser();
 
   if (!adminUser) {
@@ -99,7 +100,7 @@ export async function updateUser(userId: string, data: Partial<UserFormValues>) 
 }
 
 export async function deleteUser(formData: FormData): Promise<{ success: boolean; message: string }> {
-  const supabase = await createClient();
+  const supabase = await createClient(); // Für die Überprüfung des aktuellen Benutzers
   const { data: { user: adminUser } } = await supabase.auth.getUser();
 
   if (!adminUser) {
@@ -125,7 +126,8 @@ export async function deleteUser(formData: FormData): Promise<{ success: boolean
   }
 
   // Benutzer in Supabase Auth löschen (dies löscht auch das Profil aufgrund der CASCADE-Regel)
-  const { error } = await supabase.auth.admin.deleteUser(userId);
+  const supabaseAdmin = await createAdminClient(); // Verwende den Admin Client
+  const { error } = await supabaseAdmin.auth.admin.deleteUser(userId);
 
   if (error) {
     console.error("Fehler beim Löschen des Benutzers:", error);
@@ -137,7 +139,7 @@ export async function deleteUser(formData: FormData): Promise<{ success: boolean
 }
 
 export async function assignCustomersToManager(managerId: string, customerIds: string[]): Promise<{ success: boolean; message: string }> {
-  const supabase = await createClient();
+  const supabase = await createClient(); // Für die Überprüfung des aktuellen Benutzers
   const { data: { user: adminUser } } = await supabase.auth.getUser();
 
   if (!adminUser) {

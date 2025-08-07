@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createAdminClient } from "@/lib/supabase/server"; // Importiere createAdminClient
 import { redirect } from "next/navigation";
 import { UserForm } from "@/components/user-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,7 +8,7 @@ import { DeleteUserButton } from "@/components/delete-user-button";
 import { Mail, UserRound, Briefcase, ShieldCheck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { SearchInput } from "@/components/search-input";
-import { ManagerCustomerAssignmentDialog } from "@/components/manager-customer-assignment-dialog"; // Neuer Import
+import { ManagerCustomerAssignmentDialog } from "@/components/manager-customer-assignment-dialog";
 
 interface DisplayUser {
   id: string;
@@ -22,7 +22,7 @@ interface DisplayUser {
 export default async function UsersPage({
   searchParams,
 }: any) {
-  const supabase = await createClient();
+  const supabase = await createClient(); // Für die Überprüfung des aktuellen Benutzers
   const { data: { user: currentUser } } = await supabase.auth.getUser();
 
   if (!currentUser) {
@@ -47,7 +47,8 @@ export default async function UsersPage({
   let error: any;
 
   // Supabase Admin Client verwenden, um alle Benutzer abzurufen
-  const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
+  const supabaseAdmin = await createAdminClient(); // Verwende den Admin Client
+  const { data: authUsers, error: authError } = await supabaseAdmin.auth.admin.listUsers();
 
   if (authError) {
     console.error("Fehler beim Laden der Auth-Benutzer:", authError);
