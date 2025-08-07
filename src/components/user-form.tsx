@@ -8,6 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useState, useEffect } from "react";
+import { createClient } from "@/lib/supabase/client";
 
 export const userSchema = z.object({
   email: z.string().email("Ungültiges E-Mail-Format").min(1, "E-Mail ist erforderlich"),
@@ -15,6 +17,17 @@ export const userSchema = z.object({
   firstName: z.string().min(1, "Vorname ist erforderlich").max(100, "Vorname ist zu lang"),
   lastName: z.string().min(1, "Nachname ist erforderlich").max(100, "Nachname ist zu lang"),
   role: z.enum(["admin", "manager", "employee", "customer"]).default("employee"),
+  employeeId: z.string().uuid("Ungültige Mitarbeiter-ID").optional().nullable(), // Neues Feld
+  customerId: z.string().uuid("Ungültige Kunden-ID").optional().nullable(),     // Neues Feld
+}).refine(data => {
+  // Wenn eine Rolle zugewiesen ist, muss entweder employeeId oder customerId null sein, nicht beides
+  if (data.employeeId && data.customerId) {
+    return false; // Kann nicht beides gleichzeitig zugewiesen sein
+  }
+  return true;
+}, {
+  message: "Ein Benutzer kann entweder einem Mitarbeiter ODER einem Kunden zugewiesen werden, nicht beidem.",
+  path: ["employeeId"], // Fehlerpfad kann beliebig sein, da es um beide Felder geht
 });
 
 export type UserFormInput = z.input<typeof userSchema>;
@@ -29,18 +42,60 @@ interface UserFormProps {
 }
 
 export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, isEditMode = false }: UserFormProps) {
+  const supabase = createClient();
+  const [employees, setEmployees] = useState<{ id: string; first_name: string; last_name: string; user_id: string | null }[]>([]);
+  const [customers, setCustomers] = useState<{ id: string; name: string; user_id: string | null }[]>([]);
+  const [loadingDropdowns, setLoadingDropdowns] = useState(true);
+
   const resolvedDefaultValues: UserFormValues = {
     email: initialData?.email ?? "",
-    password: initialData?.password ?? (isEditMode ? undefined : ""), // Password optional in edit mode
+    password: initialData?.password ?? (isEditMode ? undefined : ""),
     firstName: initialData?.firstName ?? "",
     lastName: initialData?.lastName ?? "",
     role: initialData?.role ?? "employee",
+    employeeId: initialData?.employeeId ?? null,
+    customerId: initialData?.customerId ?? null,
   };
 
   const form = useForm<UserFormValues>({
     resolver: zodResolver(userSchema as z.ZodSchema<UserFormValues>),
     defaultValues: resolvedDefaultValues,
   });
+
+  useEffect(() => {
+    if (!isEditMode) { // Nur im Erstellungsmodus Dropdowns laden
+      const fetchData = async () => {
+        setLoadingDropdowns(true);
+        // Lade alle Mitarbeiter, die noch keinem Benutzer zugewiesen sind
+        const { data: employeesData, error: employeesError } = await supabase
+          .from('employees')
+          .select('id, first_name, last_name, user_id')
+          .is('user_id', null) // Nur nicht zugewiesene Mitarbeiter
+          .order('last_name', { ascending: true });
+
+        if (employeesError) {
+          console.error("Fehler beim Laden der Mitarbeiter:", employeesError);
+          toast.error("Fehler beim Laden der Mitarbeiter.");
+        }
+        setEmployees(employeesData || []);
+
+        // Lade alle Kunden, die noch keinem Benutzer zugewiesen sind
+        const { data: customersData, error: customersError } = await supabase
+          .from('customers')
+          .select('id, name, user_id')
+          .is('user_id', null) // Nur nicht zugewiesene Kunden
+          .order('name', { ascending: true });
+
+        if (customersError) {
+          console.error("Fehler beim Laden der Kunden:", customersError);
+          toast.error("Fehler beim Laden der Kunden.");
+        }
+        setCustomers(customersData || []);
+        setLoadingDropdowns(false);
+      };
+      fetchData();
+    }
+  }, [isEditMode, supabase]);
 
   const handleFormSubmit: SubmitHandler<UserFormValues> = async (data) => {
     const result = await onSubmit(data);
@@ -65,13 +120,13 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
           type="email"
           {...form.register("email")}
           placeholder="E-Mail-Adresse"
-          disabled={isEditMode} // Email should not be editable after creation
+          disabled={isEditMode}
         />
         {form.formState.errors.email && (
           <p className="text-red-500 text-sm mt-1">{form.formState.errors.email.message}</p>
         )}
       </div>
-      {!isEditMode && ( // Password only required for new user creation
+      {!isEditMode && (
         <div>
           <Label htmlFor="password">Passwort</Label>
           <Input
@@ -124,6 +179,69 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
           <p className="text-red-500 text-sm mt-1">{form.formState.errors.role.message}</p>
         )}
       </div>
+
+      {!isEditMode && ( // Diese Felder nur im Erstellungsmodus anzeigen
+        <>
+          <div>
+            <Label htmlFor="employeeId">Mitarbeiter zuweisen (optional)</Label>
+            <Select
+              onValueChange={(value) => {
+                form.setValue("employeeId", value === "unassigned" ? null : value);
+                if (value !== "unassigned") {
+                  form.setValue("customerId", null); // Wenn Mitarbeiter zugewiesen, Kunde entzuweisen
+                }
+              }}
+              value={form.watch("employeeId") || "unassigned"}
+              disabled={loadingDropdowns || !!form.watch("customerId")} // Deaktivieren, wenn Kunde ausgewählt
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Mitarbeiter auswählen" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="unassigned">Kein Mitarbeiter zugewiesen</SelectItem>
+                {employees.map(emp => (
+                  <SelectItem key={emp.id} value={emp.id}>
+                    {emp.first_name} {emp.last_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {form.formState.errors.employeeId && (
+              <p className="text-red-500 text-sm mt-1">{form.formState.errors.employeeId.message}</p>
+            )}
+          </div>
+
+          <div>
+            <Label htmlFor="customerId">Kunden zuweisen (optional)</Label>
+            <Select
+              onValueChange={(value) => {
+                form.setValue("customerId", value === "unassigned" ? null : value);
+                if (value !== "unassigned") {
+                  form.setValue("employeeId", null); // Wenn Kunde zugewiesen, Mitarbeiter entzuweisen
+                }
+              }}
+              value={form.watch("customerId") || "unassigned"}
+              disabled={loadingDropdowns || !!form.watch("employeeId")} // Deaktivieren, wenn Mitarbeiter ausgewählt
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Kunden auswählen" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="unassigned">Kein Kunde zugewiesen</SelectItem>
+                {customers.map(cust => (
+                  <SelectItem key={cust.id} value={cust.id}>
+                    {cust.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {form.formState.errors.customerId && (
+              <p className="text-red-500 text-sm mt-1">{form.formState.errors.customerId.message}</p>
+            )}
+          </div>
+        </>
+      )}
+
       <Button type="submit" disabled={form.formState.isSubmitting}>
         {form.formState.isSubmitting ? `${submitButtonText}...` : submitButtonText}
       </Button>
