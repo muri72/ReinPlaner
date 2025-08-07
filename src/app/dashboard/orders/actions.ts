@@ -20,6 +20,7 @@ export async function createOrder(data: OrderFormValues) {
     customerId,
     objectId,
     employeeId,
+    customerContactId, // Neues Feld
     orderType,
     recurringStartDate,
     recurringEndDate,
@@ -40,6 +41,7 @@ export async function createOrder(data: OrderFormValues) {
       customer_id: customerId,
       object_id: objectId,
       employee_id: employeeId,
+      customer_contact_id: customerContactId, // Neues Feld
       order_type: orderType,
       recurring_start_date: recurringStartDate ? recurringStartDate.toISOString().split('T')[0] : null, // Nur Datum
       recurring_end_date: recurringEndDate ? recurringEndDate.toISOString().split('T')[0] : null,     // Nur Datum
@@ -77,6 +79,7 @@ export async function updateOrder(orderId: string, data: OrderFormValues) {
       customer_id: data.customerId,
       object_id: data.objectId,
       employee_id: data.employeeId,
+      customer_contact_id: data.customerContactId, // Neues Feld
       order_type: data.orderType,
       recurring_start_date: data.recurringStartDate ? data.recurringStartDate.toISOString().split('T')[0] : null,
       recurring_end_date: data.recurringEndDate ? data.recurringEndDate.toISOString().split('T')[0] : null,

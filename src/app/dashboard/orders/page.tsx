@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { OrderForm } from "@/components/order-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Trash2, CalendarDays, Clock, FileText, Wrench } from "lucide-react"; // Wrench-Icon für service_type
+import { Trash2, CalendarDays, Clock, FileText, Wrench, UserRound } from "lucide-react"; // Wrench-Icon für service_type, UserRound für Kundenkontakt
 import { deleteOrder, createOrder } from "./actions";
 import { OrderEditDialog } from "@/components/order-edit-dialog";
 import { Badge } from "@/components/ui/badge";
@@ -22,10 +22,13 @@ interface DisplayOrder {
   customer_id: string | null;
   object_id: string | null;
   employee_id: string | null;
+  customer_contact_id: string | null; // Neues Feld
   customer_name: string | null;
   object_name: string | null;
   employee_first_name: string | null;
   employee_last_name: string | null;
+  customer_contact_first_name: string | null; // Name des Kundenkontakts
+  customer_contact_last_name: string | null; // Name des Kundenkontakts
   // Neue Felder
   order_type: string;
   recurring_start_date: string | null;
@@ -68,7 +71,8 @@ export default async function OrdersPage({
         *,
         customers ( name ),
         objects ( name ),
-        employees ( first_name, last_name )
+        employees ( first_name, last_name ),
+        customer_contacts ( first_name, last_name )
       `)
       .eq('user_id', user.id)
       .order('created_at', { ascending: false });
@@ -85,10 +89,13 @@ export default async function OrdersPage({
       customer_id: order.customer_id,
       object_id: order.object_id,
       employee_id: order.employee_id,
+      customer_contact_id: order.customer_contact_id, // Neues Feld
       customer_name: order.customers?.name || null,
       object_name: order.objects?.name || null,
       employee_first_name: order.employees?.first_name || null,
       employee_last_name: order.employees?.last_name || null,
+      customer_contact_first_name: order.customer_contacts?.first_name || null, // Name des Kundenkontakts
+      customer_contact_last_name: order.customer_contacts?.last_name || null, // Name des Kundenkontakts
       // Neue Felder mappen
       order_type: order.order_type,
       recurring_start_date: order.recurring_start_date,
@@ -161,6 +168,12 @@ export default async function OrdersPage({
                 )}
                 {order.object_name && (
                   <p className="text-xs text-muted-foreground">Objekt: {order.object_name}</p>
+                )}
+                {order.customer_contact_first_name && order.customer_contact_last_name && (
+                  <div className="flex items-center text-xs text-muted-foreground">
+                    <UserRound className="mr-1 h-3 w-3" />
+                    <span>Auftraggeber: {order.customer_contact_first_name} {order.customer_contact_last_name}</span>
+                  </div>
                 )}
                 {order.employee_first_name && order.employee_last_name && (
                   <p className="text-xs text-muted-foreground">Mitarbeiter: {order.employee_first_name} {order.employee_last_name}</p>

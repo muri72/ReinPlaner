@@ -37,6 +37,7 @@ export const orderSchema = z.object({ // taskSchema zu orderSchema
   customerId: z.string().uuid("Ungültige Kunden-ID").min(1, "Kunde ist erforderlich"), // Neue Felder
   objectId: z.string().uuid("Ungültige Objekt-ID").min(1, "Objekt ist erforderlich"),   // Neue Felder
   employeeId: z.string().uuid("Ungültige Mitarbeiter-ID").optional().nullable(), // Optional
+  customerContactId: z.string().uuid("Ungültige Kundenkontakt-ID").optional().nullable(), // Neues Feld
   // Neue Felder für Auftragstypen und Details
   orderType: z.enum(["one_time", "recurring", "substitution", "permanent"]).default("one_time"), // 'permanent' hinzugefügt
   recurringStartDate: z.date().optional().nullable(),
@@ -65,6 +66,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
   const [customers, setCustomers] = useState<{ id: string; name: string }[]>([]);
   const [objects, setObjects] = useState<{ id: string; name: string; customer_id: string }[]>([]);
   const [employees, setEmployees] = useState<{ id: string; first_name: string; last_name: string }[]>([]);
+  const [customerContacts, setCustomerContacts] = useState<{ id: string; first_name: string; last_name: string; customer_id: string }[]>([]); // State für Kundenkontakte
   const [isNewObjectDialogOpen, setIsNewObjectDialogOpen] = useState(false); // State für Dialog
 
   const resolvedDefaultValues: OrderFormValues = {
@@ -75,6 +77,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     customerId: initialData?.customerId ?? "",
     objectId: initialData?.objectId ?? "",
     employeeId: initialData?.employeeId ?? null,
+    customerContactId: initialData?.customerContactId ?? null, // Initialwert für neues Feld
     orderType: initialData?.orderType ?? "one_time",
     recurringStartDate: initialData?.recurringStartDate ? new Date(initialData.recurringStartDate) : null,
     recurringEndDate: initialData?.recurringEndDate ? new Date(initialData.recurringEndDate) : null,
@@ -117,8 +120,9 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     }
   }, [form.watch("recurringEndDate")]);
 
-  // Watch orderType to conditionally render date fields
+  // Watch orderType and customerId to conditionally render fields and filter contacts
   const orderType = form.watch("orderType");
+  const selectedCustomerId = form.watch("customerId");
 
   // Daten für Dropdowns laden
   useEffect(() => {
@@ -138,9 +142,28 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     fetchDropdownData();
   }, [supabase]);
 
+  // Kundenkontakte laden, wenn sich der ausgewählte Kunde ändert
+  useEffect(() => {
+    const fetchCustomerContacts = async () => {
+      if (selectedCustomerId) {
+        const { data: contactsData, error: contactsError } = await supabase
+          .from('customer_contacts')
+          .select('id, first_name, last_name, customer_id')
+          .eq('customer_id', selectedCustomerId)
+          .order('last_name', { ascending: true });
+        if (contactsData) setCustomerContacts(contactsData);
+        if (contactsError) console.error("Fehler beim Laden der Kundenkontakte:", contactsError);
+      } else {
+        setCustomerContacts([]); // Kontakte leeren, wenn kein Kunde ausgewählt ist
+        form.setValue("customerContactId", null); // Kundenkontakt zurücksetzen
+      }
+    };
+    fetchCustomerContacts();
+  }, [selectedCustomerId, supabase, form]);
+
   // Objekte filtern basierend auf ausgewähltem Kunden
-  const filteredObjects = form.watch("customerId")
-    ? objects.filter(obj => obj.customer_id === form.watch("customerId"))
+  const filteredObjects = selectedCustomerId
+    ? objects.filter(obj => obj.customer_id === selectedCustomerId)
     : [];
 
   const handleFormSubmit: SubmitHandler<OrderFormValues> = async (data) => {
@@ -223,6 +246,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
         <Select onValueChange={(value) => {
           form.setValue("customerId", value);
           form.setValue("objectId", ""); // Objekt zurücksetzen, wenn Kunde geändert wird
+          form.setValue("customerContactId", null); // Kundenkontakt zurücksetzen, wenn Kunde geändert wird
         }} value={form.watch("customerId")}>
           <SelectTrigger className="w-full">
             <SelectValue placeholder="Kunde auswählen" />
@@ -235,6 +259,23 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
         </Select>
         {form.formState.errors.customerId && (
           <p className="text-red-500 text-sm mt-1">{form.formState.errors.customerId.message}</p>
+        )}
+      </div>
+      <div>
+        <Label htmlFor="customerContactId">Auftraggebende Person (Kundenkontakt, optional)</Label>
+        <Select onValueChange={(value) => form.setValue("customerContactId", value === "unassigned" ? null : value)} value={form.watch("customerContactId") || "unassigned"} disabled={!selectedCustomerId}>
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="Kundenkontakt auswählen" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="unassigned">Kein Kundenkontakt zugewiesen</SelectItem>
+            {customerContacts.map(contact => (
+              <SelectItem key={contact.id} value={contact.id}>{contact.first_name} {contact.last_name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {form.formState.errors.customerContactId && (
+          <p className="text-red-500 text-sm mt-1">{form.formState.errors.customerContactId.message}</p>
         )}
       </div>
       <div className="flex items-end gap-2"> {/* Flex-Container für Label, Select und Button */}

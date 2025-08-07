@@ -26,6 +26,7 @@ interface OrderEditDialogProps {
     customer_id: string | null;
     object_id: string | null;
     employee_id: string | null;
+    customer_contact_id: string | null; // Neues Feld
     // Neue Felder
     order_type: string;
     recurring_start_date: string | null;
@@ -76,6 +77,7 @@ export function OrderEditDialog({ order }: OrderEditDialogProps) {
             customerId: order.customer_id ?? undefined,
             objectId: order.object_id ?? undefined,
             employeeId: order.employee_id,
+            customerContactId: order.customer_contact_id ?? undefined, // Neues Feld
             orderType: order.order_type as OrderFormValues["orderType"],
             recurringStartDate: order.recurring_start_date ? new Date(order.recurring_start_date) : undefined,
             recurringEndDate: order.recurring_end_date ? new Date(order.recurring_end_date) : undefined,
