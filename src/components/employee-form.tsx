@@ -14,6 +14,7 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useEffect, useState } from "react";
+import { Textarea } from "@/components/ui/textarea"; // Import Textarea
 
 export const employeeSchema = z.object({
   firstName: z.string().min(1, "Vorname ist erforderlich").max(100, "Vorname ist zu lang"),
@@ -22,13 +23,16 @@ export const employeeSchema = z.object({
   phone: z.string().max(50, "Telefonnummer ist zu lang").optional().nullable(),
   hireDate: z.date().optional().nullable(),
   status: z.enum(["active", "inactive", "on_leave"]).default("active"),
-  // Neue Felder
   contractType: z.enum(["minijob", "part_time", "full_time", "fixed_term"]).default("full_time"),
   hourlyRate: z.preprocess(
     (val) => (val === "" ? null : Number(val)),
     z.nullable(z.number().min(0, "Stundenlohn muss positiv sein").max(9999.99, "Stundenlohn ist zu hoch")).optional()
   ),
   startDate: z.date().optional().nullable(),
+  // Neue Felder
+  jobTitle: z.string().max(100, "Berufsbezeichnung ist zu lang").optional().nullable(),
+  department: z.string().max(100, "Abteilung ist zu lang").optional().nullable(),
+  notes: z.string().max(500, "Notizen sind zu lang").optional().nullable(),
 });
 
 export type EmployeeFormInput = z.input<typeof employeeSchema>;
@@ -49,10 +53,13 @@ export function EmployeeForm({ initialData, onSubmit, submitButtonText, onSucces
     phone: initialData?.phone ?? null,
     hireDate: initialData?.hireDate ? new Date(initialData.hireDate) : null,
     status: initialData?.status ?? "active",
-    // Neue Initialwerte
     contractType: initialData?.contractType ?? "full_time",
-    hourlyRate: typeof initialData?.hourlyRate === 'number' ? initialData.hourlyRate : null, // Korrektur hier
+    hourlyRate: typeof initialData?.hourlyRate === 'number' ? initialData.hourlyRate : null,
     startDate: initialData?.startDate ? new Date(initialData.startDate) : null,
+    // Neue Initialwerte
+    jobTitle: initialData?.jobTitle ?? null,
+    department: initialData?.department ?? null,
+    notes: initialData?.notes ?? null,
   };
 
   const form = useForm<EmployeeFormValues>({
@@ -186,7 +193,6 @@ export function EmployeeForm({ initialData, onSubmit, submitButtonText, onSucces
         )}
       </div>
 
-      {/* Neue Felder */}
       <div>
         <Label htmlFor="contractType">Vertragsart</Label>
         <Select onValueChange={(value) => form.setValue("contractType", value as "minijob" | "part_time" | "full_time" | "fixed_term")} value={form.watch("contractType")}>
@@ -243,6 +249,42 @@ export function EmployeeForm({ initialData, onSubmit, submitButtonText, onSucces
         </Popover>
         {form.formState.errors.startDate && (
           <p className="text-red-500 text-sm mt-1">{form.formState.errors.startDate.message}</p>
+        )}
+      </div>
+
+      {/* Neue HR-Felder */}
+      <div>
+        <Label htmlFor="jobTitle">Berufsbezeichnung (optional)</Label>
+        <Input
+          id="jobTitle"
+          {...form.register("jobTitle")}
+          placeholder="Z.B. Reinigungskraft, Teamleiter"
+        />
+        {form.formState.errors.jobTitle && (
+          <p className="text-red-500 text-sm mt-1">{form.formState.errors.jobTitle.message}</p>
+        )}
+      </div>
+      <div>
+        <Label htmlFor="department">Abteilung (optional)</Label>
+        <Input
+          id="department"
+          {...form.register("department")}
+          placeholder="Z.B. Gebäudereinigung, Glasreinigung"
+        />
+        {form.formState.errors.department && (
+          <p className="text-red-500 text-sm mt-1">{form.formState.errors.department.message}</p>
+        )}
+      </div>
+      <div>
+        <Label htmlFor="notes">Notizen (optional)</Label>
+        <Textarea
+          id="notes"
+          {...form.register("notes")}
+          placeholder="Zusätzliche HR-Notizen zum Mitarbeiter..."
+          rows={3}
+        />
+        {form.formState.errors.notes && (
+          <p className="text-red-500 text-sm mt-1">{form.formState.errors.notes.message}</p>
         )}
       </div>
 

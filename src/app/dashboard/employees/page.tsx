@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { createEmployee } from "./actions";
 import { EmployeeEditDialog } from "@/components/employee-edit-dialog";
 import { DeleteEmployeeButton } from "@/components/delete-employee-button";
-import { Mail, Phone, CalendarDays, UserRoundCheck, UserRoundX, UserRoundMinus, Briefcase, DollarSign } from "lucide-react"; // Neue Icons
+import { Mail, Phone, CalendarDays, UserRoundCheck, UserRoundX, UserRoundMinus, Briefcase, DollarSign, Tag, Building2, FileText } from "lucide-react"; // Neue Icons
 import { Badge } from "@/components/ui/badge";
 import { SearchInput } from "@/components/search-input"; // Importiere die SearchInput Komponente
 
@@ -28,9 +28,9 @@ export default async function EmployeesPage({
     .order('last_name', { ascending: true });
 
   if (query) {
-    // Suche nach Vorname, Nachname, E-Mail oder Telefonnummer
+    // Suche nach Vorname, Nachname, E-Mail, Telefonnummer, Berufsbezeichnung oder Abteilung
     employeesQuery = employeesQuery.or(
-      `first_name.ilike.%${query}%,last_name.ilike.%${query}%,email.ilike.%${query}%,phone.ilike.%${query}%`
+      `first_name.ilike.%${query}%,last_name.ilike.%${query}%,email.ilike.%${query}%,phone.ilike.%${query}%,job_title.ilike.%${query}%,department.ilike.%${query}%`
     );
   }
 
@@ -103,6 +103,18 @@ export default async function EmployeesPage({
                     <span>{employee.phone}</span>
                   </div>
                 )}
+                {employee.job_title && (
+                  <div className="flex items-center text-sm text-muted-foreground">
+                    <Tag className="mr-2 h-4 w-4 flex-shrink-0" />
+                    <span>Position: {employee.job_title}</span>
+                  </div>
+                )}
+                {employee.department && (
+                  <div className="flex items-center text-sm text-muted-foreground">
+                    <Building2 className="mr-2 h-4 w-4 flex-shrink-0" />
+                    <span>Abteilung: {employee.department}</span>
+                  </div>
+                )}
                 {employee.hire_date && (
                   <div className="flex items-center text-sm text-muted-foreground">
                     <CalendarDays className="mr-2 h-4 w-4 flex-shrink-0" />
@@ -125,6 +137,12 @@ export default async function EmployeesPage({
                   <div className="flex items-center text-sm text-muted-foreground">
                     <DollarSign className="mr-2 h-4 w-4 flex-shrink-0" />
                     <span>Stundenlohn: {employee.hourly_rate.toFixed(2)} €</span>
+                  </div>
+                )}
+                {employee.notes && (
+                  <div className="flex items-center text-sm text-muted-foreground">
+                    <FileText className="mr-2 h-4 w-4 flex-shrink-0" />
+                    <span>Notizen: {employee.notes}</span>
                   </div>
                 )}
                 <div className="flex items-center text-sm text-muted-foreground">
