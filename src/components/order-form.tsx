@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client"; // Importiere Supabase Client
+import { services } from "@/lib/services"; // Importiere die Dienstleistungen
 
 export const orderSchema = z.object({ // taskSchema zu orderSchema
   title: z.string().min(1, "Titel ist erforderlich").max(100, "Titel ist zu lang"),
@@ -35,7 +36,7 @@ export const orderSchema = z.object({ // taskSchema zu orderSchema
     z.nullable(z.number().min(0, "Stunden müssen positiv sein").max(999, "Stunden sind zu hoch")).optional()
   ),
   notes: z.string().max(500, "Notizen sind zu lang").optional().nullable(),
-  serviceType: z.string().max(100, "Dienstleistungstyp ist zu lang").optional().nullable(), // Neues Feld
+  serviceType: z.enum(Object.keys(services) as [string, ...string[]]).optional().nullable(), // Korrigierter Typ-Cast
 });
 
 export type OrderFormInput = z.input<typeof orderSchema>; // TaskFormInput zu OrderFormInput
@@ -171,11 +172,16 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
       </div>
       <div>
         <Label htmlFor="serviceType">Reinigungsdienstleistung</Label> {/* Neues Feld */}
-        <Input
-          id="serviceType"
-          {...form.register("serviceType")}
-          placeholder="Z.B. Glasreinigung, Grundreinigung"
-        />
+        <Select onValueChange={(value) => form.setValue("serviceType", value as OrderFormValues["serviceType"])} value={form.watch("serviceType") || ""}>
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="Dienstleistung auswählen" />
+          </SelectTrigger>
+          <SelectContent>
+            {Object.values(services).map(service => (
+              <SelectItem key={service.id} value={service.id}>{service.title}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         {form.formState.errors.serviceType && (
           <p className="text-red-500 text-sm mt-1">{form.formState.errors.serviceType.message}</p>
         )}
