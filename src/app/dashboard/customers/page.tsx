@@ -5,16 +5,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { createCustomer } from "./actions";
 import { CustomerEditDialog } from "@/components/customer-edit-dialog";
 import { DeleteCustomerButton } from "@/components/delete-customer-button";
-import { Mail, Phone, MapPin } from "lucide-react";
+import { Mail, Phone, MapPin, Users, Handshake } from "lucide-react"; // Neue Icons für Kundentyp
 import { SearchInput } from "@/components/search-input";
+import { Badge } from "@/components/ui/badge"; // Importiere Badge
 
 export default async function CustomersPage({
   searchParams,
-}: // Entferne die explizite Typisierung hier
-// {
-//   searchParams?: { [key: string]: string | string[] | undefined };
-// }
-any) { // Verwende 'any' als temporäre Lösung, um den Fehler zu umgehen
+}: any) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -32,7 +29,7 @@ any) { // Verwende 'any' als temporäre Lösung, um den Fehler zu umgehen
 
   if (query) {
     customersQuery = customersQuery.or(
-      `name.ilike.%${query}%,address.ilike.%${query}%,contact_email.ilike.%${query}%,contact_phone.ilike.%${query}%`
+      `name.ilike.%${query}%,address.ilike.%${query}%,contact_email.ilike.%${query}%,contact_phone.ilike.%${query}%,customer_type.ilike.%${query}%` // Suche auch nach Kundentyp
     );
   }
 
@@ -67,6 +64,14 @@ any) { // Verwende 'any' als temporäre Lösung, um den Fehler zu umgehen
                 </div>
               </CardHeader>
               <CardContent className="space-y-2">
+                <div className="flex items-center text-sm text-muted-foreground">
+                  {customer.customer_type === 'partner' ? (
+                    <Handshake className="mr-2 h-4 w-4 flex-shrink-0" />
+                  ) : (
+                    <Users className="mr-2 h-4 w-4 flex-shrink-0" />
+                  )}
+                  <span>Typ: <Badge variant="secondary">{customer.customer_type === 'partner' ? 'Partner' : 'Kunde'}</Badge></span>
+                </div>
                 {customer.address && (
                   <div className="flex items-center text-sm text-muted-foreground">
                     <MapPin className="mr-2 h-4 w-4 flex-shrink-0" />

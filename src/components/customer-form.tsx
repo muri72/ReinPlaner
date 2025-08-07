@@ -8,12 +8,14 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"; // Import Select components
 
 export const customerSchema = z.object({
   name: z.string().min(1, "Name ist erforderlich").max(100, "Name ist zu lang"),
   address: z.string().max(255, "Adresse ist zu lang").optional().nullable(),
   contactEmail: z.string().email("Ungültiges E-Mail-Format").max(100, "E-Mail ist zu lang").optional().nullable(),
   contactPhone: z.string().max(50, "Telefonnummer ist zu lang").optional().nullable(),
+  customerType: z.enum(["customer", "partner"]).default("customer"), // Neues Feld
 });
 
 export type CustomerFormInput = z.input<typeof customerSchema>;
@@ -32,6 +34,7 @@ export function CustomerForm({ initialData, onSubmit, submitButtonText, onSucces
     address: initialData?.address ?? null,
     contactEmail: initialData?.contactEmail ?? null,
     contactPhone: initialData?.contactPhone ?? null,
+    customerType: initialData?.customerType ?? "customer", // Initialwert für neues Feld
   };
 
   const form = useForm<CustomerFormValues>({
@@ -100,6 +103,21 @@ export function CustomerForm({ initialData, onSubmit, submitButtonText, onSucces
         />
         {form.formState.errors.contactPhone && (
           <p className="text-red-500 text-sm mt-1">{form.formState.errors.contactPhone.message}</p>
+        )}
+      </div>
+      <div>
+        <Label htmlFor="customerType">Kundentyp</Label>
+        <Select onValueChange={(value) => form.setValue("customerType", value as "customer" | "partner")} value={form.watch("customerType")}>
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="Typ auswählen" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="customer">Kunde</SelectItem>
+            <SelectItem value="partner">Partner</SelectItem>
+          </SelectContent>
+        </Select>
+        {form.formState.errors.customerType && (
+          <p className="text-red-500 text-sm mt-1">{form.formState.errors.customerType.message}</p>
         )}
       </div>
       <Button type="submit" disabled={form.formState.isSubmitting}>

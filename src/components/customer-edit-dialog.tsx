@@ -14,6 +14,7 @@ interface CustomerEditDialogProps {
     address: string | null;
     contact_email: string | null;
     contact_phone: string | null;
+    customer_type: string; // Neues Feld
   };
 }
 
@@ -45,6 +46,7 @@ export function CustomerEditDialog({ customer }: CustomerEditDialogProps) {
             address: customer.address,
             contactEmail: customer.contact_email,
             contactPhone: customer.contact_phone,
+            customerType: customer.customer_type as CustomerFormValues["customerType"], // Neues Feld
           }}
           onSubmit={handleUpdate}
           submitButtonText="Änderungen speichern"
