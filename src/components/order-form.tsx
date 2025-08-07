@@ -10,15 +10,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { CalendarIcon, PlusCircle } from "lucide-react"; // PlusCircle-Icon hinzugefügt
+import { CalendarIcon, PlusCircle } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState, useEffect } from "react";
-import { createClient } from "@/lib/supabase/client"; // Importiere Supabase Client
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"; // Dialog-Komponenten
-import { ObjectForm, ObjectFormValues } from "@/components/object-form"; // ObjectForm importieren
-import { createObject } from "@/app/dashboard/objects/actions"; // createObject-Aktion importieren
+import { createClient } from "@/lib/supabase/client";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { ObjectForm, ObjectFormValues } from "@/components/object-form";
+import { createObject } from "@/app/dashboard/objects/actions";
+import { CustomerContactCreateDialog } from "@/components/customer-contact-create-dialog"; // Importiere den neuen Dialog
 
 // Definierte Liste der Dienstleistungen
 const availableServices = [
@@ -27,19 +28,18 @@ const availableServices = [
   "Grundreinigung",
   "Graffitientfernung",
   "Sonderreinigung",
-] as const; // 'as const' für String-Literal-Typen
+] as const;
 
-export const orderSchema = z.object({ // taskSchema zu orderSchema
+export const orderSchema = z.object({
   title: z.string().min(1, "Titel ist erforderlich").max(100, "Titel ist zu lang"),
   description: z.string().max(500, "Beschreibung ist zu lang").optional().nullable(),
   dueDate: z.date().optional().nullable(),
   status: z.enum(["pending", "in_progress", "completed"]).default("pending"),
-  customerId: z.string().uuid("Ungültige Kunden-ID").min(1, "Kunde ist erforderlich"), // Neue Felder
-  objectId: z.string().uuid("Ungültige Objekt-ID").min(1, "Objekt ist erforderlich"),   // Neue Felder
-  employeeId: z.string().uuid("Ungültige Mitarbeiter-ID").optional().nullable(), // Optional
-  customerContactId: z.string().uuid("Ungültige Kundenkontakt-ID").optional().nullable(), // Neues Feld
-  // Neue Felder für Auftragstypen und Details
-  orderType: z.enum(["one_time", "recurring", "substitution", "permanent"]).default("one_time"), // 'permanent' hinzugefügt
+  customerId: z.string().uuid("Ungültige Kunden-ID").min(1, "Kunde ist erforderlich"),
+  objectId: z.string().uuid("Ungültige Objekt-ID").min(1, "Objekt ist erforderlich"),
+  employeeId: z.string().uuid("Ungültige Mitarbeiter-ID").optional().nullable(),
+  customerContactId: z.string().uuid("Ungültige Kundenkontakt-ID").optional().nullable(),
+  orderType: z.enum(["one_time", "recurring", "substitution", "permanent"]).default("one_time"),
   recurringStartDate: z.date().optional().nullable(),
   recurringEndDate: z.date().optional().nullable(),
   priority: z.enum(["low", "medium", "high"]).default("low"),
@@ -48,26 +48,26 @@ export const orderSchema = z.object({ // taskSchema zu orderSchema
     z.nullable(z.number().min(0, "Stunden müssen positiv sein").max(999, "Stunden sind zu hoch")).optional()
   ),
   notes: z.string().max(500, "Notizen sind zu lang").optional().nullable(),
-  serviceType: z.enum(availableServices).optional().nullable(), // Neues Feld als Enum der verfügbaren Services
+  serviceType: z.enum(availableServices).optional().nullable(),
 });
 
-export type OrderFormInput = z.input<typeof orderSchema>; // TaskFormInput zu OrderFormInput
-export type OrderFormValues = z.infer<typeof orderSchema>; // TaskFormValues zu OrderFormValues
+export type OrderFormInput = z.input<typeof orderSchema>;
+export type OrderFormValues = z.infer<typeof orderSchema>;
 
-interface OrderFormProps { // TaskFormProps zu OrderFormProps
+interface OrderFormProps {
   initialData?: Partial<OrderFormInput>;
   onSubmit: (data: OrderFormValues) => Promise<{ success: boolean; message: string }>;
   submitButtonText: string;
   onSuccess?: () => void;
 }
 
-export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }: OrderFormProps) { // TaskForm zu OrderForm
+export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }: OrderFormProps) {
   const supabase = createClient();
   const [customers, setCustomers] = useState<{ id: string; name: string }[]>([]);
   const [objects, setObjects] = useState<{ id: string; name: string; customer_id: string }[]>([]);
   const [employees, setEmployees] = useState<{ id: string; first_name: string; last_name: string }[]>([]);
-  const [customerContacts, setCustomerContacts] = useState<{ id: string; first_name: string; last_name: string; customer_id: string }[]>([]); // State für Kundenkontakte
-  const [isNewObjectDialogOpen, setIsNewObjectDialogOpen] = useState(false); // State für Dialog
+  const [customerContacts, setCustomerContacts] = useState<{ id: string; first_name: string; last_name: string; customer_id: string }[]>([]);
+  const [isNewObjectDialogOpen, setIsNewObjectDialogOpen] = useState(false);
 
   const resolvedDefaultValues: OrderFormValues = {
     title: initialData?.title ?? "",
@@ -77,14 +77,14 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     customerId: initialData?.customerId ?? "",
     objectId: initialData?.objectId ?? "",
     employeeId: initialData?.employeeId ?? null,
-    customerContactId: initialData?.customerContactId ?? null, // Initialwert für neues Feld
+    customerContactId: initialData?.customerContactId ?? null,
     orderType: initialData?.orderType ?? "one_time",
     recurringStartDate: initialData?.recurringStartDate ? new Date(initialData.recurringStartDate) : null,
     recurringEndDate: initialData?.recurringEndDate ? new Date(initialData.recurringEndDate) : null,
     priority: initialData?.priority ?? "low",
-    estimatedHours: (initialData?.estimatedHours as number | null | undefined) ?? null, // Fix: Explizites Casting
+    estimatedHours: (initialData?.estimatedHours as number | null | undefined) ?? null,
     notes: initialData?.notes ?? null,
-    serviceType: initialData?.serviceType ?? null, // Initialwert für neues Feld
+    serviceType: initialData?.serviceType ?? null,
   };
 
   const form = useForm<OrderFormValues>({
@@ -120,9 +120,19 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     }
   }, [form.watch("recurringEndDate")]);
 
-  // Watch orderType and customerId to conditionally render fields and filter contacts
   const orderType = form.watch("orderType");
   const selectedCustomerId = form.watch("customerId");
+
+  // Funktion zum Laden der Kundenkontakte
+  const fetchCustomerContacts = async (customerId: string) => {
+    const { data: contactsData, error: contactsError } = await supabase
+      .from('customer_contacts')
+      .select('id, first_name, last_name, customer_id')
+      .eq('customer_id', customerId)
+      .order('last_name', { ascending: true });
+    if (contactsData) setCustomerContacts(contactsData);
+    if (contactsError) console.error("Fehler beim Laden der Kundenkontakte:", contactsError);
+  };
 
   // Daten für Dropdowns laden
   useEffect(() => {
@@ -144,21 +154,12 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
 
   // Kundenkontakte laden, wenn sich der ausgewählte Kunde ändert
   useEffect(() => {
-    const fetchCustomerContacts = async () => {
-      if (selectedCustomerId) {
-        const { data: contactsData, error: contactsError } = await supabase
-          .from('customer_contacts')
-          .select('id, first_name, last_name, customer_id')
-          .eq('customer_id', selectedCustomerId)
-          .order('last_name', { ascending: true });
-        if (contactsData) setCustomerContacts(contactsData);
-        if (contactsError) console.error("Fehler beim Laden der Kundenkontakte:", contactsError);
-      } else {
-        setCustomerContacts([]); // Kontakte leeren, wenn kein Kunde ausgewählt ist
-        form.setValue("customerContactId", null); // Kundenkontakt zurücksetzen
-      }
-    };
-    fetchCustomerContacts();
+    if (selectedCustomerId) {
+      fetchCustomerContacts(selectedCustomerId);
+    } else {
+      setCustomerContacts([]);
+      form.setValue("customerContactId", null);
+    }
   }, [selectedCustomerId, supabase, form]);
 
   // Objekte filtern basierend auf ausgewähltem Kunden
@@ -184,20 +185,28 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
   const handleCreateObject = async (data: ObjectFormValues) => {
     const result = await createObject(data);
     if (result.success) {
-      // Objektliste neu laden und neues Objekt auswählen
       const { data: newObjectsData, error: newObjectsError } = await supabase.from('objects').select('id, name, customer_id');
       if (newObjectsData) {
         setObjects(newObjectsData);
-        // Versuche, das neu erstellte Objekt im Dropdown auszuwählen
         const newObject = newObjectsData.find(obj => obj.name === data.name && obj.customer_id === data.customerId);
         if (newObject) {
           form.setValue("objectId", newObject.id);
         }
       }
       if (newObjectsError) console.error("Fehler beim Neuladen der Objekte:", newObjectsError);
-      setIsNewObjectDialogOpen(false); // Dialog schließen
+      setIsNewObjectDialogOpen(false);
     }
     return result;
+  };
+
+  // Handler für die Kundenkontakterstellung im Dialog
+  const handleCustomerContactCreated = async () => {
+    if (selectedCustomerId) {
+      await fetchCustomerContacts(selectedCustomerId);
+      // Optional: Versuchen Sie, den neu erstellten Kontakt automatisch auszuwählen
+      // Dies erfordert, dass die createCustomerContact-Aktion die ID des neuen Kontakts zurückgibt.
+      // Da dies derzeit nicht der Fall ist, muss der Benutzer ihn manuell auswählen.
+    }
   };
 
   return (
@@ -226,7 +235,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
         )}
       </div>
       <div>
-        <Label htmlFor="serviceType">Reinigungsdienstleistung</Label> {/* Neues Feld */}
+        <Label htmlFor="serviceType">Reinigungsdienstleistung</Label>
         <Select onValueChange={(value) => form.setValue("serviceType", value as OrderFormValues["serviceType"])} value={form.watch("serviceType") || ""}>
           <SelectTrigger className="w-full">
             <SelectValue placeholder="Dienstleistung auswählen" />
@@ -245,8 +254,8 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
         <Label htmlFor="customerId">Kunde</Label>
         <Select onValueChange={(value) => {
           form.setValue("customerId", value);
-          form.setValue("objectId", ""); // Objekt zurücksetzen, wenn Kunde geändert wird
-          form.setValue("customerContactId", null); // Kundenkontakt zurücksetzen, wenn Kunde geändert wird
+          form.setValue("objectId", "");
+          form.setValue("customerContactId", null);
         }} value={form.watch("customerId")}>
           <SelectTrigger className="w-full">
             <SelectValue placeholder="Kunde auswählen" />
@@ -261,24 +270,31 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
           <p className="text-red-500 text-sm mt-1">{form.formState.errors.customerId.message}</p>
         )}
       </div>
-      <div>
-        <Label htmlFor="customerContactId">Auftraggebende Person (Kundenkontakt, optional)</Label>
-        <Select onValueChange={(value) => form.setValue("customerContactId", value === "unassigned" ? null : value)} value={form.watch("customerContactId") || "unassigned"} disabled={!selectedCustomerId}>
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Kundenkontakt auswählen" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="unassigned">Kein Kundenkontakt zugewiesen</SelectItem>
-            {customerContacts.map(contact => (
-              <SelectItem key={contact.id} value={contact.id}>{contact.first_name} {contact.last_name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {form.formState.errors.customerContactId && (
-          <p className="text-red-500 text-sm mt-1">{form.formState.errors.customerContactId.message}</p>
-        )}
+      <div className="flex items-end gap-2">
+        <div className="flex-grow">
+          <Label htmlFor="customerContactId">Auftraggebende Person (Kundenkontakt, optional)</Label>
+          <Select onValueChange={(value) => form.setValue("customerContactId", value === "unassigned" ? null : value)} value={form.watch("customerContactId") || "unassigned"} disabled={!selectedCustomerId}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Kundenkontakt auswählen" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="unassigned">Kein Kundenkontakt zugewiesen</SelectItem>
+              {customerContacts.map(contact => (
+                <SelectItem key={contact.id} value={contact.id}>{contact.first_name} {contact.last_name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {form.formState.errors.customerContactId && (
+            <p className="text-red-500 text-sm mt-1">{form.formState.errors.customerContactId.message}</p>
+          )}
+        </div>
+        <CustomerContactCreateDialog
+          customerId={selectedCustomerId}
+          onContactCreated={handleCustomerContactCreated}
+          disabled={!selectedCustomerId}
+        />
       </div>
-      <div className="flex items-end gap-2"> {/* Flex-Container für Label, Select und Button */}
+      <div className="flex items-end gap-2">
         <div className="flex-grow">
           <Label htmlFor="objectId">Objekt</Label>
           <Select onValueChange={(value) => form.setValue("objectId", value)} value={form.watch("objectId")} disabled={!form.watch("customerId")}>
@@ -298,11 +314,11 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
         <Dialog open={isNewObjectDialogOpen} onOpenChange={setIsNewObjectDialogOpen}>
           <DialogTrigger asChild>
             <Button
-              type="button" // Wichtig, damit es das Formular nicht absendet
+              type="button"
               variant="outline"
               size="icon"
-              className="mb-1" // Kleiner Abstand nach unten
-              disabled={!form.watch("customerId")} // Deaktivieren, wenn kein Kunde ausgewählt ist
+              className="mb-1"
+              disabled={!form.watch("customerId")}
               title={!form.watch("customerId") ? "Bitte zuerst einen Kunden auswählen" : "Neues Objekt für diesen Kunden erstellen"}
             >
               <PlusCircle className="h-4 w-4" />
@@ -313,10 +329,10 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
               <DialogTitle>Neues Objekt erstellen</DialogTitle>
             </DialogHeader>
             <ObjectForm
-              initialData={{ customerId: form.watch("customerId") }} // Kunden-ID übergeben
+              initialData={{ customerId: form.watch("customerId") }}
               onSubmit={handleCreateObject}
               submitButtonText="Objekt erstellen"
-              onSuccess={() => setIsNewObjectDialogOpen(false)} // Dialog schließen bei Erfolg
+              onSuccess={() => setIsNewObjectDialogOpen(false)}
             />
           </DialogContent>
         </Dialog>
@@ -328,7 +344,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
             <SelectValue placeholder="Mitarbeiter auswählen" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="unassigned">Kein Mitarbeiter zugewiesen</SelectItem> {/* Wert geändert */}
+            <SelectItem value="unassigned">Kein Mitarbeiter zugewiesen</SelectItem>
             {employees.map(employee => (
               <SelectItem key={employee.id} value={employee.id}>{employee.first_name} {employee.last_name}</SelectItem>
             ))}
@@ -342,7 +358,6 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
         <Label htmlFor="orderType">Auftragstyp</Label>
         <Select onValueChange={(value) => {
           form.setValue("orderType", value as OrderFormValues["orderType"]);
-          // Reset date fields when order type changes
           form.setValue("dueDate", null);
           form.setValue("recurringStartDate", null);
           form.setValue("recurringEndDate", null);
@@ -354,7 +369,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
             <SelectItem value="one_time">Einmalig</SelectItem>
             <SelectItem value="recurring">Wiederkehrend</SelectItem>
             <SelectItem value="substitution">Vertretung</SelectItem>
-            <SelectItem value="permanent">Permanent</SelectItem> {/* Neuer Typ */}
+            <SelectItem value="permanent">Permanent</SelectItem>
           </SelectContent>
         </Select>
         {form.formState.errors.orderType && (
@@ -423,7 +438,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
               <p className="text-red-500 text-sm mt-1">{form.formState.errors.recurringStartDate.message}</p>
             )}
           </div>
-          {orderType !== "permanent" && ( // Enddatum nur für recurring und substitution
+          {orderType !== "permanent" && (
             <div>
               <Label htmlFor="recurringEndDate">Enddatum (optional)</Label>
               <Popover>

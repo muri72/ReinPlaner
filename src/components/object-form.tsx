@@ -14,6 +14,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useDebouncedCallback } from "use-debounce";
+import { CustomerContactCreateDialog } from "@/components/customer-contact-create-dialog"; // Importiere den neuen Dialog
 
 // Helper to calculate hours between two time strings (HH:MM)
 const calculateHours = (start: string | null, end: string | null): number | null => {
@@ -204,23 +205,25 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
     fetchData();
   }, [supabase]);
 
+  // Funktion zum Laden der Kundenkontakte
+  const fetchCustomerContacts = async (customerId: string) => {
+    const { data: contactsData, error: contactsError } = await supabase
+      .from('customer_contacts')
+      .select('id, first_name, last_name, customer_id')
+      .eq('customer_id', customerId)
+      .order('last_name', { ascending: true });
+    if (contactsData) setCustomerContacts(contactsData);
+    if (contactsError) console.error("Fehler beim Laden der Kundenkontakte:", contactsError);
+  };
+
   // Kundenkontakte laden, wenn sich der ausgewählte Kunde ändert
   useEffect(() => {
-    const fetchCustomerContacts = async () => {
-      if (selectedCustomerId) {
-        const { data: contactsData, error: contactsError } = await supabase
-          .from('customer_contacts')
-          .select('id, first_name, last_name, customer_id')
-          .eq('customer_id', selectedCustomerId)
-          .order('last_name', { ascending: true });
-        if (contactsData) setCustomerContacts(contactsData);
-        if (contactsError) console.error("Fehler beim Laden der Kundenkontakte:", contactsError);
-      } else {
-        setCustomerContacts([]); // Kontakte leeren, wenn kein Kunde ausgewählt ist
-        form.setValue("customerContactId", null); // Objektleiter zurücksetzen
-      }
-    };
-    fetchCustomerContacts();
+    if (selectedCustomerId) {
+      fetchCustomerContacts(selectedCustomerId);
+    } else {
+      setCustomerContacts([]); // Kontakte leeren, wenn kein Kunde ausgewählt ist
+      form.setValue("customerContactId", null); // Objektleiter zurücksetzen
+    }
   }, [selectedCustomerId, supabase, form]);
 
 
@@ -256,6 +259,16 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
 
   const accessMethod = form.watch("accessMethod");
   const isAlarmSecured = form.watch("isAlarmSecured");
+
+  // Handler für die Kundenkontakterstellung im Dialog
+  const handleCustomerContactCreated = async () => {
+    if (selectedCustomerId) {
+      await fetchCustomerContacts(selectedCustomerId);
+      // Optional: Versuchen Sie, den neu erstellten Kontakt automatisch auszuwählen
+      // Dies erfordert, dass die createCustomerContact-Aktion die ID des neuen Kontakts zurückgibt.
+      // Da dies derzeit nicht der Fall ist, muss der Benutzer ihn manuell auswählen.
+    }
+  };
 
   return (
     <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 w-full max-w-md">
@@ -310,22 +323,29 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
           <p className="text-red-500 text-sm mt-1">{form.formState.errors.customerId.message}</p>
         )}
       </div>
-      <div>
-        <Label htmlFor="customerContactId">Objektleiter (Kundenkontakt, optional)</Label>
-        <Select onValueChange={(value) => form.setValue("customerContactId", value === "unassigned" ? null : value)} value={form.watch("customerContactId") || "unassigned"} disabled={!selectedCustomerId}>
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Objektleiter auswählen" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="unassigned">Kein Objektleiter zugewiesen</SelectItem>
-            {customerContacts.map(contact => (
-              <SelectItem key={contact.id} value={contact.id}>{contact.first_name} {contact.last_name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {form.formState.errors.customerContactId && (
-          <p className="text-red-500 text-sm mt-1">{form.formState.errors.customerContactId.message}</p>
-        )}
+      <div className="flex items-end gap-2">
+        <div className="flex-grow">
+          <Label htmlFor="customerContactId">Objektleiter (Kundenkontakt, optional)</Label>
+          <Select onValueChange={(value) => form.setValue("customerContactId", value === "unassigned" ? null : value)} value={form.watch("customerContactId") || "unassigned"} disabled={!selectedCustomerId}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Objektleiter auswählen" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="unassigned">Kein Objektleiter zugewiesen</SelectItem>
+              {customerContacts.map(contact => (
+                <SelectItem key={contact.id} value={contact.id}>{contact.first_name} {contact.last_name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {form.formState.errors.customerContactId && (
+            <p className="text-red-500 text-sm mt-1">{form.formState.errors.customerContactId.message}</p>
+          )}
+        </div>
+        <CustomerContactCreateDialog
+          customerId={selectedCustomerId}
+          onContactCreated={handleCustomerContactCreated}
+          disabled={!selectedCustomerId}
+        />
       </div>
 
       <h3 className="text-lg font-semibold mt-6">Auftragseinstellungen für dieses Objekt</h3>
@@ -357,7 +377,6 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
           <p className="text-red-500 text-sm mt-1">{form.formState.errors.priority.message}</p>
         )}
       </div>
-      {/* Moved timeOfDay here */}
       <div>
         <Label htmlFor="timeOfDay">Tageszeit</Label>
         <Select onValueChange={(value) => form.setValue("timeOfDay", value as "morning" | "noon" | "afternoon" | "any")} value={form.watch("timeOfDay")}>
@@ -395,14 +414,14 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
                   if (!checked) {
                     form.setValue(startTimeField, null);
                     form.setValue(endTimeField, null);
-                    setDayHoursInputs(prev => ({ ...prev, [day]: '' })); // Clear hours input as well
+                    setDayHoursInputs(prev => ({ ...prev, [day]: '' }));
                   }
                 }}
               />
               <Label htmlFor={`${day}Active`}>{day.charAt(0).toUpperCase() + day.slice(1)}</Label>
             </div>
             {activeDays[day] && (
-              <div className="grid grid-cols-3 gap-4 mt-2 items-end"> {/* Changed to 3 columns */}
+              <div className="grid grid-cols-3 gap-4 mt-2 items-end">
                 <div>
                   <Label htmlFor={startTimeField}>Start</Label>
                   <Input
@@ -429,18 +448,16 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
                   <Label htmlFor={`${day}Hours`}>Stunden</Label>
                   <Input
                     id={`${day}Hours`}
-                    type="text" // Changed to text to allow comma input
+                    type="text"
                     placeholder="Stunden"
                     value={dayHoursInputs[day]}
                     onChange={(e) => {
                       let value = e.target.value;
-                      // Replace comma with dot for parsing
                       value = value.replace(',', '.');
                       setDayHoursInputs(prev => ({ ...prev, [day]: value }));
-                      debouncedUpdateTimes(day, value, timeOfDay); // Call debounced function
+                      debouncedUpdateTimes(day, value, timeOfDay);
                     }}
                   />
-                  {/* No error message for hours input as it's derived */}
                 </div>
               </div>
             )}
