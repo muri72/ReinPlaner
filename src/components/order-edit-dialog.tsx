@@ -17,6 +17,13 @@ interface OrderEditDialogProps {
     customer_id: string | null;
     object_id: string | null;
     employee_id: string | null;
+    // Neue Felder
+    order_type: string;
+    recurring_start_date: string | null;
+    recurring_end_date: string | null;
+    priority: string;
+    estimated_hours: number | null;
+    notes: string | null;
   };
 }
 
@@ -48,9 +55,15 @@ export function OrderEditDialog({ order }: OrderEditDialogProps) {
             description: order.description || undefined,
             dueDate: order.due_date ? new Date(order.due_date) : undefined,
             status: order.status as OrderFormValues["status"],
-            customerId: order.customer_id ?? undefined, // Konvertiert null zu undefined
-            objectId: order.object_id ?? undefined,     // Konvertiert null zu undefined
+            customerId: order.customer_id ?? undefined,
+            objectId: order.object_id ?? undefined,
             employeeId: order.employee_id,
+            orderType: order.order_type as OrderFormValues["orderType"],
+            recurringStartDate: order.recurring_start_date ? new Date(order.recurring_start_date) : undefined,
+            recurringEndDate: order.recurring_end_date ? new Date(order.recurring_end_date) : undefined,
+            priority: order.priority as OrderFormValues["priority"],
+            estimatedHours: order.estimated_hours,
+            notes: order.notes,
           }}
           onSubmit={handleUpdate}
           submitButtonText="Änderungen speichern"

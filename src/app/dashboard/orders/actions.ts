@@ -12,7 +12,21 @@ export async function createOrder(data: OrderFormValues) {
     return { success: false, message: "Benutzer nicht authentifiziert." };
   }
 
-  const { title, description, dueDate, status, customerId, objectId, employeeId } = data;
+  const {
+    title,
+    description,
+    dueDate,
+    status,
+    customerId,
+    objectId,
+    employeeId,
+    orderType,
+    recurringStartDate,
+    recurringEndDate,
+    priority,
+    estimatedHours,
+    notes,
+  } = data;
 
   const { error } = await supabase
     .from('orders') // Tabelle ist jetzt 'orders'
@@ -22,9 +36,16 @@ export async function createOrder(data: OrderFormValues) {
       description,
       due_date: dueDate ? dueDate.toISOString() : null,
       status: status || 'pending',
-      customer_id: customerId, // Neue Spalte
-      object_id: objectId,     // Neue Spalte
-      employee_id: employeeId, // Neue Spalte
+      customer_id: customerId,
+      object_id: objectId,
+      employee_id: employeeId,
+      order_type: orderType,
+      recurring_start_date: recurringStartDate ? recurringStartDate.toISOString().split('T')[0] : null, // Nur Datum
+      recurring_end_date: recurringEndDate ? recurringEndDate.toISOString().split('T')[0] : null,     // Nur Datum
+      priority,
+      estimated_hours: estimatedHours,
+      notes,
+      request_status: 'approved', // Standardmäßig 'approved' für vom Admin erstellte Aufträge
     });
 
   if (error) {
@@ -51,9 +72,16 @@ export async function updateOrder(orderId: string, data: OrderFormValues) {
       description: data.description,
       due_date: data.dueDate ? data.dueDate.toISOString() : null,
       status: data.status,
-      customer_id: data.customerId, // Neue Spalte
-      object_id: data.objectId,     // Neue Spalte
-      employee_id: data.employeeId, // Neue Spalte
+      customer_id: data.customerId,
+      object_id: data.objectId,
+      employee_id: data.employeeId,
+      order_type: data.orderType,
+      recurring_start_date: data.recurringStartDate ? data.recurringStartDate.toISOString().split('T')[0] : null,
+      recurring_end_date: data.recurringEndDate ? data.recurringEndDate.toISOString().split('T')[0] : null,
+      priority: data.priority,
+      estimated_hours: data.estimatedHours,
+      notes: data.notes,
+      // request_status wird hier nicht aktualisiert, da dies ein separater Workflow ist
     })
     .eq('id', orderId)
     .eq('user_id', user.id); // Sicherstellen, dass nur eigene Aufträge aktualisiert werden können

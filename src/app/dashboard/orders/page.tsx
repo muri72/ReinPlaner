@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { OrderForm } from "@/components/order-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Trash2 } from "lucide-react";
+import { Trash2, CalendarDays, Clock, FileText } from "lucide-react"; // Neue Icons
 import { deleteOrder, createOrder } from "./actions";
 import { OrderEditDialog } from "@/components/order-edit-dialog";
 import { Badge } from "@/components/ui/badge";
@@ -26,6 +26,14 @@ interface DisplayOrder {
   object_name: string | null;
   employee_first_name: string | null;
   employee_last_name: string | null;
+  // Neue Felder
+  order_type: string;
+  recurring_start_date: string | null;
+  recurring_end_date: string | null;
+  priority: string;
+  estimated_hours: number | null;
+  notes: string | null;
+  request_status: string;
 }
 
 export default async function OrdersPage({
@@ -80,6 +88,14 @@ export default async function OrdersPage({
       object_name: order.objects?.name || null,
       employee_first_name: order.employees?.first_name || null,
       employee_last_name: order.employees?.last_name || null,
+      // Neue Felder mappen
+      order_type: order.order_type,
+      recurring_start_date: order.recurring_start_date,
+      recurring_end_date: order.recurring_end_date,
+      priority: order.priority,
+      estimated_hours: order.estimated_hours,
+      notes: order.notes,
+      request_status: order.request_status,
     })) || null;
     error = selectError;
   }
@@ -98,6 +114,18 @@ export default async function OrdersPage({
       case 'pending':
       default:
         return 'outline';
+    }
+  };
+
+  const getPriorityBadgeVariant = (priority: string) => {
+    switch (priority) {
+      case 'high':
+        return 'destructive';
+      case 'medium':
+        return 'default';
+      case 'low':
+      default:
+        return 'secondary';
     }
   };
 
@@ -135,12 +163,38 @@ export default async function OrdersPage({
                 {order.employee_first_name && order.employee_last_name && (
                   <p className="text-xs text-muted-foreground">Mitarbeiter: {order.employee_first_name} {order.employee_last_name}</p>
                 )}
-                <div className="flex items-center mt-2">
+                <div className="flex items-center mt-2 space-x-2">
                   <Badge variant={getStatusBadgeVariant(order.status)}>{order.status}</Badge>
-                  {order.due_date && (
-                    <p className="text-xs text-muted-foreground ml-auto">Fällig: {new Date(order.due_date).toLocaleDateString()}</p>
-                  )}
+                  <Badge variant="outline">{order.order_type}</Badge>
+                  <Badge variant={getPriorityBadgeVariant(order.priority)}>Priorität: {order.priority}</Badge>
                 </div>
+                {order.estimated_hours && (
+                  <div className="flex items-center text-xs text-muted-foreground mt-1">
+                    <Clock className="mr-1 h-3 w-3" />
+                    <span>Geschätzte Stunden: {order.estimated_hours}</span>
+                  </div>
+                )}
+                {order.notes && (
+                  <div className="flex items-center text-xs text-muted-foreground mt-1">
+                    <FileText className="mr-1 h-3 w-3" />
+                    <span>Notizen: {order.notes}</span>
+                  </div>
+                )}
+                {order.recurring_start_date && (
+                  <div className="flex items-center text-xs text-muted-foreground mt-1">
+                    <CalendarDays className="mr-1 h-3 w-3" />
+                    <span>Start: {new Date(order.recurring_start_date).toLocaleDateString()}</span>
+                  </div>
+                )}
+                {order.recurring_end_date && (
+                  <div className="flex items-center text-xs text-muted-foreground">
+                    <CalendarDays className="mr-1 h-3 w-3" />
+                    <span>Ende: {new Date(order.recurring_end_date).toLocaleDateString()}</span>
+                  </div>
+                )}
+                {order.due_date && (
+                  <p className="text-xs text-muted-foreground ml-auto mt-1">Fällig: {new Date(order.due_date).toLocaleDateString()}</p>
+                )}
               </CardContent>
             </Card>
           ))
