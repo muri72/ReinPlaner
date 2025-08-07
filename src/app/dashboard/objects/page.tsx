@@ -20,9 +20,9 @@ interface DisplayObject {
   created_at: string | null;
   customer_name: string | null;
   // Neue Felder
-  notes: string | null; // Geändert von default_notes
-  priority: string; // Geändert von default_priority
-  time_of_day: string; // Geändert von default_time_of_day
+  notes: string | null;
+  priority: string;
+  time_of_day: string;
   access_method: string;
   pin: string | null;
   is_alarm_secured: boolean;
@@ -103,9 +103,9 @@ export default async function ObjectsPage({
       created_at: obj.created_at,
       customer_name: obj.customers?.name || null,
       // Neue Felder mappen
-      notes: obj.notes, // Geändert von default_notes
-      priority: obj.priority, // Geändert von default_priority
-      time_of_day: obj.time_of_day, // Geändert von default_time_of_day
+      notes: obj.notes,
+      priority: obj.priority,
+      time_of_day: obj.time_of_day,
       access_method: obj.access_method,
       pin: obj.pin,
       is_alarm_secured: obj.is_alarm_secured,
