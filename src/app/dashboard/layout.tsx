@@ -1,6 +1,6 @@
 import React from "react";
 import Link from "next/link";
-import { Home, ListTodo, User, Users, Briefcase, UsersRound, Building, ContactRound } from "lucide-react"; // Building-Icon für Objekte, ContactRound für Kundenkontakte
+import { Home, ListTodo, User, Users, Briefcase, UsersRound, Building, ContactRound, Settings } from "lucide-react"; // Settings-Icon für Benutzerverwaltung
 import { Button } from "@/components/ui/button";
 import { signOut } from "@/app/dashboard/actions";
 
@@ -50,6 +50,12 @@ export default function DashboardLayout({
               <Button variant="ghost" className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
                 <UsersRound className="mr-2 h-4 w-4" />
                 Mitarbeiter
+              </Button>
+            </Link>
+            <Link href="/dashboard/users" passHref> {/* Neuer Link für Benutzerverwaltung */}
+              <Button variant="ghost" className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
+                <Settings className="mr-2 h-4 w-4" />
+                Benutzer
               </Button>
             </Link>
             <Link href="/dashboard/profile" passHref>
