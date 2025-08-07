@@ -5,30 +5,47 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { createEmployee } from "./actions";
 import { EmployeeEditDialog } from "@/components/employee-edit-dialog";
 import { DeleteEmployeeButton } from "@/components/delete-employee-button";
-import { Mail, Phone, CalendarDays, UserRoundCheck, UserRoundX, UserRoundMinus, Briefcase, DollarSign, Tag, Building2, FileText, MapPin, Cake, CreditCard, Shield } from "lucide-react"; // Neue Icons
+import { Mail, Phone, CalendarDays, UserRoundCheck, UserRoundX, UserRoundMinus, Briefcase, DollarSign, Tag, Building2, FileText, MapPin, Cake, CreditCard, Shield } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { SearchInput } from "@/components/search-input"; // Importiere die SearchInput Komponente
+import { SearchInput } from "@/components/search-input";
 
 export default async function EmployeesPage({
   searchParams,
 }: any) {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user: currentUser } } = await supabase.auth.getUser();
 
-  if (!user) {
+  if (!currentUser) {
     redirect("/login");
   }
+
+  // Fetch the current user's role
+  const { data: userProfile, error: profileError } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', currentUser.id)
+    .single();
+
+  if (profileError) {
+    console.error("Fehler beim Laden des Benutzerprofils:", profileError);
+    // Im Fehlerfall oder wenn kein Profil gefunden wird, behandeln wir es als Nicht-Admin
+  }
+
+  const isAdmin = userProfile?.role === 'admin';
 
   const query = typeof searchParams?.query === 'string' ? searchParams.query : '';
 
   let employeesQuery = supabase
     .from('employees')
     .select('*')
-    .eq('user_id', user.id)
     .order('last_name', { ascending: true });
 
+  // Apply user_id filter only if not an admin
+  if (!isAdmin) {
+    employeesQuery = employeesQuery.eq('user_id', currentUser.id);
+  }
+
   if (query) {
-    // Suche nach Vorname, Nachname, E-Mail, Telefonnummer, Berufsbezeichnung, Abteilung, Adresse, SV-Nummer, Steuer-ID oder Krankenkasse
     employeesQuery = employeesQuery.or(
       `first_name.ilike.%${query}%,last_name.ilike.%${query}%,email.ilike.%${query}%,phone.ilike.%${query}%,job_title.ilike.%${query}%,department.ilike.%${query}%,address.ilike.%${query}%,social_security_number.ilike.%${query}%,tax_id_number.ilike.%${query}%,health_insurance_provider.ilike.%${query}%`
     );
