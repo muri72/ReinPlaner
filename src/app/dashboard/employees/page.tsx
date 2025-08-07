@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { createEmployee } from "./actions";
 import { EmployeeEditDialog } from "@/components/employee-edit-dialog";
 import { DeleteEmployeeButton } from "@/components/delete-employee-button";
-import { Mail, Phone, CalendarDays, UserRoundCheck, UserRoundX, UserRoundMinus, Briefcase, DollarSign, Tag, Building2, FileText } from "lucide-react"; // Neue Icons
+import { Mail, Phone, CalendarDays, UserRoundCheck, UserRoundX, UserRoundMinus, Briefcase, DollarSign, Tag, Building2, FileText, MapPin, Cake, CreditCard, Shield } from "lucide-react"; // Neue Icons
 import { Badge } from "@/components/ui/badge";
 import { SearchInput } from "@/components/search-input"; // Importiere die SearchInput Komponente
 
@@ -28,9 +28,9 @@ export default async function EmployeesPage({
     .order('last_name', { ascending: true });
 
   if (query) {
-    // Suche nach Vorname, Nachname, E-Mail, Telefonnummer, Berufsbezeichnung oder Abteilung
+    // Suche nach Vorname, Nachname, E-Mail, Telefonnummer, Berufsbezeichnung, Abteilung, Adresse, SV-Nummer, Steuer-ID oder Krankenkasse
     employeesQuery = employeesQuery.or(
-      `first_name.ilike.%${query}%,last_name.ilike.%${query}%,email.ilike.%${query}%,phone.ilike.%${query}%,job_title.ilike.%${query}%,department.ilike.%${query}%`
+      `first_name.ilike.%${query}%,last_name.ilike.%${query}%,email.ilike.%${query}%,phone.ilike.%${query}%,job_title.ilike.%${query}%,department.ilike.%${query}%,address.ilike.%${query}%,social_security_number.ilike.%${query}%,tax_id_number.ilike.%${query}%,health_insurance_provider.ilike.%${query}%`
     );
   }
 
@@ -143,6 +143,36 @@ export default async function EmployeesPage({
                   <div className="flex items-center text-sm text-muted-foreground">
                     <FileText className="mr-2 h-4 w-4 flex-shrink-0" />
                     <span>Notizen: {employee.notes}</span>
+                  </div>
+                )}
+                {employee.address && (
+                  <div className="flex items-center text-sm text-muted-foreground">
+                    <MapPin className="mr-2 h-4 w-4 flex-shrink-0" />
+                    <span>Adresse: {employee.address}</span>
+                  </div>
+                )}
+                {employee.date_of_birth && (
+                  <div className="flex items-center text-sm text-muted-foreground">
+                    <Cake className="mr-2 h-4 w-4 flex-shrink-0" />
+                    <span>Geburtsdatum: {new Date(employee.date_of_birth).toLocaleDateString()}</span>
+                  </div>
+                )}
+                {employee.social_security_number && (
+                  <div className="flex items-center text-sm text-muted-foreground">
+                    <CreditCard className="mr-2 h-4 w-4 flex-shrink-0" />
+                    <span>SV-Nummer: {employee.social_security_number}</span>
+                  </div>
+                )}
+                {employee.tax_id_number && (
+                  <div className="flex items-center text-sm text-muted-foreground">
+                    <CreditCard className="mr-2 h-4 w-4 flex-shrink-0" />
+                    <span>Steuer-ID: {employee.tax_id_number}</span>
+                  </div>
+                )}
+                {employee.health_insurance_provider && (
+                  <div className="flex items-center text-sm text-muted-foreground">
+                    <Shield className="mr-2 h-4 w-4 flex-shrink-0" />
+                    <span>Krankenkasse: {employee.health_insurance_provider}</span>
                   </div>
                 )}
                 <div className="flex items-center text-sm text-muted-foreground">

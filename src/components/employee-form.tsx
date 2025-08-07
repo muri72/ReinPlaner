@@ -14,7 +14,7 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useEffect, useState } from "react";
-import { Textarea } from "@/components/ui/textarea"; // Import Textarea
+import { Textarea } from "@/components/ui/textarea";
 
 export const employeeSchema = z.object({
   firstName: z.string().min(1, "Vorname ist erforderlich").max(100, "Vorname ist zu lang"),
@@ -23,16 +23,21 @@ export const employeeSchema = z.object({
   phone: z.string().max(50, "Telefonnummer ist zu lang").optional().nullable(),
   hireDate: z.date().optional().nullable(),
   status: z.enum(["active", "inactive", "on_leave"]).default("active"),
-  contractType: z.enum(["minijob", "part_time", "full_time", "fixed_term"]).default("full_time"),
+  contractType: z.enum(["minijob", "part_time", "full_time"]).default("full_time"), // 'fixed_term' entfernt
   hourlyRate: z.preprocess(
     (val) => (val === "" ? null : Number(val)),
     z.nullable(z.number().min(0, "Stundenlohn muss positiv sein").max(9999.99, "Stundenlohn ist zu hoch")).optional()
   ),
   startDate: z.date().optional().nullable(),
-  // Neue Felder
   jobTitle: z.string().max(100, "Berufsbezeichnung ist zu lang").optional().nullable(),
   department: z.string().max(100, "Abteilung ist zu lang").optional().nullable(),
   notes: z.string().max(500, "Notizen sind zu lang").optional().nullable(),
+  // Neue Felder
+  address: z.string().max(255, "Adresse ist zu lang").optional().nullable(),
+  dateOfBirth: z.date().optional().nullable(),
+  socialSecurityNumber: z.string().max(50, "SV-Nummer ist zu lang").optional().nullable(),
+  taxIdNumber: z.string().max(50, "Steuer-ID ist zu lang").optional().nullable(),
+  healthInsuranceProvider: z.string().max(100, "Krankenkasse ist zu lang").optional().nullable(),
 });
 
 export type EmployeeFormInput = z.input<typeof employeeSchema>;
@@ -56,10 +61,15 @@ export function EmployeeForm({ initialData, onSubmit, submitButtonText, onSucces
     contractType: initialData?.contractType ?? "full_time",
     hourlyRate: typeof initialData?.hourlyRate === 'number' ? initialData.hourlyRate : null,
     startDate: initialData?.startDate ? new Date(initialData.startDate) : null,
-    // Neue Initialwerte
     jobTitle: initialData?.jobTitle ?? null,
     department: initialData?.department ?? null,
     notes: initialData?.notes ?? null,
+    // Neue Initialwerte
+    address: initialData?.address ?? null,
+    dateOfBirth: initialData?.dateOfBirth ? new Date(initialData.dateOfBirth) : null,
+    socialSecurityNumber: initialData?.socialSecurityNumber ?? null,
+    taxIdNumber: initialData?.taxIdNumber ?? null,
+    healthInsuranceProvider: initialData?.healthInsuranceProvider ?? null,
   };
 
   const form = useForm<EmployeeFormValues>({
@@ -69,6 +79,7 @@ export function EmployeeForm({ initialData, onSubmit, submitButtonText, onSucces
 
   const [displayHireDate, setDisplayHireDate] = useState<string | undefined>(undefined);
   const [displayStartDate, setDisplayStartDate] = useState<string | undefined>(undefined);
+  const [displayDateOfBirth, setDisplayDateOfBirth] = useState<string | undefined>(undefined); // Neues State für Geburtsdatum
 
   useEffect(() => {
     if (form.watch("hireDate")) {
@@ -85,6 +96,14 @@ export function EmployeeForm({ initialData, onSubmit, submitButtonText, onSucces
       setDisplayStartDate(undefined);
     }
   }, [form.watch("startDate")]);
+
+  useEffect(() => {
+    if (form.watch("dateOfBirth")) {
+      setDisplayDateOfBirth(format(form.watch("dateOfBirth")!, "PPP"));
+    } else {
+      setDisplayDateOfBirth(undefined);
+    }
+  }, [form.watch("dateOfBirth")]);
 
   const handleFormSubmit: SubmitHandler<EmployeeFormValues> = async (data) => {
     const result = await onSubmit(data);
@@ -195,7 +214,7 @@ export function EmployeeForm({ initialData, onSubmit, submitButtonText, onSucces
 
       <div>
         <Label htmlFor="contractType">Vertragsart</Label>
-        <Select onValueChange={(value) => form.setValue("contractType", value as "minijob" | "part_time" | "full_time" | "fixed_term")} value={form.watch("contractType")}>
+        <Select onValueChange={(value) => form.setValue("contractType", value as "minijob" | "part_time" | "full_time")} value={form.watch("contractType")}>
           <SelectTrigger className="w-full">
             <SelectValue placeholder="Vertragsart auswählen" />
           </SelectTrigger>
@@ -203,7 +222,7 @@ export function EmployeeForm({ initialData, onSubmit, submitButtonText, onSucces
             <SelectItem value="minijob">Minijob</SelectItem>
             <SelectItem value="part_time">Teilzeit</SelectItem>
             <SelectItem value="full_time">Vollzeit</SelectItem>
-            <SelectItem value="fixed_term">Befristet</SelectItem>
+            {/* <SelectItem value="fixed_term">Befristet</SelectItem> */} {/* Entfernt */}
           </SelectContent>
         </Select>
         {form.formState.errors.contractType && (
@@ -285,6 +304,81 @@ export function EmployeeForm({ initialData, onSubmit, submitButtonText, onSucces
         />
         {form.formState.errors.notes && (
           <p className="text-red-500 text-sm mt-1">{form.formState.errors.notes.message}</p>
+        )}
+      </div>
+
+      {/* Neue persönliche Felder */}
+      <div>
+        <Label htmlFor="address">Adresse (optional)</Label>
+        <Textarea
+          id="address"
+          {...form.register("address")}
+          placeholder="Z.B. Musterstraße 1, 12345 Musterstadt"
+          rows={3}
+        />
+        {form.formState.errors.address && (
+          <p className="text-red-500 text-sm mt-1">{form.formState.errors.address.message}</p>
+        )}
+      </div>
+      <div>
+        <Label htmlFor="dateOfBirth">Geburtsdatum (optional)</Label>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant={"outline"}
+              className={cn(
+                "w-full justify-start text-left font-normal",
+                !form.watch("dateOfBirth") && "text-muted-foreground"
+              )}
+            >
+              <CalendarIcon className="mr-2 h-4 w-4" />
+              {displayDateOfBirth ? displayDateOfBirth : <span>Datum auswählen</span>}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0">
+            <Calendar
+              mode="single"
+              selected={form.watch("dateOfBirth") || undefined}
+              onSelect={(date) => form.setValue("dateOfBirth", date || null)}
+              initialFocus
+            />
+          </PopoverContent>
+        </Popover>
+        {form.formState.errors.dateOfBirth && (
+          <p className="text-red-500 text-sm mt-1">{form.formState.errors.dateOfBirth.message}</p>
+        )}
+      </div>
+      <div>
+        <Label htmlFor="socialSecurityNumber">Sozialversicherungsnummer (optional)</Label>
+        <Input
+          id="socialSecurityNumber"
+          {...form.register("socialSecurityNumber")}
+          placeholder="Z.B. 12 345678 A 999"
+        />
+        {form.formState.errors.socialSecurityNumber && (
+          <p className="text-red-500 text-sm mt-1">{form.formState.errors.socialSecurityNumber.message}</p>
+        )}
+      </div>
+      <div>
+        <Label htmlFor="taxIdNumber">Steuer-ID (optional)</Label>
+        <Input
+          id="taxIdNumber"
+          {...form.register("taxIdNumber")}
+          placeholder="Z.B. 12 345 678 901"
+        />
+        {form.formState.errors.taxIdNumber && (
+          <p className="text-red-500 text-sm mt-1">{form.formState.errors.taxIdNumber.message}</p>
+        )}
+      </div>
+      <div>
+        <Label htmlFor="healthInsuranceProvider">Krankenkasse (optional)</Label>
+        <Input
+          id="healthInsuranceProvider"
+          {...form.register("healthInsuranceProvider")}
+          placeholder="Z.B. Techniker Krankenkasse"
+        />
+        {form.formState.errors.healthInsuranceProvider && (
+          <p className="text-red-500 text-sm mt-1">{form.formState.errors.healthInsuranceProvider.message}</p>
         )}
       </div>
 

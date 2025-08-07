@@ -12,7 +12,25 @@ export async function createEmployee(data: EmployeeFormValues) {
     return { success: false, message: "Benutzer nicht authentifiziert." };
   }
 
-  const { firstName, lastName, email, phone, hireDate, status, contractType, hourlyRate, startDate, jobTitle, department, notes } = data;
+  const {
+    firstName,
+    lastName,
+    email,
+    phone,
+    hireDate,
+    status,
+    contractType,
+    hourlyRate,
+    startDate,
+    jobTitle,
+    department,
+    notes,
+    address, // Neues Feld
+    dateOfBirth, // Neues Feld
+    socialSecurityNumber, // Neues Feld
+    taxIdNumber, // Neues Feld
+    healthInsuranceProvider, // Neues Feld
+  } = data;
 
   const { error } = await supabase
     .from('employees')
@@ -27,9 +45,14 @@ export async function createEmployee(data: EmployeeFormValues) {
       contract_type: contractType,
       hourly_rate: hourlyRate,
       start_date: startDate ? startDate.toISOString().split('T')[0] : null,
-      job_title: jobTitle, // Neues Feld
-      department, // Neues Feld
-      notes, // Neues Feld
+      job_title: jobTitle,
+      department,
+      notes,
+      address, // Neues Feld
+      date_of_birth: dateOfBirth ? dateOfBirth.toISOString().split('T')[0] : null, // Nur Datum speichern
+      social_security_number: socialSecurityNumber, // Neues Feld
+      tax_id_number: taxIdNumber, // Neues Feld
+      health_insurance_provider: healthInsuranceProvider, // Neues Feld
     });
 
   if (error) {
@@ -61,9 +84,14 @@ export async function updateEmployee(employeeId: string, data: EmployeeFormValue
       contract_type: data.contractType,
       hourly_rate: data.hourlyRate,
       start_date: data.startDate ? data.startDate.toISOString().split('T')[0] : null,
-      job_title: data.jobTitle, // Neues Feld
-      department: data.department, // Neues Feld
-      notes: data.notes, // Neues Feld
+      job_title: data.jobTitle,
+      department: data.department,
+      notes: data.notes,
+      address: data.address, // Neues Feld
+      date_of_birth: data.dateOfBirth ? data.dateOfBirth.toISOString().split('T')[0] : null, // Nur Datum speichern
+      social_security_number: data.socialSecurityNumber, // Neues Feld
+      tax_id_number: data.taxIdNumber, // Neues Feld
+      health_insurance_provider: data.healthInsuranceProvider, // Neues Feld
     })
     .eq('id', employeeId)
     .eq('user_id', user.id);

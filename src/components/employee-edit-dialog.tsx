@@ -19,10 +19,15 @@ interface EmployeeEditDialogProps {
     contract_type: string | null;
     hourly_rate: number | null;
     start_date: string | null;
-    // Neue Felder
     job_title: string | null;
     department: string | null;
     notes: string | null;
+    // Neue Felder
+    address: string | null;
+    date_of_birth: string | null;
+    social_security_number: string | null;
+    tax_id_number: string | null;
+    health_insurance_provider: string | null;
   };
 }
 
@@ -59,10 +64,15 @@ export function EmployeeEditDialog({ employee }: EmployeeEditDialogProps) {
             contractType: employee.contract_type as EmployeeFormValues["contractType"],
             hourlyRate: employee.hourly_rate,
             startDate: employee.start_date ? new Date(employee.start_date) : undefined,
-            // Neue Felder übergeben
             jobTitle: employee.job_title,
             department: employee.department,
             notes: employee.notes,
+            // Neue Felder übergeben
+            address: employee.address,
+            dateOfBirth: employee.date_of_birth ? new Date(employee.date_of_birth) : undefined,
+            socialSecurityNumber: employee.social_security_number,
+            taxIdNumber: employee.tax_id_number,
+            healthInsuranceProvider: employee.health_insurance_provider,
           }}
           onSubmit={handleUpdate}
           submitButtonText="Änderungen speichern"
