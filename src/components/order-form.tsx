@@ -26,7 +26,7 @@ export const orderSchema = z.object({ // taskSchema zu orderSchema
   objectId: z.string().uuid("Ungültige Objekt-ID").min(1, "Objekt ist erforderlich"),   // Neue Felder
   employeeId: z.string().uuid("Ungültige Mitarbeiter-ID").optional().nullable(), // Optional
   // Neue Felder für Auftragstypen und Details
-  orderType: z.enum(["one_time", "recurring", "substitution"]).default("one_time"),
+  orderType: z.enum(["one_time", "recurring", "substitution", "permanent"]).default("one_time"), // 'permanent' hinzugefügt
   recurringStartDate: z.date().optional().nullable(),
   recurringEndDate: z.date().optional().nullable(),
   priority: z.enum(["low", "medium", "high"]).default("low"),
@@ -35,6 +35,7 @@ export const orderSchema = z.object({ // taskSchema zu orderSchema
     z.nullable(z.number().min(0, "Stunden müssen positiv sein").max(999, "Stunden sind zu hoch")).optional()
   ),
   notes: z.string().max(500, "Notizen sind zu lang").optional().nullable(),
+  serviceType: z.string().max(100, "Dienstleistungstyp ist zu lang").optional().nullable(), // Neues Feld
 });
 
 export type OrderFormInput = z.input<typeof orderSchema>; // TaskFormInput zu OrderFormInput
@@ -67,6 +68,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     priority: initialData?.priority ?? "low",
     estimatedHours: (initialData?.estimatedHours as number | null | undefined) ?? null, // Fix: Explizites Casting
     notes: initialData?.notes ?? null,
+    serviceType: initialData?.serviceType ?? null, // Initialwert für neues Feld
   };
 
   const form = useForm<OrderFormValues>({
@@ -168,6 +170,17 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
         )}
       </div>
       <div>
+        <Label htmlFor="serviceType">Reinigungsdienstleistung</Label> {/* Neues Feld */}
+        <Input
+          id="serviceType"
+          {...form.register("serviceType")}
+          placeholder="Z.B. Glasreinigung, Grundreinigung"
+        />
+        {form.formState.errors.serviceType && (
+          <p className="text-red-500 text-sm mt-1">{form.formState.errors.serviceType.message}</p>
+        )}
+      </div>
+      <div>
         <Label htmlFor="customerId">Kunde</Label>
         <Select onValueChange={(value) => {
           form.setValue("customerId", value);
@@ -221,7 +234,13 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
       </div>
       <div>
         <Label htmlFor="orderType">Auftragstyp</Label>
-        <Select onValueChange={(value) => form.setValue("orderType", value as OrderFormValues["orderType"])} value={form.watch("orderType")}>
+        <Select onValueChange={(value) => {
+          form.setValue("orderType", value as OrderFormValues["orderType"]);
+          // Reset date fields when order type changes
+          form.setValue("dueDate", null);
+          form.setValue("recurringStartDate", null);
+          form.setValue("recurringEndDate", null);
+        }} value={form.watch("orderType")}>
           <SelectTrigger className="w-full">
             <SelectValue placeholder="Auftragstyp auswählen" />
           </SelectTrigger>
@@ -229,6 +248,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
             <SelectItem value="one_time">Einmalig</SelectItem>
             <SelectItem value="recurring">Wiederkehrend</SelectItem>
             <SelectItem value="substitution">Vertretung</SelectItem>
+            <SelectItem value="permanent">Permanent</SelectItem> {/* Neuer Typ */}
           </SelectContent>
         </Select>
         {form.formState.errors.orderType && (
@@ -236,7 +256,38 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
         )}
       </div>
 
-      {(orderType === "recurring" || orderType === "substitution") && (
+      {orderType === "one_time" && (
+        <div>
+          <Label htmlFor="dueDate">Fälligkeitsdatum (optional)</Label>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant={"outline"}
+                className={cn(
+                  "w-full justify-start text-left font-normal",
+                  !form.watch("dueDate") && "text-muted-foreground"
+                )}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {displayDueDate ? displayDueDate : <span>Datum auswählen</span>}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0">
+              <Calendar
+                mode="single"
+                selected={form.watch("dueDate") || undefined}
+                onSelect={(date) => form.setValue("dueDate", date || null)}
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
+          {form.formState.errors.dueDate && (
+            <p className="text-red-500 text-sm mt-1">{form.formState.errors.dueDate.message}</p>
+          )}
+        </div>
+      )}
+
+      {(orderType === "recurring" || orderType === "substitution" || orderType === "permanent") && (
         <>
           <div>
             <Label htmlFor="recurringStartDate">Startdatum</Label>
@@ -266,34 +317,36 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
               <p className="text-red-500 text-sm mt-1">{form.formState.errors.recurringStartDate.message}</p>
             )}
           </div>
-          <div>
-            <Label htmlFor="recurringEndDate">Enddatum (optional)</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant={"outline"}
-                  className={cn(
-                    "w-full justify-start text-left font-normal",
-                    !form.watch("recurringEndDate") && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {displayRecurringEndDate ? displayRecurringEndDate : <span>Datum auswählen</span>}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-                <Calendar
-                  mode="single"
-                  selected={form.watch("recurringEndDate") || undefined}
-                  onSelect={(date) => form.setValue("recurringEndDate", date || null)}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
-            {form.formState.errors.recurringEndDate && (
-              <p className="text-red-500 text-sm mt-1">{form.formState.errors.recurringEndDate.message}</p>
-            )}
-          </div>
+          {orderType !== "permanent" && ( // Enddatum nur für recurring und substitution
+            <div>
+              <Label htmlFor="recurringEndDate">Enddatum (optional)</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant={"outline"}
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !form.watch("recurringEndDate") && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {displayRecurringEndDate ? displayRecurringEndDate : <span>Datum auswählen</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={form.watch("recurringEndDate") || undefined}
+                    onSelect={(date) => form.setValue("recurringEndDate", date || null)}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+              {form.formState.errors.recurringEndDate && (
+                <p className="text-red-500 text-sm mt-1">{form.formState.errors.recurringEndDate.message}</p>
+              )}
+            </div>
+          )}
         </>
       )}
 
@@ -352,34 +405,6 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
         </Select>
         {form.formState.errors.status && (
           <p className="text-red-500 text-sm mt-1">{form.formState.errors.status.message}</p>
-        )}
-      </div>
-      <div>
-        <Label htmlFor="dueDate">Fälligkeitsdatum (optional)</Label>
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              variant={"outline"}
-              className={cn(
-                "w-full justify-start text-left font-normal",
-                !form.watch("dueDate") && "text-muted-foreground"
-              )}
-            >
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              {displayDueDate ? displayDueDate : <span>Datum auswählen</span>}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0">
-            <Calendar
-              mode="single"
-              selected={form.watch("dueDate") || undefined}
-              onSelect={(date) => form.setValue("dueDate", date || null)}
-              initialFocus
-            />
-          </PopoverContent>
-        </Popover>
-        {form.formState.errors.dueDate && (
-          <p className="text-red-500 text-sm mt-1">{form.formState.errors.dueDate.message}</p>
         )}
       </div>
       <Button type="submit" disabled={form.formState.isSubmitting}>

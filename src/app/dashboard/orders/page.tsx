@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { OrderForm } from "@/components/order-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Trash2, CalendarDays, Clock, FileText } from "lucide-react"; // Neue Icons
+import { Trash2, CalendarDays, Clock, FileText, Wrench } from "lucide-react"; // Wrench-Icon für service_type
 import { deleteOrder, createOrder } from "./actions";
 import { OrderEditDialog } from "@/components/order-edit-dialog";
 import { Badge } from "@/components/ui/badge";
@@ -34,6 +34,7 @@ interface DisplayOrder {
   estimated_hours: number | null;
   notes: string | null;
   request_status: string;
+  service_type: string | null; // Neues Feld
 }
 
 export default async function OrdersPage({
@@ -96,6 +97,7 @@ export default async function OrdersPage({
       estimated_hours: order.estimated_hours,
       notes: order.notes,
       request_status: order.request_status,
+      service_type: order.service_type, // Neues Feld
     })) || null;
     error = selectError;
   }
@@ -163,6 +165,12 @@ export default async function OrdersPage({
                 {order.employee_first_name && order.employee_last_name && (
                   <p className="text-xs text-muted-foreground">Mitarbeiter: {order.employee_first_name} {order.employee_last_name}</p>
                 )}
+                {order.service_type && ( // Neues Feld anzeigen
+                  <div className="flex items-center text-xs text-muted-foreground mt-1">
+                    <Wrench className="mr-1 h-3 w-3" />
+                    <span>Dienstleistung: {order.service_type}</span>
+                  </div>
+                )}
                 <div className="flex items-center mt-2 space-x-2">
                   <Badge variant={getStatusBadgeVariant(order.status)}>{order.status}</Badge>
                   <Badge variant="outline">{order.order_type}</Badge>
@@ -180,20 +188,20 @@ export default async function OrdersPage({
                     <span>Notizen: {order.notes}</span>
                   </div>
                 )}
-                {order.recurring_start_date && (
+                {order.order_type === "one_time" && order.due_date && (
+                  <p className="text-xs text-muted-foreground ml-auto mt-1">Fällig: {new Date(order.due_date).toLocaleDateString()}</p>
+                )}
+                {(order.order_type === "recurring" || order.order_type === "substitution" || order.order_type === "permanent") && order.recurring_start_date && (
                   <div className="flex items-center text-xs text-muted-foreground mt-1">
                     <CalendarDays className="mr-1 h-3 w-3" />
                     <span>Start: {new Date(order.recurring_start_date).toLocaleDateString()}</span>
                   </div>
                 )}
-                {order.recurring_end_date && (
+                {(order.order_type === "recurring" || order.order_type === "substitution") && order.recurring_end_date && (
                   <div className="flex items-center text-xs text-muted-foreground">
                     <CalendarDays className="mr-1 h-3 w-3" />
                     <span>Ende: {new Date(order.recurring_end_date).toLocaleDateString()}</span>
                   </div>
-                )}
-                {order.due_date && (
-                  <p className="text-xs text-muted-foreground ml-auto mt-1">Fällig: {new Date(order.due_date).toLocaleDateString()}</p>
                 )}
               </CardContent>
             </Card>

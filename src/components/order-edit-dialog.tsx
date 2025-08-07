@@ -24,6 +24,7 @@ interface OrderEditDialogProps {
     priority: string;
     estimated_hours: number | null;
     notes: string | null;
+    service_type: string | null; // Neues Feld
   };
 }
 
@@ -64,6 +65,7 @@ export function OrderEditDialog({ order }: OrderEditDialogProps) {
             priority: order.priority as OrderFormValues["priority"],
             estimatedHours: order.estimated_hours,
             notes: order.notes,
+            serviceType: order.service_type, // Neues Feld
           }}
           onSubmit={handleUpdate}
           submitButtonText="Änderungen speichern"
