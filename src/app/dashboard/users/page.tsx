@@ -9,6 +9,7 @@ import { Mail, UserRound, Briefcase, ShieldCheck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { SearchInput } from "@/components/search-input";
 import { ManagerCustomerAssignmentDialog } from "@/components/manager-customer-assignment-dialog";
+import { UserAssignmentDialog } from "@/components/user-assignment-dialog"; // Neuer Import
 
 interface DisplayUser {
   id: string;
@@ -17,6 +18,8 @@ interface DisplayUser {
   last_name: string | null;
   role: string;
   created_at: string | null;
+  assigned_employee_id: string | null; // Neues Feld
+  assigned_customer_id: string | null; // Neues Feld
 }
 
 export default async function UsersPage({
@@ -67,7 +70,23 @@ export default async function UsersPage({
     return <div className="p-8">Fehler beim Laden der Benutzerprofile.</div>;
   }
 
+  // Mitarbeiter- und Kundenzuweisungen abrufen
+  const { data: employeesData, error: employeesError } = await supabase
+    .from('employees')
+    .select('id, user_id')
+    .in('user_id', userIds);
+
+  const { data: customersData, error: customersError } = await supabase
+    .from('customers')
+    .select('id, user_id')
+    .in('user_id', userIds);
+
+  if (employeesError) console.error("Fehler beim Laden der Mitarbeiter-Zuweisungen:", employeesError);
+  if (customersError) console.error("Fehler beim Laden der Kunden-Zuweisungen:", customersError);
+
   const profilesMap = new Map(profilesData?.map(p => [p.id, p]));
+  const employeeAssignmentsMap = new Map(employeesData?.filter(e => e.user_id).map(e => [e.user_id, e.id]));
+  const customerAssignmentsMap = new Map(customersData?.filter(c => c.user_id).map(c => [c.user_id, c.id]));
 
   users = authUsers.users.map(authUser => {
     const profile = profilesMap.get(authUser.id);
@@ -78,6 +97,8 @@ export default async function UsersPage({
       last_name: profile?.last_name || authUser.user_metadata.last_name || null,
       role: profile?.role || 'employee', // Standardrolle, falls nicht im Profil gefunden
       created_at: authUser.created_at,
+      assigned_employee_id: employeeAssignmentsMap.get(authUser.id) || null,
+      assigned_customer_id: customerAssignmentsMap.get(authUser.id) || null,
     };
   }).filter(user => {
     // Filterung basierend auf der Suchanfrage
@@ -136,6 +157,12 @@ export default async function UsersPage({
                       managerName={`${user.first_name || ''} ${user.last_name || ''}`.trim()}
                     />
                   )}
+                  <UserAssignmentDialog
+                    userId={user.id}
+                    userName={`${user.first_name || ''} ${user.last_name || ''}`.trim()}
+                    initialEmployeeId={user.assigned_employee_id}
+                    initialCustomerId={user.assigned_customer_id}
+                  />
                   <UserEditDialog user={user} />
                   <DeleteUserButton userId={user.id} />
                 </div>
@@ -149,6 +176,18 @@ export default async function UsersPage({
                   <Briefcase className="mr-2 h-4 w-4 flex-shrink-0" />
                   <span>Rolle: <Badge variant={getRoleBadgeVariant(user.role)}>{user.role}</Badge></span>
                 </div>
+                {user.assigned_employee_id && (
+                  <div className="flex items-center text-sm text-muted-foreground">
+                    <UserRound className="mr-2 h-4 w-4 flex-shrink-0" />
+                    <span>Zugewiesener Mitarbeiter-ID: {user.assigned_employee_id.substring(0, 8)}...</span>
+                  </div>
+                )}
+                {user.assigned_customer_id && (
+                  <div className="flex items-center text-sm text-muted-foreground">
+                    <UserRound className="mr-2 h-4 w-4 flex-shrink-0" />
+                    <span>Zugewiesener Kunden-ID: {user.assigned_customer_id.substring(0, 8)}...</span>
+                  </div>
+                )}
               </CardContent>
             </Card>
           ))
