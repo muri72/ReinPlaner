@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useState, useEffect, useMemo } from "react"; // Removed useRef
+import { useState, useEffect, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -34,7 +34,7 @@ const calculateHours = (start: string | null, end: string | null): number | null
 };
 
 // Helper to generate times from hours and timeOfDay
-const generateTimesFromHours = (hours: number, timeOfDay: ObjectFormValues['defaultTimeOfDay']): { startTime: string, endTime: string } => {
+const generateTimesFromHours = (hours: number, timeOfDay: ObjectFormValues['timeOfDay']): { startTime: string, endTime: string } => {
   let startHour: number;
   switch (timeOfDay) {
     case 'morning': startHour = 8; break; // 8 AM
@@ -80,9 +80,9 @@ export const objectSchema = z.object({
   sundayStartTime: z.union([z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Ungültiges Zeitformat (HH:MM)"), z.null()]).optional(),
   sundayEndTime: z.union([z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Ungültiges Zeitformat (HH:MM)"), z.null()]).optional(),
   // Bestehende Felder
-  defaultNotes: z.string().max(500, "Standard-Notizen sind zu lang").optional().nullable(),
-  defaultPriority: z.enum(["low", "medium", "high"]).default("low"),
-  defaultTimeOfDay: z.enum(["morning", "noon", "afternoon", "any"]).default("any"),
+  notes: z.string().max(500, "Notizen sind zu lang").optional().nullable(),
+  priority: z.enum(["low", "medium", "high"]).default("low"),
+  timeOfDay: z.enum(["morning", "noon", "afternoon", "any"]).default("any"),
   accessMethod: z.enum(["key", "card", "other"]).default("key"),
   pin: z.string().max(50, "PIN ist zu lang").optional().nullable(),
   // Neue Felder für Alarmgesichert und Codewort
@@ -155,9 +155,9 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
     sundayStartTime: initialData?.sundayStartTime ?? null,
     sundayEndTime: initialData?.sundayEndTime ?? null,
     // Bestehende Felder
-    defaultNotes: initialData?.defaultNotes ?? null,
-    defaultPriority: initialData?.defaultPriority ?? "low",
-    defaultTimeOfDay: initialData?.defaultTimeOfDay ?? "any",
+    notes: initialData?.notes ?? null,
+    priority: initialData?.priority ?? "low",
+    timeOfDay: initialData?.timeOfDay ?? "any",
     accessMethod: initialData?.accessMethod ?? "key",
     pin: initialData?.pin ?? null,
     isAlarmSecured: initialData?.isAlarmSecured ?? false,
@@ -170,11 +170,11 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
     defaultValues: resolvedDefaultValues,
   });
 
-  // Watch defaultTimeOfDay for changes
-  const defaultTimeOfDay = form.watch("defaultTimeOfDay");
+  // Watch timeOfDay for changes
+  const timeOfDay = form.watch("timeOfDay");
 
   // Debounced function to update time fields based on hours input
-  const debouncedUpdateTimes = useDebouncedCallback((day: string, hoursValue: string, timeOfDay: ObjectFormValues['defaultTimeOfDay']) => {
+  const debouncedUpdateTimes = useDebouncedCallback((day: string, hoursValue: string, timeOfDay: ObjectFormValues['timeOfDay']) => {
     const parsedHours = parseFloat(hoursValue);
     const startTimeField = getDayTimeFieldName(day, 'StartTime');
     const endTimeField = getDayTimeFieldName(day, 'EndTime');
@@ -289,20 +289,20 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
 
       <h3 className="text-lg font-semibold mt-6">Auftragseinstellungen für dieses Objekt</h3>
       <div>
-        <Label htmlFor="defaultNotes">Notizen für Aufträge (optional)</Label>
+        <Label htmlFor="notes">Notizen für Aufträge (optional)</Label>
         <Textarea
-          id="defaultNotes"
-          {...form.register("defaultNotes")}
-          placeholder="Standard-Notizen, die in neue Aufträge übernommen werden..."
+          id="notes"
+          {...form.register("notes")}
+          placeholder="Notizen, die in neue Aufträge übernommen werden..."
           rows={3}
         />
-        {form.formState.errors.defaultNotes && (
-          <p className="text-red-500 text-sm mt-1">{form.formState.errors.defaultNotes.message}</p>
+        {form.formState.errors.notes && (
+          <p className="text-red-500 text-sm mt-1">{form.formState.errors.notes.message}</p>
         )}
       </div>
       <div>
-        <Label htmlFor="defaultPriority">Priorität</Label>
-        <Select onValueChange={(value) => form.setValue("defaultPriority", value as "low" | "medium" | "high")} value={form.watch("defaultPriority")}>
+        <Label htmlFor="priority">Priorität</Label>
+        <Select onValueChange={(value) => form.setValue("priority", value as "low" | "medium" | "high")} value={form.watch("priority")}>
           <SelectTrigger className="w-full">
             <SelectValue placeholder="Priorität auswählen" />
           </SelectTrigger>
@@ -312,14 +312,14 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
             <SelectItem value="high">Hoch</SelectItem>
           </SelectContent>
         </Select>
-        {form.formState.errors.defaultPriority && (
-          <p className="text-red-500 text-sm mt-1">{form.formState.errors.defaultPriority.message}</p>
+        {form.formState.errors.priority && (
+          <p className="text-red-500 text-sm mt-1">{form.formState.errors.priority.message}</p>
         )}
       </div>
-      {/* Moved defaultTimeOfDay here */}
+      {/* Moved timeOfDay here */}
       <div>
-        <Label htmlFor="defaultTimeOfDay">Tageszeit</Label>
-        <Select onValueChange={(value) => form.setValue("defaultTimeOfDay", value as "morning" | "noon" | "afternoon" | "any")} value={form.watch("defaultTimeOfDay")}>
+        <Label htmlFor="timeOfDay">Tageszeit</Label>
+        <Select onValueChange={(value) => form.setValue("timeOfDay", value as "morning" | "noon" | "afternoon" | "any")} value={form.watch("timeOfDay")}>
           <SelectTrigger className="w-full">
             <SelectValue placeholder="Tageszeit auswählen" />
           </SelectTrigger>
@@ -330,8 +330,8 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
             <SelectItem value="afternoon">Nachmittags</SelectItem>
           </SelectContent>
         </Select>
-        {form.formState.errors.defaultTimeOfDay && (
-          <p className="text-red-500 text-sm mt-1">{form.formState.errors.defaultTimeOfDay.message}</p>
+        {form.formState.errors.timeOfDay && (
+          <p className="text-red-500 text-sm mt-1">{form.formState.errors.timeOfDay.message}</p>
         )}
       </div>
 
@@ -367,7 +367,7 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
                   <Input
                     id={startTimeField}
                     type="time"
-                    {...form.register(startTimeField)} // Removed onChange here
+                    {...form.register(startTimeField)}
                   />
                   {form.formState.errors[startTimeField] && (
                     <p className="text-red-500 text-sm mt-1">{form.formState.errors[startTimeField]?.message}</p>
@@ -378,7 +378,7 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
                   <Input
                     id={endTimeField}
                     type="time"
-                    {...form.register(endTimeField)} // Removed onChange here
+                    {...form.register(endTimeField)}
                   />
                   {form.formState.errors[endTimeField] && (
                     <p className="text-red-500 text-sm mt-1">{form.formState.errors[endTimeField]?.message}</p>
@@ -396,7 +396,7 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
                       // Replace comma with dot for parsing
                       value = value.replace(',', '.');
                       setDayHoursInputs(prev => ({ ...prev, [day]: value }));
-                      debouncedUpdateTimes(day, value, defaultTimeOfDay); // Call debounced function
+                      debouncedUpdateTimes(day, value, timeOfDay); // Call debounced function
                     }}
                   />
                   {/* No error message for hours input as it's derived */}

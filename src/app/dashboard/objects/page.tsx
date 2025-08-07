@@ -20,9 +20,9 @@ interface DisplayObject {
   created_at: string | null;
   customer_name: string | null;
   // Neue Felder
-  default_notes: string | null;
-  default_priority: string;
-  default_time_of_day: string;
+  notes: string | null; // Geändert von default_notes
+  priority: string; // Geändert von default_priority
+  time_of_day: string; // Geändert von default_time_of_day
   access_method: string;
   pin: string | null;
   is_alarm_secured: boolean;
@@ -103,9 +103,9 @@ export default async function ObjectsPage({
       created_at: obj.created_at,
       customer_name: obj.customers?.name || null,
       // Neue Felder mappen
-      default_notes: obj.default_notes,
-      default_priority: obj.default_priority,
-      default_time_of_day: obj.default_time_of_day,
+      notes: obj.notes, // Geändert von default_notes
+      priority: obj.priority, // Geändert von default_priority
+      time_of_day: obj.time_of_day, // Geändert von default_time_of_day
       access_method: obj.access_method,
       pin: obj.pin,
       is_alarm_secured: obj.is_alarm_secured,
@@ -176,19 +176,19 @@ export default async function ObjectsPage({
                   </div>
                 )}
                 {/* Neue Felder anzeigen */}
-                {object.default_notes && (
+                {object.notes && (
                   <div className="flex items-center text-sm text-muted-foreground">
                     <FileText className="mr-2 h-4 w-4 flex-shrink-0" />
-                    <span>Notizen: {object.default_notes}</span>
+                    <span>Notizen: {object.notes}</span>
                   </div>
                 )}
                 <div className="flex items-center text-sm text-muted-foreground">
                   <Clock className="mr-2 h-4 w-4 flex-shrink-0" />
-                  <span>Priorität: <Badge variant="secondary">{object.default_priority}</Badge></span>
+                  <span>Priorität: <Badge variant="secondary">{object.priority}</Badge></span>
                 </div>
                 <div className="flex items-center text-sm text-muted-foreground">
                   <Clock className="mr-2 h-4 w-4 flex-shrink-0" />
-                  <span>Tageszeit: <Badge variant="secondary">{object.default_time_of_day}</Badge></span>
+                  <span>Tageszeit: <Badge variant="secondary">{object.time_of_day}</Badge></span>
                 </div>
                 <div className="flex items-center text-sm text-muted-foreground">
                   <Key className="mr-2 h-4 w-4 flex-shrink-0" />

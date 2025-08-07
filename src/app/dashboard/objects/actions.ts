@@ -31,9 +31,9 @@ export async function createObject(data: ObjectFormValues) {
     saturdayEndTime,
     sundayStartTime,
     sundayEndTime,
-    defaultNotes,
-    defaultPriority,
-    defaultTimeOfDay,
+    notes, // Geändert von defaultNotes
+    priority, // Geändert von defaultPriority
+    timeOfDay, // Geändert von defaultTimeOfDay
     accessMethod,
     pin,
     isAlarmSecured,
@@ -63,9 +63,9 @@ export async function createObject(data: ObjectFormValues) {
       saturday_end_time: saturdayEndTime,
       sunday_start_time: sundayStartTime,
       sunday_end_time: sundayEndTime,
-      default_notes: defaultNotes,
-      default_priority: defaultPriority,
-      default_time_of_day: defaultTimeOfDay,
+      notes: notes, // Geändert von default_notes
+      priority: priority, // Geändert von default_priority
+      time_of_day: timeOfDay, // Geändert von default_time_of_day
       access_method: accessMethod,
       pin,
       is_alarm_secured: isAlarmSecured,
@@ -111,9 +111,9 @@ export async function updateObject(objectId: string, data: ObjectFormValues) {
       saturday_end_time: data.saturdayEndTime,
       sunday_start_time: data.sundayStartTime,
       sunday_end_time: data.sundayEndTime,
-      default_notes: data.defaultNotes,
-      default_priority: data.defaultPriority,
-      default_time_of_day: data.defaultTimeOfDay,
+      notes: data.notes, // Geändert von default_notes
+      priority: data.priority, // Geändert von default_priority
+      time_of_day: data.timeOfDay, // Geändert von default_time_of_day
       access_method: data.accessMethod,
       pin: data.pin,
       is_alarm_secured: data.isAlarmSecured,

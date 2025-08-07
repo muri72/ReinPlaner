@@ -15,9 +15,9 @@ interface ObjectEditDialogProps {
     description: string | null;
     customer_id: string;
     // Neue Felder
-    default_notes: string | null;
-    default_priority: string;
-    default_time_of_day: string;
+    notes: string | null; // Geändert von default_notes
+    priority: string; // Geändert von default_priority
+    time_of_day: string; // Geändert von default_time_of_day
     access_method: string;
     pin: string | null;
     is_alarm_secured: boolean;
@@ -68,9 +68,9 @@ export function ObjectEditDialog({ object }: ObjectEditDialogProps) {
             address: object.address,
             description: object.description,
             customerId: object.customer_id,
-            defaultNotes: object.default_notes,
-            defaultPriority: object.default_priority as ObjectFormValues["defaultPriority"],
-            defaultTimeOfDay: object.default_time_of_day as ObjectFormValues["defaultTimeOfDay"],
+            notes: object.notes, // Geändert von defaultNotes
+            priority: object.priority as ObjectFormValues["priority"], // Geändert von defaultPriority
+            timeOfDay: object.time_of_day as ObjectFormValues["timeOfDay"], // Geändert von defaultTimeOfDay
             accessMethod: object.access_method as ObjectFormValues["accessMethod"],
             pin: object.pin,
             isAlarmSecured: object.is_alarm_secured,
