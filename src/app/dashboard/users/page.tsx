@@ -8,6 +8,7 @@ import { DeleteUserButton } from "@/components/delete-user-button";
 import { Mail, UserRound, Briefcase, ShieldCheck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { SearchInput } from "@/components/search-input";
+import { ManagerCustomerAssignmentDialog } from "@/components/manager-customer-assignment-dialog"; // Neuer Import
 
 interface DisplayUser {
   id: string;
@@ -128,6 +129,12 @@ export default async function UsersPage({
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-lg font-medium">{user.first_name} {user.last_name}</CardTitle>
                 <div className="flex items-center space-x-2">
+                  {user.role === 'manager' && (
+                    <ManagerCustomerAssignmentDialog
+                      managerId={user.id}
+                      managerName={`${user.first_name || ''} ${user.last_name || ''}`.trim()}
+                    />
+                  )}
                   <UserEditDialog user={user} />
                   <DeleteUserButton userId={user.id} />
                 </div>

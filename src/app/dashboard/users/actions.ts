@@ -135,3 +135,61 @@ export async function deleteUser(formData: FormData): Promise<{ success: boolean
   revalidatePath("/dashboard/users");
   return { success: true, message: "Benutzer erfolgreich gelöscht!" };
 }
+
+export async function assignCustomersToManager(managerId: string, customerIds: string[]): Promise<{ success: boolean; message: string }> {
+  const supabase = await createClient();
+  const { data: { user: adminUser } } = await supabase.auth.getUser();
+
+  if (!adminUser) {
+    return { success: false, message: "Nicht autorisiert. Nur Admins können Zuweisungen vornehmen." };
+  }
+
+  // Überprüfen, ob der aktuelle Benutzer ein Admin ist
+  const { data: adminProfile, error: profileError } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', adminUser.id)
+    .single();
+
+  if (profileError || adminProfile?.role !== 'admin') {
+    console.error("Berechtigungsfehler:", profileError);
+    return { success: false, message: "Nicht autorisiert. Nur Admins können Zuweisungen vornehmen." };
+  }
+
+  // Transaktion starten (oder simulieren, da Server Actions keine echten Transaktionen unterstützen)
+  // Zuerst alle bestehenden Zuweisungen für diesen Manager löschen
+  const { error: deleteError } = await supabase
+    .from('manager_customer_assignments')
+    .delete()
+    .eq('manager_id', managerId);
+
+  if (deleteError) {
+    console.error("Fehler beim Löschen alter Zuweisungen:", deleteError);
+    return { success: false, message: `Fehler beim Aktualisieren der Zuweisungen: ${deleteError.message}` };
+  }
+
+  // Dann die neuen Zuweisungen einfügen, falls vorhanden
+  if (customerIds.length > 0) {
+    const assignmentsToInsert = customerIds.map(cId => ({
+      manager_id: managerId,
+      customer_id: cId,
+    }));
+
+    const { error: insertError } = await supabase
+      .from('manager_customer_assignments')
+      .insert(assignmentsToInsert);
+
+    if (insertError) {
+      console.error("Fehler beim Einfügen neuer Zuweisungen:", insertError);
+      return { success: false, message: `Fehler beim Aktualisieren der Zuweisungen: ${insertError.message}` };
+    }
+  }
+
+  revalidatePath("/dashboard/users");
+  revalidatePath("/dashboard/customers"); // Revalidiere auch Kunden, da sich deren Sichtbarkeit ändern könnte
+  revalidatePath("/dashboard/objects");   // Revalidiere auch Objekte
+  revalidatePath("/dashboard/orders");    // Revalidiere auch Aufträge
+  revalidatePath("/dashboard/customer-contacts"); // Revalidiere auch Kundenkontakte
+
+  return { success: true, message: "Kundenzuweisungen erfolgreich aktualisiert!" };
+}
