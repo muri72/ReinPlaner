@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { CustomerContactFormValues } from "@/components/customer-contact-form";
 
-export async function createCustomerContact(data: CustomerContactFormValues) {
+export async function createCustomerContact(data: CustomerContactFormValues): Promise<{ success: boolean; message: string; newContactId?: string }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -14,7 +14,7 @@ export async function createCustomerContact(data: CustomerContactFormValues) {
 
   const { customerId, firstName, lastName, email, phone, role } = data;
 
-  const { error } = await supabase
+  const { data: newContact, error } = await supabase
     .from('customer_contacts')
     .insert({
       customer_id: customerId,
@@ -23,7 +23,9 @@ export async function createCustomerContact(data: CustomerContactFormValues) {
       email,
       phone,
       role,
-    });
+    })
+    .select('id') // Wichtig: Die ID des neu erstellten Kontakts auswählen
+    .single();
 
   if (error) {
     console.error("Fehler beim Erstellen des Kundenkontakts:", error);
@@ -33,7 +35,7 @@ export async function createCustomerContact(data: CustomerContactFormValues) {
   revalidatePath("/dashboard/customer-contacts");
   revalidatePath("/dashboard/objects"); // Revalidiere auch Objekte, da Kontakte dort verwendet werden
   revalidatePath("/dashboard/orders"); // Revalidiere auch Aufträge, da Kontakte dort verwendet werden
-  return { success: true, message: "Kundenkontakt erfolgreich hinzugefügt!" };
+  return { success: true, message: "Kundenkontakt erfolgreich hinzugefügt!", newContactId: newContact?.id };
 }
 
 export async function updateCustomerContact(contactId: string, data: CustomerContactFormValues) {

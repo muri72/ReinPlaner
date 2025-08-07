@@ -261,12 +261,10 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
   const isAlarmSecured = form.watch("isAlarmSecured");
 
   // Handler für die Kundenkontakterstellung im Dialog
-  const handleCustomerContactCreated = async () => {
+  const handleCustomerContactCreated = async (newContactId: string) => {
     if (selectedCustomerId) {
-      await fetchCustomerContacts(selectedCustomerId);
-      // Optional: Versuchen Sie, den neu erstellten Kontakt automatisch auszuwählen
-      // Dies erfordert, dass die createCustomerContact-Aktion die ID des neuen Kontakts zurückgibt.
-      // Da dies derzeit nicht der Fall ist, muss der Benutzer ihn manuell auswählen.
+      await fetchCustomerContacts(selectedCustomerId); // Liste der Kontakte neu laden
+      form.setValue("customerContactId", newContactId); // Neu erstellten Kontakt auswählen
     }
   };
 

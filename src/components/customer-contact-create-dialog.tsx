@@ -9,7 +9,7 @@ import { createCustomerContact } from "@/app/dashboard/customer-contacts/actions
 
 interface CustomerContactCreateDialogProps {
   customerId: string;
-  onContactCreated?: (newContactId: string) => void;
+  onContactCreated?: (newContactId: string) => void; // Typ geändert, um die ID zu erwarten
   disabled?: boolean;
 }
 
@@ -20,12 +20,9 @@ export function CustomerContactCreateDialog({ customerId, onContactCreated, disa
     const result = await createCustomerContact(data);
     if (result.success) {
       setOpen(false);
-      // Annahme: Die createCustomerContact-Aktion gibt die ID des neuen Kontakts zurück
-      // Da die aktuelle Aktion dies nicht tut, müssen wir die Liste neu laden
-      // oder eine andere Methode finden, um die ID zu erhalten.
-      // Fürs Erste rufen wir onContactCreated ohne spezifische ID auf,
-      // was die übergeordnete Komponente dazu veranlassen sollte, ihre Liste neu zu laden.
-      onContactCreated?.("refresh"); // Signalisiert, dass die Liste aktualisiert werden muss
+      if (result.newContactId) {
+        onContactCreated?.(result.newContactId); // Die tatsächliche ID weitergeben
+      }
     }
     return result;
   };
