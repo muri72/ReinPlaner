@@ -16,7 +16,15 @@ import { cn } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client"; // Importiere Supabase Client
-import { services } from "@/lib/services"; // Importiere die Dienstleistungen
+
+// Definierte Liste der Dienstleistungen
+const availableServices = [
+  "Unterhaltsreinigung",
+  "Glasreinigung",
+  "Grundreinigung",
+  "Graffitientfernung",
+  "Sonderreinigung",
+] as const; // 'as const' für String-Literal-Typen
 
 export const orderSchema = z.object({ // taskSchema zu orderSchema
   title: z.string().min(1, "Titel ist erforderlich").max(100, "Titel ist zu lang"),
@@ -36,7 +44,7 @@ export const orderSchema = z.object({ // taskSchema zu orderSchema
     z.nullable(z.number().min(0, "Stunden müssen positiv sein").max(999, "Stunden sind zu hoch")).optional()
   ),
   notes: z.string().max(500, "Notizen sind zu lang").optional().nullable(),
-  serviceType: z.enum(Object.keys(services) as [string, ...string[]]).optional().nullable(), // Korrigierter Typ-Cast
+  serviceType: z.enum(availableServices).optional().nullable(), // Neues Feld als Enum der verfügbaren Services
 });
 
 export type OrderFormInput = z.input<typeof orderSchema>; // TaskFormInput zu OrderFormInput
@@ -177,8 +185,8 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
             <SelectValue placeholder="Dienstleistung auswählen" />
           </SelectTrigger>
           <SelectContent>
-            {Object.values(services).map(service => (
-              <SelectItem key={service.id} value={service.id}>{service.title}</SelectItem>
+            {availableServices.map(service => (
+              <SelectItem key={service} value={service}>{service}</SelectItem>
             ))}
           </SelectContent>
         </Select>

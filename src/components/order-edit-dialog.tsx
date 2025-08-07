@@ -7,6 +7,15 @@ import { Pencil } from "lucide-react";
 import { OrderForm, OrderFormValues } from "@/components/order-form";
 import { updateOrder } from "@/app/dashboard/orders/actions";
 
+// Definierte Liste der Dienstleistungen (muss mit order-form.tsx übereinstimmen)
+const availableServices = [
+  "Unterhaltsreinigung",
+  "Glasreinigung",
+  "Grundreinigung",
+  "Graffitientfernung",
+  "Sonderreinigung",
+] as const;
+
 interface OrderEditDialogProps {
   order: {
     id: string;
@@ -39,6 +48,14 @@ export function OrderEditDialog({ order }: OrderEditDialogProps) {
     return result;
   };
 
+  // Hilfsfunktion, um service_type sicher in den Enum-Typ umzuwandeln
+  const getServiceTypeForForm = (serviceType: string | null): OrderFormValues["serviceType"] => {
+    if (serviceType && availableServices.includes(serviceType as any)) {
+      return serviceType as OrderFormValues["serviceType"];
+    }
+    return null;
+  };
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -65,7 +82,7 @@ export function OrderEditDialog({ order }: OrderEditDialogProps) {
             priority: order.priority as OrderFormValues["priority"],
             estimatedHours: order.estimated_hours,
             notes: order.notes,
-            serviceType: order.service_type, // Neues Feld
+            serviceType: getServiceTypeForForm(order.service_type), // Korrigierte Zuweisung
           }}
           onSubmit={handleUpdate}
           submitButtonText="Änderungen speichern"
