@@ -160,27 +160,27 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
     if (!isEditMode) {
       if (selectedEmployeeId) {
         const employee = employees.find(emp => emp.id === selectedEmployeeId);
-        form.setValue("firstName", employee?.first_name || "", { shouldValidate: true });
-        form.setValue("lastName", employee?.last_name || "", { shouldValidate: true });
-        form.setValue("email", employee?.email || null, { shouldValidate: true }); // Set to null if empty
-        form.setValue("role", "employee", { shouldValidate: true });
-        form.setValue("customerId", null, { shouldValidate: true });
-        form.setValue("managerCustomerIds", [], { shouldValidate: true });
+        form.setValue("firstName", employee?.first_name || "", { shouldValidate: false }); // shouldValidate entfernt
+        form.setValue("lastName", employee?.last_name || "", { shouldValidate: false });   // shouldValidate entfernt
+        form.setValue("email", employee?.email || null, { shouldValidate: false });       // shouldValidate entfernt
+        form.setValue("role", "employee", { shouldValidate: false });
+        form.setValue("customerId", null, { shouldValidate: false });
+        form.setValue("managerCustomerIds", [], { shouldValidate: false });
       } else if (selectedCustomerId) {
         const customer = customers.find(cust => cust.id === selectedCustomerId);
-        form.setValue("firstName", customer?.name || "", { shouldValidate: true });
-        form.setValue("lastName", "", { shouldValidate: true }); // Customers typically only have one name field
-        form.setValue("email", customer?.contact_email || null, { shouldValidate: true }); // Set to null if empty
-        form.setValue("role", "customer", { shouldValidate: true });
-        form.setValue("employeeId", null, { shouldValidate: true });
-        form.setValue("managerCustomerIds", [], { shouldValidate: true });
+        form.setValue("firstName", customer?.name || "", { shouldValidate: false });       // shouldValidate entfernt
+        form.setValue("lastName", "", { shouldValidate: false });                         // shouldValidate entfernt
+        form.setValue("email", customer?.contact_email || null, { shouldValidate: false }); // shouldValidate entfernt
+        form.setValue("role", "customer", { shouldValidate: false });
+        form.setValue("employeeId", null, { shouldValidate: false });
+        form.setValue("managerCustomerIds", [], { shouldValidate: false });
       } else {
         // If no employee or customer is selected, clear and enable fields
-        if (!initialData?.firstName) form.setValue("firstName", "", { shouldValidate: true });
-        if (!initialData?.lastName) form.setValue("lastName", "", { shouldValidate: true });
-        if (!initialData?.email) form.setValue("email", null, { shouldValidate: true }); // Set to null if empty
+        if (!initialData?.firstName) form.setValue("firstName", "", { shouldValidate: false }); // shouldValidate entfernt
+        if (!initialData?.lastName) form.setValue("lastName", "", { shouldValidate: false });   // shouldValidate entfernt
+        if (!initialData?.email) form.setValue("email", null, { shouldValidate: false });       // shouldValidate entfernt
         // Reset role to default if not explicitly set by initialData
-        if (!initialData?.role) form.setValue("role", "employee", { shouldValidate: true });
+        if (!initialData?.role) form.setValue("role", "employee", { shouldValidate: false });
       }
     }
   }, [selectedEmployeeId, selectedCustomerId, isEditMode, form, employees, customers, initialData]);
@@ -359,9 +359,9 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
                     onCheckedChange={(checked) => {
                       const currentCustomerIds = form.getValues("managerCustomerIds") || [];
                       if (checked) {
-                        form.setValue("managerCustomerIds", [...currentCustomerIds, customer.id], { shouldValidate: true });
+                        form.setValue("managerCustomerIds", [...currentCustomerIds, customer.id], { shouldValidate: false }); // shouldValidate entfernt
                       } else {
-                        form.setValue("managerCustomerIds", currentCustomerIds.filter((id: string) => id !== customer.id), { shouldValidate: true });
+                        form.setValue("managerCustomerIds", currentCustomerIds.filter((id: string) => id !== customer.id), { shouldValidate: false }); // shouldValidate entfernt
                       }
                     }}
                   />
