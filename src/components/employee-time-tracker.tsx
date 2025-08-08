@@ -7,9 +7,10 @@ import { createClient } from "@/lib/supabase/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Clock, Play, StopCircle, PauseCircle, RotateCcw } from "lucide-react"; // Neue Icons
+import { Clock, Play, StopCircle, PauseCircle, RotateCcw } from "lucide-react";
 import { createTimeEntry, updateTimeEntry } from "@/app/dashboard/time-tracking/actions";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"; // Importiere Tabs
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { calculateHours } from "@/lib/utils"; // Import calculateHours
 
 interface EmployeeTimeTrackerProps {
   userId: string;
@@ -20,7 +21,7 @@ interface ActiveTimeEntry {
   start_time: string;
   order_id: string | null;
   object_id: string | null;
-  type: 'clock_in_out' | 'stopwatch'; // Typ des aktiven Eintrags
+  type: 'clock_in_out' | 'stopwatch';
   orders?: { title: string }[] | null;
   objects?: { name: string }[] | null;
   notes?: string | null;
@@ -31,9 +32,14 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
   const [employeeId, setEmployeeId] = useState<string | null>(null);
   const [activeEntry, setActiveEntry] = useState<ActiveTimeEntry | null>(null);
   const [loading, setLoading] = useState(true);
-  const [orders, setOrders] = useState<{ id: string; title: string; customer_id: string; object_id: string }[]>([]);
+  const [orders, setOrders] = useState<{ id: string; title: string; customer_id: string; object_id: string; order_type: string }[]>([]); // Added order_type
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [currentTab, setCurrentTab] = useState<'clock_in_out' | 'stopwatch'>('clock_in_out');
+
+  // States for suggested times based on object schedule for permanent orders
+  const [suggestedStartTime, setSuggestedStartTime] = useState<string | null>(null);
+  const [suggestedEndTime, setSuggestedEndTime] = useState<string | null>(null);
+  const [suggestedDuration, setSuggestedDuration] = useState<number | null>(null); // in minutes
 
   // Stopwatch specific states
   const [stopwatchElapsedTime, setStopwatchElapsedTime] = useState(0);
@@ -49,7 +55,7 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
       .join(':');
   };
 
-  // Daten beim Laden der Komponente abrufen
+  // Fetch initial data and active entry
   useEffect(() => {
     const fetchInitialData = async () => {
       setLoading(true);
@@ -60,7 +66,7 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
         .eq('user_id', userId)
         .single();
 
-      if (employeeError && employeeError.code !== 'PGRST116') { // PGRST116 = keine Zeilen gefunden
+      if (employeeError && employeeError.code !== 'PGRST116') {
         console.error("Fehler beim Laden der Mitarbeiter-ID:", employeeError);
         toast.error("Fehler beim Laden Ihrer Mitarbeiterdaten.");
         setLoading(false);
@@ -94,7 +100,7 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
         } else if (activeEntryData) {
           setActiveEntry(activeEntryData as ActiveTimeEntry);
           setSelectedOrderId(activeEntryData.order_id);
-          setCurrentTab(activeEntryData.type as 'clock_in_out' | 'stopwatch'); // Setze den Tab auf den aktiven Typ
+          setCurrentTab(activeEntryData.type as 'clock_in_out' | 'stopwatch');
 
           if (activeEntryData.type === 'stopwatch') {
             const startTime = new Date(activeEntryData.start_time).getTime();
@@ -106,11 +112,11 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
           }
         }
 
-        // 3. Aufträge zur Auswahl abrufen
+        // 3. Aufträge zur Auswahl abrufen (inkl. order_type und object_id)
         const { data: ordersData, error: ordersError } = await supabase
           .from('orders')
-          .select('id, title, customer_id, object_id')
-          .eq('employee_id', empId) // Nur Aufträge, die diesem Mitarbeiter zugewiesen sind
+          .select('id, title, customer_id, object_id, order_type') // Select order_type and object_id
+          .eq('employee_id', empId)
           .order('title', { ascending: true });
 
         if (ordersData) setOrders(ordersData);
@@ -128,6 +134,62 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
     };
   }, [userId, supabase]);
 
+  // Effect to fetch object schedule for selected permanent order
+  useEffect(() => {
+    const fetchObjectSchedule = async () => {
+      setSuggestedStartTime(null);
+      setSuggestedEndTime(null);
+      setSuggestedDuration(null);
+
+      if (selectedOrderId) {
+        const selectedOrder = orders.find(o => o.id === selectedOrderId);
+        if (selectedOrder && selectedOrder.order_type === 'permanent' && selectedOrder.object_id) {
+          const { data: objectData, error: objectError } = await supabase
+            .from('objects')
+            .select('monday_start_time, monday_end_time, tuesday_start_time, tuesday_end_time, wednesday_start_time, wednesday_end_time, thursday_start_time, thursday_end_time, friday_start_time, friday_end_time, saturday_start_time, saturday_end_time, sunday_start_time, sunday_end_time')
+            .eq('id', selectedOrder.object_id)
+            .single();
+
+          if (objectError) {
+            console.error("Fehler beim Laden des Objektplans:", objectError);
+            return;
+          }
+
+          if (objectData) {
+            const today = new Date();
+            const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+
+            let startTimeKey: keyof typeof objectData | null = null;
+            let endTimeKey: keyof typeof objectData | null = null;
+
+            switch (dayOfWeek) {
+              case 0: startTimeKey = 'sunday_start_time'; endTimeKey = 'sunday_end_time'; break;
+              case 1: startTimeKey = 'monday_start_time'; endTimeKey = 'monday_end_time'; break;
+              case 2: startTimeKey = 'tuesday_start_time'; endTimeKey = 'tuesday_end_time'; break;
+              case 3: startTimeKey = 'wednesday_start_time'; endTimeKey = 'wednesday_end_time'; break;
+              case 4: startTimeKey = 'thursday_start_time'; endTimeKey = 'thursday_end_time'; break;
+              case 5: startTimeKey = 'friday_start_time'; endTimeKey = 'friday_end_time'; break;
+              case 6: startTimeKey = 'saturday_start_time'; endTimeKey = 'saturday_end_time'; break;
+            }
+
+            const suggestedStart = startTimeKey ? objectData[startTimeKey] : null;
+            const suggestedEnd = endTimeKey ? objectData[endTimeKey] : null;
+
+            setSuggestedStartTime(suggestedStart);
+            setSuggestedEndTime(suggestedEnd);
+
+            if (suggestedStart && suggestedEnd) {
+              const duration = calculateHours(suggestedStart, suggestedEnd);
+              setSuggestedDuration(duration !== null ? Math.round(duration * 60) : null);
+            }
+          }
+        }
+      }
+    };
+
+    fetchObjectSchedule();
+  }, [selectedOrderId, orders, supabase]);
+
   const handleClockIn = async () => {
     if (!employeeId) {
       toast.error("Keine Mitarbeiter-ID gefunden. Bitte stellen Sie sicher, dass Ihr Benutzer einem Mitarbeiter zugewiesen ist.");
@@ -138,38 +200,68 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
       return;
     }
     setLoading(true);
+
     const now = new Date();
-    const startTime = now.toTimeString().slice(0, 5); // HH:MM
+    const selectedOrder = orders.find(o => o.id === selectedOrderId);
+
+    let actualStartTime = now.toTimeString().slice(0, 5);
+    let actualEndTime: string | null = null;
+    let actualDurationMinutes: number | null = null;
+    let actualEndDate: Date | null = null;
+    let notes = `Eingestempelt um ${now.toLocaleTimeString()}`;
+
+    if (selectedOrder?.order_type === 'permanent' && suggestedStartTime && suggestedEndTime && suggestedDuration !== null) {
+      // For permanent orders, automatically log the full scheduled duration
+      actualStartTime = suggestedStartTime;
+      actualEndTime = suggestedEndTime;
+      actualDurationMinutes = suggestedDuration;
+      actualEndDate = now; // End date is today
+      notes = `Automatisch erfasst für permanenten Auftrag: ${actualStartTime} - ${actualEndTime}`;
+      toast.info("Permanenter Auftrag: Geplante Stunden automatisch erfasst.");
+    } else {
+      // For other order types or no schedule, start a live clock
+      notes = `Eingestempelt um ${now.toLocaleTimeString()}`;
+    }
 
     const result = await createTimeEntry({
       employeeId: employeeId,
       startDate: now,
-      startTime: startTime,
+      startTime: actualStartTime,
+      endDate: actualEndDate,
+      endTime: actualEndTime,
+      durationMinutes: actualDurationMinutes,
       type: 'clock_in_out',
       orderId: selectedOrderId,
-      notes: `Eingestempelt um ${now.toLocaleTimeString()}`,
+      objectId: selectedOrder?.object_id || null,
+      notes: notes,
     });
 
     if (result.success) {
-      toast.success("Erfolgreich eingestempelt!");
-      // Aktiven Eintrag neu abrufen, um die UI zu aktualisieren
-      const { data: newActiveEntry, error } = await supabase
-        .from('time_entries')
-        .select(`
-          id,
-          start_time,
-          order_id,
-          object_id,
-          notes,
-          type,
-          orders ( title ),
-          objects ( name )
-        `)
-        .eq('employee_id', employeeId)
-        .is('end_time', null)
-        .single();
-      if (newActiveEntry) setActiveEntry(newActiveEntry as ActiveTimeEntry);
-      if (error && error.code !== 'PGRST116') console.error("Fehler beim Neuladen des aktiven Eintrags:", error);
+      if (selectedOrder?.order_type === 'permanent' && suggestedStartTime && suggestedEndTime) {
+        toast.success("Geplante Stunden für permanenten Auftrag erfolgreich erfasst!");
+        setActiveEntry(null); // Entry is immediately completed
+        setSelectedOrderId(null); // Clear selection
+      } else {
+        toast.success("Erfolgreich eingestempelt!");
+        // Aktiven Eintrag neu abrufen, um die UI zu aktualisieren
+        const { data: newActiveEntry, error } = await supabase
+          .from('time_entries')
+          .select(`
+            id,
+            start_time,
+            order_id,
+            object_id,
+            notes,
+            type,
+            orders ( title ),
+            objects ( name )
+          `)
+          .eq('employee_id', employeeId)
+          .is('end_time', null)
+          .single();
+        if (newActiveEntry) setActiveEntry(newActiveEntry as ActiveTimeEntry);
+        if (error && error.code !== 'PGRST116') console.error("Fehler beim Neuladen des aktiven Eintrags:", error);
+      }
     } else {
       toast.error(result.message);
     }
@@ -183,9 +275,8 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
     }
     setLoading(true);
     const now = new Date();
-    const endTime = now.toTimeString().slice(0, 5); // HH:MM
+    const endTime = now.toTimeString().slice(0, 5);
 
-    // Dauer berechnen
     const startDateTime = new Date(activeEntry.start_time);
     const diffMs = now.getTime() - startDateTime.getTime();
     const durationMinutes = diffMs / (1000 * 60);
@@ -199,8 +290,8 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
 
     if (result.success) {
       toast.success("Erfolgreich ausgestempelt!");
-      setActiveEntry(null); // Aktiven Eintrag löschen
-      setSelectedOrderId(null); // Auswahl zurücksetzen
+      setActiveEntry(null);
+      setSelectedOrderId(null);
     } else {
       toast.error(result.message);
     }
@@ -220,13 +311,19 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
     const now = new Date();
     const startTime = now.toTimeString().slice(0, 5);
 
+    const selectedOrder = orders.find(o => o.id === selectedOrderId);
+
     const result = await createTimeEntry({
       employeeId: employeeId,
       startDate: now,
-      startTime: startTime,
+      startTime: startTime, // Stopwatch always starts with current time
+      endDate: null,
+      endTime: null,
+      durationMinutes: null,
       type: 'stopwatch',
       orderId: selectedOrderId,
-      notes: `Stoppuhr gestartet um ${now.toLocaleTimeString()}`,
+      objectId: selectedOrder?.object_id || null,
+      notes: `Stoppuhr gestartet um ${now.toLocaleTimeString()}${selectedOrder ? ` für Auftrag ${selectedOrder.title}` : ''}`,
     });
 
     if (result.success && result.newEntryId) {
@@ -235,7 +332,7 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
         id: result.newEntryId,
         start_time: now.toISOString(),
         order_id: selectedOrderId,
-        object_id: null, // Objekt-ID wird hier nicht direkt gesetzt, da sie über den Auftrag kommt
+        object_id: selectedOrder?.object_id || null,
         type: 'stopwatch',
         notes: `Stoppuhr gestartet um ${now.toLocaleTimeString()}`,
       });
@@ -312,6 +409,8 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
     );
   }
 
+  const selectedOrderIsPermanent = orders.find(o => o.id === selectedOrderId)?.order_type === 'permanent';
+
   return (
     <Card className="p-4 space-y-4">
       <CardHeader>
@@ -362,7 +461,7 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
                     <SelectContent>
                       <SelectItem value="unassigned">Kein Auftrag zugewiesen</SelectItem>
                       {orders.map(order => (
-                        <SelectItem key={order.id} value={order.id}>{order.title}</SelectItem>
+                        <SelectItem key={order.id} value={order.id}>{order.title} ({order.order_type === 'permanent' ? 'Permanent' : 'Einmalig'})</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -370,6 +469,15 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
                     <p className="text-muted-foreground text-sm mt-1">Keine Aufträge für Sie gefunden.</p>
                   )}
                 </div>
+
+                {selectedOrderIsPermanent && suggestedStartTime && suggestedEndTime && (
+                  <div className="text-sm text-muted-foreground mt-2 p-2 border rounded-md bg-blue-50 dark:bg-blue-950">
+                    <p>Vorgeschlagene Zeiten für diesen permanenten Auftrag heute:</p>
+                    <p className="font-semibold">{suggestedStartTime} - {suggestedEndTime} ({suggestedDuration !== null ? (suggestedDuration / 60).toFixed(2) : 'N/A'} Stunden)</p>
+                    <p className="text-xs mt-1">Beim Einstempeln werden diese Stunden automatisch erfasst.</p>
+                  </div>
+                )}
+
                 {!activeEntry ? (
                   <Button
                     onClick={handleClockIn}
@@ -406,7 +514,7 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
                     <SelectContent>
                       <SelectItem value="unassigned">Kein Auftrag zugewiesen</SelectItem>
                       {orders.map(order => (
-                        <SelectItem key={order.id} value={order.id}>{order.title}</SelectItem>
+                        <SelectItem key={order.id} value={order.id}>{order.title} ({order.order_type === 'permanent' ? 'Permanent' : 'Einmalig'})</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -414,6 +522,15 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
                     <p className="text-muted-foreground text-sm mt-1">Keine Aufträge für Sie gefunden.</p>
                   )}
                 </div>
+
+                {selectedOrderIsPermanent && suggestedStartTime && suggestedEndTime && (
+                  <div className="text-sm text-muted-foreground mt-2 p-2 border rounded-md bg-blue-50 dark:bg-blue-950">
+                    <p>Vorgeschlagene Zeiten für diesen permanenten Auftrag heute:</p>
+                    <p className="font-semibold">{suggestedStartTime} - {suggestedEndTime} ({suggestedDuration !== null ? (suggestedDuration / 60).toFixed(2) : 'N/A'} Stunden)</p>
+                    <p className="text-xs mt-1">Die Stoppuhr verfolgt die tatsächliche Zeit, aber dies ist der erwartete Zeitrahmen.</p>
+                  </div>
+                )}
+
                 <div className="flex justify-center items-center text-4xl font-bold my-4">
                   {formatTime(stopwatchElapsedTime)}
                 </div>
