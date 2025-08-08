@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 
 export default function LoginPage() {
+  console.log("LoginPage: Component rendered."); // NEUER LOG
   const supabase = createClient();
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -16,25 +17,33 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    console.log("LoginPage useEffect: Setting up auth state listener."); // NEUER LOG
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log("Auth State Change Event:", event, "Session:", session); // NEUER LOG
         if (event === "SIGNED_IN" || event === "USER_UPDATED") {
           if (session) {
+            console.log("User signed in, redirecting to /dashboard."); // NEUER LOG
             router.push("/dashboard"); // Authentifizierte Benutzer zum Dashboard umleiten
           }
         } else if (event === "SIGNED_OUT") {
           toast.info("Sie wurden abgemeldet.");
+          console.log("User signed out."); // NEUER LOG
         }
       }
     );
 
-    return () => subscription.unsubscribe();
+    return () => {
+      console.log("LoginPage useEffect: Cleaning up auth state listener."); // NEUER LOG
+      subscription.unsubscribe();
+    };
   }, [router, supabase.auth]);
 
   const handleDemoLogin = async () => {
     setLoading(true);
     const demoEmail = "admin@reinigung-aris.de";
     const demoPassword = "admin123";
+    console.log("Attempting demo login..."); // NEUER LOG
 
     const { error } = await supabase.auth.signInWithPassword({
       email: demoEmail,
@@ -43,8 +52,10 @@ export default function LoginPage() {
 
     if (error) {
       toast.error(`Anmeldung fehlgeschlagen: ${error.message}. Bitte stellen Sie sicher, dass der Demo-Benutzer in Supabase existiert.`);
+      console.error("Demo login failed:", error.message); // NEUER LOG
     } else {
       toast.success("Erfolgreich als Demo-Benutzer angemeldet!");
+      console.log("Demo login successful."); // NEUER LOG
       // Die Weiterleitung wird durch onAuthStateChange gehandhabt
     }
     setLoading(false);
@@ -53,6 +64,7 @@ export default function LoginPage() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    console.log("Attempting regular login for email:", email); // NEUER LOG
 
     const { error } = await supabase.auth.signInWithPassword({
       email,
@@ -61,8 +73,10 @@ export default function LoginPage() {
 
     if (error) {
       toast.error(`Anmeldung fehlgeschlagen: ${error.message}`);
+      console.error("Regular login failed:", error.message); // NEUER LOG
     } else {
       toast.success("Erfolgreich angemeldet!");
+      console.log("Regular login successful."); // NEUER LOG
       // Die Weiterleitung wird durch onAuthStateChange gehandhabt
     }
     setLoading(false);
