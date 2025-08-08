@@ -42,7 +42,19 @@ export async function updateCustomer(customerId: string, data: CustomerFormValue
     return { success: false, message: "Benutzer nicht authentifiziert." };
   }
 
-  const { data: updatedRows, error } = await supabase
+  // Überprüfen, ob der aktuelle Benutzer ein Admin ist
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single();
+
+  if (profileError) {
+    console.error("Fehler beim Abrufen des Benutzerprofils:", profileError);
+    return { success: false, message: "Fehler beim Überprüfen der Berechtigungen." };
+  }
+
+  let query = supabase
     .from('customers')
     .update({
       name: data.name,
@@ -51,16 +63,20 @@ export async function updateCustomer(customerId: string, data: CustomerFormValue
       contact_phone: data.contactPhone,
       customer_type: data.customerType, // Neues Feld
     })
-    .eq('id', customerId)
-    .eq('user_id', user.id) // Sicherstellen, dass nur eigene Kunden aktualisiert werden können
-    .select(); // Wichtig: .select() hinzufügen, um die aktualisierten Zeilen zu erhalten
+    .eq('id', customerId);
+
+  // Wenn der Benutzer kein Admin ist, nur eigene Kunden aktualisieren
+  if (profile?.role !== 'admin') {
+    query = query.eq('user_id', user.id);
+  }
+
+  const { data: updatedRows, error } = await query.select();
 
   if (error) {
     console.error("Fehler beim Aktualisieren des Kunden:", error);
     return { success: false, message: error.message };
   }
 
-  // Überprüfen, ob tatsächlich Zeilen aktualisiert wurden (wichtig für RLS-Fehler, die keinen 'error' zurückgeben)
   if (!updatedRows || updatedRows.length === 0) {
     console.warn(`Update-Operation für Kunden-ID ${customerId} durch Benutzer ${user.id} führte zu keiner Aktualisierung. Dies könnte ein RLS-Problem sein oder der Datensatz existiert nicht/gehört nicht dem Benutzer.`);
     return { success: false, message: "Kunde konnte nicht aktualisiert werden. Möglicherweise haben Sie keine Berechtigung oder der Kunde existiert nicht." };
@@ -78,13 +94,31 @@ export async function deleteCustomer(formData: FormData): Promise<{ success: boo
     return { success: false, message: "Benutzer nicht authentifiziert." };
   }
 
+  // Überprüfen, ob der aktuelle Benutzer ein Admin ist
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single();
+
+  if (profileError) {
+    console.error("Fehler beim Abrufen des Benutzerprofils:", profileError);
+    return { success: false, message: "Fehler beim Überprüfen der Berechtigungen." };
+  }
+
   const customerId = formData.get('customerId') as string;
 
-  const { error } = await supabase
+  let query = supabase
     .from('customers')
     .delete()
-    .eq('id', customerId)
-    .eq('user_id', user.id); // Sicherstellen, dass nur eigene Kunden gelöscht werden können
+    .eq('id', customerId);
+
+  // Wenn der Benutzer kein Admin ist, nur eigene Kunden löschen
+  if (profile?.role !== 'admin') {
+    query = query.eq('user_id', user.id);
+  }
+
+  const { error } = await query;
 
   if (error) {
     console.error("Fehler beim Löschen des Kunden:", error);

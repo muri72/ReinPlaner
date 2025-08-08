@@ -92,7 +92,19 @@ export async function updateObject(objectId: string, data: ObjectFormValues) {
     return { success: false, message: "Benutzer nicht authentifiziert." };
   }
 
-  const { error } = await supabase
+  // Überprüfen, ob der aktuelle Benutzer ein Admin ist
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single();
+
+  if (profileError) {
+    console.error("Fehler beim Abrufen des Benutzerprofils:", profileError);
+    return { success: false, message: "Fehler beim Überprüfen der Berechtigungen." };
+  }
+
+  let query = supabase
     .from('objects')
     .update({
       name: data.name,
@@ -123,12 +135,23 @@ export async function updateObject(objectId: string, data: ObjectFormValues) {
       alarm_password: data.alarmPassword,
       security_code_word: data.securityCodeWord,
     })
-    .eq('id', objectId)
-    .eq('user_id', user.id);
+    .eq('id', objectId);
+
+  // Wenn der Benutzer kein Admin ist, nur eigene Objekte aktualisieren
+  if (profile?.role !== 'admin') {
+    query = query.eq('user_id', user.id);
+  }
+
+  const { data: updatedRows, error } = await query.select();
 
   if (error) {
     console.error("Fehler beim Aktualisieren des Objekts:", error);
     return { success: false, message: error.message };
+  }
+
+  if (!updatedRows || updatedRows.length === 0) {
+    console.warn(`Update-Operation für Objekt-ID ${objectId} durch Benutzer ${user.id} führte zu keiner Aktualisierung. Dies könnte ein RLS-Problem sein oder der Datensatz existiert nicht/gehört nicht dem Benutzer.`);
+    return { success: false, message: "Objekt konnte nicht aktualisiert werden. Möglicherweise haben Sie keine Berechtigung oder das Objekt existiert nicht." };
   }
 
   revalidatePath("/dashboard/objects");
@@ -143,13 +166,31 @@ export async function deleteObject(formData: FormData): Promise<{ success: boole
     return { success: false, message: "Benutzer nicht authentifiziert." };
   }
 
+  // Überprüfen, ob der aktuelle Benutzer ein Admin ist
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single();
+
+  if (profileError) {
+    console.error("Fehler beim Abrufen des Benutzerprofils:", profileError);
+    return { success: false, message: "Fehler beim Überprüfen der Berechtigungen." };
+  }
+
   const objectId = formData.get('objectId') as string;
 
-  const { error } = await supabase
+  let query = supabase
     .from('objects')
     .delete()
-    .eq('id', objectId)
-    .eq('user_id', user.id);
+    .eq('id', objectId);
+
+  // Wenn der Benutzer kein Admin ist, nur eigene Objekte löschen
+  if (profile?.role !== 'admin') {
+    query = query.eq('user_id', user.id);
+  }
+
+  const { error } = await query;
 
   if (error) {
     console.error("Fehler beim Löschen des Objekts:", error);

@@ -30,10 +30,13 @@ export async function registerUser(data: UserFormValues) {
     return { success: false, message: "Passwort ist für die Registrierung erforderlich." };
   }
 
+  // Konvertiere null-E-Mail zu undefined, da Supabase createUser null nicht akzeptiert
+  const userEmail = email === null ? undefined : email;
+
   // Benutzer in Supabase Auth registrieren
   const supabaseAdmin = await createAdminClient(); // Verwende den Admin Client
   const { data: newUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
-    email,
+    email: userEmail,
     password,
     email_confirm: true, // Bestätigt die E-Mail automatisch
     user_metadata: { first_name: firstName, last_name: lastName },

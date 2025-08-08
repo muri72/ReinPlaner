@@ -72,7 +72,19 @@ export async function updateEmployee(employeeId: string, data: EmployeeFormValue
     return { success: false, message: "Benutzer nicht authentifiziert." };
   }
 
-  const { data: updatedRows, error } = await supabase
+  // Überprüfen, ob der aktuelle Benutzer ein Admin ist
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single();
+
+  if (profileError) {
+    console.error("Fehler beim Abrufen des Benutzerprofils:", profileError);
+    return { success: false, message: "Fehler beim Überprüfen der Berechtigungen." };
+  }
+
+  let query = supabase
     .from('employees')
     .update({
       first_name: data.firstName,
@@ -87,22 +99,26 @@ export async function updateEmployee(employeeId: string, data: EmployeeFormValue
       job_title: data.jobTitle,
       department: data.department,
       notes: data.notes,
-      address: data.address, // Neues Feld
-      date_of_birth: data.dateOfBirth ? data.dateOfBirth.toISOString().split('T')[0] : null, // Nur Datum speichern
-      social_security_number: data.socialSecurityNumber, // Neues Feld
-      tax_id_number: data.taxIdNumber, // Neues Feld
-      health_insurance_provider: data.healthInsuranceProvider, // Neues Feld
+      address: data.address,
+      date_of_birth: data.dateOfBirth ? data.dateOfBirth.toISOString().split('T')[0] : null,
+      social_security_number: data.socialSecurityNumber,
+      tax_id_number: data.taxIdNumber,
+      health_insurance_provider: data.healthInsuranceProvider,
     })
-    .eq('id', employeeId)
-    .eq('user_id', user.id)
-    .select(); // Wichtig: .select() hinzufügen, um die aktualisierten Zeilen zu erhalten
+    .eq('id', employeeId);
+
+  // Wenn der Benutzer kein Admin ist, nur eigene Mitarbeiter aktualisieren
+  if (profile?.role !== 'admin') {
+    query = query.eq('user_id', user.id);
+  }
+
+  const { data: updatedRows, error } = await query.select();
 
   if (error) {
     console.error("Fehler beim Aktualisieren des Mitarbeiters:", error);
     return { success: false, message: error.message };
   }
 
-  // Überprüfen, ob tatsächlich Zeilen aktualisiert wurden (wichtig für RLS-Fehler, die keinen 'error' zurückgeben)
   if (!updatedRows || updatedRows.length === 0) {
     console.warn(`Update-Operation für Mitarbeiter-ID ${employeeId} durch Benutzer ${user.id} führte zu keiner Aktualisierung. Dies könnte ein RLS-Problem sein oder der Datensatz existiert nicht/gehört nicht dem Benutzer.`);
     return { success: false, message: "Mitarbeiter konnte nicht aktualisiert werden. Möglicherweise haben Sie keine Berechtigung oder der Mitarbeiter existiert nicht." };
@@ -120,13 +136,31 @@ export async function deleteEmployee(formData: FormData): Promise<{ success: boo
     return { success: false, message: "Benutzer nicht authentifiziert." };
   }
 
+  // Überprüfen, ob der aktuelle Benutzer ein Admin ist
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single();
+
+  if (profileError) {
+    console.error("Fehler beim Abrufen des Benutzerprofils:", profileError);
+    return { success: false, message: "Fehler beim Überprüfen der Berechtigungen." };
+  }
+
   const employeeId = formData.get('employeeId') as string;
 
-  const { error } = await supabase
+  let query = supabase
     .from('employees')
     .delete()
-    .eq('id', employeeId)
-    .eq('user_id', user.id);
+    .eq('id', employeeId);
+
+  // Wenn der Benutzer kein Admin ist, nur eigene Mitarbeiter löschen
+  if (profile?.role !== 'admin') {
+    query = query.eq('user_id', user.id);
+  }
+
+  const { error } = await query;
 
   if (error) {
     console.error("Fehler beim Löschen des Mitarbeiters:", error);

@@ -46,20 +46,19 @@ export async function updateCustomerContact(contactId: string, data: CustomerCon
     return { success: false, message: "Benutzer nicht authentifiziert." };
   }
 
-  // Kunden-IDs des aktuellen Benutzers abrufen
-  const { data: customerIds, error: customerIdsError } = await supabase
-    .from('customers')
-    .select('id')
-    .eq('user_id', user.id);
+  // Überprüfen, ob der aktuelle Benutzer ein Admin ist
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single();
 
-  if (customerIdsError) {
-    console.error("Fehler beim Abrufen der Kunden-IDs:", customerIdsError);
+  if (profileError) {
+    console.error("Fehler beim Abrufen des Benutzerprofils:", profileError);
     return { success: false, message: "Fehler beim Überprüfen der Berechtigungen." };
   }
 
-  const allowedCustomerIds = customerIds.map(c => c.id);
-
-  const { data: updatedRows, error } = await supabase
+  let query = supabase
     .from('customer_contacts')
     .update({
       first_name: data.firstName,
@@ -68,16 +67,30 @@ export async function updateCustomerContact(contactId: string, data: CustomerCon
       phone: data.phone,
       role: data.role,
     })
-    .eq('id', contactId)
-    .in('customer_id', allowedCustomerIds) // Korrigiert: Übergabe eines Arrays von IDs
-    .select(); // Wichtig: .select() hinzufügen, um die aktualisierten Zeilen zu erhalten
+    .eq('id', contactId);
+
+  // Wenn der Benutzer kein Admin ist, nur Kontakte aktualisieren, die zu seinen Kunden gehören
+  if (profile?.role !== 'admin') {
+    const { data: customerIds, error: customerIdsError } = await supabase
+      .from('customers')
+      .select('id')
+      .eq('user_id', user.id);
+
+    if (customerIdsError) {
+      console.error("Fehler beim Abrufen der Kunden-IDs für Berechtigungsprüfung:", customerIdsError);
+      return { success: false, message: "Fehler beim Überprüfen der Berechtigungen." };
+    }
+    const allowedCustomerIds = customerIds.map(c => c.id);
+    query = query.in('customer_id', allowedCustomerIds);
+  }
+
+  const { data: updatedRows, error } = await query.select();
 
   if (error) {
     console.error("Fehler beim Aktualisieren des Kundenkontakts:", error);
     return { success: false, message: error.message };
   }
 
-  // Überprüfen, ob tatsächlich Zeilen aktualisiert wurden (wichtig für RLS-Fehler, die keinen 'error' zurückgeben)
   if (!updatedRows || updatedRows.length === 0) {
     console.warn(`Update-Operation für Kundenkontakt-ID ${contactId} durch Benutzer ${user.id} führte zu keiner Aktualisierung. Dies könnte ein RLS-Problem sein oder der Datensatz existiert nicht/gehört nicht zu den Kunden des Benutzers.`);
     return { success: false, message: "Kundenkontakt konnte nicht aktualisiert werden. Möglicherweise haben Sie keine Berechtigung oder der Kontakt existiert nicht." };
@@ -97,26 +110,41 @@ export async function deleteCustomerContact(formData: FormData): Promise<{ succe
     return { success: false, message: "Benutzer nicht authentifiziert." };
   }
 
-  const contactId = formData.get('contactId') as string;
+  // Überprüfen, ob der aktuelle Benutzer ein Admin ist
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single();
 
-  // Kunden-IDs des aktuellen Benutzers abrufen
-  const { data: customerIds, error: customerIdsError } = await supabase
-    .from('customers')
-    .select('id')
-    .eq('user_id', user.id);
-
-  if (customerIdsError) {
-    console.error("Fehler beim Abrufen der Kunden-IDs:", customerIdsError);
+  if (profileError) {
+    console.error("Fehler beim Abrufen des Benutzerprofils:", profileError);
     return { success: false, message: "Fehler beim Überprüfen der Berechtigungen." };
   }
 
-  const allowedCustomerIds = customerIds.map(c => c.id);
+  const contactId = formData.get('contactId') as string;
 
-  const { error } = await supabase
+  let query = supabase
     .from('customer_contacts')
     .delete()
-    .eq('id', contactId)
-    .in('customer_id', allowedCustomerIds); // Korrigiert: Übergabe eines Arrays von IDs
+    .eq('id', contactId);
+
+  // Wenn der Benutzer kein Admin ist, nur Kontakte löschen, die zu seinen Kunden gehören
+  if (profile?.role !== 'admin') {
+    const { data: customerIds, error: customerIdsError } = await supabase
+      .from('customers')
+      .select('id')
+      .eq('user_id', user.id);
+
+    if (customerIdsError) {
+      console.error("Fehler beim Abrufen der Kunden-IDs für Berechtigungsprüfung:", customerIdsError);
+      return { success: false, message: "Fehler beim Überprüfen der Berechtigungen." };
+    }
+    const allowedCustomerIds = customerIds.map(c => c.id);
+    query = query.in('customer_id', allowedCustomerIds);
+  }
+
+  const { error } = await query;
 
   if (error) {
     console.error("Fehler beim Löschen des Kundenkontakts:", error);
