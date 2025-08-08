@@ -36,6 +36,11 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [currentTab, setCurrentTab] = useState<'clock_in_out' | 'stopwatch'>('clock_in_out');
 
+  // States for suggested times based on object schedule for permanent orders
+  const [suggestedStartTime, setSuggestedStartTime] = useState<string | null>(null);
+  const [suggestedEndTime, setSuggestedEndTime] = useState<string | null>(null);
+  const [suggestedDuration, setSuggestedDuration] = useState<number | null>(null); // in minutes
+
   // Stopwatch specific states
   const [stopwatchElapsedTime, setStopwatchElapsedTime] = useState(0);
   const stopwatchIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -129,7 +134,62 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
     };
   }, [userId, supabase]);
 
-  // Removed: Effect to fetch object schedule for selected order (no longer needed for manual clock-in)
+  // Effect to fetch object schedule for selected order (if object_id exists)
+  useEffect(() => {
+    const fetchObjectSchedule = async () => {
+      setSuggestedStartTime(null);
+      setSuggestedEndTime(null);
+      setSuggestedDuration(null);
+
+      if (selectedOrderId) {
+        const selectedOrder = orders.find(o => o.id === selectedOrderId);
+        // Fetch schedule if an object is linked to the order
+        if (selectedOrder && selectedOrder.object_id) {
+          const { data: objectData, error: objectError } = await supabase
+            .from('objects')
+            .select('monday_start_time, monday_end_time, tuesday_start_time, tuesday_end_time, wednesday_start_time, wednesday_end_time, thursday_start_time, thursday_end_time, friday_start_time, friday_end_time, saturday_start_time, saturday_end_time, sunday_start_time, sunday_end_time')
+            .eq('id', selectedOrder.object_id)
+            .single();
+
+          if (objectError) {
+            console.error("Fehler beim Laden des Objektplans:", objectError);
+            return;
+          }
+
+          if (objectData) {
+            const today = new Date();
+            const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+
+            let startTimeKey: keyof typeof objectData | null = null;
+            let endTimeKey: keyof typeof objectData | null = null;
+
+            switch (dayOfWeek) {
+              case 0: startTimeKey = 'sunday_start_time'; endTimeKey = 'sunday_end_time'; break;
+              case 1: startTimeKey = 'monday_start_time'; endTimeKey = 'monday_end_time'; break;
+              case 2: startTimeKey = 'tuesday_start_time'; endTimeKey = 'tuesday_end_time'; break;
+              case 3: startTimeKey = 'wednesday_start_time'; endTimeKey = 'wednesday_end_time'; break;
+              case 4: startTimeKey = 'thursday_start_time'; endTimeKey = 'thursday_end_time'; break;
+              case 5: startTimeKey = 'friday_start_time'; endTimeKey = 'friday_end_time'; break;
+              case 6: startTimeKey = 'saturday_start_time'; endTimeKey = 'saturday_end_time'; break;
+            }
+
+            const suggestedStart = startTimeKey ? objectData[startTimeKey] : null;
+            const suggestedEnd = endTimeKey ? objectData[endTimeKey] : null;
+
+            setSuggestedStartTime(suggestedStart);
+            setSuggestedEndTime(suggestedEnd);
+
+            if (suggestedStart && suggestedEnd) {
+              const duration = calculateHours(suggestedStart, suggestedEnd);
+              setSuggestedDuration(duration !== null ? Math.round(duration * 60) : null);
+            }
+          }
+        }
+      }
+    };
+
+    fetchObjectSchedule();
+  }, [selectedOrderId, orders, supabase]);
 
   const handleClockIn = async () => {
     if (!employeeId) {
@@ -145,39 +205,68 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
     const now = new Date();
     const selectedOrder = orders.find(o => o.id === selectedOrderId);
 
+    let actualStartTime = now.toTimeString().slice(0, 5);
+    let actualEndTime: string | null = null;
+    let actualDurationMinutes: number | null = null;
+    let actualEndDate: Date | null = null;
+    let notes = `Eingestempelt um ${now.toLocaleTimeString()}`;
+    let entryType: 'clock_in_out' | 'stopwatch' | 'automatic_scheduled_order' = 'clock_in_out'; // Standardtyp
+
+    // Check if suggested times are available for the selected order's object
+    if (suggestedStartTime && suggestedEndTime && suggestedDuration !== null) {
+      // If scheduled times exist, automatically log the full scheduled duration
+      actualStartTime = suggestedStartTime;
+      actualEndTime = suggestedEndTime;
+      actualDurationMinutes = suggestedDuration;
+      actualEndDate = now; // End date is today
+      notes = `Automatisch erfasst für geplanten Auftrag: ${actualStartTime} - ${actualEndTime}`;
+      entryType = 'automatic_scheduled_order'; // Neuer Typ
+      toast.info("Geplanter Auftrag: Stunden automatisch erfasst.");
+    } else {
+      // For other order types or no schedule, start a live clock
+      notes = `Eingestempelt um ${now.toLocaleTimeString()}`;
+      entryType = 'clock_in_out';
+    }
+
     const result = await createTimeEntry({
       employeeId: employeeId,
       startDate: now,
-      startTime: now.toTimeString().slice(0, 5),
-      endDate: null,
-      endTime: null,
-      durationMinutes: null,
-      type: 'clock_in_out', // Always clock_in_out for manual action
+      startTime: actualStartTime,
+      endDate: actualEndDate,
+      endTime: actualEndTime,
+      durationMinutes: actualDurationMinutes,
+      type: entryType, // Verwende den dynamisch bestimmten Typ
       orderId: selectedOrderId,
       objectId: selectedOrder?.object_id || null,
-      notes: `Eingestempelt um ${now.toLocaleTimeString()}`,
+      notes: notes,
     });
 
     if (result.success) {
-      toast.success("Erfolgreich eingestempelt!");
-      // Aktiven Eintrag neu abrufen, um die UI zu aktualisieren
-      const { data: newActiveEntry, error } = await supabase
-        .from('time_entries')
-        .select(`
-          id,
-          start_time,
-          order_id,
-          object_id,
-          notes,
-          type,
-          orders ( title ),
-          objects ( name )
-        `)
-        .eq('employee_id', employeeId)
-        .is('end_time', null)
-        .single();
-      if (newActiveEntry) setActiveEntry(newActiveEntry as ActiveTimeEntry);
-      if (error && error.code !== 'PGRST116') console.error("Fehler beim Neuladen des aktiven Eintrags:", error);
+      if (entryType === 'automatic_scheduled_order') {
+        toast.success("Geplante Stunden erfolgreich erfasst!");
+        setActiveEntry(null); // Entry is immediately completed
+        setSelectedOrderId(null); // Clear selection
+      } else {
+        toast.success("Erfolgreich eingestempelt!");
+        // Aktiven Eintrag neu abrufen, um die UI zu aktualisieren
+        const { data: newActiveEntry, error } = await supabase
+          .from('time_entries')
+          .select(`
+            id,
+            start_time,
+            order_id,
+            object_id,
+            notes,
+            type,
+            orders ( title ),
+            objects ( name )
+          `)
+          .eq('employee_id', employeeId)
+          .is('end_time', null)
+          .single();
+        if (newActiveEntry) setActiveEntry(newActiveEntry as ActiveTimeEntry);
+        if (error && error.code !== 'PGRST116') console.error("Fehler beim Neuladen des aktiven Eintrags:", error);
+      }
     } else {
       toast.error(result.message);
     }
@@ -325,6 +414,9 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
     );
   }
 
+  // Check if suggested times are available for the selected order
+  const isScheduledOrder = !!(selectedOrderId && suggestedStartTime && suggestedEndTime && suggestedDuration !== null);
+
   return (
     <Card className="p-4 space-y-4">
       <CardHeader>
@@ -384,6 +476,14 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
                   )}
                 </div>
 
+                {isScheduledOrder && suggestedStartTime && suggestedEndTime && (
+                  <div className="text-sm text-muted-foreground mt-2 p-2 border rounded-md bg-blue-50 dark:bg-blue-950">
+                    <p>Vorgeschlagene Zeiten für diesen Auftrag heute:</p>
+                    <p className="font-semibold">{suggestedStartTime} - {suggestedEndTime} ({suggestedDuration !== null ? (suggestedDuration / 60).toFixed(2) : 'N/A'} Stunden)</p>
+                    <p className="text-xs mt-1">Beim Einstempeln werden diese Stunden automatisch erfasst.</p>
+                  </div>
+                )}
+
                 {!activeEntry ? (
                   <Button
                     onClick={handleClockIn}
@@ -428,6 +528,14 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
                     <p className="text-muted-foreground text-sm mt-1">Keine Aufträge für Sie gefunden.</p>
                   )}
                 </div>
+
+                {isScheduledOrder && suggestedStartTime && suggestedEndTime && (
+                  <div className="text-sm text-muted-foreground mt-2 p-2 border rounded-md bg-blue-50 dark:bg-blue-950">
+                    <p>Vorgeschlagene Zeiten für diesen Auftrag heute:</p>
+                    <p className="font-semibold">{suggestedStartTime} - {suggestedEndTime} ({suggestedDuration !== null ? (suggestedDuration / 60).toFixed(2) : 'N/A'} Stunden)</p>
+                    <p className="text-xs mt-1">Die Stoppuhr verfolgt die tatsächliche Zeit, aber dies ist der erwartete Zeitrahmen.</p>
+                  </div>
+                )}
 
                 <div className="flex justify-center items-center text-4xl font-bold my-4">
                   {formatTime(stopwatchElapsedTime)}

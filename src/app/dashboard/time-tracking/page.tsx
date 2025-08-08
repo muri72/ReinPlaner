@@ -199,10 +199,6 @@ export default async function TimeTrackingPage({
           <h2 className="text-2xl font-bold mt-8">Ihre Stempeluhr</h2>
           <EmployeeTimeTracker userId={currentUser.id} />
 
-          <p className="text-sm text-muted-foreground mt-4">
-            Geplante Stunden für Ihre Aufträge werden automatisch erfasst und erscheinen in der Liste unten.
-          </p>
-
           <h2 className="text-2xl font-bold mt-8">Ihre Stundenübersicht (letzte 3 Monate)</h2>
           <TimeTrackingCharts weeklyData={formattedWeeklyData} monthlyData={formattedMonthlyData} />
 
