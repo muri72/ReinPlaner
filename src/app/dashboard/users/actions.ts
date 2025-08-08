@@ -24,7 +24,7 @@ export async function registerUser(data: UserFormValues) {
     return { success: false, message: "Nicht autorisiert. Nur Admins können Benutzer registrieren." };
   }
 
-  const { email, password, firstName, lastName, role, employeeId, customerId, managerCustomerIds } = data;
+  const { email, password, firstName, lastName, role, employeeId, customerId, customerContactId, managerCustomerIds } = data; // customerContactId hinzugefügt
 
   if (!password) {
     return { success: false, message: "Passwort ist für die Registrierung erforderlich." };
@@ -132,6 +132,36 @@ export async function registerUser(data: UserFormValues) {
     }
   }
 
+  // Zuweisung des Benutzers zu einem Kundenkontakt (NEU)
+  if (customerContactId) {
+    // Zuerst prüfen, ob der Kundenkontakt bereits einem anderen Benutzer zugewiesen ist
+    const { data: existingContact, error: fetchContactError } = await supabaseAdmin
+      .from('customer_contacts')
+      .select('user_id')
+      .eq('id', customerContactId)
+      .single();
+
+    if (fetchContactError && fetchContactError.code !== 'PGRST116') {
+      console.error("Fehler beim Abrufen des Kundenkontakts für Zuweisung:", fetchContactError);
+    } else if (existingContact && existingContact.user_id && existingContact.user_id !== newUserId) {
+      // Wenn der Kontakt bereits einem ANDEREN Benutzer zugewiesen ist, diesen entknüpfen
+      const { error: unlinkOtherUserError } = await supabaseAdmin
+        .from('customer_contacts')
+        .update({ user_id: null })
+        .eq('user_id', existingContact.user_id)
+        .eq('id', customerContactId);
+      if (unlinkOtherUserError) console.error("Fehler beim Entknüpfen des Kundenkontakts von anderem Benutzer:", unlinkOtherUserError);
+    }
+
+    const { error: assignContactError } = await supabaseAdmin
+      .from('customer_contacts')
+      .update({ user_id: newUserId })
+      .eq('id', customerContactId);
+    if (assignContactError) {
+      console.error("Fehler beim Zuweisen des Kundenkontakts zum Benutzer:", assignContactError);
+    }
+  }
+
   // Zuweisung von Kunden zu einem Manager
   if (role === 'manager' && managerCustomerIds && managerCustomerIds.length > 0) {
     const { success: assignSuccess, message: assignMessage } = await assignCustomersToManager(newUserId, managerCustomerIds);
@@ -145,6 +175,7 @@ export async function registerUser(data: UserFormValues) {
   revalidatePath("/dashboard/users");
   revalidatePath("/dashboard/employees"); // Revalidiere Mitarbeiterseite, falls Zuweisung geändert
   revalidatePath("/dashboard/customers"); // Revalidiere Kundenseite, falls Zuweisung geändert
+  revalidatePath("/dashboard/customer-contacts"); // Revalidiere Kundenkontakte-Seite
   return { success: true, message: "Benutzer erfolgreich registriert und zugewiesen!" };
 }
 
@@ -211,8 +242,32 @@ export async function deleteUser(formData: FormData): Promise<{ success: boolean
     return { success: false, message: "Sie können Ihr eigenes Benutzerkonto nicht löschen." };
   }
 
-  // Benutzer in Supabase Auth löschen (dies löscht auch das Profil aufgrund der CASCADE-Regel)
+  // Vor dem Löschen des Benutzers, alle Verknüpfungen in employees, customers und customer_contacts aufheben
   const supabaseAdmin = await createAdminClient(); // Verwende den Admin Client
+
+  // Mitarbeiter entknüpfen
+  const { error: employeeUnlinkError } = await supabaseAdmin
+    .from('employees')
+    .update({ user_id: null })
+    .eq('user_id', userId);
+  if (employeeUnlinkError) console.error("Fehler beim Entknüpfen des Mitarbeiters:", employeeUnlinkError);
+
+  // Kunden entknüpfen
+  const { error: customerUnlinkError } = await supabaseAdmin
+    .from('customers')
+    .update({ user_id: null })
+    .eq('user_id', userId);
+  if (customerUnlinkError) console.error("Fehler beim Entknüpfen des Kunden:", customerUnlinkError);
+
+  // Kundenkontakte entknüpfen (NEU)
+  const { error: customerContactUnlinkError } = await supabaseAdmin
+    .from('customer_contacts')
+    .update({ user_id: null })
+    .eq('user_id', userId);
+  if (customerContactUnlinkError) console.error("Fehler beim Entknüpfen des Kundenkontakts:", customerContactUnlinkError);
+
+
+  // Benutzer in Supabase Auth löschen (dies löscht auch das Profil aufgrund der CASCADE-Regel)
   const { error } = await supabaseAdmin.auth.admin.deleteUser(userId);
 
   if (error) {
@@ -223,6 +278,7 @@ export async function deleteUser(formData: FormData): Promise<{ success: boolean
   revalidatePath("/dashboard/users");
   revalidatePath("/dashboard/employees"); // Revalidiere Mitarbeiterseite, falls Zuweisung geändert
   revalidatePath("/dashboard/customers"); // Revalidiere Kundenseite, falls Zuweisung geändert
+  revalidatePath("/dashboard/customer-contacts"); // Revalidiere Kundenkontakte-Seite
   return { success: true, message: "Benutzer erfolgreich gelöscht!" };
 }
 
