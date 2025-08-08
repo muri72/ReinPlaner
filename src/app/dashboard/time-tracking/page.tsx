@@ -6,13 +6,14 @@ import { createTimeEntry } from "./actions";
 import { EmployeeTimeTracker } from "@/components/employee-time-tracker";
 import { DeleteTimeEntryButton } from "@/components/delete-time-entry-button";
 import { Clock, UserRound, Building, Briefcase, FileText } from "lucide-react";
-import { getWeek } from 'date-fns'; // Neuer Import für die Wochenberechnung
-import { TimeTrackingCharts } from '@/components/time-tracking-charts'; // Neuer Import für die Diagramme
+import { getWeek } from 'date-fns';
+import { TimeTrackingCharts } from '@/components/time-tracking-charts';
+import { Badge } from "@/components/ui/badge"; // Importiere Badge
 
 // Definieren Sie die Schnittstelle für die Zeiteintrag-Daten, wie sie auf dieser Seite verwendet werden
 interface DisplayTimeEntry {
   id: string;
-  user_id: string; // Hinzugefügt, falls benötigt
+  user_id: string;
   employee_id: string | null;
   customer_id: string | null;
   object_id: string | null;
@@ -22,10 +23,11 @@ interface DisplayTimeEntry {
   duration_minutes: number | null;
   type: string;
   notes: string | null;
-  employees: { first_name: string; last_name: string; }[] | null; // Array, da Supabase so zurückgibt
-  customers: { name: string; }[] | null; // Array
-  objects: { name: string; }[] | null; // Array
-  orders: { title: string; }[] | null; // Array
+  employee_first_name: string | null; // Direkte Felder für Namen
+  employee_last_name: string | null;
+  customer_name: string | null;
+  object_name: string | null;
+  order_title: string | null;
 }
 
 export default async function TimeTrackingPage() {
@@ -91,10 +93,11 @@ export default async function TimeTrackingPage() {
     duration_minutes: entry.duration_minutes,
     type: entry.type,
     notes: entry.notes,
-    employees: entry.employees,
-    customers: entry.customers,
-    objects: entry.objects,
-    orders: entry.orders,
+    employee_first_name: entry.employees?.[0]?.first_name || null,
+    employee_last_name: entry.employees?.[0]?.last_name || null,
+    customer_name: entry.customers?.[0]?.name || null,
+    object_name: entry.objects?.[0]?.name || null,
+    order_title: entry.orders?.[0]?.title || null,
   })) || [];
 
   // Daten für die Visualisierung abrufen (z.B. letzte 3 Monate)
@@ -144,6 +147,27 @@ export default async function TimeTrackingPage() {
     hours: parseFloat(monthlyData[key].toFixed(2))
   }));
 
+  // Helper to format duration from minutes to HH:MM
+  const formatDuration = (minutes: number | null) => {
+    if (minutes === null) return "N/A";
+    const totalSeconds = Math.round(minutes * 60);
+    const hours = Math.floor(totalSeconds / 3600);
+    const remainingMinutes = Math.floor((totalSeconds % 3600) / 60);
+    return `${hours}h ${remainingMinutes}m`;
+  };
+
+  const getTypeBadgeVariant = (type: string) => {
+    switch (type) {
+      case 'manual':
+        return 'outline';
+      case 'clock_in_out':
+        return 'default';
+      case 'stopwatch':
+        return 'secondary';
+      default:
+        return 'outline';
+    }
+  };
 
   return (
     <div className="p-8 space-y-8">
@@ -175,9 +199,12 @@ export default async function TimeTrackingPage() {
             <Card key={entry.id}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-lg font-medium">
-                  {entry.type === 'clock_in_out' ? 'Stempeluhr' : entry.type === 'stopwatch' ? 'Stoppuhr' : 'Manuell'}
+                  Zeiteintrag
                 </CardTitle>
-                <DeleteTimeEntryButton entryId={entry.id} />
+                <div className="flex items-center space-x-2">
+                  <Badge variant={getTypeBadgeVariant(entry.type)}>{entry.type}</Badge>
+                  <DeleteTimeEntryButton entryId={entry.id} />
+                </div>
               </CardHeader>
               <CardContent className="space-y-2 text-sm text-muted-foreground">
                 <div className="flex items-center">
@@ -190,34 +217,34 @@ export default async function TimeTrackingPage() {
                     <span>Ende: {new Date(entry.end_time).toLocaleString()}</span>
                   </div>
                 )}
-                {entry.duration_minutes && (
+                {entry.duration_minutes !== null && (
                   <div className="flex items-center">
                     <Clock className="mr-2 h-4 w-4 flex-shrink-0" />
-                    <span>Dauer: {entry.duration_minutes.toFixed(2)} Minuten</span>
+                    <span>Dauer: {formatDuration(entry.duration_minutes)}</span>
                   </div>
                 )}
-                {entry.employee_id && (
+                {entry.employee_first_name && entry.employee_last_name && (
                   <div className="flex items-center">
                     <UserRound className="mr-2 h-4 w-4 flex-shrink-0" />
-                    <span>Mitarbeiter: {entry.employees?.[0]?.first_name} {entry.employees?.[0]?.last_name}</span>
+                    <span>Mitarbeiter: {entry.employee_first_name} {entry.employee_last_name}</span>
                   </div>
                 )}
-                {entry.customer_id && (
+                {entry.customer_name && (
                   <div className="flex items-center">
                     <Building className="mr-2 h-4 w-4 flex-shrink-0" />
-                    <span>Kunde: {entry.customers?.[0]?.name}</span>
+                    <span>Kunde: {entry.customer_name}</span>
                   </div>
                 )}
-                {entry.object_id && (
+                {entry.object_name && (
                   <div className="flex items-center">
                     <Building className="mr-2 h-4 w-4 flex-shrink-0" />
-                    <span>Objekt: {entry.objects?.[0]?.name}</span>
+                    <span>Objekt: {entry.object_name}</span>
                   </div>
                 )}
-                {entry.order_id && (
+                {entry.order_title && (
                   <div className="flex items-center">
                     <Briefcase className="mr-2 h-4 w-4 flex-shrink-0" />
-                    <span>Auftrag: {entry.orders?.[0]?.title}</span>
+                    <span>Auftrag: {entry.order_title}</span>
                   </div>
                 )}
                 {entry.notes && (
