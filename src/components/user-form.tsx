@@ -138,34 +138,35 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
     fetchData();
   }, [supabase]);
 
-  // Effect to handle role changes based on employee/customer selection
+  // Effect to handle changes in employee/customer selection for auto-populating fields
   useEffect(() => {
     if (!isEditMode) {
       if (selectedEmployeeId) {
+        const employee = employees.find(emp => emp.id === selectedEmployeeId);
+        form.setValue("firstName", employee?.first_name || "", { shouldValidate: true });
+        form.setValue("lastName", employee?.last_name || "", { shouldValidate: true });
+        form.setValue("email", employee?.email || "", { shouldValidate: true });
         form.setValue("role", "employee", { shouldValidate: true });
         form.setValue("customerId", null, { shouldValidate: true });
         form.setValue("managerCustomerIds", [], { shouldValidate: true });
-        const employee = employees.find(emp => emp.id === selectedEmployeeId);
-        if (employee?.email) {
-          form.setValue("email", employee.email, { shouldValidate: true });
-        }
       } else if (selectedCustomerId) {
+        const customer = customers.find(cust => cust.id === selectedCustomerId);
+        form.setValue("firstName", customer?.name || "", { shouldValidate: true });
+        form.setValue("lastName", "", { shouldValidate: true }); // Customers typically only have one name field
+        form.setValue("email", customer?.contact_email || "", { shouldValidate: true });
         form.setValue("role", "customer", { shouldValidate: true });
         form.setValue("employeeId", null, { shouldValidate: true });
         form.setValue("managerCustomerIds", [], { shouldValidate: true });
-        const customer = customers.find(cust => cust.id === selectedCustomerId);
-        if (customer?.contact_email) {
-          form.setValue("email", customer.contact_email, { shouldValidate: true });
-        }
       } else {
-        // If neither is selected, and it's not edit mode, clear the email field
-        // if it was auto-populated and not part of initialData.
-        if (!initialData?.email) {
-          form.setValue("email", "", { shouldValidate: true });
-        }
+        // If no employee or customer is selected, clear and enable fields
+        if (!initialData?.firstName) form.setValue("firstName", "", { shouldValidate: true });
+        if (!initialData?.lastName) form.setValue("lastName", "", { shouldValidate: true });
+        if (!initialData?.email) form.setValue("email", "", { shouldValidate: true });
+        // Reset role to default if not explicitly set by initialData
+        if (!initialData?.role) form.setValue("role", "employee", { shouldValidate: true });
       }
     }
-  }, [selectedEmployeeId, selectedCustomerId, isEditMode, form, employees, customers, initialData?.email]);
+  }, [selectedEmployeeId, selectedCustomerId, isEditMode, form, employees, customers, initialData]);
 
 
   const handleFormSubmit: SubmitHandler<UserFormValues> = async (data) => {
@@ -184,56 +185,32 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
 
   return (
     <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 w-full max-w-md">
-      <div>
-        <Label htmlFor="firstName">Vorname</Label>
-        <Input
-          id="firstName"
-          {...form.register("firstName")}
-          placeholder="Vorname"
-        />
-        {form.formState.errors.firstName && (
-          <p className="text-red-500 text-sm mt-1">{form.formState.errors.firstName.message}</p>
-        )}
-      </div>
-      <div>
-        <Label htmlFor="lastName">Nachname</Label>
-        <Input
-          id="lastName"
-          {...form.register("lastName")}
-          placeholder="Nachname"
-        />
-        {form.formState.errors.lastName && (
-          <p className="text-red-500 text-sm mt-1">{form.formState.errors.lastName.message}</p>
-        )}
-      </div>
-
       {!isEditMode && ( // Diese Felder nur im Erstellungsmodus anzeigen
-        <>
-          <div className="border-t pt-4 mt-4">
-            <h3 className="text-md font-semibold mb-2">Bestehendem Profil zuweisen:</h3>
-            <div>
-              <Label htmlFor="employeeId">Mitarbeiter zuweisen (optional)</Label>
-              <Select
-                onValueChange={(value) => {
-                  form.setValue("employeeId", value === "unassigned" ? null : value);
-                  if (value !== "unassigned") {
-                    form.setValue("customerId", null); // Wenn Mitarbeiter zugewiesen, Kunde entzuweisen
-                  }
-                }}
-                value={selectedEmployeeId || "unassigned"}
-                disabled={loadingDropdowns || !!selectedCustomerId} // Deaktivieren, wenn Kunde ausgewählt
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Mitarbeiter auswählen" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="unassigned">Kein Mitarbeiter zugewiesen</SelectItem>
-                  {employees.map(emp => (
-                    <SelectItem key={emp.id} value={emp.id}>
-                      {emp.first_name} {emp.last_name} {emp.email ? `(${emp.email})` : ''}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
+        <div className="border-b pb-4 mb-4">
+          <h3 className="text-md font-semibold mb-2">Bestehendem Profil zuweisen:</h3>
+          <div>
+            <Label htmlFor="employeeId">Mitarbeiter zuweisen (optional)</Label>
+            <Select
+              onValueChange={(value) => {
+                form.setValue("employeeId", value === "unassigned" ? null : value);
+                if (value !== "unassigned") {
+                  form.setValue("customerId", null); // Wenn Mitarbeiter zugewiesen, Kunde entzuweisen
+                }
+              }}
+              value={selectedEmployeeId || "unassigned"}
+              disabled={loadingDropdowns || !!selectedCustomerId} // Deaktivieren, wenn Kunde ausgewählt
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Mitarbeiter auswählen" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="unassigned">Kein Mitarbeiter zugewiesen</SelectItem>
+                {employees.map(emp => (
+                  <SelectItem key={emp.id} value={emp.id}>
+                    {emp.first_name} {emp.last_name} {emp.email ? `(${emp.email})` : ''}
+                  </SelectItem>
+                ))}
+              </SelectContent>
             </Select>
             {form.formState.errors.employeeId && (
               <p className="text-red-500 text-sm mt-1">{form.formState.errors.employeeId.message}</p>
@@ -269,9 +246,32 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
             )}
           </div>
         </div>
-        </>
       )}
 
+      <div>
+        <Label htmlFor="firstName">Vorname</Label>
+        <Input
+          id="firstName"
+          {...form.register("firstName")}
+          placeholder="Vorname"
+          disabled={isEditMode || !!selectedEmployeeId || !!selectedCustomerId}
+        />
+        {form.formState.errors.firstName && (
+          <p className="text-red-500 text-sm mt-1">{form.formState.errors.firstName.message}</p>
+        )}
+      </div>
+      <div>
+        <Label htmlFor="lastName">Nachname</Label>
+        <Input
+          id="lastName"
+          {...form.register("lastName")}
+          placeholder="Nachname"
+          disabled={isEditMode || !!selectedEmployeeId || !!selectedCustomerId}
+        />
+        {form.formState.errors.lastName && (
+          <p className="text-red-500 text-sm mt-1">{form.formState.errors.lastName.message}</p>
+        )}
+      </div>
       <div>
         <Label htmlFor="email">E-Mail</Label>
         <Input
