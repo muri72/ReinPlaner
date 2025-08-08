@@ -4,8 +4,10 @@ import { TimeEntryForm } from "@/components/time-entry-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { createTimeEntry } from "./actions";
 import { EmployeeTimeTracker } from "@/components/employee-time-tracker";
-import { DeleteTimeEntryButton } from "@/components/delete-time-entry-button"; // Neuer Import
-import { Clock, UserRound, Building, Briefcase, FileText } from "lucide-react"; // Icons für die Anzeige
+import { DeleteTimeEntryButton } from "@/components/delete-time-entry-button";
+import { Clock, UserRound, Building, Briefcase, FileText } from "lucide-react";
+import { getWeek } from 'date-fns'; // Neuer Import für die Wochenberechnung
+import { TimeTrackingCharts } from '@/components/time-tracking-charts'; // Neuer Import für die Diagramme
 
 // Definieren Sie die Schnittstelle für die Zeiteintrag-Daten, wie sie auf dieser Seite verwendet werden
 interface DisplayTimeEntry {
@@ -95,6 +97,53 @@ export default async function TimeTrackingPage() {
     orders: entry.orders,
   })) || [];
 
+  // Daten für die Visualisierung abrufen (z.B. letzte 3 Monate)
+  const threeMonthsAgo = new Date();
+  threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+
+  const { data: recentTimeEntries, error: recentEntriesError } = await supabase
+    .from('time_entries')
+    .select('start_time, end_time, duration_minutes')
+    .eq('user_id', currentUser.id)
+    .gte('start_time', threeMonthsAgo.toISOString())
+    .order('start_time', { ascending: true });
+
+  if (recentEntriesError) {
+    console.error("Fehler beim Laden der letzten Zeiteinträge für die Visualisierung:", recentEntriesError);
+  }
+
+  // Daten nach Woche und Monat aggregieren (client-seitig für Einfachheit)
+  const weeklyData: { [key: string]: number } = {}; // key: YYYY-WW
+  const monthlyData: { [key: string]: number } = {}; // key: YYYY-MM
+
+  recentTimeEntries?.forEach(entry => {
+    if (entry.start_time && entry.duration_minutes !== null) {
+      const startDate = new Date(entry.start_time);
+      const durationHours = entry.duration_minutes / 60;
+
+      // Nach Woche aggregieren
+      const year = startDate.getFullYear();
+      const week = getWeek(startDate, { weekStartsOn: 1 }); // Montag als Wochenanfang
+      const weekKey = `${year}-${String(week).padStart(2, '0')}`;
+      weeklyData[weekKey] = (weeklyData[weekKey] || 0) + durationHours;
+
+      // Nach Monat aggregieren
+      const month = startDate.getMonth() + 1; // 1-12
+      const monthKey = `${year}-${String(month).padStart(2, '0')}`;
+      monthlyData[monthKey] = (monthlyData[monthKey] || 0) + durationHours;
+    }
+  });
+
+  const formattedWeeklyData = Object.keys(weeklyData).sort().map(key => ({
+    name: `KW ${key.substring(5)}`,
+    hours: parseFloat(weeklyData[key].toFixed(2))
+  }));
+
+  const formattedMonthlyData = Object.keys(monthlyData).sort().map(key => ({
+    name: `${new Date(parseInt(key.substring(0,4)), parseInt(key.substring(5,7)) - 1, 1).toLocaleString('de-DE', { month: 'short', year: '2-digit' })}`,
+    hours: parseFloat(monthlyData[key].toFixed(2))
+  }));
+
 
   return (
     <div className="p-8 space-y-8">
@@ -111,6 +160,9 @@ export default async function TimeTrackingPage() {
           <EmployeeTimeTracker userId={currentUser.id} />
         </>
       )}
+
+      <h2 className="text-2xl font-bold mt-8">Ihre Stundenübersicht</h2>
+      <TimeTrackingCharts weeklyData={formattedWeeklyData} monthlyData={formattedMonthlyData} />
 
       <h2 className="text-2xl font-bold mt-8">Ihre Zeiteinträge</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

@@ -1,0 +1,65 @@
+"use client";
+
+import React from 'react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+
+interface ChartData {
+  name: string;
+  hours: number;
+}
+
+interface TimeTrackingChartsProps {
+  weeklyData: ChartData[];
+  monthlyData: ChartData[];
+}
+
+export function TimeTrackingCharts({ weeklyData, monthlyData }: TimeTrackingChartsProps) {
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Wöchentliche Stunden</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {weeklyData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={weeklyData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis label={{ value: 'Stunden', angle: -90, position: 'insideLeft' }} />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="hours" fill="hsl(var(--primary))" name="Geleistete Stunden" />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <p className="text-center text-muted-foreground">Keine wöchentlichen Daten verfügbar.</p>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Monatliche Stunden</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {monthlyData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={monthlyData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis label={{ value: 'Stunden', angle: -90, position: 'insideLeft' }} />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="hours" fill="hsl(var(--accent))" name="Geleistete Stunden" />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <p className="text-center text-muted-foreground">Keine monatlichen Daten verfügbar.</p>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
