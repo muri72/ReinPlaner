@@ -1,14 +1,23 @@
 import React from "react";
 import Link from "next/link";
-import { Home, ListTodo, User, Users, Briefcase, UsersRound, Building, ContactRound, Settings } from "lucide-react"; // Settings-Icon für Benutzerverwaltung
+import { Home, ListTodo, User, Users, Briefcase, UsersRound, Building, ContactRound, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { signOut } from "@/app/dashboard/actions";
+import { createClient } from "@/lib/supabase/server"; // Import createClient
+import { redirect } from "next/navigation"; // Import redirect
 
-export default function DashboardLayout({
+export default async function DashboardLayout({ // Make it async
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login"); // Redirect unauthenticated users to login
+  }
+
   return (
     <div className="min-h-screen flex">
       {/* Sidebar */}
@@ -34,9 +43,9 @@ export default function DashboardLayout({
                 Kunden
               </Button>
             </Link>
-            <Link href="/dashboard/customer-contacts" passHref> {/* Neuer Link für Kundenkontakte */}
+            <Link href="/dashboard/customer-contacts" passHref>
               <Button variant="ghost" className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
-                <ContactRound className="mr-2 h-4 w-4" /> {/* Icon für Kundenkontakte */}
+                <ContactRound className="mr-2 h-4 w-4" />
                 Kundenkontakte
               </Button>
             </Link>
@@ -52,7 +61,7 @@ export default function DashboardLayout({
                 Mitarbeiter
               </Button>
             </Link>
-            <Link href="/dashboard/users" passHref> {/* Neuer Link für Benutzerverwaltung */}
+            <Link href="/dashboard/users" passHref>
               <Button variant="ghost" className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
                 <Settings className="mr-2 h-4 w-4" />
                 Benutzer
