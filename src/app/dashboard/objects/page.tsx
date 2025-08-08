@@ -74,64 +74,21 @@ export default async function ObjectsPage({
     redirect("/login");
   }
 
-  // Fetch the current user's role
-  const { data: userProfile, error: profileError } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', currentUser.id)
-    .single();
-
-  if (profileError) {
-    console.error("Fehler beim Laden des Benutzerprofils:", profileError);
-  }
-
-  const isAdmin = userProfile?.role === 'admin';
-  const isCustomer = userProfile?.role === 'customer';
-
-  let filterUserId: string | null = null;
-  let filterCustomerId: string | null = null;
-
-  if (isAdmin) {
-    // Admins sehen alles, keine Filter
-    filterUserId = null;
-    filterCustomerId = null;
-  } else if (isCustomer) {
-    // Kunden sehen Objekte basierend auf ihrer customer_id (über customer_contacts)
-    const { data: customerContact, error: contactError } = await supabase
-      .from('customer_contacts')
-      .select('customer_id')
-      .eq('user_id', currentUser.id)
-      .single();
-
-    if (contactError) {
-      console.error("Fehler beim Laden des Kundenkontakts für den aktuellen Benutzer:", contactError);
-      // Wenn kein Kundenkontakt gefunden wird, zeigen wir keine Objekte an
-      return <div className="p-8">Fehler beim Laden der Objekte: Kundenkontakt nicht gefunden.</div>;
-    }
-    filterCustomerId = customerContact?.customer_id || null;
-    filterUserId = null; // Nicht nach user_id filtern für Kunden
-  } else {
-    // Mitarbeiter und Manager sehen Objekte, die sie erstellt haben
-    filterUserId = currentUser.id;
-    filterCustomerId = null;
-  }
-
   const query = typeof searchParams?.query === 'string' ? searchParams.query : '';
 
   let objects: DisplayObject[] | null;
   let error: any;
 
   if (query) {
-    // Verwende die neue RPC-Funktion für die Suche
+    // Verwende die vereinfachte RPC-Funktion für die Suche
     const { data, error: rpcError } = await supabase.rpc('search_objects', {
       search_query: query,
-      filter_user_id: filterUserId,
-      filter_customer_id: filterCustomerId,
     });
     objects = data as DisplayObject[] | null;
     error = rpcError;
   } else {
-    let objectsQuery = supabase
+    // Direkte Abfrage, die sich auf RLS verlässt
+    const { data, error: selectError } = await supabase
       .from('objects')
       .select(`
         *,
@@ -139,16 +96,6 @@ export default async function ObjectsPage({
         customer_contacts ( first_name, last_name )
       `)
       .order('name', { ascending: true });
-
-    // Filter basierend auf der Rolle
-    if (filterUserId) {
-      objectsQuery = objectsQuery.eq('user_id', filterUserId);
-    } else if (filterCustomerId) {
-      objectsQuery = objectsQuery.eq('customer_id', filterCustomerId);
-    }
-    // Wenn beides null ist (Admin), kein Filter anwenden
-
-    const { data, error: selectError } = await objectsQuery;
 
     objects = data?.map(obj => ({
       id: obj.id,
