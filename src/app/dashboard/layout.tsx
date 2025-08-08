@@ -1,12 +1,12 @@
 import React from "react";
 import Link from "next/link";
-import { Home, ListTodo, User, Users, Briefcase, UsersRound, Building, ContactRound, Settings } from "lucide-react";
+import { Home, ListTodo, User, Users, Briefcase, UsersRound, Building, ContactRound, Settings, Clock } from "lucide-react"; // Clock-Icon hinzugefügt
 import { Button } from "@/components/ui/button";
 import { signOut } from "@/app/dashboard/actions";
-import { createClient } from "@/lib/supabase/server"; // Import createClient
-import { redirect } from "next/navigation"; // Import redirect
+import { createClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
 
-export default async function DashboardLayout({ // Make it async
+export default async function DashboardLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
@@ -15,7 +15,7 @@ export default async function DashboardLayout({ // Make it async
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/login"); // Redirect unauthenticated users to login
+    redirect("/login");
   }
 
   return (
@@ -59,6 +59,12 @@ export default async function DashboardLayout({ // Make it async
               <Button variant="ghost" className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
                 <UsersRound className="mr-2 h-4 w-4" />
                 Mitarbeiter
+              </Button>
+            </Link>
+            <Link href="/dashboard/time-tracking" passHref> {/* Neuer Link */}
+              <Button variant="ghost" className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
+                <Clock className="mr-2 h-4 w-4" />
+                Zeiterfassung
               </Button>
             </Link>
             <Link href="/dashboard/users" passHref>
