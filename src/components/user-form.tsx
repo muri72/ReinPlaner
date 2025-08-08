@@ -158,10 +158,9 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
           form.setValue("email", customer.contact_email, { shouldValidate: true });
         }
       } else {
-        // If neither is selected, allow role to be chosen, but clear assignments if role changes
-        // This is handled by the role select's onValueChange
-        // Also clear email if it was auto-populated and no longer applies
-        if (!initialData?.email) { // Only clear if not an initial email from edit mode
+        // If neither is selected, and it's not edit mode, clear the email field
+        // if it was auto-populated and not part of initialData.
+        if (!initialData?.email) {
           form.setValue("email", "", { shouldValidate: true });
         }
       }
@@ -186,33 +185,6 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
   return (
     <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 w-full max-w-md">
       <div>
-        <Label htmlFor="email">E-Mail</Label>
-        <Input
-          id="email"
-          type="email"
-          {...form.register("email")}
-          placeholder="E-Mail-Adresse"
-          disabled={isEditMode}
-        />
-        {form.formState.errors.email && (
-          <p className="text-red-500 text-sm mt-1">{form.formState.errors.email.message}</p>
-        )}
-      </div>
-      {!isEditMode && (
-        <div>
-          <Label htmlFor="password">Passwort</Label>
-          <Input
-            id="password"
-            type="password"
-            {...form.register("password")}
-            placeholder="Passwort"
-          />
-          {form.formState.errors.password && (
-            <p className="text-red-500 text-sm mt-1">{form.formState.errors.password.message}</p>
-          )}
-        </div>
-      )}
-      <div>
         <Label htmlFor="firstName">Vorname</Label>
         <Input
           id="firstName"
@@ -234,42 +206,11 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
           <p className="text-red-500 text-sm mt-1">{form.formState.errors.lastName.message}</p>
         )}
       </div>
-      <div>
-        <Label htmlFor="role">Rolle</Label>
-        <Select
-          onValueChange={(value) => {
-            form.setValue("role", value as UserFormValues["role"]);
-            // Clear assignment fields if role changes and is not forced by employee/customer selection
-            if (!selectedEmployeeId && !selectedCustomerId) {
-              form.setValue("employeeId", null);
-              form.setValue("customerId", null);
-            }
-            if (value !== "manager") {
-              form.setValue("managerCustomerIds", []);
-            }
-          }}
-          value={selectedRole}
-          disabled={isEditMode || !!selectedEmployeeId || !!selectedCustomerId} // Disable if employee/customer is selected
-        >
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Rolle auswählen" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="admin">Admin</SelectItem>
-            <SelectItem value="manager">Manager</SelectItem>
-            <SelectItem value="employee">Mitarbeiter</SelectItem>
-            <SelectItem value="customer">Kunde</SelectItem>
-          </SelectContent>
-        </Select>
-        {form.formState.errors.role && (
-          <p className="text-red-500 text-sm mt-1">{form.formState.errors.role.message}</p>
-        )}
-      </div>
 
       {!isEditMode && ( // Diese Felder nur im Erstellungsmodus anzeigen
         <>
           <div className="border-t pt-4 mt-4">
-            <h3 className="text-md font-semibold mb-2">Oder bestehendem Profil zuweisen:</h3>
+            <h3 className="text-md font-semibold mb-2">Bestehendem Profil zuweisen:</h3>
             <div>
               <Label htmlFor="employeeId">Mitarbeiter zuweisen (optional)</Label>
               <Select
@@ -330,6 +271,61 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
         </div>
         </>
       )}
+
+      <div>
+        <Label htmlFor="email">E-Mail</Label>
+        <Input
+          id="email"
+          type="email"
+          {...form.register("email")}
+          placeholder="E-Mail-Adresse"
+          disabled={isEditMode || !!selectedEmployeeId || !!selectedCustomerId}
+        />
+        {form.formState.errors.email && (
+          <p className="text-red-500 text-sm mt-1">{form.formState.errors.email.message}</p>
+        )}
+      </div>
+      {!isEditMode && (
+        <div>
+          <Label htmlFor="password">Passwort</Label>
+          <Input
+            id="password"
+            type="password"
+            {...form.register("password")}
+            placeholder="Passwort"
+          />
+          {form.formState.errors.password && (
+            <p className="text-red-500 text-sm mt-1">{form.formState.errors.password.message}</p>
+          )}
+        </div>
+      )}
+      <div>
+        <Label htmlFor="role">Rolle</Label>
+        <Select
+          onValueChange={(value) => {
+            form.setValue("role", value as UserFormValues["role"]);
+            // Clear managerCustomerIds if role changes from manager
+            if (value !== "manager") {
+              form.setValue("managerCustomerIds", []);
+            }
+          }}
+          value={selectedRole}
+          disabled={isEditMode || !!selectedEmployeeId || !!selectedCustomerId} // Disable if employee/customer is selected
+        >
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="Rolle auswählen" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="admin">Admin</SelectItem>
+            <SelectItem value="manager">Manager</SelectItem>
+            <SelectItem value="employee">Mitarbeiter</SelectItem>
+            <SelectItem value="customer">Kunde</SelectItem>
+          </SelectContent>
+        </Select>
+        {form.formState.errors.role && (
+          <p className="text-red-500 text-sm mt-1">{form.formState.errors.role.message}</p>
+        )}
+      </div>
 
       {selectedRole === "manager" && !isEditMode && (
         <div className="border-t pt-4 mt-4">
