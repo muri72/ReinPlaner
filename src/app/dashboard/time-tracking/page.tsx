@@ -8,9 +8,9 @@ import { DeleteTimeEntryButton } from "@/components/delete-time-entry-button";
 import { Clock, UserRound, Building, Briefcase, FileText } from "lucide-react";
 import { getWeek } from 'date-fns';
 import { TimeTrackingCharts } from '@/components/time-tracking-charts';
-import { Badge } from "@/components/ui/badge"; // Importiere Badge
-import { AdminTimeEntriesOverview } from "@/components/admin-time-entries-overview"; // Neue Komponente
-import { TimeEntryEditDialog } from "@/components/time-entry-edit-dialog"; // Importiere TimeEntryEditDialog
+import { Badge } from "@/components/ui/badge";
+import { AdminTimeEntriesOverview } from "@/components/admin-time-entries-overview";
+import { TimeEntryEditDialog } from "@/components/time-entry-edit-dialog";
 
 // Definieren Sie die Schnittstelle für die Zeiteintrag-Daten, wie sie auf dieser Seite verwendet werden
 interface DisplayTimeEntry {
@@ -56,16 +56,16 @@ export default async function TimeTrackingPage({
 
   const isAdmin = userProfile?.role === 'admin';
 
-  // Zeiteinträge zur Anzeige abrufen (nur für Nicht-Admins oder wenn kein Benutzerfilter aktiv ist)
+  // Zeiteinträge zur Anzeige abrufen
   let timeEntries: DisplayTimeEntry[] | null = [];
   let recentTimeEntries: { start_time: string; end_time: string | null; duration_minutes: number | null; }[] | null = [];
   let error: any;
   let recentEntriesError: any;
 
-  // Nur Daten für Diagramme und die Liste der eigenen Einträge abrufen, wenn es kein Admin ist
-  // oder wenn der Admin keine spezifische Benutzerfilterung vornimmt (dann zeigt er seine eigenen Daten)
-  if (!isAdmin || !searchParams?.userId) {
-    const { data: entriesData, error: entriesError } = await supabase
+  // Wenn der Benutzer ein Admin ist und kein spezifischer Benutzerfilter aktiv ist,
+  // oder wenn der Benutzer kein Admin ist, dann die entsprechenden Einträge abrufen.
+  if (!isAdmin || !searchParams?.userId) { // Diese Bedingung bleibt, um die Logik für Nicht-Admins zu steuern
+    let queryBuilder = supabase
       .from('time_entries')
       .select(`
         id,
@@ -84,8 +84,16 @@ export default async function TimeTrackingPage({
         objects ( name ),
         orders ( title )
       `)
-      .eq('user_id', currentUser.id) // Nur eigene Einträge anzeigen
       .order('start_time', { ascending: false });
+
+    // Wenn es kein Admin ist, oder ein Admin ist, der keine spezifische userId filtert,
+    // dann nur die eigenen Einträge anzeigen.
+    // Die AdminTimeEntriesOverview Komponente handhabt die Anzeige aller Einträge für Admins.
+    if (!isAdmin || (isAdmin && !searchParams?.userId)) {
+      queryBuilder = queryBuilder.eq('user_id', currentUser.id);
+    }
+
+    const { data: entriesData, error: entriesError } = await queryBuilder;
 
     timeEntries = entriesData?.map(entry => ({
       id: entry.id,
@@ -177,8 +185,8 @@ export default async function TimeTrackingPage({
         return 'default';
       case 'stopwatch':
         return 'secondary';
-      case 'automatic_scheduled_order': // Neuer Typ
-        return 'success'; // Oder eine andere passende Variante
+      case 'automatic_scheduled_order':
+        return 'success';
       default:
         return 'outline';
     }
@@ -190,7 +198,7 @@ export default async function TimeTrackingPage({
 
       {isAdmin ? (
         <>
-          <AdminTimeEntriesOverview /> {/* Neue Admin-Komponente */}
+          <AdminTimeEntriesOverview />
           <h2 className="text-2xl font-bold mt-8">Neuen Zeiteintrag hinzufügen (Admin)</h2>
           <TimeEntryForm onSubmit={createTimeEntry} submitButtonText="Zeiteintrag hinzufügen" />
         </>
@@ -217,7 +225,7 @@ export default async function TimeTrackingPage({
                     </CardTitle>
                     <div className="flex items-center space-x-2">
                       <Badge variant={getTypeBadgeVariant(entry.type)}>{entry.type === 'automatic_scheduled_order' ? 'Automatisch' : entry.type}</Badge>
-                      <TimeEntryEditDialog timeEntry={entry} /> {/* Bearbeitungs-Button hinzugefügt */}
+                      <TimeEntryEditDialog timeEntry={entry} />
                       <DeleteTimeEntryButton entryId={entry.id} />
                     </div>
                   </CardHeader>
