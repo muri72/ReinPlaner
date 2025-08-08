@@ -14,7 +14,11 @@ import { Checkbox } from "@/components/ui/checkbox"; // For multi-select
 
 // Define the base schema first to avoid circular dependency
 const baseUserSchema = z.object({
-  email: z.string().email("Ungültiges E-Mail-Format").optional().nullable(), // Make email optional and nullable
+  // KORREKTUR HIER: E-Mail-Schema angepasst, um leere Strings als null zu behandeln
+  email: z.union([
+    z.string().email("Ungültiges E-Mail-Format"),
+    z.literal(""), // Erlaube leeren String
+  ]).transform(e => e === "" ? null : e).optional().nullable(),
   password: z.string().min(6, "Passwort muss mindestens 6 Zeichen lang sein").optional(), // Optional for updates
   firstName: z.string().min(1, "Vorname ist erforderlich").max(100, "Vorname ist zu lang"),
   lastName: z.string().min(1, "Nachname ist erforderlich").max(100, "Nachname ist zu lang"),
@@ -33,8 +37,9 @@ export type UserFormValues = z.infer<typeof baseUserSchema>;
 export const userSchema = baseUserSchema
 .refine((data) => { // 'data' is now correctly inferred as UserFormValues
   // If it's a new user creation (password is present) AND no employee/customer is linked, then email is required.
+  // Also, if email is provided, it must not be an empty string.
   if (data.password !== undefined && !data.employeeId && !data.customerId) {
-    return data.email && data.email.length > 0; // Email must be present and not empty
+    return data.email !== null && data.email !== ""; // Email must be present and not empty
   }
   return true; // Otherwise, email is optional/nullable
 }, {
@@ -83,7 +88,7 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
   const [loadingDropdowns, setLoadingDropdowns] = useState(true);
 
   const resolvedDefaultValues: UserFormValues = {
-    email: initialData?.email ?? "",
+    email: initialData?.email ?? null, // Set to null if undefined
     password: initialData?.password ?? (isEditMode ? undefined : ""),
     firstName: initialData?.firstName ?? "",
     lastName: initialData?.lastName ?? "",
@@ -97,6 +102,7 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
   const form = useForm<UserFormValues>({
     resolver: zodResolver(userSchema as z.ZodSchema<UserFormValues>),
     defaultValues: resolvedDefaultValues,
+    mode: "onSubmit", // KORREKTUR HIER: Validierung auf onSubmit setzen
   });
 
   const selectedRole = form.watch("role");
@@ -157,7 +163,7 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
         const employee = employees.find(emp => emp.id === selectedEmployeeId);
         form.setValue("firstName", employee?.first_name || "", { shouldValidate: true });
         form.setValue("lastName", employee?.last_name || "", { shouldValidate: true });
-        form.setValue("email", employee?.email || "", { shouldValidate: true });
+        form.setValue("email", employee?.email || null, { shouldValidate: true }); // Set to null if empty
         form.setValue("role", "employee", { shouldValidate: true });
         form.setValue("customerId", null, { shouldValidate: true });
         form.setValue("managerCustomerIds", [], { shouldValidate: true });
@@ -165,7 +171,7 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
         const customer = customers.find(cust => cust.id === selectedCustomerId);
         form.setValue("firstName", customer?.name || "", { shouldValidate: true });
         form.setValue("lastName", "", { shouldValidate: true }); // Customers typically only have one name field
-        form.setValue("email", customer?.contact_email || "", { shouldValidate: true });
+        form.setValue("email", customer?.contact_email || null, { shouldValidate: true }); // Set to null if empty
         form.setValue("role", "customer", { shouldValidate: true });
         form.setValue("employeeId", null, { shouldValidate: true });
         form.setValue("managerCustomerIds", [], { shouldValidate: true });
@@ -173,7 +179,7 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
         // If no employee or customer is selected, clear and enable fields
         if (!initialData?.firstName) form.setValue("firstName", "", { shouldValidate: true });
         if (!initialData?.lastName) form.setValue("lastName", "", { shouldValidate: true });
-        if (!initialData?.email) form.setValue("email", "", { shouldValidate: true });
+        if (!initialData?.email) form.setValue("email", null, { shouldValidate: true }); // Set to null if empty
         // Reset role to default if not explicitly set by initialData
         if (!initialData?.role) form.setValue("role", "employee", { shouldValidate: true });
       }
