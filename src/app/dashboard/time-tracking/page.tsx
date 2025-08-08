@@ -32,28 +32,6 @@ interface DisplayTimeEntry {
   order_title: string | null;
 }
 
-// Schnittstelle für die Ergebnisse der Supabase RPC-Funktion search_time_entries
-interface TimeEntryRpcResult {
-  id: string;
-  user_id: string;
-  employee_id: string | null;
-  customer_id: string | null;
-  object_id: string | null;
-  order_id: string | null;
-  start_time: string;
-  end_time: string | null;
-  duration_minutes: number | null;
-  type: string;
-  notes: string | null;
-  created_at: string;
-  updated_at: string;
-  employee_first_name: string | null;
-  employee_last_name: string | null;
-  customer_name: string | null;
-  object_name: string | null;
-  order_title: string | null;
-}
-
 export default async function TimeTrackingPage({
   searchParams,
 }: any) {
@@ -77,65 +55,81 @@ export default async function TimeTrackingPage({
   }
 
   const isAdmin = userProfile?.role === 'admin';
-  const query = typeof searchParams?.query === 'string' ? searchParams.query : '';
 
+  // Zeiteinträge zur Anzeige abrufen
   let timeEntries: DisplayTimeEntry[] = [];
-  let error: any = null;
+  let recentTimeEntries: { start_time: string; end_time: string | null; duration_minutes: number | null; }[] = [];
+  let error: any = null; // Initialisiere error mit null
 
-  // Bestimme filter_user_id für den RPC-Aufruf
-  const rpcFilterUserId = isAdmin ? null : currentUser.id;
+  // Daten für die Hauptliste der Zeiteinträge abrufen
+  let queryBuilder = supabase
+    .from('time_entries')
+    .select(`
+      id,
+      user_id,
+      employee_id,
+      customer_id,
+      object_id,
+      order_id,
+      start_time,
+      end_time,
+      duration_minutes,
+      type,
+      notes,
+      employees ( first_name, last_name ),
+      customers ( name ),
+      objects ( name ),
+      orders ( title )
+    `)
+    .order('start_time', { ascending: false });
 
-  // Daten für die Hauptliste der Zeiteinträge abrufen über RPC
-  const { data: rpcData, error: rpcError } = await supabase.rpc('search_time_entries', {
-    search_query: query,
-    filter_user_id: rpcFilterUserId,
-  });
-
-  if (rpcError) {
-    console.error("Fehler beim Laden der Zeiteinträge über RPC:", rpcError);
-    error = rpcError;
-  } else {
-    timeEntries = rpcData?.map((entry: TimeEntryRpcResult) => ({
-      id: entry.id,
-      user_id: entry.user_id,
-      employee_id: entry.employee_id,
-      customer_id: entry.customer_id,
-      object_id: entry.object_id,
-      order_id: entry.order_id,
-      start_time: entry.start_time,
-      end_time: entry.end_time,
-      duration_minutes: entry.duration_minutes,
-      type: entry.type,
-      notes: entry.notes,
-      employee_first_name: entry.employee_first_name, // Diese sind jetzt direkt von RPC
-      employee_last_name: entry.employee_last_name,
-      customer_name: entry.customer_name,
-      object_name: entry.object_name,
-      order_title: entry.order_title,
-    })) || [];
+  // Wenn der Benutzer KEIN Admin ist, filtern Sie nach seiner eigenen user_id
+  if (!isAdmin) {
+    queryBuilder = queryBuilder.eq('user_id', currentUser.id);
   }
 
+  const { data: entriesData, error: entriesError } = await queryBuilder;
+
+  timeEntries = entriesData?.map(entry => ({
+    id: entry.id,
+    user_id: entry.user_id,
+    employee_id: entry.employee_id,
+    customer_id: entry.customer_id,
+    object_id: entry.object_id,
+    order_id: entry.order_id,
+    start_time: entry.start_time,
+    end_time: entry.end_time,
+    duration_minutes: entry.duration_minutes,
+    type: entry.type,
+    notes: entry.notes,
+    employee_first_name: entry.employees?.[0]?.first_name || null,
+    employee_last_name: entry.employees?.[0]?.last_name || null,
+    customer_name: entry.customers?.[0]?.name || null,
+    object_name: entry.objects?.[0]?.name || null,
+    order_title: entry.orders?.[0]?.title || null,
+  })) || [];
+  error = entriesError;
+
   // Daten für die Visualisierung (Charts) abrufen
-  let recentTimeEntries: { start_time: string; end_time: string | null; duration_minutes: number | null; }[] = [];
   const threeMonthsAgo = new Date();
   threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
 
-  const { data: recentRpcData, error: recentRpcError } = await supabase.rpc('search_time_entries', {
-    search_query: '', // Keine Suchanfrage für Charts
-    filter_user_id: rpcFilterUserId,
-    start_date_filter: threeMonthsAgo.toISOString().split('T')[0], // Datum als String übergeben
-    end_date_filter: new Date().toISOString().split('T')[0], // Datum als String übergeben
-  });
+  let recentQueryBuilder = supabase
+    .from('time_entries')
+    .select('start_time, end_time, duration_minutes')
+    .gte('start_time', threeMonthsAgo.toISOString())
+    .order('start_time', { ascending: true });
 
-  if (recentRpcError) {
-    console.error("Fehler beim Laden der letzten Zeiteinträge für Charts über RPC:", recentRpcError);
-  } else {
-    recentTimeEntries = recentRpcData?.map((entry: TimeEntryRpcResult) => ({
-      start_time: entry.start_time,
-      end_time: entry.end_time,
-      duration_minutes: entry.duration_minutes,
-    })) || [];
+  // Wenn der Benutzer KEIN Admin ist, filtern Sie auch hier nach seiner eigenen user_id
+  if (!isAdmin) {
+    recentQueryBuilder = recentQueryBuilder.eq('user_id', currentUser.id);
   }
+
+  const { data: recentData, error: recentError } = await recentQueryBuilder;
+
+  recentTimeEntries = recentData || [];
+  if (recentError) console.error("Fehler beim Laden der letzten Zeiteinträge für Charts:", recentError);
+
 
   if (error) {
     console.error("Fehler beim Laden der Zeiteinträge:", error);

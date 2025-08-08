@@ -12,7 +12,6 @@ import { TimeEntryEditDialog } from "@/components/time-entry-edit-dialog";
 import { useSearchParams, usePathname, useRouter } from "next/navigation";
 import { useDebouncedCallback } from "use-debounce";
 import { formatDuration } from "@/lib/utils"; // Importiere formatDuration
-import { type TimeEntryRpcResult } from "@/app/dashboard/time-tracking/page"; // Importiere die Schnittstelle
 
 interface DisplayTimeEntry {
   id: string;
@@ -71,17 +70,47 @@ export function AdminTimeEntriesOverview() {
     fetchUsers();
   }, [supabase]);
 
-  // Fetch time entries based on filters using RPC
+  // Fetch time entries based on filters - DIRECT SELECT FOR DEBUGGING
   useEffect(() => {
     const fetchTimeEntries = async () => {
       setLoading(true);
-      const { data, error } = await supabase.rpc('search_time_entries', {
-        search_query: currentQuery,
-        filter_user_id: selectedUserId === "all" ? null : selectedUserId,
-      });
+      let queryBuilder = supabase
+        .from('time_entries')
+        .select(`
+          id,
+          user_id,
+          employee_id,
+          customer_id,
+          object_id,
+          order_id,
+          start_time,
+          end_time,
+          duration_minutes,
+          type,
+          notes,
+          employees ( first_name, last_name ),
+          customers ( name ),
+          objects ( name ),
+          orders ( title )
+        `)
+        .order('start_time', { ascending: false });
+
+      // Apply user_id filter if selected (even with RLS disabled, this filters the client-side data)
+      if (selectedUserId && selectedUserId !== "all") {
+        queryBuilder = queryBuilder.eq('user_id', selectedUserId);
+      }
+
+      // Apply search query if present
+      if (currentQuery) {
+        queryBuilder = queryBuilder.or(
+          `notes.ilike.%${currentQuery}%,employees.first_name.ilike.%${currentQuery}%,employees.last_name.ilike.%${currentQuery}%,customers.name.ilike.%${currentQuery}%,objects.name.ilike.%${currentQuery}%,orders.title.ilike.%${currentQuery}%,type.ilike.%${currentQuery}%`
+        );
+      }
+
+      const { data, error } = await queryBuilder;
 
       if (data) {
-        setTimeEntries(data.map((entry: TimeEntryRpcResult) => ({
+        setTimeEntries(data.map(entry => ({
           id: entry.id,
           user_id: entry.user_id,
           employee_id: entry.employee_id,
@@ -93,15 +122,15 @@ export function AdminTimeEntriesOverview() {
           duration_minutes: entry.duration_minutes,
           type: entry.type,
           notes: entry.notes,
-          employee_first_name: entry.employee_first_name,
-          employee_last_name: entry.employee_last_name,
-          customer_name: entry.customer_name,
-          object_name: entry.object_name,
-          order_title: entry.order_title,
+          employee_first_name: entry.employees?.[0]?.first_name || null,
+          employee_last_name: entry.employees?.[0]?.last_name || null,
+          customer_name: entry.customers?.[0]?.name || null,
+          object_name: entry.objects?.[0]?.name || null,
+          order_title: entry.orders?.[0]?.title || null,
         })));
       }
       if (error) {
-        console.error("Fehler beim Laden der Zeiteinträge über RPC (Admin):", error);
+        console.error("Fehler beim Laden der Zeiteinträge:", error);
         // toast.error("Fehler beim Laden der Zeiteinträge."); // Optional: Toast bei Fehler
       }
       setLoading(false);
