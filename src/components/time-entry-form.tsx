@@ -247,7 +247,7 @@ export function TimeEntryForm({ initialData, onSubmit, submitButtonText, onSucce
           <SelectContent>
             <SelectItem value="manual">Manuell</SelectItem>
             <SelectItem value="clock_in_out">Kommt/Geht</SelectItem>
-            {/* <SelectItem value="stopwatch">Stoppuhr</SelectItem> */} {/* Wird in Phase 2 hinzugefügt */}
+            <SelectItem value="stopwatch">Stoppuhr</SelectItem> {/* Wird in Phase 2 hinzugefügt */}
           </SelectContent>
         </Select>
         {form.formState.errors.type && (
