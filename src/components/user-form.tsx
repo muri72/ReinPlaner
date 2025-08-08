@@ -57,10 +57,8 @@ export const userSchema = baseUserSchema
     if (data.employeeId && data.role !== 'employee') {
       return false;
     }
-    if (data.customerId && data.role !== 'customer') {
-      return false;
-    }
-    if (data.customerContactId && data.role !== 'customer') { // Kundenkontakt sollte auch 'customer' Rolle haben
+    // Removed direct customerId role check, as customerId is now a filter for contacts
+    if (data.customerContactId && data.role !== 'customer') { // Kundenkontakt sollte 'customer' Rolle haben
       return false;
     }
     if (data.role === 'manager' && (data.employeeId || data.customerId || data.customerContactId)) {
@@ -170,7 +168,6 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
           .from('customer_contacts')
           .select('id, first_name, last_name, email, customer_id, user_id')
           .eq('customer_id', selectedCustomerId)
-          // .is('user_id', null) // Removed this filter to show all contacts for the selected customer
           .order('last_name', { ascending: true });
 
         if (contactsError) {
@@ -190,41 +187,43 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
   // Effect to handle changes in employee/customer/customerContact selection for auto-populating fields
   useEffect(() => {
     if (!isEditMode) {
+      // Clear all fields first if no assignment is selected
+      if (!selectedEmployeeId && !selectedCustomerId && !selectedCustomerContactId) {
+        form.setValue("firstName", initialData?.firstName || "", { shouldValidate: false });
+        form.setValue("lastName", initialData?.lastName || "", { shouldValidate: false });
+        form.setValue("email", initialData?.email || null, { shouldValidate: false });
+        form.setValue("role", initialData?.role || "employee", { shouldValidate: false });
+        form.setValue("managerCustomerIds", [], { shouldValidate: false });
+      }
+
       if (selectedEmployeeId) {
         const employee = employees.find(emp => emp.id === selectedEmployeeId);
         form.setValue("firstName", employee?.first_name || "", { shouldValidate: false });
         form.setValue("lastName", employee?.last_name || "", { shouldValidate: false });
         form.setValue("email", employee?.email || null, { shouldValidate: false });
         form.setValue("role", "employee", { shouldValidate: false });
-        form.setValue("customerId", null, { shouldValidate: false });
-        form.setValue("customerContactId", null, { shouldValidate: false });
+        form.setValue("customerId", null, { shouldValidate: false }); // Clear other assignments
+        form.setValue("customerContactId", null, { shouldValidate: false }); // Clear other assignments
         form.setValue("managerCustomerIds", [], { shouldValidate: false });
-      } else if (selectedCustomerId) {
-        const customer = customers.find(cust => cust.id === selectedCustomerId);
-        form.setValue("firstName", customer?.name || "", { shouldValidate: false });
-        form.setValue("lastName", "", { shouldValidate: false }); // Customers typically only have one name field
-        form.setValue("email", customer?.contact_email || null, { shouldValidate: false });
-        form.setValue("role", "customer", { shouldValidate: false });
-        form.setValue("employeeId", null, { shouldValidate: false });
-        form.setValue("customerContactId", null, { shouldValidate: false });
-        form.setValue("managerCustomerIds", [], { shouldValidate: false });
-      } else if (selectedCustomerContactId) { // Neues Feld
+      } else if (selectedCustomerContactId) { // Prioritize customer contact if selected
         const contact = customerContactsForUserAssignment.find(c => c.id === selectedCustomerContactId);
         form.setValue("firstName", contact?.first_name || "", { shouldValidate: false });
         form.setValue("lastName", contact?.last_name || "", { shouldValidate: false });
         form.setValue("email", contact?.email || null, { shouldValidate: false });
-        form.setValue("role", "customer", { shouldValidate: false }); // Rolle auf 'customer' setzen
-        form.setValue("employeeId", null, { shouldValidate: false });
-        form.setValue("customerId", null, { shouldValidate: false });
+        form.setValue("role", "customer", { shouldValidate: false }); // Role should be 'customer' for contacts
+        form.setValue("employeeId", null, { shouldValidate: false }); // Clear other assignments
+        // customerId is kept as it's the parent filter
         form.setValue("managerCustomerIds", [], { shouldValidate: false });
-      }
-      else {
-        // If no employee or customer is selected, clear and enable fields
-        if (!initialData?.firstName) form.setValue("firstName", "", { shouldValidate: false });
-        if (!initialData?.lastName) form.setValue("lastName", "", { shouldValidate: false });
-        if (!initialData?.email) form.setValue("email", null, { shouldValidate: false });
-        // Reset role to default if not explicitly set by initialData
-        if (!initialData?.role) form.setValue("role", "employee", { shouldValidate: false });
+      } else if (selectedCustomerId) { // If only customer is selected (no specific contact yet)
+        // Do NOT pre-fill name/email or set role here.
+        // This dropdown is now primarily for filtering customer contacts.
+        // Ensure customerContactId is cleared if customer changes.
+        form.setValue("customerContactId", null, { shouldValidate: false });
+        // Reset name/email/role to default if no specific contact is selected
+        form.setValue("firstName", initialData?.firstName || "", { shouldValidate: false });
+        form.setValue("lastName", initialData?.lastName || "", { shouldValidate: false });
+        form.setValue("email", initialData?.email || null, { shouldValidate: false });
+        form.setValue("role", initialData?.role || "employee", { shouldValidate: false }); // Default role
       }
     }
   }, [selectedEmployeeId, selectedCustomerId, selectedCustomerContactId, isEditMode, form, employees, customers, customerContactsForUserAssignment, initialData]);
@@ -245,7 +244,9 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
   };
 
   // Bestimmt, ob die Felder für Vorname, Nachname, E-Mail und Rolle deaktiviert sein sollen
-  const areFieldsDisabled = isEditMode || !!selectedEmployeeId || !!selectedCustomerId || !!selectedCustomerContactId;
+  const areFieldsDisabled = isEditMode || !!selectedEmployeeId || !!selectedCustomerContactId;
+  // Note: selectedCustomerId alone does NOT disable fields, as it's just a filter.
+  // Fields are only disabled if a specific entity (employee or contact) is chosen.
 
   return (
     <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 w-full max-w-md">
@@ -283,14 +284,14 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
           </div>
 
           <div className="mt-4">
-            <Label htmlFor="customerId">Kunden zuweisen (optional)</Label>
+            <Label htmlFor="customerId">Kunden filtern (optional)</Label>
             <Select
               onValueChange={(value) => {
                 form.setValue("customerId", value === "unassigned" ? null : value);
                 if (value !== "unassigned") {
                   form.setValue("employeeId", null); // Wenn Kunde zugewiesen, Mitarbeiter entzuweisen
-                  form.setValue("customerContactId", null); // Kundenkontakt entzuweisen
                 }
+                form.setValue("customerContactId", null); // Kundenkontakt immer zurücksetzen, wenn Kunde wechselt
               }}
               value={selectedCustomerId || "unassigned"}
               disabled={loadingDropdowns || !!selectedEmployeeId || !!selectedCustomerContactId} // Deaktivieren, wenn Mitarbeiter oder Kundenkontakt ausgewählt
@@ -299,7 +300,7 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
                 <SelectValue placeholder="Kunden auswählen" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="unassigned">Kein Kunde zugewiesen</SelectItem>
+                <SelectItem value="unassigned">Kein Kunde ausgewählt</SelectItem>
                 {customers.map(cust => (
                   <SelectItem key={cust.id} value={cust.id}>
                     {cust.name} {cust.contact_email ? `(${cust.contact_email})` : ''} {cust.user_id ? '(zugewiesen)' : ''}
@@ -319,11 +320,11 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
                 form.setValue("customerContactId", value === "unassigned" ? null : value);
                 if (value !== "unassigned") {
                   form.setValue("employeeId", null); // Wenn Kundenkontakt zugewiesen, Mitarbeiter entzuweisen
-                  form.setValue("customerId", null); // Kunde entzuweisen
+                  // customerId bleibt bestehen, da es der Filter ist
                 }
               }}
               value={selectedCustomerContactId || "unassigned"}
-              disabled={loadingDropdowns || !!selectedEmployeeId || !!selectedCustomerId || customerContactsForUserAssignment.length === 0} // Deaktivieren, wenn Mitarbeiter/Kunde ausgewählt oder keine Kontakte verfügbar
+              disabled={loadingDropdowns || !!selectedEmployeeId || !selectedCustomerId || customerContactsForUserAssignment.length === 0} // Deaktivieren, wenn Mitarbeiter ausgewählt, kein Kunde ausgewählt oder keine Kontakte verfügbar
             >
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Kundenkontakt auswählen" />
