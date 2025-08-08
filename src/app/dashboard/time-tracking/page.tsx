@@ -61,96 +61,102 @@ export default async function TimeTrackingPage({
   let recentTimeEntries: { start_time: string; end_time: string | null; duration_minutes: number | null; }[] = [];
   let error: any = null; // Initialisiere error mit null
 
-  // Daten nur abrufen, wenn der Benutzer KEIN Admin ist
+  // Daten für die Hauptliste der Zeiteinträge abrufen
+  let queryBuilder = supabase
+    .from('time_entries')
+    .select(`
+      id,
+      user_id,
+      employee_id,
+      customer_id,
+      object_id,
+      order_id,
+      start_time,
+      end_time,
+      duration_minutes,
+      type,
+      notes,
+      employees ( first_name, last_name ),
+      customers ( name ),
+      objects ( name ),
+      orders ( title )
+    `)
+    .order('start_time', { ascending: false });
+
+  // Wenn der Benutzer KEIN Admin ist, filtern Sie nach seiner eigenen user_id
   if (!isAdmin) {
-    let queryBuilder = supabase
-      .from('time_entries')
-      .select(`
-        id,
-        user_id,
-        employee_id,
-        customer_id,
-        object_id,
-        order_id,
-        start_time,
-        end_time,
-        duration_minutes,
-        type,
-        notes,
-        employees ( first_name, last_name ),
-        customers ( name ),
-        objects ( name ),
-        orders ( title )
-      `)
-      .order('start_time', { ascending: false })
-      .eq('user_id', currentUser.id); // Für Nicht-Admins immer nach eigener user_id filtern
-
-    const { data: entriesData, error: entriesError } = await queryBuilder;
-
-    timeEntries = entriesData?.map(entry => ({
-      id: entry.id,
-      user_id: entry.user_id,
-      employee_id: entry.employee_id,
-      customer_id: entry.customer_id,
-      object_id: entry.object_id,
-      order_id: entry.order_id,
-      start_time: entry.start_time,
-      end_time: entry.end_time,
-      duration_minutes: entry.duration_minutes,
-      type: entry.type,
-      notes: entry.notes,
-      employee_first_name: entry.employees?.[0]?.first_name || null,
-      employee_last_name: entry.employees?.[0]?.last_name || null,
-      customer_name: entry.customers?.[0]?.name || null,
-      object_name: entry.objects?.[0]?.name || null,
-      order_title: entry.orders?.[0]?.title || null,
-    })) || [];
-    error = entriesError;
-
-    // Daten für die Visualisierung abrufen (z.B. letzte 3 Monate)
-    const threeMonthsAgo = new Date();
-    threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
-
-    const { data: recentData, error: recentError } = await supabase
-      .from('time_entries')
-      .select('start_time, end_time, duration_minutes')
-      .eq('user_id', currentUser.id)
-      .gte('start_time', threeMonthsAgo.toISOString())
-      .order('start_time', { ascending: true });
-
-    recentTimeEntries = recentData || [];
-    // Fehler für recentEntriesError wird hier nicht direkt verwendet, aber gut zu loggen
-    if (recentError) console.error("Fehler beim Laden der letzten Zeiteinträge für Charts:", recentError);
+    queryBuilder = queryBuilder.eq('user_id', currentUser.id);
   }
+
+  const { data: entriesData, error: entriesError } = await queryBuilder;
+
+  timeEntries = entriesData?.map(entry => ({
+    id: entry.id,
+    user_id: entry.user_id,
+    employee_id: entry.employee_id,
+    customer_id: entry.customer_id,
+    object_id: entry.object_id,
+    order_id: entry.order_id,
+    start_time: entry.start_time,
+    end_time: entry.end_time,
+    duration_minutes: entry.duration_minutes,
+    type: entry.type,
+    notes: entry.notes,
+    employee_first_name: entry.employees?.[0]?.first_name || null,
+    employee_last_name: entry.employees?.[0]?.last_name || null,
+    customer_name: entry.customers?.[0]?.name || null,
+    object_name: entry.objects?.[0]?.name || null,
+    order_title: entry.orders?.[0]?.title || null,
+  })) || [];
+  error = entriesError;
+
+  // Daten für die Visualisierung (Charts) abrufen
+  const threeMonthsAgo = new Date();
+  threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+
+  let recentQueryBuilder = supabase
+    .from('time_entries')
+    .select('start_time, end_time, duration_minutes')
+    .gte('start_time', threeMonthsAgo.toISOString())
+    .order('start_time', { ascending: true });
+
+  // Wenn der Benutzer KEIN Admin ist, filtern Sie auch hier nach seiner eigenen user_id
+  if (!isAdmin) {
+    recentQueryBuilder = recentQueryBuilder.eq('user_id', currentUser.id);
+  }
+
+  const { data: recentData, error: recentError } = await recentQueryBuilder;
+
+  recentTimeEntries = recentData || [];
+  if (recentError) console.error("Fehler beim Laden der letzten Zeiteinträge für Charts:", recentError);
+
 
   if (error) {
     console.error("Fehler beim Laden der Zeiteinträge:", error);
     return <div className="p-8">Fehler beim Laden der Zeiteinträge.</div>;
   }
 
-  // Daten nach Woche und Monat aggregieren (nur für Nicht-Admins relevant)
+  // Daten nach Woche und Monat aggregieren
   const weeklyData: { [key: string]: number } = {}; // key: YYYY-WW
   const monthlyData: { [key: string]: number } = {}; // key: YYYY-MM
 
-  if (!isAdmin) { // Nur aggregieren, wenn nicht Admin
-    recentTimeEntries.forEach(entry => {
-      if (entry.start_time && entry.duration_minutes !== null) {
-        const startDate = new Date(entry.start_time);
-        const durationHours = entry.duration_minutes / 60;
+  recentTimeEntries.forEach(entry => {
+    if (entry.start_time && entry.duration_minutes !== null) {
+      const startDate = new Date(entry.start_time);
+      const durationHours = entry.duration_minutes / 60;
 
-        // Nach Woche aggregieren
-        const year = startDate.getFullYear();
-        const week = getWeek(startDate, { weekStartsOn: 1 }); // Montag als Wochenanfang
-        const weekKey = `${year}-${String(week).padStart(2, '0')}`;
-        weeklyData[weekKey] = (weeklyData[weekKey] || 0) + durationHours;
+      // Nach Woche aggregieren
+      const year = startDate.getFullYear();
+      const week = getWeek(startDate, { weekStartsOn: 1 }); // Montag als Wochenanfang
+      const weekKey = `${year}-${String(week).padStart(2, '0')}`;
+      weeklyData[weekKey] = (weeklyData[weekKey] || 0) + durationHours;
 
-        // Nach Monat aggregieren
-        const month = startDate.getMonth() + 1; // 1-12
-        const monthKey = `${year}-${String(month).padStart(2, '0')}`;
-        monthlyData[monthKey] = (monthlyData[monthKey] || 0) + durationHours;
-      }
-    });
-  }
+      // Nach Monat aggregieren
+      const month = startDate.getMonth() + 1; // 1-12
+      const monthKey = `${year}-${String(month).padStart(2, '0')}`;
+      monthlyData[monthKey] = (monthlyData[monthKey] || 0) + durationHours;
+    }
+  });
 
   const formattedWeeklyData = Object.keys(weeklyData).sort().map(key => ({
     name: `KW ${key.substring(5)}`,
