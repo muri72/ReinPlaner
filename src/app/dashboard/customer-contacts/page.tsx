@@ -25,40 +25,73 @@ export default async function CustomerContactsPage({
   searchParams,
 }: any) {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user: currentUser } } = await supabase.auth.getUser();
 
-  if (!user) {
+  if (!currentUser) {
     redirect("/login");
   }
 
-  const query = typeof searchParams?.query === 'string' ? searchParams.query : '';
+  // Fetch the current user's role
+  const { data: userProfile, error: profileError } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', currentUser.id)
+    .single();
 
-  // Kunden-IDs des aktuellen Benutzers abrufen
-  const { data: customerIds, error: customerIdsError } = await supabase
-    .from('customers')
-    .select('id')
-    .eq('user_id', user.id);
-
-  if (customerIdsError) {
-    console.error("Fehler beim Abrufen der Kunden-IDs:", customerIdsError);
-    return <div className="p-8">Fehler beim Laden der Kundenkontakte.</div>;
+  if (profileError) {
+    console.error("Fehler beim Laden des Benutzerprofils:", profileError);
   }
 
-  const allowedCustomerIds = customerIds.map(c => c.id);
+  const isAdmin = userProfile?.role === 'admin';
 
-  let customerContactsQuery = supabase
-    .from('customer_contacts')
-    .select(`
-      *,
-      customers ( name )
-    `)
-    .in('customer_id', allowedCustomerIds) // Korrigiert: Übergabe eines Arrays von IDs
-    .order('last_name', { ascending: true });
+  const query = typeof searchParams?.query === 'string' ? searchParams.query : '';
 
-  if (query) {
-    customerContactsQuery = customerContactsQuery.or(
-      `first_name.ilike.%${query}%,last_name.ilike.%${query}%,email.ilike.%${query}%,phone.ilike.%${query}%,role.ilike.%${query}%,customers.name.ilike.%${query}%`
-    );
+  let customerContactsQuery;
+
+  if (isAdmin) {
+    // Admins sehen alle Kundenkontakte
+    customerContactsQuery = supabase
+      .from('customer_contacts')
+      .select(`
+        *,
+        customers ( name )
+      `)
+      .order('last_name', { ascending: true });
+
+    if (query) {
+      customerContactsQuery = customerContactsQuery.or(
+        `first_name.ilike.%${query}%,last_name.ilike.%${query}%,email.ilike.%${query}%,phone.ilike.%${query}%,role.ilike.%${query}%,customers.name.ilike.%${query}%`
+      );
+    }
+
+  } else {
+    // Nicht-Admins sehen nur Kundenkontakte, die zu ihren Kunden gehören
+    const { data: customerIds, error: customerIdsError } = await supabase
+      .from('customers')
+      .select('id')
+      .eq('user_id', currentUser.id);
+
+    if (customerIdsError) {
+      console.error("Fehler beim Abrufen der Kunden-IDs:", customerIdsError);
+      return <div className="p-8">Fehler beim Laden der Kundenkontakte.</div>;
+    }
+
+    const allowedCustomerIds = customerIds.map(c => c.id);
+
+    customerContactsQuery = supabase
+      .from('customer_contacts')
+      .select(`
+        *,
+        customers ( name )
+      `)
+      .in('customer_id', allowedCustomerIds)
+      .order('last_name', { ascending: true });
+
+    if (query) {
+      customerContactsQuery = customerContactsQuery.or(
+        `first_name.ilike.%${query}%,last_name.ilike.%${query}%,email.ilike.%${query}%,phone.ilike.%${query}%,role.ilike.%${query}%,customers.name.ilike.%${query}%`
+      );
+    }
   }
 
   const { data: contacts, error } = await customerContactsQuery;

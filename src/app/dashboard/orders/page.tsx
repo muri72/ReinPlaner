@@ -44,11 +44,24 @@ export default async function OrdersPage({
   searchParams,
 }: any) {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user: currentUser } } = await supabase.auth.getUser();
 
-  if (!user) {
+  if (!currentUser) {
     redirect("/login");
   }
+
+  // Fetch the current user's role
+  const { data: userProfile, error: profileError } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', currentUser.id)
+    .single();
+
+  if (profileError) {
+    console.error("Fehler beim Laden des Benutzerprofils:", profileError);
+  }
+
+  const isAdmin = userProfile?.role === 'admin';
 
   const query = typeof searchParams?.query === 'string' ? searchParams.query : '';
 
@@ -59,13 +72,12 @@ export default async function OrdersPage({
     // Verwende die neue RPC-Funktion für die Suche
     const { data, error: rpcError } = await supabase.rpc('search_orders', {
       search_query: query,
-      user_id_param: user.id,
+      user_id_param: isAdmin ? null : currentUser.id, // Pass null for admin to search all
     });
     orders = data as DisplayOrder[] | null;
     error = rpcError;
   } else {
-    // Normale Abfrage, wenn kein Suchbegriff vorhanden ist
-    const { data, error: selectError } = await supabase
+    let ordersQuery = supabase
       .from('orders')
       .select(`
         *,
@@ -74,8 +86,14 @@ export default async function OrdersPage({
         employees ( first_name, last_name ),
         customer_contacts ( first_name, last_name )
       `)
-      .eq('user_id', user.id)
       .order('created_at', { ascending: false });
+
+    // Apply user_id filter only if not an admin
+    if (!isAdmin) {
+      ordersQuery = ordersQuery.eq('user_id', currentUser.id);
+    }
+
+    const { data, error: selectError } = await ordersQuery;
 
     // Daten mappen, um sie an die DisplayOrder-Schnittstelle anzupassen
     orders = data?.map(order => ({

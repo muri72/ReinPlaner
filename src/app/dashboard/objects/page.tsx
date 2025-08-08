@@ -68,11 +68,24 @@ export default async function ObjectsPage({
   searchParams,
 }: any) {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user: currentUser } } = await supabase.auth.getUser();
 
-  if (!user) {
+  if (!currentUser) {
     redirect("/login");
   }
+
+  // Fetch the current user's role
+  const { data: userProfile, error: profileError } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', currentUser.id)
+    .single();
+
+  if (profileError) {
+    console.error("Fehler beim Laden des Benutzerprofils:", profileError);
+  }
+
+  const isAdmin = userProfile?.role === 'admin';
 
   const query = typeof searchParams?.query === 'string' ? searchParams.query : '';
 
@@ -80,22 +93,29 @@ export default async function ObjectsPage({
   let error: any;
 
   if (query) {
+    // Verwende die neue RPC-Funktion für die Suche
     const { data, error: rpcError } = await supabase.rpc('search_objects', {
       search_query: query,
-      user_id_param: user.id,
+      user_id_param: isAdmin ? null : currentUser.id, // Pass null for admin to search all
     });
     objects = data as DisplayObject[] | null;
     error = rpcError;
   } else {
-    const { data, error: selectError } = await supabase
+    let objectsQuery = supabase
       .from('objects')
       .select(`
         *,
         customers ( name ),
         customer_contacts ( first_name, last_name )
       `)
-      .eq('user_id', user.id)
       .order('name', { ascending: true });
+
+    // Apply user_id filter only if not an admin
+    if (!isAdmin) {
+      objectsQuery = objectsQuery.eq('user_id', currentUser.id);
+    }
+
+    const { data, error: selectError } = await objectsQuery;
 
     objects = data?.map(obj => ({
       id: obj.id,
