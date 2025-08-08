@@ -243,7 +243,7 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
 
     if (result.success) {
       if (entryType === 'automatic_scheduled_order') {
-        toast.success("Geplante Stunden erfolgreich erfasst!");
+        toast.success("Geplante Stunden erfolgreich erfasst und abgeschlossen! Sie finden den Eintrag in der Liste unten."); // Präzisere Meldung
         setActiveEntry(null); // Entry is immediately completed
         setSelectedOrderId(null); // Clear selection
       } else {
