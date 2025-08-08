@@ -134,7 +134,7 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
     };
   }, [userId, supabase]);
 
-  // Effect to fetch object schedule for selected permanent order
+  // Effect to fetch object schedule for selected order (if object_id exists)
   useEffect(() => {
     const fetchObjectSchedule = async () => {
       setSuggestedStartTime(null);
@@ -143,7 +143,8 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
 
       if (selectedOrderId) {
         const selectedOrder = orders.find(o => o.id === selectedOrderId);
-        if (selectedOrder && selectedOrder.order_type === 'permanent' && selectedOrder.object_id) {
+        // Fetch schedule if an object is linked to the order
+        if (selectedOrder && selectedOrder.object_id) {
           const { data: objectData, error: objectError } = await supabase
             .from('objects')
             .select('monday_start_time, monday_end_time, tuesday_start_time, tuesday_end_time, wednesday_start_time, wednesday_end_time, thursday_start_time, thursday_end_time, friday_start_time, friday_end_time, saturday_start_time, saturday_end_time, sunday_start_time, sunday_end_time')
@@ -209,18 +210,22 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
     let actualDurationMinutes: number | null = null;
     let actualEndDate: Date | null = null;
     let notes = `Eingestempelt um ${now.toLocaleTimeString()}`;
+    let entryType: 'clock_in_out' | 'stopwatch' | 'automatic_scheduled_order' = 'clock_in_out'; // Standardtyp
 
-    if (selectedOrder?.order_type === 'permanent' && suggestedStartTime && suggestedEndTime && suggestedDuration !== null) {
-      // For permanent orders, automatically log the full scheduled duration
+    // Check if suggested times are available for the selected order's object
+    if (suggestedStartTime && suggestedEndTime && suggestedDuration !== null) {
+      // If scheduled times exist, automatically log the full scheduled duration
       actualStartTime = suggestedStartTime;
       actualEndTime = suggestedEndTime;
       actualDurationMinutes = suggestedDuration;
       actualEndDate = now; // End date is today
-      notes = `Automatisch erfasst für permanenten Auftrag: ${actualStartTime} - ${actualEndTime}`;
-      toast.info("Permanenter Auftrag: Geplante Stunden automatisch erfasst.");
+      notes = `Automatisch erfasst für geplanten Auftrag: ${actualStartTime} - ${actualEndTime}`;
+      entryType = 'automatic_scheduled_order'; // Neuer Typ
+      toast.info("Geplanter Auftrag: Stunden automatisch erfasst.");
     } else {
       // For other order types or no schedule, start a live clock
       notes = `Eingestempelt um ${now.toLocaleTimeString()}`;
+      entryType = 'clock_in_out';
     }
 
     const result = await createTimeEntry({
@@ -230,15 +235,15 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
       endDate: actualEndDate,
       endTime: actualEndTime,
       durationMinutes: actualDurationMinutes,
-      type: 'clock_in_out',
+      type: entryType, // Verwende den dynamisch bestimmten Typ
       orderId: selectedOrderId,
       objectId: selectedOrder?.object_id || null,
       notes: notes,
     });
 
     if (result.success) {
-      if (selectedOrder?.order_type === 'permanent' && suggestedStartTime && suggestedEndTime) {
-        toast.success("Geplante Stunden für permanenten Auftrag erfolgreich erfasst!");
+      if (entryType === 'automatic_scheduled_order') {
+        toast.success("Geplante Stunden erfolgreich erfasst!");
         setActiveEntry(null); // Entry is immediately completed
         setSelectedOrderId(null); // Clear selection
       } else {
@@ -409,7 +414,8 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
     );
   }
 
-  const selectedOrderIsPermanent = orders.find(o => o.id === selectedOrderId)?.order_type === 'permanent';
+  // Check if suggested times are available for the selected order
+  const isScheduledOrder = !!(selectedOrderId && suggestedStartTime && suggestedEndTime && suggestedDuration !== null);
 
   return (
     <Card className="p-4 space-y-4">
@@ -470,9 +476,9 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
                   )}
                 </div>
 
-                {selectedOrderIsPermanent && suggestedStartTime && suggestedEndTime && (
+                {isScheduledOrder && suggestedStartTime && suggestedEndTime && (
                   <div className="text-sm text-muted-foreground mt-2 p-2 border rounded-md bg-blue-50 dark:bg-blue-950">
-                    <p>Vorgeschlagene Zeiten für diesen permanenten Auftrag heute:</p>
+                    <p>Vorgeschlagene Zeiten für diesen Auftrag heute:</p>
                     <p className="font-semibold">{suggestedStartTime} - {suggestedEndTime} ({suggestedDuration !== null ? (suggestedDuration / 60).toFixed(2) : 'N/A'} Stunden)</p>
                     <p className="text-xs mt-1">Beim Einstempeln werden diese Stunden automatisch erfasst.</p>
                   </div>
@@ -523,9 +529,9 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
                   )}
                 </div>
 
-                {selectedOrderIsPermanent && suggestedStartTime && suggestedEndTime && (
+                {isScheduledOrder && suggestedStartTime && suggestedEndTime && (
                   <div className="text-sm text-muted-foreground mt-2 p-2 border rounded-md bg-blue-50 dark:bg-blue-950">
-                    <p>Vorgeschlagene Zeiten für diesen permanenten Auftrag heute:</p>
+                    <p>Vorgeschlagene Zeiten für diesen Auftrag heute:</p>
                     <p className="font-semibold">{suggestedStartTime} - {suggestedEndTime} ({suggestedDuration !== null ? (suggestedDuration / 60).toFixed(2) : 'N/A'} Stunden)</p>
                     <p className="text-xs mt-1">Die Stoppuhr verfolgt die tatsächliche Zeit, aber dies ist der erwartete Zeitrahmen.</p>
                   </div>

@@ -164,6 +164,8 @@ export default async function TimeTrackingPage() {
         return 'default';
       case 'stopwatch':
         return 'secondary';
+      case 'automatic_scheduled_order': // Neuer Typ
+        return 'success'; // Oder eine andere passende Variante
       default:
         return 'outline';
     }
@@ -185,7 +187,7 @@ export default async function TimeTrackingPage() {
         </>
       )}
 
-      <h2 className="text-2xl font-bold mt-8">Ihre Stundenübersicht</h2>
+      <h2 className="text-2xl font-bold mt-8">Ihre Stundenübersicht (letzte 3 Monate)</h2>
       <TimeTrackingCharts weeklyData={formattedWeeklyData} monthlyData={formattedMonthlyData} />
 
       <h2 className="text-2xl font-bold mt-8">Ihre Zeiteinträge</h2>
@@ -202,7 +204,7 @@ export default async function TimeTrackingPage() {
                   Zeiteintrag
                 </CardTitle>
                 <div className="flex items-center space-x-2">
-                  <Badge variant={getTypeBadgeVariant(entry.type)}>{entry.type}</Badge>
+                  <Badge variant={getTypeBadgeVariant(entry.type)}>{entry.type === 'automatic_scheduled_order' ? 'Automatisch' : entry.type}</Badge>
                   <DeleteTimeEntryButton entryId={entry.id} />
                 </div>
               </CardHeader>
