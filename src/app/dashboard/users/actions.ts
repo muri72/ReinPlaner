@@ -24,7 +24,7 @@ export async function registerUser(data: UserFormValues) {
     return { success: false, message: "Nicht autorisiert. Nur Admins können Benutzer registrieren." };
   }
 
-  const { email, password, firstName, lastName, role, employeeId, customerId } = data; // employeeId und customerId hinzugefügt
+  const { email, password, firstName, lastName, role, employeeId, customerId, managerCustomerIds } = data;
 
   if (!password) {
     return { success: false, message: "Passwort ist für die Registrierung erforderlich." };
@@ -60,7 +60,8 @@ export async function registerUser(data: UserFormValues) {
 
   if (profileUpdateError) {
     console.error("Fehler beim Aktualisieren des Benutzerprofils:", profileUpdateError);
-    await supabaseAdmin.auth.admin.deleteUser(newUserId);
+    // Optional: Benutzer in Auth löschen, wenn Profil-Update fehlschlägt
+    await supabaseAdmin.auth.admin.deleteUser(newUser.user?.id!); // Verwende den Admin Client
     return { success: false, message: profileUpdateError.message };
   }
 
@@ -125,6 +126,16 @@ export async function registerUser(data: UserFormValues) {
     if (assignCustomerError) {
       console.error("Fehler beim Zuweisen des Kunden zum Benutzer:", assignCustomerError);
       // Nicht abbrechen
+    }
+  }
+
+  // Zuweisung von Kunden zu einem Manager
+  if (role === 'manager' && managerCustomerIds && managerCustomerIds.length > 0) {
+    const { success: assignSuccess, message: assignMessage } = await assignCustomersToManager(newUserId, managerCustomerIds);
+    if (!assignSuccess) {
+      console.error("Fehler beim Zuweisen von Kunden zum Manager:", assignMessage);
+      // Hier entscheiden, ob der Fehler die gesamte Benutzererstellung fehlschlagen lassen soll
+      // Fürs Erste wird der Fehler nur geloggt, da der Benutzer bereits erstellt wurde.
     }
   }
 
