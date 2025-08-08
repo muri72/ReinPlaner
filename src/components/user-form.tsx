@@ -65,8 +65,8 @@ interface UserFormProps {
 
 export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, isEditMode = false }: UserFormProps) {
   const supabase = createClient();
-  const [employees, setEmployees] = useState<{ id: string; first_name: string; last_name: string; user_id: string | null }[]>([]);
-  const [customers, setCustomers] = useState<{ id: string; name: string; user_id: string | null }[]>([]);
+  const [employees, setEmployees] = useState<{ id: string; first_name: string; last_name: string; user_id: string | null; email: string | null }[]>([]);
+  const [customers, setCustomers] = useState<{ id: string; name: string; user_id: string | null; contact_email: string | null }[]>([]);
   const [allCustomersForManager, setAllCustomersForManager] = useState<{ id: string; name: string }[]>([]); // For manager assignment
   const [loadingDropdowns, setLoadingDropdowns] = useState(true);
 
@@ -98,7 +98,7 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
       // Fetch unassigned employees for new user creation
       const { data: employeesData, error: employeesError } = await supabase
         .from('employees')
-        .select('id, first_name, last_name, user_id')
+        .select('id, first_name, last_name, user_id, email') // 'email' hinzugefügt
         .is('user_id', null) // Only unassigned employees
         .order('last_name', { ascending: true });
 
@@ -111,7 +111,7 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
       // Fetch unassigned customers for new user creation
       const { data: customersData, error: customersError } = await supabase
         .from('customers')
-        .select('id, name, user_id')
+        .select('id, name, user_id, contact_email') // 'contact_email' hinzugefügt
         .is('user_id', null) // Only unassigned customers
         .order('name', { ascending: true });
 
@@ -145,16 +145,28 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
         form.setValue("role", "employee", { shouldValidate: true });
         form.setValue("customerId", null, { shouldValidate: true });
         form.setValue("managerCustomerIds", [], { shouldValidate: true });
+        const employee = employees.find(emp => emp.id === selectedEmployeeId);
+        if (employee?.email) {
+          form.setValue("email", employee.email, { shouldValidate: true });
+        }
       } else if (selectedCustomerId) {
         form.setValue("role", "customer", { shouldValidate: true });
         form.setValue("employeeId", null, { shouldValidate: true });
         form.setValue("managerCustomerIds", [], { shouldValidate: true });
+        const customer = customers.find(cust => cust.id === selectedCustomerId);
+        if (customer?.contact_email) {
+          form.setValue("email", customer.contact_email, { shouldValidate: true });
+        }
       } else {
         // If neither is selected, allow role to be chosen, but clear assignments if role changes
         // This is handled by the role select's onValueChange
+        // Also clear email if it was auto-populated and no longer applies
+        if (!initialData?.email) { // Only clear if not an initial email from edit mode
+          form.setValue("email", "", { shouldValidate: true });
+        }
       }
     }
-  }, [selectedEmployeeId, selectedCustomerId, isEditMode, form]);
+  }, [selectedEmployeeId, selectedCustomerId, isEditMode, form, employees, customers, initialData?.email]);
 
 
   const handleFormSubmit: SubmitHandler<UserFormValues> = async (data) => {
@@ -263,9 +275,12 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
               <Select
                 onValueChange={(value) => {
                   form.setValue("employeeId", value === "unassigned" ? null : value);
+                  if (value !== "unassigned") {
+                    form.setValue("customerId", null); // Wenn Mitarbeiter zugewiesen, Kunde entzuweisen
+                  }
                 }}
                 value={selectedEmployeeId || "unassigned"}
-                disabled={loadingDropdowns || !!selectedCustomerId || selectedRole === 'customer'} // Disable if customer selected or role is customer
+                disabled={loadingDropdowns || !!selectedCustomerId} // Deaktivieren, wenn Kunde ausgewählt
               >
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Mitarbeiter auswählen" />
@@ -274,42 +289,45 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
                   <SelectItem value="unassigned">Kein Mitarbeiter zugewiesen</SelectItem>
                   {employees.map(emp => (
                     <SelectItem key={emp.id} value={emp.id}>
-                      {emp.first_name} {emp.last_name}
+                      {emp.first_name} {emp.last_name} {emp.email ? `(${emp.email})` : ''}
                     </SelectItem>
                   ))}
                 </SelectContent>
-              </Select>
-              {form.formState.errors.employeeId && (
-                <p className="text-red-500 text-sm mt-1">{form.formState.errors.employeeId.message}</p>
-              )}
-            </div>
-
-            <div className="mt-4">
-              <Label htmlFor="customerId">Kunden zuweisen (optional)</Label>
-              <Select
-                onValueChange={(value) => {
-                  form.setValue("customerId", value === "unassigned" ? null : value);
-                }}
-                value={selectedCustomerId || "unassigned"}
-                disabled={loadingDropdowns || !!selectedEmployeeId || selectedRole === 'employee'} // Disable if employee selected or role is employee
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Kunden auswählen" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="unassigned">Kein Kunde zugewiesen</SelectItem>
-                  {customers.map(cust => (
-                    <SelectItem key={cust.id} value={cust.id}>
-                      {cust.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {form.formState.errors.customerId && (
-                <p className="text-red-500 text-sm mt-1">{form.formState.errors.customerId.message}</p>
-              )}
-            </div>
+            </Select>
+            {form.formState.errors.employeeId && (
+              <p className="text-red-500 text-sm mt-1">{form.formState.errors.employeeId.message}</p>
+            )}
           </div>
+
+          <div className="mt-4">
+            <Label htmlFor="customerId">Kunden zuweisen (optional)</Label>
+            <Select
+              onValueChange={(value) => {
+                form.setValue("customerId", value === "unassigned" ? null : value);
+                if (value !== "unassigned") {
+                  form.setValue("employeeId", null); // Wenn Kunde zugewiesen, Mitarbeiter entzuweisen
+                }
+              }}
+              value={selectedCustomerId || "unassigned"}
+              disabled={loadingDropdowns || !!selectedEmployeeId} // Deaktivieren, wenn Mitarbeiter ausgewählt
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Kunden auswählen" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="unassigned">Kein Kunde zugewiesen</SelectItem>
+                {customers.map(cust => (
+                  <SelectItem key={cust.id} value={cust.id}>
+                    {cust.name} {cust.contact_email ? `(${cust.contact_email})` : ''}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {form.formState.errors.customerId && (
+              <p className="text-red-500 text-sm mt-1">{form.formState.errors.customerId.message}</p>
+            )}
+          </div>
+        </div>
         </>
       )}
 
