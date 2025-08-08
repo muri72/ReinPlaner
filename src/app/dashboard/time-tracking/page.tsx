@@ -10,6 +10,7 @@ import { getWeek } from 'date-fns';
 import { TimeTrackingCharts } from '@/components/time-tracking-charts';
 import { Badge } from "@/components/ui/badge"; // Importiere Badge
 import { AdminTimeEntriesOverview } from "@/components/admin-time-entries-overview"; // Neue Komponente
+import { TimeEntryEditDialog } from "@/components/time-entry-edit-dialog"; // Importiere TimeEntryEditDialog
 
 // Definieren Sie die Schnittstelle für die Zeiteintrag-Daten, wie sie auf dieser Seite verwendet werden
 interface DisplayTimeEntry {
@@ -216,6 +217,7 @@ export default async function TimeTrackingPage({
                     </CardTitle>
                     <div className="flex items-center space-x-2">
                       <Badge variant={getTypeBadgeVariant(entry.type)}>{entry.type === 'automatic_scheduled_order' ? 'Automatisch' : entry.type}</Badge>
+                      <TimeEntryEditDialog timeEntry={entry} /> {/* Bearbeitungs-Button hinzugefügt */}
                       <DeleteTimeEntryButton entryId={entry.id} />
                     </div>
                   </CardHeader>
