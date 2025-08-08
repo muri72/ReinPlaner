@@ -24,7 +24,7 @@ const baseUserSchema = z.object({
   role: z.enum(["admin", "manager", "employee", "customer"]).default("employee"),
   // These are only for NEW user creation, not for editing existing users
   employeeId: z.string().uuid("Ungültige Mitarbeiter-ID").optional().nullable(),
-  customerId: z.string().uuid("Ungültige Kunden-ID").optional().nullable(),
+  customerId: z.string().uuid("Ungültige Kunden-ID").optional().nullable(), // This is now primarily a filter
   customerContactId: z.string().uuid("Ungültige Kundenkontakt-ID").optional().nullable(), // Neues Feld für Kundenkontakt
   managerCustomerIds: z.array(z.string().uuid()).optional(), // For manager role
 });
@@ -49,21 +49,26 @@ export const userSchema = baseUserSchema
 .refine((data) => { // 'data' is now correctly inferred as UserFormValues
   // Validierung für Rollen- und Zuweisungskombinationen
   if (data.password !== undefined) { // Nur für neue Benutzer
-    const assignedCount = [data.employeeId, data.customerId, data.customerContactId].filter(Boolean).length;
-    if (assignedCount > 1) {
-      return false; // Nur eine Zuweisung erlaubt
+    // Zähle direkte Zuweisungen (Mitarbeiter oder Kundenkontakt)
+    const directAssignmentsCount = [data.employeeId, data.customerContactId].filter(Boolean).length;
+
+    if (directAssignmentsCount > 1) {
+      return false; // Nur eine direkte Zuweisung (Mitarbeiter oder Kundenkontakt) erlaubt
     }
 
+    // Wenn ein Mitarbeiter zugewiesen ist, muss die Rolle 'employee' sein
     if (data.employeeId && data.role !== 'employee') {
       return false;
     }
-    // Removed direct customerId role check, as customerId is now a filter for contacts
-    if (data.customerContactId && data.role !== 'customer') { // Kundenkontakt sollte 'customer' Rolle haben
+    // Wenn ein Kundenkontakt zugewiesen ist, muss die Rolle 'customer' sein
+    if (data.customerContactId && data.role !== 'customer') {
       return false;
     }
+    // Wenn die Rolle 'manager' ist, sollten keine direkten Zuweisungen (Mitarbeiter, Kunde oder Kundenkontakt) vorhanden sein
     if (data.role === 'manager' && (data.employeeId || data.customerId || data.customerContactId)) {
       return false;
     }
+    // Wenn die Rolle nicht 'manager' ist, sollten keine Manager-Kundenzuweisungen vorhanden sein
     if (data.role !== 'manager' && data.managerCustomerIds && data.managerCustomerIds.length > 0) {
       return false;
     }
@@ -212,7 +217,7 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
         form.setValue("email", contact?.email || null, { shouldValidate: false });
         form.setValue("role", "customer", { shouldValidate: false }); // Role should be 'customer' for contacts
         form.setValue("employeeId", null, { shouldValidate: false }); // Clear other assignments
-        // customerId is kept as it's the parent filter
+        form.setValue("customerId", contact?.customer_id || null, { shouldValidate: false }); // Set customerId to the contact's customerId
         form.setValue("managerCustomerIds", [], { shouldValidate: false });
       } else if (selectedCustomerId) { // If only customer is selected (no specific contact yet)
         // Do NOT pre-fill name/email or set role here.
