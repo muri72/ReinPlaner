@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { TimeEntryFormValues } from "@/components/time-entry-form";
 
-export async function createTimeEntry(data: TimeEntryFormValues) {
+export async function createTimeEntry(data: TimeEntryFormValues): Promise<{ success: boolean; message: string; newEntryId?: string }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -45,7 +45,7 @@ export async function createTimeEntry(data: TimeEntryFormValues) {
     finalDurationMinutes = diffMs / (1000 * 60); // Convert milliseconds to minutes
   }
 
-  const { error } = await supabase
+  const { data: newEntry, error } = await supabase
     .from('time_entries')
     .insert({
       user_id: user.id,
@@ -58,7 +58,9 @@ export async function createTimeEntry(data: TimeEntryFormValues) {
       duration_minutes: finalDurationMinutes,
       type,
       notes,
-    });
+    })
+    .select('id') // Wichtig: Die ID des neu erstellten Eintrags auswählen
+    .single();
 
   if (error) {
     console.error("Fehler beim Erstellen des Zeiteintrags:", error);
@@ -66,7 +68,7 @@ export async function createTimeEntry(data: TimeEntryFormValues) {
   }
 
   revalidatePath("/dashboard/time-tracking");
-  return { success: true, message: "Zeiteintrag erfolgreich hinzugefügt!" };
+  return { success: true, message: "Zeiteintrag erfolgreich hinzugefügt!", newEntryId: newEntry?.id };
 }
 
 export async function updateTimeEntry(entryId: string, data: Partial<TimeEntryFormValues>) {
