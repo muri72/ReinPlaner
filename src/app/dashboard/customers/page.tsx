@@ -19,20 +19,6 @@ export default async function CustomersPage({
     redirect("/login");
   }
 
-  // Fetch the current user's role
-  const { data: userProfile, error: profileError } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', currentUser.id)
-    .single();
-
-  if (profileError) {
-    console.error("Fehler beim Laden des Benutzerprofils:", profileError);
-    // Im Fehlerfall oder wenn kein Profil gefunden wird, behandeln wir es als Nicht-Admin
-  }
-
-  const isAdmin = userProfile?.role === 'admin';
-
   const query = typeof searchParams?.query === 'string' ? searchParams.query : '';
 
   let customersQuery = supabase
@@ -40,10 +26,10 @@ export default async function CustomersPage({
     .select('*')
     .order('name', { ascending: true });
 
-  // Apply user_id filter only if not an admin
-  if (!isAdmin) {
-    customersQuery = customersQuery.eq('user_id', currentUser.id);
-  }
+  // Die explizite user_id-Filterung wird entfernt, da RLS dies übernimmt.
+  // if (!isAdmin) {
+  //   customersQuery = customersQuery.eq('user_id', currentUser.id);
+  // }
 
   if (query) {
     customersQuery = customersQuery.or(

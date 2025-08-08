@@ -31,67 +31,23 @@ export default async function CustomerContactsPage({
     redirect("/login");
   }
 
-  // Fetch the current user's role
-  const { data: userProfile, error: profileError } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', currentUser.id)
-    .single();
-
-  if (profileError) {
-    console.error("Fehler beim Laden des Benutzerprofils:", profileError);
-  }
-
-  const isAdmin = userProfile?.role === 'admin';
-
   const query = typeof searchParams?.query === 'string' ? searchParams.query : '';
 
-  let customerContactsQuery;
+  let customerContactsQuery = supabase
+    .from('customer_contacts')
+    .select(`
+      *,
+      customers ( name )
+    `)
+    .order('last_name', { ascending: true });
 
-  if (isAdmin) {
-    // Admins sehen alle Kundenkontakte
-    customerContactsQuery = supabase
-      .from('customer_contacts')
-      .select(`
-        *,
-        customers ( name )
-      `)
-      .order('last_name', { ascending: true });
+  // Die explizite Filterlogik basierend auf isAdmin oder customerIds wird entfernt,
+  // da RLS dies nun vollständig übernimmt.
 
-    if (query) {
-      customerContactsQuery = customerContactsQuery.or(
-        `first_name.ilike.%${query}%,last_name.ilike.%${query}%,email.ilike.%${query}%,phone.ilike.%${query}%,role.ilike.%${query}%,customers.name.ilike.%${query}%`
-      );
-    }
-
-  } else {
-    // Nicht-Admins sehen nur Kundenkontakte, die zu ihren Kunden gehören
-    const { data: customerIds, error: customerIdsError } = await supabase
-      .from('customers')
-      .select('id')
-      .eq('user_id', currentUser.id);
-
-    if (customerIdsError) {
-      console.error("Fehler beim Abrufen der Kunden-IDs:", customerIdsError);
-      return <div className="p-8">Fehler beim Laden der Kundenkontakte.</div>;
-    }
-
-    const allowedCustomerIds = customerIds.map(c => c.id);
-
-    customerContactsQuery = supabase
-      .from('customer_contacts')
-      .select(`
-        *,
-        customers ( name )
-      `)
-      .in('customer_id', allowedCustomerIds)
-      .order('last_name', { ascending: true });
-
-    if (query) {
-      customerContactsQuery = customerContactsQuery.or(
-        `first_name.ilike.%${query}%,last_name.ilike.%${query}%,email.ilike.%${query}%,phone.ilike.%${query}%,role.ilike.%${query}%,customers.name.ilike.%${query}%`
-      );
-    }
+  if (query) {
+    customerContactsQuery = customerContactsQuery.or(
+      `first_name.ilike.%${query}%,last_name.ilike.%${query}%,email.ilike.%${query}%,phone.ilike.%${query}%,role.ilike.%${query}%,customers.name.ilike.%${query}%`
+    );
   }
 
   const { data: contacts, error } = await customerContactsQuery;
