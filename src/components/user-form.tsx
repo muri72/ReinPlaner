@@ -14,14 +14,13 @@ import { Checkbox } from "@/components/ui/checkbox"; // For multi-select
 
 // Define the base schema first to avoid circular dependency
 const baseUserSchema = z.object({
-  // KORREKTUR HIER: E-Mail-Schema angepasst, um leere Strings als null zu behandeln
   email: z.union([
     z.string().email("Ungültiges E-Mail-Format"),
     z.literal(""), // Erlaube leeren String
   ]).transform(e => e === "" ? null : e).optional().nullable(),
   password: z.string().min(6, "Passwort muss mindestens 6 Zeichen lang sein").optional(), // Optional for updates
   firstName: z.string().min(1, "Vorname ist erforderlich").max(100, "Vorname ist zu lang"),
-  lastName: z.string().min(1, "Nachname ist erforderlich").max(100, "Nachname ist zu lang"),
+  lastName: z.string().max(100, "Nachname ist zu lang").optional().nullable(), // Nachname optional gemacht
   role: z.enum(["admin", "manager", "employee", "customer"]).default("employee"),
   // These are only for NEW user creation, not for editing existing users
   employeeId: z.string().uuid("Ungültige Mitarbeiter-ID").optional().nullable(),
@@ -35,17 +34,7 @@ export type UserFormValues = z.infer<typeof baseUserSchema>;
 
 // Apply refine methods to the base schema
 export const userSchema = baseUserSchema
-.refine((data) => { // 'data' is now correctly inferred as UserFormValues
-  // If it's a new user creation (password is present) AND no employee/customer is linked, then email is required.
-  // Also, if email is provided, it must not be an empty string.
-  if (data.password !== undefined && !data.employeeId && !data.customerId) {
-    return data.email !== null && data.email !== ""; // Email must be present and not empty
-  }
-  return true; // Otherwise, email is optional/nullable
-}, {
-  message: "E-Mail ist erforderlich, wenn kein Mitarbeiter oder Kunde zugewiesen ist.",
-  path: ["email"],
-})
+// Die refine-Regel für die E-Mail-Pflicht wurde entfernt.
 .refine((data) => { // 'data' is now correctly inferred as UserFormValues
   // Existing validation for role and assignment combinations
   if (data.password !== undefined) {
@@ -91,7 +80,7 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
     email: initialData?.email ?? null, // Set to null if undefined
     password: initialData?.password ?? (isEditMode ? undefined : ""),
     firstName: initialData?.firstName ?? "",
-    lastName: initialData?.lastName ?? "",
+    lastName: initialData?.lastName ?? null, // Initialwert für optionalen Nachnamen
     role: initialData?.role ?? "employee",
     // These initialData values are only relevant for new user creation, not for editing
     employeeId: initialData?.employeeId ?? null,
@@ -162,7 +151,7 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
       if (selectedEmployeeId) {
         const employee = employees.find(emp => emp.id === selectedEmployeeId);
         form.setValue("firstName", employee?.first_name || "", { shouldValidate: true });
-        form.setValue("lastName", employee?.last_name || "", { shouldValidate: true });
+        form.setValue("lastName", employee?.last_name || null, { shouldValidate: true }); // Set to null if empty
         form.setValue("email", employee?.email || null, { shouldValidate: true }); // Set to null if empty
         form.setValue("role", "employee", { shouldValidate: true });
         form.setValue("customerId", null, { shouldValidate: true });
@@ -170,7 +159,7 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
       } else if (selectedCustomerId) {
         const customer = customers.find(cust => cust.id === selectedCustomerId);
         form.setValue("firstName", customer?.name || "", { shouldValidate: true });
-        form.setValue("lastName", "", { shouldValidate: true }); // Customers typically only have one name field
+        form.setValue("lastName", null, { shouldValidate: true }); // Customers typically only have one name field, so lastName is null
         form.setValue("email", customer?.contact_email || null, { shouldValidate: true }); // Set to null if empty
         form.setValue("role", "customer", { shouldValidate: true });
         form.setValue("employeeId", null, { shouldValidate: true });
@@ -178,7 +167,7 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
       } else {
         // If no employee or customer is selected, clear and enable fields
         if (!initialData?.firstName) form.setValue("firstName", "", { shouldValidate: true });
-        if (!initialData?.lastName) form.setValue("lastName", "", { shouldValidate: true });
+        if (!initialData?.lastName) form.setValue("lastName", null, { shouldValidate: true }); // Set to null if empty
         if (!initialData?.email) form.setValue("email", null, { shouldValidate: true }); // Set to null if empty
         // Reset role to default if not explicitly set by initialData
         if (!initialData?.role) form.setValue("role", "employee", { shouldValidate: true });
