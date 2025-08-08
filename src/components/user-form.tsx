@@ -35,43 +35,39 @@ export type UserFormValues = z.infer<typeof baseUserSchema>;
 
 // Apply refine methods to the base schema
 export const userSchema = baseUserSchema
-.refine((data) => { // 'data' is now correctly inferred as UserFormValues
-  // E-Mail ist erforderlich, wenn ein neues Benutzerkonto erstellt wird (Passwort ist vorhanden)
-  // UND kein Mitarbeiter, Kunde oder Kundenkontakt zugewiesen ist.
-  if (!data.employeeId && !data.customerId && !data.customerContactId && data.password !== undefined) {
-    return data.email !== null && data.email !== ""; // E-Mail muss vorhanden und nicht leer sein
+.refine((data) => {
+  // Rule 1: Email is required for new users if no direct assignment (employee or customer contact)
+  if (data.password !== undefined && !data.employeeId && !data.customerContactId) {
+    return data.email !== null && data.email !== "";
   }
-  return true; // Andernfalls ist E-Mail optional/nullable
+  return true;
 }, {
-  message: "E-Mail ist erforderlich, wenn kein Mitarbeiter, Kunde oder Kundenkontakt zugewiesen ist.",
+  message: "E-Mail ist erforderlich, wenn kein Mitarbeiter oder Kundenkontakt zugewiesen ist.",
   path: ["email"],
 })
-.refine((data) => { // 'data' is now correctly inferred as UserFormValues
-  // Validierung für Rollen- und Zuweisungskombinationen
-  if (data.password !== undefined) { // Nur für neue Benutzer
-    // Zähle direkte Zuweisungen (Mitarbeiter oder Kundenkontakt)
-    const directAssignmentsCount = [data.employeeId, data.customerContactId].filter(Boolean).length;
-
-    if (directAssignmentsCount > 1) {
-      return false; // Nur eine direkte Zuweisung (Mitarbeiter oder Kundenkontakt) erlaubt
+.refine((data) => {
+  if (data.password !== undefined) { // Only for new users
+    // Rule 2: A user can be linked to AT MOST one of employeeId or customerContactId.
+    // customerId is just a filter for customerContactId, not a direct assignment for the user.
+    const directAssignments = [data.employeeId, data.customerContactId].filter(Boolean);
+    if (directAssignments.length > 1) {
+      return false; // Cannot be both an employee and a customer contact
     }
 
-    // Wenn ein Mitarbeiter zugewiesen ist, muss die Rolle 'employee' sein
-    if (data.employeeId && data.role !== 'employee') {
-      return false;
-    }
-    // Wenn ein Kundenkontakt zugewiesen ist, muss die Rolle 'customer' sein
+    // Rule 3: If a customer contact is assigned, the role MUST be 'customer'.
     if (data.customerContactId && data.role !== 'customer') {
       return false;
     }
-    // Wenn die Rolle 'manager' ist, sollten keine direkten Zuweisungen (Mitarbeiter, Kunde oder Kundenkontakt) vorhanden sein
-    if (data.role === 'manager' && (data.employeeId || data.customerId || data.customerContactId)) {
-      return false;
-    }
-    // Wenn die Rolle nicht 'manager' ist, sollten keine Manager-Kundenzuweisungen vorhanden sein
+
+    // Rule 4: If the role is NOT 'manager', then managerCustomerIds should be empty.
     if (data.role !== 'manager' && data.managerCustomerIds && data.managerCustomerIds.length > 0) {
       return false;
     }
+
+    // No specific role restriction for employeeId anymore, as per user request.
+    // A user linked to an employee can be admin, manager, or employee.
+    // A user linked to a customer contact must be 'customer'.
+    // A user not linked to anything can be admin, manager, employee, customer.
   }
   return true;
 }, {
@@ -192,12 +188,12 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
   // Effect to handle changes in employee/customer/customerContact selection for auto-populating fields
   useEffect(() => {
     if (!isEditMode) {
-      // Clear all fields first if no assignment is selected
+      // Reset fields if no assignment is selected
       if (!selectedEmployeeId && !selectedCustomerId && !selectedCustomerContactId) {
         form.setValue("firstName", initialData?.firstName || "", { shouldValidate: false });
         form.setValue("lastName", initialData?.lastName || "", { shouldValidate: false });
         form.setValue("email", initialData?.email || null, { shouldValidate: false });
-        form.setValue("role", initialData?.role || "employee", { shouldValidate: false });
+        form.setValue("role", initialData?.role || "employee", { shouldValidate: false }); // Default role
         form.setValue("managerCustomerIds", [], { shouldValidate: false });
       }
 
@@ -206,7 +202,7 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
         form.setValue("firstName", employee?.first_name || "", { shouldValidate: false });
         form.setValue("lastName", employee?.last_name || "", { shouldValidate: false });
         form.setValue("email", employee?.email || null, { shouldValidate: false });
-        form.setValue("role", "employee", { shouldValidate: false });
+        // DO NOT set role here. Let the user choose.
         form.setValue("customerId", null, { shouldValidate: false }); // Clear other assignments
         form.setValue("customerContactId", null, { shouldValidate: false }); // Clear other assignments
         form.setValue("managerCustomerIds", [], { shouldValidate: false });
@@ -215,14 +211,12 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
         form.setValue("firstName", contact?.first_name || "", { shouldValidate: false });
         form.setValue("lastName", contact?.last_name || "", { shouldValidate: false });
         form.setValue("email", contact?.email || null, { shouldValidate: false });
-        form.setValue("role", "customer", { shouldValidate: false }); // Role should be 'customer' for contacts
+        form.setValue("role", "customer", { shouldValidate: false }); // Keep setting role to 'customer' for contacts
         form.setValue("employeeId", null, { shouldValidate: false }); // Clear other assignments
         form.setValue("customerId", contact?.customer_id || null, { shouldValidate: false }); // Set customerId to the contact's customerId
         form.setValue("managerCustomerIds", [], { shouldValidate: false });
       } else if (selectedCustomerId) { // If only customer is selected (no specific contact yet)
-        // Do NOT pre-fill name/email or set role here.
-        // This dropdown is now primarily for filtering customer contacts.
-        // Ensure customerContactId is cleared if customer changes.
+        // This is just a filter, do not pre-fill or set role based on customerId alone.
         form.setValue("customerContactId", null, { shouldValidate: false });
         // Reset name/email/role to default if no specific contact is selected
         form.setValue("firstName", initialData?.firstName || "", { shouldValidate: false });
@@ -248,10 +242,10 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
     }
   };
 
-  // Bestimmt, ob die Felder für Vorname, Nachname, E-Mail und Rolle deaktiviert sein sollen
-  const areFieldsDisabled = isEditMode || !!selectedEmployeeId || !!selectedCustomerContactId;
-  // Note: selectedCustomerId alone does NOT disable fields, as it's just a filter.
-  // Fields are only disabled if a specific entity (employee or contact) is chosen.
+  // Bestimmt, ob die Felder für Vorname, Nachname, E-Mail deaktiviert sein sollen
+  const areNameEmailFieldsDisabled = isEditMode || !!selectedEmployeeId || !!selectedCustomerContactId;
+  // Bestimmt, ob das Rollenfeld deaktiviert sein soll
+  const isRoleFieldDisabled = isEditMode || !!selectedCustomerContactId; // Deaktiviert, wenn im Bearbeitungsmodus oder wenn Kundenkontakt ausgewählt (muss 'Kunde' sein)
 
   return (
     <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 w-full max-w-md">
@@ -359,7 +353,7 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
           id="firstName"
           {...form.register("firstName")}
           placeholder="Vorname"
-          disabled={areFieldsDisabled}
+          disabled={areNameEmailFieldsDisabled}
         />
         {form.formState.errors.firstName && (
           <p className="text-red-500 text-sm mt-1">{form.formState.errors.firstName.message}</p>
@@ -371,7 +365,7 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
           id="lastName"
           {...form.register("lastName")}
           placeholder="Nachname"
-          disabled={areFieldsDisabled}
+          disabled={areNameEmailFieldsDisabled}
         />
         {form.formState.errors.lastName && (
           <p className="text-red-500 text-sm mt-1">{form.formState.errors.lastName.message}</p>
@@ -384,7 +378,7 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
           type="email"
           {...form.register("email")}
           placeholder="E-Mail-Adresse"
-          disabled={areFieldsDisabled}
+          disabled={areNameEmailFieldsDisabled}
         />
         {form.formState.errors.email && (
           <p className="text-red-500 text-sm mt-1">{form.formState.errors.email.message}</p>
@@ -415,7 +409,7 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
             }
           }}
           value={selectedRole}
-          disabled={areFieldsDisabled} // Disable if employee/customer/contact is selected
+          disabled={isRoleFieldDisabled}
         >
           <SelectTrigger className="w-full">
             <SelectValue placeholder="Rolle auswählen" />
