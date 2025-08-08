@@ -25,10 +25,8 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  console.log("RootLayout: Initializing..."); // NEUER LOG
   const supabase = await createClient();
   const { data: { session } } = await supabase.auth.getSession();
-  console.log("RootLayout: Supabase session fetched.", session ? "Session exists." : "No session."); // NEUER LOG
 
   return (
     <html lang="de">
