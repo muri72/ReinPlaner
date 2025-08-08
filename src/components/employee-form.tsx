@@ -15,7 +15,11 @@ import { DatePicker } from "@/components/date-picker"; // Importiere die neue Da
 export const employeeSchema = z.object({
   firstName: z.string().min(1, "Vorname ist erforderlich").max(100, "Vorname ist zu lang"),
   lastName: z.string().min(1, "Nachname ist erforderlich").max(100, "Nachname ist zu lang"),
-  email: z.string().email("Ungültiges E-Mail-Format").max(100, "E-Mail ist zu lang").optional().nullable(),
+  // KORREKTUR HIER: E-Mail-Schema angepasst, um leere Strings als null zu behandeln
+  email: z.union([
+    z.string().email("Ungültiges E-Mail-Format"),
+    z.literal(""), // Erlaube leeren String
+  ]).transform(e => e === "" ? null : e).optional().nullable(),
   phone: z.string().max(50, "Telefonnummer ist zu lang").optional().nullable(),
   hireDate: z.date().optional().nullable(),
   status: z.enum(["active", "inactive", "on_leave"]).default("active"),
