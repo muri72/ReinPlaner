@@ -74,9 +74,11 @@ export function AdminTimeEntriesOverview() {
   useEffect(() => {
     const fetchTimeEntries = async () => {
       setLoading(true);
+      // Explizit null übergeben, wenn "all" ausgewählt ist, damit die RPC-Funktion alle Einträge zurückgibt
+      const userIdToFilter = selectedUserId === "all" ? null : selectedUserId; 
       const { data, error } = await supabase.rpc('search_time_entries', {
         search_query: currentQuery,
-        filter_user_id: selectedUserId,
+        filter_user_id: userIdToFilter,
       });
 
       if (data) {
