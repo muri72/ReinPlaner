@@ -27,7 +27,7 @@ export const timeEntrySchema = z.object({
     (val) => (val === "" ? null : Number(val)),
     z.nullable(z.number().min(0, "Dauer muss positiv sein").max(99999, "Dauer ist zu hoch")).optional()
   ),
-  type: z.enum(["manual", "clock_in_out", "stopwatch", "automatic_scheduled_order"]).default("manual"), // Typ umbenannt
+  type: z.enum(["manual", "clock_in_out", "stopwatch"]).default("manual"), // 'automatic_scheduled_order' entfernt
   notes: z.string().max(500, "Notizen sind zu lang").optional().nullable(),
 }).refine((data) => {
   // If end date is provided, end time must also be provided
@@ -248,7 +248,6 @@ export function TimeEntryForm({ initialData, onSubmit, submitButtonText, onSucce
             <SelectItem value="manual">Manuell</SelectItem>
             <SelectItem value="clock_in_out">Kommt/Geht</SelectItem>
             <SelectItem value="stopwatch">Stoppuhr</SelectItem>
-            <SelectItem value="automatic_scheduled_order">Automatischer geplanter Auftrag</SelectItem> {/* Neuer Typ */}
           </SelectContent>
         </Select>
         {form.formState.errors.type && (
