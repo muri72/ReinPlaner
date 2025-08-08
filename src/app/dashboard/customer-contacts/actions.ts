@@ -59,7 +59,7 @@ export async function updateCustomerContact(contactId: string, data: CustomerCon
 
   const allowedCustomerIds = customerIds.map(c => c.id);
 
-  const { error } = await supabase
+  const { data: updatedRows, error } = await supabase
     .from('customer_contacts')
     .update({
       first_name: data.firstName,
@@ -69,11 +69,18 @@ export async function updateCustomerContact(contactId: string, data: CustomerCon
       role: data.role,
     })
     .eq('id', contactId)
-    .in('customer_id', allowedCustomerIds); // Korrigiert: Übergabe eines Arrays von IDs
+    .in('customer_id', allowedCustomerIds) // Korrigiert: Übergabe eines Arrays von IDs
+    .select(); // Wichtig: .select() hinzufügen, um die aktualisierten Zeilen zu erhalten
 
   if (error) {
     console.error("Fehler beim Aktualisieren des Kundenkontakts:", error);
     return { success: false, message: error.message };
+  }
+
+  // Überprüfen, ob tatsächlich Zeilen aktualisiert wurden (wichtig für RLS-Fehler, die keinen 'error' zurückgeben)
+  if (!updatedRows || updatedRows.length === 0) {
+    console.warn(`Update-Operation für Kundenkontakt-ID ${contactId} durch Benutzer ${user.id} führte zu keiner Aktualisierung. Dies könnte ein RLS-Problem sein oder der Datensatz existiert nicht/gehört nicht zu den Kunden des Benutzers.`);
+    return { success: false, message: "Kundenkontakt konnte nicht aktualisiert werden. Möglicherweise haben Sie keine Berechtigung oder der Kontakt existiert nicht." };
   }
 
   revalidatePath("/dashboard/customer-contacts");

@@ -42,7 +42,7 @@ export async function updateCustomer(customerId: string, data: CustomerFormValue
     return { success: false, message: "Benutzer nicht authentifiziert." };
   }
 
-  const { error } = await supabase
+  const { data: updatedRows, error } = await supabase
     .from('customers')
     .update({
       name: data.name,
@@ -52,11 +52,18 @@ export async function updateCustomer(customerId: string, data: CustomerFormValue
       customer_type: data.customerType, // Neues Feld
     })
     .eq('id', customerId)
-    .eq('user_id', user.id); // Sicherstellen, dass nur eigene Kunden aktualisiert werden können
+    .eq('user_id', user.id) // Sicherstellen, dass nur eigene Kunden aktualisiert werden können
+    .select(); // Wichtig: .select() hinzufügen, um die aktualisierten Zeilen zu erhalten
 
   if (error) {
     console.error("Fehler beim Aktualisieren des Kunden:", error);
     return { success: false, message: error.message };
+  }
+
+  // Überprüfen, ob tatsächlich Zeilen aktualisiert wurden (wichtig für RLS-Fehler, die keinen 'error' zurückgeben)
+  if (!updatedRows || updatedRows.length === 0) {
+    console.warn(`Update-Operation für Kunden-ID ${customerId} durch Benutzer ${user.id} führte zu keiner Aktualisierung. Dies könnte ein RLS-Problem sein oder der Datensatz existiert nicht/gehört nicht dem Benutzer.`);
+    return { success: false, message: "Kunde konnte nicht aktualisiert werden. Möglicherweise haben Sie keine Berechtigung oder der Kunde existiert nicht." };
   }
 
   revalidatePath("/dashboard/customers");

@@ -12,8 +12,9 @@ import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Checkbox } from "@/components/ui/checkbox"; // For multi-select
 
-export const userSchema = z.object({
-  email: z.string().email("Ungültiges E-Mail-Format").min(1, "E-Mail ist erforderlich"),
+// Define the base schema first to avoid circular dependency
+const baseUserSchema = z.object({
+  email: z.string().email("Ungültiges E-Mail-Format").optional().nullable(), // Make email optional and nullable
   password: z.string().min(6, "Passwort muss mindestens 6 Zeichen lang sein").optional(), // Optional for updates
   firstName: z.string().min(1, "Vorname ist erforderlich").max(100, "Vorname ist zu lang"),
   lastName: z.string().min(1, "Nachname ist erforderlich").max(100, "Nachname ist zu lang"),
@@ -22,26 +23,39 @@ export const userSchema = z.object({
   employeeId: z.string().uuid("Ungültige Mitarbeiter-ID").optional().nullable(),
   customerId: z.string().uuid("Ungültige Kunden-ID").optional().nullable(),
   managerCustomerIds: z.array(z.string().uuid()).optional(), // For manager role
-}).refine(data => {
-  // Logic for NEW user creation only
-  if (data.password !== undefined) { // This means it's a new user creation
-    // EmployeeId and CustomerId are mutually exclusive
+});
+
+// Now define the types based on the base schema
+export type UserFormInput = z.input<typeof baseUserSchema>;
+export type UserFormValues = z.infer<typeof baseUserSchema>;
+
+// Apply refine methods to the base schema
+export const userSchema = baseUserSchema
+.refine((data) => { // 'data' is now correctly inferred as UserFormValues
+  // If it's a new user creation (password is present) AND no employee/customer is linked, then email is required.
+  if (data.password !== undefined && !data.employeeId && !data.customerId) {
+    return data.email && data.email.length > 0; // Email must be present and not empty
+  }
+  return true; // Otherwise, email is optional/nullable
+}, {
+  message: "E-Mail ist erforderlich, wenn kein Mitarbeiter oder Kunde zugewiesen ist.",
+  path: ["email"],
+})
+.refine((data) => { // 'data' is now correctly inferred as UserFormValues
+  // Existing validation for role and assignment combinations
+  if (data.password !== undefined) {
     if (data.employeeId && data.customerId) {
-      return false; // Cannot assign to both employee and customer
+      return false;
     }
-    // If employeeId is selected, role must be 'employee'
     if (data.employeeId && data.role !== 'employee') {
       return false;
     }
-    // If customerId is selected, role must be 'customer'
     if (data.customerId && data.role !== 'customer') {
       return false;
     }
-    // If role is 'manager', managerCustomerIds can be present, but employeeId/customerId must be null
     if (data.role === 'manager' && (data.employeeId || data.customerId)) {
       return false;
     }
-    // If role is not 'manager', managerCustomerIds must be empty
     if (data.role !== 'manager' && data.managerCustomerIds && data.managerCustomerIds.length > 0) {
       return false;
     }
@@ -49,11 +63,9 @@ export const userSchema = z.object({
   return true;
 }, {
   message: "Ungültige Rollen- und Zuweisungskombination.",
-  path: ["role"], // General path for the combined validation
+  path: ["role"],
 });
 
-export type UserFormInput = z.input<typeof userSchema>;
-export type UserFormValues = z.infer<typeof userSchema>;
 
 interface UserFormProps {
   initialData?: Partial<UserFormInput>;
@@ -344,7 +356,7 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
                       if (checked) {
                         form.setValue("managerCustomerIds", [...currentCustomerIds, customer.id], { shouldValidate: true });
                       } else {
-                        form.setValue("managerCustomerIds", currentCustomerIds.filter(id => id !== customer.id), { shouldValidate: true });
+                        form.setValue("managerCustomerIds", currentCustomerIds.filter((id: string) => id !== customer.id), { shouldValidate: true });
                       }
                     }}
                   />

@@ -72,7 +72,7 @@ export async function updateEmployee(employeeId: string, data: EmployeeFormValue
     return { success: false, message: "Benutzer nicht authentifiziert." };
   }
 
-  const { error } = await supabase
+  const { data: updatedRows, error } = await supabase
     .from('employees')
     .update({
       first_name: data.firstName,
@@ -94,11 +94,18 @@ export async function updateEmployee(employeeId: string, data: EmployeeFormValue
       health_insurance_provider: data.healthInsuranceProvider, // Neues Feld
     })
     .eq('id', employeeId)
-    .eq('user_id', user.id);
+    .eq('user_id', user.id)
+    .select(); // Wichtig: .select() hinzufügen, um die aktualisierten Zeilen zu erhalten
 
   if (error) {
     console.error("Fehler beim Aktualisieren des Mitarbeiters:", error);
     return { success: false, message: error.message };
+  }
+
+  // Überprüfen, ob tatsächlich Zeilen aktualisiert wurden (wichtig für RLS-Fehler, die keinen 'error' zurückgeben)
+  if (!updatedRows || updatedRows.length === 0) {
+    console.warn(`Update-Operation für Mitarbeiter-ID ${employeeId} durch Benutzer ${user.id} führte zu keiner Aktualisierung. Dies könnte ein RLS-Problem sein oder der Datensatz existiert nicht/gehört nicht dem Benutzer.`);
+    return { success: false, message: "Mitarbeiter konnte nicht aktualisiert werden. Möglicherweise haben Sie keine Berechtigung oder der Mitarbeiter existiert nicht." };
   }
 
   revalidatePath("/dashboard/employees");
