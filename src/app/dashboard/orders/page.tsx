@@ -62,6 +62,35 @@ export default async function OrdersPage({
   }
 
   const isAdmin = userProfile?.role === 'admin';
+  const isCustomer = userProfile?.role === 'customer';
+
+  let filterUserId: string | null = null;
+  let filterCustomerId: string | null = null;
+
+  if (isAdmin) {
+    // Admins sehen alles, keine Filter
+    filterUserId = null;
+    filterCustomerId = null;
+  } else if (isCustomer) {
+    // Kunden sehen Aufträge basierend auf ihrer customer_id (über customer_contacts)
+    const { data: customerContact, error: contactError } = await supabase
+      .from('customer_contacts')
+      .select('customer_id')
+      .eq('user_id', currentUser.id)
+      .single();
+
+    if (contactError) {
+      console.error("Fehler beim Laden des Kundenkontakts für den aktuellen Benutzer:", contactError);
+      // Wenn kein Kundenkontakt gefunden wird, zeigen wir keine Aufträge an
+      return <div className="p-8">Fehler beim Laden der Aufträge: Kundenkontakt nicht gefunden.</div>;
+    }
+    filterCustomerId = customerContact?.customer_id || null;
+    filterUserId = null; // Nicht nach user_id filtern für Kunden
+  } else {
+    // Mitarbeiter und Manager sehen Aufträge, die sie erstellt haben
+    filterUserId = currentUser.id;
+    filterCustomerId = null;
+  }
 
   const query = typeof searchParams?.query === 'string' ? searchParams.query : '';
 
@@ -72,7 +101,8 @@ export default async function OrdersPage({
     // Verwende die neue RPC-Funktion für die Suche
     const { data, error: rpcError } = await supabase.rpc('search_orders', {
       search_query: query,
-      user_id_param: isAdmin ? null : currentUser.id, // Pass null for admin to search all
+      filter_user_id: filterUserId,
+      filter_customer_id: filterCustomerId,
     });
     orders = data as DisplayOrder[] | null;
     error = rpcError;
@@ -88,10 +118,13 @@ export default async function OrdersPage({
       `)
       .order('created_at', { ascending: false });
 
-    // Apply user_id filter only if not an admin
-    if (!isAdmin) {
-      ordersQuery = ordersQuery.eq('user_id', currentUser.id);
+    // Filter basierend auf der Rolle
+    if (filterUserId) {
+      ordersQuery = ordersQuery.eq('user_id', filterUserId);
+    } else if (filterCustomerId) {
+      ordersQuery = ordersQuery.eq('customer_id', filterCustomerId);
     }
+    // Wenn beides null ist (Admin), kein Filter anwenden
 
     const { data, error: selectError } = await ordersQuery;
 
