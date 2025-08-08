@@ -121,11 +121,10 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
   useEffect(() => {
     const fetchData = async () => {
       setLoadingDropdowns(true);
-      // Fetch unassigned employees for new user creation
+      // Fetch all employees (not just unassigned) for new user creation
       const { data: employeesData, error: employeesError } = await supabase
         .from('employees')
         .select('id, first_name, last_name, user_id, email')
-        .is('user_id', null) // Only unassigned employees
         .order('last_name', { ascending: true });
 
       if (employeesError) {
@@ -134,11 +133,10 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
       }
       setEmployees(employeesData || []);
 
-      // Fetch unassigned customers for new user creation
+      // Fetch all customers (not just unassigned) for new user creation
       const { data: customersData, error: customersError } = await supabase
         .from('customers')
         .select('id, name, user_id, contact_email')
-        .is('user_id', null) // Only unassigned customers
         .order('name', { ascending: true });
 
       if (customersError) {
@@ -172,7 +170,7 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
           .from('customer_contacts')
           .select('id, first_name, last_name, email, customer_id, user_id')
           .eq('customer_id', selectedCustomerId)
-          .is('user_id', null) // Only unassigned contacts
+          // .is('user_id', null) // Removed this filter to show all contacts for the selected customer
           .order('last_name', { ascending: true });
 
         if (contactsError) {
@@ -271,14 +269,10 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
                 <SelectValue placeholder="Mitarbeiter auswählen" />
               </SelectTrigger>
               <SelectContent>
-                {employees.length === 0 && !loadingDropdowns ? (
-                  <p className="p-2 text-muted-foreground">Keine unzugewiesenen Mitarbeiter gefunden.</p>
-                ) : (
-                  <SelectItem value="unassigned">Kein Mitarbeiter zugewiesen</SelectItem>
-                )}
+                <SelectItem value="unassigned">Kein Mitarbeiter zugewiesen</SelectItem>
                 {employees.map(emp => (
                   <SelectItem key={emp.id} value={emp.id}>
-                    {emp.first_name} {emp.last_name} {emp.email ? `(${emp.email})` : ''}
+                    {emp.first_name} {emp.last_name} {emp.email ? `(${emp.email})` : ''} {emp.user_id ? '(zugewiesen)' : ''}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -305,14 +299,10 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
                 <SelectValue placeholder="Kunden auswählen" />
               </SelectTrigger>
               <SelectContent>
-                {customers.length === 0 && !loadingDropdowns ? (
-                  <p className="p-2 text-muted-foreground">Keine unzugewiesenen Kunden gefunden.</p>
-                ) : (
-                  <SelectItem value="unassigned">Kein Kunde zugewiesen</SelectItem>
-                )}
+                <SelectItem value="unassigned">Kein Kunde zugewiesen</SelectItem>
                 {customers.map(cust => (
                   <SelectItem key={cust.id} value={cust.id}>
-                    {cust.name} {cust.contact_email ? `(${cust.contact_email})` : ''}
+                    {cust.name} {cust.contact_email ? `(${cust.contact_email})` : ''} {cust.user_id ? '(zugewiesen)' : ''}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -339,14 +329,10 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
                 <SelectValue placeholder="Kundenkontakt auswählen" />
               </SelectTrigger>
               <SelectContent>
-                {customerContactsForUserAssignment.length === 0 && !loadingDropdowns ? (
-                  <p className="p-2 text-muted-foreground">Keine unzugewiesenen Kontakte für diesen Kunden gefunden.</p>
-                ) : (
-                  <SelectItem value="unassigned">Kein Kundenkontakt zugewiesen</SelectItem>
-                )}
+                <SelectItem value="unassigned">Kein Kundenkontakt zugewiesen</SelectItem>
                 {customerContactsForUserAssignment.map(contact => (
                   <SelectItem key={contact.id} value={contact.id}>
-                    {contact.first_name} {contact.last_name} {contact.email ? `(${contact.email})` : ''}
+                    {contact.first_name} {contact.last_name} {contact.email ? `(${contact.email})` : ''} {contact.user_id ? '(zugewiesen)' : ''}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -355,7 +341,7 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
               <p className="text-red-500 text-sm mt-1">{form.formState.errors.customerContactId.message}</p>
             )}
             {selectedCustomerId && customerContactsForUserAssignment.length === 0 && (
-              <p className="text-muted-foreground text-sm mt-1">Keine unzugewiesenen Kontakte für diesen Kunden gefunden.</p>
+              <p className="text-muted-foreground text-sm mt-1">Keine Kontakte für diesen Kunden gefunden.</p>
             )}
           </div>
         </div>
