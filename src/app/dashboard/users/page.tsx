@@ -79,15 +79,17 @@ export default async function UsersPage({
 
   const users: DisplayUser[] = authUsers.users.map(authUser => {
     const profile = profilesMap.get(authUser.id);
+    const userRole = profile?.role || 'employee'; // Standardrolle, falls nicht im Profil gefunden
     return {
       id: authUser.id,
       email: authUser.email || 'N/A',
       first_name: profile?.first_name || authUser.user_metadata.first_name || null,
       last_name: profile?.last_name || authUser.user_metadata.last_name || null,
-      role: profile?.role || 'employee',
+      role: userRole,
       created_at: authUser.created_at,
       assigned_employee_name: employeesMap.get(authUser.id) || null,
-      assigned_customer_name: customersMap.get(authUser.id) || null,
+      // Zeige zugewiesenen Kunden nur an, wenn die Rolle NICHT 'admin' ist
+      assigned_customer_name: userRole === 'admin' ? null : (customersMap.get(authUser.id) || null),
     };
   }).filter(user => {
     if (!query) return true;
