@@ -19,7 +19,7 @@ const baseUserSchema = z.object({
     z.literal(""), // Erlaube leeren String
   ]).transform(e => e === "" ? null : e).optional().nullable(),
   password: z.string().min(6, "Passwort muss mindestens 6 Zeichen lang sein").optional(), // Optional for updates
-  firstName: z.string().min(1, "Vorname ist erforderlich").max(100, "Vorname ist zu lang"),
+  firstName: z.string().max(100, "Vorname ist zu lang").optional().nullable(), // Vorname optional gemacht
   lastName: z.string().max(100, "Nachname ist zu lang").optional().nullable(), // Nachname optional gemacht
   role: z.enum(["admin", "manager", "employee", "customer"]).default("employee"),
   // These are only for NEW user creation, not for editing existing users
@@ -79,7 +79,7 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
   const resolvedDefaultValues: UserFormValues = {
     email: initialData?.email ?? null, // Set to null if undefined
     password: initialData?.password ?? (isEditMode ? undefined : ""),
-    firstName: initialData?.firstName ?? "",
+    firstName: initialData?.firstName ?? null, // Initialwert für optionalen Vornamen
     lastName: initialData?.lastName ?? null, // Initialwert für optionalen Nachnamen
     role: initialData?.role ?? "employee",
     // These initialData values are only relevant for new user creation, not for editing
@@ -150,7 +150,7 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
     if (!isEditMode) {
       if (selectedEmployeeId) {
         const employee = employees.find(emp => emp.id === selectedEmployeeId);
-        form.setValue("firstName", employee?.first_name || "", { shouldValidate: true });
+        form.setValue("firstName", employee?.first_name || null, { shouldValidate: true }); // Set to null if empty
         form.setValue("lastName", employee?.last_name || null, { shouldValidate: true }); // Set to null if empty
         form.setValue("email", employee?.email || null, { shouldValidate: true }); // Set to null if empty
         form.setValue("role", "employee", { shouldValidate: true });
@@ -158,7 +158,7 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
         form.setValue("managerCustomerIds", [], { shouldValidate: true });
       } else if (selectedCustomerId) {
         const customer = customers.find(cust => cust.id === selectedCustomerId);
-        form.setValue("firstName", customer?.name || "", { shouldValidate: true });
+        form.setValue("firstName", customer?.name || null, { shouldValidate: true }); // Set to null if empty
         form.setValue("lastName", null, { shouldValidate: true }); // Customers typically only have one name field, so lastName is null
         form.setValue("email", customer?.contact_email || null, { shouldValidate: true }); // Set to null if empty
         form.setValue("role", "customer", { shouldValidate: true });
@@ -166,7 +166,7 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
         form.setValue("managerCustomerIds", [], { shouldValidate: true });
       } else {
         // If no employee or customer is selected, clear and enable fields
-        if (!initialData?.firstName) form.setValue("firstName", "", { shouldValidate: true });
+        if (!initialData?.firstName) form.setValue("firstName", null, { shouldValidate: true }); // Set to null if empty
         if (!initialData?.lastName) form.setValue("lastName", null, { shouldValidate: true }); // Set to null if empty
         if (!initialData?.email) form.setValue("email", null, { shouldValidate: true }); // Set to null if empty
         // Reset role to default if not explicitly set by initialData
