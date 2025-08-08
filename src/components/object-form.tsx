@@ -15,24 +15,7 @@ import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useDebouncedCallback } from "use-debounce";
 import { CustomerContactCreateDialog } from "@/components/customer-contact-create-dialog"; // Importiere den neuen Dialog
-
-// Helper to calculate hours between two time strings (HH:MM)
-const calculateHours = (start: string | null, end: string | null): number | null => {
-  if (!start || !end) return null;
-  const [startH, startM] = start.split(':').map(Number);
-  const [endH, endM] = end.split(':').map(Number);
-
-  const startDate = new Date(0, 0, 0, startH, startM);
-  let endDate = new Date(0, 0, 0, endH, endM);
-
-  // If end time is earlier than start time, assume it's the next day
-  if (endDate < startDate) {
-    endDate.setDate(endDate.getDate() + 1);
-  }
-
-  const diffMs = endDate.getTime() - startDate.getTime();
-  return diffMs / (1000 * 60 * 60); // Convert milliseconds to hours
-};
+import { calculateHours } from "@/lib/utils"; // Importiere von utils
 
 // Helper to generate times from hours and timeOfDay
 const generateTimesFromHours = (hours: number, timeOfDay: ObjectFormValues['timeOfDay']): { startTime: string, endTime: string } => {

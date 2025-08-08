@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { DatePicker } from "@/components/date-picker";
+import { calculateHours } from "@/lib/utils"; // Importiere von utils
 
 export const timeEntrySchema = z.object({
   employeeId: z.string().uuid("Ungültige Mitarbeiter-ID").optional().nullable(),
@@ -74,7 +75,7 @@ export function TimeEntryForm({ initialData, onSubmit, submitButtonText, onSucce
   const supabase = createClient();
   const [employees, setEmployees] = useState<{ id: string; first_name: string; last_name: string }[]>([]);
   const [customers, setCustomers] = useState<{ id: string; name: string }[]>([]);
-  const [objects, setObjects] = useState<{ id: string; name: string; customer_id: string }[]>([]);
+  const [objects, setObjects] = useState<{ id: string; name: string; customer_id: string; monday_start_time: string | null; monday_end_time: string | null; tuesday_start_time: string | null; tuesday_end_time: string | null; wednesday_start_time: string | null; wednesday_end_time: string | null; thursday_start_time: string | null; thursday_end_time: string | null; friday_start_time: string | null; friday_end_time: string | null; saturday_start_time: string | null; saturday_end_time: string | null; sunday_start_time: string | null; sunday_end_time: string | null; }[]>([]);
   const [orders, setOrders] = useState<{ id: string; title: string; customer_id: string; object_id: string }[]>([]);
 
   const resolvedDefaultValues: TimeEntryFormValues = {
@@ -86,7 +87,7 @@ export function TimeEntryForm({ initialData, onSubmit, submitButtonText, onSucce
     startTime: initialData?.startTime ?? new Date().toTimeString().slice(0, 5),
     endDate: initialData?.endDate ?? null,
     endTime: initialData?.endTime ?? null,
-    durationMinutes: typeof initialData?.durationMinutes === 'number' ? initialData.durationMinutes : null, // Korrektur hier
+    durationMinutes: typeof initialData?.durationMinutes === 'number' ? initialData.durationMinutes : null,
     type: initialData?.type ?? "manual",
     notes: initialData?.notes ?? null,
   };
@@ -98,6 +99,7 @@ export function TimeEntryForm({ initialData, onSubmit, submitButtonText, onSucce
 
   const selectedCustomerId = form.watch("customerId");
   const selectedObjectId = form.watch("objectId");
+  const selectedStartDate = form.watch("startDate"); // Watch for startDate changes
   const selectedType = form.watch("type");
 
   // Fetch data for dropdowns
@@ -111,7 +113,8 @@ export function TimeEntryForm({ initialData, onSubmit, submitButtonText, onSucce
       if (customersData) setCustomers(customersData);
       if (customersError) console.error("Fehler beim Laden der Kunden:", customersError);
 
-      const { data: objectsData, error: objectsError } = await supabase.from('objects').select('id, name, customer_id').order('name', { ascending: true });
+      // Fetch all object details including time schedules
+      const { data: objectsData, error: objectsError } = await supabase.from('objects').select('id, name, customer_id, monday_start_time, monday_end_time, tuesday_start_time, tuesday_end_time, wednesday_start_time, wednesday_end_time, thursday_start_time, thursday_end_time, friday_start_time, friday_end_time, saturday_start_time, saturday_end_time, sunday_start_time, sunday_end_time').order('name', { ascending: true });
       if (objectsData) setObjects(objectsData);
       if (objectsError) console.error("Fehler beim Laden der Objekte:", objectsError);
 
@@ -140,6 +143,72 @@ export function TimeEntryForm({ initialData, onSubmit, submitButtonText, onSucce
       form.setValue("orderId", null);
     }
   }, [selectedCustomerId, selectedObjectId, filteredObjects, filteredOrders, form]);
+
+  // Intelligent pre-filling based on selected object and date
+  useEffect(() => {
+    if (selectedObjectId && selectedStartDate) {
+      const selectedObject = objects.find(obj => obj.id === selectedObjectId);
+      if (selectedObject) {
+        const dayOfWeek = selectedStartDate.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+        let startTime: string | null = null;
+        let endTime: string | null = null;
+
+        switch (dayOfWeek) {
+          case 0: // Sunday
+            startTime = selectedObject.sunday_start_time;
+            endTime = selectedObject.sunday_end_time;
+            break;
+          case 1: // Monday
+            startTime = selectedObject.monday_start_time;
+            endTime = selectedObject.monday_end_time;
+            break;
+          case 2: // Tuesday
+            startTime = selectedObject.tuesday_start_time;
+            endTime = selectedObject.tuesday_end_time;
+            break;
+          case 3: // Wednesday
+            startTime = selectedObject.wednesday_start_time;
+            endTime = selectedObject.wednesday_end_time;
+            break;
+          case 4: // Thursday
+            startTime = selectedObject.thursday_start_time;
+            endTime = selectedObject.thursday_end_time;
+            break;
+          case 5: // Friday
+            startTime = selectedObject.friday_start_time;
+            endTime = selectedObject.friday_end_time;
+            break;
+          case 6: // Saturday
+            startTime = selectedObject.saturday_start_time;
+            endTime = selectedObject.saturday_end_time;
+            break;
+        }
+
+        if (startTime && endTime) {
+          form.setValue("startTime", startTime);
+          form.setValue("endTime", endTime);
+          form.setValue("endDate", selectedStartDate); // Set end date to start date if times are found
+          const duration = calculateHours(startTime, endTime);
+          if (duration !== null) {
+            form.setValue("durationMinutes", Math.round(duration * 60));
+          }
+        } else {
+          // Clear times if no schedule found for the day
+          form.setValue("startTime", new Date().toTimeString().slice(0, 5)); // Default to current time
+          form.setValue("endTime", null);
+          form.setValue("endDate", null);
+          form.setValue("durationMinutes", null);
+        }
+      }
+    } else if (!initialData) {
+      // Reset to current time if object or date is cleared and not in edit mode
+      form.setValue("startTime", new Date().toTimeString().slice(0, 5));
+      form.setValue("endTime", null);
+      form.setValue("endDate", null);
+      form.setValue("durationMinutes", null);
+    }
+  }, [selectedObjectId, selectedStartDate, objects, form, initialData]);
+
 
   const handleFormSubmit: SubmitHandler<TimeEntryFormValues> = async (data) => {
     const result = await onSubmit(data);
