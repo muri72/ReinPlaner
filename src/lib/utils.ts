@@ -22,3 +22,12 @@ export const calculateHours = (start: string | null, end: string | null): number
   const diffMs = endDate.getTime() - startDate.getTime();
   return diffMs / (1000 * 60 * 60); // Convert milliseconds to hours
 };
+
+// Helper to format duration from minutes to HH:MM
+export const formatDuration = (minutes: number | null) => {
+  if (minutes === null) return "N/A";
+  const totalSeconds = Math.round(minutes * 60);
+  const hours = Math.floor(totalSeconds / 3600);
+  const remainingMinutes = Math.floor((totalSeconds % 3600) / 60);
+  return `${hours}h ${remainingMinutes}m`;
+};

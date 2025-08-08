@@ -9,6 +9,7 @@ import { Clock, UserRound, Building, Briefcase, FileText } from "lucide-react";
 import { getWeek } from 'date-fns';
 import { TimeTrackingCharts } from '@/components/time-tracking-charts';
 import { Badge } from "@/components/ui/badge"; // Importiere Badge
+import { AdminTimeEntriesOverview } from "@/components/admin-time-entries-overview"; // Neue Komponente
 
 // Definieren Sie die Schnittstelle für die Zeiteintrag-Daten, wie sie auf dieser Seite verwendet werden
 interface DisplayTimeEntry {
@@ -30,7 +31,9 @@ interface DisplayTimeEntry {
   order_title: string | null;
 }
 
-export default async function TimeTrackingPage() {
+export default async function TimeTrackingPage({
+  searchParams,
+}: any) {
   const supabase = await createClient();
   const { data: { user: currentUser } } = await supabase.auth.getUser();
 
@@ -52,67 +55,76 @@ export default async function TimeTrackingPage() {
 
   const isAdmin = userProfile?.role === 'admin';
 
-  // Zeiteinträge zur Anzeige abrufen
-  const { data: timeEntriesData, error } = await supabase
-    .from('time_entries')
-    .select(`
-      id,
-      user_id,
-      employee_id,
-      customer_id,
-      object_id,
-      order_id,
-      start_time,
-      end_time,
-      duration_minutes,
-      type,
-      notes,
-      employees ( first_name, last_name ),
-      customers ( name ),
-      objects ( name ),
-      orders ( title )
-    `)
-    .eq('user_id', currentUser.id) // Nur eigene Einträge anzeigen
-    .order('start_time', { ascending: false });
+  // Zeiteinträge zur Anzeige abrufen (nur für Nicht-Admins oder wenn kein Benutzerfilter aktiv ist)
+  let timeEntries: DisplayTimeEntry[] | null = [];
+  let recentTimeEntries: { start_time: string; end_time: string | null; duration_minutes: number | null; }[] | null = [];
+  let error: any;
+  let recentEntriesError: any;
+
+  // Nur Daten für Diagramme und die Liste der eigenen Einträge abrufen, wenn es kein Admin ist
+  // oder wenn der Admin keine spezifische Benutzerfilterung vornimmt (dann zeigt er seine eigenen Daten)
+  if (!isAdmin || !searchParams?.userId) {
+    const { data: entriesData, error: entriesError } = await supabase
+      .from('time_entries')
+      .select(`
+        id,
+        user_id,
+        employee_id,
+        customer_id,
+        object_id,
+        order_id,
+        start_time,
+        end_time,
+        duration_minutes,
+        type,
+        notes,
+        employees ( first_name, last_name ),
+        customers ( name ),
+        objects ( name ),
+        orders ( title )
+      `)
+      .eq('user_id', currentUser.id) // Nur eigene Einträge anzeigen
+      .order('start_time', { ascending: false });
+
+    timeEntries = entriesData?.map(entry => ({
+      id: entry.id,
+      user_id: entry.user_id,
+      employee_id: entry.employee_id,
+      customer_id: entry.customer_id,
+      object_id: entry.object_id,
+      order_id: entry.order_id,
+      start_time: entry.start_time,
+      end_time: entry.end_time,
+      duration_minutes: entry.duration_minutes,
+      type: entry.type,
+      notes: entry.notes,
+      employee_first_name: entry.employees?.[0]?.first_name || null,
+      employee_last_name: entry.employees?.[0]?.last_name || null,
+      customer_name: entry.customers?.[0]?.name || null,
+      object_name: entry.objects?.[0]?.name || null,
+      order_title: entry.orders?.[0]?.title || null,
+    })) || [];
+    error = entriesError;
+
+    // Daten für die Visualisierung abrufen (z.B. letzte 3 Monate)
+    const threeMonthsAgo = new Date();
+    threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+
+    const { data: recentData, error: recentError } = await supabase
+      .from('time_entries')
+      .select('start_time, end_time, duration_minutes')
+      .eq('user_id', currentUser.id)
+      .gte('start_time', threeMonthsAgo.toISOString())
+      .order('start_time', { ascending: true });
+
+    recentTimeEntries = recentData;
+    recentEntriesError = recentError;
+  }
+
 
   if (error) {
     console.error("Fehler beim Laden der Zeiteinträge:", error);
     return <div className="p-8">Fehler beim Laden der Zeiteinträge.</div>;
-  }
-
-  // Daten in das DisplayTimeEntry-Format mappen
-  const timeEntries: DisplayTimeEntry[] = timeEntriesData?.map(entry => ({
-    id: entry.id,
-    user_id: entry.user_id,
-    employee_id: entry.employee_id,
-    customer_id: entry.customer_id,
-    object_id: entry.object_id,
-    order_id: entry.order_id,
-    start_time: entry.start_time,
-    end_time: entry.end_time,
-    duration_minutes: entry.duration_minutes,
-    type: entry.type,
-    notes: entry.notes,
-    employee_first_name: entry.employees?.[0]?.first_name || null,
-    employee_last_name: entry.employees?.[0]?.last_name || null,
-    customer_name: entry.customers?.[0]?.name || null,
-    object_name: entry.objects?.[0]?.name || null,
-    order_title: entry.orders?.[0]?.title || null,
-  })) || [];
-
-  // Daten für die Visualisierung abrufen (z.B. letzte 3 Monate)
-  const threeMonthsAgo = new Date();
-  threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
-
-  const { data: recentTimeEntries, error: recentEntriesError } = await supabase
-    .from('time_entries')
-    .select('start_time, end_time, duration_minutes')
-    .eq('user_id', currentUser.id)
-    .gte('start_time', threeMonthsAgo.toISOString())
-    .order('start_time', { ascending: true });
-
-  if (recentEntriesError) {
-    console.error("Fehler beim Laden der letzten Zeiteinträge für die Visualisierung:", recentEntriesError);
   }
 
   // Daten nach Woche und Monat aggregieren (client-seitig für Einfachheit)
@@ -177,6 +189,7 @@ export default async function TimeTrackingPage() {
 
       {isAdmin ? (
         <>
+          <AdminTimeEntriesOverview /> {/* Neue Admin-Komponente */}
           <h2 className="text-2xl font-bold mt-8">Neuen Zeiteintrag hinzufügen (Admin)</h2>
           <TimeEntryForm onSubmit={createTimeEntry} submitButtonText="Zeiteintrag hinzufügen" />
         </>
@@ -184,82 +197,82 @@ export default async function TimeTrackingPage() {
         <>
           <h2 className="text-2xl font-bold mt-8">Ihre Stempeluhr</h2>
           <EmployeeTimeTracker userId={currentUser.id} />
+
+          <h2 className="text-2xl font-bold mt-8">Ihre Stundenübersicht (letzte 3 Monate)</h2>
+          <TimeTrackingCharts weeklyData={formattedWeeklyData} monthlyData={formattedMonthlyData} />
+
+          <h2 className="text-2xl font-bold mt-8">Ihre Zeiteinträge</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {timeEntries.length === 0 ? (
+              <p className="col-span-full text-center text-muted-foreground">
+                Noch keine Zeiteinträge vorhanden. Fügen Sie einen hinzu!
+              </p>
+            ) : (
+              timeEntries.map((entry) => (
+                <Card key={entry.id}>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-lg font-medium">
+                      Zeiteintrag
+                    </CardTitle>
+                    <div className="flex items-center space-x-2">
+                      <Badge variant={getTypeBadgeVariant(entry.type)}>{entry.type === 'automatic_scheduled_order' ? 'Automatisch' : entry.type}</Badge>
+                      <DeleteTimeEntryButton entryId={entry.id} />
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-2 text-sm text-muted-foreground">
+                    <div className="flex items-center">
+                      <Clock className="mr-2 h-4 w-4 flex-shrink-0" />
+                      <span>Start: {new Date(entry.start_time).toLocaleString()}</span>
+                    </div>
+                    {entry.end_time && (
+                      <div className="flex items-center">
+                        <Clock className="mr-2 h-4 w-4 flex-shrink-0" />
+                        <span>Ende: {new Date(entry.end_time).toLocaleString()}</span>
+                      </div>
+                    )}
+                    {entry.duration_minutes !== null && (
+                      <div className="flex items-center">
+                        <Clock className="mr-2 h-4 w-4 flex-shrink-0" />
+                        <span>Dauer: {formatDuration(entry.duration_minutes)}</span>
+                      </div>
+                    )}
+                    {entry.employee_first_name && entry.employee_last_name && (
+                      <div className="flex items-center">
+                        <UserRound className="mr-2 h-4 w-4 flex-shrink-0" />
+                        <span>Mitarbeiter: {entry.employee_first_name} {entry.employee_last_name}</span>
+                      </div>
+                    )}
+                    {entry.customer_name && (
+                      <div className="flex items-center">
+                        <Building className="mr-2 h-4 w-4 flex-shrink-0" />
+                        <span>Kunde: {entry.customer_name}</span>
+                      </div>
+                    )}
+                    {entry.object_name && (
+                      <div className="flex items-center">
+                        <Building className="mr-2 h-4 w-4 flex-shrink-0" />
+                        <span>Objekt: {entry.object_name}</span>
+                      </div>
+                    )}
+                    {entry.order_title && (
+                      <div className="flex items-center">
+                        <Briefcase className="mr-2 h-4 w-4 flex-shrink-0" />
+                        <span>Auftrag: {entry.order_title}</span>
+                      </div>
+                    )}
+                    {entry.notes && (
+                      <div className="flex items-center">
+                        <FileText className="mr-2 h-4 w-4 flex-shrink-0" />
+                        <span>Notizen: {entry.notes}</span>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </div>
         </>
       )}
-
-      <h2 className="text-2xl font-bold mt-8">Ihre Stundenübersicht (letzte 3 Monate)</h2>
-      <TimeTrackingCharts weeklyData={formattedWeeklyData} monthlyData={formattedMonthlyData} />
-
-      <h2 className="text-2xl font-bold mt-8">Ihre Zeiteinträge</h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {timeEntries.length === 0 ? (
-          <p className="col-span-full text-center text-muted-foreground">
-            Noch keine Zeiteinträge vorhanden. Fügen Sie einen hinzu!
-          </p>
-        ) : (
-          timeEntries.map((entry) => (
-            <Card key={entry.id}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-lg font-medium">
-                  Zeiteintrag
-                </CardTitle>
-                <div className="flex items-center space-x-2">
-                  <Badge variant={getTypeBadgeVariant(entry.type)}>{entry.type === 'automatic_scheduled_order' ? 'Automatisch' : entry.type}</Badge>
-                  <DeleteTimeEntryButton entryId={entry.id} />
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-2 text-sm text-muted-foreground">
-                <div className="flex items-center">
-                  <Clock className="mr-2 h-4 w-4 flex-shrink-0" />
-                  <span>Start: {new Date(entry.start_time).toLocaleString()}</span>
-                </div>
-                {entry.end_time && (
-                  <div className="flex items-center">
-                    <Clock className="mr-2 h-4 w-4 flex-shrink-0" />
-                    <span>Ende: {new Date(entry.end_time).toLocaleString()}</span>
-                  </div>
-                )}
-                {entry.duration_minutes !== null && (
-                  <div className="flex items-center">
-                    <Clock className="mr-2 h-4 w-4 flex-shrink-0" />
-                    <span>Dauer: {formatDuration(entry.duration_minutes)}</span>
-                  </div>
-                )}
-                {entry.employee_first_name && entry.employee_last_name && (
-                  <div className="flex items-center">
-                    <UserRound className="mr-2 h-4 w-4 flex-shrink-0" />
-                    <span>Mitarbeiter: {entry.employee_first_name} {entry.employee_last_name}</span>
-                  </div>
-                )}
-                {entry.customer_name && (
-                  <div className="flex items-center">
-                    <Building className="mr-2 h-4 w-4 flex-shrink-0" />
-                    <span>Kunde: {entry.customer_name}</span>
-                  </div>
-                )}
-                {entry.object_name && (
-                  <div className="flex items-center">
-                    <Building className="mr-2 h-4 w-4 flex-shrink-0" />
-                    <span>Objekt: {entry.object_name}</span>
-                  </div>
-                )}
-                {entry.order_title && (
-                  <div className="flex items-center">
-                    <Briefcase className="mr-2 h-4 w-4 flex-shrink-0" />
-                    <span>Auftrag: {entry.order_title}</span>
-                  </div>
-                )}
-                {entry.notes && (
-                  <div className="flex items-center">
-                    <FileText className="mr-2 h-4 w-4 flex-shrink-0" />
-                    <span>Notizen: {entry.notes}</span>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          ))
-        )}
-      </div>
     </div>
   );
 }
