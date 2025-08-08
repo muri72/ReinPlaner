@@ -57,14 +57,12 @@ export default async function TimeTrackingPage({
   const isAdmin = userProfile?.role === 'admin';
 
   // Zeiteinträge zur Anzeige abrufen
-  let timeEntries: DisplayTimeEntry[] | null = [];
-  let recentTimeEntries: { start_time: string; end_time: string | null; duration_minutes: number | null; }[] | null = [];
-  let error: any;
-  let recentEntriesError: any;
+  let timeEntries: DisplayTimeEntry[] = [];
+  let recentTimeEntries: { start_time: string; end_time: string | null; duration_minutes: number | null; }[] = [];
+  let error: any = null; // Initialisiere error mit null
 
-  // Wenn der Benutzer ein Admin ist und kein spezifischer Benutzerfilter aktiv ist,
-  // oder wenn der Benutzer kein Admin ist, dann die entsprechenden Einträge abrufen.
-  if (!isAdmin || !searchParams?.userId) { // Diese Bedingung bleibt, um die Logik für Nicht-Admins zu steuern
+  // Daten nur abrufen, wenn der Benutzer KEIN Admin ist
+  if (!isAdmin) {
     let queryBuilder = supabase
       .from('time_entries')
       .select(`
@@ -84,14 +82,8 @@ export default async function TimeTrackingPage({
         objects ( name ),
         orders ( title )
       `)
-      .order('start_time', { ascending: false });
-
-    // Wenn es kein Admin ist, oder ein Admin ist, der keine spezifische userId filtert,
-    // dann nur die eigenen Einträge anzeigen.
-    // Die AdminTimeEntriesOverview Komponente handhabt die Anzeige aller Einträge für Admins.
-    if (!isAdmin || (isAdmin && !searchParams?.userId)) {
-      queryBuilder = queryBuilder.eq('user_id', currentUser.id);
-    }
+      .order('start_time', { ascending: false })
+      .eq('user_id', currentUser.id); // Für Nicht-Admins immer nach eigener user_id filtern
 
     const { data: entriesData, error: entriesError } = await queryBuilder;
 
@@ -126,37 +118,39 @@ export default async function TimeTrackingPage({
       .gte('start_time', threeMonthsAgo.toISOString())
       .order('start_time', { ascending: true });
 
-    recentTimeEntries = recentData;
-    recentEntriesError = recentError;
+    recentTimeEntries = recentData || [];
+    // Fehler für recentEntriesError wird hier nicht direkt verwendet, aber gut zu loggen
+    if (recentError) console.error("Fehler beim Laden der letzten Zeiteinträge für Charts:", recentError);
   }
-
 
   if (error) {
     console.error("Fehler beim Laden der Zeiteinträge:", error);
     return <div className="p-8">Fehler beim Laden der Zeiteinträge.</div>;
   }
 
-  // Daten nach Woche und Monat aggregieren (client-seitig für Einfachheit)
+  // Daten nach Woche und Monat aggregieren (nur für Nicht-Admins relevant)
   const weeklyData: { [key: string]: number } = {}; // key: YYYY-WW
   const monthlyData: { [key: string]: number } = {}; // key: YYYY-MM
 
-  recentTimeEntries?.forEach(entry => {
-    if (entry.start_time && entry.duration_minutes !== null) {
-      const startDate = new Date(entry.start_time);
-      const durationHours = entry.duration_minutes / 60;
+  if (!isAdmin) { // Nur aggregieren, wenn nicht Admin
+    recentTimeEntries.forEach(entry => {
+      if (entry.start_time && entry.duration_minutes !== null) {
+        const startDate = new Date(entry.start_time);
+        const durationHours = entry.duration_minutes / 60;
 
-      // Nach Woche aggregieren
-      const year = startDate.getFullYear();
-      const week = getWeek(startDate, { weekStartsOn: 1 }); // Montag als Wochenanfang
-      const weekKey = `${year}-${String(week).padStart(2, '0')}`;
-      weeklyData[weekKey] = (weeklyData[weekKey] || 0) + durationHours;
+        // Nach Woche aggregieren
+        const year = startDate.getFullYear();
+        const week = getWeek(startDate, { weekStartsOn: 1 }); // Montag als Wochenanfang
+        const weekKey = `${year}-${String(week).padStart(2, '0')}`;
+        weeklyData[weekKey] = (weeklyData[weekKey] || 0) + durationHours;
 
-      // Nach Monat aggregieren
-      const month = startDate.getMonth() + 1; // 1-12
-      const monthKey = `${year}-${String(month).padStart(2, '0')}`;
-      monthlyData[monthKey] = (monthlyData[monthKey] || 0) + durationHours;
-    }
-  });
+        // Nach Monat aggregieren
+        const month = startDate.getMonth() + 1; // 1-12
+        const monthKey = `${year}-${String(month).padStart(2, '0')}`;
+        monthlyData[monthKey] = (monthlyData[monthKey] || 0) + durationHours;
+      }
+    });
+  }
 
   const formattedWeeklyData = Object.keys(weeklyData).sort().map(key => ({
     name: `KW ${key.substring(5)}`,
