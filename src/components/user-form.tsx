@@ -271,7 +271,11 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
                 <SelectValue placeholder="Mitarbeiter auswählen" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="unassigned">Kein Mitarbeiter zugewiesen</SelectItem>
+                {employees.length === 0 && !loadingDropdowns ? (
+                  <p className="p-2 text-muted-foreground">Keine unzugewiesenen Mitarbeiter gefunden.</p>
+                ) : (
+                  <SelectItem value="unassigned">Kein Mitarbeiter zugewiesen</SelectItem>
+                )}
                 {employees.map(emp => (
                   <SelectItem key={emp.id} value={emp.id}>
                     {emp.first_name} {emp.last_name} {emp.email ? `(${emp.email})` : ''}
@@ -301,7 +305,11 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
                 <SelectValue placeholder="Kunden auswählen" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="unassigned">Kein Kunde zugewiesen</SelectItem>
+                {customers.length === 0 && !loadingDropdowns ? (
+                  <p className="p-2 text-muted-foreground">Keine unzugewiesenen Kunden gefunden.</p>
+                ) : (
+                  <SelectItem value="unassigned">Kein Kunde zugewiesen</SelectItem>
+                )}
                 {customers.map(cust => (
                   <SelectItem key={cust.id} value={cust.id}>
                     {cust.name} {cust.contact_email ? `(${cust.contact_email})` : ''}
@@ -331,7 +339,11 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
                 <SelectValue placeholder="Kundenkontakt auswählen" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="unassigned">Kein Kundenkontakt zugewiesen</SelectItem>
+                {customerContactsForUserAssignment.length === 0 && !loadingDropdowns ? (
+                  <p className="p-2 text-muted-foreground">Keine unzugewiesenen Kontakte für diesen Kunden gefunden.</p>
+                ) : (
+                  <SelectItem value="unassigned">Kein Kundenkontakt zugewiesen</SelectItem>
+                )}
                 {customerContactsForUserAssignment.map(contact => (
                   <SelectItem key={contact.id} value={contact.id}>
                     {contact.first_name} {contact.last_name} {contact.email ? `(${contact.email})` : ''}
