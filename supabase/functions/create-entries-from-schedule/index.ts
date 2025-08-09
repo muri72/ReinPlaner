@@ -19,7 +19,7 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  console.log("--- Invoking create-entries-from-schedule (v4 - Final) ---");
+  console.log("--- Invoking create-entries-from-schedule (v5 - Final Logic) ---");
 
   try {
     const supabaseAdmin = createClient(
@@ -28,9 +28,10 @@ serve(async (req) => {
     );
     console.log("Supabase admin client created.");
 
+    // 1. Fetch all relevant orders, now including the order's own user_id.
     const { data: orders, error: ordersError } = await supabaseAdmin
       .from('orders')
-      .select('id, customer_id, employee_id, object_id, recurring_start_date, recurring_end_date')
+      .select('id, user_id, customer_id, employee_id, object_id, recurring_start_date, recurring_end_date')
       .not('employee_id', 'is', null)
       .not('object_id', 'is', null)
       .not('recurring_start_date', 'is', null);
@@ -48,6 +49,15 @@ serve(async (req) => {
       try {
         console.log(`\nProcessing Order ID: ${order.id}`);
 
+        // 2. Use the user_id from the order itself. This is the corrected logic.
+        const entryUserId = order.user_id;
+        if (!entryUserId) {
+          console.warn(`  - SKIPPING: Order with ID ${order.id} has no user_id.`);
+          skippedCount++;
+          continue;
+        }
+        console.log(`  - Using Order's User ID for new entry: ${entryUserId}`);
+
         const { data: objectData, error: objectError } = await supabaseAdmin
           .from('objects')
           .select('*')
@@ -60,23 +70,10 @@ serve(async (req) => {
           continue;
         }
 
-        const { data: employee, error: employeeError } = await supabaseAdmin
-          .from('employees')
-          .select('user_id')
-          .eq('id', order.employee_id)
-          .single();
-
-        if (employeeError || !employee || !employee.user_id) {
-          console.warn(`  - SKIPPING: Could not find a linked user for employee ID ${order.employee_id}. Error: ${employeeError?.message}`);
-          skippedCount++;
-          continue;
-        }
-        const employeeUserId = employee.user_id;
-
         const startDate = new Date(order.recurring_start_date);
         const endDate = order.recurring_end_date ? new Date(order.recurring_end_date) : new Date();
         
-        if (startDate > endDate) {
+        if (startDate > new Date()) {
             console.warn(`  - SKIPPING: recurring_start_date (${order.recurring_start_date}) is in the future.`);
             skippedCount++;
             continue;
@@ -119,7 +116,7 @@ serve(async (req) => {
             const endTime = new Date(startTime.getTime() + grossMinutes * 60000);
 
             const newEntry = {
-              user_id: employeeUserId,
+              user_id: entryUserId, // Use the corrected user_id
               employee_id: order.employee_id,
               customer_id: order.customer_id,
               object_id: order.object_id,
