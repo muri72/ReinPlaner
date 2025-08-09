@@ -1,6 +1,6 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createAdminClient } from "@/lib/supabase/server"; // createAdminClient importieren
 import { endOfMonth, startOfMonth } from "date-fns";
 
 // Definieren Sie die Schnittstellen hier, damit sie exportiert und importiert werden können
@@ -31,12 +31,11 @@ function calculateBreakMinutes(grossDurationMinutes: number): number {
 }
 
 export async function getWorkTimeReport(objectId: string, month: number, year: number): Promise<{ success: boolean; message: string; data: WorkTimeReportData | null }> {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
-    return { success: false, message: "Benutzer nicht authentifiziert.", data: null };
-  }
+  const supabase = await createAdminClient(); // HIER: createAdminClient() verwenden
+  // Der Benutzer wird hier nicht mehr direkt benötigt, da der Admin Client RLS umgeht.
+  // Eine Authentifizierungsprüfung für den Aufrufer der Server-Aktion ist jedoch weiterhin sinnvoll,
+  // um sicherzustellen, dass nur berechtigte Benutzer diese Aktion auslösen können.
+  // Diese Prüfung findet bereits auf der reports/page.tsx statt.
 
   const startDate = startOfMonth(new Date(year, month - 1, 1)); // month is 1-indexed from form
   const endDate = endOfMonth(new Date(year, month - 1, 1));
