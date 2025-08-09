@@ -19,7 +19,7 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  console.log("--- Invoking create-entries-from-schedule (v3 - Robust) ---");
+  console.log("--- Invoking create-entries-from-schedule (v4 - Final) ---");
 
   try {
     const supabaseAdmin = createClient(
@@ -28,7 +28,6 @@ serve(async (req) => {
     );
     console.log("Supabase admin client created.");
 
-    // 1. Fetch all relevant orders WITHOUT nesting to avoid join issues.
     const { data: orders, error: ordersError } = await supabaseAdmin
       .from('orders')
       .select('id, customer_id, employee_id, object_id, recurring_start_date, recurring_end_date')
@@ -45,13 +44,10 @@ serve(async (req) => {
     let createdCount = 0;
     let skippedCount = 0;
 
-    // 2. Loop through each order.
     for (const order of orders) {
-      // 3. Wrap each order's processing in a try/catch to prevent one bad order from crashing everything.
       try {
         console.log(`\nProcessing Order ID: ${order.id}`);
 
-        // 4. Fetch the associated object separately and safely.
         const { data: objectData, error: objectError } = await supabaseAdmin
           .from('objects')
           .select('*')
@@ -61,10 +57,9 @@ serve(async (req) => {
         if (objectError || !objectData) {
           console.warn(`  - SKIPPING: Could not fetch object with ID ${order.object_id}. Error: ${objectError?.message}`);
           skippedCount++;
-          continue; // Skip to the next order
+          continue;
         }
 
-        // 5. Fetch the associated employee safely.
         const { data: employee, error: employeeError } = await supabaseAdmin
           .from('employees')
           .select('user_id')
@@ -74,14 +69,19 @@ serve(async (req) => {
         if (employeeError || !employee || !employee.user_id) {
           console.warn(`  - SKIPPING: Could not find a linked user for employee ID ${order.employee_id}. Error: ${employeeError?.message}`);
           skippedCount++;
-          continue; // Skip to the next order
+          continue;
         }
         const employeeUserId = employee.user_id;
 
-        // 6. Process dates and create entries
         const startDate = new Date(order.recurring_start_date);
         const endDate = order.recurring_end_date ? new Date(order.recurring_end_date) : new Date();
         
+        if (startDate > endDate) {
+            console.warn(`  - SKIPPING: recurring_start_date (${order.recurring_start_date}) is in the future.`);
+            skippedCount++;
+            continue;
+        }
+
         for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
           if (d > new Date()) continue;
 
