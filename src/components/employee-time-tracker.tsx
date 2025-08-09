@@ -7,10 +7,12 @@ import { createClient } from "@/lib/supabase/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Clock, Play, StopCircle, PauseCircle, RotateCcw } from "lucide-react";
+import { Clock, Play, StopCircle, PauseCircle, RotateCcw, PlusCircle } from "lucide-react";
 import { createTimeEntry, updateTimeEntry } from "@/app/dashboard/time-tracking/actions";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { calculateHours } from "@/lib/utils"; // Import calculateHours
+import { TimeEntryCreateDialog } from "@/components/time-entry-create-dialog";
+import { TimeEntryFormValues } from "@/components/time-entry-form"; // Hinzugefügter Import
 
 interface EmployeeTimeTrackerProps {
   userId: string;
@@ -143,8 +145,8 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
 
       if (selectedOrderId) {
         const selectedOrder = orders.find(o => o.id === selectedOrderId);
-        // Fetch schedule if an object is linked to the order
-        if (selectedOrder && selectedOrder.object_id) {
+        // Fetch schedule if an object is linked to the order and it's a permanent order
+        if (selectedOrder && selectedOrder.object_id && selectedOrder.order_type === 'permanent') {
           const { data: objectData, error: objectError } = await supabase
             .from('objects')
             .select('monday_start_time, monday_end_time, tuesday_start_time, tuesday_end_time, wednesday_start_time, wednesday_end_time, thursday_start_time, thursday_end_time, friday_start_time, friday_end_time, saturday_start_time, saturday_end_time, sunday_start_time, sunday_end_time')
@@ -190,88 +192,6 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
 
     fetchObjectSchedule();
   }, [selectedOrderId, orders, supabase]);
-
-  const handleClockIn = async () => {
-    if (!employeeId) {
-      toast.error("Keine Mitarbeiter-ID gefunden. Bitte stellen Sie sicher, dass Ihr Benutzer einem Mitarbeiter zugewiesen ist.");
-      return;
-    }
-    if (activeEntry) {
-      toast.error("Es ist bereits ein Zeiteintrag aktiv. Bitte stempeln Sie zuerst aus oder stoppen Sie die Stoppuhr.");
-      return;
-    }
-    setLoading(true);
-
-    const now = new Date();
-    const selectedOrder = orders.find(o => o.id === selectedOrderId);
-
-    let actualStartTime = now.toTimeString().slice(0, 5);
-    let actualEndTime: string | null = null;
-    let actualDurationMinutes: number | null = null;
-    let actualEndDate: Date | null = null;
-    let notes = `Eingestempelt um ${now.toLocaleTimeString()}`;
-    let entryType: 'clock_in_out' | 'stopwatch' | 'automatic_scheduled_order' = 'clock_in_out'; // Standardtyp
-
-    // Check if suggested times are available for the selected order's object
-    if (suggestedStartTime && suggestedEndTime && suggestedDuration !== null) {
-      // If scheduled times exist, automatically log the full scheduled duration
-      actualStartTime = suggestedStartTime;
-      actualEndTime = suggestedEndTime;
-      actualDurationMinutes = suggestedDuration;
-      actualEndDate = now; // End date is today
-      notes = `Automatisch erfasst für geplanten Auftrag: ${actualStartTime} - ${actualEndTime}`;
-      entryType = 'automatic_scheduled_order'; // Neuer Typ
-      toast.info("Geplanter Auftrag: Stunden automatisch erfasst.");
-    } else {
-      // For other order types or no schedule, start a live clock
-      notes = `Eingestempelt um ${now.toLocaleTimeString()}`;
-      entryType = 'clock_in_out';
-    }
-
-    const result = await createTimeEntry({
-      employeeId: employeeId,
-      startDate: now,
-      startTime: actualStartTime,
-      endDate: actualEndDate,
-      endTime: actualEndTime,
-      durationMinutes: actualDurationMinutes,
-      type: entryType, // Verwende den dynamisch bestimmten Typ
-      orderId: selectedOrderId,
-      objectId: selectedOrder?.object_id || null,
-      notes: notes,
-    });
-
-    if (result.success) {
-      if (entryType === 'automatic_scheduled_order') {
-        toast.success("Geplante Stunden erfolgreich erfasst!");
-        setActiveEntry(null); // Entry is immediately completed
-        setSelectedOrderId(null); // Clear selection
-      } else {
-        toast.success("Erfolgreich eingestempelt!");
-        // Aktiven Eintrag neu abrufen, um die UI zu aktualisieren
-        const { data: newActiveEntry, error } = await supabase
-          .from('time_entries')
-          .select(`
-            id,
-            start_time,
-            order_id,
-            object_id,
-            notes,
-            type,
-            orders ( title ),
-            objects ( name )
-          `)
-          .eq('employee_id', employeeId)
-          .is('end_time', null)
-          .single();
-        if (newActiveEntry) setActiveEntry(newActiveEntry as ActiveTimeEntry);
-        if (error && error.code !== 'PGRST116') console.error("Fehler beim Neuladen des aktiven Eintrags:", error);
-      }
-    } else {
-      toast.error(result.message);
-    }
-    setLoading(false);
-  };
 
   const handleClockOut = async () => {
     if (!activeEntry || activeEntry.type !== 'clock_in_out') {
@@ -415,7 +335,42 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
   }
 
   // Check if suggested times are available for the selected order
-  const isScheduledOrder = !!(selectedOrderId && suggestedStartTime && suggestedEndTime && suggestedDuration !== null);
+  const selectedOrder = orders.find(o => o.id === selectedOrderId);
+  const isScheduledOrder = !!(selectedOrder && selectedOrder.order_type === 'permanent' && suggestedStartTime && suggestedEndTime && suggestedDuration !== null);
+
+  const getInitialDataForDialog = (): Partial<TimeEntryFormValues> => {
+    const now = new Date();
+    const baseData: Partial<TimeEntryFormValues> = {
+      employeeId: employeeId,
+      customerId: selectedOrder?.customer_id || null,
+      objectId: selectedOrder?.object_id || null,
+      orderId: selectedOrderId,
+      notes: selectedOrder ? `Zeiteintrag für Auftrag: ${selectedOrder.title}` : '',
+    };
+
+    if (isScheduledOrder) {
+      return {
+        ...baseData,
+        startDate: now,
+        startTime: suggestedStartTime,
+        endDate: now,
+        endTime: suggestedEndTime,
+        durationMinutes: suggestedDuration,
+        type: 'automatic_scheduled_order' as const, // Explizit als Literal-Typ deklarieren
+        notes: `Automatisch erfasster geplanter Auftrag: ${suggestedStartTime} - ${suggestedEndTime}`,
+      };
+    } else {
+      return {
+        ...baseData,
+        startDate: now,
+        startTime: now.toTimeString().slice(0, 5),
+        endDate: null,
+        endTime: null,
+        durationMinutes: null,
+        type: 'clock_in_out' as const, // Explizit als Literal-Typ deklarieren
+      };
+    }
+  };
 
   return (
     <Card className="p-4 space-y-4">
@@ -480,19 +435,45 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
                   <div className="text-sm text-muted-foreground mt-2 p-2 border rounded-md bg-blue-50 dark:bg-blue-950">
                     <p>Vorgeschlagene Zeiten für diesen Auftrag heute:</p>
                     <p className="font-semibold">{suggestedStartTime} - {suggestedEndTime} ({suggestedDuration !== null ? (suggestedDuration / 60).toFixed(2) : 'N/A'} Stunden)</p>
-                    <p className="text-xs mt-1">Beim Einstempeln werden diese Stunden automatisch erfasst.</p>
+                    <p className="text-xs mt-1">Klicken Sie auf "Einstempeln", um diese Stunden zu bestätigen.</p>
                   </div>
                 )}
 
                 {!activeEntry ? (
-                  <Button
-                    onClick={handleClockIn}
-                    disabled={loading}
-                    className="w-full bg-green-600 hover:bg-green-700"
-                  >
-                    <Play className="mr-2 h-4 w-4" />
-                    Einstempeln
-                  </Button>
+                  <TimeEntryCreateDialog
+                    initialData={getInitialDataForDialog()}
+                    triggerButtonText="Einstempeln"
+                    triggerButtonIcon={<Play className="mr-2 h-4 w-4" />}
+                    triggerButtonVariant="default"
+                    triggerButtonClassName="w-full bg-green-600 hover:bg-green-700"
+                    dialogTitle={isScheduledOrder ? "Geplanten Zeiteintrag bestätigen" : "Neuen Zeiteintrag erstellen"}
+                    onEntryCreated={() => {
+                      // Nach erfolgreicher Erstellung den aktiven Eintrag neu laden
+                      // Dies ist wichtig, falls der Benutzer einen manuellen "Clock-in" macht
+                      // und wir den aktiven Eintrag in der UI anzeigen müssen.
+                      // Für automatische Einträge wird activeEntry null bleiben.
+                      supabase
+                        .from('time_entries')
+                        .select(`
+                          id,
+                          start_time,
+                          order_id,
+                          object_id,
+                          notes,
+                          type,
+                          orders ( title ),
+                          objects ( name )
+                        `)
+                        .eq('employee_id', employeeId)
+                        .is('end_time', null)
+                        .single()
+                        .then(({ data: newActiveEntry, error }) => {
+                          if (newActiveEntry) setActiveEntry(newActiveEntry as ActiveTimeEntry);
+                          if (error && error.code !== 'PGRST116') console.error("Fehler beim Neuladen des aktiven Eintrags:", error);
+                        });
+                      setSelectedOrderId(null); // Auswahl zurücksetzen
+                    }}
+                  />
                 ) : (
                   <Button
                     onClick={handleClockOut}
