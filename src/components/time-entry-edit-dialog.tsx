@@ -17,6 +17,7 @@ interface TimeEntryEditDialogProps {
     start_time: string;
     end_time: string | null;
     duration_minutes: number | null;
+    break_minutes: number | null; // Neues Feld
     type: string;
     notes: string | null;
   };
@@ -55,6 +56,7 @@ export function TimeEntryEditDialog({ timeEntry }: TimeEntryEditDialogProps) {
             endDate: timeEntry.end_time ? new Date(timeEntry.end_time) : null,
             endTime: timeEntry.end_time ? new Date(timeEntry.end_time).toTimeString().slice(0, 5) : null,
             durationMinutes: timeEntry.duration_minutes,
+            breakMinutes: timeEntry.break_minutes, // Neues Feld übergeben
             type: timeEntry.type as TimeEntryFormValues["type"],
             notes: timeEntry.notes,
           }}

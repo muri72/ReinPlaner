@@ -23,6 +23,7 @@ interface DisplayTimeEntry {
   start_time: string;
   end_time: string | null;
   duration_minutes: number | null;
+  break_minutes: number | null; // Neues Feld
   type: string;
   notes: string | null;
   employee_first_name: string | null; // Direkte Felder für Namen
@@ -58,7 +59,7 @@ export default async function TimeTrackingPage({
 
   // Zeiteinträge zur Anzeige abrufen
   let timeEntries: DisplayTimeEntry[] = [];
-  let recentTimeEntries: { start_time: string; end_time: string | null; duration_minutes: number | null; }[] = [];
+  let recentTimeEntries: { start_time: string; end_time: string | null; duration_minutes: number | null; break_minutes: number | null; }[] = []; // break_minutes hinzugefügt
   let error: any = null; // Initialisiere error mit null
 
   // Daten für die Hauptliste der Zeiteinträge abrufen
@@ -74,6 +75,7 @@ export default async function TimeTrackingPage({
       start_time,
       end_time,
       duration_minutes,
+      break_minutes,
       type,
       notes,
       employees ( first_name, last_name ),
@@ -100,6 +102,7 @@ export default async function TimeTrackingPage({
     start_time: entry.start_time,
     end_time: entry.end_time,
     duration_minutes: entry.duration_minutes,
+    break_minutes: entry.break_minutes, // Neues Feld mappen
     type: entry.type,
     notes: entry.notes,
     employee_first_name: entry.employees?.[0]?.first_name || null,
@@ -116,7 +119,7 @@ export default async function TimeTrackingPage({
 
   let recentQueryBuilder = supabase
     .from('time_entries')
-    .select('start_time, end_time, duration_minutes')
+    .select('start_time, end_time, duration_minutes, break_minutes') // break_minutes hinzugefügt
     .gte('start_time', threeMonthsAgo.toISOString())
     .order('start_time', { ascending: true });
 
@@ -143,18 +146,20 @@ export default async function TimeTrackingPage({
   recentTimeEntries.forEach(entry => {
     if (entry.start_time && entry.duration_minutes !== null) {
       const startDate = new Date(entry.start_time);
-      const durationHours = entry.duration_minutes / 60;
+      const grossDurationHours = entry.duration_minutes / 60;
+      const breakHours = (entry.break_minutes || 0) / 60; // Pausenminuten in Stunden umwandeln
+      const netDurationHours = grossDurationHours - breakHours; // Netto-Stunden berechnen
 
       // Nach Woche aggregieren
       const year = startDate.getFullYear();
       const week = getWeek(startDate, { weekStartsOn: 1 }); // Montag als Wochenanfang
       const weekKey = `${year}-${String(week).padStart(2, '0')}`;
-      weeklyData[weekKey] = (weeklyData[weekKey] || 0) + durationHours;
+      weeklyData[weekKey] = (weeklyData[weekKey] || 0) + netDurationHours; // Netto-Stunden verwenden
 
       // Nach Monat aggregieren
       const month = startDate.getMonth() + 1; // 1-12
       const monthKey = `${year}-${String(month).padStart(2, '0')}`;
-      monthlyData[monthKey] = (monthlyData[monthKey] || 0) + durationHours;
+      monthlyData[monthKey] = (monthlyData[monthKey] || 0) + netDurationHours; // Netto-Stunden verwenden
     }
   });
 
@@ -243,7 +248,13 @@ export default async function TimeTrackingPage({
                     {entry.duration_minutes !== null && (
                       <div className="flex items-center">
                         <Clock className="mr-2 h-4 w-4 flex-shrink-0" />
-                        <span>Dauer: {formatDuration(entry.duration_minutes)}</span>
+                        <span>Dauer (Brutto): {formatDuration(entry.duration_minutes)}</span>
+                      </div>
+                    )}
+                    {entry.break_minutes !== null && entry.break_minutes > 0 && ( // Neues Feld anzeigen
+                      <div className="flex items-center">
+                        <Clock className="mr-2 h-4 w-4 flex-shrink-0" />
+                        <span>Pause: {formatDuration(entry.break_minutes)}</span>
                       </div>
                     )}
                     {entry.employee_first_name && entry.employee_last_name && (

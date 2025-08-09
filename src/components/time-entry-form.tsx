@@ -27,6 +27,10 @@ export const timeEntrySchema = z.object({
     (val) => (val === "" ? null : Number(val)),
     z.nullable(z.number().min(0, "Dauer muss positiv sein").max(99999, "Dauer ist zu hoch")).optional()
   ),
+  breakMinutes: z.preprocess( // Neues Feld für Pausenminuten
+    (val) => (val === "" ? null : Number(val)),
+    z.nullable(z.number().min(0, "Pausenminuten müssen positiv sein").max(1440, "Pausenminuten sind zu hoch")).optional()
+  ),
   type: z.enum(["manual", "clock_in_out", "stopwatch", "automatic_scheduled_order"]).default("manual"), // Typ umbenannt
   notes: z.string().max(500, "Notizen sind zu lang").optional().nullable(),
 }).refine((data) => {
@@ -88,6 +92,7 @@ export function TimeEntryForm({ initialData, onSubmit, submitButtonText, onSucce
     endDate: initialData?.endDate ?? null,
     endTime: initialData?.endTime ?? null,
     durationMinutes: typeof initialData?.durationMinutes === 'number' ? initialData.durationMinutes : null,
+    breakMinutes: typeof initialData?.breakMinutes === 'number' ? initialData.breakMinutes : null, // Initialwert für Pausenminuten
     type: initialData?.type ?? "manual",
     notes: initialData?.notes ?? null,
   };
@@ -222,6 +227,7 @@ export function TimeEntryForm({ initialData, onSubmit, submitButtonText, onSucce
           endDate: null,
           endTime: null,
           durationMinutes: null,
+          breakMinutes: null, // Pausenminuten zurücksetzen
           employeeId: null,
           customerId: null,
           objectId: null,
@@ -392,6 +398,20 @@ export function TimeEntryForm({ initialData, onSubmit, submitButtonText, onSucce
         />
         {form.formState.errors.durationMinutes && (
           <p className="text-red-500 text-sm mt-1">{form.formState.errors.durationMinutes.message}</p>
+        )}
+      </div>
+
+      <div>
+        <Label htmlFor="breakMinutes">Pausenminuten (optional)</Label> {/* Neues Feld */}
+        <Input
+          id="breakMinutes"
+          type="number"
+          step="1"
+          {...form.register("breakMinutes", { valueAsNumber: true })}
+          placeholder="Z.B. 30 für 30 Minuten"
+        />
+        {form.formState.errors.breakMinutes && (
+          <p className="text-red-500 text-sm mt-1">{form.formState.errors.breakMinutes.message}</p>
         )}
       </div>
 

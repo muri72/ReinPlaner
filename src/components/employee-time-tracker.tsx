@@ -42,6 +42,7 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
   const [suggestedStartTime, setSuggestedStartTime] = useState<string | null>(null);
   const [suggestedEndTime, setSuggestedEndTime] = useState<string | null>(null);
   const [suggestedDuration, setSuggestedDuration] = useState<number | null>(null); // in minutes
+  const [suggestedBreakMinutes, setSuggestedBreakMinutes] = useState<number | null>(null); // Neues Feld für Pausen
 
   // Stopwatch specific states
   const [stopwatchElapsedTime, setStopwatchElapsedTime] = useState(0);
@@ -55,6 +56,16 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
     return [hours, minutes, seconds]
       .map(unit => String(unit).padStart(2, '0'))
       .join(':');
+  };
+
+  // Helper function to calculate break minutes based on gross duration (same as in reports/actions.ts)
+  const calculateBreakMinutesFallback = (grossDurationMinutes: number): number => {
+    if (grossDurationMinutes >= 9 * 60) {
+      return 45;
+    } else if (grossDurationMinutes >= 6 * 60) {
+      return 30;
+    }
+    return 0;
   };
 
   // Fetch initial data and active entry
@@ -142,6 +153,7 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
       setSuggestedStartTime(null);
       setSuggestedEndTime(null);
       setSuggestedDuration(null);
+      setSuggestedBreakMinutes(null); // Pausenminuten zurücksetzen
 
       if (selectedOrderId) {
         const selectedOrder = orders.find(o => o.id === selectedOrderId);
@@ -184,6 +196,8 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
             if (suggestedStart && suggestedEnd) {
               const duration = calculateHours(suggestedStart, suggestedEnd);
               setSuggestedDuration(duration !== null ? Math.round(duration * 60) : null);
+              // Pausenminuten basierend auf der berechneten Dauer vorschlagen
+              setSuggestedBreakMinutes(duration !== null ? calculateBreakMinutesFallback(Math.round(duration * 60)) : null);
             }
           }
         }
@@ -205,11 +219,13 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
     const startDateTime = new Date(activeEntry.start_time);
     const diffMs = now.getTime() - startDateTime.getTime();
     const durationMinutes = diffMs / (1000 * 60);
+    const calculatedBreakMinutes = calculateBreakMinutesFallback(durationMinutes); // Pausen berechnen
 
     const result = await updateTimeEntry(activeEntry.id, {
       endDate: now,
       endTime: endTime,
       durationMinutes: durationMinutes,
+      breakMinutes: calculatedBreakMinutes, // Pausenminuten speichern
       notes: `${activeEntry.notes || ''} Ausgestempelt um ${now.toLocaleTimeString()}`,
     });
 
@@ -245,6 +261,7 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
       endDate: null,
       endTime: null,
       durationMinutes: null,
+      breakMinutes: null, // Pausenminuten sind zu Beginn der Stoppuhr unbekannt
       type: 'stopwatch',
       orderId: selectedOrderId,
       objectId: selectedOrder?.object_id || null,
@@ -287,11 +304,13 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
     const startDateTime = new Date(activeEntry.start_time);
     const diffMs = now.getTime() - startDateTime.getTime();
     const durationMinutes = diffMs / (1000 * 60);
+    const calculatedBreakMinutes = calculateBreakMinutesFallback(durationMinutes); // Pausen berechnen
 
     const result = await updateTimeEntry(activeEntry.id, {
       endDate: now,
       endTime: endTime,
       durationMinutes: durationMinutes,
+      breakMinutes: calculatedBreakMinutes, // Pausenminuten speichern
       notes: `${activeEntry.notes || ''} Stoppuhr gestoppt um ${now.toLocaleTimeString()}`,
     });
 
@@ -356,6 +375,7 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
         endDate: now,
         endTime: suggestedEndTime,
         durationMinutes: suggestedDuration,
+        breakMinutes: suggestedBreakMinutes, // Pausenminuten übergeben
         type: 'automatic_scheduled_order' as const, // Explizit als Literal-Typ deklarieren
         notes: `Automatisch erfasster geplanter Auftrag: ${suggestedStartTime} - ${suggestedEndTime}`,
       };
@@ -367,6 +387,7 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
         endDate: null,
         endTime: null,
         durationMinutes: null,
+        breakMinutes: null, // Keine Pausen für manuelle/Stoppuhr-Starts
         type: 'clock_in_out' as const, // Explizit als Literal-Typ deklarieren
       };
     }
@@ -435,6 +456,9 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
                   <div className="text-sm text-muted-foreground mt-2 p-2 border rounded-md bg-blue-50 dark:bg-blue-950">
                     <p>Vorgeschlagene Zeiten für diesen Auftrag heute:</p>
                     <p className="font-semibold">{suggestedStartTime} - {suggestedEndTime} ({suggestedDuration !== null ? (suggestedDuration / 60).toFixed(2) : 'N/A'} Stunden)</p>
+                    {suggestedBreakMinutes !== null && suggestedBreakMinutes > 0 && (
+                      <p className="text-xs mt-1">Inkl. {suggestedBreakMinutes} Minuten Pause.</p>
+                    )}
                     <p className="text-xs mt-1">Klicken Sie auf "Einstempeln", um diese Stunden zu bestätigen.</p>
                   </div>
                 )}

@@ -22,6 +22,7 @@ export async function createTimeEntry(data: TimeEntryFormValues): Promise<{ succ
     endDate,
     endTime,
     durationMinutes,
+    breakMinutes, // Neues Feld
     type,
     notes,
   } = data;
@@ -56,6 +57,7 @@ export async function createTimeEntry(data: TimeEntryFormValues): Promise<{ succ
       start_time: startDateTime.toISOString(),
       end_time: endDateTime ? endDateTime.toISOString() : null,
       duration_minutes: finalDurationMinutes,
+      break_minutes: breakMinutes, // Neues Feld speichern
       type,
       notes,
     })
@@ -89,6 +91,7 @@ export async function updateTimeEntry(entryId: string, data: Partial<TimeEntryFo
     endDate,
     endTime,
     durationMinutes,
+    breakMinutes, // Neues Feld
     type,
     notes,
   } = data;
@@ -127,6 +130,7 @@ export async function updateTimeEntry(entryId: string, data: Partial<TimeEntryFo
       start_time: startDateTime ? startDateTime.toISOString() : undefined,
       end_time: endDateTime ? endDateTime.toISOString() : null,
       duration_minutes: finalDurationMinutes,
+      break_minutes: breakMinutes, // Neues Feld aktualisieren
       type,
       notes,
       updated_at: new Date().toISOString(),
