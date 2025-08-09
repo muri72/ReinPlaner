@@ -11,6 +11,7 @@ import { TimeTrackingCharts } from '@/components/time-tracking-charts';
 import { Badge } from "@/components/ui/badge";
 import { AdminTimeEntriesOverview } from "@/components/admin-time-entries-overview";
 import { TimeEntryEditDialog } from "@/components/time-entry-edit-dialog";
+import { TriggerAutoTimeEntryButton } from "@/components/trigger-auto-time-entry-button"; // Importieren
 
 // Definieren Sie die Schnittstelle für die Zeiteintrag-Daten, wie sie auf dieser Seite verwendet werden
 interface DisplayTimeEntry {
@@ -203,6 +204,17 @@ export default async function TimeTrackingPage({
 
       {isAdmin ? (
         <>
+          <Card>
+            <CardHeader>
+              <CardTitle>Automatische Zeiterfassung</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground mb-4">
+                Lösen Sie die automatische Erstellung von Zeiteinträgen für alle geplanten Aufträge aus. Dies füllt fehlende Einträge für vergangene Tage auf.
+              </p>
+              <TriggerAutoTimeEntryButton />
+            </CardContent>
+          </Card>
           <AdminTimeEntriesOverview currentUserId={currentUser.id} isAdmin={isAdmin} />
           <h2 className="text-2xl font-bold mt-8">Neuen Zeiteintrag hinzufügen (Admin)</h2>
           <TimeEntryForm onSubmit={createTimeEntry} currentUserId={currentUser.id} isAdmin={isAdmin} submitButtonText="Zeiteintrag hinzufügen" />
