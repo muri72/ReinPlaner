@@ -4,42 +4,21 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Bot } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { triggerAutomaticTimeEntryCreation } from "@/app/dashboard/time-tracking/actions";
 
 export function TriggerAutoTimeEntryButton() {
   const [loading, setLoading] = useState(false);
-  const supabase = createClient();
 
   const handleTrigger = async () => {
     setLoading(true);
     toast.info("Starte die automatische Erstellung von Zeiteinträgen...");
 
-    try {
-      const { data, error } = await supabase.functions.invoke('create-entries-from-schedule', {
-        method: 'POST',
-      });
+    const result = await triggerAutomaticTimeEntryCreation();
 
-      if (error) {
-        throw error;
-      }
-
-      if (data.success) {
-        toast.success(data.message);
-      } else {
-        toast.error(data.message || "Ein unbekannter Fehler in der Edge Function ist aufgetreten.");
-      }
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Ein unbekannter Fehler ist aufgetreten.";
-      toast.error(`Fehler beim Aufrufen der Funktion: ${errorMessage}`);
+    if (result.success) {
+      toast.success(result.message);
+    } else {
+      toast.error(result.message);
     }
 
     setLoading(false);
