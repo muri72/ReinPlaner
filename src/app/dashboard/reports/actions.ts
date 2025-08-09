@@ -72,7 +72,7 @@ export async function getWorkTimeReport(objectId: string, month: number, year: n
       date: new Date(entry.start_time).toLocaleDateString('de-DE'),
       startTime: new Date(entry.start_time).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }),
       endTime: entry.end_time ? new Date(entry.end_time).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) : 'N/A',
-      employeeName: `${entry.employees?.first_name || ''} ${entry.employees?.last_name || ''}`.trim() || 'Unbekannt', // Korrigierter Zugriff
+      employeeName: `${entry.employees?.[0]?.first_name || ''} ${entry.employees?.[0]?.last_name || ''}`.trim() || 'Unbekannt', // Korrigierter Zugriff
       duration: grossDurationMinutes, // Store gross duration
       breakMinutes: breakMins,
       // notes: entry.notes || '', // Entfernt
