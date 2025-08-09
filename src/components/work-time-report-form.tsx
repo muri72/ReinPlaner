@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react"; // Korrigierter Import
+import { useState, useEffect, useRef } from "react";
 import { useForm, SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -192,9 +192,9 @@ export function WorkTimeReportForm({}: WorkTimeReportFormProps) {
                       <TableHead>Mitarbeiter</TableHead>
                       <TableHead>Start</TableHead>
                       <TableHead>Ende</TableHead>
-                      <TableHead>Dauer (Brutto)</TableHead> {/* Geändert zu Brutto */}
-                      <TableHead>Pause</TableHead> {/* Neue Spalte */}
-                      {/* <TableHead>Notizen</TableHead> */} {/* Entfernt */}
+                      <TableHead>Dauer</TableHead> {/* 'Brutto' entfernt */}
+                      <TableHead>Pause</TableHead>
+                      {/* <TableHead>Notizen</TableHead> */}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -204,15 +204,15 @@ export function WorkTimeReportForm({}: WorkTimeReportFormProps) {
                         <TableCell>{entry.employeeName}</TableCell>
                         <TableCell>{entry.startTime}</TableCell>
                         <TableCell>{entry.endTime}</TableCell>
-                        <TableCell>{formatDuration(entry.duration)}</TableCell> {/* Brutto-Dauer */}
-                        <TableCell>{formatDuration(entry.breakMinutes)}</TableCell> {/* Pausen-Dauer */}
-                        {/* <TableCell className="max-w-[200px] truncate">{entry.notes}</TableCell> */} {/* Entfernt */}
+                        <TableCell>{formatDuration(entry.duration)}</TableCell>
+                        <TableCell>{formatDuration(entry.breakMinutes)}</TableCell>
+                        {/* <TableCell className="max-w-[200px] truncate">{entry.notes}</TableCell> */}
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
                 <div className="text-right font-bold text-lg mt-4">
-                  Gesamtstunden (Netto): {reportData.totalHours}
+                  Gesamtstunden: {reportData.totalHours} {/* 'Netto' entfernt */}
                 </div>
               </div>
               <Button onClick={handleExportPdf} disabled={loadingReport} className="mt-4">
