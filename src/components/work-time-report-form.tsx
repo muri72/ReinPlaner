@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react"; // useRef für den PDF-Export
+import { useState, useEffect, useRef } from "react"; // Korrigierter Import
 import { useForm, SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -12,9 +12,9 @@ import { createClient } from "@/lib/supabase/client";
 import { getWorkTimeReport, ReportEntry, WorkTimeReportData } from "@/app/dashboard/reports/actions";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatDuration } from "@/lib/utils";
-import jsPDF from 'jspdf'; // Import jspdf
-import html2canvas from 'html2canvas'; // Import html2canvas
-import { Download } from "lucide-react"; // Icon für den Download
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
+import { Download } from "lucide-react";
 
 const reportSchema = z.object({
   objectId: z.string().uuid("Bitte wählen Sie ein gültiges Objekt aus."),
@@ -33,7 +33,7 @@ export function WorkTimeReportForm({}: WorkTimeReportFormProps) {
   const [objects, setObjects] = useState<{ id: string; name: string }[]>([]);
   const [reportData, setReportData] = useState<WorkTimeReportData | null>(null);
   const [loadingReport, setLoadingReport] = useState(false);
-  const reportTableRef = useRef<HTMLDivElement>(null); // Ref für den zu exportierenden Bereich
+  const reportTableRef = useRef<HTMLDivElement>(null);
 
   const form = useForm<ReportFormValues>({
     resolver: zodResolver(reportSchema),
@@ -192,8 +192,9 @@ export function WorkTimeReportForm({}: WorkTimeReportFormProps) {
                       <TableHead>Mitarbeiter</TableHead>
                       <TableHead>Start</TableHead>
                       <TableHead>Ende</TableHead>
-                      <TableHead>Dauer</TableHead>
-                      <TableHead>Notizen</TableHead>
+                      <TableHead>Dauer (Brutto)</TableHead> {/* Geändert zu Brutto */}
+                      <TableHead>Pause</TableHead> {/* Neue Spalte */}
+                      {/* <TableHead>Notizen</TableHead> */} {/* Entfernt */}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -203,14 +204,15 @@ export function WorkTimeReportForm({}: WorkTimeReportFormProps) {
                         <TableCell>{entry.employeeName}</TableCell>
                         <TableCell>{entry.startTime}</TableCell>
                         <TableCell>{entry.endTime}</TableCell>
-                        <TableCell>{formatDuration(entry.duration)}</TableCell>
-                        <TableCell className="max-w-[200px] truncate">{entry.notes}</TableCell>
+                        <TableCell>{formatDuration(entry.duration)}</TableCell> {/* Brutto-Dauer */}
+                        <TableCell>{formatDuration(entry.breakMinutes)}</TableCell> {/* Pausen-Dauer */}
+                        {/* <TableCell className="max-w-[200px] truncate">{entry.notes}</TableCell> */} {/* Entfernt */}
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
                 <div className="text-right font-bold text-lg mt-4">
-                  Gesamtstunden: {reportData.totalHours}
+                  Gesamtstunden (Netto): {reportData.totalHours}
                 </div>
               </div>
               <Button onClick={handleExportPdf} disabled={loadingReport} className="mt-4">

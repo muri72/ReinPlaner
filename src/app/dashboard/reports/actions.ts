@@ -10,13 +10,24 @@ export interface ReportEntry {
   startTime: string;
   endTime: string;
   employeeName: string;
-  duration: number; // in minutes
-  notes: string;
+  duration: number; // in minutes (gross duration)
+  breakMinutes: number; // calculated break minutes
+  // notes: string; // Entfernt
 }
 
 export interface WorkTimeReportData {
   entries: ReportEntry[];
-  totalHours: number;
+  totalHours: number; // net hours (gross - breaks)
+}
+
+// Helper function to calculate break minutes based on gross duration
+function calculateBreakMinutes(grossDurationMinutes: number): number {
+  if (grossDurationMinutes >= 9 * 60) { // More than 9 hours (540 minutes)
+    return 45;
+  } else if (grossDurationMinutes >= 6 * 60) { // More than 6 hours (360 minutes)
+    return 30;
+  }
+  return 0;
 }
 
 export async function getWorkTimeReport(objectId: string, month: number, year: number): Promise<{ success: boolean; message: string; data: WorkTimeReportData | null }> {
@@ -51,22 +62,29 @@ export async function getWorkTimeReport(objectId: string, month: number, year: n
     return { success: false, message: error.message, data: null };
   }
 
-  // Calculate total duration
-  const totalMinutes = timeEntries.reduce((sum, entry) => sum + (entry.duration_minutes || 0), 0);
-  const totalHours = totalMinutes / 60;
+  let totalNetMinutes = 0;
 
-  const reportData: WorkTimeReportData = {
-    entries: timeEntries.map(entry => ({
+  const reportEntries: ReportEntry[] = timeEntries.map(entry => {
+    const grossDurationMinutes = entry.duration_minutes || 0;
+    const breakMins = calculateBreakMinutes(grossDurationMinutes);
+    const netDurationMinutes = grossDurationMinutes - breakMins;
+    totalNetMinutes += netDurationMinutes;
+
+    return {
       id: entry.id,
       date: new Date(entry.start_time).toLocaleDateString('de-DE'),
       startTime: new Date(entry.start_time).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }),
       endTime: entry.end_time ? new Date(entry.end_time).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) : 'N/A',
-      // Korrektur: Zugriff auf das erste Element des employees-Arrays
       employeeName: `${entry.employees?.[0]?.first_name || ''} ${entry.employees?.[0]?.last_name || ''}`.trim() || 'Unbekannt',
-      duration: entry.duration_minutes || 0, // in minutes
-      notes: entry.notes || '',
-    })),
-    totalHours: parseFloat(totalHours.toFixed(2)),
+      duration: grossDurationMinutes, // Store gross duration
+      breakMinutes: breakMins,
+      // notes: entry.notes || '', // Entfernt
+    };
+  });
+
+  const reportData: WorkTimeReportData = {
+    entries: reportEntries,
+    totalHours: parseFloat((totalNetMinutes / 60).toFixed(2)),
   };
 
   return {
