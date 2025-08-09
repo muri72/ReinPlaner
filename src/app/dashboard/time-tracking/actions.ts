@@ -171,3 +171,33 @@ export async function deleteTimeEntry(formData: FormData): Promise<{ success: bo
   revalidatePath("/dashboard/time-tracking");
   return { success: true, message: "Zeiteintrag erfolgreich gelöscht!" };
 }
+
+export async function triggerAutomaticTimeEntryCreation(): Promise<{ success: boolean; message: string; createdCount?: number }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { success: false, message: "Benutzer nicht authentifiziert." };
+  }
+
+  // Check if user is admin
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single();
+
+  if (profileError || profile?.role !== 'admin') {
+    return { success: false, message: "Nur Admins können diese Aktion ausführen." };
+  }
+
+  const { data: createdCount, error: rpcError } = await supabase.rpc('create_missing_scheduled_time_entries');
+
+  if (rpcError) {
+    console.error("Fehler beim Ausführen der DB-Funktion:", rpcError);
+    return { success: false, message: `Fehler bei der Erstellung: ${rpcError.message}` };
+  }
+
+  revalidatePath("/dashboard/time-tracking");
+  return { success: true, message: `Überprüfung abgeschlossen. ${createdCount} neue Zeiteinträge erstellt.`, createdCount: createdCount ?? 0 };
+}
