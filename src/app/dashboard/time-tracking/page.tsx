@@ -93,25 +93,31 @@ export default async function TimeTrackingPage({
 
   const { data: entriesData, error: entriesError } = await queryBuilder;
 
-  timeEntries = entriesData?.map(entry => ({
-    id: entry.id,
-    user_id: entry.user_id,
-    employee_id: entry.employee_id,
-    customer_id: entry.customer_id,
-    object_id: entry.object_id,
-    order_id: entry.order_id,
-    start_time: entry.start_time,
-    end_time: entry.end_time,
-    duration_minutes: entry.duration_minutes,
-    break_minutes: entry.break_minutes, // Neues Feld mappen
-    type: entry.type,
-    notes: entry.notes,
-    employee_first_name: entry.employees?.[0]?.first_name || null,
-    employee_last_name: entry.employees?.[0]?.last_name || null,
-    customer_name: entry.customers?.[0]?.name || null,
-    object_name: entry.objects?.[0]?.name || null,
-    order_title: entry.orders?.[0]?.title || null,
-  })) || [];
+  timeEntries = entriesData?.map(entry => {
+    const employee = Array.isArray(entry.employees) ? entry.employees[0] : entry.employees;
+    const customer = Array.isArray(entry.customers) ? entry.customers[0] : entry.customers;
+    const object = Array.isArray(entry.objects) ? entry.objects[0] : entry.objects;
+    const order = Array.isArray(entry.orders) ? entry.orders[0] : entry.orders;
+    return {
+      id: entry.id,
+      user_id: entry.user_id,
+      employee_id: entry.employee_id,
+      customer_id: entry.customer_id,
+      object_id: entry.object_id,
+      order_id: entry.order_id,
+      start_time: entry.start_time,
+      end_time: entry.end_time,
+      duration_minutes: entry.duration_minutes,
+      break_minutes: entry.break_minutes, // Neues Feld mappen
+      type: entry.type,
+      notes: entry.notes,
+      employee_first_name: employee?.first_name || null,
+      employee_last_name: employee?.last_name || null,
+      customer_name: customer?.name || null,
+      object_name: object?.name || null,
+      order_title: order?.title || null,
+    }
+  }) || [];
   error = entriesError;
 
   // Daten für die Visualisierung (Charts) abrufen
