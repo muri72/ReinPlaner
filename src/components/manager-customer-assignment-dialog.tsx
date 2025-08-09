@@ -21,7 +21,7 @@ export function ManagerCustomerAssignmentDialog({ managerId, managerName }: Mana
           <LinkIcon className="h-4 w-4" />
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Kunden für {managerName} zuweisen</DialogTitle>
         </DialogHeader>

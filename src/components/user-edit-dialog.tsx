@@ -35,7 +35,7 @@ export function UserEditDialog({ user }: UserEditDialogProps) {
           <Pencil className="h-4 w-4" />
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Benutzer bearbeiten</DialogTitle>
         </DialogHeader>
