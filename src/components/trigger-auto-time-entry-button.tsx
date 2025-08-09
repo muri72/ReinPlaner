@@ -12,14 +12,29 @@ export function TriggerAutoTimeEntryButton() {
 
   const handleTrigger = async () => {
     setLoading(true);
-    toast.info("Starte die automatische Erstellung von Zeiteinträgen. Dies kann einen Moment dauern...");
+    toast.info("Starte die automatische Erstellung von Zeiteinträgen...");
 
     const { data, error } = await supabase.functions.invoke('create-scheduled-time-entries');
 
     if (error) {
-      toast.error(`Fehler: ${error.message}`);
+      toast.error(`Fehler beim Aufrufen der Funktion: ${error.message}`);
     } else {
-      toast.success(data.message || "Funktion erfolgreich ausgeführt.");
+      if (data.success) {
+        toast.success(data.message);
+        if (data.createdCount === 0) {
+            toast.info("Keine neuen Einträge erstellt. Details in der Browser-Konsole (F12).", {
+                description: "Mögliche Gründe: Einträge existieren bereits oder es gibt keine passenden Aufträge.",
+            });
+        }
+        console.log("--- Server-Protokoll der automatischen Zeiterstellung ---");
+        console.log(data.logs.join('\n'));
+        console.log("---------------------------------------------------------");
+      } else {
+        toast.error(data.message || "Ein unbekannter Fehler in der Funktion ist aufgetreten.");
+        console.error("--- Fehler-Protokoll der automatischen Zeiterstellung ---");
+        console.error(data.logs.join('\n'));
+        console.error("-----------------------------------------------------------");
+      }
     }
 
     setLoading(false);

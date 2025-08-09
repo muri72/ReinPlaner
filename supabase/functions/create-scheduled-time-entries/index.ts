@@ -31,13 +31,14 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const logs = [];
   try {
+    logs.push("Function execution started.");
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     );
 
-    // 1. Fetch all active permanent and recurring orders with their objects
     const today = new Date().toISOString().split('T')[0];
     const { data: orders, error: ordersError } = await supabaseAdmin
       .from('orders')
@@ -57,62 +58,66 @@ serve(async (req) => {
       .lte('recurring_start_date', today);
 
     if (ordersError) throw ordersError;
+    logs.push(`Found ${orders.length} active, assigned, permanent/recurring orders.`);
 
     let createdCount = 0;
-    let checkedCount = 0;
-    const createdEntries = [];
 
-    // 2. Loop through each order
     for (const order of orders) {
-      if (!order.objects) continue; // Skip if object data is missing
+      logs.push(`\nProcessing Order ID: ${order.id}`);
+      if (!order.objects) {
+        logs.push(`  - SKIPPING: No associated object data found for this order.`);
+        continue;
+      }
+      logs.push(`  - Associated Object: ${order.objects.name} (ID: ${order.objects.id})`);
+      logs.push(`  - Assigned Employee ID: ${order.employee_id}`);
 
       const startDate = new Date(order.recurring_start_date);
       const endDate = order.recurring_end_date ? new Date(order.recurring_end_date) : new Date();
       
-      // 3. Loop through each day from the order's start date to today/end date
       for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-        if (d > new Date()) continue; // Don't create entries for the future
+        if (d > new Date()) continue;
 
-        const dayOfWeek = d.getDay(); // 0=Sun, 1=Mon, ...
+        const dayOfWeek = d.getDay();
         const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
         const dayName = dayNames[dayOfWeek];
 
         const objectStartTime = order.objects[`${dayName}_start_time`];
         const objectEndTime = order.objects[`${dayName}_end_time`];
 
-        // 4. Check if work is scheduled for this day
         if (objectStartTime && objectEndTime) {
-          checkedCount++;
-          const entryDate = new Date(d);
-          entryDate.setHours(0, 0, 0, 0);
+          const entryDateStr = d.toISOString().split('T')[0];
+          logs.push(`  - Checking date: ${entryDateStr}. Found schedule: ${objectStartTime}-${objectEndTime}`);
+          
+          const entryDateStart = new Date(d);
+          entryDateStart.setUTCHours(0, 0, 0, 0);
+          const entryDateEnd = new Date(entryDateStart.getTime() + 24 * 60 * 60 * 1000);
 
-          // 5. Check if an entry already exists for this employee, object, and day
           const { count: existingCount, error: checkError } = await supabaseAdmin
             .from('time_entries')
             .select('id', { count: 'exact', head: true })
             .eq('employee_id', order.employee_id)
             .eq('object_id', order.object_id)
-            .gte('start_time', entryDate.toISOString())
-            .lt('start_time', new Date(entryDate.getTime() + 24 * 60 * 60 * 1000).toISOString());
+            .gte('start_time', entryDateStart.toISOString())
+            .lt('start_time', entryDateEnd.toISOString());
 
           if (checkError) {
-            console.error(`Error checking existing entry: ${checkError.message}`);
+            logs.push(`    - ERROR checking for existing entry: ${checkError.message}`);
             continue;
           }
 
           if (existingCount === 0) {
-            // 6. Calculate durations and times
+            logs.push(`    - No existing entry found. Creating new one.`);
+            
             const netDurationMinutes = timeToMinutes(objectEndTime) - timeToMinutes(objectStartTime);
             const breakMinutes = calculateBreakMinutes(netDurationMinutes);
             const grossDurationMinutes = netDurationMinutes + breakMinutes;
 
-            const finalStartTime = new Date(entryDate);
+            const finalStartTime = new Date(entryDateStart);
             const [startH, startM] = objectStartTime.split(':').map(Number);
-            finalStartTime.setHours(startH, startM);
+            finalStartTime.setUTCHours(startH, startM);
 
             const finalEndTime = new Date(finalStartTime.getTime() + grossDurationMinutes * 60 * 1000);
 
-            // 7. Create the new time entry
             const newEntry = {
               user_id: order.user_id,
               employee_id: order.employee_id,
@@ -130,30 +135,35 @@ serve(async (req) => {
             const { error: insertError } = await supabaseAdmin.from('time_entries').insert(newEntry);
 
             if (insertError) {
-              console.error(`Error inserting time entry: ${insertError.message}`);
+              logs.push(`    - FAILED to insert entry: ${insertError.message}`);
             } else {
+              logs.push(`    - SUCCESS: Created new time entry.`);
               createdCount++;
-              createdEntries.push(newEntry);
             }
+          } else {
+            logs.push(`    - SKIPPING: An entry already exists for this day.`);
           }
         }
       }
     }
 
+    logs.push(`\nFunction finished. Created ${createdCount} new entries.`);
+    console.log(logs.join('\n'));
+
     return new Response(
       JSON.stringify({
         success: true,
         message: `Überprüfung abgeschlossen. ${createdCount} neue Zeiteinträge erstellt.`,
-        checkedCount,
-        createdCount,
-        // createdEntries, // Optional: for debugging
+        logs: logs,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
 
   } catch (error) {
     const message = error instanceof Error ? error.message : "An unknown error occurred";
-    return new Response(JSON.stringify({ success: false, message }), {
+    logs.push(`FATAL ERROR: ${message}`);
+    console.error(logs.join('\n'));
+    return new Response(JSON.stringify({ success: false, message, logs }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 500,
     });
