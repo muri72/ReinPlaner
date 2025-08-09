@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react"; // useRef für den PDF-Export
 import { useForm, SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -9,9 +9,12 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
-import { getWorkTimeReport, ReportEntry, WorkTimeReportData } from "@/app/dashboard/reports/actions"; // Korrigierter Import
+import { getWorkTimeReport, ReportEntry, WorkTimeReportData } from "@/app/dashboard/reports/actions";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { formatDuration } from "@/lib/utils"; // Assuming this utility exists
+import { formatDuration } from "@/lib/utils";
+import jsPDF from 'jspdf'; // Import jspdf
+import html2canvas from 'html2canvas'; // Import html2canvas
+import { Download } from "lucide-react"; // Icon für den Download
 
 const reportSchema = z.object({
   objectId: z.string().uuid("Bitte wählen Sie ein gültiges Objekt aus."),
@@ -28,8 +31,9 @@ interface WorkTimeReportFormProps {
 export function WorkTimeReportForm({}: WorkTimeReportFormProps) {
   const supabase = createClient();
   const [objects, setObjects] = useState<{ id: string; name: string }[]>([]);
-  const [reportData, setReportData] = useState<WorkTimeReportData | null>(null); // Typ aktualisiert
+  const [reportData, setReportData] = useState<WorkTimeReportData | null>(null);
   const [loadingReport, setLoadingReport] = useState(false);
+  const reportTableRef = useRef<HTMLDivElement>(null); // Ref für den zu exportierenden Bereich
 
   const form = useForm<ReportFormValues>({
     resolver: zodResolver(reportSchema),
@@ -62,6 +66,48 @@ export function WorkTimeReportForm({}: WorkTimeReportFormProps) {
       toast.error(result.message);
     }
     setLoadingReport(false);
+  };
+
+  const handleExportPdf = async () => {
+    if (!reportTableRef.current || !reportData) {
+      toast.error("Keine Berichtsdaten zum Exportieren gefunden.");
+      return;
+    }
+
+    setLoadingReport(true); // Set loading state for export
+    try {
+      const input = reportTableRef.current;
+      const canvas = await html2canvas(input, { scale: 2 }); // Höhere Skalierung für bessere Qualität
+      const imgData = canvas.toDataURL('image/png');
+
+      const pdf = new jsPDF('p', 'mm', 'a4'); // Portrait, Millimeter, A4
+      const imgWidth = 210; // A4 width in mm
+      const pageHeight = 297; // A4 height in mm
+      const imgHeight = canvas.height * imgWidth / canvas.width;
+      let heightLeft = imgHeight;
+      let position = 0;
+
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+
+      while (heightLeft >= 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
+
+      const selectedObject = objects.find(obj => obj.id === form.getValues("objectId"));
+      const monthLabel = months.find(m => m.value === form.getValues("month"))?.label;
+      const fileName = `Arbeitszeitnachweis_${selectedObject?.name || 'Objekt'}_${monthLabel}_${form.getValues("year")}.pdf`;
+      pdf.save(fileName);
+      toast.success("PDF erfolgreich exportiert!");
+    } catch (error) {
+      console.error("Fehler beim PDF-Export:", error);
+      toast.error("Fehler beim Exportieren des PDF.");
+    } finally {
+      setLoadingReport(false);
+    }
   };
 
   const currentYear = new Date().getFullYear();
@@ -135,38 +181,46 @@ export function WorkTimeReportForm({}: WorkTimeReportFormProps) {
           <h2 className="text-xl font-semibold">Arbeitszeitnachweis</h2>
           {reportData.entries.length > 0 ? (
             <>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Datum</TableHead>
-                    <TableHead>Mitarbeiter</TableHead>
-                    <TableHead>Start</TableHead>
-                    <TableHead>Ende</TableHead>
-                    <TableHead>Dauer</TableHead>
-                    <TableHead>Notizen</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {reportData.entries.map(entry => (
-                    <TableRow key={entry.id}>
-                      <TableCell>{entry.date}</TableCell>
-                      <TableCell>{entry.employeeName}</TableCell>
-                      <TableCell>{entry.startTime}</TableCell>
-                      <TableCell>{entry.endTime}</TableCell>
-                      <TableCell>{formatDuration(entry.duration)}</TableCell>
-                      <TableCell className="max-w-[200px] truncate">{entry.notes}</TableCell>
+              <div ref={reportTableRef} className="p-4 bg-white dark:bg-gray-900 rounded-md shadow-sm"> {/* Der zu exportierende Bereich */}
+                <h3 className="text-lg font-bold mb-4">
+                  Bericht für {objects.find(obj => obj.id === form.getValues("objectId"))?.name || 'Ausgewähltes Objekt'} - {months.find(m => m.value === form.getValues("month"))?.label} {form.getValues("year")}
+                </h3>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Datum</TableHead>
+                      <TableHead>Mitarbeiter</TableHead>
+                      <TableHead>Start</TableHead>
+                      <TableHead>Ende</TableHead>
+                      <TableHead>Dauer</TableHead>
+                      <TableHead>Notizen</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-              <div className="text-right font-bold text-lg mt-4">
-                Gesamtstunden: {reportData.totalHours}
+                  </TableHeader>
+                  <TableBody>
+                    {reportData.entries.map(entry => (
+                      <TableRow key={entry.id}>
+                        <TableCell>{entry.date}</TableCell>
+                        <TableCell>{entry.employeeName}</TableCell>
+                        <TableCell>{entry.startTime}</TableCell>
+                        <TableCell>{entry.endTime}</TableCell>
+                        <TableCell>{formatDuration(entry.duration)}</TableCell>
+                        <TableCell className="max-w-[200px] truncate">{entry.notes}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+                <div className="text-right font-bold text-lg mt-4">
+                  Gesamtstunden: {reportData.totalHours}
+                </div>
               </div>
+              <Button onClick={handleExportPdf} disabled={loadingReport} className="mt-4">
+                <Download className="mr-2 h-4 w-4" />
+                {loadingReport ? "Exportiere..." : "Als PDF exportieren"}
+              </Button>
             </>
           ) : (
             <p className="text-muted-foreground">Keine Zeiteinträge für die ausgewählten Kriterien gefunden.</p>
           )}
-          {/* Der PDF-Export-Button wird im nächsten Schritt hinzugefügt */}
         </div>
       )}
     </div>
