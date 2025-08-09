@@ -33,7 +33,7 @@ serve(async (req) => {
 
   const logs = [];
   try {
-    logs.push("Function execution started.");
+    logs.push("Function execution started (v2).");
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
