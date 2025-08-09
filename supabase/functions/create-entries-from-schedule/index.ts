@@ -19,16 +19,16 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  console.log("--- Invoking create-entries-from-schedule (v5 - Final Logic) ---");
+  const logs = [];
+  logs.push("--- Invoking create-entries-from-schedule (v6 - Heavy Debugging) ---");
 
   try {
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     );
-    console.log("Supabase admin client created.");
+    logs.push("Supabase admin client created.");
 
-    // 1. Fetch all relevant orders, now including the order's own user_id.
     const { data: orders, error: ordersError } = await supabaseAdmin
       .from('orders')
       .select('id, user_id, customer_id, employee_id, object_id, recurring_start_date, recurring_end_date')
@@ -37,123 +37,133 @@ serve(async (req) => {
       .not('recurring_start_date', 'is', null);
 
     if (ordersError) {
-      console.error("FATAL: Could not fetch orders.", ordersError);
+      logs.push(`FATAL: Could not fetch orders. Error: ${ordersError.message}`);
       throw ordersError;
     }
-    console.log(`Found ${orders.length} orders to process.`);
+    logs.push(`Found ${orders.length} orders to process.`);
 
     let createdCount = 0;
     let skippedCount = 0;
 
     for (const order of orders) {
-      try {
-        console.log(`\nProcessing Order ID: ${order.id}`);
-
-        // 2. Use the user_id from the order itself. This is the corrected logic.
-        const entryUserId = order.user_id;
-        if (!entryUserId) {
-          console.warn(`  - SKIPPING: Order with ID ${order.id} has no user_id.`);
-          skippedCount++;
-          continue;
-        }
-        console.log(`  - Using Order's User ID for new entry: ${entryUserId}`);
-
-        const { data: objectData, error: objectError } = await supabaseAdmin
-          .from('objects')
-          .select('*')
-          .eq('id', order.object_id)
-          .single();
-
-        if (objectError || !objectData) {
-          console.warn(`  - SKIPPING: Could not fetch object with ID ${order.object_id}. Error: ${objectError?.message}`);
-          skippedCount++;
-          continue;
-        }
-
-        const startDate = new Date(order.recurring_start_date);
-        const endDate = order.recurring_end_date ? new Date(order.recurring_end_date) : new Date();
-        
-        if (startDate > new Date()) {
-            console.warn(`  - SKIPPING: recurring_start_date (${order.recurring_start_date}) is in the future.`);
-            skippedCount++;
-            continue;
-        }
-
-        for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-          if (d > new Date()) continue;
-
-          const dayOfWeek = d.getDay();
-          const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-          const dayName = dayNames[dayOfWeek];
-          
-          const netHours = objectData[`${dayName}_hours`];
-          const startTimeStr = objectData[`${dayName}_start_time`];
-
-          if (netHours && netHours > 0 && startTimeStr) {
-            const entryDateStr = d.toISOString().split('T')[0];
-            
-            const { count: existingEntryCount, error: checkError } = await supabaseAdmin
-              .from('time_entries')
-              .select('id', { count: 'exact', head: true })
-              .eq('employee_id', order.employee_id)
-              .gte('start_time', `${entryDateStr}T00:00:00.000Z`)
-              .lte('start_time', `${entryDateStr}T23:59:59.999Z`);
-
-            if (checkError) {
-              console.error(`    - ERROR checking for existing entry:`, checkError);
-              continue;
-            }
-
-            if (existingEntryCount > 0) {
-              continue;
-            }
-
-            const netMinutes = netHours * 60;
-            const breakMinutes = calculateBreakMinutes(netHours);
-            const grossMinutes = netMinutes + breakMinutes;
-
-            const startTime = new Date(`${entryDateStr}T${startTimeStr}:00`);
-            const endTime = new Date(startTime.getTime() + grossMinutes * 60000);
-
-            const newEntry = {
-              user_id: entryUserId, // Use the corrected user_id
-              employee_id: order.employee_id,
-              customer_id: order.customer_id,
-              object_id: order.object_id,
-              order_id: order.id,
-              start_time: startTime.toISOString(),
-              end_time: endTime.toISOString(),
-              duration_minutes: grossMinutes,
-              break_minutes: breakMinutes,
-              type: 'automatic_scheduled_order',
-              notes: `Automatisch erstellter Eintrag basierend auf Objektplan.`,
-            };
-
-            const { error: insertError } = await supabaseAdmin.from('time_entries').insert(newEntry);
-            if (insertError) {
-              console.error(`    - FAILED to insert new entry:`, insertError);
-            } else {
-              console.log(`    - SUCCESS: Created new time entry for ${entryDateStr}.`);
-              createdCount++;
-            }
-          }
-        }
-      } catch (orderError) {
-        console.error(`--- ERROR processing Order ID ${order.id}: ${orderError.message} ---`);
+      logs.push(`\n[Processing Order ID: ${order.id}]`);
+      
+      // Check 1: user_id on order
+      const entryUserId = order.user_id;
+      if (!entryUserId) {
+        logs.push(`  - SKIP: Order has no user_id.`);
         skippedCount++;
+        continue;
+      }
+      logs.push(`  - OK: Found user_id on order: ${entryUserId}`);
+
+      // Check 2: Fetch object
+      const { data: objectData, error: objectError } = await supabaseAdmin
+        .from('objects')
+        .select('*')
+        .eq('id', order.object_id)
+        .single();
+
+      if (objectError || !objectData) {
+        logs.push(`  - SKIP: Could not fetch object with ID ${order.object_id}. Error: ${objectError?.message}`);
+        skippedCount++;
+        continue;
+      }
+      logs.push(`  - OK: Fetched object "${objectData.name}"`);
+
+      // Check 3: Date range
+      const startDate = new Date(order.recurring_start_date);
+      const today = new Date();
+      logs.push(`  - Checking date: StartDate=${startDate.toISOString()}, Today=${today.toISOString()}`);
+      if (startDate > today) {
+        logs.push(`  - SKIP: recurring_start_date (${order.recurring_start_date}) is in the future.`);
+        skippedCount++;
+        continue;
+      }
+      logs.push(`  - OK: Date range is valid.`);
+
+      const endDate = order.recurring_end_date ? new Date(order.recurring_end_date) : today;
+
+      for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+        if (d > today) continue; // Don't create for future days within the range
+
+        const dayOfWeek = d.getDay();
+        const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+        const dayName = dayNames[dayOfWeek];
+        const entryDateStr = d.toISOString().split('T')[0];
+        
+        logs.push(`    [Checking day: ${entryDateStr} (${dayName})]`);
+
+        // Check 4: Schedule for the day
+        const netHours = objectData[`${dayName}_hours`];
+        const startTimeStr = objectData[`${dayName}_start_time`];
+
+        if (!netHours || netHours <= 0 || !startTimeStr) {
+          logs.push(`    - SKIP Day: No valid schedule. (Hours: ${netHours}, StartTime: ${startTimeStr})`);
+          continue;
+        }
+        logs.push(`    - OK Day: Found schedule. Hours=${netHours}, StartTime=${startTimeStr}`);
+
+        // Check 5: Existing entry
+        const { count: existingEntryCount, error: checkError } = await supabaseAdmin
+          .from('time_entries')
+          .select('id', { count: 'exact', head: true })
+          .eq('employee_id', order.employee_id)
+          .gte('start_time', `${entryDateStr}T00:00:00.000Z`)
+          .lte('start_time', `${entryDateStr}T23:59:59.999Z`);
+
+        if (checkError) {
+          logs.push(`    - ERROR Day: Could not check for existing entry. ${checkError.message}`);
+          continue;
+        }
+
+        if (existingEntryCount > 0) {
+          logs.push(`    - SKIP Day: Entry already exists for this employee on this day.`);
+          continue;
+        }
+        logs.push(`    - OK Day: No existing entry found. Proceeding to create.`);
+
+        // Create entry
+        const netMinutes = netHours * 60;
+        const breakMinutes = calculateBreakMinutes(netHours);
+        const grossMinutes = netMinutes + breakMinutes;
+        const startTime = new Date(`${entryDateStr}T${startTimeStr}`);
+        const endTime = new Date(startTime.getTime() + grossMinutes * 60000);
+
+        const newEntry = {
+          user_id: entryUserId,
+          employee_id: order.employee_id,
+          customer_id: order.customer_id,
+          object_id: order.object_id,
+          order_id: order.id,
+          start_time: startTime.toISOString(),
+          end_time: endTime.toISOString(),
+          duration_minutes: grossMinutes,
+          break_minutes: breakMinutes,
+          type: 'automatic_scheduled_order',
+          notes: `Automatisch erstellter Eintrag basierend auf Objektplan.`,
+        };
+
+        const { error: insertError } = await supabaseAdmin.from('time_entries').insert(newEntry);
+        if (insertError) {
+          logs.push(`    - FAILED to insert new entry: ${insertError.message}`);
+        } else {
+          logs.push(`    - SUCCESS: Created new time entry for ${entryDateStr}.`);
+          createdCount++;
+        }
       }
     }
 
     const successMessage = `Funktion erfolgreich ausgeführt. ${createdCount} Einträge erstellt, ${skippedCount} Aufträge übersprungen.`;
-    console.log(`\nFunction finished. ${successMessage}`);
-    return new Response(JSON.stringify({ success: true, message: successMessage }), {
+    logs.push(`\nFunction finished. ${successMessage}`);
+    return new Response(JSON.stringify({ success: true, message: successMessage, logs: logs }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     });
 
   } catch (globalError) {
-    console.error("--- FATAL ERROR in Edge Function ---", globalError);
-    return new Response(JSON.stringify({ success: false, message: globalError.message, errorDetails: globalError.toString() }), {
+    logs.push(`--- FATAL ERROR in Edge Function --- ${globalError.message}`);
+    return new Response(JSON.stringify({ success: false, message: globalError.message, errorDetails: globalError.toString(), logs: logs }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,
     });
