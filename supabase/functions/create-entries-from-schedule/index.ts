@@ -16,15 +16,9 @@ function calculateBreakMinutes(netHours: number): number {
 
 // Funktion zum Parsen von HH:MM Zeit-Strings in Minuten seit Mitternacht
 function timeToMinutes(timeStr: string): number {
+  if (!timeStr || !timeStr.includes(':')) return 0;
   const [hours, minutes] = timeStr.split(':').map(Number);
   return hours * 60 + minutes;
-}
-
-// Funktion zum Konvertieren von Minuten seit Mitternacht in einen HH:MM String
-function minutesToTime(totalMinutes: number): string {
-  const hours = Math.floor(totalMinutes / 60) % 24;
-  const minutes = totalMinutes % 60;
-  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
 }
 
 serve(async (req) => {
@@ -32,13 +26,14 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  const logs = [];
+  console.log("--- Invoking create-entries-from-schedule ---");
+
   try {
-    logs.push("Function 'create-entries-from-schedule' started.");
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     );
+    console.log("Supabase admin client created.");
 
     const { data: orders, error: ordersError } = await supabaseAdmin
       .from('orders')
@@ -55,15 +50,21 @@ serve(async (req) => {
       .not('object_id', 'is', null)
       .not('recurring_start_date', 'is', null);
 
-    if (ordersError) throw ordersError;
-    logs.push(`Found ${orders.length} potentially relevant orders.`);
+    if (ordersError) {
+      console.error("Error fetching orders:", ordersError);
+      throw ordersError;
+    }
+    console.log(`Found ${orders.length} potentially relevant orders.`);
 
     let createdCount = 0;
 
     for (const order of orders) {
-      logs.push(`\nProcessing Order ID: ${order.id}`);
-      if (!order.objects || !order.employee_id) {
-        logs.push(`  - SKIPPING: Missing object or employee data.`);
+      console.log(`\nProcessing Order ID: ${order.id}`);
+      
+      const objectData = Array.isArray(order.objects) ? order.objects[0] : order.objects;
+
+      if (!objectData || !order.employee_id) {
+        console.log(`  - SKIPPING: Missing object data or employee_id.`);
         continue;
       }
       
@@ -74,11 +75,11 @@ serve(async (req) => {
         .single();
 
       if (employeeError || !employee || !employee.user_id) {
-        logs.push(`  - SKIPPING: Could not find a linked user for employee ID ${order.employee_id}. Error: ${employeeError?.message}`);
+        console.log(`  - SKIPPING: Could not find a linked user for employee ID ${order.employee_id}. Error: ${employeeError?.message}`);
         continue;
       }
       const employeeUserId = employee.user_id;
-      logs.push(`  - Found Employee User ID: ${employeeUserId}`);
+      console.log(`  - Found Employee User ID: ${employeeUserId}`);
 
       const startDate = new Date(order.recurring_start_date);
       const endDate = order.recurring_end_date ? new Date(order.recurring_end_date) : new Date();
@@ -90,37 +91,33 @@ serve(async (req) => {
         const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
         const dayName = dayNames[dayOfWeek];
         
-        const netHours = order.objects[`${dayName}_hours`];
-        const startTimeStr = order.objects[`${dayName}_start_time`];
+        const netHours = objectData[`${dayName}_hours`];
+        const startTimeStr = objectData[`${dayName}_start_time`];
 
         if (netHours && netHours > 0 && startTimeStr) {
           const entryDateStr = d.toISOString().split('T')[0];
-          logs.push(`  - Checking date: ${entryDateStr}. Found schedule: ${netHours} net hours, starting at ${startTimeStr}.`);
+          console.log(`  - Checking date: ${entryDateStr}. Found schedule: ${netHours} net hours, starting at ${startTimeStr}.`);
           
           const { data: existingEntry, error: checkError } = await supabaseAdmin
             .from('time_entries')
-            .select('id')
+            .select('id', { count: 'exact', head: true })
             .eq('employee_id', order.employee_id)
             .gte('start_time', `${entryDateStr}T00:00:00.000Z`)
-            .lte('start_time', `${entryDateStr}T23:59:59.999Z`)
-            .limit(1);
+            .lte('start_time', `${entryDateStr}T23:59:59.999Z`);
 
           if (checkError) {
-            logs.push(`    - ERROR checking for existing entry: ${checkError.message}`);
+            console.error(`    - ERROR checking for existing entry:`, checkError);
             continue;
           }
 
-          if (existingEntry && existingEntry.length > 0) {
-            logs.push(`    - SKIPPING: Entry already exists for this day.`);
+          if (existingEntry && existingEntry.count > 0) {
+            console.log(`    - SKIPPING: Entry already exists for this day.`);
             continue;
           }
 
           const netMinutes = netHours * 60;
           const breakMinutes = calculateBreakMinutes(netHours);
           const grossMinutes = netMinutes + breakMinutes;
-
-          const startMinutesFromMidnight = timeToMinutes(startTimeStr);
-          const endMinutesFromMidnight = startMinutesFromMidnight + grossMinutes;
 
           const startTime = new Date(`${entryDateStr}T${startTimeStr}:00`);
           const endTime = new Date(startTime.getTime() + grossMinutes * 60000);
@@ -139,26 +136,28 @@ serve(async (req) => {
             notes: `Automatisch erstellter Eintrag basierend auf Objektplan.`,
           };
 
+          console.log("    - Preparing to insert new entry:", newEntry);
           const { error: insertError } = await supabaseAdmin.from('time_entries').insert(newEntry);
           if (insertError) {
-            logs.push(`    - FAILED to insert new entry: ${insertError.message}`);
+            console.error(`    - FAILED to insert new entry:`, insertError);
           } else {
-            logs.push(`    - SUCCESS: Created new time entry.`);
+            console.log(`    - SUCCESS: Created new time entry.`);
             createdCount++;
           }
         }
       }
     }
 
-    logs.push(`\nFunction finished. Created ${createdCount} new entries.`);
-    return new Response(JSON.stringify({ success: true, message: `Funktion erfolgreich ausgeführt. ${createdCount} Einträge erstellt.`, logs }), {
+    const successMessage = `Funktion erfolgreich ausgeführt. ${createdCount} Einträge erstellt.`;
+    console.log(`\nFunction finished. ${successMessage}`);
+    return new Response(JSON.stringify({ success: true, message: successMessage }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     });
 
   } catch (error) {
-    logs.push(`\nFATAL ERROR: ${error.message}`);
-    return new Response(JSON.stringify({ success: false, message: error.message, logs }), {
+    console.error("--- FATAL ERROR in Edge Function ---", error);
+    return new Response(JSON.stringify({ success: false, message: error.message, errorDetails: error.toString() }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,
     });
