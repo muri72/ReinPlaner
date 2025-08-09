@@ -21,9 +21,11 @@ interface TimeEntryEditDialogProps {
     type: string;
     notes: string | null;
   };
+  currentUserId: string; // Hinzugefügt
+  isAdmin: boolean; // Hinzugefügt
 }
 
-export function TimeEntryEditDialog({ timeEntry }: TimeEntryEditDialogProps) {
+export function TimeEntryEditDialog({ timeEntry, currentUserId, isAdmin }: TimeEntryEditDialogProps) {
   const [open, setOpen] = useState(false);
 
   const handleUpdate = async (data: TimeEntryFormValues) => {
@@ -63,6 +65,8 @@ export function TimeEntryEditDialog({ timeEntry }: TimeEntryEditDialogProps) {
           onSubmit={handleUpdate}
           submitButtonText="Änderungen speichern"
           onSuccess={() => setOpen(false)}
+          currentUserId={currentUserId} // Hinzugefügt
+          isAdmin={isAdmin} // Hinzugefügt
         />
       </DialogContent>
     </Dialog>

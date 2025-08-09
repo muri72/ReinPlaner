@@ -15,6 +15,8 @@ interface TimeEntryCreateDialogProps {
   triggerButtonClassName?: string;
   dialogTitle?: string;
   onEntryCreated?: (newEntryId: string) => void;
+  currentUserId: string; // Hinzugefügt
+  isAdmin: boolean; // Hinzugefügt
 }
 
 export function TimeEntryCreateDialog({
@@ -25,6 +27,8 @@ export function TimeEntryCreateDialog({
   triggerButtonClassName,
   dialogTitle = "Neuen Zeiteintrag erstellen",
   onEntryCreated,
+  currentUserId, // Hinzugefügt
+  isAdmin, // Hinzugefügt
 }: TimeEntryCreateDialogProps) {
   const [open, setOpen] = useState(false);
 
@@ -56,6 +60,8 @@ export function TimeEntryCreateDialog({
           onSubmit={handleCreate}
           submitButtonText="Zeiteintrag hinzufügen"
           onSuccess={() => setOpen(false)}
+          currentUserId={currentUserId} // Hinzugefügt
+          isAdmin={isAdmin} // Hinzugefügt
         />
       </DialogContent>
     </Dialog>

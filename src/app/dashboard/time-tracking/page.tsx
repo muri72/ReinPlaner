@@ -203,9 +203,9 @@ export default async function TimeTrackingPage({
 
       {isAdmin ? (
         <>
-          <AdminTimeEntriesOverview />
+          <AdminTimeEntriesOverview currentUserId={currentUser.id} isAdmin={isAdmin} />
           <h2 className="text-2xl font-bold mt-8">Neuen Zeiteintrag hinzufügen (Admin)</h2>
-          <TimeEntryForm onSubmit={createTimeEntry} submitButtonText="Zeiteintrag hinzufügen" />
+          <TimeEntryForm onSubmit={createTimeEntry} currentUserId={currentUser.id} isAdmin={isAdmin} submitButtonText="Zeiteintrag hinzufügen" />
         </>
       ) : (
         <>
@@ -230,7 +230,7 @@ export default async function TimeTrackingPage({
                     </CardTitle>
                     <div className="flex items-center space-x-2">
                       <Badge variant={getTypeBadgeVariant(entry.type)}>{entry.type === 'automatic_scheduled_order' ? 'Automatisch' : entry.type}</Badge>
-                      <TimeEntryEditDialog timeEntry={entry} />
+                      <TimeEntryEditDialog timeEntry={entry} currentUserId={currentUser.id} isAdmin={isAdmin} />
                       <DeleteTimeEntryButton entryId={entry.id} />
                     </div>
                   </CardHeader>
@@ -248,10 +248,10 @@ export default async function TimeTrackingPage({
                     {entry.duration_minutes !== null && (
                       <div className="flex items-center">
                         <Clock className="mr-2 h-4 w-4 flex-shrink-0" />
-                        <span>Dauer (Brutto): {formatDuration(entry.duration_minutes)}</span>
+                        <span>Dauer: {formatDuration(entry.duration_minutes)}</span>
                       </div>
                     )}
-                    {entry.break_minutes !== null && entry.break_minutes > 0 && ( // Neues Feld anzeigen
+                    {entry.break_minutes !== null && entry.break_minutes > 0 && (
                       <div className="flex items-center">
                         <Clock className="mr-2 h-4 w-4 flex-shrink-0" />
                         <span>Pause: {formatDuration(entry.break_minutes)}</span>

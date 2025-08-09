@@ -429,7 +429,7 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
         <Tabs value={currentTab} onValueChange={(value) => setCurrentTab(value as 'clock_in_out' | 'stopwatch')} className="w-full">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="clock_in_out" disabled={!!activeEntry && activeEntry.type !== 'clock_in_out'}>Stempeluhr</TabsTrigger>
-            <TabsTrigger value="stopwatch" disabled={!!activeEntry && activeEntry.type !== 'stopwatch'}>Stoppuhr</TabsTrigger>
+            <TabsTrigger value="stopwatch" disabled={!!activeEntry && activeEntry.type !== 'clock_in_out'}>Stoppuhr</TabsTrigger>
           </TabsList>
           <TabsContent value="clock_in_out" className="mt-4 space-y-4">
             {!activeEntry || activeEntry.type === 'clock_in_out' ? (
@@ -497,6 +497,8 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
                         });
                       setSelectedOrderId(null); // Auswahl zurücksetzen
                     }}
+                    currentUserId={userId} // Hinzugefügt
+                    isAdmin={false} // Mitarbeiter-Tracker ist nicht für Admins
                   />
                 ) : (
                   <Button

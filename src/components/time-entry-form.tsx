@@ -73,9 +73,11 @@ interface TimeEntryFormProps {
   onSubmit: (data: TimeEntryFormValues) => Promise<{ success: boolean; message: string }>;
   submitButtonText: string;
   onSuccess?: () => void;
+  currentUserId: string; // Hinzugefügt
+  isAdmin: boolean; // Hinzugefügt
 }
 
-export function TimeEntryForm({ initialData, onSubmit, submitButtonText, onSuccess }: TimeEntryFormProps) {
+export function TimeEntryForm({ initialData, onSubmit, submitButtonText, onSuccess, currentUserId, isAdmin }: TimeEntryFormProps) {
   const supabase = createClient();
   const [employees, setEmployees] = useState<{ id: string; first_name: string; last_name: string }[]>([]);
   const [customers, setCustomers] = useState<{ id: string; name: string }[]>([]);
@@ -110,8 +112,19 @@ export function TimeEntryForm({ initialData, onSubmit, submitButtonText, onSucce
   // Fetch data for dropdowns
   useEffect(() => {
     const fetchDropdownData = async () => {
-      const { data: employeesData, error: employeesError } = await supabase.from('employees').select('id, first_name, last_name').order('last_name', { ascending: true });
-      if (employeesData) setEmployees(employeesData);
+      // Fetch all employees if admin, otherwise only the employee linked to the current user
+      let employeesQuery = supabase.from('employees').select('id, first_name, last_name').order('last_name', { ascending: true });
+      if (!isAdmin) {
+        employeesQuery = employeesQuery.eq('user_id', currentUserId);
+      }
+      const { data: employeesData, error: employeesError } = await employeesQuery;
+      if (employeesData) {
+        setEmployees(employeesData);
+        // If not admin and an employee is found, set it as default
+        if (!isAdmin && employeesData.length > 0) {
+          form.setValue("employeeId", employeesData[0].id);
+        }
+      }
       if (employeesError) console.error("Fehler beim Laden der Mitarbeiter:", employeesError);
 
       const { data: customersData, error: customersError } = await supabase.from('customers').select('id, name').order('name', { ascending: true });
@@ -128,7 +141,7 @@ export function TimeEntryForm({ initialData, onSubmit, submitButtonText, onSucce
       if (ordersError) console.error("Fehler beim Laden der Aufträge:", ordersError);
     };
     fetchDropdownData();
-  }, [supabase]);
+  }, [supabase, currentUserId, isAdmin, form]); // Abhängigkeiten aktualisiert
 
   // Filter objects and orders based on selected customer/object
   const filteredObjects = selectedCustomerId
@@ -228,7 +241,7 @@ export function TimeEntryForm({ initialData, onSubmit, submitButtonText, onSucce
           endTime: null,
           durationMinutes: null,
           breakMinutes: null, // Pausenminuten zurücksetzen
-          employeeId: null,
+          employeeId: isAdmin ? null : form.getValues("employeeId"), // Nur zurücksetzen, wenn nicht Admin
           customerId: null,
           objectId: null,
           orderId: null,
@@ -264,7 +277,11 @@ export function TimeEntryForm({ initialData, onSubmit, submitButtonText, onSucce
 
       <div>
         <Label htmlFor="employeeId">Mitarbeiter (optional)</Label>
-        <Select onValueChange={(value) => form.setValue("employeeId", value === "unassigned" ? null : value)} value={form.watch("employeeId") || "unassigned"}>
+        <Select
+          onValueChange={(value) => form.setValue("employeeId", value === "unassigned" ? null : value)}
+          value={form.watch("employeeId") || "unassigned"}
+          disabled={!isAdmin && employees.length > 0} // Deaktiviert, wenn nicht Admin und Mitarbeiter zugewiesen
+        >
           <SelectTrigger className="w-full">
             <SelectValue placeholder="Mitarbeiter auswählen" />
           </SelectTrigger>
@@ -277,6 +294,9 @@ export function TimeEntryForm({ initialData, onSubmit, submitButtonText, onSucce
         </Select>
         {form.formState.errors.employeeId && (
           <p className="text-red-500 text-sm mt-1">{form.formState.errors.employeeId.message}</p>
+        )}
+        {!isAdmin && employees.length === 0 && (
+          <p className="text-muted-foreground text-sm mt-1">Kein Mitarbeiterprofil gefunden. Bitte kontaktieren Sie Ihren Administrator.</p>
         )}
       </div>
 
@@ -402,7 +422,7 @@ export function TimeEntryForm({ initialData, onSubmit, submitButtonText, onSucce
       </div>
 
       <div>
-        <Label htmlFor="breakMinutes">Pausenminuten (optional)</Label> {/* Neues Feld */}
+        <Label htmlFor="breakMinutes">Pausenminuten (optional)</Label>
         <Input
           id="breakMinutes"
           type="number"

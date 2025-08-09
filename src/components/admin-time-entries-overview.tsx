@@ -40,7 +40,12 @@ interface UserProfile {
   email: string | null;
 }
 
-export function AdminTimeEntriesOverview() {
+interface AdminTimeEntriesOverviewProps {
+  currentUserId: string;
+  isAdmin: boolean;
+}
+
+export function AdminTimeEntriesOverview({ currentUserId, isAdmin }: AdminTimeEntriesOverviewProps) {
   const supabase = createClient();
   const searchParams = useSearchParams();
   const pathname = usePathname();
@@ -221,7 +226,7 @@ export function AdminTimeEntriesOverview() {
                 </CardTitle>
                 <div className="flex items-center space-x-2">
                   <Badge variant={getTypeBadgeVariant(entry.type)}>{entry.type === 'automatic_scheduled_order' ? 'Automatisch' : entry.type}</Badge>
-                  <TimeEntryEditDialog timeEntry={entry} />
+                  <TimeEntryEditDialog timeEntry={entry} currentUserId={currentUserId} isAdmin={isAdmin} />
                   <DeleteTimeEntryButton entryId={entry.id} />
                 </div>
               </CardHeader>
