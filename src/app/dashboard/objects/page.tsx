@@ -19,10 +19,9 @@ interface DisplayObject {
   description: string | null;
   created_at: string | null;
   customer_name: string | null;
-  customer_contact_id: string | null; // Neues Feld
-  object_leader_first_name: string | null; // Name des Objektleiters
-  object_leader_last_name: string | null; // Name des Objektleiters
-  // Neue Felder
+  customer_contact_id: string | null;
+  object_leader_first_name: string | null;
+  object_leader_last_name: string | null;
   notes: string | null;
   priority: string;
   time_of_day: string;
@@ -45,24 +44,14 @@ interface DisplayObject {
   saturday_end_time: string | null;
   sunday_start_time: string | null;
   sunday_end_time: string | null;
+  monday_hours: number | null;
+  tuesday_hours: number | null;
+  wednesday_hours: number | null;
+  thursday_hours: number | null;
+  friday_hours: number | null;
+  saturday_hours: number | null;
+  sunday_hours: number | null;
 }
-
-// Helper to calculate hours between two time strings (HH:MM)
-const calculateHours = (start: string | null, end: string | null): number | null => {
-  if (!start || !end) return null;
-  const [startH, startM] = start.split(':').map(Number);
-  const [endH, endM] = end.split(':').map(Number);
-
-  const startDate = new Date(0, 0, 0, startH, startM);
-  let endDate = new Date(0, 0, 0, endH, endM);
-
-  if (endDate < startDate) {
-    endDate.setDate(endDate.getDate() + 1);
-  }
-
-  const diffMs = endDate.getTime() - startDate.getTime();
-  return diffMs / (1000 * 60 * 60);
-};
 
 export default async function ObjectsPage({
   searchParams,
@@ -98,40 +87,10 @@ export default async function ObjectsPage({
       .order('name', { ascending: true });
 
     objects = data?.map(obj => ({
-      id: obj.id,
-      user_id: obj.user_id,
-      customer_id: obj.customer_id,
-      name: obj.name,
-      address: obj.address,
-      description: obj.description,
-      created_at: obj.created_at,
+      ...obj,
       customer_name: obj.customers?.name || null,
-      customer_contact_id: obj.customer_contact_id, // Neues Feld
-      object_leader_first_name: obj.customer_contacts?.first_name || null, // Name des Objektleiters
-      object_leader_last_name: obj.customer_contacts?.last_name || null, // Name des Objektleiters
-      // Neue Felder mappen
-      notes: obj.notes,
-      priority: obj.priority,
-      time_of_day: obj.time_of_day,
-      access_method: obj.access_method,
-      pin: obj.pin,
-      is_alarm_secured: obj.is_alarm_secured,
-      alarm_password: obj.alarm_password,
-      security_code_word: obj.security_code_word,
-      monday_start_time: obj.monday_start_time,
-      monday_end_time: obj.monday_end_time,
-      tuesday_start_time: obj.tuesday_start_time,
-      tuesday_end_time: obj.tuesday_end_time,
-      wednesday_start_time: obj.wednesday_start_time,
-      wednesday_end_time: obj.wednesday_end_time,
-      thursday_start_time: obj.thursday_start_time,
-      thursday_end_time: obj.thursday_end_time,
-      friday_start_time: obj.friday_start_time,
-      friday_end_time: obj.friday_end_time,
-      saturday_start_time: obj.saturday_start_time,
-      saturday_end_time: obj.saturday_end_time,
-      sunday_start_time: obj.sunday_start_time,
-      sunday_end_time: obj.sunday_end_time,
+      object_leader_first_name: obj.customer_contacts?.first_name || null,
+      object_leader_last_name: obj.customer_contacts?.last_name || null,
     })) || null;
     error = selectError;
   }
@@ -188,7 +147,6 @@ export default async function ObjectsPage({
                     <span>{object.description}</span>
                   </div>
                 )}
-                {/* Neue Felder anzeigen */}
                 {object.notes && (
                   <div className="flex items-center text-sm text-muted-foreground">
                     <FileText className="mr-2 h-4 w-4 flex-shrink-0" />
@@ -237,14 +195,17 @@ export default async function ObjectsPage({
                 {dayNames.map(day => {
                   const startTimeKey = `${day}_start_time` as keyof DisplayObject;
                   const endTimeKey = `${day}_end_time` as keyof DisplayObject;
+                  const hoursKey = `${day}_hours` as keyof DisplayObject;
                   const startTime = object[startTimeKey] as string | null;
                   const endTime = object[endTimeKey] as string | null;
-                  const hours = calculateHours(startTime, endTime);
+                  const hours = object[hoursKey] as number | null;
 
-                  if (startTime && endTime) {
+                  if (startTime || hours) {
                     return (
                       <p key={day} className="text-xs text-muted-foreground ml-2">
-                        {day.charAt(0).toUpperCase() + day.slice(1)}: {startTime} - {endTime} ({hours?.toFixed(2)} Std.)
+                        {day.charAt(0).toUpperCase() + day.slice(1)}:
+                        {startTime && endTime ? ` ${startTime} - ${endTime}` : ''}
+                        {hours ? ` (${Number(hours).toFixed(2)} Std. Netto)` : ''}
                       </p>
                     );
                   }

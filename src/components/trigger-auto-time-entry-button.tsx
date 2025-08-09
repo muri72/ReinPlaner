@@ -4,26 +4,43 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Bot } from "lucide-react";
-import { triggerAutomaticTimeEntryCreation } from "@/app/dashboard/time-tracking/actions";
+import { createClient } from "@/lib/supabase/client";
 
 export function TriggerAutoTimeEntryButton() {
   const [loading, setLoading] = useState(false);
+  const supabase = createClient();
 
   const handleTrigger = async () => {
     setLoading(true);
     toast.info("Starte die automatische Erstellung von Zeiteinträgen...");
 
-    const result = await triggerAutomaticTimeEntryCreation();
+    try {
+      const { data, error } = await supabase.functions.invoke('create-entries-from-schedule', {
+        method: 'POST',
+      });
 
-    if (result.success) {
-      toast.success(result.message);
-      if (result.createdCount === 0) {
-        toast.info("Keine neuen Einträge erstellt.", {
-          description: "Mögliche Gründe: Einträge existieren bereits oder es gibt keine passenden Aufträge.",
-        });
+      if (error) {
+        throw error;
       }
-    } else {
-      toast.error(result.message);
+
+      if (data.success) {
+        toast.success(data.message);
+        if (data.logs) {
+          console.log("Edge Function Logs:", data.logs);
+        }
+      } else {
+        toast.error(data.message || "Ein unbekannter Fehler in der Edge Function ist aufgetreten.");
+        if (data.logs) {
+          console.error("Edge Function Error Logs:", data.logs);
+        }
+      }
+    } catch (error) {
+      console.error("Fehler beim Aufrufen der Edge Function:", error);
+      if (error instanceof Error) {
+        toast.error(`Fehler beim Aufrufen der Funktion: ${error.message}`);
+      } else {
+        toast.error("Ein unbekannter Fehler ist aufgetreten.");
+      }
     }
 
     setLoading(false);

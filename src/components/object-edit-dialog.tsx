@@ -14,8 +14,7 @@ interface ObjectEditDialogProps {
     address: string;
     description: string | null;
     customer_id: string;
-    customer_contact_id: string | null; // Neues Feld
-    // Neue Felder
+    customer_contact_id: string | null;
     notes: string | null;
     priority: string;
     time_of_day: string;
@@ -38,6 +37,13 @@ interface ObjectEditDialogProps {
     saturday_end_time: string | null;
     sunday_start_time: string | null;
     sunday_end_time: string | null;
+    monday_hours: number | null;
+    tuesday_hours: number | null;
+    wednesday_hours: number | null;
+    thursday_hours: number | null;
+    friday_hours: number | null;
+    saturday_hours: number | null;
+    sunday_hours: number | null;
   };
 }
 
@@ -69,7 +75,7 @@ export function ObjectEditDialog({ object }: ObjectEditDialogProps) {
             address: object.address,
             description: object.description,
             customerId: object.customer_id,
-            customerContactId: object.customer_contact_id, // Neues Feld
+            customerContactId: object.customer_contact_id,
             notes: object.notes,
             priority: object.priority as ObjectFormValues["priority"],
             timeOfDay: object.time_of_day as ObjectFormValues["timeOfDay"],
@@ -78,20 +84,27 @@ export function ObjectEditDialog({ object }: ObjectEditDialogProps) {
             isAlarmSecured: object.is_alarm_secured,
             alarmPassword: object.alarm_password,
             securityCodeWord: object.security_code_word,
-            mondayStartTime: object.monday_start_time,
-            mondayEndTime: object.monday_end_time,
-            tuesdayStartTime: object.tuesday_start_time,
-            tuesdayEndTime: object.tuesday_end_time,
-            wednesdayStartTime: object.wednesday_start_time,
-            wednesdayEndTime: object.wednesday_end_time,
-            thursdayStartTime: object.thursday_start_time,
-            thursdayEndTime: object.thursday_end_time,
-            fridayStartTime: object.friday_start_time,
-            fridayEndTime: object.friday_end_time,
-            saturdayStartTime: object.saturday_start_time,
-            saturdayEndTime: object.saturday_end_time,
-            sundayStartTime: object.sunday_start_time,
-            sundayEndTime: object.sunday_end_time,
+            monday_start_time: object.monday_start_time,
+            monday_end_time: object.monday_end_time,
+            tuesday_start_time: object.tuesday_start_time,
+            tuesday_end_time: object.tuesday_end_time,
+            wednesday_start_time: object.wednesday_start_time,
+            wednesday_end_time: object.wednesday_end_time,
+            thursday_start_time: object.thursday_start_time,
+            thursday_end_time: object.thursday_end_time,
+            friday_start_time: object.friday_start_time,
+            friday_end_time: object.friday_end_time,
+            saturday_start_time: object.saturday_start_time,
+            saturday_end_time: object.saturday_end_time,
+            sunday_start_time: object.sunday_start_time,
+            sunday_end_time: object.sunday_end_time,
+            monday_hours: object.monday_hours,
+            tuesday_hours: object.tuesday_hours,
+            wednesday_hours: object.wednesday_hours,
+            thursday_hours: object.thursday_hours,
+            friday_hours: object.friday_hours,
+            saturday_hours: object.saturday_hours,
+            sunday_hours: object.sunday_hours,
           }}
           onSubmit={handleUpdate}
           submitButtonText="Änderungen speichern"

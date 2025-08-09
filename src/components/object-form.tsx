@@ -9,68 +9,49 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Switch } from "@/components/ui/switch";
-import { Checkbox } from "@/components/ui/checkbox";
-import { useDebouncedCallback } from "use-debounce";
-import { CustomerContactCreateDialog } from "@/components/customer-contact-create-dialog"; // Importiere den neuen Dialog
-import { calculateHours } from "@/lib/utils"; // Importiere von utils
+import { CustomerContactCreateDialog } from "@/components/customer-contact-create-dialog";
 
-// Helper to generate times from hours and timeOfDay
-const generateTimesFromHours = (hours: number, timeOfDay: ObjectFormValues['timeOfDay']): { startTime: string, endTime: string } => {
-  let startHour: number;
-  switch (timeOfDay) {
-    case 'morning': startHour = 8; break; // 8 AM
-    case 'noon': startHour = 12; break; // 12 PM
-    case 'afternoon': startHour = 16; break; // 4 PM
-    case 'any': default: startHour = 9; break; // Default to 9 AM for 'any'
-  }
-
-  const totalMinutes = hours * 60;
-  const endHour = startHour + Math.floor(totalMinutes / 60);
-  const endMinute = Math.round(totalMinutes % 60);
-
-  const formatTime = (h: number, m: number) => {
-    const date = new Date();
-    date.setHours(h, m, 0, 0);
-    return date.toTimeString().slice(0, 5); // "HH:MM"
-  };
-
-  return {
-    startTime: formatTime(startHour, 0),
-    endTime: formatTime(endHour, endMinute),
-  };
-};
+const preprocessNumber = (val: any) => (val === "" || isNaN(Number(val)) ? null : Number(val));
+const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
 
 export const objectSchema = z.object({
   name: z.string().min(1, "Name ist erforderlich").max(100, "Name ist zu lang"),
   address: z.string().min(1, "Adresse ist erforderlich").max(255, "Adresse ist zu lang"),
   description: z.string().max(500, "Beschreibung ist zu lang").optional().nullable(),
   customerId: z.string().uuid("Ungültige Kunden-ID").min(1, "Kunde ist erforderlich"),
-  customerContactId: z.string().uuid("Ungültige Kontakt-ID").optional().nullable(), // Neues Feld
-  // Neue Felder für Wochentags-Start-/Endzeiten
-  mondayStartTime: z.union([z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Ungültiges Zeitformat (HH:MM)"), z.null()]).optional(),
-  mondayEndTime: z.union([z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Ungültiges Zeitformat (HH:MM)"), z.null()]).optional(),
-  tuesdayStartTime: z.union([z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Ungültiges Zeitformat (HH:MM)"), z.null()]).optional(),
-  tuesdayEndTime: z.union([z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Ungültiges Zeitformat (HH:MM)"), z.null()]).optional(),
-  wednesdayStartTime: z.union([z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Ungültiges Zeitformat (HH:MM)"), z.null()]).optional(),
-  wednesdayEndTime: z.union([z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Ungültiges Zeitformat (HH:MM)"), z.null()]).optional(),
-  thursdayStartTime: z.union([z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Ungültiges Zeitformat (HH:MM)"), z.null()]).optional(),
-  thursdayEndTime: z.union([z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Ungültiges Zeitformat (HH:MM)"), z.null()]).optional(),
-  fridayStartTime: z.union([z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Ungültiges Zeitformat (HH:MM)"), z.null()]).optional(),
-  fridayEndTime: z.union([z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Ungültiges Zeitformat (HH:MM)"), z.null()]).optional(),
-  saturdayStartTime: z.union([z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Ungültiges Zeitformat (HH:MM)"), z.null()]).optional(),
-  saturdayEndTime: z.union([z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Ungültiges Zeitformat (HH:MM)"), z.null()]).optional(),
-  sundayStartTime: z.union([z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Ungültiges Zeitformat (HH:MM)"), z.null()]).optional(),
-  sundayEndTime: z.union([z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Ungültiges Zeitformat (HH:MM)"), z.null()]).optional(),
-  // Bestehende Felder
+  customerContactId: z.string().uuid("Ungültige Kontakt-ID").optional().nullable(),
+  
+  monday_hours: z.preprocess(preprocessNumber, z.number().min(0).max(24).optional().nullable()),
+  tuesday_hours: z.preprocess(preprocessNumber, z.number().min(0).max(24).optional().nullable()),
+  wednesday_hours: z.preprocess(preprocessNumber, z.number().min(0).max(24).optional().nullable()),
+  thursday_hours: z.preprocess(preprocessNumber, z.number().min(0).max(24).optional().nullable()),
+  friday_hours: z.preprocess(preprocessNumber, z.number().min(0).max(24).optional().nullable()),
+  saturday_hours: z.preprocess(preprocessNumber, z.number().min(0).max(24).optional().nullable()),
+  sunday_hours: z.preprocess(preprocessNumber, z.number().min(0).max(24).optional().nullable()),
+
+  monday_start_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
+  monday_end_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
+  tuesday_start_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
+  tuesday_end_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
+  wednesday_start_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
+  wednesday_end_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
+  thursday_start_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
+  thursday_end_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
+  friday_start_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
+  friday_end_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
+  saturday_start_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
+  saturday_end_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
+  sunday_start_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
+  sunday_end_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
+
   notes: z.string().max(500, "Notizen sind zu lang").optional().nullable(),
   priority: z.enum(["low", "medium", "high"]).default("low"),
   timeOfDay: z.enum(["morning", "noon", "afternoon", "any"]).default("any"),
   accessMethod: z.enum(["key", "card", "other"]).default("key"),
   pin: z.string().max(50, "PIN ist zu lang").optional().nullable(),
-  // Neue Felder für Alarmgesichert und Codewort
   isAlarmSecured: z.boolean().default(false),
   alarmPassword: z.string().max(50, "Alarmkennwort ist zu lang").optional().nullable(),
   securityCodeWord: z.string().max(50, "Codewort ist zu lang").optional().nullable(),
@@ -89,35 +70,17 @@ interface ObjectFormProps {
 export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess }: ObjectFormProps) {
   const supabase = createClient();
   const [customers, setCustomers] = useState<{ id: string; name: string }[]>([]);
-  const [customerContacts, setCustomerContacts] = useState<{ id: string; first_name: string; last_name: string; customer_id: string }[]>([]); // State für Kundenkontakte
+  const [customerContacts, setCustomerContacts] = useState<{ id: string; first_name: string; last_name: string; customer_id: string }[]>([]);
 
   const dayNames = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
-
-  // State to manage which days are active (checkboxes)
-  const [activeDays, setActiveDays] = useState<Record<string, boolean>>(() => {
-    const initialActiveDays: Record<string, boolean> = {};
-    dayNames.forEach(day => {
-      const startTimeKey = `${day}StartTime` as keyof ObjectFormInput;
-      initialActiveDays[day] = !!initialData?.[startTimeKey];
-    });
-    return initialActiveDays;
-  });
-
-  // Local state for hours input for each day
-  const [dayHoursInputs, setDayHoursInputs] = useState<Record<string, string>>(() => {
-    const initialHours: Record<string, string> = {};
-    dayNames.forEach(day => {
-      const startTime = (initialData?.[`${day}StartTime` as keyof ObjectFormInput] ?? null) as string | null;
-      const endTime = (initialData?.[`${day}EndTime` as keyof ObjectFormInput] ?? null) as string | null;
-      const hours = calculateHours(startTime, endTime);
-      initialHours[day] = hours !== null ? hours.toFixed(2) : '';
-    });
-    return initialHours;
-  });
-
-  // Helper function to get the correct field name type for form.register
-  const getDayTimeFieldName = (day: string, type: 'StartTime' | 'EndTime'): keyof ObjectFormValues => {
-    return `${day}${type}` as keyof ObjectFormValues;
+  const germanDayNames: { [key: string]: string } = {
+    monday: 'Montag',
+    tuesday: 'Dienstag',
+    wednesday: 'Mittwoch',
+    thursday: 'Donnerstag',
+    friday: 'Freitag',
+    saturday: 'Samstag',
+    sunday: 'Sonntag',
   };
 
   const resolvedDefaultValues: ObjectFormValues = {
@@ -125,23 +88,28 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
     address: initialData?.address ?? "",
     description: initialData?.description ?? null,
     customerId: initialData?.customerId ?? "",
-    customerContactId: initialData?.customerContactId ?? null, // Initialwert für neues Feld
-    // Initialwerte für neue Zeitfelder
-    mondayStartTime: initialData?.mondayStartTime ?? null,
-    mondayEndTime: initialData?.mondayEndTime ?? null,
-    tuesdayStartTime: initialData?.tuesdayStartTime ?? null,
-    tuesdayEndTime: initialData?.tuesdayEndTime ?? null,
-    wednesdayStartTime: initialData?.wednesdayStartTime ?? null,
-    wednesdayEndTime: initialData?.wednesdayEndTime ?? null,
-    thursdayStartTime: initialData?.thursdayStartTime ?? null,
-    thursdayEndTime: initialData?.thursdayEndTime ?? null,
-    fridayStartTime: initialData?.fridayStartTime ?? null,
-    fridayEndTime: initialData?.fridayEndTime ?? null,
-    saturdayStartTime: initialData?.saturdayStartTime ?? null,
-    saturdayEndTime: initialData?.saturdayEndTime ?? null,
-    sundayStartTime: initialData?.sundayStartTime ?? null,
-    sundayEndTime: initialData?.sundayEndTime ?? null,
-    // Bestehende Felder
+    customerContactId: initialData?.customerContactId ?? null,
+    monday_hours: (initialData?.monday_hours as number) ?? null,
+    tuesday_hours: (initialData?.tuesday_hours as number) ?? null,
+    wednesday_hours: (initialData?.wednesday_hours as number) ?? null,
+    thursday_hours: (initialData?.thursday_hours as number) ?? null,
+    friday_hours: (initialData?.friday_hours as number) ?? null,
+    saturday_hours: (initialData?.saturday_hours as number) ?? null,
+    sunday_hours: (initialData?.sunday_hours as number) ?? null,
+    monday_start_time: initialData?.monday_start_time ?? null,
+    monday_end_time: initialData?.monday_end_time ?? null,
+    tuesday_start_time: initialData?.tuesday_start_time ?? null,
+    tuesday_end_time: initialData?.tuesday_end_time ?? null,
+    wednesday_start_time: initialData?.wednesday_start_time ?? null,
+    wednesday_end_time: initialData?.wednesday_end_time ?? null,
+    thursday_start_time: initialData?.thursday_start_time ?? null,
+    thursday_end_time: initialData?.thursday_end_time ?? null,
+    friday_start_time: initialData?.friday_start_time ?? null,
+    friday_end_time: initialData?.friday_end_time ?? null,
+    saturday_start_time: initialData?.saturday_start_time ?? null,
+    saturday_end_time: initialData?.saturday_end_time ?? null,
+    sunday_start_time: initialData?.sunday_start_time ?? null,
+    sunday_end_time: initialData?.sunday_end_time ?? null,
     notes: initialData?.notes ?? null,
     priority: initialData?.priority ?? "low",
     timeOfDay: initialData?.timeOfDay ?? "any",
@@ -149,7 +117,7 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
     pin: initialData?.pin ?? null,
     isAlarmSecured: initialData?.isAlarmSecured ?? false,
     alarmPassword: initialData?.alarmPassword ?? null,
-    securityCodeWord: initialData?.securityCodeWord ?? null, // Initialwert für neues Feld
+    securityCodeWord: initialData?.securityCodeWord ?? null,
   };
 
   const form = useForm<ObjectFormValues>({
@@ -157,360 +125,138 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
     defaultValues: resolvedDefaultValues,
   });
 
-  // Watch timeOfDay and customerId for changes
-  const timeOfDay = form.watch("timeOfDay");
   const selectedCustomerId = form.watch("customerId");
 
-  // Debounced function to update time fields based on hours input
-  const debouncedUpdateTimes = useDebouncedCallback((day: string, hoursValue: string, timeOfDay: ObjectFormValues['timeOfDay']) => {
-    const parsedHours = parseFloat(hoursValue);
-    const startTimeField = getDayTimeFieldName(day, 'StartTime');
-    const endTimeField = getDayTimeFieldName(day, 'EndTime');
-
-    if (!isNaN(parsedHours) && parsedHours > 0) {
-      const { startTime, endTime } = generateTimesFromHours(parsedHours, timeOfDay);
-      form.setValue(startTimeField, startTime);
-      form.setValue(endTimeField, endTime);
-    } else {
-      form.setValue(startTimeField, null);
-      form.setValue(endTimeField, null);
-    }
-  }, 500); // Debounce for 500ms
-
-
-  // Kunden und Kundenkontakte für Dropdowns laden
   useEffect(() => {
     const fetchData = async () => {
-      const { data: customersData, error: customersError } = await supabase.from('customers').select('id, name').order('name', { ascending: true });
+      const { data: customersData } = await supabase.from('customers').select('id, name').order('name', { ascending: true });
       if (customersData) setCustomers(customersData);
-      if (customersError) console.error("Fehler beim Laden der Kunden:", customersError);
     };
     fetchData();
   }, [supabase]);
 
-  // Funktion zum Laden der Kundenkontakte
   const fetchCustomerContacts = async (customerId: string) => {
-    const { data: contactsData, error: contactsError } = await supabase
-      .from('customer_contacts')
-      .select('id, first_name, last_name, customer_id')
-      .eq('customer_id', customerId)
-      .order('last_name', { ascending: true });
+    const { data: contactsData } = await supabase.from('customer_contacts').select('id, first_name, last_name, customer_id').eq('customer_id', customerId).order('last_name', { ascending: true });
     if (contactsData) setCustomerContacts(contactsData);
-    if (contactsError) console.error("Fehler beim Laden der Kundenkontakte:", contactsError);
   };
 
-  // Kundenkontakte laden, wenn sich der ausgewählte Kunde ändert
   useEffect(() => {
     if (selectedCustomerId) {
       fetchCustomerContacts(selectedCustomerId);
     } else {
-      setCustomerContacts([]); // Kontakte leeren, wenn kein Kunde ausgewählt ist
-      form.setValue("customerContactId", null); // Objektleiter zurücksetzen
+      setCustomerContacts([]);
+      form.setValue("customerContactId", null);
     }
   }, [selectedCustomerId, supabase, form]);
 
-
   const handleFormSubmit: SubmitHandler<ObjectFormValues> = async (data) => {
-    // Create a mutable copy of data
-    const dataToSubmit: ObjectFormValues = { ...data };
-
-    dayNames.forEach(day => {
-      const startTimeField = getDayTimeFieldName(day, 'StartTime');
-      const endTimeField = getDayTimeFieldName(day, 'EndTime');
-      if (!activeDays[day]) {
-        // Explicitly cast the property to its expected type to allow null assignment
-        (dataToSubmit[startTimeField] as ObjectFormValues[typeof startTimeField]) = null;
-        (dataToSubmit[endTimeField] as ObjectFormValues[typeof endTimeField]) = null;
-      }
-    });
-
-    const result = await onSubmit(dataToSubmit);
-
+    const result = await onSubmit(data);
     if (result.success) {
       toast.success(result.message);
-      if (!initialData) {
-        form.reset();
-        // Reset active days state as well
-        setActiveDays(dayNames.reduce((acc, day) => ({ ...acc, [day]: false }), {}));
-        setDayHoursInputs(dayNames.reduce((acc, day) => ({ ...acc, [day]: '' }), {})); // Reset hours inputs
-      }
+      if (!initialData) form.reset();
       onSuccess?.();
     } else {
       toast.error(result.message);
     }
   };
 
-  const accessMethod = form.watch("accessMethod");
-  const isAlarmSecured = form.watch("isAlarmSecured");
-
-  // Handler für die Kundenkontakterstellung im Dialog
   const handleCustomerContactCreated = async (newContactId: string) => {
     if (selectedCustomerId) {
-      await fetchCustomerContacts(selectedCustomerId); // Liste der Kontakte neu laden
-      form.setValue("customerContactId", newContactId); // Neu erstellten Kontakt auswählen
+      await fetchCustomerContacts(selectedCustomerId);
+      form.setValue("customerContactId", newContactId);
     }
   };
 
+  const accessMethod = form.watch("accessMethod");
+  const isAlarmSecured = form.watch("isAlarmSecured");
+
   return (
     <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 w-full max-w-md">
-      <div>
-        <Label htmlFor="name">Name</Label>
-        <Input
-          id="name"
-          {...form.register("name")}
-          placeholder="Z.B. Firmenname GmbH"
-        />
-        {form.formState.errors.name && (
-          <p className="text-red-500 text-sm mt-1">{form.formState.errors.name.message}</p>
-        )}
-      </div>
-      <div>
-        <Label htmlFor="address">Adresse</Label>
-        <Textarea
-          id="address"
-          {...form.register("address")}
-          placeholder="Z.B. Musterstraße 1, 12345 Musterstadt"
-          rows={3}
-        />
-        {form.formState.errors.address && (
-          <p className="text-red-500 text-sm mt-1">{form.formState.errors.address.message}</p>
-        )}
-      </div>
-      <div>
-        <Label htmlFor="description">Beschreibung (optional)</Label>
-        <Textarea
-          id="description"
-          {...form.register("description")}
-          placeholder="Zusätzliche Details zum Objekt..."
-          rows={3}
-        />
-        {form.formState.errors.description && (
-          <p className="text-red-500 text-sm mt-1">{form.formState.errors.description.message}</p>
-        )}
-      </div>
-      <div>
-        <Label htmlFor="customerId">Zugehöriger Kunde</Label>
-        <Select onValueChange={(value) => form.setValue("customerId", value)} value={form.watch("customerId")}>
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Kunde auswählen" />
-          </SelectTrigger>
-          <SelectContent>
-            {customers.map(customer => (
-              <SelectItem key={customer.id} value={customer.id}>{customer.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {form.formState.errors.customerId && (
-          <p className="text-red-500 text-sm mt-1">{form.formState.errors.customerId.message}</p>
-        )}
-      </div>
+      {/* Grundlegende Objektinformationen */}
+      <Input id="name" {...form.register("name")} placeholder="Name des Objekts" />
+      <Textarea id="address" {...form.register("address")} placeholder="Adresse" rows={3} />
+      <Textarea id="description" {...form.register("description")} placeholder="Beschreibung (optional)" rows={3} />
+      
+      {/* Kunde und Kontakt */}
+      <Select onValueChange={(value) => form.setValue("customerId", value)} value={form.watch("customerId")}>
+        <SelectTrigger><SelectValue placeholder="Kunde auswählen" /></SelectTrigger>
+        <SelectContent>{customers.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+      </Select>
       <div className="flex items-end gap-2">
         <div className="flex-grow">
-          <Label htmlFor="customerContactId">Objektleiter (Kundenkontakt, optional)</Label>
-          <Select onValueChange={(value) => form.setValue("customerContactId", value === "unassigned" ? null : value)} value={form.watch("customerContactId") || "unassigned"} disabled={!selectedCustomerId}>
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Objektleiter auswählen" />
-            </SelectTrigger>
+          <Select onValueChange={(v) => form.setValue("customerContactId", v === "unassigned" ? null : v)} value={form.watch("customerContactId") || "unassigned"} disabled={!selectedCustomerId}>
+            <SelectTrigger><SelectValue placeholder="Objektleiter auswählen" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="unassigned">Kein Objektleiter zugewiesen</SelectItem>
-              {customerContacts.map(contact => (
-                <SelectItem key={contact.id} value={contact.id}>{contact.first_name} {contact.last_name}</SelectItem>
-              ))}
+              <SelectItem value="unassigned">Kein Objektleiter</SelectItem>
+              {customerContacts.map(c => <SelectItem key={c.id} value={c.id}>{c.first_name} {c.last_name}</SelectItem>)}
             </SelectContent>
           </Select>
-          {form.formState.errors.customerContactId && (
-            <p className="text-red-500 text-sm mt-1">{form.formState.errors.customerContactId.message}</p>
-          )}
         </div>
-        <CustomerContactCreateDialog
-          customerId={selectedCustomerId}
-          onContactCreated={handleCustomerContactCreated}
-          disabled={!selectedCustomerId}
-        />
+        <CustomerContactCreateDialog customerId={selectedCustomerId} onContactCreated={handleCustomerContactCreated} disabled={!selectedCustomerId} />
       </div>
 
-      <h3 className="text-lg font-semibold mt-6">Auftragseinstellungen für dieses Objekt</h3>
-      <div>
-        <Label htmlFor="notes">Notizen für Aufträge (optional)</Label>
-        <Textarea
-          id="notes"
-          {...form.register("notes")}
-          placeholder="Notizen, die in neue Aufträge übernommen werden..."
-          rows={3}
-        />
-        {form.formState.errors.notes && (
-          <p className="text-red-500 text-sm mt-1">{form.formState.errors.notes.message}</p>
-        )}
-      </div>
-      <div>
-        <Label htmlFor="priority">Priorität</Label>
-        <Select onValueChange={(value) => form.setValue("priority", value as "low" | "medium" | "high")} value={form.watch("priority")}>
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Priorität auswählen" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="low">Niedrig</SelectItem>
-            <SelectItem value="medium">Mittel</SelectItem>
-            <SelectItem value="high">Hoch</SelectItem>
-          </SelectContent>
-        </Select>
-        {form.formState.errors.priority && (
-          <p className="text-red-500 text-sm mt-1">{form.formState.errors.priority.message}</p>
-        )}
-      </div>
-      <div>
-        <Label htmlFor="timeOfDay">Tageszeit</Label>
-        <Select onValueChange={(value) => form.setValue("timeOfDay", value as "morning" | "noon" | "afternoon" | "any")} value={form.watch("timeOfDay")}>
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Tageszeit auswählen" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="any">Beliebig</SelectItem>
-            <SelectItem value="morning">Vormittags</SelectItem>
-            <SelectItem value="noon">Mittags</SelectItem>
-            <SelectItem value="afternoon">Nachmittags</SelectItem>
-          </SelectContent>
-        </Select>
-        {form.formState.errors.timeOfDay && (
-          <p className="text-red-500 text-sm mt-1">{form.formState.errors.timeOfDay.message}</p>
-        )}
-      </div>
-
-      <h3 className="text-lg font-semibold mt-6">Arbeitszeiten pro Wochentag</h3>
-      {dayNames.map(day => {
-        const startTimeField = getDayTimeFieldName(day, 'StartTime');
-        const endTimeField = getDayTimeFieldName(day, 'EndTime');
-        const currentStartTime = form.watch(startTimeField) as string | null;
-        const currentEndTime = form.watch(endTimeField) as string | null;
-        const calculatedHours = useMemo(() => calculateHours(currentStartTime, currentEndTime), [currentStartTime, currentEndTime]);
-
-        return (
-          <div key={day} className="space-y-2 border p-3 rounded-md">
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id={`${day}Active`}
-                checked={activeDays[day]}
-                onCheckedChange={(checked) => {
-                  setActiveDays(prev => ({ ...prev, [day]: !!checked }));
-                  if (!checked) {
-                    form.setValue(startTimeField, null);
-                    form.setValue(endTimeField, null);
-                    setDayHoursInputs(prev => ({ ...prev, [day]: '' }));
-                  }
-                }}
-              />
-              <Label htmlFor={`${day}Active`}>{day.charAt(0).toUpperCase() + day.slice(1)}</Label>
+      {/* Arbeitszeiten pro Wochentag */}
+      <h3 className="text-lg font-semibold mt-6">Arbeitsplan pro Wochentag</h3>
+      {dayNames.map(day => (
+        <div key={day} className="p-3 border rounded-md space-y-2">
+          <Label className="font-medium">{germanDayNames[day]}</Label>
+          <div className="grid grid-cols-3 gap-2">
+            <div>
+              <Label htmlFor={`${day}_start_time`} className="text-xs">Start</Label>
+              <Input id={`${day}_start_time`} type="time" {...form.register(`${day}_start_time` as keyof ObjectFormValues)} />
             </div>
-            {activeDays[day] && (
-              <div className="grid grid-cols-3 gap-4 mt-2 items-end">
-                <div>
-                  <Label htmlFor={startTimeField}>Start</Label>
-                  <Input
-                    id={startTimeField}
-                    type="time"
-                    {...form.register(startTimeField)}
-                  />
-                  {form.formState.errors[startTimeField] && (
-                    <p className="text-red-500 text-sm mt-1">{form.formState.errors[startTimeField]?.message}</p>
-                  )}
-                </div>
-                <div>
-                  <Label htmlFor={endTimeField}>Ende</Label>
-                  <Input
-                    id={endTimeField}
-                    type="time"
-                    {...form.register(endTimeField)}
-                  />
-                  {form.formState.errors[endTimeField] && (
-                    <p className="text-red-500 text-sm mt-1">{form.formState.errors[endTimeField]?.message}</p>
-                  )}
-                </div>
-                <div>
-                  <Label htmlFor={`${day}Hours`}>Stunden</Label>
-                  <Input
-                    id={`${day}Hours`}
-                    type="text"
-                    placeholder="Stunden"
-                    value={dayHoursInputs[day]}
-                    onChange={(e) => {
-                      let value = e.target.value;
-                      value = value.replace(',', '.');
-                      setDayHoursInputs(prev => ({ ...prev, [day]: value }));
-                      debouncedUpdateTimes(day, value, timeOfDay);
-                    }}
-                  />
-                </div>
-              </div>
-            )}
+            <div>
+              <Label htmlFor={`${day}_end_time`} className="text-xs">Ende</Label>
+              <Input id={`${day}_end_time`} type="time" {...form.register(`${day}_end_time` as keyof ObjectFormValues)} />
+            </div>
+            <div>
+              <Label htmlFor={`${day}_hours`} className="text-xs">Netto-Std.</Label>
+              <Input id={`${day}_hours`} type="number" step="0.01" {...form.register(`${day}_hours` as keyof ObjectFormValues)} placeholder="z.B. 7.5" />
+            </div>
           </div>
-        );
-      })}
-
-      <h3 className="text-lg font-semibold mt-6">Zugangsinformationen</h3>
-      <div>
-        <Label htmlFor="accessMethod">Zugangsmethode</Label>
-        <Select onValueChange={(value) => form.setValue("accessMethod", value as "key" | "card" | "other")} value={form.watch("accessMethod")}>
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Zugangsmethode auswählen" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="key">Schlüssel</SelectItem>
-            <SelectItem value="card">Karte</SelectItem>
-            <SelectItem value="other">Andere</SelectItem>
-          </SelectContent>
-        </Select>
-        {form.formState.errors.accessMethod && (
-          <p className="text-red-500 text-sm mt-1">{form.formState.errors.accessMethod.message}</p>
-        )}
-      </div>
-
-      {accessMethod === "card" && (
-        <div>
-          <Label htmlFor="pin">PIN (optional)</Label>
-          <Input
-            id="pin"
-            {...form.register("pin")}
-            placeholder="PIN für den Zugang"
-          />
-          {form.formState.errors.pin && (
-            <p className="text-red-500 text-sm mt-1">{form.formState.errors.pin.message}</p>
-          )}
         </div>
-      )}
+      ))}
 
+      {/* Auftragseinstellungen */}
+      <h3 className="text-lg font-semibold mt-6">Standard-Auftragseinstellungen</h3>
+      <Textarea id="notes" {...form.register("notes")} placeholder="Notizen für Aufträge (optional)" rows={3} />
+      <Select onValueChange={(v) => form.setValue("priority", v as any)} value={form.watch("priority")}>
+        <SelectTrigger><SelectValue placeholder="Priorität" /></SelectTrigger>
+        <SelectContent>
+          <SelectItem value="low">Niedrig</SelectItem>
+          <SelectItem value="medium">Mittel</SelectItem>
+          <SelectItem value="high">Hoch</SelectItem>
+        </SelectContent>
+      </Select>
+      <Select onValueChange={(v) => form.setValue("timeOfDay", v as any)} value={form.watch("timeOfDay")}>
+        <SelectTrigger><SelectValue placeholder="Tageszeit" /></SelectTrigger>
+        <SelectContent>
+          <SelectItem value="any">Beliebig</SelectItem>
+          <SelectItem value="morning">Vormittags</SelectItem>
+          <SelectItem value="noon">Mittags</SelectItem>
+          <SelectItem value="afternoon">Nachmittags</SelectItem>
+        </SelectContent>
+      </Select>
+
+      {/* Zugangsinformationen */}
+      <h3 className="text-lg font-semibold mt-6">Zugangsinformationen</h3>
+      <Select onValueChange={(v) => form.setValue("accessMethod", v as any)} value={accessMethod}>
+        <SelectTrigger><SelectValue placeholder="Zugangsmethode" /></SelectTrigger>
+        <SelectContent>
+          <SelectItem value="key">Schlüssel</SelectItem>
+          <SelectItem value="card">Karte</SelectItem>
+          <SelectItem value="other">Andere</SelectItem>
+        </SelectContent>
+      </Select>
+      {accessMethod === "card" && <Input id="pin" {...form.register("pin")} placeholder="PIN (optional)" />}
       <div className="flex items-center justify-between space-x-2">
         <Label htmlFor="isAlarmSecured">Alarmgesichert?</Label>
-        <Switch
-          id="isAlarmSecured"
-          checked={isAlarmSecured}
-          onCheckedChange={(checked) => form.setValue("isAlarmSecured", checked)}
-        />
+        <Switch id="isAlarmSecured" checked={isAlarmSecured} onCheckedChange={(c) => form.setValue("isAlarmSecured", c)} />
       </div>
-
       {isAlarmSecured && (
         <>
-          <div>
-            <Label htmlFor="alarmPassword">Alarmkennwort (optional)</Label>
-            <Input
-              id="alarmPassword"
-              {...form.register("alarmPassword")}
-              placeholder="Alarmkennwort"
-            />
-            {form.formState.errors.alarmPassword && (
-              <p className="text-red-500 text-sm mt-1">{form.formState.errors.alarmPassword.message}</p>
-            )}
-          </div>
-          <div>
-            <Label htmlFor="securityCodeWord">Codewort für Security (optional)</Label>
-            <Input
-              id="securityCodeWord"
-              {...form.register("securityCodeWord")}
-              placeholder="Codewort für Security"
-            />
-            {form.formState.errors.securityCodeWord && (
-              <p className="text-red-500 text-sm mt-1">{form.formState.errors.securityCodeWord.message}</p>
-            )}
-          </div>
+          <Input id="alarmPassword" {...form.register("alarmPassword")} placeholder="Alarmkennwort (optional)" />
+          <Input id="securityCodeWord" {...form.register("securityCodeWord")} placeholder="Codewort für Security (optional)" />
         </>
       )}
 
