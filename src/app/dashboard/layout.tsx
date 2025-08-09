@@ -1,6 +1,6 @@
 import React from "react";
 import Link from "next/link";
-import { Home, ListTodo, User, Users, Briefcase, UsersRound, Building, ContactRound, Settings, Clock } from "lucide-react"; // Clock-Icon hinzugefügt
+import { Home, ListTodo, User, Users, Briefcase, UsersRound, Building, ContactRound, Settings, Clock, FileText } from "lucide-react"; // Clock-Icon hinzugefügt, FileText für Reports
 import { Button } from "@/components/ui/button";
 import { signOut } from "@/app/dashboard/actions";
 import { createClient } from "@/lib/supabase/server";
@@ -17,6 +17,15 @@ export default async function DashboardLayout({
   if (!user) {
     redirect("/login");
   }
+
+  // Fetch the current user's role to conditionally show the "Benutzer" and "Arbeitszeitnachweise" link
+  const { data: userProfile, error: profileError } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single();
+
+  const isAdmin = userProfile?.role === 'admin';
 
   return (
     <div className="min-h-screen flex">
@@ -61,18 +70,28 @@ export default async function DashboardLayout({
                 Mitarbeiter
               </Button>
             </Link>
-            <Link href="/dashboard/time-tracking" passHref> {/* Neuer Link */}
+            <Link href="/dashboard/time-tracking" passHref>
               <Button variant="ghost" className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
                 <Clock className="mr-2 h-4 w-4" />
                 Zeiterfassung
               </Button>
             </Link>
-            <Link href="/dashboard/users" passHref>
-              <Button variant="ghost" className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
-                <Settings className="mr-2 h-4 w-4" />
-                Benutzer
-              </Button>
-            </Link>
+            {isAdmin && ( // Only show for admins
+              <Link href="/dashboard/reports" passHref>
+                <Button variant="ghost" className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
+                  <FileText className="mr-2 h-4 w-4" />
+                  Arbeitszeitnachweise
+                </Button>
+              </Link>
+            )}
+            {isAdmin && ( // Only show for admins
+              <Link href="/dashboard/users" passHref>
+                <Button variant="ghost" className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
+                  <Settings className="mr-2 h-4 w-4" />
+                  Benutzer
+                </Button>
+              </Link>
+            )}
             <Link href="/dashboard/profile" passHref>
               <Button variant="ghost" className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
                 <User className="mr-2 h-4 w-4" />
