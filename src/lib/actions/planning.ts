@@ -39,12 +39,15 @@ export async function getPlanningDataForWeek(currentDate: Date): Promise<{ succe
       .select('id, first_name, last_name');
     if (employeesError) throw employeesError;
 
-    // 2. Alle relevanten Aufträge abrufen (permanent/wiederkehrend mit Mitarbeiter und Objekt)
+    // 2. Alle relevanten Aufträge abrufen (alle Typen mit Mitarbeiter)
     const { data: orders, error: ordersError } = await supabase
       .from('orders')
       .select(`
         title,
         employee_id,
+        order_type,
+        due_date,
+        estimated_hours,
         recurring_start_date,
         recurring_end_date,
         objects (
@@ -52,9 +55,7 @@ export async function getPlanningDataForWeek(currentDate: Date): Promise<{ succe
           friday_hours, saturday_hours, sunday_hours
         )
       `)
-      .in('order_type', ['permanent', 'recurring'])
-      .not('employee_id', 'is', null)
-      .not('object_id', 'is', null);
+      .not('employee_id', 'is', null);
     if (ordersError) throw ordersError;
 
     // 3. Alle genehmigten Abwesenheiten im Zeitraum abrufen
@@ -100,34 +101,45 @@ export async function getPlanningDataForWeek(currentDate: Date): Promise<{ succe
           continue; // Wenn abwesend, keine Aufträge prüfen
         }
 
-        // Aufträge für diesen Tag prüfen
-        const employeeOrders = orders.filter(o =>
-          o.employee_id === employee.id &&
-          parseISO(o.recurring_start_date) <= day &&
-          (!o.recurring_end_date || parseISO(o.recurring_end_date) >= day)
-        );
+        // Alle Aufträge für diesen Mitarbeiter durchgehen
+        const employeeOrders = orders.filter(o => o.employee_id === employee.id);
 
         for (const order of employeeOrders) {
-          if (!order.objects) continue;
-          const schedule = Array.isArray(order.objects) ? order.objects[0] : order.objects;
-          if (!schedule) continue;
-
           let dailyHours = 0;
+          let assignmentTitle = order.title;
 
-          switch (dayOfWeek) {
-            case 1: dailyHours = schedule.monday_hours || 0; break;
-            case 2: dailyHours = schedule.tuesday_hours || 0; break;
-            case 3: dailyHours = schedule.wednesday_hours || 0; break;
-            case 4: dailyHours = schedule.thursday_hours || 0; break;
-            case 5: dailyHours = schedule.friday_hours || 0; break;
-            case 6: dailyHours = schedule.saturday_hours || 0; break;
-            case 0: dailyHours = schedule.sunday_hours || 0; break;
+          // Fall 1: Daueraufträge (permanent, recurring, substitution)
+          if (['permanent', 'recurring', 'substitution'].includes(order.order_type)) {
+            if (order.recurring_start_date && parseISO(order.recurring_start_date) <= day && (!order.recurring_end_date || parseISO(order.recurring_end_date) >= day)) {
+              if (order.objects) {
+                const schedule = Array.isArray(order.objects) ? order.objects[0] : order.objects;
+                if (schedule) {
+                  switch (dayOfWeek) {
+                    case 1: dailyHours = schedule.monday_hours || 0; break;
+                    case 2: dailyHours = schedule.tuesday_hours || 0; break;
+                    case 3: dailyHours = schedule.wednesday_hours || 0; break;
+                    case 4: dailyHours = schedule.thursday_hours || 0; break;
+                    case 5: dailyHours = schedule.friday_hours || 0; break;
+                    case 6: dailyHours = schedule.saturday_hours || 0; break;
+                    case 0: dailyHours = schedule.sunday_hours || 0; break;
+                  }
+                  assignmentTitle = `${order.title} (Plan)`;
+                }
+              }
+            }
+          }
+          // Fall 2: Einmalige Aufträge
+          else if (order.order_type === 'one_time') {
+            if (order.due_date && formatISO(parseISO(order.due_date), { representation: 'date' }) === dateString) {
+              dailyHours = order.estimated_hours || 0;
+              assignmentTitle = `${order.title} (Einmalig)`;
+            }
           }
 
           if (dailyHours > 0) {
             planningData[employee.id].schedule[dateString].totalHours += dailyHours;
             planningData[employee.id].schedule[dateString].assignments.push({
-              title: order.title,
+              title: assignmentTitle,
               hours: dailyHours,
             });
           }
