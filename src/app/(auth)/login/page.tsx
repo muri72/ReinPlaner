@@ -18,10 +18,10 @@ export default function LoginPage() {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        if (event === "SIGNED_IN" || event === "USER_UPDATED") {
-          if (session) {
-            router.push("/dashboard"); // Authentifizierte Benutzer zum Dashboard umleiten
-          }
+        if (event === "SIGNED_IN") {
+          // On sign-in, push to the root and let the middleware handle the redirect.
+          router.push("/"); 
+          router.refresh(); // Ensure the page reloads to trigger middleware correctly.
         } else if (event === "SIGNED_OUT") {
           toast.info("Sie wurden abgemeldet.");
         }
@@ -47,7 +47,7 @@ export default function LoginPage() {
       toast.error(`Anmeldung fehlgeschlagen: ${error.message}. Bitte stellen Sie sicher, dass der Demo-Benutzer in Supabase existiert.`);
     } else {
       toast.success("Erfolgreich als Demo-Benutzer angemeldet!");
-      // Die Weiterleitung wird durch onAuthStateChange gehandhabt
+      // The onAuthStateChange handler will now manage the redirect.
     }
     setLoading(false);
   };
@@ -65,7 +65,7 @@ export default function LoginPage() {
       toast.error(`Anmeldung fehlgeschlagen: ${error.message}`);
     } else {
       toast.success("Erfolgreich angemeldet!");
-      // Die Weiterleitung wird durch onAuthStateChange gehandhabt
+      // The onAuthStateChange handler will now manage the redirect.
     }
     setLoading(false);
   };

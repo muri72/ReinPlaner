@@ -3,28 +3,43 @@ import { createClient } from '@/lib/supabase/middleware'
 
 export async function middleware(request: NextRequest) {
   const { supabase, response } = createClient(request)
-
   const { data: { session } } = await supabase.auth.getSession()
-
   const { pathname } = request.nextUrl;
 
-  // Wenn angemeldet und versucht, auf die Root-URL '/' zuzugreifen, zum Dashboard weiterleiten
-  if (session && pathname === '/') {
-    return NextResponse.redirect(new URL('/dashboard', request.url));
+  // If no session, redirect protected routes to login
+  if (!session) {
+    if (pathname.startsWith('/dashboard') || pathname.startsWith('/portal')) {
+      return NextResponse.redirect(new URL('/login', request.url));
+    }
+    return response;
   }
 
-  // Zugriff auf Auth-Seiten ohne Authentifizierung erlauben
-  if (pathname.startsWith('/login') || pathname.startsWith('/auth/callback')) {
-    if (session) {
-      // Wenn angemeldet, von der Login-Seite zum Dashboard weiterleiten
+  // If session exists, handle role-based routing
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', session.user.id)
+    .single();
+
+  const userRole = profile?.role;
+
+  // Redirect logged-in users away from the login page
+  if (pathname.startsWith('/login')) {
+    const url = userRole === 'customer' ? '/portal/dashboard' : '/dashboard';
+    return NextResponse.redirect(new URL(url, request.url));
+  }
+
+  // Role-based routing for the rest of the app
+  if (userRole === 'customer') {
+    // If a customer tries to access the main app, redirect them to their portal
+    if (pathname.startsWith('/dashboard') || pathname === '/') {
+      return NextResponse.redirect(new URL('/portal/dashboard', request.url));
+    }
+  } else { // For admin, manager, employee
+    // If an internal user tries to access the customer portal, redirect them to the main dashboard
+    if (pathname.startsWith('/portal') || pathname === '/') {
       return NextResponse.redirect(new URL('/dashboard', request.url));
     }
-    return response; // Zugriff auf Login/Callback erlauben
-  }
-
-  // Alle anderen Routen schützen, bei nicht angemeldeten Benutzern zur Login-Seite weiterleiten
-  if (!session) {
-    return NextResponse.redirect(new URL('/login', request.url));
   }
 
   return response

@@ -11,5 +11,6 @@ export async function GET(request: Request) {
   }
 
   // URL to redirect to after sign in process completes
-  return NextResponse.redirect(requestUrl.origin + '/dashboard')
+  // Redirect to the root, and let the middleware handle the role-based redirect.
+  return NextResponse.redirect(requestUrl.origin)
 }
