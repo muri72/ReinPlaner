@@ -126,3 +126,44 @@ export async function deleteOrder(formData: FormData): Promise<{ success: boolea
   revalidatePath("/dashboard/orders"); // Pfad aktualisiert
   return { success: true, message: "Auftrag erfolgreich gelöscht!" };
 }
+
+export async function processOrderRequest(formData: FormData): Promise<{ success: boolean; message: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { success: false, message: "Benutzer nicht authentifiziert." };
+  }
+
+  const orderId = formData.get('orderId') as string;
+  const employeeId = formData.get('employeeId') as string | null;
+  const decision = formData.get('decision') as 'approved' | 'rejected';
+
+  if (!orderId || !decision) {
+    return { success: false, message: "Ungültige Anfrage." };
+  }
+
+  if (decision === 'approved' && !employeeId) {
+    return { success: false, message: "Bitte weisen Sie einen Mitarbeiter zu, um den Auftrag zu genehmigen." };
+  }
+
+  // TODO: Add security check to ensure user is admin or assigned manager
+
+  const { error } = await supabase
+    .from('orders')
+    .update({
+      request_status: decision,
+      employee_id: decision === 'approved' ? employeeId : null,
+      // When approved, set the main status to 'pending' so it appears in the active orders list
+      status: decision === 'approved' ? 'pending' : 'pending', // status remains pending, but request_status changes
+    })
+    .eq('id', orderId);
+
+  if (error) {
+    console.error("Fehler bei der Bearbeitung der Auftragsanfrage:", error);
+    return { success: false, message: error.message };
+  }
+
+  revalidatePath("/dashboard/orders");
+  return { success: true, message: `Anfrage erfolgreich ${decision === 'approved' ? 'genehmigt' : 'abgelehnt'}!` };
+}

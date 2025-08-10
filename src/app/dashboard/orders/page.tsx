@@ -3,14 +3,14 @@ import { redirect } from "next/navigation";
 import { OrderForm } from "@/components/order-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Trash2, CalendarDays, Clock, FileText, Wrench, UserRound } from "lucide-react"; // Wrench-Icon für service_type, UserRound für Kundenkontakt
+import { Trash2, CalendarDays, Clock, FileText, Wrench, UserRound, AlertTriangle } from "lucide-react";
 import { deleteOrder, createOrder } from "./actions";
 import { OrderEditDialog } from "@/components/order-edit-dialog";
 import { Badge } from "@/components/ui/badge";
 import { DeleteOrderButton } from "@/components/delete-order-button";
-import { SearchInput } from "@/components/search-input"; // Importiere die SearchInput Komponente
+import { SearchInput } from "@/components/search-input";
+import { OrderPlanningDialog } from "@/components/order-planning-dialog";
 
-// Definieren Sie die Schnittstelle für die Auftrags-Daten, wie sie auf dieser Seite verwendet werden
 interface DisplayOrder {
   id: string;
   user_id: string;
@@ -22,22 +22,21 @@ interface DisplayOrder {
   customer_id: string | null;
   object_id: string | null;
   employee_id: string | null;
-  customer_contact_id: string | null; // Neues Feld
+  customer_contact_id: string | null;
   customer_name: string | null;
   object_name: string | null;
   employee_first_name: string | null;
   employee_last_name: string | null;
-  customer_contact_first_name: string | null; // Name des Kundenkontakts
-  customer_contact_last_name: string | null; // Name des Kundenkontakts
-  // Neue Felder
+  customer_contact_first_name: string | null;
+  customer_contact_last_name: string | null;
   order_type: string;
   recurring_start_date: string | null;
   recurring_end_date: string | null;
   priority: string;
   estimated_hours: number | null;
   notes: string | null;
-  request_status: string; // Neues Feld
-  service_type: string | null; // Neues Feld
+  request_status: string;
+  service_type: string | null;
 }
 
 export default async function OrdersPage({
@@ -52,18 +51,14 @@ export default async function OrdersPage({
 
   const query = typeof searchParams?.query === 'string' ? searchParams.query : '';
 
-  let orders: DisplayOrder[] | null;
+  let allOrders: DisplayOrder[] = [];
   let error: any;
 
   if (query) {
-    // Verwende die vereinfachte RPC-Funktion für die Suche
-    const { data, error: rpcError } = await supabase.rpc('search_orders', {
-      search_query: query,
-    });
-    orders = data as DisplayOrder[] | null;
+    const { data, error: rpcError } = await supabase.rpc('search_orders', { search_query: query });
+    allOrders = (data as DisplayOrder[] | null) || [];
     error = rpcError;
   } else {
-    // Direkte Abfrage, die sich auf RLS verlässt
     const { data, error: selectError } = await supabase
       .from('orders')
       .select(`
@@ -75,8 +70,7 @@ export default async function OrdersPage({
       `)
       .order('created_at', { ascending: false });
 
-    // Daten mappen, um sie an die DisplayOrder-Schnittstelle anzupassen
-    orders = data?.map(order => ({
+    allOrders = data?.map(order => ({
       id: order.id,
       user_id: order.user_id,
       title: order.title,
@@ -87,23 +81,22 @@ export default async function OrdersPage({
       customer_id: order.customer_id,
       object_id: order.object_id,
       employee_id: order.employee_id,
-      customer_contact_id: order.customer_contact_id, // Neues Feld
+      customer_contact_id: order.customer_contact_id,
       customer_name: order.customers?.name || null,
       object_name: order.objects?.name || null,
       employee_first_name: order.employees?.first_name || null,
       employee_last_name: order.employees?.last_name || null,
-      customer_contact_first_name: order.customer_contacts?.first_name || null, // Name des Kundenkontakts
-      customer_contact_last_name: order.customer_contacts?.last_name || null, // Name des Kundenkontakts
-      // Neue Felder mappen
+      customer_contact_first_name: order.customer_contacts?.first_name || null,
+      customer_contact_last_name: order.customer_contacts?.last_name || null,
       order_type: order.order_type,
       recurring_start_date: order.recurring_start_date,
       recurring_end_date: order.recurring_end_date,
       priority: order.priority,
       estimated_hours: order.estimated_hours,
       notes: order.notes,
-      request_status: order.request_status, // Neues Feld
-      service_type: order.service_type, // Neues Feld
-    })) || null;
+      request_status: order.request_status,
+      service_type: order.service_type,
+    })) || [];
     error = selectError;
   }
 
@@ -112,126 +105,113 @@ export default async function OrdersPage({
     return <div className="p-8">Fehler beim Laden der Aufträge.</div>;
   }
 
+  const pendingRequests = allOrders.filter(order => order.request_status === 'pending');
+  const otherOrders = allOrders.filter(order => order.request_status !== 'pending');
+
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
-      case 'completed':
-        return 'default';
-      case 'in_progress':
-        return 'secondary';
+      case 'completed': return 'default';
+      case 'in_progress': return 'secondary';
       case 'pending':
-      default:
-        return 'outline';
+      default: return 'outline';
     }
   };
 
   const getPriorityBadgeVariant = (priority: string) => {
     switch (priority) {
-      case 'high':
-        return 'destructive';
-      case 'medium':
-        return 'default';
+      case 'high': return 'destructive';
+      case 'medium': return 'default';
       case 'low':
-      default:
-        return 'secondary';
+      default: return 'secondary';
     }
   };
 
   const getRequestStatusBadgeVariant = (requestStatus: string) => {
     switch (requestStatus) {
-      case 'approved':
-        return 'default';
-      case 'pending':
-        return 'secondary';
-      case 'rejected':
-        return 'destructive';
-      default:
-        return 'outline';
+      case 'approved': return 'default';
+      case 'pending': return 'secondary';
+      case 'rejected': return 'destructive';
+      default: return 'outline';
     }
   };
 
   return (
     <div className="p-8 space-y-8">
-      <h1 className="text-3xl font-bold">Ihre Aufträge</h1>
-
+      <h1 className="text-3xl font-bold">Auftragsverwaltung</h1>
       <div className="mb-4">
         <SearchInput placeholder="Aufträge suchen..." />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {orders && orders.length === 0 ? (
-          <p className="col-span-full text-center text-muted-foreground">
-            {query ? "Keine Aufträge gefunden, die Ihrer Suche entsprechen." : "Noch keine Aufträge vorhanden. Fügen Sie einen hinzu!"}
-          </p>
-        ) : (
-          orders?.map((order) => (
-            <Card key={order.id}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-lg font-medium">{order.title}</CardTitle>
-                <div className="flex items-center space-x-2">
-                  <OrderEditDialog order={order} />
-                  <DeleteOrderButton orderId={order.id} />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground">{order.description}</p>
-                {order.customer_name && (
-                  <p className="text-xs text-muted-foreground mt-1">Kunde: {order.customer_name}</p>
-                )}
-                {order.object_name && (
-                  <p className="text-xs text-muted-foreground">Objekt: {order.object_name}</p>
-                )}
-                {order.customer_contact_first_name && order.customer_contact_last_name && (
-                  <div className="flex items-center text-xs text-muted-foreground">
-                    <UserRound className="mr-1 h-3 w-3" />
-                    <span>Auftraggeber: {order.customer_contact_first_name} {order.customer_contact_last_name}</span>
+      {/* Section for Pending Requests */}
+      <div className="space-y-4">
+        <h2 className="text-2xl font-bold flex items-center">
+          <AlertTriangle className="mr-2 h-6 w-6 text-amber-500" />
+          Offene Anfragen ({pendingRequests.length})
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {pendingRequests.length === 0 ? (
+            <p className="col-span-full text-center text-muted-foreground">Keine offenen Anfragen vorhanden.</p>
+          ) : (
+            pendingRequests.map((order) => (
+              <Card key={order.id} className="border-amber-500 border-2">
+                <CardHeader>
+                  <CardTitle className="text-lg font-medium">{order.title}</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <p className="text-sm text-muted-foreground">{order.description}</p>
+                  {order.customer_name && <p className="text-xs text-muted-foreground mt-1">Kunde: {order.customer_name}</p>}
+                  {order.object_name && <p className="text-xs text-muted-foreground">Objekt: {order.object_name}</p>}
+                  <div className="pt-4">
+                    <OrderPlanningDialog order={order} />
                   </div>
-                )}
-                {order.employee_first_name && order.employee_last_name && (
-                  <p className="text-xs text-muted-foreground">Mitarbeiter: {order.employee_first_name} {order.employee_last_name}</p>
-                )}
-                {order.service_type && ( // Neues Feld anzeigen
-                  <div className="flex items-center text-xs text-muted-foreground mt-1">
-                    <Wrench className="mr-1 h-3 w-3" />
-                    <span>Dienstleistung: {order.service_type}</span>
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* Section for Other Orders */}
+      <div className="space-y-4 pt-8">
+        <h2 className="text-2xl font-bold">Bestehende Aufträge</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {otherOrders.length === 0 && !query ? (
+            <p className="col-span-full text-center text-muted-foreground">Keine bestehenden Aufträge vorhanden.</p>
+          ) : (
+            otherOrders.map((order) => (
+              <Card key={order.id}>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-lg font-medium">{order.title}</CardTitle>
+                  <div className="flex items-center space-x-2">
+                    <OrderEditDialog order={order} />
+                    <DeleteOrderButton orderId={order.id} />
                   </div>
-                )}
-                <div className="flex items-center mt-2 space-x-2">
-                  <Badge variant={getStatusBadgeVariant(order.status)}>{order.status}</Badge>
-                  <Badge variant="outline">{order.order_type}</Badge>
-                  <Badge variant={getPriorityBadgeVariant(order.priority)}>Priorität: {order.priority}</Badge>
-                  <Badge variant={getRequestStatusBadgeVariant(order.request_status)}>Anfrage: {order.request_status}</Badge>
-                </div>
-                {order.estimated_hours && (
-                  <div className="flex items-center text-xs text-muted-foreground mt-1">
-                    <Clock className="mr-1 h-3 w-3" />
-                    <span>Geschätzte Stunden: {order.estimated_hours}</span>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground">{order.description}</p>
+                  {order.customer_name && <p className="text-xs text-muted-foreground mt-1">Kunde: {order.customer_name}</p>}
+                  {order.object_name && <p className="text-xs text-muted-foreground">Objekt: {order.object_name}</p>}
+                  {order.customer_contact_first_name && order.customer_contact_last_name && (
+                    <div className="flex items-center text-xs text-muted-foreground"><UserRound className="mr-1 h-3 w-3" /><span>Auftraggeber: {order.customer_contact_first_name} {order.customer_contact_last_name}</span></div>
+                  )}
+                  {order.employee_first_name && order.employee_last_name && <p className="text-xs text-muted-foreground">Mitarbeiter: {order.employee_first_name} {order.employee_last_name}</p>}
+                  {order.service_type && <div className="flex items-center text-xs text-muted-foreground mt-1"><Wrench className="mr-1 h-3 w-3" /><span>Dienstleistung: {order.service_type}</span></div>}
+                  <div className="flex items-center mt-2 space-x-2">
+                    <Badge variant={getStatusBadgeVariant(order.status)}>{order.status}</Badge>
+                    <Badge variant="outline">{order.order_type}</Badge>
+                    <Badge variant={getPriorityBadgeVariant(order.priority)}>Priorität: {order.priority}</Badge>
+                    <Badge variant={getRequestStatusBadgeVariant(order.request_status)}>Anfrage: {order.request_status}</Badge>
                   </div>
-                )}
-                {order.notes && (
-                  <div className="flex items-center text-xs text-muted-foreground mt-1">
-                    <FileText className="mr-1 h-3 w-3" />
-                    <span>Notizen: {order.notes}</span>
-                  </div>
-                )}
-                {order.order_type === "one_time" && order.due_date && (
-                  <p className="text-xs text-muted-foreground ml-auto mt-1">Fällig: {new Date(order.due_date).toLocaleDateString()}</p>
-                )}
-                {(order.order_type === "recurring" || order.order_type === "substitution" || order.order_type === "permanent") && order.recurring_start_date && (
-                  <div className="flex items-center text-xs text-muted-foreground mt-1">
-                    <CalendarDays className="mr-1 h-3 w-3" />
-                    <span>Start: {new Date(order.recurring_start_date).toLocaleDateString()}</span>
-                  </div>
-                )}
-                {(order.order_type === "recurring" || order.order_type === "substitution") && order.recurring_end_date && (
-                  <div className="flex items-center text-xs text-muted-foreground">
-                    <CalendarDays className="mr-1 h-3 w-3" />
-                    <span>Ende: {new Date(order.recurring_end_date).toLocaleDateString()}</span>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          ))
-        )}
+                  {order.estimated_hours && <div className="flex items-center text-xs text-muted-foreground mt-1"><Clock className="mr-1 h-3 w-3" /><span>Geschätzte Stunden: {order.estimated_hours}</span></div>}
+                  {order.notes && <div className="flex items-center text-xs text-muted-foreground mt-1"><FileText className="mr-1 h-3 w-3" /><span>Notizen: {order.notes}</span></div>}
+                  {order.order_type === "one_time" && order.due_date && <p className="text-xs text-muted-foreground ml-auto mt-1">Fällig: {new Date(order.due_date).toLocaleDateString()}</p>}
+                  {(order.order_type === "recurring" || order.order_type === "substitution" || order.order_type === "permanent") && order.recurring_start_date && <div className="flex items-center text-xs text-muted-foreground mt-1"><CalendarDays className="mr-1 h-3 w-3" /><span>Start: {new Date(order.recurring_start_date).toLocaleDateString()}</span></div>}
+                  {(order.order_type === "recurring" || order.order_type === "substitution") && order.recurring_end_date && <div className="flex items-center text-xs text-muted-foreground"><CalendarDays className="mr-1 h-3 w-3" /><span>Ende: {new Date(order.recurring_end_date).toLocaleDateString()}</span></div>}
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </div>
       </div>
 
       <h2 className="text-2xl font-bold mt-8">Neuen Auftrag hinzufügen</h2>
