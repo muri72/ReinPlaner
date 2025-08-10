@@ -182,21 +182,11 @@ export async function createOrderFeedback(formData: FormData): Promise<{ success
     return { success: false, message: "Auftrags-ID und Bewertung sind erforderlich." };
   }
 
-  const { data: orderData, error: orderError } = await supabase
-    .from('orders')
-    .select('user_id')
-    .eq('id', orderId)
-    .single();
-
-  if (orderError || !orderData) {
-    return { success: false, message: "Zugehöriger Auftrag konnte nicht gefunden werden." };
-  }
-
   const { error } = await supabase
     .from('order_feedback')
     .insert({
       order_id: orderId,
-      user_id: orderData.user_id,
+      user_id: user.id, // FIX: Use the ID of the currently logged-in user
       rating: rating,
       comment: comment,
       image_urls: imageUrls.length > 0 ? imageUrls : null,
