@@ -3,6 +3,7 @@
 import * as React from "react";
 import { format, addDays, subDays, startOfWeek, endOfWeek, eachDayOfInterval } from "date-fns";
 import { de } from "date-fns/locale";
+// Using a direct relative path to ensure the module is found by the build system.
 import { getPlanningDataForWeek, PlanningData } from "../lib/actions/planning";
 import { Button } from "./ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
