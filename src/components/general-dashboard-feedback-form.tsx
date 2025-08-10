@@ -77,22 +77,15 @@ export function GeneralDashboardFeedbackForm() {
 
   const onSubmit = async (data: GeneralFeedbackFormValues) => {
     setIsSubmitting(true);
-    let uploadedImageUrls: string[] = [];
-
     try {
-      for (const file of files) {
-        const filePath = `general-feedback/${Date.now()}-${file.name}`; // FIX: Removed "public/" prefix
-        const { data: uploadData, error: uploadError } = await supabase.storage.from("feedback-images").upload(filePath, file);
-        if (uploadError) throw new Error(`Fehler beim Hochladen des Bildes: ${uploadError.message}`);
-        const { data: urlData } = supabase.storage.from("feedback-images").getPublicUrl(uploadData.path);
-        if (urlData) uploadedImageUrls.push(urlData.publicUrl);
-      }
-
       const formData = new FormData();
       if (data.customerId) formData.append("customerId", data.customerId);
       if (data.subject) formData.append("subject", data.subject);
       formData.append("message", data.message);
-      uploadedImageUrls.forEach(url => formData.append("imageUrls[]", url));
+      
+      files.forEach(file => {
+        formData.append("images", file);
+      });
 
       const result = await createGeneralDashboardFeedback(formData);
 
@@ -104,7 +97,8 @@ export function GeneralDashboardFeedbackForm() {
         toast.error(result.message);
       }
     } catch (error: any) {
-      toast.error(error.message);
+      toast.error("Ein unerwarteter Fehler ist aufgetreten.");
+      console.error(error);
     } finally {
       setIsSubmitting(false);
     }

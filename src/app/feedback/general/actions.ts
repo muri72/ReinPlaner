@@ -1,6 +1,6 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 
 export async function createGeneralFeedback(formData: FormData): Promise<{ success: boolean; message: string }> {
@@ -10,10 +10,31 @@ export async function createGeneralFeedback(formData: FormData): Promise<{ succe
   const email = formData.get('email') as string | null;
   const subject = formData.get('subject') as string | null;
   const message = formData.get('message') as string;
-  const imageUrls = formData.getAll('imageUrls[]') as string[];
+  const images = formData.getAll('images') as File[];
 
   if (!name || !message) {
     return { success: false, message: "Name und Nachricht sind erforderlich." };
+  }
+
+  let uploadedImageUrls: string[] = [];
+  if (images.length > 0 && images[0].size > 0) {
+    const supabaseAdmin = await createAdminClient();
+    for (const image of images) {
+      const filePath = `general-feedback/${Date.now()}-${image.name}`;
+      const { error: uploadError } = await supabaseAdmin.storage
+        .from("feedback-images")
+        .upload(filePath, image);
+
+      if (uploadError) {
+        console.error("Fehler beim Hochladen des Bildes:", uploadError);
+        return { success: false, message: `Fehler beim Hochladen des Bildes: ${uploadError.message}` };
+      }
+
+      const { data: urlData } = supabaseAdmin.storage.from("feedback-images").getPublicUrl(filePath);
+      if (urlData) {
+        uploadedImageUrls.push(urlData.publicUrl);
+      }
+    }
   }
 
   const { error } = await supabase
@@ -23,7 +44,7 @@ export async function createGeneralFeedback(formData: FormData): Promise<{ succe
       email,
       subject,
       message,
-      image_urls: imageUrls.length > 0 ? imageUrls : null,
+      image_urls: uploadedImageUrls.length > 0 ? uploadedImageUrls : null,
     });
 
   if (error) {

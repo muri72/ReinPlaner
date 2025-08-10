@@ -4,7 +4,6 @@ import { useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -27,10 +26,9 @@ interface OrderFeedbackFormProps {
 }
 
 export function OrderFeedbackForm({ orderId, onSuccess }: OrderFeedbackFormProps) {
-  const supabase = createClient();
   const [hoverRating, setHoverRating] = useState(0);
   const [files, setFiles] = useState<File[]>([]);
-  const [isUploading, setIsUploading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<FeedbackFormValues>({
@@ -59,39 +57,17 @@ export function OrderFeedbackForm({ orderId, onSuccess }: OrderFeedbackFormProps
   };
 
   const onSubmit = async (data: FeedbackFormValues) => {
-    setIsUploading(true);
-    let uploadedImageUrls: string[] = [];
-
+    setIsSubmitting(true);
     try {
-      // Upload images to Supabase Storage
-      for (const file of files) {
-        const filePath = `${orderId}/${Date.now()}-${file.name}`; // FIX: Removed "public/" prefix
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from("feedback-images")
-          .upload(filePath, file);
-
-        if (uploadError) {
-          throw new Error(`Fehler beim Hochladen des Bildes: ${uploadError.message}`);
-        }
-
-        // Get public URL
-        const { data: urlData } = supabase.storage
-          .from("feedback-images")
-          .getPublicUrl(uploadData.path);
-        
-        if (urlData) {
-          uploadedImageUrls.push(urlData.publicUrl);
-        }
-      }
-
-      // Submit the form data with image URLs
       const formData = new FormData();
       formData.append("orderId", orderId);
       formData.append("rating", String(data.rating));
       if (data.comment) {
         formData.append("comment", data.comment);
       }
-      uploadedImageUrls.forEach(url => formData.append("imageUrls[]", url));
+      files.forEach(file => {
+        formData.append("images", file);
+      });
 
       const result = await createOrderFeedback(formData);
 
@@ -104,9 +80,10 @@ export function OrderFeedbackForm({ orderId, onSuccess }: OrderFeedbackFormProps
         toast.error(result.message);
       }
     } catch (error: any) {
-      toast.error(error.message);
+      toast.error("Ein unerwarteter Fehler ist aufgetreten.");
+      console.error(error);
     } finally {
-      setIsUploading(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -182,8 +159,8 @@ export function OrderFeedbackForm({ orderId, onSuccess }: OrderFeedbackFormProps
         </div>
       </div>
 
-      <Button type="submit" disabled={isUploading || form.formState.isSubmitting}>
-        {isUploading ? "Wird gesendet..." : "Feedback senden"}
+      <Button type="submit" disabled={isSubmitting}>
+        {isSubmitting ? "Wird gesendet..." : "Feedback senden"}
       </Button>
     </form>
   );

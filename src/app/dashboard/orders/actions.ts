@@ -1,6 +1,6 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { OrderFormValues } from "@/components/order-form";
 
@@ -176,20 +176,41 @@ export async function createOrderFeedback(formData: FormData): Promise<{ success
   const orderId = formData.get('orderId') as string;
   const rating = Number(formData.get('rating'));
   const comment = formData.get('comment') as string | null;
-  const imageUrls = formData.getAll('imageUrls[]') as string[];
+  const images = formData.getAll('images') as File[];
 
   if (!orderId || !rating) {
     return { success: false, message: "Auftrags-ID und Bewertung sind erforderlich." };
+  }
+
+  let uploadedImageUrls: string[] = [];
+  if (images.length > 0 && images[0].size > 0) {
+    const supabaseAdmin = await createAdminClient();
+    for (const image of images) {
+      const filePath = `${orderId}/${Date.now()}-${image.name}`;
+      const { error: uploadError } = await supabaseAdmin.storage
+        .from("feedback-images")
+        .upload(filePath, image);
+
+      if (uploadError) {
+        console.error("Fehler beim Hochladen des Bildes:", uploadError);
+        return { success: false, message: `Fehler beim Hochladen des Bildes: ${uploadError.message}` };
+      }
+
+      const { data: urlData } = supabaseAdmin.storage.from("feedback-images").getPublicUrl(filePath);
+      if (urlData) {
+        uploadedImageUrls.push(urlData.publicUrl);
+      }
+    }
   }
 
   const { error } = await supabase
     .from('order_feedback')
     .insert({
       order_id: orderId,
-      user_id: user.id, // FIX: Use the ID of the currently logged-in user
+      user_id: user.id,
       rating: rating,
       comment: comment,
-      image_urls: imageUrls.length > 0 ? imageUrls : null,
+      image_urls: uploadedImageUrls.length > 0 ? uploadedImageUrls : null,
     });
 
   if (error) {

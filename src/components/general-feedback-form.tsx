@@ -4,7 +4,6 @@ import { useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -24,9 +23,8 @@ const generalFeedbackSchema = z.object({
 type GeneralFeedbackFormValues = z.infer<typeof generalFeedbackSchema>;
 
 export function GeneralFeedbackForm() {
-  const supabase = createClient();
   const [files, setFiles] = useState<File[]>([]);
-  const [isUploading, setIsUploading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<GeneralFeedbackFormValues>({
@@ -49,28 +47,17 @@ export function GeneralFeedbackForm() {
   };
 
   const onSubmit = async (data: GeneralFeedbackFormValues) => {
-    setIsUploading(true);
-    let uploadedImageUrls: string[] = [];
-
+    setIsSubmitting(true);
     try {
-      for (const file of files) {
-        const filePath = `general-feedback/${Date.now()}-${file.name}`; // FIX: Removed "public/" prefix
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from("feedback-images")
-          .upload(filePath, file);
-
-        if (uploadError) throw new Error(`Fehler beim Hochladen des Bildes: ${uploadError.message}`);
-        
-        const { data: urlData } = supabase.storage.from("feedback-images").getPublicUrl(uploadData.path);
-        if (urlData) uploadedImageUrls.push(urlData.publicUrl);
-      }
-
       const formData = new FormData();
       formData.append("name", data.name);
       if (data.email) formData.append("email", data.email);
       if (data.subject) formData.append("subject", data.subject);
       formData.append("message", data.message);
-      uploadedImageUrls.forEach(url => formData.append("imageUrls[]", url));
+      
+      files.forEach(file => {
+        formData.append("images", file);
+      });
 
       const result = await createGeneralFeedback(formData);
 
@@ -82,9 +69,10 @@ export function GeneralFeedbackForm() {
         toast.error(result.message);
       }
     } catch (error: any) {
-      toast.error(error.message);
+      toast.error("Ein unerwarteter Fehler ist aufgetreten.");
+      console.error(error);
     } finally {
-      setIsUploading(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -123,7 +111,7 @@ export function GeneralFeedbackForm() {
           ))}
         </div>
       </div>
-      <Button type="submit" disabled={isUploading || form.formState.isSubmitting}>{isUploading ? "Wird gesendet..." : "Feedback senden"}</Button>
+      <Button type="submit" disabled={isSubmitting}>{isSubmitting ? "Wird gesendet..." : "Feedback senden"}</Button>
     </form>
   );
 }
