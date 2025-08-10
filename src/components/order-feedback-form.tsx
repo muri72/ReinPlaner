@@ -65,7 +65,7 @@ export function OrderFeedbackForm({ orderId, onSuccess }: OrderFeedbackFormProps
     try {
       // Upload images to Supabase Storage
       for (const file of files) {
-        const filePath = `public/${orderId}/${Date.now()}-${file.name}`;
+        const filePath = `${orderId}/${Date.now()}-${file.name}`; // FIX: Removed "public/" prefix
         const { data: uploadData, error: uploadError } = await supabase.storage
           .from("feedback-images")
           .upload(filePath, file);

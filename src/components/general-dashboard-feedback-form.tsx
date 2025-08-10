@@ -81,7 +81,7 @@ export function GeneralDashboardFeedbackForm() {
 
     try {
       for (const file of files) {
-        const filePath = `public/general-feedback/${Date.now()}-${file.name}`;
+        const filePath = `general-feedback/${Date.now()}-${file.name}`; // FIX: Removed "public/" prefix
         const { data: uploadData, error: uploadError } = await supabase.storage.from("feedback-images").upload(filePath, file);
         if (uploadError) throw new Error(`Fehler beim Hochladen des Bildes: ${uploadError.message}`);
         const { data: urlData } = supabase.storage.from("feedback-images").getPublicUrl(uploadData.path);
