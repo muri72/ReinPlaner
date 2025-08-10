@@ -3,7 +3,7 @@
 import * as React from "react";
 import { format, addDays, subDays, startOfWeek, endOfWeek, eachDayOfInterval } from "date-fns";
 import { de } from "date-fns/locale";
-import { getPlanningDataForWeek, PlanningPageData, UnassignedOrder } from "@/app/dashboard/planning/actions";
+import { getPlanningDataForWeek, PlanningPageData, UnassignedOrder } from "@/lib/actions/planning";
 import { assignOrderToEmployee } from "@/app/dashboard/planning/actions";
 import { Button } from "./ui/button";
 import { ChevronLeft, ChevronRight, GripVertical } from "lucide-react";
@@ -137,7 +137,11 @@ export function ResourcePlanningCalendar() {
             </CardHeader>
             <CardContent className="h-[60vh] overflow-y-auto">
               {loading ? (
-                <Skeleton className="h-20 w-full mb-2" count={3} />
+                <>
+                  <Skeleton className="h-20 w-full mb-2" />
+                  <Skeleton className="h-20 w-full mb-2" />
+                  <Skeleton className="h-20 w-full mb-2" />
+                </>
               ) : planningPageData?.unassignedOrders.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center mt-8">Keine ungeplanten Aufträge.</p>
               ) : (
