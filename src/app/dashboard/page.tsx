@@ -6,7 +6,8 @@ import { ProfileUpdateForm } from "@/components/profile-update-form";
 import { signOut } from "@/app/dashboard/actions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, Building, UsersRound, Briefcase, Clock } from "lucide-react";
-import { OrderStatusChart } from "@/components/order-status-chart"; // Neuer Import
+import { OrderStatusChart } from "@/components/order-status-chart";
+import { FeedbackHowToCard } from "@/components/feedback-howto-card"; // Importiert
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -30,30 +31,25 @@ export default async function DashboardPage() {
   // Daten für das Dashboard abrufen
   const { count: customerCount, error: customerError } = await supabase
     .from('customers')
-    .select('*', { count: 'exact', head: true })
-    .eq('user_id', user.id);
+    .select('*', { count: 'exact', head: true });
 
   const { count: objectCount, error: objectError } = await supabase
     .from('objects')
-    .select('*', { count: 'exact', head: true })
-    .eq('user_id', user.id);
+    .select('*', { count: 'exact', head: true });
 
   const { count: employeeCount, error: employeeError } = await supabase
     .from('employees')
-    .select('*', { count: 'exact', head: true })
-    .eq('user_id', user.id);
+    .select('*', { count: 'exact', head: true });
 
   const { count: pendingOrderCount, error: pendingOrderError } = await supabase
     .from('orders')
     .select('*', { count: 'exact', head: true })
-    .eq('user_id', user.id)
     .eq('status', 'pending');
 
   // Daten für die Auftragsstatus-Grafik abrufen
   const { data: ordersData, error: ordersError } = await supabase
     .from('orders')
-    .select('status')
-    .eq('user_id', user.id);
+    .select('status');
 
   if (customerError) console.error("Fehler beim Laden der Kundenzahl:", customerError);
   if (objectError) console.error("Fehler beim Laden der Objektzahl:", objectError);
@@ -78,6 +74,8 @@ export default async function DashboardPage() {
       <h1 className="text-3xl font-bold">
         Willkommen im Dashboard, {profile?.first_name || user.email}!
       </h1>
+
+      <FeedbackHowToCard />
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
