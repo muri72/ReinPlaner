@@ -167,3 +167,39 @@ export async function processOrderRequest(formData: FormData): Promise<{ success
   revalidatePath("/dashboard/orders");
   return { success: true, message: `Anfrage erfolgreich ${decision === 'approved' ? 'genehmigt' : 'abgelehnt'}!` };
 }
+
+export async function createOrderFeedback(formData: FormData): Promise<{ success: boolean; message: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { success: false, message: "Benutzer nicht authentifiziert." };
+  }
+
+  const orderId = formData.get('orderId') as string;
+  const rating = Number(formData.get('rating'));
+  const comment = formData.get('comment') as string | null;
+  const imageUrls = formData.getAll('imageUrls[]') as string[];
+
+  if (!orderId || !rating) {
+    return { success: false, message: "Auftrags-ID und Bewertung sind erforderlich." };
+  }
+
+  const { error } = await supabase
+    .from('order_feedback')
+    .insert({
+      order_id: orderId,
+      user_id: user.id,
+      rating: rating,
+      comment: comment,
+      image_urls: imageUrls.length > 0 ? imageUrls : null,
+    });
+
+  if (error) {
+    console.error("Fehler beim Erstellen des Feedbacks:", error);
+    return { success: false, message: `Fehler beim Speichern des Feedbacks: ${error.message}` };
+  }
+
+  revalidatePath("/dashboard/orders");
+  return { success: true, message: "Vielen Dank für Ihr Feedback!" };
+}

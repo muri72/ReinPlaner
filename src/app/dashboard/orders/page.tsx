@@ -3,13 +3,15 @@ import { redirect } from "next/navigation";
 import { OrderForm } from "@/components/order-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Trash2, CalendarDays, Clock, FileText, Wrench, UserRound, AlertTriangle } from "lucide-react";
+import { Trash2, CalendarDays, Clock, FileText, Wrench, UserRound, AlertTriangle, Star as StarIcon } from "lucide-react";
 import { deleteOrder, createOrder } from "./actions";
 import { OrderEditDialog } from "@/components/order-edit-dialog";
 import { Badge } from "@/components/ui/badge";
 import { DeleteOrderButton } from "@/components/delete-order-button";
 import { SearchInput } from "@/components/search-input";
 import { OrderPlanningDialog } from "@/components/order-planning-dialog";
+import { OrderFeedbackDialog } from "@/components/order-feedback-dialog";
+import { OrderFeedbackDisplay } from "@/components/order-feedback-display";
 
 interface DisplayOrder {
   id: string;
@@ -37,6 +39,13 @@ interface DisplayOrder {
   notes: string | null;
   request_status: string;
   service_type: string | null;
+  order_feedback: {
+    id: string;
+    rating: number;
+    comment: string | null;
+    image_urls: string[] | null;
+    created_at: string;
+  }[];
 }
 
 export default async function OrdersPage({
@@ -49,6 +58,13 @@ export default async function OrdersPage({
     redirect("/login");
   }
 
+  const { data: userProfile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', currentUser.id)
+    .single();
+  const userRole = userProfile?.role;
+
   const query = typeof searchParams?.query === 'string' ? searchParams.query : '';
 
   let allOrders: DisplayOrder[] = [];
@@ -56,7 +72,9 @@ export default async function OrdersPage({
 
   if (query) {
     const { data, error: rpcError } = await supabase.rpc('search_orders', { search_query: query });
-    allOrders = (data as DisplayOrder[] | null) || [];
+    // RPC doesn't easily join feedback, so we'll fetch it separately if needed or adjust RPC
+    // For now, we assume search might not show feedback, which is acceptable.
+    allOrders = (data as DisplayOrder[] | null)?.map(o => ({ ...o, order_feedback: [] })) || [];
     error = rpcError;
   } else {
     const { data, error: selectError } = await supabase
@@ -66,7 +84,8 @@ export default async function OrdersPage({
         customers ( name ),
         objects ( name ),
         employees ( first_name, last_name ),
-        customer_contacts ( first_name, last_name )
+        customer_contacts ( first_name, last_name ),
+        order_feedback ( * )
       `)
       .order('created_at', { ascending: false });
 
@@ -96,6 +115,7 @@ export default async function OrdersPage({
       notes: order.notes,
       request_status: order.request_status,
       service_type: order.service_type,
+      order_feedback: order.order_feedback,
     })) || [];
     error = selectError;
   }
@@ -178,38 +198,54 @@ export default async function OrdersPage({
           {otherOrders.length === 0 && !query ? (
             <p className="col-span-full text-center text-muted-foreground">Keine bestehenden Aufträge vorhanden.</p>
           ) : (
-            otherOrders.map((order) => (
-              <Card key={order.id}>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-lg font-medium">{order.title}</CardTitle>
-                  <div className="flex items-center space-x-2">
-                    <OrderEditDialog order={order} />
-                    <DeleteOrderButton orderId={order.id} />
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">{order.description}</p>
-                  {order.customer_name && <p className="text-xs text-muted-foreground mt-1">Kunde: {order.customer_name}</p>}
-                  {order.object_name && <p className="text-xs text-muted-foreground">Objekt: {order.object_name}</p>}
-                  {order.customer_contact_first_name && order.customer_contact_last_name && (
-                    <div className="flex items-center text-xs text-muted-foreground"><UserRound className="mr-1 h-3 w-3" /><span>Auftraggeber: {order.customer_contact_first_name} {order.customer_contact_last_name}</span></div>
-                  )}
-                  {order.employee_first_name && order.employee_last_name && <p className="text-xs text-muted-foreground">Mitarbeiter: {order.employee_first_name} {order.employee_last_name}</p>}
-                  {order.service_type && <div className="flex items-center text-xs text-muted-foreground mt-1"><Wrench className="mr-1 h-3 w-3" /><span>Dienstleistung: {order.service_type}</span></div>}
-                  <div className="flex items-center mt-2 space-x-2">
-                    <Badge variant={getStatusBadgeVariant(order.status)}>{order.status}</Badge>
-                    <Badge variant="outline">{order.order_type}</Badge>
-                    <Badge variant={getPriorityBadgeVariant(order.priority)}>Priorität: {order.priority}</Badge>
-                    <Badge variant={getRequestStatusBadgeVariant(order.request_status)}>Anfrage: {order.request_status}</Badge>
-                  </div>
-                  {order.estimated_hours && <div className="flex items-center text-xs text-muted-foreground mt-1"><Clock className="mr-1 h-3 w-3" /><span>Geschätzte Stunden: {order.estimated_hours}</span></div>}
-                  {order.notes && <div className="flex items-center text-xs text-muted-foreground mt-1"><FileText className="mr-1 h-3 w-3" /><span>Notizen: {order.notes}</span></div>}
-                  {order.order_type === "one_time" && order.due_date && <p className="text-xs text-muted-foreground ml-auto mt-1">Fällig: {new Date(order.due_date).toLocaleDateString()}</p>}
-                  {(order.order_type === "recurring" || order.order_type === "substitution" || order.order_type === "permanent") && order.recurring_start_date && <div className="flex items-center text-xs text-muted-foreground mt-1"><CalendarDays className="mr-1 h-3 w-3" /><span>Start: {new Date(order.recurring_start_date).toLocaleDateString()}</span></div>}
-                  {(order.order_type === "recurring" || order.order_type === "substitution") && order.recurring_end_date && <div className="flex items-center text-xs text-muted-foreground"><CalendarDays className="mr-1 h-3 w-3" /><span>Ende: {new Date(order.recurring_end_date).toLocaleDateString()}</span></div>}
-                </CardContent>
-              </Card>
-            ))
+            otherOrders.map((order) => {
+              const feedback = order.order_feedback?.[0];
+              const isCustomer = userRole === 'customer';
+              const canLeaveFeedback = isCustomer && order.status === 'completed' && !feedback;
+              const canViewFeedback = !isCustomer && feedback;
+
+              return (
+                <Card key={order.id}>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-lg font-medium">{order.title}</CardTitle>
+                    <div className="flex items-center space-x-2">
+                      <OrderEditDialog order={order} />
+                      <DeleteOrderButton orderId={order.id} />
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground">{order.description}</p>
+                    {order.customer_name && <p className="text-xs text-muted-foreground mt-1">Kunde: {order.customer_name}</p>}
+                    {order.object_name && <p className="text-xs text-muted-foreground">Objekt: {order.object_name}</p>}
+                    {order.customer_contact_first_name && order.customer_contact_last_name && (
+                      <div className="flex items-center text-xs text-muted-foreground"><UserRound className="mr-1 h-3 w-3" /><span>Auftraggeber: {order.customer_contact_first_name} {order.customer_contact_last_name}</span></div>
+                    )}
+                    {order.employee_first_name && order.employee_last_name && <p className="text-xs text-muted-foreground">Mitarbeiter: {order.employee_first_name} {order.employee_last_name}</p>}
+                    {order.service_type && <div className="flex items-center text-xs text-muted-foreground mt-1"><Wrench className="mr-1 h-3 w-3" /><span>Dienstleistung: {order.service_type}</span></div>}
+                    <div className="flex items-center mt-2 space-x-2">
+                      <Badge variant={getStatusBadgeVariant(order.status)}>{order.status}</Badge>
+                      <Badge variant="outline">{order.order_type}</Badge>
+                      <Badge variant={getPriorityBadgeVariant(order.priority)}>Priorität: {order.priority}</Badge>
+                      <Badge variant={getRequestStatusBadgeVariant(order.request_status)}>Anfrage: {order.request_status}</Badge>
+                    </div>
+                    {order.estimated_hours && <div className="flex items-center text-xs text-muted-foreground mt-1"><Clock className="mr-1 h-3 w-3" /><span>Geschätzte Stunden: {order.estimated_hours}</span></div>}
+                    {order.notes && <div className="flex items-center text-xs text-muted-foreground mt-1"><FileText className="mr-1 h-3 w-3" /><span>Notizen: {order.notes}</span></div>}
+                    {order.order_type === "one_time" && order.due_date && <p className="text-xs text-muted-foreground ml-auto mt-1">Fällig: {new Date(order.due_date).toLocaleDateString()}</p>}
+                    {(order.order_type === "recurring" || order.order_type === "substitution" || order.order_type === "permanent") && order.recurring_start_date && <div className="flex items-center text-xs text-muted-foreground mt-1"><CalendarDays className="mr-1 h-3 w-3" /><span>Start: {new Date(order.recurring_start_date).toLocaleDateString()}</span></div>}
+                    {(order.order_type === "recurring" || order.order_type === "substitution") && order.recurring_end_date && <div className="flex items-center text-xs text-muted-foreground"><CalendarDays className="mr-1 h-3 w-3" /><span>Ende: {new Date(order.recurring_end_date).toLocaleDateString()}</span></div>}
+                    
+                    {canLeaveFeedback && (
+                      <div className="mt-4 border-t pt-4">
+                        <OrderFeedbackDialog orderId={order.id} />
+                      </div>
+                    )}
+                    {canViewFeedback && (
+                      <OrderFeedbackDisplay feedback={feedback} />
+                    )}
+                  </CardContent>
+                </Card>
+              )
+            })
           )}
         </div>
       </div>
