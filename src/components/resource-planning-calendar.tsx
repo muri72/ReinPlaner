@@ -3,7 +3,7 @@
 import * as React from "react";
 import { format, addDays, subDays, startOfWeek, endOfWeek, eachDayOfInterval } from "date-fns";
 import { de } from "date-fns/locale";
-import { getPlanningDataForWeek, PlanningData } from "@/lib/actions/planning";
+import { getPlanningDataForWeek, PlanningData } from "../lib/actions/planning";
 import { Button } from "./ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
