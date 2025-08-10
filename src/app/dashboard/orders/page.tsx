@@ -58,13 +58,6 @@ export default async function OrdersPage({
     redirect("/login");
   }
 
-  const { data: userProfile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', currentUser.id)
-    .single();
-  const userRole = userProfile?.role;
-
   const query = typeof searchParams?.query === 'string' ? searchParams.query : '';
 
   let allOrders: DisplayOrder[] = [];
@@ -72,8 +65,6 @@ export default async function OrdersPage({
 
   if (query) {
     const { data, error: rpcError } = await supabase.rpc('search_orders', { search_query: query });
-    // RPC doesn't easily join feedback, so we'll fetch it separately if needed or adjust RPC
-    // For now, we assume search might not show feedback, which is acceptable.
     allOrders = (data as DisplayOrder[] | null)?.map(o => ({ ...o, order_feedback: [] })) || [];
     error = rpcError;
   } else {
@@ -200,10 +191,6 @@ export default async function OrdersPage({
           ) : (
             otherOrders.map((order) => {
               const feedback = order.order_feedback?.[0];
-              const isCustomer = userRole === 'customer';
-              const canLeaveFeedback = isCustomer && order.status === 'completed' && !feedback;
-              const canViewFeedback = !isCustomer && feedback;
-
               return (
                 <Card key={order.id}>
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -234,12 +221,7 @@ export default async function OrdersPage({
                     {(order.order_type === "recurring" || order.order_type === "substitution" || order.order_type === "permanent") && order.recurring_start_date && <div className="flex items-center text-xs text-muted-foreground mt-1"><CalendarDays className="mr-1 h-3 w-3" /><span>Start: {new Date(order.recurring_start_date).toLocaleDateString()}</span></div>}
                     {(order.order_type === "recurring" || order.order_type === "substitution") && order.recurring_end_date && <div className="flex items-center text-xs text-muted-foreground"><CalendarDays className="mr-1 h-3 w-3" /><span>Ende: {new Date(order.recurring_end_date).toLocaleDateString()}</span></div>}
                     
-                    {canLeaveFeedback && (
-                      <div className="mt-4 border-t pt-4">
-                        <OrderFeedbackDialog orderId={order.id} />
-                      </div>
-                    )}
-                    {canViewFeedback && (
+                    {feedback && (
                       <OrderFeedbackDisplay feedback={feedback} />
                     )}
                   </CardContent>

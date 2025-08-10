@@ -13,7 +13,6 @@ import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Switch } from "@/components/ui/switch";
 import { CustomerContactCreateDialog } from "@/components/customer-contact-create-dialog";
-import { usePathname } from "next/navigation"; // Import usePathname
 
 const preprocessNumber = (val: any) => (val === "" || isNaN(Number(val)) ? null : Number(val));
 const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
@@ -22,7 +21,7 @@ export const objectSchema = z.object({
   name: z.string().min(1, "Name ist erforderlich").max(100, "Name ist zu lang"),
   address: z.string().min(1, "Adresse ist erforderlich").max(255, "Adresse ist zu lang"),
   description: z.string().max(500, "Beschreibung ist zu lang").optional().nullable(),
-  customerId: z.string().uuid("Ungültige Kunden-ID"), // Wird jetzt immer benötigt, aber im Portal ausgeblendet
+  customerId: z.string().uuid("Ungültige Kunden-ID").min(1, "Kunde ist erforderlich"),
   customerContactId: z.string().uuid("Ungültige Kontakt-ID").optional().nullable(),
   
   monday_hours: z.preprocess(preprocessNumber, z.number().min(0).max(24).optional().nullable()),
@@ -70,9 +69,6 @@ interface ObjectFormProps {
 
 export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess }: ObjectFormProps) {
   const supabase = createClient();
-  const pathname = usePathname(); // Get current path
-  const isPortal = pathname.startsWith('/portal'); // Check if we are in the portal
-
   const [customers, setCustomers] = useState<{ id: string; name: string }[]>([]);
   const [customerContacts, setCustomerContacts] = useState<{ id: string; first_name: string; last_name: string; customer_id: string }[]>([]);
 
@@ -125,12 +121,7 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
   };
 
   const form = useForm<ObjectFormValues>({
-    resolver: zodResolver(
-      objectSchema.refine(data => isPortal || !!data.customerId, {
-        message: "Kunde ist erforderlich",
-        path: ["customerId"],
-      }) as z.ZodType<ObjectFormValues> // FIX: Cast the refined schema to resolve type mismatch
-    ),
+    resolver: zodResolver(objectSchema as z.ZodType<ObjectFormValues>),
     defaultValues: resolvedDefaultValues,
   });
 
@@ -138,13 +129,11 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
 
   useEffect(() => {
     const fetchData = async () => {
-      if (!isPortal) { // Only fetch all customers if not in portal
-        const { data: customersData } = await supabase.from('customers').select('id, name').order('name', { ascending: true });
-        if (customersData) setCustomers(customersData);
-      }
+      const { data: customersData } = await supabase.from('customers').select('id, name').order('name', { ascending: true });
+      if (customersData) setCustomers(customersData);
     };
     fetchData();
-  }, [supabase, isPortal]);
+  }, [supabase]);
 
   const fetchCustomerContacts = async (customerId: string) => {
     const { data: contactsData } = await supabase.from('customer_contacts').select('id, first_name, last_name, customer_id').eq('customer_id', customerId).order('last_name', { ascending: true });
@@ -189,12 +178,10 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
       <Textarea id="description" {...form.register("description")} placeholder="Beschreibung (optional)" rows={3} />
       
       {/* Kunde und Kontakt */}
-      {!isPortal && (
-        <Select onValueChange={(value) => form.setValue("customerId", value)} value={form.watch("customerId")}>
-          <SelectTrigger><SelectValue placeholder="Kunde auswählen" /></SelectTrigger>
-          <SelectContent>{customers.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
-        </Select>
-      )}
+      <Select onValueChange={(value) => form.setValue("customerId", value)} value={form.watch("customerId")}>
+        <SelectTrigger><SelectValue placeholder="Kunde auswählen" /></SelectTrigger>
+        <SelectContent>{customers.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+      </Select>
       {form.formState.errors.customerId && <p className="text-red-500 text-sm mt-1">{form.formState.errors.customerId.message}</p>}
 
       <div className="flex items-end gap-2">
