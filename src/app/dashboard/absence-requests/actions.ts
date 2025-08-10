@@ -135,7 +135,7 @@ export async function getAbsencesForMonth(date: Date) {
       start_date,
       end_date,
       type,
-      employees ( first_name, last_name )
+      employees ( id, first_name, last_name )
     `)
     .eq('status', 'approved')
     .lte('start_date', lastDay.toISOString().split('T')[0])
