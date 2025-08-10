@@ -1,10 +1,11 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 
 export async function createGeneralFeedback(formData: FormData): Promise<{ success: boolean; message: string }> {
-  const supabase = await createClient();
+  const supabase = await createClient(); // For inserting the text data
+  const supabaseAdmin = createAdminClient(); // For uploading files with admin rights
 
   const name = formData.get('name') as string;
   const email = formData.get('email') as string | null;
@@ -20,7 +21,8 @@ export async function createGeneralFeedback(formData: FormData): Promise<{ succe
   if (images.length > 0 && images[0].size > 0) {
     for (const image of images) {
       const filePath = `general-feedback/${Date.now()}-${image.name}`;
-      const { error: uploadError } = await supabase.storage
+      // Use the admin client for the upload
+      const { error: uploadError } = await supabaseAdmin.storage
         .from("feedback-images")
         .upload(filePath, image);
 
@@ -29,7 +31,8 @@ export async function createGeneralFeedback(formData: FormData): Promise<{ succe
         return { success: false, message: `Fehler beim Hochladen des Bildes: ${uploadError.message}` };
       }
 
-      const { data: urlData } = supabase.storage.from("feedback-images").getPublicUrl(filePath);
+      // Use the admin client to get the public URL
+      const { data: urlData } = supabaseAdmin.storage.from("feedback-images").getPublicUrl(filePath);
       if (urlData) {
         uploadedImageUrls.push(urlData.publicUrl);
       }
