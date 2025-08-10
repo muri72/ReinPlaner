@@ -20,7 +20,19 @@ export interface PlanningData {
   };
 }
 
-export async function getPlanningDataForWeek(currentDate: Date): Promise<{ success: boolean; data: PlanningData | null; message: string }> {
+export interface UnassignedOrder {
+  id: string;
+  title: string;
+  estimated_hours: number | null;
+  service_type: string | null;
+}
+
+export interface PlanningPageData {
+  planningData: PlanningData;
+  unassignedOrders: UnassignedOrder[];
+}
+
+export async function getPlanningDataForWeek(currentDate: Date): Promise<{ success: boolean; data: PlanningPageData | null; message: string }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -67,7 +79,16 @@ export async function getPlanningDataForWeek(currentDate: Date): Promise<{ succe
       .gte('end_date', formatISO(start, { representation: 'date' }));
     if (absencesError) throw absencesError;
 
-    // 4. Daten verarbeiten
+    // 4. NEU: Ungeplante Aufträge abrufen
+    const { data: unassignedOrdersData, error: unassignedOrdersError } = await supabase
+      .from('orders')
+      .select('id, title, estimated_hours, service_type')
+      .is('employee_id', null)
+      .in('order_type', ['one_time', 'substitution']) // Nur planbare Typen
+      .eq('request_status', 'approved');
+    if (unassignedOrdersError) throw unassignedOrdersError;
+
+    // 5. Daten verarbeiten
     const planningData: PlanningData = {};
 
     for (const employee of employees) {
@@ -80,7 +101,6 @@ export async function getPlanningDataForWeek(currentDate: Date): Promise<{ succe
         const dateString = formatISO(day, { representation: 'date' });
         const dayOfWeek = getDay(day); // 0=So, 1=Mo, ...
 
-        // Initialisiere den Tag
         planningData[employee.id].schedule[dateString] = {
           totalHours: 0,
           isAbsence: false,
@@ -88,7 +108,6 @@ export async function getPlanningDataForWeek(currentDate: Date): Promise<{ succe
           assignments: [],
         };
 
-        // Abwesenheit prüfen
         const absence = absences.find(a =>
           a.employee_id === employee.id &&
           parseISO(a.start_date) <= day &&
@@ -98,17 +117,15 @@ export async function getPlanningDataForWeek(currentDate: Date): Promise<{ succe
         if (absence) {
           planningData[employee.id].schedule[dateString].isAbsence = true;
           planningData[employee.id].schedule[dateString].absenceType = absence.type;
-          continue; // Wenn abwesend, keine Aufträge prüfen
+          continue;
         }
 
-        // Alle Aufträge für diesen Mitarbeiter durchgehen
         const employeeOrders = orders.filter(o => o.employee_id === employee.id);
 
         for (const order of employeeOrders) {
           let dailyHours = 0;
           let assignmentTitle = order.title;
 
-          // Fall 1: Daueraufträge (permanent, recurring, substitution)
           if (['permanent', 'recurring', 'substitution'].includes(order.order_type)) {
             if (order.recurring_start_date && parseISO(order.recurring_start_date) <= day && (!order.recurring_end_date || parseISO(order.recurring_end_date) >= day)) {
               if (order.objects) {
@@ -127,9 +144,7 @@ export async function getPlanningDataForWeek(currentDate: Date): Promise<{ succe
                 }
               }
             }
-          }
-          // Fall 2: Einmalige Aufträge
-          else if (order.order_type === 'one_time') {
+          } else if (order.order_type === 'one_time') {
             if (order.due_date && formatISO(parseISO(order.due_date), { representation: 'date' }) === dateString) {
               dailyHours = order.estimated_hours || 0;
               assignmentTitle = `${order.title} (Einmalig)`;
@@ -147,7 +162,12 @@ export async function getPlanningDataForWeek(currentDate: Date): Promise<{ succe
       }
     }
 
-    return { success: true, data: planningData, message: "Plandaten erfolgreich geladen." };
+    const pageData: PlanningPageData = {
+      planningData,
+      unassignedOrders: unassignedOrdersData || [],
+    };
+
+    return { success: true, data: pageData, message: "Plandaten erfolgreich geladen." };
 
   } catch (error: any) {
     console.error("Fehler beim Laden der Plandaten:", error);
