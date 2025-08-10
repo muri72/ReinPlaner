@@ -10,8 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { DeleteOrderButton } from "@/components/delete-order-button";
 import { SearchInput } from "@/components/search-input";
 import { OrderPlanningDialog } from "@/components/order-planning-dialog";
-import { OrderFeedbackDialog } from "@/components/order-feedback-dialog";
 import { OrderFeedbackDisplay } from "@/components/order-feedback-display";
+import { CopyFeedbackLinkButton } from "@/components/copy-feedback-link-button";
 
 interface DisplayOrder {
   id: string;
@@ -225,7 +225,7 @@ export default async function OrdersPage({
                       <OrderFeedbackDisplay feedback={feedback} />
                     ) : order.status === 'completed' && (
                       <div className="mt-4">
-                        <OrderFeedbackDialog orderId={order.id} />
+                        <CopyFeedbackLinkButton orderId={order.id} />
                       </div>
                     )}
                   </CardContent>

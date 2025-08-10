@@ -170,11 +170,6 @@ export async function processOrderRequest(formData: FormData): Promise<{ success
 
 export async function createOrderFeedback(formData: FormData): Promise<{ success: boolean; message: string }> {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
-    return { success: false, message: "Benutzer nicht authentifiziert." };
-  }
 
   const orderId = formData.get('orderId') as string;
   const rating = Number(formData.get('rating'));
@@ -185,11 +180,22 @@ export async function createOrderFeedback(formData: FormData): Promise<{ success
     return { success: false, message: "Auftrags-ID und Bewertung sind erforderlich." };
   }
 
+  // Fetch the original order to get the user_id of the creator
+  const { data: orderData, error: orderError } = await supabase
+    .from('orders')
+    .select('user_id')
+    .eq('id', orderId)
+    .single();
+
+  if (orderError || !orderData) {
+    return { success: false, message: "Zugehöriger Auftrag konnte nicht gefunden werden." };
+  }
+
   const { error } = await supabase
     .from('order_feedback')
     .insert({
       order_id: orderId,
-      user_id: user.id,
+      user_id: orderData.user_id, // Use the user_id from the original order
       rating: rating,
       comment: comment,
       image_urls: imageUrls.length > 0 ? imageUrls : null,
@@ -200,6 +206,6 @@ export async function createOrderFeedback(formData: FormData): Promise<{ success
     return { success: false, message: `Fehler beim Speichern des Feedbacks: ${error.message}` };
   }
 
-  revalidatePath("/dashboard/orders");
+  revalidatePath("/dashboard/feedback"); // Revalidate the admin feedback page
   return { success: true, message: "Vielen Dank für Ihr Feedback!" };
 }
