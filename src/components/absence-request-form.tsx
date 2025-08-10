@@ -40,7 +40,7 @@ interface AbsenceRequestFormProps {
 
 export function AbsenceRequestForm({ initialData, onSubmit, submitButtonText, onSuccess, currentUserRole, currentUserId }: AbsenceRequestFormProps) {
   const supabase = createClient();
-  const [employees, setEmployees] = useState<{ id: string; first_name: string; last_name: string }[]>([]);
+  const [employees, setEmployees] = useState<{ id: string; first_name: string; last_name: string; user_id: string | null }[]>([]);
 
   const resolvedDefaultValues: AbsenceRequestFormValues = {
     employeeId: initialData?.employeeId ?? "",
@@ -71,17 +71,15 @@ export function AbsenceRequestForm({ initialData, onSubmit, submitButtonText, on
         return;
       }
 
-      const userEmployee = data?.find(emp => emp.user_id === currentUserId);
+      const employeeList = data || [];
+      const userEmployee = employeeList.find(emp => emp.user_id === currentUserId);
 
       if (isManagerOrAdmin) {
-        // Admins/Managers see all employees
-        setEmployees(data || []);
-        // If the admin/manager has an associated employee profile, pre-select it
+        setEmployees(employeeList);
         if (userEmployee) {
           form.setValue("employeeId", userEmployee.id);
         }
       } else {
-        // Regular employees only see themselves
         if (userEmployee) {
           setEmployees([userEmployee]);
           form.setValue("employeeId", userEmployee.id);
@@ -92,6 +90,14 @@ export function AbsenceRequestForm({ initialData, onSubmit, submitButtonText, on
   }, [supabase, isManagerOrAdmin, currentUserId, form]);
 
   const handleFormSubmit: SubmitHandler<AbsenceRequestFormValues> = async (data) => {
+    // Auto-approve if admin is creating for themselves
+    const selectedEmployee = employees.find(e => e.id === data.employeeId);
+    const isSelfRequestByAdmin = currentUserRole === 'admin' && selectedEmployee?.id === employees.find(e => e.user_id === currentUserId)?.id;
+
+    if (isSelfRequestByAdmin) {
+      data.status = 'approved';
+    }
+
     const result = await onSubmit(data);
     if (result.success) {
       toast.success(result.message);
