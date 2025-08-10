@@ -44,7 +44,6 @@ export function GiveFeedbackForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  // New state for user role
   const [userRole, setUserRole] = useState<string | null>(null);
 
   const form = useForm<FeedbackFormValues>({
@@ -56,7 +55,6 @@ export function GiveFeedbackForm() {
 
   const rating = form.watch("rating");
 
-  // Fetch user role and customer data
   useEffect(() => {
     const fetchUserData = async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -81,7 +79,6 @@ export function GiveFeedbackForm() {
               form.setValue("customerId", customerData.id, { shouldValidate: true });
             }
           } else {
-            // If admin/manager, fetch all customers for the dropdown
             const { data: customersData, error } = await supabase.from('customers').select('id, name').order('name');
             if (customersData) setCustomers(customersData);
             if (error) toast.error("Kunden konnten nicht geladen werden.");
@@ -92,7 +89,6 @@ export function GiveFeedbackForm() {
     fetchUserData();
   }, [supabase, form]);
 
-  // Fetch orders when a customer is selected (either manually or automatically)
   useEffect(() => {
     const fetchOrders = async () => {
       if (!selectedCustomerId) {
@@ -124,45 +120,29 @@ export function GiveFeedbackForm() {
 
   const onSubmit = async (data: FeedbackFormValues) => {
     setIsSubmitting(true);
-    let uploadedImageUrls: string[] = [];
-
-    try {
-      for (const file of files) {
-        const filePath = `public/${data.orderId}/${Date.now()}-${file.name}`;
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from("feedback-images")
-          .upload(filePath, file);
-
-        if (uploadError) throw new Error(`Fehler beim Hochladen des Bildes: ${uploadError.message}`);
-        
-        const { data: urlData } = supabase.storage.from("feedback-images").getPublicUrl(uploadData.path);
-        if (urlData) uploadedImageUrls.push(urlData.publicUrl);
-      }
-
-      const formData = new FormData();
-      formData.append("orderId", data.orderId);
-      formData.append("rating", String(data.rating));
-      if (data.comment) formData.append("comment", data.comment);
-      uploadedImageUrls.forEach(url => formData.append("imageUrls[]", url));
-
-      const result = await createOrderFeedback(formData);
-
-      if (result.success) {
-        toast.success(result.message);
-        form.reset();
-        setFiles([]);
-        // Don't reset customer if they are a customer user
-        if (userRole !== 'customer') {
-          setSelectedCustomerId(null);
-        }
-      } else {
-        toast.error(result.message);
-      }
-    } catch (error: any) {
-      toast.error(error.message);
-    } finally {
-      setIsSubmitting(false);
+    const formData = new FormData();
+    formData.append("orderId", data.orderId);
+    formData.append("rating", String(data.rating));
+    if (data.comment) {
+      formData.append("comment", data.comment);
     }
+    files.forEach(file => {
+      formData.append("images", file);
+    });
+
+    const result = await createOrderFeedback(formData);
+
+    if (result.success) {
+      toast.success(result.message);
+      form.reset();
+      setFiles([]);
+      if (userRole !== 'customer') {
+        setSelectedCustomerId(null);
+      }
+    } else {
+      toast.error(result.message);
+    }
+    setIsSubmitting(false);
   };
 
   return (
