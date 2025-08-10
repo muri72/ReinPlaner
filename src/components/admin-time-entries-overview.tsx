@@ -33,11 +33,10 @@ interface DisplayTimeEntry {
   order_title: string | null;
 }
 
-interface UserProfile {
+interface EmployeeFilterItem {
   id: string;
   first_name: string | null;
   last_name: string | null;
-  email: string | null;
 }
 
 interface AdminTimeEntriesOverviewProps {
@@ -52,31 +51,27 @@ export function AdminTimeEntriesOverview({ currentUserId, isAdmin }: AdminTimeEn
   const { replace } = useRouter();
 
   const [timeEntries, setTimeEntries] = useState<DisplayTimeEntry[]>([]);
-  const [users, setUsers] = useState<UserProfile[]>([]);
+  const [employees, setEmployees] = useState<EmployeeFilterItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedUserId, setSelectedUserId] = useState<string | null>(searchParams.get("userId") || null);
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(searchParams.get("employeeId") || null);
   const currentQuery = searchParams.get("query") || "";
 
-  // Fetch users for the filter dropdown
+  // Fetch employees for the filter dropdown
   useEffect(() => {
-    const fetchUsers = async () => {
-      const { data: profiles, error } = await supabase
-        .from('profiles')
-        .select('id, first_name, last_name');
-      if (profiles) {
-        setUsers(profiles.map(p => ({
-          id: p.id,
-          first_name: p.first_name,
-          last_name: p.last_name,
-          email: null // Email is not in profiles table, but could be fetched from auth.users if needed
-        })));
+    const fetchEmployees = async () => {
+      const { data, error } = await supabase
+        .from('employees')
+        .select('id, first_name, last_name')
+        .order('last_name', { ascending: true });
+      if (data) {
+        setEmployees(data);
       }
-      if (error) console.error("Fehler beim Laden der Benutzerprofile:", error);
+      if (error) console.error("Fehler beim Laden der Mitarbeiter:", error);
     };
-    fetchUsers();
+    fetchEmployees();
   }, [supabase]);
 
-  // Fetch time entries based on filters - DIRECT SELECT FOR DEBUGGING
+  // Fetch time entries based on filters
   useEffect(() => {
     const fetchTimeEntries = async () => {
       setLoading(true);
@@ -102,9 +97,9 @@ export function AdminTimeEntriesOverview({ currentUserId, isAdmin }: AdminTimeEn
         `)
         .order('start_time', { ascending: false });
 
-      // Apply user_id filter if selected (even with RLS disabled, this filters the client-side data)
-      if (selectedUserId && selectedUserId !== "all") {
-        queryBuilder = queryBuilder.eq('user_id', selectedUserId);
+      // Apply employee_id filter if selected
+      if (selectedEmployeeId && selectedEmployeeId !== "all") {
+        queryBuilder = queryBuilder.eq('employee_id', selectedEmployeeId);
       }
 
       // Apply search query if present
@@ -132,7 +127,7 @@ export function AdminTimeEntriesOverview({ currentUserId, isAdmin }: AdminTimeEn
             start_time: entry.start_time,
             end_time: entry.end_time,
             duration_minutes: entry.duration_minutes,
-            break_minutes: entry.break_minutes, // Neues Feld mappen
+            break_minutes: entry.break_minutes,
             type: entry.type,
             notes: entry.notes,
             employee_first_name: employee?.first_name || null,
@@ -145,13 +140,12 @@ export function AdminTimeEntriesOverview({ currentUserId, isAdmin }: AdminTimeEn
       }
       if (error) {
         console.error("Fehler beim Laden der Zeiteinträge:", error);
-        // toast.error("Fehler beim Laden der Zeiteinträge."); // Optional: Toast bei Fehler
       }
       setLoading(false);
     };
 
     fetchTimeEntries();
-  }, [selectedUserId, currentQuery, supabase]);
+  }, [selectedEmployeeId, currentQuery, supabase]);
 
   const handleSearch = useDebouncedCallback((term: string) => {
     const params = new URLSearchParams(searchParams);
@@ -163,15 +157,15 @@ export function AdminTimeEntriesOverview({ currentUserId, isAdmin }: AdminTimeEn
     replace(`${pathname}?${params.toString()}`);
   }, 300);
 
-  const handleUserFilterChange = (userId: string) => {
+  const handleEmployeeFilterChange = (employeeId: string) => {
     const params = new URLSearchParams(searchParams);
-    if (userId && userId !== "all") {
-      params.set("userId", userId);
+    if (employeeId && employeeId !== "all") {
+      params.set("employeeId", employeeId);
     } else {
-      params.delete("userId");
+      params.delete("employeeId");
     }
     replace(`${pathname}?${params.toString()}`);
-    setSelectedUserId(userId === "all" ? null : userId);
+    setSelectedEmployeeId(employeeId === "all" ? null : employeeId);
   };
 
   const getTypeBadgeVariant = (type: string) => {
@@ -202,15 +196,15 @@ export function AdminTimeEntriesOverview({ currentUserId, isAdmin }: AdminTimeEn
           <SearchInput placeholder="Zeiteinträge suchen..." />
         </div>
         <div className="w-full sm:w-auto">
-          <Select onValueChange={handleUserFilterChange} value={selectedUserId || "all"}>
+          <Select onValueChange={handleEmployeeFilterChange} value={selectedEmployeeId || "all"}>
             <SelectTrigger className="w-full sm:w-[180px]">
-              <SelectValue placeholder="Benutzer filtern" />
+              <SelectValue placeholder="Mitarbeiter filtern" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Alle Benutzer</SelectItem>
-              {users.map(user => (
-                <SelectItem key={user.id} value={user.id}>
-                  {user.first_name} {user.last_name}
+              <SelectItem value="all">Alle Mitarbeiter</SelectItem>
+              {employees.map(employee => (
+                <SelectItem key={employee.id} value={employee.id}>
+                  {employee.first_name} {employee.last_name}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -221,7 +215,7 @@ export function AdminTimeEntriesOverview({ currentUserId, isAdmin }: AdminTimeEn
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {timeEntries.length === 0 ? (
           <p className="col-span-full text-center text-muted-foreground">
-            {currentQuery || selectedUserId ? "Keine Zeiteinträge für diese Filter gefunden." : "Noch keine Zeiteinträge vorhanden."}
+            {currentQuery || selectedEmployeeId ? "Keine Zeiteinträge für diese Filter gefunden." : "Noch keine Zeiteinträge vorhanden."}
           </p>
         ) : (
           timeEntries.map((entry) => (
