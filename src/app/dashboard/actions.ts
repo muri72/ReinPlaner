@@ -18,19 +18,53 @@ export async function updateProfile(formData: FormData) {
     return { success: false, message: "Benutzer nicht authentifiziert." };
   }
 
-  const firstName = formData.get('firstName') as string;
-  const lastName = formData.get('lastName') as string;
+  const firstName = formData.get('firstName') as string | null;
+  const lastName = formData.get('lastName') as string | null;
+  const avatarFile = formData.get('avatar') as File | null;
 
-  const { error } = await supabase
-    .from('profiles')
-    .update({ first_name: firstName, last_name: lastName, updated_at: new Date().toISOString() })
-    .eq('id', user.id);
+  const profileUpdateData: { first_name?: string; last_name?: string; avatar_url?: string; updated_at: string } = {
+    updated_at: new Date().toISOString(),
+  };
 
-  if (error) {
-    console.error("Fehler beim Aktualisieren des Profils:", error);
-    return { success: false, message: error.message };
+  if (firstName) profileUpdateData.first_name = firstName;
+  if (lastName) profileUpdateData.last_name = lastName;
+
+  // Handle avatar upload
+  if (avatarFile && avatarFile.size > 0) {
+    const fileExt = avatarFile.name.split('.').pop();
+    const filePath = `${user.id}/avatar.${fileExt}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('avatars')
+      .upload(filePath, avatarFile, { upsert: true });
+
+    if (uploadError) {
+      console.error("Fehler beim Hochladen des Avatars:", uploadError);
+      return { success: false, message: `Avatar-Upload fehlgeschlagen: ${uploadError.message}` };
+    }
+
+    const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(filePath);
+    // Add a timestamp to the URL to bypass cache
+    profileUpdateData.avatar_url = `${urlData.publicUrl}?t=${new Date().getTime()}`;
   }
 
-  revalidatePath("/dashboard"); // Revalidiere die Dashboard-Seite, um die aktualisierten Daten anzuzeigen
+  // Only update if there's something to update (name fields or avatar)
+  if (Object.keys(profileUpdateData).length > 1) {
+      const { error } = await supabase
+        .from('profiles')
+        .update(profileUpdateData)
+        .eq('id', user.id);
+
+      if (error) {
+        console.error("Fehler beim Aktualisieren des Profils:", error);
+        return { success: false, message: error.message };
+      }
+  } else {
+    // Nothing to update
+    return { success: true, message: "Keine Änderungen zum Speichern." };
+  }
+
+  revalidatePath("/dashboard/profile");
+  revalidatePath("/dashboard");
   return { success: true, message: "Profil erfolgreich aktualisiert!" };
 }

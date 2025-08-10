@@ -7,7 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { updateProfile } from "@/app/dashboard/actions"; // Importiere die Server-Aktion
+import { updateProfile } from "@/app/dashboard/actions";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useState, useRef } from "react";
 
 const profileSchema = z.object({
   firstName: z.string().max(50, "Vorname ist zu lang").optional(),
@@ -20,10 +22,15 @@ interface ProfileUpdateFormProps {
   initialData: {
     firstName: string | null;
     lastName: string | null;
+    avatarUrl: string | null;
   };
 }
 
 export function ProfileUpdateForm({ initialData }: ProfileUpdateFormProps) {
+  const [file, setFile] = useState<File | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
@@ -33,22 +40,55 @@ export function ProfileUpdateForm({ initialData }: ProfileUpdateFormProps) {
     mode: "onChange",
   });
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const selectedFile = e.target.files[0];
+      setFile(selectedFile);
+      setPreview(URL.createObjectURL(selectedFile));
+    }
+  };
+
   const onSubmit = async (data: ProfileFormValues) => {
     const formData = new FormData();
-    formData.append('firstName', data.firstName || '');
-    formData.append('lastName', data.lastName || '');
+    if (data.firstName) formData.append('firstName', data.firstName);
+    if (data.lastName) formData.append('lastName', data.lastName);
+    if (file) formData.append('avatar', file);
+
+    if (!data.firstName && !data.lastName && !file) {
+        toast.info("Keine Änderungen zum Speichern.");
+        return;
+    }
 
     const result = await updateProfile(formData);
 
     if (result.success) {
       toast.success(result.message);
+      setFile(null);
+      setPreview(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
     } else {
       toast.error(result.message);
     }
   };
 
   return (
-    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 w-full max-w-md">
+    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 w-full max-w-md">
+      <div className="space-y-2 text-center">
+        <Avatar className="w-24 h-24 mx-auto">
+          <AvatarImage src={preview || initialData.avatarUrl || undefined} alt="User avatar" />
+          <AvatarFallback>{initialData.firstName?.[0]}{initialData.lastName?.[0]}</AvatarFallback>
+        </Avatar>
+        <Input
+          id="avatar"
+          type="file"
+          accept="image/png, image/jpeg, image/webp"
+          onChange={handleFileChange}
+          ref={fileInputRef}
+          className="w-full"
+        />
+      </div>
       <div>
         <Label htmlFor="firstName">Vorname</Label>
         <Input

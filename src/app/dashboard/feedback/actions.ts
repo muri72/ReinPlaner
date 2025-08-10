@@ -1,6 +1,6 @@
 "use server";
 
-import { createClient, createAdminClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 
 export async function createGeneralDashboardFeedback(formData: FormData): Promise<{ success: boolean; message: string }> {
@@ -39,10 +39,9 @@ export async function createGeneralDashboardFeedback(formData: FormData): Promis
 
   let uploadedImageUrls: string[] = [];
   if (images.length > 0 && images[0].size > 0) {
-    const supabaseAdmin = createAdminClient();
     for (const image of images) {
       const filePath = `general-feedback/${Date.now()}-${image.name}`;
-      const { error: uploadError } = await supabaseAdmin.storage
+      const { error: uploadError } = await supabase.storage
         .from("feedback-images")
         .upload(filePath, image);
 
@@ -51,7 +50,7 @@ export async function createGeneralDashboardFeedback(formData: FormData): Promis
         return { success: false, message: `Fehler beim Hochladen des Bildes: ${uploadError.message}` };
       }
 
-      const { data: urlData } = supabaseAdmin.storage.from("feedback-images").getPublicUrl(filePath);
+      const { data: urlData } = supabase.storage.from("feedback-images").getPublicUrl(filePath);
       if (urlData) {
         uploadedImageUrls.push(urlData.publicUrl);
       }
