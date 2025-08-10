@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { AbsenceRequestFormValues } from "@/components/absence-request-form";
+import { startOfMonth, endOfMonth } from "date-fns";
 
 export async function createAbsenceRequest(data: AbsenceRequestFormValues): Promise<{ success: boolean; message: string }> {
   const supabase = await createClient();
@@ -114,4 +115,36 @@ export async function deleteAbsenceRequest(formData: FormData): Promise<{ succes
 
   revalidatePath("/dashboard/absence-requests");
   return { success: true, message: "Abwesenheitsantrag erfolgreich gelöscht!" };
+}
+
+// New server action for the calendar
+export async function getAbsencesForMonth(date: Date) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { success: false, message: "Benutzer nicht authentifiziert.", data: [] };
+  }
+
+  const firstDay = startOfMonth(date);
+  const lastDay = endOfMonth(date);
+
+  const { data, error } = await supabase
+    .from('absence_requests')
+    .select(`
+      start_date,
+      end_date,
+      type,
+      employees ( first_name, last_name )
+    `)
+    .eq('status', 'approved')
+    .lte('start_date', lastDay.toISOString().split('T')[0])
+    .gte('end_date', firstDay.toISOString().split('T')[0]);
+
+  if (error) {
+    console.error("Fehler beim Laden der Abwesenheiten für den Kalender:", error);
+    return { success: false, message: error.message, data: [] };
+  }
+
+  return { success: true, message: "Daten geladen", data };
 }
