@@ -63,7 +63,7 @@ export async function createTimeEntry(data: TimeEntryFormValues): Promise<{ succ
     finalDurationMinutes = diffMs / (1000 * 60); // Convert milliseconds to minutes
   }
 
-  const supabaseAdmin = await createAdminClient();
+  const supabaseAdmin = createAdminClient();
   const { data: newEntry, error } = await supabaseAdmin
     .from('time_entries')
     .insert({

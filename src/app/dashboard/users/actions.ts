@@ -34,7 +34,7 @@ export async function registerUser(data: UserFormValues) {
   const userEmail = email === null ? undefined : email;
 
   // Benutzer in Supabase Auth registrieren
-  const supabaseAdmin = await createAdminClient(); // Verwende den Admin Client
+  const supabaseAdmin = createAdminClient(); // Verwende den Admin Client
   const { data: newUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
     email: userEmail,
     password,
@@ -243,7 +243,7 @@ export async function deleteUser(formData: FormData): Promise<{ success: boolean
   }
 
   // Vor dem Löschen des Benutzers, alle Verknüpfungen in employees, customers und customer_contacts aufheben
-  const supabaseAdmin = await createAdminClient(); // Verwende den Admin Client
+  const supabaseAdmin = createAdminClient(); // Verwende den Admin Client
 
   // Mitarbeiter entknüpfen
   const { error: employeeUnlinkError } = await supabaseAdmin

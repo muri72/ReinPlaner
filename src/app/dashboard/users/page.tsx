@@ -43,7 +43,7 @@ export default async function UsersPage({
 
   const query = typeof searchParams?.query === 'string' ? searchParams.query : '';
 
-  const supabaseAdmin = await createAdminClient();
+  const supabaseAdmin = createAdminClient();
   const { data: authUsers, error: authError } = await supabaseAdmin.auth.admin.listUsers();
 
   if (authError) {

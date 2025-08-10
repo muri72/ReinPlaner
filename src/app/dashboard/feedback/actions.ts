@@ -39,7 +39,7 @@ export async function createGeneralDashboardFeedback(formData: FormData): Promis
 
   let uploadedImageUrls: string[] = [];
   if (images.length > 0 && images[0].size > 0) {
-    const supabaseAdmin = await createAdminClient();
+    const supabaseAdmin = createAdminClient();
     for (const image of images) {
       const filePath = `general-feedback/${Date.now()}-${image.name}`;
       const { error: uploadError } = await supabaseAdmin.storage

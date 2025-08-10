@@ -184,7 +184,7 @@ export async function createOrderFeedback(formData: FormData): Promise<{ success
 
   let uploadedImageUrls: string[] = [];
   if (images.length > 0 && images[0].size > 0) {
-    const supabaseAdmin = await createAdminClient();
+    const supabaseAdmin = createAdminClient();
     for (const image of images) {
       const filePath = `${orderId}/${Date.now()}-${image.name}`;
       const { error: uploadError } = await supabaseAdmin.storage
