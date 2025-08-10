@@ -43,7 +43,7 @@ export default async function PortalLayout({
                 Neue Anfrage
               </Button>
             </Link>
-            <Link href="/dashboard/profile" passHref>
+            <Link href="/portal/profile" passHref>
               <Button variant="ghost" className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
                 <User className="mr-2 h-4 w-4" />
                 Profil

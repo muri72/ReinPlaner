@@ -24,20 +24,25 @@ export async function middleware(request: NextRequest) {
   const userRole = profile?.role;
 
   // Redirect logged-in users away from the login page
-  if (pathname.startsWith('/login')) {
+  if (pathname === '/login') {
     const url = userRole === 'customer' ? '/portal/dashboard' : '/dashboard';
     return NextResponse.redirect(new URL(url, request.url));
   }
 
   // Role-based routing for the rest of the app
   if (userRole === 'customer') {
-    // If a customer tries to access the main app, redirect them to their portal
-    if (pathname.startsWith('/dashboard') || pathname === '/') {
+    // If a customer tries to access anything outside the portal, redirect them.
+    // Exception for auth callback route.
+    if (!pathname.startsWith('/portal') && pathname !== '/auth/callback') {
       return NextResponse.redirect(new URL('/portal/dashboard', request.url));
     }
   } else { // For admin, manager, employee
-    // If an internal user tries to access the customer portal, redirect them to the main dashboard
-    if (pathname.startsWith('/portal') || pathname === '/') {
+    // If an internal user tries to access the customer portal, redirect them to the main dashboard.
+    if (pathname.startsWith('/portal')) {
+      return NextResponse.redirect(new URL('/dashboard', request.url));
+    }
+    // Also handle the root path for internal users
+    if (pathname === '/') {
       return NextResponse.redirect(new URL('/dashboard', request.url));
     }
   }
