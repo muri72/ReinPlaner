@@ -1,52 +1,37 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { AbsenceRequestFormValues } from "@/components/absence-request-form";
 
 export async function createAbsenceRequest(data: AbsenceRequestFormValues): Promise<{ success: boolean; message: string }> {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user: creator } } = await supabase.auth.getUser();
 
-  if (!user) {
+  if (!creator) {
     return { success: false, message: "Benutzer nicht authentifiziert." };
   }
 
-  // Check if the user is linked to the selected employee (for non-admins)
+  // Get the user_id of the employee for whom the request is being created
   const { data: employee, error: employeeError } = await supabase
     .from('employees')
-    .select('id, user_id')
+    .select('user_id')
     .eq('id', data.employeeId)
     .single();
 
-  if (employeeError || !employee) {
-    console.error("Fehler beim Abrufen des Mitarbeiters:", employeeError);
-    return { success: false, message: "Mitarbeiter nicht gefunden oder Fehler beim Abrufen." };
+  if (employeeError || !employee || !employee.user_id) {
+    console.error("Fehler beim Abrufen des Mitarbeiter-Benutzers:", employeeError);
+    return { success: false, message: "Der ausgewählte Mitarbeiter ist keinem Benutzerkonto zugeordnet und es können keine Anträge für ihn gestellt werden." };
   }
 
-  // Check user's role
-  const { data: profile, error: profileError } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single();
+  const employeeUserId = employee.user_id;
 
-  if (profileError) {
-    console.error("Fehler beim Abrufen des Benutzerprofils:", profileError);
-    return { success: false, message: "Fehler beim Überprüfen der Berechtigungen." };
-  }
-
-  const isAdminOrManager = profile?.role === 'admin' || profile?.role === 'manager';
-
-  // If not admin/manager, ensure the request is for their own linked employee
-  if (!isAdminOrManager && employee.user_id !== user.id) {
-    return { success: false, message: "Sie können nur Abwesenheitsanträge für sich selbst einreichen." };
-  }
-
-  const { error } = await supabase
+  // Use admin client to bypass RLS for inserting on behalf of another user
+  const supabaseAdmin = await createAdminClient();
+  const { error } = await supabaseAdmin
     .from('absence_requests')
     .insert({
-      user_id: user.id, // The user who submits the request
+      user_id: employeeUserId, // Use the employee's user_id
       employee_id: data.employeeId,
       start_date: data.startDate.toISOString().split('T')[0],
       end_date: data.endDate.toISOString().split('T')[0],

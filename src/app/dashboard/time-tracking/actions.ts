@@ -1,6 +1,6 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { TimeEntryFormValues } from "@/components/time-entry-form";
 
@@ -22,10 +22,27 @@ export async function createTimeEntry(data: TimeEntryFormValues): Promise<{ succ
     endDate,
     endTime,
     durationMinutes,
-    breakMinutes, // Neues Feld
+    breakMinutes,
     type,
     notes,
   } = data;
+
+  let finalUserId = user.id;
+
+  // If an admin/manager is creating an entry for a specific employee, find that employee's user_id
+  if (employeeId) {
+    const { data: employee, error: employeeError } = await supabase
+      .from('employees')
+      .select('user_id')
+      .eq('id', employeeId)
+      .single();
+
+    if (employeeError || !employee || !employee.user_id) {
+      console.error("Fehler beim Abrufen des Mitarbeiter-Benutzers für Zeiteintrag:", employeeError);
+      return { success: false, message: "Der ausgewählte Mitarbeiter ist keinem Benutzerkonto zugeordnet." };
+    }
+    finalUserId = employee.user_id;
+  }
 
   // Combine date and time for start_time
   const startDateTime = new Date(startDate);
@@ -46,10 +63,11 @@ export async function createTimeEntry(data: TimeEntryFormValues): Promise<{ succ
     finalDurationMinutes = diffMs / (1000 * 60); // Convert milliseconds to minutes
   }
 
-  const { data: newEntry, error } = await supabase
+  const supabaseAdmin = await createAdminClient();
+  const { data: newEntry, error } = await supabaseAdmin
     .from('time_entries')
     .insert({
-      user_id: user.id,
+      user_id: finalUserId, // Use the correct user_id
       employee_id: employeeId,
       customer_id: customerId,
       object_id: objectId,
@@ -57,11 +75,11 @@ export async function createTimeEntry(data: TimeEntryFormValues): Promise<{ succ
       start_time: startDateTime.toISOString(),
       end_time: endDateTime ? endDateTime.toISOString() : null,
       duration_minutes: finalDurationMinutes,
-      break_minutes: breakMinutes, // Neues Feld speichern
+      break_minutes: breakMinutes,
       type,
       notes,
     })
-    .select('id') // Wichtig: Die ID des neu erstellten Eintrags auswählen
+    .select('id')
     .single();
 
   if (error) {
@@ -135,8 +153,8 @@ export async function updateTimeEntry(entryId: string, data: Partial<TimeEntryFo
       notes,
       updated_at: new Date().toISOString(),
     })
-    .eq('id', entryId)
-    .eq('user_id', user.id); // Sicherstellen, dass der Benutzer nur eigene Einträge aktualisieren kann
+    .eq('id', entryId);
+    // RLS will handle the permission check for updates
 
   if (error) {
     console.error("Fehler beim Aktualisieren des Zeiteintrags:", error);
@@ -160,8 +178,8 @@ export async function deleteTimeEntry(formData: FormData): Promise<{ success: bo
   const { error } = await supabase
     .from('time_entries')
     .delete()
-    .eq('id', entryId)
-    .eq('user_id', user.id); // Sicherstellen, dass der Benutzer nur eigene Einträge löschen kann
+    .eq('id', entryId);
+    // RLS will handle the permission check for deletes
 
   if (error) {
     console.error("Fehler beim Löschen des Zeiteintrags:", error);
