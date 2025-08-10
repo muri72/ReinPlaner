@@ -198,7 +198,8 @@ export async function createOrderFeedback(formData: FormData): Promise<{ success
 
       const { data: urlData } = supabaseAdmin.storage.from("feedback-images").getPublicUrl(filePath);
       if (urlData) {
-        uploadedImageUrls.push(urlData.publicUrl);
+        // Add a timestamp to the URL to bypass cache
+        uploadedImageUrls.push(`${urlData.publicUrl}?t=${new Date().getTime()}`);
       }
     }
   }

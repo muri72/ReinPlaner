@@ -34,7 +34,8 @@ export async function createGeneralFeedback(formData: FormData): Promise<{ succe
       // Use the admin client to get the public URL
       const { data: urlData } = supabaseAdmin.storage.from("feedback-images").getPublicUrl(filePath);
       if (urlData) {
-        uploadedImageUrls.push(urlData.publicUrl);
+        // Add a timestamp to the URL to bypass cache
+        uploadedImageUrls.push(`${urlData.publicUrl}?t=${new Date().getTime()}`);
       }
     }
   }

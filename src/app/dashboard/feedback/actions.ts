@@ -53,7 +53,8 @@ export async function createGeneralDashboardFeedback(formData: FormData): Promis
 
       const { data: urlData } = supabaseAdmin.storage.from("feedback-images").getPublicUrl(filePath);
       if (urlData) {
-        uploadedImageUrls.push(urlData.publicUrl);
+        // Add a timestamp to the URL to bypass cache
+        uploadedImageUrls.push(`${urlData.publicUrl}?t=${new Date().getTime()}`);
       }
     }
   }
