@@ -1,6 +1,6 @@
 import React from "react";
 import Link from "next/link";
-import { Home, ListTodo, User, Users, Briefcase, UsersRound, Building, ContactRound, Settings, Clock, FileText, CalendarOff, CalendarCheck } from "lucide-react"; // CalendarCheck hinzugefügt
+import { Home, ListTodo, User, Users, Briefcase, UsersRound, Building, ContactRound, Settings, Clock, FileText, CalendarOff, CalendarCheck, Star } from "lucide-react"; // Star hinzugefügt
 import { Button } from "@/components/ui/button";
 import { signOut } from "@/app/dashboard/actions";
 import { createClient } from "@/lib/supabase/server";
@@ -91,6 +91,12 @@ export default async function DashboardLayout({
                 </Button>
               </Link>
             )}
+            <Link href="/dashboard/feedback" passHref>
+              <Button variant="ghost" className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
+                <Star className="mr-2 h-4 w-4" />
+                Feedback
+              </Button>
+            </Link>
             {(isAdmin || isManager) && ( // Only show for admins and managers
               <Link href="/dashboard/reports" passHref>
                 <Button variant="ghost" className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">

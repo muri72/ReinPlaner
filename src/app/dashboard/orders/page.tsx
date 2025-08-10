@@ -221,8 +221,12 @@ export default async function OrdersPage({
                     {(order.order_type === "recurring" || order.order_type === "substitution" || order.order_type === "permanent") && order.recurring_start_date && <div className="flex items-center text-xs text-muted-foreground mt-1"><CalendarDays className="mr-1 h-3 w-3" /><span>Start: {new Date(order.recurring_start_date).toLocaleDateString()}</span></div>}
                     {(order.order_type === "recurring" || order.order_type === "substitution") && order.recurring_end_date && <div className="flex items-center text-xs text-muted-foreground"><CalendarDays className="mr-1 h-3 w-3" /><span>Ende: {new Date(order.recurring_end_date).toLocaleDateString()}</span></div>}
                     
-                    {feedback && (
+                    {feedback ? (
                       <OrderFeedbackDisplay feedback={feedback} />
+                    ) : order.status === 'completed' && (
+                      <div className="mt-4">
+                        <OrderFeedbackDialog orderId={order.id} />
+                      </div>
                     )}
                   </CardContent>
                 </Card>
