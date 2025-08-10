@@ -7,7 +7,6 @@ import { signOut } from "@/app/dashboard/actions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, Building, UsersRound, Briefcase, Clock } from "lucide-react";
 import { OrderStatusChart } from "@/components/order-status-chart";
-import { FeedbackHowToCard } from "@/components/feedback-howto-card"; // Importiert
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -74,8 +73,6 @@ export default async function DashboardPage() {
       <h1 className="text-3xl font-bold">
         Willkommen im Dashboard, {profile?.first_name || user.email}!
       </h1>
-
-      <FeedbackHowToCard />
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
