@@ -1,29 +1,39 @@
 "use client";
 
 import * as React from "react";
-import { format, eachDayOfInterval, isSameDay } from "date-fns";
+import { format, eachDayOfInterval } from "date-fns";
 import { de } from "date-fns/locale";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { getAbsencesForMonth } from "@/app/dashboard/absence-requests/actions";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "./ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-
-interface AbsenceData {
-  start_date: string;
-  end_date: string;
-  type: string;
-  employees: { first_name: string | null; last_name: string | null } | null;
-}
 
 interface AbsencesByDay {
   [key: string]: { name: string; type: string }[];
 }
 
+const typeTranslations: { [key: string]: string } = {
+  vacation: "Urlaub",
+  sick_leave: "Krankheit",
+  training: "Weiterbildung",
+  other: "Sonstiges",
+};
+
+const typeColors: { [key: string]: string } = {
+  vacation: "bg-blue-200 text-blue-900",
+  sick_leave: "bg-yellow-200 text-yellow-900",
+  training: "bg-green-200 text-green-900",
+  other: "bg-gray-200 text-gray-900",
+};
+
 export function AbsenceCalendar() {
   const [month, setMonth] = React.useState(new Date());
-  const [absences, setAbsences] = React.useState<AbsencesByDay>({});
+  const [absenceDetails, setAbsenceDetails] = React.useState<AbsencesByDay>({});
+  const [vacationDays, setVacationDays] = React.useState<Date[]>([]);
+  const [sickDays, setSickDays] = React.useState<Date[]>([]);
+  const [trainingDays, setTrainingDays] = React.useState<Date[]>([]);
+  const [otherDays, setOtherDays] = React.useState<Date[]>([]);
   const [loading, setLoading] = React.useState(true);
 
   React.useEffect(() => {
@@ -31,7 +41,12 @@ export function AbsenceCalendar() {
       setLoading(true);
       const result = await getAbsencesForMonth(month);
       if (result.success && result.data) {
-        const processedAbsences: AbsencesByDay = {};
+        const details: AbsencesByDay = {};
+        const vacation: Date[] = [];
+        const sick: Date[] = [];
+        const training: Date[] = [];
+        const other: Date[] = [];
+
         result.data.forEach((absence: any) => {
           const interval = eachDayOfInterval({
             start: new Date(absence.start_date),
@@ -39,42 +54,40 @@ export function AbsenceCalendar() {
           });
           interval.forEach((day) => {
             const dayKey = format(day, "yyyy-MM-dd");
-            if (!processedAbsences[dayKey]) {
-              processedAbsences[dayKey] = [];
+            if (!details[dayKey]) {
+              details[dayKey] = [];
             }
-            processedAbsences[dayKey].push({
+            details[dayKey].push({
               name: `${absence.employees?.first_name || ''} ${absence.employees?.last_name || ''}`.trim(),
               type: absence.type,
             });
+
+            switch (absence.type) {
+              case 'vacation': vacation.push(day); break;
+              case 'sick_leave': sick.push(day); break;
+              case 'training': training.push(day); break;
+              default: other.push(day); break;
+            }
           });
         });
-        setAbsences(processedAbsences);
+
+        setAbsenceDetails(details);
+        setVacationDays(vacation);
+        setSickDays(sick);
+        setTrainingDays(training);
+        setOtherDays(other);
       }
       setLoading(false);
     };
     fetchAndProcessAbsences();
   }, [month]);
 
-  const absentDays = Object.keys(absences).map((dayStr) => new Date(dayStr));
-
-  const handlePrevMonth = () => {
-    setMonth(new Date(month.setMonth(month.getMonth() - 1)));
-  };
-
-  const handleNextMonth = () => {
-    setMonth(new Date(month.setMonth(month.getMonth() + 1)));
-  };
-  
-  const typeTranslations: { [key: string]: string } = {
-    vacation: "Urlaub",
-    sick_leave: "Krank",
-    training: "Schulung",
-    other: "Sonstiges",
-  };
+  const handlePrevMonth = () => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1));
+  const handleNextMonth = () => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1));
 
   function DayContent(props: { date: Date }) {
     const dayKey = format(props.date, "yyyy-MM-dd");
-    const dayAbsences = absences[dayKey];
+    const dayAbsences = absenceDetails[dayKey];
 
     if (!dayAbsences) {
       return <div className="p-2">{format(props.date, "d")}</div>;
@@ -83,7 +96,7 @@ export function AbsenceCalendar() {
     return (
       <Popover>
         <PopoverTrigger asChild>
-          <div className="w-full h-full flex items-center justify-center cursor-pointer">
+          <div className="w-full h-full flex items-center justify-center cursor-pointer rounded-md">
             {format(props.date, "d")}
           </div>
         </PopoverTrigger>
@@ -105,7 +118,7 @@ export function AbsenceCalendar() {
 
   return (
     <div className="p-4 border rounded-lg">
-       <div className="flex justify-between items-center mb-4">
+      <div className="flex justify-between items-center mb-4">
         <Button variant="outline" size="icon" onClick={handlePrevMonth}>
           <ChevronLeft className="h-4 w-4" />
         </Button>
@@ -120,17 +133,31 @@ export function AbsenceCalendar() {
         mode="single"
         month={month}
         onMonthChange={setMonth}
-        selected={undefined} // We don't need to select a single day
-        modifiers={{ absent: absentDays }}
+        selected={undefined}
+        modifiers={{
+          vacation: vacationDays,
+          sick: sickDays,
+          training: trainingDays,
+          other: otherDays,
+        }}
         modifiersClassNames={{
-          absent: "bg-destructive/20 text-destructive-foreground rounded-md",
+          vacation: `${typeColors.vacation} rounded-md`,
+          sick: `${typeColors.sick_leave} rounded-md`,
+          training: `${typeColors.training} rounded-md`,
+          other: `${typeColors.other} rounded-md`,
         }}
-        components={{
-          DayContent: DayContent,
-        }}
+        components={{ DayContent }}
         className="w-full"
         locale={de}
       />
+      <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-sm">
+        {Object.entries(typeTranslations).map(([key, label]) => (
+          <div key={key} className="flex items-center gap-2">
+            <div className={`w-3 h-3 rounded-full ${typeColors[key]?.split(' ')[0]}`}></div>
+            <span>{label}</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

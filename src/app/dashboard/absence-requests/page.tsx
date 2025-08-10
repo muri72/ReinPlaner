@@ -29,6 +29,7 @@ export default async function AbsenceRequestsPage() {
   }
 
   const currentUserRole = profile.role as 'admin' | 'manager' | 'employee';
+  const isAdmin = currentUserRole === 'admin';
 
   const { data: requests, error } = await supabase
     .from('absence_requests')
@@ -72,13 +73,15 @@ export default async function AbsenceRequestsPage() {
     <div className="p-8 space-y-8">
       <h1 className="text-3xl font-bold">Abwesenheitsverwaltung</h1>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 space-y-6">
-          <h2 className="text-2xl font-bold">Abwesenheitskalender</h2>
-          <AbsenceCalendar />
-        </div>
+      <div className={`grid grid-cols-1 ${isAdmin ? 'lg:grid-cols-3' : ''} gap-8`}>
+        {isAdmin && (
+          <div className="lg:col-span-2 space-y-6">
+            <h2 className="text-2xl font-bold">Abwesenheitskalender</h2>
+            <AbsenceCalendar />
+          </div>
+        )}
 
-        <div className="lg:col-span-1">
+        <div className={isAdmin ? "lg:col-span-1" : "max-w-md mx-auto w-full"}>
           <h2 className="text-2xl font-bold mb-6">Neuen Antrag einreichen</h2>
           <AbsenceRequestForm
             onSubmit={createAbsenceRequest}
