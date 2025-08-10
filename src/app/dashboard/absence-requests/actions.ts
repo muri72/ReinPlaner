@@ -1,6 +1,6 @@
 "use server";
 
-import { createClient, createAdminClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { AbsenceRequestFormValues } from "@/components/absence-request-form";
 
@@ -26,9 +26,10 @@ export async function createAbsenceRequest(data: AbsenceRequestFormValues): Prom
 
   const employeeUserId = employee.user_id;
 
-  // Use admin client to bypass RLS for inserting on behalf of another user
-  const supabaseAdmin = await createAdminClient();
-  const { error } = await supabaseAdmin
+  // The RLS policies will now handle the permission check.
+  // Admins/managers can insert due to the new policy.
+  // Employees can insert for themselves due to the existing policy.
+  const { error } = await supabase
     .from('absence_requests')
     .insert({
       user_id: employeeUserId, // Use the employee's user_id
@@ -43,7 +44,7 @@ export async function createAbsenceRequest(data: AbsenceRequestFormValues): Prom
 
   if (error) {
     console.error("Fehler beim Erstellen des Abwesenheitsantrags:", error);
-    return { success: false, message: error.message };
+    return { success: false, message: `Fehler beim Erstellen des Antrags: ${error.message}` };
   }
 
   revalidatePath("/dashboard/absence-requests");
