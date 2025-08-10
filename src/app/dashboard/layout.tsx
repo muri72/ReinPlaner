@@ -1,6 +1,6 @@
 import React from "react";
 import Link from "next/link";
-import { Home, ListTodo, User, Users, Briefcase, UsersRound, Building, ContactRound, Settings, Clock, FileText } from "lucide-react"; // Clock-Icon hinzugefügt, FileText für Reports
+import { Home, ListTodo, User, Users, Briefcase, UsersRound, Building, ContactRound, Settings, Clock, FileText, CalendarOff } from "lucide-react"; // CalendarOff hinzugefügt
 import { Button } from "@/components/ui/button";
 import { signOut } from "@/app/dashboard/actions";
 import { createClient } from "@/lib/supabase/server";
@@ -26,6 +26,7 @@ export default async function DashboardLayout({
     .single();
 
   const isAdmin = userProfile?.role === 'admin';
+  const isManager = userProfile?.role === 'manager';
 
   return (
     <div className="min-h-screen flex">
@@ -76,7 +77,13 @@ export default async function DashboardLayout({
                 Zeiterfassung
               </Button>
             </Link>
-            {isAdmin && ( // Only show for admins
+            <Link href="/dashboard/absence-requests" passHref>
+              <Button variant="ghost" className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
+                <CalendarOff className="mr-2 h-4 w-4" />
+                Abwesenheiten
+              </Button>
+            </Link>
+            {(isAdmin || isManager) && ( // Only show for admins and managers
               <Link href="/dashboard/reports" passHref>
                 <Button variant="ghost" className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
                   <FileText className="mr-2 h-4 w-4" />

@@ -81,7 +81,7 @@ export async function createAbsenceRequest(data: AbsenceRequestFormValues): Prom
   return { success: true, message: "Abwesenheitsantrag erfolgreich hinzugefügt!" };
 }
 
-export async function updateAbsenceRequest(requestId: string, data: AbsenceRequestFormValues): Promise<{ success: boolean; message: string }> {
+export async function updateAbsenceRequest(requestId: string, data: Partial<AbsenceRequestFormValues>): Promise<{ success: boolean; message: string }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -89,61 +89,28 @@ export async function updateAbsenceRequest(requestId: string, data: AbsenceReque
     return { success: false, message: "Benutzer nicht authentifiziert." };
   }
 
-  // Check user's role
-  const { data: profile, error: profileError } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single();
-
-  if (profileError) {
-    console.error("Fehler beim Abrufen des Benutzerprofils:", profileError);
-    return { success: false, message: "Fehler beim Überprüfen der Berechtigungen." };
-  }
-
-  const isAdminOrManager = profile?.role === 'admin' || profile?.role === 'manager';
-
-  // Fetch the existing request to check ownership/permissions
-  const { data: existingRequest, error: fetchError } = await supabase
-    .from('absence_requests')
-    .select('user_id, status')
-    .eq('id', requestId)
-    .single();
-
-  if (fetchError || !existingRequest) {
-    console.error("Fehler beim Abrufen des bestehenden Antrags:", fetchError);
-    return { success: false, message: "Abwesenheitsantrag nicht gefunden oder Fehler beim Abrufen." };
-  }
-
-  // Determine which fields can be updated based on role and current status
-  const updateData: Partial<AbsenceRequestFormValues> = {
-    employee_id: data.employeeId,
-    start_date: data.startDate.toISOString().split('T')[0],
-    end_date: data.endDate.toISOString().split('T')[0],
-    type: data.type,
-    notes: data.notes,
+  const updateData: any = {
     updated_at: new Date().toISOString(),
   };
 
-  // Admins/Managers can change status and admin_notes
-  if (isAdminOrManager) {
-    updateData.status = data.status;
-    updateData.admin_notes = data.adminNotes;
-  } else {
-    // Employees can only update their own pending requests
-    if (existingRequest.user_id !== user.id || existingRequest.status !== 'pending') {
-      return { success: false, message: "Sie können diesen Antrag nicht aktualisieren." };
-    }
-    // Ensure employees don't try to change status or admin_notes
-    delete updateData.status;
-    delete updateData.admin_notes;
+  // Map form values to database columns
+  if (data.employeeId) updateData.employee_id = data.employeeId;
+  if (data.startDate) updateData.start_date = data.startDate.toISOString().split('T')[0];
+  if (data.endDate) updateData.end_date = data.endDate.toISOString().split('T')[0];
+  if (data.type) updateData.type = data.type;
+  if (data.notes !== undefined) updateData.notes = data.notes;
+
+  // Only admins/managers can update status and admin_notes
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+  if (profile?.role === 'admin' || profile?.role === 'manager') {
+    if (data.status) updateData.status = data.status;
+    if (data.adminNotes !== undefined) updateData.admin_notes = data.adminNotes;
   }
 
   const { error } = await supabase
     .from('absence_requests')
     .update(updateData)
-    .eq('id', requestId)
-    .eq('user_id', existingRequest.user_id); // Ensure only the original submitter or admin can update via RLS
+    .eq('id', requestId);
 
   if (error) {
     console.error("Fehler beim Aktualisieren des Abwesenheitsantrags:", error);
@@ -164,7 +131,7 @@ export async function deleteAbsenceRequest(formData: FormData): Promise<{ succes
 
   const requestId = formData.get('requestId') as string;
 
-  // RLS policies will handle the permission check (only admins/managers or owner of pending request)
+  // RLS policies will handle the permission check
   const { error } = await supabase
     .from('absence_requests')
     .delete()
