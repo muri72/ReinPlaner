@@ -61,8 +61,9 @@ export function AbsenceRequestForm({ initialData, onSubmit, submitButtonText, on
 
   useEffect(() => {
     const fetchEmployees = async () => {
-      let query = supabase.from('employees').select('id, first_name, last_name, user_id');
-      const { data, error } = await query;
+      const { data, error } = await supabase
+        .from('employees')
+        .select('id, first_name, last_name, user_id');
 
       if (error) {
         console.error("Fehler beim Laden der Mitarbeiter:", error);
@@ -70,10 +71,17 @@ export function AbsenceRequestForm({ initialData, onSubmit, submitButtonText, on
         return;
       }
 
+      const userEmployee = data?.find(emp => emp.user_id === currentUserId);
+
       if (isManagerOrAdmin) {
+        // Admins/Managers see all employees
         setEmployees(data || []);
+        // If the admin/manager has an associated employee profile, pre-select it
+        if (userEmployee) {
+          form.setValue("employeeId", userEmployee.id);
+        }
       } else {
-        const userEmployee = data?.find(emp => emp.user_id === currentUserId);
+        // Regular employees only see themselves
         if (userEmployee) {
           setEmployees([userEmployee]);
           form.setValue("employeeId", userEmployee.id);
