@@ -43,6 +43,9 @@ export function GiveFeedbackForm() {
   const [files, setFiles] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // New state for user role
+  const [userRole, setUserRole] = useState<string | null>(null);
 
   const form = useForm<FeedbackFormValues>({
     resolver: zodResolver(feedbackSchema),
@@ -53,15 +56,43 @@ export function GiveFeedbackForm() {
 
   const rating = form.watch("rating");
 
+  // Fetch user role and customer data
   useEffect(() => {
-    const fetchCustomers = async () => {
-      const { data, error } = await supabase.from('customers').select('id, name').order('name');
-      if (data) setCustomers(data);
-      if (error) toast.error("Kunden konnten nicht geladen werden.");
+    const fetchUserData = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single();
+        
+        if (profile) {
+          setUserRole(profile.role);
+          if (profile.role === 'customer') {
+            const { data: customerData } = await supabase
+              .from('customers')
+              .select('id')
+              .eq('user_id', user.id)
+              .single();
+            
+            if (customerData) {
+              setSelectedCustomerId(customerData.id);
+              form.setValue("customerId", customerData.id, { shouldValidate: true });
+            }
+          } else {
+            // If admin/manager, fetch all customers for the dropdown
+            const { data: customersData, error } = await supabase.from('customers').select('id, name').order('name');
+            if (customersData) setCustomers(customersData);
+            if (error) toast.error("Kunden konnten nicht geladen werden.");
+          }
+        }
+      }
     };
-    fetchCustomers();
-  }, [supabase]);
+    fetchUserData();
+  }, [supabase, form]);
 
+  // Fetch orders when a customer is selected (either manually or automatically)
   useEffect(() => {
     const fetchOrders = async () => {
       if (!selectedCustomerId) {
@@ -120,7 +151,10 @@ export function GiveFeedbackForm() {
         toast.success(result.message);
         form.reset();
         setFiles([]);
-        setSelectedCustomerId(null);
+        // Don't reset customer if they are a customer user
+        if (userRole !== 'customer') {
+          setSelectedCustomerId(null);
+        }
       } else {
         toast.error(result.message);
       }
@@ -134,22 +168,24 @@ export function GiveFeedbackForm() {
   return (
     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {userRole !== 'customer' && (
+          <div>
+            <Label htmlFor="customerId">1. Kunde auswählen</Label>
+            <Select
+              onValueChange={(value) => {
+                setSelectedCustomerId(value);
+                form.setValue("customerId", value, { shouldValidate: true });
+              }}
+              value={selectedCustomerId || ""}
+            >
+              <SelectTrigger><SelectValue placeholder="Kunde..." /></SelectTrigger>
+              <SelectContent>{customers.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+            </Select>
+            {form.formState.errors.customerId && <p className="text-red-500 text-sm mt-1">{form.formState.errors.customerId.message}</p>}
+          </div>
+        )}
         <div>
-          <Label htmlFor="customerId">1. Kunde auswählen</Label>
-          <Select
-            onValueChange={(value) => {
-              setSelectedCustomerId(value);
-              form.setValue("customerId", value, { shouldValidate: true });
-            }}
-            value={selectedCustomerId || ""}
-          >
-            <SelectTrigger><SelectValue placeholder="Kunde..." /></SelectTrigger>
-            <SelectContent>{customers.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
-          </Select>
-          {form.formState.errors.customerId && <p className="text-red-500 text-sm mt-1">{form.formState.errors.customerId.message}</p>}
-        </div>
-        <div>
-          <Label htmlFor="orderId">2. Auftrag auswählen</Label>
+          <Label htmlFor="orderId">{userRole === 'customer' ? '1. Auftrag auswählen' : '2. Auftrag auswählen'}</Label>
           <Select
             {...form.register("orderId")}
             onValueChange={(value) => form.setValue("orderId", value, { shouldValidate: true })}
@@ -163,7 +199,7 @@ export function GiveFeedbackForm() {
       </div>
 
       <div>
-        <Label>3. Bewertung</Label>
+        <Label>{userRole === 'customer' ? '2. Bewertung' : '3. Bewertung'}</Label>
         <div className="flex items-center gap-1">
           {[1, 2, 3, 4, 5].map((star) => (
             <Star
@@ -179,12 +215,12 @@ export function GiveFeedbackForm() {
       </div>
 
       <div>
-        <Label htmlFor="comment">4. Kommentar (optional)</Label>
+        <Label htmlFor="comment">{userRole === 'customer' ? '3. Kommentar (optional)' : '4. Kommentar (optional)'}</Label>
         <Textarea id="comment" {...form.register("comment")} placeholder="Wie war die Erfahrung mit unserer Dienstleistung?" rows={4} />
       </div>
 
       <div>
-        <Label htmlFor="images">5. Bilder hinzufügen (optional, max. 5)</Label>
+        <Label htmlFor="images">{userRole === 'customer' ? '4. Bilder hinzufügen (optional, max. 5)' : '5. Bilder hinzufügen (optional, max. 5)'}</Label>
         <Input id="images" type="file" multiple accept="image/png, image/jpeg, image/webp" onChange={handleFileChange} ref={fileInputRef} className="hidden" />
         <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>Bilder auswählen</Button>
         <div className="mt-2 grid grid-cols-3 gap-2">
