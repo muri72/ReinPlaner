@@ -4,8 +4,8 @@ import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Pencil } from "lucide-react";
-import { AbsenceRequestForm } from "@/components/absence-request-form";
-import { updateAbsenceRequest, AbsenceRequestFormValues } from "@/app/dashboard/absence-requests/actions";
+import { AbsenceRequestForm, AbsenceRequestFormValues } from "@/components/absence-request-form";
+import { updateAbsenceRequest } from "@/app/dashboard/absence-requests/actions";
 
 interface AbsenceRequestEditDialogProps {
   request: {

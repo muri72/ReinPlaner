@@ -3,7 +3,6 @@
 import { useForm, SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { absenceRequestSchema, AbsenceRequestFormValues } from "@/app/dashboard/absence-requests/actions";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -13,6 +12,22 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { DatePicker } from "@/components/date-picker";
+
+// Define the schema for absence request form values
+export const absenceRequestSchema = z.object({
+  employeeId: z.string().uuid("Ungültige Mitarbeiter-ID").min(1, "Mitarbeiter ist erforderlich"),
+  startDate: z.date({ required_error: "Startdatum ist erforderlich" }),
+  endDate: z.date({ required_error: "Enddatum ist erforderlich" }),
+  type: z.enum(["vacation", "sick_leave", "training", "other"], { required_error: "Abwesenheitstyp ist erforderlich" }).default("vacation"),
+  status: z.enum(["pending", "approved", "rejected"]).default("pending"),
+  notes: z.string().max(500, "Notizen sind zu lang").optional().nullable(),
+  adminNotes: z.string().max(500, "Admin-Notizen sind zu lang").optional().nullable(),
+}).refine((data) => data.endDate >= data.startDate, {
+  message: "Enddatum muss nach oder am Startdatum liegen.",
+  path: ["endDate"],
+});
+
+export type AbsenceRequestFormValues = z.infer<typeof absenceRequestSchema>;
 
 interface AbsenceRequestFormProps {
   initialData?: Partial<AbsenceRequestFormValues>;
