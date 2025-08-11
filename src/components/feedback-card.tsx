@@ -143,12 +143,16 @@ export function FeedbackCard({ feedback, feedbackType, currentUserId, currentUse
             )}
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button variant="ghost" size="icon" className="text-destructive"><Trash2 className="h-4 w-4" /></Button>
+                <Button variant="ghost" size="icon" className="text-destructive" disabled={isDeleting}>
+                  <Trash2 className="h-4 w-4" />
+                </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
                   <AlertDialogTitle>Sind Sie sicher?</AlertDialogTitle>
-                  <AlertDialogDescription>Diese Aktion kann nicht rückgängig gemacht werden. Das Feedback wird dauerhaft gelöscht.</AlertDialogDescription>
+                  <AlertDialogDescription>
+                    Diese Aktion kann nicht rückgängig gemacht werden. Das Feedback wird dauerhaft gelöscht.
+                  </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogCancel>Abbrechen</AlertDialogCancel>

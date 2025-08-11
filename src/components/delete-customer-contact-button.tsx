@@ -5,6 +5,17 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Trash2 } from "lucide-react";
 import { deleteCustomerContact } from "@/app/dashboard/customer-contacts/actions";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface DeleteCustomerContactButtonProps {
   contactId: string;
@@ -13,10 +24,10 @@ interface DeleteCustomerContactButtonProps {
 export function DeleteCustomerContactButton({ contactId }: DeleteCustomerContactButtonProps) {
   const [loading, setLoading] = useState(false);
 
-  const handleDelete = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const handleDelete = async () => {
     setLoading(true);
-    const formData = new FormData(event.currentTarget);
+    const formData = new FormData();
+    formData.append('contactId', contactId);
 
     const result = await deleteCustomerContact(formData);
 
@@ -29,17 +40,31 @@ export function DeleteCustomerContactButton({ contactId }: DeleteCustomerContact
   };
 
   return (
-    <form onSubmit={handleDelete}>
-      <input type="hidden" name="contactId" value={contactId} />
-      <Button
-        variant="ghost"
-        size="icon"
-        className="text-destructive hover:text-destructive/80"
-        type="submit"
-        disabled={loading}
-      >
-        <Trash2 className="h-4 w-4" />
-      </Button>
-    </form>
+    <AlertDialog>
+      <AlertDialogTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="text-destructive hover:text-destructive/80"
+          disabled={loading}
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Sind Sie sicher?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Diese Aktion kann nicht rückgängig gemacht werden. Der Kundenkontakt wird dauerhaft gelöscht.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+          <AlertDialogAction onClick={handleDelete} disabled={loading}>
+            {loading ? "Löschen..." : "Löschen"}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
