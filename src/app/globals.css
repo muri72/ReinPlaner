@@ -109,6 +109,9 @@
   * {
     @apply border-border;
   }
+  html {
+    @apply border-4 border-primary rounded-2xl; /* Added a subtle border to the html element */
+  }
   body {
     @apply bg-background text-foreground;
     /* Subtle noise pattern for texture */
