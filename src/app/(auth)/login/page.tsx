@@ -72,7 +72,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-background">
+    <div className="min-h-screen flex items-center justify-center p-4 bg-background bg-none">
       <div className="relative z-10 w-full max-w-4xl flex flex-col md:flex-row rounded-xl shadow-elevation-4 border border-border overflow-hidden">
         {/* Left Side: Login Form */}
         <div className="w-full md:w-1/2 p-8 space-y-6 bg-background/70 backdrop-blur-xl">
