@@ -36,7 +36,12 @@
     --warning-foreground: 0 0% 100%; /* White */
 
     --border: 210 20% 85%; /* Light Gray-Blue Border */
-    --input: 210 20% 90%; /* Slightly darker input background */
+    --input: <think>**Implementing the Changes**
+
+I've now updated the `src/app/globals.css` file. I've removed the `border-4 border-primary rounded-2xl` styles from the `html` element. Furthermore, I've modified the scrollbar styling. The scrollbar thumb is now transparent by default.  The custom scrollbar color will now only appear on hover, making the scrollbar very subtle until interacted with. These changes should address both the rounded background and scrollbar visibility concerns. I'm ready to test the changes.
+
+
+</think>210 20% 90%; /* Slightly darker input background */
     --ring: 210 80% 45%; /* Primary color for focus ring */
 
     /* Border Radius */
@@ -110,7 +115,7 @@
     @apply border-border;
   }
   html {
-    @apply border-4 border-primary rounded-2xl; /* Added a subtle border to the html element */
+    /* Removed border and border-radius from html */
   }
   body {
     @apply bg-background text-foreground;
@@ -151,7 +156,7 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background-color: hsl(var(--primary) / 0.3); /* Semi-transparent primary color */
+  background-color: transparent; /* Make thumb transparent by default */
   border-radius: 10px;
   border: 2px solid transparent; /* Add transparent border to make it thinner visually */
   background-clip: padding-box; /* Ensures border doesn't affect background-color area */
@@ -165,5 +170,5 @@
 /* For Firefox */
 * {
   scrollbar-width: thin; /* "auto" or "thin" */
-  scrollbar-color: hsl(var(--primary) / 0.3) transparent; /* thumb color track color */
+  scrollbar-color: transparent transparent; /* thumb color track color (transparent by default) */
 }
