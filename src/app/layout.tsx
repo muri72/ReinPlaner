@@ -4,6 +4,7 @@ import "./globals.css";
 import { SessionContextProvider } from "@/components/supabase-session-provider";
 import { createClient } from "@/lib/supabase/server";
 import { Toaster } from "@/components/ui/sonner";
+import { ThemeProvider } from "next-themes"; // Import ThemeProvider
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -29,14 +30,21 @@ export default async function RootLayout({
   const { data: { session } } = await supabase.auth.getSession();
 
   return (
-    <html lang="de">
+    <html lang="de" suppressHydrationWarning> {/* suppressHydrationWarning added for next-themes */}
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <SessionContextProvider initialSession={session}>
-          {children}
-        </SessionContextProvider>
-        <Toaster />
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <SessionContextProvider initialSession={session}>
+            {children}
+          </SessionContextProvider>
+          <Toaster />
+        </ThemeProvider>
       </body>
     </html>
   );
