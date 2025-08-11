@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState } from "react"; // Korrigierte Import-Anweisung
 import { Menu, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NotificationBell } from "@/components/notification-bell";
@@ -34,7 +34,7 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut }: 
               side="left"
               className={cn(
                 "w-64 bg-sidebar text-sidebar-foreground border-r border-sidebar-border p-4 flex flex-col",
-                "bg-gradient-to-br from-sidebar-background to-sidebar-accent/20" // Keep the gradient
+                "bg-gradient-to-br from-sidebar-background to-sidebar-accent"
               )}
             >
               <SheetHeader>
@@ -64,7 +64,7 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut }: 
         className={cn(
           "hidden md:flex flex-col bg-sidebar text-sidebar-foreground border-r border-sidebar-border p-4 transition-all duration-300 ease-in-out",
           isCollapsed ? "w-20" : "w-64",
-          "bg-gradient-to-br from-sidebar-background to-sidebar-accent/20"
+          "bg-gradient-to-br from-sidebar-background to-sidebar-accent"
         )}
       >
         <div className="flex items-center justify-between mb-6">
