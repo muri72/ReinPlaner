@@ -105,7 +105,7 @@ export default async function FeedbackPage() {
                   <p className="text-sm">Wenn Sie Feedback zu einem Auftrag haben, können Sie es hier einreichen.</p>
                   {currentUserRole !== 'admin' && currentUserRole !== 'manager' && (
                     <div className="mt-4">
-                      <Button onClick={() => { /* Logic to switch tab or scroll to form */ }} className="transition-colors duration-200">
+                      <Button onClick={() => { /* Placeholder for future scroll/tab switch logic */ }} className="transition-colors duration-200">
                         <PlusCircle className="mr-2 h-4 w-4" />
                         Feedback geben
                       </Button>
@@ -134,7 +134,7 @@ export default async function FeedbackPage() {
                   <p className="text-sm">Wenn Sie allgemeines Feedback haben, können Sie es hier einreichen.</p>
                   {currentUserRole !== 'admin' && currentUserRole !== 'manager' && (
                     <div className="mt-4">
-                      <Button onClick={() => { /* Logic to switch tab or scroll to form */ }} className="transition-colors duration-200">
+                      <Button onClick={() => { /* Placeholder for future scroll/tab switch logic */ }} className="transition-colors duration-200">
                         <PlusCircle className="mr-2 h-4 w-4" />
                         Feedback geben
                       </Button>

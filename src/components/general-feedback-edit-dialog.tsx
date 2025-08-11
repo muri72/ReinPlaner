@@ -12,6 +12,7 @@ import { updateGeneralFeedback } from "@/app/dashboard/feedback/actions";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"; // Import Tooltip components
 
 const editSchema = z.object({
   subject: z.string().max(200, "Betreff ist zu lang").optional(),
@@ -55,9 +56,18 @@ export function GeneralFeedbackEditDialog({ feedback }: GeneralFeedbackEditDialo
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="ghost" size="icon"><Pencil className="h-4 w-4" /></Button>
-      </DialogTrigger>
+      <TooltipProvider delayDuration={300}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <DialogTrigger asChild>
+              <Button variant="ghost" size="icon"><Pencil className="h-4 w-4" /></Button>
+            </DialogTrigger>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Feedback bearbeiten</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
       <DialogContent aria-labelledby="general-feedback-edit-dialog-title">
         <DialogHeader>
           <DialogTitle id="general-feedback-edit-dialog-title">Feedback bearbeiten</DialogTitle>

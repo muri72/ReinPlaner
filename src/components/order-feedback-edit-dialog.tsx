@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { updateOrderFeedback } from "@/app/dashboard/feedback/actions";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"; // Import Tooltip components
 
 const editSchema = z.object({
   rating: z.number().min(1, "Bewertung ist erforderlich").max(5),
@@ -55,9 +56,18 @@ export function OrderFeedbackEditDialog({ feedback }: OrderFeedbackEditDialogPro
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="ghost" size="icon"><Pencil className="h-4 w-4" /></Button>
-      </DialogTrigger>
+      <TooltipProvider delayDuration={300}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <DialogTrigger asChild>
+              <Button variant="ghost" size="icon"><Pencil className="h-4 w-4" /></Button>
+            </DialogTrigger>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Feedback bearbeiten</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
       <DialogContent aria-labelledby="order-feedback-edit-dialog-title">
         <DialogHeader>
           <DialogTitle id="order-feedback-edit-dialog-title">Feedback bearbeiten</DialogTitle>

@@ -60,7 +60,7 @@ export default async function CustomersPage({
             <p className="text-base md:text-lg font-semibold">Noch keine Kunden vorhanden</p>
             <p className="text-sm">Fügen Sie Ihren ersten Kunden hinzu, um loszulegen.</p>
             <div className="mt-4">
-              <Button onClick={() => { /* Logic to open create form or scroll to it */ }} className="transition-colors duration-200">
+              <Button onClick={() => { /* Placeholder for future scroll/dialog logic */ }} className="transition-colors duration-200">
                 <PlusCircle className="mr-2 h-4 w-4" />
                 Ersten Kunden hinzufügen
               </Button>

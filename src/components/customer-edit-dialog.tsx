@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Pencil } from "lucide-react";
 import { CustomerForm, CustomerFormValues } from "@/components/customer-form";
 import { updateCustomer } from "@/app/dashboard/customers/actions";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"; // Import Tooltip components
 
 interface CustomerEditDialogProps {
   customer: {
@@ -31,11 +32,20 @@ export function CustomerEditDialog({ customer }: CustomerEditDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="ghost" size="icon" className="text-primary hover:text-primary/80">
-          <Pencil className="h-4 w-4" />
-        </Button>
-      </DialogTrigger>
+      <TooltipProvider delayDuration={300}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <DialogTrigger asChild>
+              <Button variant="ghost" size="icon" className="text-primary hover:text-primary/80">
+                <Pencil className="h-4 w-4" />
+              </Button>
+            </DialogTrigger>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Kunden bearbeiten</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
       <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto" aria-labelledby="customer-edit-dialog-title">
         <DialogHeader>
           <DialogTitle id="customer-edit-dialog-title">Kunden bearbeiten</DialogTitle>

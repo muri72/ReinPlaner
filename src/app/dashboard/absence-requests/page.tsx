@@ -91,7 +91,7 @@ export default async function AbsenceRequestsPage() {
                 <p className="text-base md:text-lg font-semibold">Keine Anträge gefunden</p>
                 <p className="text-sm">Reichen Sie einen neuen Abwesenheitsantrag ein.</p>
                 <div className="mt-4">
-                  <Button onClick={() => { /* Logic to open create form or scroll to it */ }} className="transition-colors duration-200">
+                  <Button onClick={() => { /* Placeholder for future scroll/dialog logic */ }} className="transition-colors duration-200">
                     <PlusCircle className="mr-2 h-4 w-4" />
                     Ersten Antrag einreichen
                   </Button>

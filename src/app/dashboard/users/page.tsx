@@ -139,7 +139,7 @@ export default async function UsersPage({
             <p className="text-base md:text-lg font-semibold">Noch keine Benutzer vorhanden</p>
             <p className="text-sm">Registrieren Sie einen neuen Benutzer, um Ihr Team zu erweitern.</p>
             <div className="mt-4">
-              <Button onClick={() => { /* Logic to open create form or scroll to it */ }} className="transition-colors duration-200">
+              <Button onClick={() => { /* Placeholder for future scroll/dialog logic */ }} className="transition-colors duration-200">
                 <PlusCircle className="mr-2 h-4 w-4" />
                 Ersten Benutzer registrieren
               </Button>
