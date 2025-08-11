@@ -146,10 +146,10 @@ export default function LoginPage() {
             height={200} // Angepasste Größe
             className="mb-6"
           />
-          <h3 className="text-2xl font-bold mb-2">Willkommen bei ARIS Management</h3>
+          <h3 className="text-2xl font-bold mb-2">ARIS Management</h3>
           <p className="text-sm opacity-90">
-            Ihre umfassende Lösung für Glas- und Gebäudereinigung.
-            Verwalten Sie Kunden, Objekte, Mitarbeiter und Aufträge effizient an einem Ort.
+            Ihre effiziente Lösung für Gebäudereinigung.
+            Alles an einem Ort.
           </p>
         </div>
       </div>
