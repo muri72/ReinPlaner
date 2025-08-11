@@ -39,6 +39,13 @@
     --input: 210 20% 90%; /* Slightly darker input background */
     --ring: 210 80% 45%; /* Primary color for focus ring */
 
+    /* Border Radius */
+    --radius: 12px; /* Default for rounded-lg, increased */
+    --radius-sm: 4px; /* Increased */
+    --radius-md: 8px; /* Increased */
+    --radius-xl: 16px; /* New for larger rounding */
+    --radius-2xl: 24px; /* New for even larger rounding */
+
     /* Sidebar Specific Colors (adjusted to new palette) */
     --sidebar-background: 210 20% 98%; /* Very light gray-blue */
     --sidebar-foreground: 220 10% 20%; /* Darker text */
