@@ -50,7 +50,7 @@ const navItems: NavItem[] = [
     children: [
       { title: "Aufträge", href: "/dashboard/orders", icon: Briefcase, roles: ['admin', 'manager', 'employee', 'customer'] },
       { title: "Objekte", href: "/dashboard/objects", icon: Building, roles: ['admin', 'manager', 'employee', 'customer'] },
-      { title: "Ressourcenplanung", href: "/dashboard/planning", icon: CalendarCheck, roles: ['admin', 'manager'] },
+      { title: "Planung", href: "/dashboard/planning", icon: CalendarCheck, roles: ['admin', 'manager'] }, // Umbenannt
     ],
   },
   {
@@ -78,7 +78,7 @@ const navItems: NavItem[] = [
     roles: ['admin', 'manager'],
     children: [
       { title: "Finanzen", href: "/dashboard/finances", icon: TrendingUp, roles: ['admin', 'manager'] },
-      { title: "Arbeitszeitnachweise", href: "/dashboard/reports", icon: FileText, roles: ['admin'] }, // Only admin for reports
+      { title: "Berichte", href: "/dashboard/reports", icon: FileText, roles: ['admin'] }, // Umbenannt
     ],
   },
   {
