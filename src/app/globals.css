@@ -112,6 +112,18 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  /* Global interactive element styles for smooth transitions */
+  a, button, input, select, textarea, [role="button"], [tabindex]:not([tabindex="-1"]) {
+    @apply transition-colors duration-200 ease-in-out;
+  }
+
+  /* Focus ring for accessibility */
+  *:focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+    @apply rounded-md; /* Apply border-radius for consistency */
+  }
 }
 
 /* Custom utility for small caps letter spacing */
