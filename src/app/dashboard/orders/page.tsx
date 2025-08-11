@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { OrderForm } from "@/components/order-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Trash2, CalendarDays, Clock, FileText, Wrench, UserRound, AlertTriangle, Star as StarIcon } from "lucide-react";
+import { Trash2, CalendarDays, Clock, FileText, Wrench, UserRound, AlertTriangle, Star as StarIcon, PlusCircle, Briefcase } from "lucide-react"; // Briefcase hinzugefügt
 import { deleteOrder, createOrder } from "./actions";
 import { OrderEditDialog } from "@/components/order-edit-dialog";
 import { Badge } from "@/components/ui/badge";
@@ -138,7 +138,7 @@ export default async function OrdersPage({
   const getRequestStatusBadgeVariant = (requestStatus: string) => {
     switch (requestStatus) {
       case 'approved': return 'default';
-      case 'pending': return 'warning'; // Changed to warning
+      case 'pending': return 'warning';
       case 'rejected': return 'destructive';
       default: return 'outline';
     }
@@ -154,15 +154,19 @@ export default async function OrdersPage({
       {/* Section for Pending Requests */}
       <div className="space-y-4">
         <h2 className="text-2xl font-bold flex items-center">
-          <AlertTriangle className="mr-2 h-6 w-6 text-warning" /> {/* Changed to text-warning */}
+          <AlertTriangle className="mr-2 h-6 w-6 text-warning" />
           Offene Anfragen ({pendingRequests.length})
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {pendingRequests.length === 0 ? (
-            <p className="col-span-full text-center text-muted-foreground">Keine offenen Anfragen vorhanden.</p>
+            <div className="col-span-full text-center text-muted-foreground py-8">
+              <Briefcase className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+              <p className="text-lg font-semibold">Keine offenen Auftragsanfragen</p>
+              <p className="text-sm">Alle Anfragen wurden bearbeitet oder es gibt keine neuen.</p>
+            </div>
           ) : (
             pendingRequests.map((order) => (
-              <Card key={order.id} className="border-warning border-2"> {/* Changed to border-warning */}
+              <Card key={order.id} className="border-warning border-2">
                 <CardHeader>
                   <CardTitle className="text-lg font-medium">{order.title}</CardTitle>
                 </CardHeader>
@@ -185,7 +189,17 @@ export default async function OrdersPage({
         <h2 className="text-2xl font-bold">Bestehende Aufträge</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {otherOrders.length === 0 && !query ? (
-            <p className="col-span-full text-center text-muted-foreground">Keine bestehenden Aufträge vorhanden.</p>
+            <div className="col-span-full text-center text-muted-foreground py-8">
+              <Briefcase className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+              <p className="text-lg font-semibold">Noch keine Aufträge vorhanden</p>
+              <p className="text-sm">Beginnen Sie, indem Sie einen neuen Auftrag hinzufügen.</p>
+            </div>
+          ) : otherOrders.length === 0 && query ? (
+            <div className="col-span-full text-center text-muted-foreground py-8">
+              <Briefcase className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+              <p className="text-lg font-semibold">Keine Aufträge gefunden</p>
+              <p className="text-sm">Ihre Suche nach "{query}" ergab keine Treffer.</p>
+            </div>
           ) : (
             otherOrders.map((order) => {
               const feedback = order.order_feedback?.[0];
@@ -220,7 +234,7 @@ export default async function OrdersPage({
                     {(order.order_type === "recurring" || order.order_type === "substitution") && order.recurring_end_date && <div className="flex items-center text-xs text-muted-foreground"><CalendarDays className="mr-1 h-3 w-3" /><span>Ende: {new Date(order.recurring_end_date).toLocaleDateString()}</span></div>}
                     
                     {feedback && (
-                      <div className="flex items-center text-xs text-warning mt-2"> {/* Changed to text-warning */}
+                      <div className="flex items-center text-xs text-warning mt-2">
                         <StarIcon className="mr-1 h-3 w-3 fill-current" />
                         <span>Feedback vorhanden</span>
                       </div>

@@ -38,49 +38,49 @@ export default async function DashboardLayout({
           </div>
           <nav className="space-y-2">
             <Link href="/dashboard" passHref>
-              <Button variant="ghost" className="w-full justify-start text-base text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
+              <Button variant="ghost" className="w-full justify-start text-base text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors duration-200">
                 <Home className="mr-2 h-5 w-5" />
                 Dashboard
               </Button>
             </Link>
             <Link href="/dashboard/orders" passHref>
-              <Button variant="ghost" className="w-full justify-start text-base text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
+              <Button variant="ghost" className="w-full justify-start text-base text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors duration-200">
                 <Briefcase className="mr-2 h-5 w-5" />
                 Aufträge
               </Button>
             </Link>
             <Link href="/dashboard/customers" passHref>
-              <Button variant="ghost" className="w-full justify-start text-base text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
+              <Button variant="ghost" className="w-full justify-start text-base text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors duration-200">
                 <Users className="mr-2 h-5 w-5" />
                 Kunden
               </Button>
             </Link>
             <Link href="/dashboard/customer-contacts" passHref>
-              <Button variant="ghost" className="w-full justify-start text-base text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
+              <Button variant="ghost" className="w-full justify-start text-base text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors duration-200">
                 <ContactRound className="mr-2 h-5 w-5" />
                 Kundenkontakte
               </Button>
             </Link>
             <Link href="/dashboard/objects" passHref>
-              <Button variant="ghost" className="w-full justify-start text-base text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
+              <Button variant="ghost" className="w-full justify-start text-base text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors duration-200">
                 <Building className="mr-2 h-5 w-5" />
                 Objekte
               </Button>
             </Link>
             <Link href="/dashboard/employees" passHref>
-              <Button variant="ghost" className="w-full justify-start text-base text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
+              <Button variant="ghost" className="w-full justify-start text-base text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors duration-200">
                 <UsersRound className="mr-2 h-5 w-5" />
                 Mitarbeiter
               </Button>
             </Link>
             <Link href="/dashboard/time-tracking" passHref>
-              <Button variant="ghost" className="w-full justify-start text-base text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
+              <Button variant="ghost" className="w-full justify-start text-base text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors duration-200">
                 <Clock className="mr-2 h-5 w-5" />
                 Zeiterfassung
               </Button>
             </Link>
             <Link href="/dashboard/absence-requests" passHref>
-              <Button variant="ghost" className="w-full justify-start text-base text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
+              <Button variant="ghost" className="w-full justify-start text-base text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors duration-200">
                 <CalendarOff className="mr-2 h-5 w-5" />
                 Abwesenheiten
               </Button>
@@ -88,19 +88,19 @@ export default async function DashboardLayout({
             {(isAdmin || isManager) && (
               <>
                 <Link href="/dashboard/planning" passHref>
-                  <Button variant="ghost" className="w-full justify-start text-base text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
+                  <Button variant="ghost" className="w-full justify-start text-base text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors duration-200">
                     <CalendarCheck className="mr-2 h-5 w-5" />
                     Ressourcenplanung
                   </Button>
                 </Link>
                 <Link href="/dashboard/finances" passHref>
-                  <Button variant="ghost" className="w-full justify-start text-base text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
+                  <Button variant="ghost" className="w-full justify-start text-base text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors duration-200">
                     <TrendingUp className="mr-2 h-5 w-5" />
                     Finanzen
                   </Button>
                 </Link>
                 <Link href="/dashboard/reports" passHref>
-                  <Button variant="ghost" className="w-full justify-start text-base text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
+                  <Button variant="ghost" className="w-full justify-start text-base text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors duration-200">
                     <FileText className="mr-2 h-5 w-5" />
                     Arbeitszeitnachweise
                   </Button>
@@ -108,21 +108,21 @@ export default async function DashboardLayout({
               </>
             )}
             <Link href="/dashboard/feedback" passHref>
-              <Button variant="ghost" className="w-full justify-start text-base text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
+              <Button variant="ghost" className="w-full justify-start text-base text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors duration-200">
                 <Star className="mr-2 h-5 w-5" />
                 Feedback
               </Button>
             </Link>
             {isAdmin && (
               <Link href="/dashboard/users" passHref>
-                <Button variant="ghost" className="w-full justify-start text-base text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
+                <Button variant="ghost" className="w-full justify-start text-base text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors duration-200">
                   <Settings className="mr-2 h-5 w-5" />
                   Benutzer
                 </Button>
               </Link>
             )}
             <Link href="/dashboard/profile" passHref>
-              <Button variant="ghost" className="w-full justify-start text-base text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
+              <Button variant="ghost" className="w-full justify-start text-base text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors duration-200">
                 <User className="mr-2 h-5 w-5" />
                 Profil
               </Button>

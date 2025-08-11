@@ -5,13 +5,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { createTimeEntry } from "./actions";
 import { EmployeeTimeTracker } from "@/components/employee-time-tracker";
 import { DeleteTimeEntryButton } from "@/components/delete-time-entry-button";
-import { Clock, UserRound, Building, Briefcase, FileText } from "lucide-react";
+import { Clock, UserRound, Building, Briefcase, FileText, PlusCircle } from "lucide-react";
 import { getWeek } from 'date-fns';
 import { TimeTrackingCharts } from '@/components/time-tracking-charts';
 import { Badge } from "@/components/ui/badge";
 import { AdminTimeEntriesOverview } from "@/components/admin-time-entries-overview";
 import { TimeEntryEditDialog } from "@/components/time-entry-edit-dialog";
-import { TriggerAutoTimeEntryButton } from "@/components/trigger-auto-time-entry-button"; // Importieren
+import { TriggerAutoTimeEntryButton } from "@/components/trigger-auto-time-entry-button";
 
 // Definieren Sie die Schnittstelle für die Zeiteintrag-Daten, wie sie auf dieser Seite verwendet werden
 interface DisplayTimeEntry {
@@ -213,10 +213,10 @@ export default async function TimeTrackingPage({
         <>
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg font-semibold">Automatische Zeiterfassung</CardTitle> {/* Changed to text-lg font-semibold */}
+              <CardTitle className="text-lg font-semibold">Automatische Zeiterfassung</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground mb-4"> {/* Changed to text-sm */}
+              <p className="text-sm text-muted-foreground mb-4">
                 Lösen Sie die automatische Erstellung von Zeiteinträgen für alle geplanten Aufträge aus. Dies füllt fehlende Einträge für vergangene Tage auf.
               </p>
               <TriggerAutoTimeEntryButton />
@@ -237,14 +237,19 @@ export default async function TimeTrackingPage({
           <h2 className="text-2xl font-bold mt-8">Ihre Zeiteinträge</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {timeEntries.length === 0 ? (
-              <p className="col-span-full text-center text-muted-foreground text-sm"> {/* Changed to text-sm */}
-                Noch keine Zeiteinträge vorhanden. Fügen Sie einen hinzu!
-              </p>
+              <div className="col-span-full text-center text-muted-foreground py-8">
+                <Clock className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                <p className="text-lg font-semibold">Noch keine Zeiteinträge vorhanden</p>
+                <p className="text-sm">Beginnen Sie, indem Sie Ihre Arbeitszeit erfassen oder einen Eintrag manuell hinzufügen.</p>
+                <div className="mt-4">
+                  <TimeEntryForm onSubmit={createTimeEntry} currentUserId={currentUser.id} isAdmin={isAdmin} submitButtonText="Zeiteintrag hinzufügen" />
+                </div>
+              </div>
             ) : (
               timeEntries.map((entry) => (
                 <Card key={entry.id}>
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-lg font-semibold"> {/* Changed to text-lg font-semibold */}
+                    <CardTitle className="text-lg font-semibold">
                       Zeiteintrag
                     </CardTitle>
                     <div className="flex items-center space-x-2">

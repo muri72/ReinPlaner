@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { createObject } from "./actions";
 import { ObjectEditDialog } from "@/components/object-edit-dialog";
 import { DeleteObjectButton } from "@/components/delete-object-button";
-import { MapPin, FileText, Clock, Key, Lock, ShieldCheck, UserRound } from "lucide-react"; // Neue Icons
+import { MapPin, FileText, Clock, Key, Lock, ShieldCheck, UserRound, PlusCircle, Building } from "lucide-react"; // Neue Icons
 import { SearchInput } from "@/components/search-input";
 import { Badge } from "@/components/ui/badge";
 
@@ -111,10 +111,18 @@ export default async function ObjectsPage({
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {objects && objects.length === 0 ? (
-          <p className="col-span-full text-center text-muted-foreground text-sm">
-            {query ? "Keine Objekte gefunden, die Ihrer Suche entsprechen." : "Noch keine Objekte vorhanden. Fügen Sie eines hinzu!"}
-          </p>
+        {objects && objects.length === 0 && !query ? (
+          <div className="col-span-full text-center text-muted-foreground py-8">
+            <Building className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+            <p className="text-lg font-semibold">Noch keine Objekte vorhanden</p>
+            <p className="text-sm">Fügen Sie ein neues Objekt hinzu, um es zu verwalten.</p>
+          </div>
+        ) : objects && objects.length === 0 && query ? (
+          <div className="col-span-full text-center text-muted-foreground py-8">
+            <Building className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+            <p className="text-lg font-semibold">Keine Objekte gefunden</p>
+            <p className="text-sm">Ihre Suche nach "{query}" ergab keine Treffer.</p>
+          </div>
         ) : (
           objects?.map((object) => (
             <Card key={object.id}>

@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { createCustomerContact } from "./actions";
 import { CustomerContactEditDialog } from "@/components/customer-contact-edit-dialog";
 import { DeleteCustomerContactButton } from "@/components/delete-customer-contact-button";
-import { Mail, Phone, Briefcase, UserRound } from "lucide-react";
+import { Mail, Phone, Briefcase, UserRound, PlusCircle, ContactRound } from "lucide-react";
 import { SearchInput } from "@/components/search-input";
 
 // Definieren Sie die Schnittstelle für die Kundenkontakt-Daten
@@ -78,10 +78,18 @@ export default async function CustomerContactsPage({
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {displayContacts.length === 0 ? (
-          <p className="col-span-full text-center text-muted-foreground text-sm">
-            {query ? "Keine Kundenkontakte gefunden, die Ihrer Suche entsprechen." : "Noch keine Kundenkontakte vorhanden. Fügen Sie einen hinzu!"}
-          </p>
+        {displayContacts.length === 0 && !query ? (
+          <div className="col-span-full text-center text-muted-foreground py-8">
+            <ContactRound className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+            <p className="text-lg font-semibold">Noch keine Kundenkontakte vorhanden</p>
+            <p className="text-sm">Fügen Sie einen neuen Kontakt hinzu, um Ihre Kundenbeziehungen zu verwalten.</p>
+          </div>
+        ) : displayContacts.length === 0 && query ? (
+          <div className="col-span-full text-center text-muted-foreground py-8">
+            <ContactRound className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+            <p className="text-lg font-semibold">Keine Kundenkontakte gefunden</p>
+            <p className="text-sm">Ihre Suche nach "{query}" ergab keine Treffer.</p>
+          </div>
         ) : (
           displayContacts.map((contact) => (
             <Card key={contact.id}>

@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { createCustomer } from "./actions";
 import { CustomerEditDialog } from "@/components/customer-edit-dialog";
 import { DeleteCustomerButton } from "@/components/delete-customer-button";
-import { Mail, Phone, MapPin, Users, Handshake } from "lucide-react"; // Neue Icons für Kundentyp
+import { Mail, Phone, MapPin, Users, Handshake, PlusCircle } from "lucide-react"; // Neue Icons für Kundentyp
 import { SearchInput } from "@/components/search-input";
 import { Badge } from "@/components/ui/badge"; // Importiere Badge
 
@@ -53,10 +53,18 @@ export default async function CustomersPage({
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {customers.length === 0 ? (
-          <p className="col-span-full text-center text-muted-foreground text-sm">
-            {query ? "Keine Kunden gefunden, die Ihrer Suche entsprechen." : "Noch keine Kunden vorhanden. Fügen Sie einen hinzu!"}
-          </p>
+        {customers.length === 0 && !query ? (
+          <div className="col-span-full text-center text-muted-foreground py-8">
+            <Users className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+            <p className="text-lg font-semibold">Noch keine Kunden vorhanden</p>
+            <p className="text-sm">Fügen Sie Ihren ersten Kunden hinzu, um loszulegen.</p>
+          </div>
+        ) : customers.length === 0 && query ? (
+          <div className="col-span-full text-center text-muted-foreground py-8">
+            <Users className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+            <p className="text-lg font-semibold">Keine Kunden gefunden</p>
+            <p className="text-sm">Ihre Suche nach "{query}" ergab keine Treffer.</p>
+          </div>
         ) : (
           customers.map((customer) => (
             <Card key={customer.id}>

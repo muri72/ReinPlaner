@@ -5,6 +5,7 @@ import { FeedbackCard } from "@/components/feedback-card";
 import { GiveFeedbackForm } from "@/components/give-feedback-form";
 import { GeneralDashboardFeedbackForm } from "@/components/general-dashboard-feedback-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { MessageSquare, Star } from "lucide-react";
 
 export default async function FeedbackPage() {
   const supabase = await createClient();
@@ -94,9 +95,11 @@ export default async function FeedbackPage() {
           <TabsContent value="orders" className="mt-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {mappedOrderFeedback.length === 0 ? (
-                <p className="col-span-full text-center text-muted-foreground text-sm">
-                  Bisher wurde kein auftragsbezogenes Feedback abgegeben.
-                </p>
+                <div className="col-span-full text-center text-muted-foreground py-8">
+                  <Star className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                  <p className="text-lg font-semibold">Bisher kein auftragsbezogenes Feedback</p>
+                  <p className="text-sm">Wenn Sie Feedback zu einem Auftrag haben, können Sie es hier einreichen.</p>
+                </div>
               ) : (
                 mappedOrderFeedback.map((feedback) => (
                   <FeedbackCard
@@ -113,9 +116,11 @@ export default async function FeedbackPage() {
           <TabsContent value="general" className="mt-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {mappedGeneralFeedback.length === 0 ? (
-                <p className="col-span-full text-center text-muted-foreground text-sm">
-                  Kein allgemeines Feedback vorhanden.
-                </p>
+                <div className="col-span-full text-center text-muted-foreground py-8">
+                  <MessageSquare className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                  <p className="text-lg font-semibold">Kein allgemeines Feedback vorhanden</p>
+                  <p className="text-sm">Wenn Sie allgemeines Feedback haben, können Sie es hier einreichen.</p>
+                </div>
               ) : (
                 mappedGeneralFeedback.map((feedback) => (
                   <FeedbackCard

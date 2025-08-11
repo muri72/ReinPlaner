@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { registerUser } from "./actions";
 import { UserEditDialog } from "@/components/user-edit-dialog";
 import { DeleteUserButton } from "@/components/delete-user-button";
-import { Mail, Briefcase, ShieldCheck, UserRound } from "lucide-react"; // UserRound für zugewiesenen Mitarbeiter/Kunden
+import { Mail, Briefcase, ShieldCheck, UserRound, UsersRound, PlusCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { SearchInput } from "@/components/search-input";
 import { ManagerCustomerAssignmentDialog } from "@/components/manager-customer-assignment-dialog";
@@ -132,10 +132,18 @@ export default async function UsersPage({
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {users.length === 0 ? (
-          <p className="col-span-full text-center text-muted-foreground text-sm">
-            {query ? "Keine Benutzer gefunden, die Ihrer Suche entsprechen." : "Noch keine Benutzer vorhanden. Fügen Sie einen hinzu!"}
-          </p>
+        {users.length === 0 && !query ? (
+          <div className="col-span-full text-center text-muted-foreground py-8">
+            <UsersRound className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+            <p className="text-lg font-semibold">Noch keine Benutzer vorhanden</p>
+            <p className="text-sm">Registrieren Sie einen neuen Benutzer, um Ihr Team zu erweitern.</p>
+          </div>
+        ) : users.length === 0 && query ? (
+          <div className="col-span-full text-center text-muted-foreground py-8">
+            <UsersRound className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+            <p className="text-lg font-semibold">Keine Benutzer gefunden</p>
+            <p className="text-sm">Ihre Suche nach "{query}" ergab keine Treffer.</p>
+          </div>
         ) : (
           users.map((user) => (
             <Card key={user.id}>

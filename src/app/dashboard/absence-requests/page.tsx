@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CalendarOff, User, FileText, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
+import { CalendarOff, User, FileText, CheckCircle2, XCircle, AlertCircle, PlusCircle } from "lucide-react";
 import { AbsenceRequestForm } from "@/components/absence-request-form";
 import { createAbsenceRequest } from "./actions";
 import { AbsenceRequestEditDialog } from "@/components/absence-request-edit-dialog";
@@ -49,7 +49,7 @@ export default async function AbsenceRequestsPage() {
       case 'approved': return 'success';
       case 'rejected': return 'destructive';
       case 'pending':
-      default: return 'warning'; // Changed to warning
+      default: return 'warning';
     }
   };
 
@@ -58,7 +58,7 @@ export default async function AbsenceRequestsPage() {
       case 'approved': return <CheckCircle2 className="mr-2 h-4 w-4 text-success-foreground" />;
       case 'rejected': return <XCircle className="mr-2 h-4 w-4 text-destructive-foreground" />;
       case 'pending':
-      default: return <AlertCircle className="mr-2 h-4 w-4 text-warning-foreground" />; // Changed to text-warning-foreground
+      default: return <AlertCircle className="mr-2 h-4 w-4 text-warning-foreground" />;
     }
   };
 
@@ -85,9 +85,11 @@ export default async function AbsenceRequestsPage() {
           <h2 className="text-2xl font-bold">Antragsübersicht</h2>
           <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-4">
             {requests.length === 0 ? (
-              <p className="text-center text-muted-foreground text-sm">
-                Keine Anträge gefunden.
-              </p>
+              <div className="text-center text-muted-foreground py-8">
+                <CalendarOff className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                <p className="text-lg font-semibold">Keine Anträge gefunden</p>
+                <p className="text-sm">Reichen Sie einen neuen Abwesenheitsantrag ein.</p>
+              </div>
             ) : (
               requests.map((request) => (
                 <Card key={request.id}>

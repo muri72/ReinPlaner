@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { createEmployee } from "./actions";
 import { EmployeeEditDialog } from "@/components/employee-edit-dialog";
 import { DeleteEmployeeButton } from "@/components/delete-employee-button";
-import { Mail, Phone, CalendarDays, UserRoundCheck, UserRoundX, UserRoundMinus, Briefcase, DollarSign, Tag, Building2, FileText, MapPin, Cake, CreditCard, Shield } from "lucide-react";
+import { Mail, Phone, CalendarDays, UserRoundCheck, UserRoundX, UserRoundMinus, Briefcase, DollarSign, Tag, Building2, FileText, MapPin, Cake, CreditCard, Shield, UsersRound, PlusCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { SearchInput } from "@/components/search-input";
 
@@ -93,10 +93,18 @@ export default async function EmployeesPage({
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {employees.length === 0 ? (
-          <p className="col-span-full text-center text-muted-foreground text-sm">
-            {query ? "Keine Mitarbeiter gefunden, die Ihrer Suche entsprechen." : "Noch keine Mitarbeiter vorhanden. Fügen Sie einen hinzu!"}
-          </p>
+        {employees.length === 0 && !query ? (
+          <div className="col-span-full text-center text-muted-foreground py-8">
+            <UsersRound className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+            <p className="text-lg font-semibold">Noch keine Mitarbeiter vorhanden</p>
+            <p className="text-sm">Fügen Sie einen neuen Mitarbeiter hinzu, um Ihr Team zu erweitern.</p>
+          </div>
+        ) : employees.length === 0 && query ? (
+          <div className="col-span-full text-center text-muted-foreground py-8">
+            <UsersRound className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+            <p className="text-lg font-semibold">Keine Mitarbeiter gefunden</p>
+            <p className="text-sm">Ihre Suche nach "{query}" ergab keine Treffer.</p>
+          </div>
         ) : (
           employees.map((employee) => (
             <Card key={employee.id}>
