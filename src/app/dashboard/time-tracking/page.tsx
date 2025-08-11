@@ -238,7 +238,7 @@ export default async function TimeTrackingPage({
           <h2 className="text-2xl font-bold mt-8">Ihre Zeiteinträge</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {timeEntries.length === 0 ? (
-              <div className="col-span-full text-center text-muted-foreground py-8">
+              <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30">
                 <Clock className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
                 <p className="text-lg font-semibold">Noch keine Zeiteinträge vorhanden</p>
                 <p className="text-sm">Beginnen Sie, indem Sie Ihre Arbeitszeit erfassen oder einen Eintrag manuell hinzufügen.</p>

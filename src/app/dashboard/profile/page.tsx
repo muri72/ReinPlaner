@@ -4,6 +4,7 @@ import { ProfileUpdateForm } from "@/components/profile-update-form";
 import { PasswordUpdateForm } from "@/components/password-update-form";
 import { MadeWithDyad } from "@/components/made-with-dyad";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { GradientDivider } from "@/components/gradient-divider"; // Import the new component
 
 export default async function ProfilePage() {
   const supabase = await createClient();
@@ -51,6 +52,7 @@ export default async function ProfilePage() {
         </Card>
         <PasswordUpdateForm />
       </div>
+      <GradientDivider className="my-8" /> {/* Add the gradient divider here */}
       <MadeWithDyad />
     </div>
   );

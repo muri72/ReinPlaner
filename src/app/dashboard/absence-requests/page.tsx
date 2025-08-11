@@ -86,7 +86,7 @@ export default async function AbsenceRequestsPage() {
           <h2 className="text-2xl font-bold">Antragsübersicht</h2>
           <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-4">
             {requests.length === 0 ? (
-              <div className="text-center text-muted-foreground py-8">
+              <div className="text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30">
                 <CalendarOff className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
                 <p className="text-lg font-semibold">Keine Anträge gefunden</p>
                 <p className="text-sm">Reichen Sie einen neuen Abwesenheitsantrag ein.</p>

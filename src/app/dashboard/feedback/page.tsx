@@ -7,6 +7,7 @@ import { GeneralDashboardFeedbackForm } from "@/components/general-dashboard-fee
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MessageSquare, Star, PlusCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { GradientDivider } from "@/components/gradient-divider"; // Import the new component
 
 export default async function FeedbackPage() {
   const supabase = await createClient();
@@ -86,6 +87,8 @@ export default async function FeedbackPage() {
         </Card>
       )}
 
+      <GradientDivider className="my-8" /> {/* Add the gradient divider here */}
+
       <div>
         <h2 className="text-2xl font-bold mt-8 mb-4">Eingegangenes Feedback</h2>
         <Tabs defaultValue="orders">
@@ -96,7 +99,7 @@ export default async function FeedbackPage() {
           <TabsContent value="orders" className="mt-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {mappedOrderFeedback.length === 0 ? (
-                <div className="col-span-full text-center text-muted-foreground py-8">
+                <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30">
                   <Star className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
                   <p className="text-lg font-semibold">Bisher kein auftragsbezogenes Feedback</p>
                   <p className="text-sm">Wenn Sie Feedback zu einem Auftrag haben, können Sie es hier einreichen.</p>
@@ -125,7 +128,7 @@ export default async function FeedbackPage() {
           <TabsContent value="general" className="mt-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {mappedGeneralFeedback.length === 0 ? (
-                <div className="col-span-full text-center text-muted-foreground py-8">
+                <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30">
                   <MessageSquare className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
                   <p className="text-lg font-semibold">Kein allgemeines Feedback vorhanden</p>
                   <p className="text-sm">Wenn Sie allgemeines Feedback haben, können Sie es hier einreichen.</p>

@@ -95,7 +95,7 @@ export default async function EmployeesPage({
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {employees.length === 0 && !query ? (
-          <div className="col-span-full text-center text-muted-foreground py-8">
+          <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30">
             <UsersRound className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
             <p className="text-lg font-semibold">Noch keine Mitarbeiter vorhanden</p>
             <p className="text-sm">Fügen Sie einen neuen Mitarbeiter hinzu, um Ihr Team zu erweitern.</p>
@@ -107,7 +107,7 @@ export default async function EmployeesPage({
             </div>
           </div>
         ) : employees.length === 0 && query ? (
-          <div className="col-span-full text-center text-muted-foreground py-8">
+          <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30">
             <UsersRound className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
             <p className="text-lg font-semibold">Keine Mitarbeiter gefunden</p>
             <p className="text-sm">Ihre Suche nach "{query}" ergab keine Treffer.</p>
