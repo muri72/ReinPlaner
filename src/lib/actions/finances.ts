@@ -15,6 +15,7 @@ export async function getFinancialOverview(year: number, month: number) {
     const { data: timeEntries, error: timeEntriesError } = await supabase
       .from('time_entries')
       .select('duration_minutes, employees(hourly_rate)')
+      .not('employee_id', 'is', null) // Nur Einträge mit zugewiesenen Mitarbeitern berücksichtigen
       .gte('start_time', startDate.toISOString())
       .lte('start_time', endDate.toISOString());
 
