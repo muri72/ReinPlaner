@@ -37,9 +37,9 @@ export function PersonnelCostTable({ data, totalHours, totalCost }: PersonnelCos
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead className="text-sm">Mitarbeiter</TableHead>
-          <TableHead className="text-right text-sm">Geleistete Stunden</TableHead>
-          <TableHead className="text-right text-sm">Gesamtkosten</TableHead>
+          <TableHead className="text-base font-semibold">Mitarbeiter</TableHead>
+          <TableHead className="text-right text-base font-semibold">Geleistete Stunden</TableHead>
+          <TableHead className="text-right text-base font-semibold">Gesamtkosten</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -52,7 +52,7 @@ export function PersonnelCostTable({ data, totalHours, totalCost }: PersonnelCos
         ) : (
           data.map((employee) => (
             <TableRow key={employee.employee_id}>
-              <TableCell className="font-normal text-sm">{`${employee.first_name} ${employee.last_name}`}</TableCell>
+              <TableCell className="font-medium text-sm">{`${employee.first_name} ${employee.last_name}`}</TableCell>
               <TableCell className="text-right text-sm">{formatHours(employee.total_hours)}</TableCell>
               <TableCell className="text-right text-sm text-destructive">{formatCurrency(employee.total_cost)}</TableCell>
             </TableRow>
@@ -61,8 +61,8 @@ export function PersonnelCostTable({ data, totalHours, totalCost }: PersonnelCos
       </TableBody>
       <TableFooter>
         <TableRow>
-          <TableCell colSpan={2} className="font-semibold text-base text-right">Gesamt</TableCell>
-          <TableCell className="text-right font-semibold text-base text-destructive">{formatCurrency(totalCost)}</TableCell>
+          <TableCell colSpan={2} className="font-bold text-base text-right">Gesamt</TableCell>
+          <TableCell className="text-right font-bold text-base text-destructive">{formatCurrency(totalCost)}</TableCell>
         </TableRow>
       </TableFooter>
     </Table>

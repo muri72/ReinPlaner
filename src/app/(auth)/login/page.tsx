@@ -71,8 +71,18 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900">
-      <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow-md dark:bg-gray-800">
+    <div className="relative min-h-screen flex items-center justify-center overflow-hidden">
+      {/* Parallax Background Element */}
+      <div 
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat" 
+        style={{ 
+          backgroundImage: "url('/public/window.svg')", // Replace with a suitable background image
+          backgroundAttachment: "fixed",
+          transform: "scale(1.05)", // Slightly scale for a subtle zoom effect
+          filter: "brightness(0.8) blur(2px)", // Darken and blur slightly
+        }}
+      ></div>
+      <div className="relative z-10 w-full max-w-md p-8 space-y-6 bg-white/80 dark:bg-gray-800/80 backdrop-blur-md rounded-xl shadow-lg border border-border">
         <h2 className="text-2xl font-bold text-center text-gray-900 dark:text-white">
           Anmelden
         </h2>

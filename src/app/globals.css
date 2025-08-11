@@ -117,6 +117,7 @@
     /* Subtle noise pattern for texture */
     background-image: radial-gradient(circle at center, rgba(0,0,0,0.01) 1px, transparent 1px);
     background-size: 2px 2px;
+    background-attachment: fixed; /* Ensure background is fixed for parallax */
   }
 
   /* Global interactive element styles for smooth transitions */
