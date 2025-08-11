@@ -12,6 +12,7 @@ import { TimeEntryEditDialog } from "@/components/time-entry-edit-dialog";
 import { useSearchParams, usePathname, useRouter } from "next/navigation";
 import { useDebouncedCallback } from "use-debounce";
 import { formatDuration } from "@/lib/utils"; // Importiere formatDuration
+import { Skeleton } from "@/components/ui/skeleton"; // Import Skeleton
 
 interface DisplayTimeEntry {
   id: string;
@@ -183,10 +184,6 @@ export function AdminTimeEntriesOverview({ currentUserId, isAdmin }: AdminTimeEn
     }
   };
 
-  if (loading) {
-    return <div className="text-center py-4 text-sm">Lade Zeiteinträge...</div>; {/* Changed to text-sm */}
-  }
-
   return (
     <div className="p-8 space-y-8">
       <h1 className="text-3xl font-bold">Zeiterfassung (Admin-Ansicht)</h1>
@@ -212,82 +209,105 @@ export function AdminTimeEntriesOverview({ currentUserId, isAdmin }: AdminTimeEn
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {timeEntries.length === 0 ? (
-          <p className="col-span-full text-center text-muted-foreground text-sm"> {/* Changed to text-sm */}
-            {currentQuery || selectedEmployeeId ? "Keine Zeiteinträge für diese Filter gefunden." : "Noch keine Zeiteinträge vorhanden."}
-          </p>
-        ) : (
-          timeEntries.map((entry) => (
-            <Card key={entry.id}>
+      {loading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Card key={i} className="shadow-elevation-1">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-lg font-semibold"> {/* Changed to text-lg font-semibold */}
-                  Zeiteintrag
-                </CardTitle>
-                <div className="flex items-center space-x-2">
-                  <Badge variant={getTypeBadgeVariant(entry.type)}>{entry.type === 'automatic_scheduled_order' ? 'Automatisch' : entry.type}</Badge>
-                  <TimeEntryEditDialog timeEntry={entry} currentUserId={currentUserId} isAdmin={isAdmin} />
-                  <DeleteTimeEntryButton entryId={entry.id} />
+                <Skeleton className="h-6 w-3/4" />
+                <div className="flex space-x-2">
+                  <Skeleton className="h-6 w-16" />
+                  <Skeleton className="h-6 w-6 rounded-full" />
+                  <Skeleton className="h-6 w-6 rounded-full" />
                 </div>
               </CardHeader>
-              <CardContent className="space-y-2 text-sm text-muted-foreground"> {/* Changed to text-sm */}
-                <div className="flex items-center">
-                  <Clock className="mr-2 h-4 w-4 flex-shrink-0" />
-                  <span>Start: {new Date(entry.start_time).toLocaleString()}</span>
-                </div>
-                {entry.end_time && (
-                  <div className="flex items-center">
-                    <Clock className="mr-2 h-4 w-4 flex-shrink-0" />
-                    <span>Ende: {new Date(entry.end_time).toLocaleString()}</span>
-                  </div>
-                )}
-                {entry.duration_minutes !== null && (
-                  <div className="flex items-center">
-                    <Clock className="mr-2 h-4 w-4 flex-shrink-0" />
-                    <span>Dauer (Brutto): {formatDuration(entry.duration_minutes)}</span>
-                  </div>
-                )}
-                {entry.break_minutes !== null && entry.break_minutes > 0 && (
-                  <div className="flex items-center">
-                    <Clock className="mr-2 h-4 w-4 flex-shrink-0" />
-                    <span>Pause: {formatDuration(entry.break_minutes)}</span>
-                  </div>
-                )}
-                {entry.employee_first_name && entry.employee_last_name && (
-                  <div className="flex items-center">
-                    <UserRound className="mr-2 h-4 w-4 flex-shrink-0" />
-                    <span>Mitarbeiter: {entry.employee_first_name} {entry.employee_last_name}</span>
-                  </div>
-                )}
-                {entry.customer_name && (
-                  <div className="flex items-center">
-                    <Building className="mr-2 h-4 w-4 flex-shrink-0" />
-                    <span>Kunde: {entry.customer_name}</span>
-                  </div>
-                )}
-                {entry.object_name && (
-                  <div className="flex items-center">
-                    <Building className="mr-2 h-4 w-4 flex-shrink-0" />
-                    <span>Objekt: {entry.object_name}</span>
-                  </div>
-                )}
-                {entry.order_title && (
-                  <div className="flex items-center">
-                    <Briefcase className="mr-2 h-4 w-4 flex-shrink-0" />
-                    <span>Auftrag: {entry.order_title}</span>
-                  </div>
-                )}
-                {entry.notes && (
-                  <div className="flex items-center">
-                    <FileText className="mr-2 h-4 w-4 flex-shrink-0" />
-                    <span>Notizen: {entry.notes}</span>
-                  </div>
-                )}
+              <CardContent className="space-y-2">
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-4 w-1/2" />
               </CardContent>
             </Card>
-          ))
-        )}
-      </div>
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {timeEntries.length === 0 ? (
+            <p className="col-span-full text-center text-muted-foreground text-sm"> {/* Changed to text-sm */}
+              {currentQuery || selectedEmployeeId ? "Keine Zeiteinträge für diese Filter gefunden." : "Noch keine Zeiteinträge vorhanden."}
+            </p>
+          ) : (
+            timeEntries.map((entry) => (
+              <Card key={entry.id}>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-lg font-semibold"> {/* Changed to text-lg font-semibold */}
+                    Zeiteintrag
+                  </CardTitle>
+                  <div className="flex items-center space-x-2">
+                    <Badge variant={getTypeBadgeVariant(entry.type)}>{entry.type === 'automatic_scheduled_order' ? 'Automatisch' : entry.type}</Badge>
+                    <TimeEntryEditDialog timeEntry={entry} currentUserId={currentUserId} isAdmin={isAdmin} />
+                    <DeleteTimeEntryButton entryId={entry.id} />
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-2 text-sm text-muted-foreground"> {/* Changed to text-sm */}
+                  <div className="flex items-center">
+                    <Clock className="mr-2 h-4 w-4 flex-shrink-0" />
+                    <span>Start: {new Date(entry.start_time).toLocaleString()}</span>
+                  </div>
+                  {entry.end_time && (
+                    <div className="flex items-center">
+                      <Clock className="mr-2 h-4 w-4 flex-shrink-0" />
+                      <span>Ende: {new Date(entry.end_time).toLocaleString()}</span>
+                    </div>
+                  )}
+                  {entry.duration_minutes !== null && (
+                    <div className="flex items-center">
+                      <Clock className="mr-2 h-4 w-4 flex-shrink-0" />
+                      <span>Dauer (Brutto): {formatDuration(entry.duration_minutes)}</span>
+                    </div>
+                  )}
+                  {entry.break_minutes !== null && entry.break_minutes > 0 && (
+                    <div className="flex items-center">
+                      <Clock className="mr-2 h-4 w-4 flex-shrink-0" />
+                      <span>Pause: {formatDuration(entry.break_minutes)}</span>
+                    </div>
+                  )}
+                  {entry.employee_first_name && entry.employee_last_name && (
+                    <div className="flex items-center">
+                      <UserRound className="mr-2 h-4 w-4 flex-shrink-0" />
+                      <span>Mitarbeiter: {entry.employee_first_name} {entry.employee_last_name}</span>
+                    </div>
+                  )}
+                  {entry.customer_name && (
+                    <div className="flex items-center">
+                      <Building className="mr-2 h-4 w-4 flex-shrink-0" />
+                      <span>Kunde: {entry.customer_name}</span>
+                    </div>
+                  )}
+                  {entry.object_name && (
+                    <div className="flex items-center">
+                      <Building className="mr-2 h-4 w-4 flex-shrink-0" />
+                      <span>Objekt: {entry.object_name}</span>
+                    </div>
+                  )}
+                  {entry.order_title && (
+                    <div className="flex items-center">
+                      <Briefcase className="mr-2 h-4 w-4 flex-shrink-0" />
+                      <span>Auftrag: {entry.order_title}</span>
+                    </div>
+                  )}
+                  {entry.notes && (
+                    <div className="flex items-center">
+                      <FileText className="mr-2 h-4 w-4 flex-shrink-0" />
+                      <span>Notizen: {entry.notes}</span>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </div>
+      )}
     </div>
   );
 }
