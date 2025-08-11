@@ -16,18 +16,17 @@ export async function generateSignedUploadUrls(
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  // Allow anonymous users to get signed URLs for the public feedback form
-  // if (!user) {
-  //   return { success: false, message: "Benutzer nicht authentifiziert." };
-  // }
+  if (!user) {
+    return { success: false, message: "Benutzer nicht authentifiziert." };
+  }
 
   const supabaseAdmin = createAdminClient();
   const uploads: { signedUrl: string; publicUrl: string }[] = [];
 
   for (const file of files) {
-    const folder = feedbackType === 'order' ? referenceId : 'general-feedback';
-    // Create a unique path for each file to prevent overwrites
-    const filePath = `${folder}/${uuidv4()}-${file.name}`;
+    // Use a dedicated folder for each feedback type, and group by a reference ID.
+    const folder = feedbackType === 'order' ? 'order-feedback' : 'general-feedback';
+    const filePath = `${folder}/${referenceId}/${uuidv4()}-${file.name}`;
 
     const { data, error } = await supabaseAdmin.storage
       .from("feedback-images")
