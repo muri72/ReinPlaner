@@ -4,10 +4,11 @@ import React, { useState } from "react";
 import { Menu, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NotificationBell } from "@/components/notification-bell";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTrigger, SheetTitle } from "@/components/ui/sheet"; // Import SheetTitle
 import { SidebarNav } from "@/components/sidebar-nav";
-import { UserMenu } from "@/components/user-menu"; // Import the new UserMenu component
+import { UserMenu } from "@/components/user-menu";
 import { cn } from "@/lib/utils";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden"; // Import VisuallyHidden
 
 interface DashboardClientLayoutProps {
   children: React.ReactNode;
@@ -30,19 +31,23 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut }: 
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="w-64 bg-sidebar text-sidebar-foreground border-r border-sidebar-border p-4 flex flex-col bg-gradient-to-br from-sidebar-background to-sidebar-accent/20">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-bold text-sidebar-primary-foreground tracking-tight">ARIS</h2>
-                <NotificationBell /> {/* Keep notification bell in mobile sidebar */}
-              </div>
+              <SheetHeader>
+                <SheetTitle>
+                  <VisuallyHidden>ARIS Navigation</VisuallyHidden>
+                </SheetTitle>
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-xl font-bold text-sidebar-primary-foreground tracking-tight">ARIS</h2>
+                  <NotificationBell />
+                </div>
+              </SheetHeader>
               <nav className="flex-grow space-y-2">
-                {/* Mobile nav links will use the same SidebarNav component, but always expanded */}
                 <SidebarNav isCollapsed={false} currentUserRole={currentUserRole} onSignOut={onSignOut} />
               </nav>
             </SheetContent>
           </Sheet>
           <h2 className="text-xl font-bold text-sidebar-primary-foreground tracking-tight ml-4">ARIS</h2>
         </div>
-        <div className="flex items-center space-x-2"> {/* Group notification and user menu */}
+        <div className="flex items-center space-x-2">
           <NotificationBell />
           <UserMenu currentUserRole={currentUserRole} onSignOut={onSignOut} />
         </div>
@@ -64,7 +69,7 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut }: 
             variant="ghost"
             size="icon"
             onClick={() => setIsCollapsed(!isCollapsed)}
-            className={cn(isCollapsed ? "mx-auto" : "ml-auto")} // Center button when collapsed
+            className={cn(isCollapsed ? "mx-auto" : "ml-auto")}
           >
             {isCollapsed ? (
               <ChevronRight className="h-5 w-5" />
@@ -76,7 +81,7 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut }: 
         <SidebarNav isCollapsed={isCollapsed} currentUserRole={currentUserRole} onSignOut={onSignOut} />
       </aside>
       <main className="flex-grow p-4 md:p-8">
-        <div className="hidden md:flex justify-end items-center mb-4 space-x-4"> {/* Desktop header right side */}
+        <div className="hidden md:flex justify-end items-center mb-4 space-x-4">
           <NotificationBell />
           <UserMenu currentUserRole={currentUserRole} onSignOut={onSignOut} />
         </div>
