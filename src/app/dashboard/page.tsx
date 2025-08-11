@@ -1,7 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { MadeWithDyad } from "@/components/made-with-dyad";
 import { ProfileUpdateForm } from "@/components/profile-update-form";
 import { signOut } from "@/app/dashboard/actions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -140,7 +139,6 @@ export default async function DashboardPage() {
       <form action={signOut} className="mt-8">
         <Button type="submit">Abmelden</Button>
       </form>
-      <MadeWithDyad />
     </div>
   );
 }
