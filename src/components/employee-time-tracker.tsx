@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { calculateHours } from "@/lib/utils"; // Import calculateHours
 import { TimeEntryCreateDialog } from "@/components/time-entry-create-dialog";
 import { TimeEntryFormValues } from "@/components/time-entry-form"; // Hinzugefügter Import
+import { Skeleton } from "@/components/ui/skeleton"; // Hinzugefügter Import
 
 interface EmployeeTimeTrackerProps {
   userId: string;
@@ -335,7 +336,22 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
   };
 
   if (loading) {
-    return <div className="text-center py-4 text-sm">Lade Zeiterfassung...</div>;
+    return (
+      <Card className="p-4 space-y-4">
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold">Ihre Zeiterfassung</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <Skeleton className="h-10 w-full" /> {/* Tabs skeleton */}
+          <Skeleton className="h-10 w-full" /> {/* Select skeleton */}
+          <Skeleton className="h-24 w-full" /> {/* Main area skeleton */}
+          <div className="flex gap-2">
+            <Skeleton className="h-10 w-full" /> {/* Button skeleton */}
+            <Skeleton className="h-10 w-10" /> {/* Small button skeleton */}
+          </div>
+        </CardContent>
+      </Card>
+    );
   }
 
   if (!employeeId) {
