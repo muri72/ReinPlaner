@@ -33,7 +33,7 @@ export default async function FinancesPage() {
     <div className="p-8 space-y-8">
       <h1 className="text-3xl font-bold">Finanzübersicht</h1>
       
-      <Card>
+      <Card className="shadow-elevation-2">
         <CardHeader>
           <CardTitle className="text-lg font-semibold">Monatsübersicht</CardTitle>
           <CardDescription className="text-sm">
@@ -55,7 +55,7 @@ export default async function FinancesPage() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="shadow-elevation-2">
         <CardHeader>
           <CardTitle className="text-lg font-semibold">Rentabilitätsanalyse pro Auftrag</CardTitle>
           <CardDescription className="text-sm">
@@ -67,7 +67,7 @@ export default async function FinancesPage() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="shadow-elevation-2">
         <CardHeader>
           <CardTitle className="text-lg font-semibold">Personalkosten-Analyse</CardTitle>
           <CardDescription className="text-sm">
@@ -80,7 +80,7 @@ export default async function FinancesPage() {
       </Card>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <Card>
+        <Card className="shadow-elevation-2">
           <CardHeader>
             <CardTitle className="text-lg font-semibold">Stundensätze verwalten</CardTitle>
             <CardDescription className="text-sm">
@@ -91,7 +91,7 @@ export default async function FinancesPage() {
             <ServiceRateManager />
           </CardContent>
         </Card>
-        <Card>
+        <Card className="shadow-elevation-2">
           <CardHeader>
             <CardTitle className="text-lg font-semibold">Standard-Mitarbeiterstundenlohn</CardTitle>
             <CardDescription className="text-sm">

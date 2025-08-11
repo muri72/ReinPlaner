@@ -166,7 +166,7 @@ export default async function OrdersPage({
             </div>
           ) : (
             pendingRequests.map((order) => (
-              <Card key={order.id} className="border-warning border-2">
+              <Card key={order.id} className="border-warning border-2 shadow-elevation-2">
                 <CardHeader>
                   <CardTitle className="text-lg font-medium">{order.title}</CardTitle>
                 </CardHeader>
@@ -210,7 +210,7 @@ export default async function OrdersPage({
             otherOrders.map((order) => {
               const feedback = order.order_feedback?.[0];
               return (
-                <Card key={order.id}>
+                <Card key={order.id} className="shadow-elevation-1">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-lg font-medium">{order.title}</CardTitle>
                     <div className="flex items-center space-x-2">

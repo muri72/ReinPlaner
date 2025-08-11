@@ -99,7 +99,7 @@ export default async function CustomerContactsPage({
           </div>
         ) : (
           displayContacts.map((contact) => (
-            <Card key={contact.id}>
+            <Card key={contact.id} className="shadow-elevation-1">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-lg font-semibold">{contact.first_name} {contact.last_name}</CardTitle>
                 <div className="flex items-center space-x-2">

@@ -110,6 +110,13 @@ export default {
             xl: 'var(--radius-xl)',
             '2xl': 'var(--radius-2xl)',
   		},
+        boxShadow: {
+          'elevation-1': '0px 1px 2px rgba(0, 0, 0, 0.05), 0px 1px 1px rgba(0, 0, 0, 0.03)',
+          'elevation-2': '0px 2px 4px rgba(0, 0, 0, 0.06), 0px 2px 2px rgba(0, 0, 0, 0.04)',
+          'elevation-3': '0px 4px 8px rgba(0, 0, 0, 0.08), 0px 4px 4px rgba(0, 0, 0, 0.05)',
+          'elevation-4': '0px 8px 16px rgba(0, 0, 0, 0.1), 0px 8px 8px rgba(0, 0, 0, 0.06)',
+          'elevation-5': '0px 16px 32px rgba(0, 0, 0, 0.12), 0px 16px 16px rgba(0, 0, 0, 0.08)',
+        },
   		keyframes: {
   			'accordion-down': {
   				from: {

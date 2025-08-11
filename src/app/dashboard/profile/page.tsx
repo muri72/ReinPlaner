@@ -27,7 +27,7 @@ export default async function ProfilePage() {
     <div className="p-8 space-y-8">
       <h1 className="text-3xl font-bold">Ihr Profil</h1>
       <div className="grid gap-8 md:grid-cols-2">
-        <Card>
+        <Card className="shadow-elevation-2">
           <CardHeader>
             <CardTitle className="text-lg font-semibold">Profilinformationen</CardTitle>
             <CardDescription className="text-sm">

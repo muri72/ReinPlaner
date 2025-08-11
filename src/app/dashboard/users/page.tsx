@@ -153,7 +153,7 @@ export default async function UsersPage({
           </div>
         ) : (
           users.map((user) => (
-            <Card key={user.id}>
+            <Card key={user.id} className="shadow-elevation-1">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-lg font-semibold">{user.first_name} {user.last_name}</CardTitle>
                 <div className="flex items-center space-x-2">

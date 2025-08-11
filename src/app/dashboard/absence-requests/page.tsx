@@ -99,7 +99,7 @@ export default async function AbsenceRequestsPage() {
               </div>
             ) : (
               requests.map((request) => (
-                <Card key={request.id}>
+                <Card key={request.id} className="shadow-elevation-1">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-lg font-semibold">
                       {typeTranslations[request.type] || 'Abwesenheit'}

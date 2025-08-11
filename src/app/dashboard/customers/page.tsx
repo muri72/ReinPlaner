@@ -74,7 +74,7 @@ export default async function CustomersPage({
           </div>
         ) : (
           customers.map((customer) => (
-            <Card key={customer.id}>
+            <Card key={customer.id} className="shadow-elevation-1">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-lg font-semibold">{customer.name}</CardTitle>
                 <div className="flex items-center space-x-2">

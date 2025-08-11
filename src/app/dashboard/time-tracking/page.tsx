@@ -212,7 +212,7 @@ export default async function TimeTrackingPage({
 
       {isAdmin ? (
         <>
-          <Card>
+          <Card className="shadow-elevation-2">
             <CardHeader>
               <CardTitle className="text-lg font-semibold">Automatische Zeiterfassung</CardTitle>
             </CardHeader>
@@ -254,7 +254,7 @@ export default async function TimeTrackingPage({
               </div>
             ) : (
               timeEntries.map((entry) => (
-                <Card key={entry.id}>
+                <Card key={entry.id} className="shadow-elevation-1">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-lg font-semibold">
                       Zeiteintrag

@@ -65,7 +65,7 @@ export default async function FeedbackPage() {
       <h1 className="text-3xl font-bold">Feedback</h1>
       
       {currentUserRole !== 'admin' && currentUserRole !== 'manager' && (
-        <Card>
+        <Card className="shadow-elevation-2">
           <CardHeader>
             <CardTitle className="text-lg font-semibold">Neues Feedback einreichen</CardTitle>
           </CardHeader>
