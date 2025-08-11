@@ -62,6 +62,34 @@ export async function createOrderFeedback(formData: FormData): Promise<{ success
   return { success: true, message: "Vielen Dank für Ihr Feedback!" };
 }
 
+export async function updateOrderFeedback(feedbackId: string, formData: FormData): Promise<{ success: boolean; message: string }> {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+        return { success: false, message: "Benutzer nicht authentifiziert." };
+    }
+
+    const rating = Number(formData.get('rating'));
+    const comment = formData.get('comment') as string | null;
+
+    const { error } = await supabase
+        .from('order_feedback')
+        .update({
+            rating,
+            comment,
+        })
+        .eq('id', feedbackId);
+
+    if (error) {
+        console.error("Fehler beim Aktualisieren des Feedbacks:", error);
+        return { success: false, message: `Fehler: ${error.message}` };
+    }
+
+    revalidatePath("/dashboard/feedback");
+    return { success: true, message: "Feedback erfolgreich aktualisiert." };
+}
+
 export async function replyToOrderFeedback(feedbackId: string, replyText: string): Promise<{ success: boolean; message: string }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -177,6 +205,34 @@ export async function createGeneralFeedback(formData: FormData): Promise<{ succe
 
   revalidatePath("/dashboard/feedback");
   return { success: true, message: "Vielen Dank für Ihr Feedback!" };
+}
+
+export async function updateGeneralFeedback(feedbackId: string, formData: FormData): Promise<{ success: boolean; message: string }> {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+        return { success: false, message: "Benutzer nicht authentifiziert." };
+    }
+
+    const subject = formData.get('subject') as string | null;
+    const message = formData.get('message') as string;
+
+    const { error } = await supabase
+        .from('general_feedback')
+        .update({
+            subject,
+            message,
+        })
+        .eq('id', feedbackId);
+
+    if (error) {
+        console.error("Fehler beim Aktualisieren des Feedbacks:", error);
+        return { success: false, message: `Fehler: ${error.message}` };
+    }
+
+    revalidatePath("/dashboard/feedback");
+    return { success: true, message: "Feedback erfolgreich aktualisiert." };
 }
 
 export async function replyToGeneralFeedback(feedbackId: string, replyText: string): Promise<{ success: boolean; message: string }> {

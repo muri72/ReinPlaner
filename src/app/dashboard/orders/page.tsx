@@ -10,7 +10,6 @@ import { Badge } from "@/components/ui/badge";
 import { DeleteOrderButton } from "@/components/delete-order-button";
 import { SearchInput } from "@/components/search-input";
 import { OrderPlanningDialog } from "@/components/order-planning-dialog";
-import { OrderFeedbackDisplay } from "@/components/order-feedback-display";
 
 interface DisplayOrder {
   id: string;
@@ -221,7 +220,10 @@ export default async function OrdersPage({
                     {(order.order_type === "recurring" || order.order_type === "substitution") && order.recurring_end_date && <div className="flex items-center text-xs text-muted-foreground"><CalendarDays className="mr-1 h-3 w-3" /><span>Ende: {new Date(order.recurring_end_date).toLocaleDateString()}</span></div>}
                     
                     {feedback && (
-                      <OrderFeedbackDisplay feedback={feedback} />
+                      <div className="flex items-center text-xs text-amber-500 mt-2">
+                        <StarIcon className="mr-1 h-3 w-3 fill-current" />
+                        <span>Feedback vorhanden</span>
+                      </div>
                     )}
                   </CardContent>
                 </Card>

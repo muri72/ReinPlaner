@@ -1,6 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { OrderFeedbackDisplay } from "@/components/order-feedback-display";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { User, Briefcase, Building, Mail, MessageSquare, Image as ImageIcon } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -60,7 +59,7 @@ export default async function FeedbackPage() {
                        <div className="flex items-center"><User className="mr-2 h-4 w-4" /><span>Kunde: {feedback.orders?.customers?.name || 'N/A'}</span></div>
                        <div className="flex items-center"><Building className="mr-2 h-4 w-4" /><span>Mitarbeiter: {`${feedback.orders?.employees?.first_name || ''} ${feedback.orders?.employees?.last_name || ''}`.trim() || 'N/A'}</span></div>
                     </div>
-                    <OrderFeedbackDisplay feedback={feedback} />
+                    {/* The new FeedbackCard will replace this logic */}
                   </CardContent>
                 </Card>
               ))
