@@ -26,7 +26,7 @@ const absenceTypeTranslations: { [key: string]: string } = {
 const absenceTypeColors: { [key: string]: string } = {
   vacation: "bg-primary text-primary-foreground",
   sick_leave: "bg-warning text-warning-foreground",
-  training: "bg-accent text-accent-foreground", // Geändert zu accent
+  training: "bg-accent text-accent-foreground",
   other: "bg-muted text-muted-foreground",
 };
 
@@ -171,8 +171,7 @@ export function ResourcePlanningCalendar() {
               <Table className="min-w-full border-collapse">
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="sticky left-0 bg-card z-10 min-w-[120px] sm:min-w-[200px] text-xs sm:text-sm">Mitarbeiter</TableHead> {/* Adjusted min-width and font size */}
-                    {weekDays.map((day: Date) => (
+                    <TableHead className="sticky left-0 bg-card z-10 min-w-[120px] sm:min-w-[200px] text-xs sm:text-sm">Mitarbeiter</TableHead>{weekDays.map((day: Date) => (
                       <TableHead key={day.toString()} className="text-center text-xs sm:text-sm"> {/* Adjusted font size */}
                         {format(day, "E dd.", { locale: de })}
                       </TableHead>
@@ -183,21 +182,17 @@ export function ResourcePlanningCalendar() {
                   {loading ? (
                     Array.from({ length: 5 }).map((_, i) => (
                       <TableRow key={i}>
-                        <TableCell className="sticky left-0 bg-card z-10"><Skeleton className="h-12 w-32" /></TableCell>
-                        {weekDays.map((day: Date) => <TableCell key={day.toString()}><Skeleton className="h-12 w-16 mx-auto" /></TableCell>)}
+                        <TableCell className="sticky left-0 bg-card z-10"><Skeleton className="h-12 w-32" /></TableCell>{weekDays.map((day: Date) => <TableCell key={day.toString()}><Skeleton className="h-12 w-16 mx-auto" /></TableCell>)}
                       </TableRow>
                     ))
                   ) : employeeIds.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={8} className="text-center text-muted-foreground h-24 text-sm">Keine Mitarbeiterdaten gefunden.</TableCell>
-                    </TableRow>
+                    <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground h-24 text-sm">Keine Mitarbeiterdaten gefunden.</TableCell></TableRow>
                   ) : (
                     employeeIds.map(id => {
                       const employee = planningPageData!.planningData[id];
                       return (
                         <TableRow key={id}>
-                          <TableCell className="font-normal sticky left-0 bg-card z-10 text-xs sm:text-sm">{employee.name}</TableCell> {/* Adjusted font size */}
-                          {weekDays.map((day: Date) => {
+                          <TableCell className="font-normal sticky left-0 bg-card z-10 text-xs sm:text-sm">{employee.name}</TableCell>{weekDays.map((day: Date) => {
                             const dateString = format(day, "yyyy-MM-dd");
                             const dayData = employee.schedule[dateString];
                             const droppableId = `${id}__${dateString}`;
@@ -210,7 +205,7 @@ export function ResourcePlanningCalendar() {
                                   <TooltipProvider>
                                     <Tooltip>
                                       <TooltipTrigger asChild>
-                                        <div className={cn("w-full h-16 flex items-center justify-center font-semibold text-xs sm:text-sm", absenceTypeColors[dayData.absenceType || 'other'])}> {/* Adjusted font size */}
+                                        <div className={cn("w-full h-16 flex items-center justify-center font-semibold text-xs sm:text-sm", absenceTypeColors[dayData.absenceType || 'other'])}>
                                           {absenceTypeTranslations[dayData.absenceType || 'other']?.charAt(0)}
                                         </div>
                                       </TooltipTrigger>
@@ -227,7 +222,7 @@ export function ResourcePlanningCalendar() {
                                   <Tooltip>
                                     <TooltipTrigger asChild>
                                       <div className={cn("w-full h-16 flex flex-col items-center justify-center", getWorkloadColor(dayData.totalHours))}>
-                                        <span className="font-semibold text-xs sm:text-sm">{dayData.totalHours > 0 ? `${dayData.totalHours.toFixed(1)}h` : '-'}</span> {/* Adjusted font size */}
+                                        <span className="font-semibold text-xs sm:text-sm">{dayData.totalHours > 0 ? `${dayData.totalHours.toFixed(1)}h` : '-'}</span>
                                       </div>
                                     </TooltipTrigger>
                                     {dayData.assignments.length > 0 && (

@@ -25,10 +25,10 @@ const typeTranslations: { [key: string]: string } = {
 };
 
 const typeColors: { [key: string]: string } = {
-  vacation: "bg-primary text-primary-foreground", // Changed to primary
-  sick_leave: "bg-warning text-warning-foreground", // Changed to warning
-  training: "bg-accent text-accent-foreground", // Changed to accent
-  other: "bg-muted text-muted-foreground", // Changed to muted
+  vacation: "bg-primary text-primary-foreground",
+  sick_leave: "bg-warning text-warning-foreground",
+  training: "bg-accent text-accent-foreground",
+  other: "bg-muted text-muted-foreground",
 };
 
 export function AbsenceTimelineCalendar() {
@@ -89,29 +89,24 @@ export function AbsenceTimelineCalendar() {
         <Table className="min-w-full border-collapse">
           <TableHeader>
             <TableRow>
-              <TableHead className="sticky left-0 bg-card z-10 min-w-[150px]">Mitarbeiter</TableHead>
-              {daysArray.map(day => <TableHead key={day} className="text-center">{day}</TableHead>)}
+              <TableHead className="sticky left-0 bg-card z-10 min-w-[150px]">Mitarbeiter</TableHead>{daysArray.map(day => <TableHead key={day} className="text-center">{day}</TableHead>)}
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
               Array.from({ length: 3 }).map((_, i) => (
                 <TableRow key={i}>
-                  <TableCell className="sticky left-0 bg-card z-10"><Skeleton className="h-6 w-32" /></TableCell>
-                  {daysArray.map(day => <TableCell key={day}><Skeleton className="h-6 w-6 mx-auto" /></TableCell>)}
+                  <TableCell className="sticky left-0 bg-card z-10"><Skeleton className="h-6 w-32" /></TableCell>{daysArray.map(day => <TableCell key={day}><Skeleton className="h-6 w-6 mx-auto" /></TableCell>)}
                 </TableRow>
               ))
             ) : employeeIds.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={daysInMonth + 1} className="text-center text-muted-foreground h-24">
-                  Keine Abwesenheiten für diesen Monat erfasst.
-                </TableCell>
-              </TableRow>
+              <TableRow><TableCell colSpan={daysInMonth + 1} className="text-center text-muted-foreground h-24">
+                Keine Abwesenheiten für diesen Monat erfasst.
+              </TableCell></TableRow>
             ) : (
               employeeIds.map(id => (
                 <TableRow key={id}>
-                  <TableCell className="font-medium sticky left-0 bg-card z-10">{employeeData[id].name}</TableCell>
-                  {daysArray.map(day => {
+                  <TableCell className="font-medium sticky left-0 bg-card z-10">{employeeData[id].name}</TableCell>{daysArray.map(day => {
                     const absenceType = employeeData[id].absences[day];
                     return (
                       <TableCell key={day} className="p-0 text-center">
@@ -122,31 +117,31 @@ export function AbsenceTimelineCalendar() {
                                 <div className={`w-full h-10 flex items-center justify-center ${typeColors[absenceType] || 'bg-muted'}`}>
                                 </div>
                               </TooltipTrigger>
-                              <TooltipContent>
-                                <p>{typeTranslations[absenceType] || absenceType}</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        ) : (
-                          <div className="w-full h-10"></div>
-                        )}
-                      </TableCell>
-                    );
-                  })}
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+                                <TooltipContent>
+                                  <p>{typeTranslations[absenceType] || absenceType}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          ) : (
+                            <div className="w-full h-10"></div>
+                          )}
+                        </TableCell>
+                      );
+                    })}
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
+        <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-sm">
+          {Object.entries(typeTranslations).map(([key, label]) => (
+            <div key={key} className="flex items-center gap-2">
+              <div className={`w-3 h-3 rounded-sm ${typeColors[key]}`}></div>
+              <span>{label}</span>
+            </div>
+          ))}
+        </div>
       </div>
-      <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-sm">
-        {Object.entries(typeTranslations).map(([key, label]) => (
-          <div key={key} className="flex items-center gap-2">
-            <div className={`w-3 h-3 rounded-sm ${typeColors[key]}`}></div>
-            <span>{label}</span>
-          </div>
-        ))}
-      </div>
-    </div>
   );
 }
