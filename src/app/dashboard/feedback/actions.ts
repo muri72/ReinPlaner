@@ -16,9 +16,10 @@ export async function generateSignedUploadUrls(
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  if (!user) {
-    return { success: false, message: "Benutzer nicht authentifiziert." };
-  }
+  // Allow anonymous users to get signed URLs for the public feedback form
+  // if (!user) {
+  //   return { success: false, message: "Benutzer nicht authentifiziert." };
+  // }
 
   const supabaseAdmin = createAdminClient();
   const uploads: { signedUrl: string; publicUrl: string }[] = [];
@@ -159,7 +160,9 @@ export async function deleteOrderFeedback(feedbackId: string): Promise<{ success
 // --- GENERAL FEEDBACK ACTIONS ---
 
 export async function createGeneralFeedback(data: {
-  customerId: string | null;
+  name?: string | null;
+  email?: string | null;
+  customerId?: string | null;
   subject: string | null;
   message: string;
   imageUrls: string[];
@@ -167,18 +170,15 @@ export async function createGeneralFeedback(data: {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  if (!user) {
-    return { success: false, message: "Benutzer nicht authentifiziert." };
-  }
-
-  const { customerId, subject, message, imageUrls } = data;
+  const { customerId, subject, message, imageUrls, name, email } = data;
 
   if (!message) {
     return { success: false, message: "Eine Nachricht ist erforderlich." };
   }
 
-  let feedbackName = user.email || 'Unbekannter Benutzer';
-  let feedbackEmail = user.email;
+  let feedbackUserId = user?.id || null;
+  let feedbackName = name || user?.email || 'Unbekannter Benutzer';
+  let feedbackEmail = email || user?.email;
 
   if (customerId) {
     const { data: customer, error: customerError } = await supabase
@@ -197,7 +197,7 @@ export async function createGeneralFeedback(data: {
   const { error } = await supabase
     .from('general_feedback')
     .insert({
-      user_id: user.id,
+      user_id: feedbackUserId,
       name: feedbackName,
       email: feedbackEmail,
       subject,

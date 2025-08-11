@@ -10,8 +10,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { X } from "lucide-react";
-import { createGeneralFeedback } from "@/app/dashboard/feedback/actions";
+import { createGeneralFeedback, generateSignedUploadUrls } from "@/app/dashboard/feedback/actions";
 import Image from "next/image";
+import { v4 as uuidv4 } from 'uuid';
 
 const generalFeedbackSchema = z.object({
   name: z.string().min(1, "Name ist erforderlich"),
@@ -49,27 +50,53 @@ export function GeneralFeedbackForm() {
   const onSubmit = async (data: GeneralFeedbackFormValues) => {
     setIsSubmitting(true);
     try {
-      const formData = new FormData();
-      formData.append("name", data.name);
-      if (data.email) formData.append("email", data.email);
-      if (data.subject) formData.append("subject", data.subject);
-      formData.append("message", data.message);
-      
-      files.forEach(file => {
-        formData.append("images", file);
-      });
+      let uploadedImageUrls: string[] = [];
 
-      const result = await createGeneralFeedback(formData);
+      if (files.length > 0) {
+        toast.info(`Lade ${files.length} Bilder hoch...`);
+        const fileDetails = files.map(f => ({ name: f.name, type: f.type }));
+        const referenceId = uuidv4();
+        const signedUrlResult = await generateSignedUploadUrls('general', referenceId, fileDetails);
+
+        if (!signedUrlResult.success || !signedUrlResult.uploads) {
+          throw new Error(signedUrlResult.message);
+        }
+
+        const uploadPromises = signedUrlResult.uploads.map((uploadInfo, index) => {
+          return fetch(uploadInfo.signedUrl, {
+            method: 'PUT',
+            headers: { 'Content-Type': files[index].type },
+            body: files[index],
+          }).then(response => {
+            if (!response.ok) {
+              throw new Error(`Fehler beim Hochladen von Bild: ${files[index].name}`);
+            }
+            return uploadInfo.publicUrl;
+          });
+        });
+
+        uploadedImageUrls = await Promise.all(uploadPromises);
+        toast.success("Alle Bilder erfolgreich hochgeladen!");
+      }
+
+      toast.info("Speichere Feedback...");
+      const result = await createGeneralFeedback({
+        name: data.name,
+        email: data.email || null,
+        subject: data.subject || null,
+        message: data.message,
+        imageUrls: uploadedImageUrls,
+      });
 
       if (result.success) {
         toast.success(result.message);
         form.reset();
         setFiles([]);
       } else {
-        toast.error(result.message);
+        throw new Error(result.message);
       }
     } catch (error: any) {
-      toast.error("Ein unerwarteter Fehler ist aufgetreten.");
+      toast.error(error.message || "Ein unerwarteter Fehler ist aufgetreten.");
       console.error(error);
     } finally {
       setIsSubmitting(false);
