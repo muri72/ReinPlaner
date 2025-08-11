@@ -4,11 +4,11 @@ import React, { useState } from "react";
 import { Menu, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NotificationBell } from "@/components/notification-bell";
-import { Sheet, SheetContent, SheetHeader, SheetTrigger, SheetTitle } from "@/components/ui/sheet"; // Import SheetTitle
+import { Sheet, SheetContent, SheetHeader, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { SidebarNav } from "@/components/sidebar-nav";
 import { UserMenu } from "@/components/user-menu";
 import { cn } from "@/lib/utils";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden"; // Import VisuallyHidden
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 interface DashboardClientLayoutProps {
   children: React.ReactNode;
@@ -30,13 +30,19 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut }: 
                 <Menu className="h-6 w-6" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="w-64 bg-sidebar text-sidebar-foreground border-r border-sidebar-border p-4 flex flex-col bg-gradient-to-br from-sidebar-background to-sidebar-accent/20">
+            <SheetContent
+              side="left"
+              className={cn(
+                "w-64 bg-sidebar text-sidebar-foreground border-r border-sidebar-border p-4 flex flex-col",
+                "bg-gradient-to-br from-sidebar-background to-sidebar-accent/20" // Keep the gradient
+              )}
+            >
               <SheetHeader>
                 <SheetTitle>
                   <VisuallyHidden>ARIS Navigation</VisuallyHidden>
                 </SheetTitle>
                 <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-xl font-bold text-sidebar-primary-foreground tracking-tight">ARIS</h2>
+                  <h2 className="text-xl font-bold text-primary tracking-tight">ARIS</h2>
                   <NotificationBell />
                 </div>
               </SheetHeader>
@@ -45,7 +51,7 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut }: 
               </nav>
             </SheetContent>
           </Sheet>
-          <h2 className="text-xl font-bold text-sidebar-primary-foreground tracking-tight ml-4">ARIS</h2>
+          <h2 className="text-xl font-bold text-primary tracking-tight ml-4">ARIS</h2>
         </div>
         <div className="flex items-center space-x-2">
           <NotificationBell />
@@ -63,7 +69,7 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut }: 
       >
         <div className="flex items-center justify-between mb-6">
           {!isCollapsed && (
-            <h2 className="text-xl font-bold text-sidebar-primary-foreground tracking-tight">ARIS</h2>
+            <h2 className="text-xl font-bold text-primary tracking-tight">ARIS</h2>
           )}
           <Button
             variant="ghost"
