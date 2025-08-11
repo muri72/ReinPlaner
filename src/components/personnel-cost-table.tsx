@@ -4,6 +4,7 @@ import {
   Table,
   TableBody,
   TableCell,
+  TableFooter,
   TableHead,
   TableHeader,
   TableRow,
@@ -19,9 +20,11 @@ interface PersonnelCost {
 
 interface PersonnelCostTableProps {
   data: PersonnelCost[];
+  totalHours: number;
+  totalCost: number;
 }
 
-export function PersonnelCostTable({ data }: PersonnelCostTableProps) {
+export function PersonnelCostTable({ data, totalHours, totalCost }: PersonnelCostTableProps) {
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(value);
   };
@@ -56,6 +59,13 @@ export function PersonnelCostTable({ data }: PersonnelCostTableProps) {
           ))
         )}
       </TableBody>
+      <TableFooter>
+        <TableRow>
+          <TableCell className="font-bold">Gesamt</TableCell>
+          <TableCell className="text-right font-bold">{formatHours(totalHours)}</TableCell>
+          <TableCell className="text-right font-bold text-destructive">{formatCurrency(totalCost)}</TableCell>
+        </TableRow>
+      </TableFooter>
     </Table>
   );
 }

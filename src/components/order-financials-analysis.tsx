@@ -47,6 +47,16 @@ export function OrderFinancialsAnalysis() {
     label: new Date(0, i).toLocaleString('de-DE', { month: 'long' }),
   }));
 
+  const totals = data.reduce(
+    (acc, order) => {
+      acc.revenue += order.total_revenue;
+      acc.cost += order.total_cost;
+      acc.profit += order.profit;
+      return acc;
+    },
+    { revenue: 0, cost: 0, profit: 0 }
+  );
+
   return (
     <div className="space-y-4">
       <div className="flex gap-4">
@@ -74,7 +84,7 @@ export function OrderFinancialsAnalysis() {
           <Skeleton className="h-12 w-full" />
         </div>
       ) : (
-        <OrderFinancialsTable data={data} />
+        <OrderFinancialsTable data={data} totals={totals} />
       )}
     </div>
   );

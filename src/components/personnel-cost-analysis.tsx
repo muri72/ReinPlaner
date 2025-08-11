@@ -43,6 +43,9 @@ export function PersonnelCostAnalysis() {
     label: new Date(0, i).toLocaleString('de-DE', { month: 'long' }),
   }));
 
+  const totalCost = data.reduce((acc, employee) => acc + employee.total_cost, 0);
+  const totalHours = data.reduce((acc, employee) => acc + employee.total_hours, 0);
+
   return (
     <div className="space-y-4">
       <div className="flex gap-4">
@@ -70,7 +73,7 @@ export function PersonnelCostAnalysis() {
           <Skeleton className="h-12 w-full" />
         </div>
       ) : (
-        <PersonnelCostTable data={data} />
+        <PersonnelCostTable data={data} totalCost={totalCost} totalHours={totalHours} />
       )}
     </div>
   );

@@ -4,6 +4,7 @@ import {
   Table,
   TableBody,
   TableCell,
+  TableFooter,
   TableHead,
   TableHeader,
   TableRow,
@@ -24,9 +25,14 @@ interface OrderFinancial {
 
 interface OrderFinancialsTableProps {
   data: OrderFinancial[];
+  totals: {
+    revenue: number;
+    cost: number;
+    profit: number;
+  };
 }
 
-export function OrderFinancialsTable({ data }: OrderFinancialsTableProps) {
+export function OrderFinancialsTable({ data, totals }: OrderFinancialsTableProps) {
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(value);
   };
@@ -74,6 +80,19 @@ export function OrderFinancialsTable({ data }: OrderFinancialsTableProps) {
           ))
         )}
       </TableBody>
+      <TableFooter>
+        <TableRow>
+          <TableCell colSpan={4} className="text-right font-bold">Gesamt</TableCell>
+          <TableCell className="text-right font-bold">{formatCurrency(totals.revenue)}</TableCell>
+          <TableCell className="text-right font-bold text-destructive">{formatCurrency(totals.cost)}</TableCell>
+          <TableCell className={cn(
+            "text-right font-bold",
+            totals.profit >= 0 ? "text-green-600" : "text-destructive"
+          )}>
+            {formatCurrency(totals.profit)}
+          </TableCell>
+        </TableRow>
+      </TableFooter>
     </Table>
   );
 }
