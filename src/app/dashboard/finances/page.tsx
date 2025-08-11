@@ -1,0 +1,93 @@
+import { createClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
+import { getFinancialOverview } from "./actions";
+import { FinancialSummaryCard } from "@/components/financial-summary-card";
+import { ServiceRateManager } from "@/components/service-rate-manager";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { OrderFinancialsAnalysis } from "@/components/order-financials-analysis";
+import { DefaultRateManager } from "@/components/default-rate-manager";
+
+export default async function FinancesPage() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single();
+
+  if (profile?.role !== 'admin' && profile?.role !== 'manager') {
+    redirect("/dashboard");
+  }
+
+  const now = new Date();
+  const { data: financialData, message: overviewMessage, success: overviewSuccess } = await getFinancialOverview(now.getFullYear(), now.getMonth() + 1);
+
+  return (
+    <div className="p-8 space-y-8">
+      <h1 className="text-3xl font-bold">Finanzübersicht</h1>
+      
+      <Card>
+        <CardHeader>
+          <CardTitle>Monatsübersicht</CardTitle>
+          <CardDescription>
+            Eine Zusammenfassung Ihrer Finanzen für den aktuellen Monat.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {overviewSuccess && financialData ? (
+            <div className="grid gap-6 md:grid-cols-3">
+              <FinancialSummaryCard title="Einnahmen" value={financialData.totalRevenue} />
+              <FinancialSummaryCard title="Personalkosten" value={financialData.totalCosts} isCost />
+              <FinancialSummaryCard title="Gewinn" value={financialData.profit} isProfit />
+            </div>
+          ) : (
+            <p className="text-destructive">{overviewMessage}</p>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Rentabilitätsanalyse pro Auftrag</CardTitle>
+          <CardDescription>
+            Wählen Sie einen Monat aus, um eine detaillierte Aufschlüsselung der Finanzen für jeden Auftrag in diesem Zeitraum anzuzeigen.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <OrderFinancialsAnalysis />
+        </CardContent>
+      </Card>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <Card>
+          <CardHeader>
+            <CardTitle>Stundensätze verwalten</CardTitle>
+            <CardDescription>
+              Legen Sie hier die Netto-Stundensätze für Ihre verschiedenen Dienstleistungen fest.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ServiceRateManager />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Standard-Mitarbeiterstundenlohn</CardTitle>
+            <CardDescription>
+              Dieser Wert wird verwendet, wenn für einen Mitarbeiter kein individueller Stundenlohn hinterlegt ist.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <DefaultRateManager />
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
