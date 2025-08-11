@@ -30,7 +30,7 @@ export default async function DashboardLayout({
 
   return (
     <div className="min-h-screen flex">
-      <aside className="w-64 bg-sidebar text-sidebar-foreground border-r border-sidebar-border p-4 flex flex-col">
+      <aside className="w-64 bg-sidebar text-sidebar-foreground border-r border-sidebar-border p-4 flex flex-col bg-gradient-to-br from-sidebar-background to-sidebar-accent/20">
         <div className="flex-grow">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-xl font-bold text-sidebar-primary-foreground tracking-tight">ARIS</h2>
