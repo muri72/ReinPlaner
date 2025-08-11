@@ -245,6 +245,26 @@ export function ResourcePlanningCalendar() {
                 </TableBody>
               </Table>
             </div>
+            <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-sm">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-sm bg-success-foreground/10 dark:bg-success-foreground/20"></div>
+                <span>0-6 Stunden</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-sm bg-warning-foreground/10 dark:bg-warning-foreground/20"></div>
+                <span>6-8 Stunden</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-sm bg-destructive-foreground/10 dark:bg-destructive-foreground/20"></div>
+                <span>&gt; 8 Stunden</span>
+              </div>
+              {Object.entries(absenceTypeTranslations).map(([key, label]) => (
+                <div key={key} className="flex items-center gap-2">
+                  <div className={`w-3 h-3 rounded-sm ${absenceTypeColors[key]}`}></div>
+                  <span>{label} (Abwesenheit)</span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
