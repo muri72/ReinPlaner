@@ -11,6 +11,7 @@ interface OrderFinancial {
   order_id: string;
   order_title: string;
   customer_name: string;
+  object_name: string | null;
   employee_first_name: string | null;
   employee_last_name: string | null;
   total_revenue: number;

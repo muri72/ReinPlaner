@@ -14,6 +14,7 @@ interface OrderFinancial {
   order_id: string;
   order_title: string;
   customer_name: string;
+  object_name: string | null;
   employee_first_name: string | null;
   employee_last_name: string | null;
   total_revenue: number;
@@ -36,6 +37,7 @@ export function OrderFinancialsTable({ data }: OrderFinancialsTableProps) {
         <TableRow>
           <TableHead>Auftrag</TableHead>
           <TableHead>Kunde</TableHead>
+          <TableHead>Objekt</TableHead>
           <TableHead>Mitarbeiter</TableHead>
           <TableHead className="text-right">Einnahmen</TableHead>
           <TableHead className="text-right">Kosten</TableHead>
@@ -45,7 +47,7 @@ export function OrderFinancialsTable({ data }: OrderFinancialsTableProps) {
       <TableBody>
         {data.length === 0 ? (
           <TableRow>
-            <TableCell colSpan={6} className="h-24 text-center">
+            <TableCell colSpan={7} className="h-24 text-center">
               Keine Auftragsdaten zur Analyse gefunden.
             </TableCell>
           </TableRow>
@@ -54,6 +56,7 @@ export function OrderFinancialsTable({ data }: OrderFinancialsTableProps) {
             <TableRow key={order.order_id}>
               <TableCell className="font-medium">{order.order_title}</TableCell>
               <TableCell>{order.customer_name}</TableCell>
+              <TableCell>{order.object_name || 'N/A'}</TableCell>
               <TableCell>
                 {order.employee_first_name || order.employee_last_name
                   ? `${order.employee_first_name || ''} ${order.employee_last_name || ''}`.trim()
