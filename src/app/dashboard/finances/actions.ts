@@ -80,7 +80,7 @@ export async function getFinancialOverview(year: number, month: number) {
 }
 
 export async function getServiceRates() {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data, error } = await supabase.from('service_rates').select('*');
   if (error) {
     return { success: false, message: error.message, data: null };
