@@ -45,18 +45,20 @@ function DraggableOrder({ order }: { order: UnassignedOrder }) {
       style={style}
       className={cn("mb-2 p-2 cursor-grab touch-none", isDragging && "shadow-lg z-50 opacity-75")}
     >
-      <div className="flex items-center">
-        <div {...listeners} {...attributes} className="p-1">
-          <GripVertical className="h-5 w-5 text-muted-foreground" />
-        </div>
-        <div className="flex-grow">
-          <p className="font-semibold text-sm">{order.title}</p>
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <span>{order.service_type || 'Allgemein'}</span>
-            <span>{order.estimated_hours ? `${order.estimated_hours}h` : ''}</span>
+      <CardContent>
+        <div className="flex items-center">
+          <div {...listeners} {...attributes} className="p-1">
+            <GripVertical className="h-5 w-5 text-muted-foreground" />
+          </div>
+          <div className="flex-grow">
+            <p className="font-semibold text-sm">{order.title}</p>
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span>{order.service_type || 'Allgemein'}</span>
+              <span>{order.estimated_hours ? `${order.estimated_hours}h` : ''}</span>
+            </div>
           </div>
         </div>
-      </div>
+      </CardContent>
     </Card>
   );
 }
@@ -120,9 +122,9 @@ export function ResourcePlanningCalendar() {
   const employeeIds = planningPageData ? Object.keys(planningPageData.planningData) : [];
 
   const getWorkloadColor = (hours: number) => {
-    if (hours >= 8) return "bg-destructive/50"; // >= 8 Stunden ist rot
-    if (hours >= 6) return "bg-warning/50";     // >= 6 Stunden (und < 8) ist gelb
-    if (hours > 0) return "bg-success/50";     // > 0 Stunden (und < 6) ist grün
+    if (hours >= 8) return "bg-destructive/50";
+    if (hours >= 6) return "bg-warning/50";
+    if (hours > 0) return "bg-success/50";
     return "bg-transparent";
   };
 
@@ -261,7 +263,7 @@ export function ResourcePlanningCalendar() {
               {Object.entries(absenceTypeTranslations).map(([key, label]) => (
                 <div key={key} className="flex items-center gap-2">
                   <div className={`w-3 h-3 rounded-sm ${absenceTypeColors[key]}`}></div>
-                  <span>{label} (Abwesenheit)</span>
+                  <span>{label}</span>
                 </div>
               ))}
             </div>
