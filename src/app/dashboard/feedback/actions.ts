@@ -3,7 +3,108 @@
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 
-export async function createGeneralDashboardFeedback(formData: FormData): Promise<{ success: boolean; message: string }> {
+// --- ORDER FEEDBACK ACTIONS ---
+
+export async function createOrderFeedback(formData: FormData): Promise<{ success: boolean; message: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { success: false, message: "Benutzer nicht authentifiziert." };
+  }
+
+  const orderId = formData.get('orderId') as string;
+  const rating = Number(formData.get('rating'));
+  const comment = formData.get('comment') as string | null;
+  const images = formData.getAll('images') as File[];
+
+  if (!orderId || !rating) {
+    return { success: false, message: "Auftrags-ID und Bewertung sind erforderlich." };
+  }
+
+  let uploadedImageUrls: string[] = [];
+  if (images.length > 0 && images[0].size > 0) {
+    const supabaseAdmin = createAdminClient();
+    for (const image of images) {
+      const filePath = `${orderId}/${Date.now()}-${image.name}`;
+      const { error: uploadError } = await supabaseAdmin.storage
+        .from("feedback-images")
+        .upload(filePath, image);
+
+      if (uploadError) {
+        console.error("Fehler beim Hochladen des Bildes:", uploadError);
+        return { success: false, message: `Fehler beim Hochladen des Bildes: ${uploadError.message}` };
+      }
+
+      const { data: urlData } = supabaseAdmin.storage.from("feedback-images").getPublicUrl(filePath);
+      if (urlData) {
+        uploadedImageUrls.push(`${urlData.publicUrl}?t=${new Date().getTime()}`);
+      }
+    }
+  }
+
+  const { error } = await supabase
+    .from('order_feedback')
+    .insert({
+      order_id: orderId,
+      user_id: user.id,
+      rating: rating,
+      comment: comment,
+      image_urls: uploadedImageUrls.length > 0 ? uploadedImageUrls : null,
+    });
+
+  if (error) {
+    console.error("Fehler beim Erstellen des Feedbacks:", error);
+    return { success: false, message: `Fehler beim Speichern des Feedbacks: ${error.message}` };
+  }
+
+  revalidatePath("/dashboard/feedback");
+  return { success: true, message: "Vielen Dank für Ihr Feedback!" };
+}
+
+export async function replyToOrderFeedback(feedbackId: string, replyText: string): Promise<{ success: boolean; message: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { success: false, message: "Benutzer nicht authentifiziert." };
+  }
+
+  const { error } = await supabase
+    .from('order_feedback')
+    .update({
+      reply: replyText,
+      replied_by: user.id,
+      replied_at: new Date().toISOString(),
+    })
+    .eq('id', feedbackId);
+
+  if (error) {
+    console.error("Fehler beim Antworten auf Feedback:", error);
+    return { success: false, message: `Fehler: ${error.message}` };
+  }
+
+  revalidatePath("/dashboard/feedback");
+  return { success: true, message: "Antwort erfolgreich gesendet." };
+}
+
+export async function deleteOrderFeedback(feedbackId: string): Promise<{ success: boolean; message: string }> {
+    const supabase = await createClient();
+    const { error } = await supabase.from('order_feedback').delete().eq('id', feedbackId);
+
+    if (error) {
+        console.error("Fehler beim Löschen des Feedbacks:", error);
+        return { success: false, message: `Fehler: ${error.message}` };
+    }
+
+    revalidatePath("/dashboard/feedback");
+    return { success: true, message: "Feedback erfolgreich gelöscht." };
+}
+
+
+// --- GENERAL FEEDBACK ACTIONS ---
+
+export async function createGeneralFeedback(formData: FormData): Promise<{ success: boolean; message: string }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -53,7 +154,6 @@ export async function createGeneralDashboardFeedback(formData: FormData): Promis
 
       const { data: urlData } = supabaseAdmin.storage.from("feedback-images").getPublicUrl(filePath);
       if (urlData) {
-        // Add a timestamp to the URL to bypass cache
         uploadedImageUrls.push(`${urlData.publicUrl}?t=${new Date().getTime()}`);
       }
     }
@@ -62,6 +162,7 @@ export async function createGeneralDashboardFeedback(formData: FormData): Promis
   const { error } = await supabase
     .from('general_feedback')
     .insert({
+      user_id: user.id,
       name: feedbackName,
       email: feedbackEmail,
       subject,
@@ -76,4 +177,43 @@ export async function createGeneralDashboardFeedback(formData: FormData): Promis
 
   revalidatePath("/dashboard/feedback");
   return { success: true, message: "Vielen Dank für Ihr Feedback!" };
+}
+
+export async function replyToGeneralFeedback(feedbackId: string, replyText: string): Promise<{ success: boolean; message: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { success: false, message: "Benutzer nicht authentifiziert." };
+  }
+
+  const { error } = await supabase
+    .from('general_feedback')
+    .update({
+      reply: replyText,
+      replied_by: user.id,
+      replied_at: new Date().toISOString(),
+    })
+    .eq('id', feedbackId);
+
+  if (error) {
+    console.error("Fehler beim Antworten auf Feedback:", error);
+    return { success: false, message: `Fehler: ${error.message}` };
+  }
+
+  revalidatePath("/dashboard/feedback");
+  return { success: true, message: "Antwort erfolgreich gesendet." };
+}
+
+export async function deleteGeneralFeedback(feedbackId: string): Promise<{ success: boolean; message: string }> {
+    const supabase = await createClient();
+    const { error } = await supabase.from('general_feedback').delete().eq('id', feedbackId);
+
+    if (error) {
+        console.error("Fehler beim Löschen des Feedbacks:", error);
+        return { success: false, message: `Fehler: ${error.message}` };
+    }
+
+    revalidatePath("/dashboard/feedback");
+    return { success: true, message: "Feedback erfolgreich gelöscht." };
 }

@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { X } from "lucide-react";
-import { createGeneralDashboardFeedback } from "@/app/dashboard/feedback/actions";
+import { createGeneralFeedback } from "@/app/dashboard/feedback/actions";
 import Image from "next/image";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -87,7 +87,7 @@ export function GeneralDashboardFeedbackForm() {
         formData.append("images", file);
       });
 
-      const result = await createGeneralDashboardFeedback(formData);
+      const result = await createGeneralFeedback(formData);
 
       if (result.success) {
         toast.success(result.message);
