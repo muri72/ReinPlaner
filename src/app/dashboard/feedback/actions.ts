@@ -3,11 +3,10 @@
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { v4 as uuidv4 } from 'uuid';
+import { sendNotification } from "@/lib/actions/notifications";
 
 // --- ORDER FEEDBACK ACTIONS ---
 
-// This is a new helper action to securely generate upload URLs on the server.
-// The client will use these URLs to upload files directly to Supabase Storage.
 export async function generateSignedUploadUrls(
   feedbackType: 'order' | 'general',
   referenceId: string,
@@ -24,7 +23,6 @@ export async function generateSignedUploadUrls(
   const uploads: { signedUrl: string; publicUrl: string }[] = [];
 
   for (const file of files) {
-    // Use a dedicated folder for each feedback type, and group by a reference ID.
     const folder = feedbackType === 'order' ? 'order-feedback' : 'general-feedback';
     const filePath = `${folder}/${referenceId}/${uuidv4()}-${file.name}`;
 
@@ -48,8 +46,6 @@ export async function generateSignedUploadUrls(
   return { success: true, message: "Upload-URLs erfolgreich erstellt.", uploads };
 }
 
-
-// The create action now only receives the final data, not the files themselves.
 export async function createOrderFeedback(data: {
   orderId: string;
   rating: number;
@@ -82,6 +78,20 @@ export async function createOrderFeedback(data: {
   if (error) {
     console.error("Fehler beim Erstellen des Feedbacks:", error);
     return { success: false, message: `Fehler beim Speichern des Feedbacks: ${error.message}` };
+  }
+
+  // Notify admins and managers
+  const supabaseAdmin = createAdminClient();
+  const { data: adminsAndManagers } = await supabaseAdmin.from('profiles').select('id').in('role', ['admin', 'manager']);
+  if (adminsAndManagers) {
+    for (const admin of adminsAndManagers) {
+      await sendNotification({
+        userId: admin.id,
+        title: "Neues Auftragsfeedback",
+        message: `Ein neues Feedback mit ${rating} Sternen wurde abgegeben.`,
+        link: "/dashboard/feedback"
+      });
+    }
   }
 
   revalidatePath("/dashboard/feedback");
@@ -138,6 +148,17 @@ export async function replyToOrderFeedback(feedbackId: string, replyText: string
     return { success: false, message: `Fehler: ${error.message}` };
   }
 
+  // Notify the user who gave the feedback
+  const { data: feedback } = await supabase.from('order_feedback').select('user_id').eq('id', feedbackId).single();
+  if (feedback) {
+    await sendNotification({
+      userId: feedback.user_id,
+      title: "Antwort auf Ihr Feedback",
+      message: "Ein Administrator hat auf Ihr Feedback geantwortet.",
+      link: "/dashboard/feedback"
+    });
+  }
+
   revalidatePath("/dashboard/feedback");
   return { success: true, message: "Antwort erfolgreich gesendet." };
 }
@@ -154,7 +175,6 @@ export async function deleteOrderFeedback(feedbackId: string): Promise<{ success
     revalidatePath("/dashboard/feedback");
     return { success: true, message: "Feedback erfolgreich gelöscht." };
 }
-
 
 // --- GENERAL FEEDBACK ACTIONS ---
 
@@ -209,6 +229,20 @@ export async function createGeneralFeedback(data: {
     return { success: false, message: `Fehler beim Speichern des Feedbacks: ${error.message}` };
   }
 
+  // Notify admins and managers
+  const supabaseAdmin = createAdminClient();
+  const { data: adminsAndManagers } = await supabaseAdmin.from('profiles').select('id').in('role', ['admin', 'manager']);
+  if (adminsAndManagers) {
+    for (const admin of adminsAndManagers) {
+      await sendNotification({
+        userId: admin.id,
+        title: "Neues allgemeines Feedback",
+        message: `Ein neues allgemeines Feedback von ${feedbackName} wurde hinterlassen.`,
+        link: "/dashboard/feedback"
+      });
+    }
+  }
+
   revalidatePath("/dashboard/feedback");
   return { success: true, message: "Vielen Dank für Ihr Feedback!" };
 }
@@ -261,6 +295,17 @@ export async function replyToGeneralFeedback(feedbackId: string, replyText: stri
   if (error) {
     console.error("Fehler beim Antworten auf Feedback:", error);
     return { success: false, message: `Fehler: ${error.message}` };
+  }
+
+  // Notify the user who gave the feedback, if they are a registered user
+  const { data: feedback } = await supabase.from('general_feedback').select('user_id').eq('id', feedbackId).single();
+  if (feedback && feedback.user_id) {
+    await sendNotification({
+      userId: feedback.user_id,
+      title: "Antwort auf Ihr Feedback",
+      message: "Ein Administrator hat auf Ihr allgemeines Feedback geantwortet.",
+      link: "/dashboard/feedback"
+    });
   }
 
   revalidatePath("/dashboard/feedback");
