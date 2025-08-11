@@ -101,7 +101,7 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
     // These initialData values are only relevant for new user creation, not for editing
     employeeId: initialData?.employeeId ?? null,
     customerId: initialData?.customerId ?? null,
-    customerContactId: initialData?.customerContactId ?? null, // Initialwert für neues Feld
+    customerContactId: initialData?.customerContactId ?? null, // Neues Feld für Kundenkontakt
     managerCustomerIds: initialData?.managerCustomerIds ?? [],
   };
 

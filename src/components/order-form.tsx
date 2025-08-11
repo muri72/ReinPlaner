@@ -257,11 +257,31 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
             <p className="text-red-500 text-sm mt-1">{form.formState.errors.customerContactId.message}</p>
           )}
         </div>
-        <CustomerContactCreateDialog
-          customerId={selectedCustomerId}
-          onContactCreated={handleCustomerContactCreated}
-          disabled={!selectedCustomerId}
-        />
+        <Dialog open={isNewObjectDialogOpen} onOpenChange={setIsNewObjectDialogOpen}>
+          <DialogTrigger asChild>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="mb-1"
+              disabled={!form.watch("customerId")}
+              title={!form.watch("customerId") ? "Bitte zuerst einen Kunden auswählen" : "Neues Objekt für diesen Kunden erstellen"}
+            >
+              <PlusCircle className="h-4 w-4" />
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto" aria-labelledby="object-create-dialog-title">
+            <DialogHeader>
+              <DialogTitle id="object-create-dialog-title">Neues Objekt erstellen</DialogTitle>
+            </DialogHeader>
+            <ObjectForm
+              initialData={{ customerId: form.watch("customerId") }}
+              onSubmit={handleCreateObject}
+              submitButtonText="Objekt erstellen"
+              onSuccess={() => setIsNewObjectDialogOpen(false)}
+            />
+          </DialogContent>
+        </Dialog>
       </div>
       <div className="flex items-end gap-2">
         <div className="flex-grow">
@@ -280,31 +300,11 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
             <p className="text-red-500 text-sm mt-1">{form.formState.errors.objectId.message}</p>
           )}
         </div>
-        <Dialog open={isNewObjectDialogOpen} onOpenChange={setIsNewObjectDialogOpen}>
-          <DialogTrigger asChild>
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              className="mb-1"
-              disabled={!form.watch("customerId")}
-              title={!form.watch("customerId") ? "Bitte zuerst einen Kunden auswählen" : "Neues Objekt für diesen Kunden erstellen"}
-            >
-              <PlusCircle className="h-4 w-4" />
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Neues Objekt erstellen</DialogTitle>
-            </DialogHeader>
-            <ObjectForm
-              initialData={{ customerId: form.watch("customerId") }}
-              onSubmit={handleCreateObject}
-              submitButtonText="Objekt erstellen"
-              onSuccess={() => setIsNewObjectDialogOpen(false)}
-            />
-          </DialogContent>
-        </Dialog>
+        <CustomerContactCreateDialog
+          customerId={selectedCustomerId}
+          onContactCreated={handleCustomerContactCreated}
+          disabled={!selectedCustomerId}
+        />
       </div>
       <div>
         <Label htmlFor="employeeId">Zugewiesener Mitarbeiter (optional)</Label>
