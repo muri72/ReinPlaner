@@ -36,8 +36,9 @@ export async function updateProfile(formData: FormData) {
     const sanitizedLastName = (lastName || '').replace(/[^a-zA-Z0-9]/g, '_');
     
     const fileExt = avatarFile.name.split('.').pop();
-    // Create a more descriptive and organized file path
-    const filePath = `${user.id}_${sanitizedFirstName}_${sanitizedLastName}/avatar.${fileExt}`;
+    // Create a more descriptive and organized file path in the format: vorname-nachname-userid
+    const folderName = `${sanitizedFirstName}-${sanitizedLastName}-${user.id}`.replace(/--/g, '-').replace(/^-|-$/g, '');
+    const filePath = `${folderName}/avatar.${fileExt}`;
 
     const { error: uploadError } = await supabase.storage
       .from('avatars')
