@@ -7,24 +7,34 @@ import { startOfMonth, endOfMonth } from 'date-fns';
 export async function getFinancialOverview(year: number, month: number) {
   const supabase = createAdminClient();
 
-  const startDate = startOfMonth(new Date(year, month - 1));
-  const endDate = endOfMonth(new Date(year, month - 1));
+  const startDate = new Date(year, month - 1, 1);
+  const endDate = new Date(year, month, 1); // Start of next month for correct range
 
   try {
-    // 1. Personalkosten berechnen
-    const { data: timeEntries, error: timeEntriesError } = await supabase
+    // Get default hourly rate for employees
+    const { data: defaultRateData, error: defaultRateError } = await supabase
+      .from('app_settings')
+      .select('value')
+      .eq('key', 'default_employee_hourly_rate')
+      .single();
+    if (defaultRateError) throw defaultRateError;
+    const defaultEmployeeRate = Number(defaultRateData?.value) || 14.25; // Fallback
+
+    // 1. Personalkosten berechnen (basierend auf Netto-Stunden)
+    const { data: costTimeEntries, error: timeEntriesError } = await supabase
       .from('time_entries')
-      .select('duration_minutes, employees(hourly_rate)')
-      .not('employee_id', 'is', null) // Nur Einträge mit zugewiesenen Mitarbeitern berücksichtigen
+      .select('duration_minutes, break_minutes, employees(hourly_rate)')
+      .not('employee_id', 'is', null)
       .gte('start_time', startDate.toISOString())
-      .lte('start_time', endDate.toISOString());
+      .lt('start_time', endDate.toISOString());
 
     if (timeEntriesError) throw timeEntriesError;
 
-    const totalCosts = timeEntries.reduce((acc, entry) => {
+    const totalCosts = costTimeEntries.reduce((acc, entry) => {
       const employee = Array.isArray(entry.employees) ? entry.employees[0] : entry.employees;
-      const hourlyRate = employee?.hourly_rate || 14.25; // Fallback auf 14.25
-      const hoursWorked = (entry.duration_minutes || 0) / 60;
+      const hourlyRate = employee?.hourly_rate || defaultEmployeeRate;
+      const netMinutes = (entry.duration_minutes || 0) - (entry.break_minutes || 0);
+      const hoursWorked = netMinutes / 60;
       return acc + (hoursWorked * Number(hourlyRate));
     }, 0);
 
@@ -49,16 +59,15 @@ export async function getFinancialOverview(year: number, month: number) {
       .from('time_entries')
       .select('duration_minutes, orders(service_type, order_type, fixed_monthly_price)')
       .gte('start_time', startDate.toISOString())
-      .lte('start_time', endDate.toISOString());
+      .lt('start_time', endDate.toISOString());
 
     if (hourlyEntriesError) throw hourlyEntriesError;
 
     hourlyTimeEntries.forEach(entry => {
       const order = Array.isArray(entry.orders) ? entry.orders[0] : entry.orders;
-      // Nur Einnahmen für Aufträge berechnen, die KEINEN festen Monatspreis haben
       if (order && (order.order_type !== 'permanent' || !order.fixed_monthly_price)) {
-        const rate = serviceRates.get(order.service_type || '') || 24.00; // Fallback auf 24.00
-        const hoursWorked = (entry.duration_minutes || 0) / 60;
+        const rate = serviceRates.get(order.service_type || '') || 24.00; // Fallback
+        const hoursWorked = (entry.duration_minutes || 0) / 60; // Revenue is based on gross hours
         totalRevenue += hoursWorked * rate;
       }
     });
