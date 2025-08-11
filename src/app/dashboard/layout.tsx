@@ -93,14 +93,12 @@ export default async function DashboardLayout({
                 </Button>
               </Link>
             )}
-            {(isAdmin || isManager) && (
-              <Link href="/dashboard/finances" passHref>
-                <Button variant="ghost" className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
-                  <DollarSign className="mr-2 h-4 w-4" />
-                  Finanzen
-                </Button>
-              </Link>
-            )}
+            <Link href="/dashboard/finances" passHref>
+              <Button variant="ghost" className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
+                <DollarSign className="mr-2 h-4 w-4" />
+                Finanzen
+              </Button>
+            </Link>
             <Link href="/dashboard/feedback" passHref>
               <Button variant="ghost" className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
                 <Star className="mr-2 h-4 w-4" />
