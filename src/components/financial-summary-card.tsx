@@ -16,8 +16,8 @@ export function FinancialSummaryCard({ title, value, isCost, isProfit }: Financi
   };
 
   return (
-    <Card>
-      <CardHeader>
+    <Card className="flex-1 min-w-[180px]"> {/* Ensure cards can flex and have a minimum width */}
+      <CardHeader className="pb-2"> {/* Reduced padding for mobile */}
         <CardTitle className="text-sm font-medium">{title}</CardTitle>
       </CardHeader>
       <CardContent>

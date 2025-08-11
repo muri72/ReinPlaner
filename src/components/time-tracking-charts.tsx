@@ -21,9 +21,9 @@ export function TimeTrackingCharts({ weeklyData, monthlyData }: TimeTrackingChar
         <CardHeader>
           <CardTitle>Wöchentliche Stunden</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="h-[300px] w-full"> {/* Ensure fixed height for responsiveness */}
           {weeklyData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height="100%">
               <BarChart data={weeklyData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="name" />
@@ -34,7 +34,7 @@ export function TimeTrackingCharts({ weeklyData, monthlyData }: TimeTrackingChar
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <p className="text-center text-muted-foreground">Keine wöchentlichen Daten verfügbar.</p>
+            <p className="text-center text-muted-foreground text-sm py-4">Keine wöchentlichen Daten verfügbar.</p>
           )}
         </CardContent>
       </Card>
@@ -43,9 +43,9 @@ export function TimeTrackingCharts({ weeklyData, monthlyData }: TimeTrackingChar
         <CardHeader>
           <CardTitle>Monatliche Stunden</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="h-[300px] w-full"> {/* Ensure fixed height for responsiveness */}
           {monthlyData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height="100%">
               <BarChart data={monthlyData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="name" />
@@ -56,7 +56,7 @@ export function TimeTrackingCharts({ weeklyData, monthlyData }: TimeTrackingChar
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <p className="text-center text-muted-foreground">Keine monatlichen Daten verfügbar.</p>
+            <p className="text-center text-muted-foreground text-sm py-4">Keine monatlichen Daten verfügbar.</p>
           )}
         </CardContent>
       </Card>

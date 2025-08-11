@@ -17,12 +17,12 @@ export function OrderStatusChart({ data }: OrderStatusChartProps) {
 
   if (filteredData.length === 0) {
     return (
-      <Card>
+      <Card className="col-span-full lg:col-span-2">
         <CardHeader>
           <CardTitle>Auftragsstatus-Verteilung</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-center text-muted-foreground">Keine Auftragsdaten verfügbar.</p>
+          <p className="text-center text-muted-foreground text-sm py-4">Keine Auftragsdaten verfügbar.</p> {/* Adjusted text size and padding */}
         </CardContent>
       </Card>
     );
@@ -33,8 +33,8 @@ export function OrderStatusChart({ data }: OrderStatusChartProps) {
       <CardHeader>
         <CardTitle>Auftragsstatus-Verteilung</CardTitle>
       </CardHeader>
-      <CardContent>
-        <ResponsiveContainer width="100%" height={300}>
+      <CardContent className="h-[300px] w-full"> {/* Ensure fixed height for responsiveness */}
+        <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
               data={filteredData}

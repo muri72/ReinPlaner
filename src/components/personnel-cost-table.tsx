@@ -34,37 +34,39 @@ export function PersonnelCostTable({ data, totalHours, totalCost }: PersonnelCos
   };
 
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead className="text-base font-semibold">Mitarbeiter</TableHead>
-          <TableHead className="text-right text-base font-semibold">Geleistete Stunden</TableHead>
-          <TableHead className="text-right text-base font-semibold">Gesamtkosten</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {data.length === 0 ? (
+    <div className="overflow-x-auto"> {/* Added overflow-x-auto for mobile scrolling */}
+      <Table>
+        <TableHeader>
           <TableRow>
-            <TableCell colSpan={3} className="h-24 text-center text-sm text-muted-foreground">
-              Keine Personalkosten für diesen Monat gefunden.
-            </TableCell>
+            <TableHead className="text-base font-semibold min-w-[150px]">Mitarbeiter</TableHead> {/* Added min-width */}
+            <TableHead className="text-right text-base font-semibold min-w-[120px]">Geleistete Stunden</TableHead>
+            <TableHead className="text-right text-base font-semibold min-w-[120px]">Gesamtkosten</TableHead>
           </TableRow>
-        ) : (
-          data.map((employee) => (
-            <TableRow key={employee.employee_id}>
-              <TableCell className="font-medium text-sm">{`${employee.first_name} ${employee.last_name}`}</TableCell>
-              <TableCell className="text-right text-sm">{formatHours(employee.total_hours)}</TableCell>
-              <TableCell className="text-right text-sm text-destructive">{formatCurrency(employee.total_cost)}</TableCell>
+        </TableHeader>
+        <TableBody>
+          {data.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={3} className="h-24 text-center text-sm text-muted-foreground">
+                Keine Personalkosten für diesen Monat gefunden.
+              </TableCell>
             </TableRow>
-          ))
-        )}
-      </TableBody>
-      <TableFooter>
-        <TableRow>
-          <TableCell colSpan={2} className="font-bold text-base text-right">Gesamt</TableCell>
-          <TableCell className="text-right font-bold text-base text-destructive">{formatCurrency(totalCost)}</TableCell>
-        </TableRow>
-      </TableFooter>
-    </Table>
+          ) : (
+            data.map((employee) => (
+              <TableRow key={employee.employee_id}>
+                <TableCell className="font-medium text-sm">{`${employee.first_name} ${employee.last_name}`}</TableCell>
+                <TableCell className="text-right text-sm">{formatHours(employee.total_hours)}</TableCell>
+                <TableCell className="text-right text-sm text-destructive">{formatCurrency(employee.total_cost)}</TableCell>
+              </TableRow>
+            ))
+          )}
+        </TableBody>
+        <TableFooter>
+          <TableRow>
+            <TableCell colSpan={2} className="font-bold text-base text-right">Gesamt</TableCell>
+            <TableCell className="text-right font-bold text-base text-destructive">{formatCurrency(totalCost)}</TableCell>
+          </TableRow>
+        </TableFooter>
+      </Table>
+    </div>
   );
 }
