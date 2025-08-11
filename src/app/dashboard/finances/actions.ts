@@ -90,6 +90,16 @@ export async function getMonthlyFinancialsForAllOrders(year: number, month: numb
   return { success: true, message: "Daten geladen.", data };
 }
 
+export async function getMonthlyPersonnelCosts(year: number, month: number) {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase.rpc('get_monthly_personnel_costs', { p_year: year, p_month: month });
+  if (error) {
+    console.error("Fehler beim Abrufen der monatlichen Personalkosten:", error);
+    return { success: false, message: error.message, data: null };
+  }
+  return { success: true, message: "Daten geladen.", data };
+}
+
 export async function getServiceRates() {
   const supabase = await createClient();
   const { data, error } = await supabase.from('service_rates').select('*');

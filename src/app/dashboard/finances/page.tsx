@@ -6,6 +6,7 @@ import { ServiceRateManager } from "@/components/service-rate-manager";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { OrderFinancialsAnalysis } from "@/components/order-financials-analysis";
 import { DefaultRateManager } from "@/components/default-rate-manager";
+import { PersonnelCostAnalysis } from "@/components/personnel-cost-analysis";
 
 export default async function FinancesPage() {
   const supabase = await createClient();
@@ -61,6 +62,18 @@ export default async function FinancesPage() {
         </CardHeader>
         <CardContent>
           <OrderFinancialsAnalysis />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Personalkosten-Analyse</CardTitle>
+          <CardDescription>
+            Detaillierte Aufschlüsselung der Personalkosten pro Mitarbeiter für den ausgewählten Monat.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <PersonnelCostAnalysis />
         </CardContent>
       </Card>
 
