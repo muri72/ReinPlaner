@@ -8,7 +8,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import {
   Home, Briefcase, Users, ContactRound, Building, UsersRound, Clock, CalendarOff,
   CalendarCheck, TrendingUp, FileText, Star
-} from "lucide-react"; // Removed Settings, User, LogOut
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // Definieren der Rollen-Typen
@@ -92,10 +92,11 @@ const navItems: NavItem[] = [
 interface SidebarNavProps {
   isCollapsed: boolean;
   currentUserRole: UserRole;
-  onSignOut: () => Promise<void>; // Pass signOut action
+  onSignOut: () => Promise<void>;
+  onLinkClick?: () => void; // Neue Prop
 }
 
-export function SidebarNav({ isCollapsed, currentUserRole, onSignOut }: SidebarNavProps) {
+export function SidebarNav({ isCollapsed, currentUserRole, onSignOut, onLinkClick }: SidebarNavProps) {
   const pathname = usePathname();
 
   const filteredNavItems = navItems.filter(item => {
@@ -120,7 +121,7 @@ export function SidebarNav({ isCollapsed, currentUserRole, onSignOut }: SidebarN
               </h3>
             )}
             {item.children.map(child => (
-              <Link key={child.href} href={child.href} passHref>
+              <Link key={child.href} href={child.href} passHref onClick={onLinkClick}> {/* onClick hinzugefügt */}
                 <TooltipProvider delayDuration={300}>
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -143,8 +144,7 @@ export function SidebarNav({ isCollapsed, currentUserRole, onSignOut }: SidebarN
             ))}
           </div>
         ) : (
-          // Hier ist item vom Typ NavLinkItem, daher sind href und icon garantiert vorhanden
-          <Link key={item.href} href={item.href} passHref>
+          <Link key={item.href} href={item.href} passHref onClick={onLinkClick}> {/* onClick hinzugefügt */}
             <TooltipProvider delayDuration={300}>
               <Tooltip>
                 <TooltipTrigger asChild>

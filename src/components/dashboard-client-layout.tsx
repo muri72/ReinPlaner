@@ -18,13 +18,14 @@ interface DashboardClientLayoutProps {
 
 export function DashboardClientLayout({ children, currentUserRole, onSignOut }: DashboardClientLayoutProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isSheetOpen, setIsSheetOpen] = useState(false); // Neuer Zustand für das mobile Menü
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row">
       {/* Mobile Header and Navigation */}
       <header className="md:hidden w-full bg-sidebar text-sidebar-foreground border-b border-sidebar-border p-4 flex items-center justify-between">
         <div className="flex items-center">
-          <Sheet>
+          <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}> {/* Sheet an Zustand binden */}
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon">
                 <Menu className="h-6 w-6" />
@@ -34,7 +35,7 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut }: 
               side="left"
               className={cn(
                 "w-64 text-sidebar-foreground border-r border-sidebar-border p-4 flex flex-col",
-                "bg-sidebar/80 backdrop-blur-xl" // Semi-transparenter Hintergrund mit Blur-Effekt
+                "bg-sidebar/80 backdrop-blur-xl"
               )}
             >
               <SheetHeader>
@@ -47,7 +48,12 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut }: 
                 </div>
               </SheetHeader>
               <nav className="flex-grow space-y-2">
-                <SidebarNav isCollapsed={false} currentUserRole={currentUserRole} onSignOut={onSignOut} />
+                <SidebarNav
+                  isCollapsed={false}
+                  currentUserRole={currentUserRole}
+                  onSignOut={onSignOut}
+                  onLinkClick={() => setIsSheetOpen(false)} // Funktion zum Schließen übergeben
+                />
               </nav>
             </SheetContent>
           </Sheet>
