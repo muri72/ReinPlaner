@@ -13,7 +13,7 @@ export default async function ProfilePage() {
 
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
-    .select('first_name, last_name')
+    .select('first_name, last_name, avatar_url, email_notifications_enabled')
     .eq('id', user.id)
     .single();
 
@@ -36,6 +36,8 @@ export default async function ProfilePage() {
             initialData={{
                 firstName: profile?.first_name || null,
                 lastName: profile?.last_name || null,
+                avatarUrl: profile?.avatar_url || null, // Hinzugefügt
+                emailNotificationsEnabled: profile?.email_notifications_enabled ?? true, // Hinzugefügt
             }}
             />
         </div>
