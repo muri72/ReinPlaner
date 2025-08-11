@@ -16,7 +16,8 @@ export async function createOrderFeedback(formData: FormData): Promise<{ success
   const orderId = formData.get('orderId') as string;
   const rating = Number(formData.get('rating'));
   const comment = formData.get('comment') as string | null;
-  const images = formData.getAll('images') as File[];
+  // KORREKTUR: Sicherstellen, dass nur File-Objekte verarbeitet werden.
+  const images = formData.getAll('images').filter((f): f is File => f instanceof File);
 
   if (!orderId || !rating) {
     return { success: false, message: "Auftrags-ID und Bewertung sind erforderlich." };
@@ -143,7 +144,8 @@ export async function createGeneralFeedback(formData: FormData): Promise<{ succe
   const customerId = formData.get('customerId') as string | null;
   const subject = formData.get('subject') as string | null;
   const message = formData.get('message') as string;
-  const images = formData.getAll('images') as File[];
+  // KORREKTUR: Sicherstellen, dass nur File-Objekte verarbeitet werden.
+  const images = formData.getAll('images').filter((f): f is File => f instanceof File);
 
   if (!message) {
     return { success: false, message: "Eine Nachricht ist erforderlich." };
