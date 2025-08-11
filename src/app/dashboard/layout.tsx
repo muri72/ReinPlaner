@@ -1,10 +1,11 @@
 import React from "react";
 import Link from "next/link";
-import { Home, ListTodo, User, Users, Briefcase, UsersRound, Building, ContactRound, Settings, Clock, FileText, CalendarOff, CalendarCheck, Star } from "lucide-react"; // Star hinzugefügt
+import { Home, ListTodo, User, Users, Briefcase, UsersRound, Building, ContactRound, Settings, Clock, FileText, CalendarOff, CalendarCheck, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { signOut } from "@/app/dashboard/actions";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import { NotificationBell } from "@/components/notification-bell"; // Importiert
 
 export default async function DashboardLayout({
   children,
@@ -18,7 +19,6 @@ export default async function DashboardLayout({
     redirect("/login");
   }
 
-  // Fetch the current user's role to conditionally show the "Benutzer" and "Arbeitszeitnachweise" link
   const { data: userProfile, error: profileError } = await supabase
     .from('profiles')
     .select('role')
@@ -30,10 +30,12 @@ export default async function DashboardLayout({
 
   return (
     <div className="min-h-screen flex">
-      {/* Sidebar */}
       <aside className="w-64 bg-sidebar text-sidebar-foreground border-r border-sidebar-border p-4 flex flex-col">
         <div className="flex-grow">
-          <h2 className="text-2xl font-bold mb-6 text-sidebar-primary-foreground">ARIS</h2>
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-bold text-sidebar-primary-foreground">ARIS</h2>
+            <NotificationBell />
+          </div>
           <nav className="space-y-2">
             <Link href="/dashboard" passHref>
               <Button variant="ghost" className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
@@ -97,7 +99,7 @@ export default async function DashboardLayout({
                 Feedback
               </Button>
             </Link>
-            {(isAdmin || isManager) && ( // Only show for admins and managers
+            {(isAdmin || isManager) && (
               <Link href="/dashboard/reports" passHref>
                 <Button variant="ghost" className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
                   <FileText className="mr-2 h-4 w-4" />
@@ -105,7 +107,7 @@ export default async function DashboardLayout({
                 </Button>
               </Link>
             )}
-            {isAdmin && ( // Only show for admins
+            {isAdmin && (
               <Link href="/dashboard/users" passHref>
                 <Button variant="ghost" className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
                   <Settings className="mr-2 h-4 w-4" />
@@ -121,15 +123,12 @@ export default async function DashboardLayout({
             </Link>
           </nav>
         </div>
-        {/* Sign Out Button am unteren Rand der Sidebar */}
         <form action={signOut} className="mt-auto">
           <Button type="submit" variant="destructive" className="w-full">
             Abmelden
           </Button>
         </form>
       </aside>
-
-      {/* Main Content */}
       <main className="flex-grow">
         {children}
       </main>
