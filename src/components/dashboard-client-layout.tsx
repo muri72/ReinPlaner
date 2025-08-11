@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react"; // Korrigierte Import-Anweisung
+import React, { useState } from "react";
 import { Menu, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NotificationBell } from "@/components/notification-bell";
@@ -33,8 +33,8 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut }: 
             <SheetContent
               side="left"
               className={cn(
-                "w-64 bg-sidebar text-sidebar-foreground border-r border-sidebar-border p-4 flex flex-col",
-                "bg-gradient-to-br from-sidebar-background to-sidebar-accent"
+                "w-64 text-sidebar-foreground border-r border-sidebar-border p-4 flex flex-col",
+                "bg-sidebar/80 backdrop-blur-xl" // Semi-transparenter Hintergrund mit Blur-Effekt
               )}
             >
               <SheetHeader>
