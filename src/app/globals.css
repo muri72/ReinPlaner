@@ -14,16 +14,16 @@
     --popover: 0 0% 100%;
     --popover-foreground: 220 10% 15%;
 
-    --primary: 220 80% 40%; /* Deep Blue */
+    --primary: 210 80% 45%; /* Custom Blue from Logo */
     --primary-foreground: 0 0% 100%; /* White */
 
-    --secondary: 210 40% 90%; /* Light Gray-Blue */
-    --secondary-foreground: 220 80% 20%; /* Darker Blue */
+    --secondary: 200 70% 70%; /* Lighter Blue from Logo */
+    --secondary-foreground: 210 80% 20%; /* Darker Blue */
 
     --muted: 210 20% 95%; /* Lighter Gray-Blue */
     --muted-foreground: 210 10% 45%; /* Medium Gray-Blue */
 
-    --accent: 180 70% 40%; /* Vibrant Teal */
+    --accent: 200 80% 60%; /* More vibrant blue accent */
     --accent-foreground: 0 0% 100%; /* White */
 
     --destructive: 0 80% 50%; /* Strong Red */
@@ -37,24 +37,17 @@
 
     --border: 210 20% 85%; /* Light Gray-Blue Border */
     --input: 210 20% 90%; /* Slightly darker input background */
-    --ring: 220 80% 40%; /* Primary color for focus ring */
-
-    /* Border Radius */
-    --radius: 8px; /* Default for rounded-lg */
-    --radius-sm: 2px;
-    --radius-md: 4px;
-    --radius-xl: 12px;
-    --radius-2xl: 16px;
+    --ring: 210 80% 45%; /* Primary color for focus ring */
 
     /* Sidebar Specific Colors (adjusted to new palette) */
     --sidebar-background: 210 20% 98%; /* Very light gray-blue */
     --sidebar-foreground: 220 10% 20%; /* Darker text */
-    --sidebar-primary: 220 80% 30%; /* Darker primary for contrast */
+    --sidebar-primary: 210 80% 35%; /* Darker primary for contrast */
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 210 40% 90%; /* Secondary color for hover */
+    --sidebar-accent: 200 70% 70%; /* Secondary color for hover */
     --sidebar-accent-foreground: 220 80% 20%;
     --sidebar-border: 210 20% 85%;
-    --sidebar-ring: 220 80% 40%;
+    --sidebar-ring: 210 80% 45%;
   }
 
   .dark {
@@ -68,16 +61,16 @@
     --popover: 220 10% 12%;
     --popover-foreground: 220 10% 90%;
 
-    --primary: 220 80% 60%; /* Lighter Blue for dark mode */
+    --primary: 210 80% 65%; /* Lighter Custom Blue for dark mode */
     --primary-foreground: 220 10% 10%; /* Dark background */
 
-    --secondary: 210 20% 25%; /* Darker Gray-Blue */
-    --secondary-foreground: 210 40% 90%; /* Lighter text */
+    --secondary: 200 70% 30%; /* Darker Lighter Blue for dark mode */
+    --secondary-foreground: 200 70% 70%; /* Lighter text */
 
     --muted: 210 15% 20%;
     --muted-foreground: 210 10% 60%;
 
-    --accent: 180 70% 60%; /* Lighter Teal for dark mode */
+    --accent: 200 80% 40%; /* Darker vibrant blue accent for dark mode */
     --accent-foreground: 220 10% 10%;
 
     --destructive: 0 80% 60%; /* Lighter Red for dark mode */
@@ -91,17 +84,17 @@
 
     --border: 210 15% 20%;
     --input: 210 15% 20%;
-    --ring: 220 80% 60%;
+    --ring: 210 80% 65%;
 
     /* Sidebar Specific Colors (adjusted to new palette) */
     --sidebar-background: 220 10% 15%;
     --sidebar-foreground: 220 10% 85%;
-    --sidebar-primary: 220 80% 70%;
+    --sidebar-primary: 210 80% 75%;
     --sidebar-primary-foreground: 220 10% 10%;
-    --sidebar-accent: 210 20% 25%;
-    --sidebar-accent-foreground: 210 40% 90%;
+    --sidebar-accent: 200 70% 30%;
+    --sidebar-accent-foreground: 200 70% 70%;
     --sidebar-border: 210 15% 20%;
-    --sidebar-ring: 220 80% 60%;
+    --sidebar-ring: 210 80% 65%;
   }
 }
 

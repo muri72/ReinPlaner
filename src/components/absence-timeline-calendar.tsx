@@ -27,7 +27,7 @@ const typeTranslations: { [key: string]: string } = {
 const typeColors: { [key: string]: string } = {
   vacation: "bg-primary text-primary-foreground", // Changed to primary
   sick_leave: "bg-warning text-warning-foreground", // Changed to warning
-  training: "bg-success text-success-foreground", // Changed to success
+  training: "bg-accent text-accent-foreground", // Changed to accent
   other: "bg-muted text-muted-foreground", // Changed to muted
 };
 
