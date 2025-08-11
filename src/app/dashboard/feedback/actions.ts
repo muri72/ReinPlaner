@@ -2,10 +2,17 @@
 
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { v4 as uuidv4 } from 'uuid';
 
 // --- ORDER FEEDBACK ACTIONS ---
 
-export async function createOrderFeedback(formData: FormData): Promise<{ success: boolean; message: string }> {
+// This is a new helper action to securely generate upload URLs on the server.
+// The client will use these URLs to upload files directly to Supabase Storage.
+export async function generateSignedUploadUrls(
+  feedbackType: 'order' | 'general',
+  referenceId: string,
+  files: { name: string; type: string }[]
+): Promise<{ success: boolean; message: string; uploads?: { signedUrl: string; publicUrl: string }[] }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -13,34 +20,53 @@ export async function createOrderFeedback(formData: FormData): Promise<{ success
     return { success: false, message: "Benutzer nicht authentifiziert." };
   }
 
-  const orderId = formData.get('orderId') as string;
-  const rating = Number(formData.get('rating'));
-  const comment = formData.get('comment') as string | null;
-  const images = formData.getAll('images').filter((f): f is File => f instanceof File);
+  const supabaseAdmin = createAdminClient();
+  const uploads: { signedUrl: string; publicUrl: string }[] = [];
+
+  for (const file of files) {
+    const folder = feedbackType === 'order' ? referenceId : 'general-feedback';
+    // Create a unique path for each file to prevent overwrites
+    const filePath = `${folder}/${uuidv4()}-${file.name}`;
+
+    const { data, error } = await supabaseAdmin.storage
+      .from("feedback-images")
+      .createSignedUploadUrl(filePath);
+
+    if (error) {
+      console.error("Fehler beim Erstellen der Signed URL:", error);
+      return { success: false, message: `Fehler beim Erstellen der Upload-URL: ${error.message}` };
+    }
+
+    const { data: publicUrlData } = supabaseAdmin.storage.from("feedback-images").getPublicUrl(filePath);
+    
+    uploads.push({
+      signedUrl: data.signedUrl,
+      publicUrl: publicUrlData.publicUrl,
+    });
+  }
+
+  return { success: true, message: "Upload-URLs erfolgreich erstellt.", uploads };
+}
+
+
+// The create action now only receives the final data, not the files themselves.
+export async function createOrderFeedback(data: {
+  orderId: string;
+  rating: number;
+  comment: string | null;
+  imageUrls: string[];
+}): Promise<{ success: boolean; message: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { success: false, message: "Benutzer nicht authentifiziert." };
+  }
+
+  const { orderId, rating, comment, imageUrls } = data;
 
   if (!orderId || !rating) {
     return { success: false, message: "Auftrags-ID und Bewertung sind erforderlich." };
-  }
-
-  let uploadedImageUrls: string[] = [];
-  if (images.length > 0 && images[0].size > 0) {
-    const supabaseAdmin = createAdminClient();
-    
-    // Upload images sequentially to prevent server overload
-    for (const image of images) {
-      const filePath = `${orderId}/${Date.now()}-${Math.random().toString(36).substring(2)}-${image.name}`;
-      const { error: uploadError } = await supabaseAdmin.storage
-        .from("feedback-images")
-        .upload(filePath, image);
-
-      if (uploadError) {
-        console.error("Fehler beim Hochladen eines Bildes:", uploadError);
-        return { success: false, message: `Fehler beim Hochladen des Bildes: ${uploadError.message}` };
-      }
-
-      const { data: urlData } = supabaseAdmin.storage.from("feedback-images").getPublicUrl(filePath);
-      uploadedImageUrls.push(`${urlData.publicUrl}?t=${new Date().getTime()}`);
-    }
   }
 
   const { error } = await supabase
@@ -50,7 +76,7 @@ export async function createOrderFeedback(formData: FormData): Promise<{ success
       user_id: user.id,
       rating: rating,
       comment: comment,
-      image_urls: uploadedImageUrls.length > 0 ? uploadedImageUrls : null,
+      image_urls: imageUrls.length > 0 ? imageUrls : null,
     });
 
   if (error) {
@@ -132,7 +158,12 @@ export async function deleteOrderFeedback(feedbackId: string): Promise<{ success
 
 // --- GENERAL FEEDBACK ACTIONS ---
 
-export async function createGeneralFeedback(formData: FormData): Promise<{ success: boolean; message: string }> {
+export async function createGeneralFeedback(data: {
+  customerId: string | null;
+  subject: string | null;
+  message: string;
+  imageUrls: string[];
+}): Promise<{ success: boolean; message: string }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -140,10 +171,7 @@ export async function createGeneralFeedback(formData: FormData): Promise<{ succe
     return { success: false, message: "Benutzer nicht authentifiziert." };
   }
 
-  const customerId = formData.get('customerId') as string | null;
-  const subject = formData.get('subject') as string | null;
-  const message = formData.get('message') as string;
-  const images = formData.getAll('images').filter((f): f is File => f instanceof File);
+  const { customerId, subject, message, imageUrls } = data;
 
   if (!message) {
     return { success: false, message: "Eine Nachricht ist erforderlich." };
@@ -166,27 +194,6 @@ export async function createGeneralFeedback(formData: FormData): Promise<{ succe
     feedbackEmail = customer.contact_email || null;
   }
 
-  let uploadedImageUrls: string[] = [];
-  if (images.length > 0 && images[0].size > 0) {
-    const supabaseAdmin = createAdminClient();
-
-    // Upload images sequentially to prevent server overload
-    for (const image of images) {
-      const filePath = `general-feedback/${Date.now()}-${Math.random().toString(36).substring(2)}-${image.name}`;
-      const { error: uploadError } = await supabaseAdmin.storage
-        .from("feedback-images")
-        .upload(filePath, image);
-
-      if (uploadError) {
-        console.error("Fehler beim Hochladen eines Bildes:", uploadError);
-        return { success: false, message: `Fehler beim Hochladen eines Bildes: ${uploadError.message}` };
-      }
-
-      const { data: urlData } = supabaseAdmin.storage.from("feedback-images").getPublicUrl(filePath);
-      uploadedImageUrls.push(`${urlData.publicUrl}?t=${new Date().getTime()}`);
-    }
-  }
-
   const { error } = await supabase
     .from('general_feedback')
     .insert({
@@ -195,7 +202,7 @@ export async function createGeneralFeedback(formData: FormData): Promise<{ succe
       email: feedbackEmail,
       subject,
       message,
-      image_urls: uploadedImageUrls.length > 0 ? uploadedImageUrls : null,
+      image_urls: imageUrls.length > 0 ? imageUrls : null,
     });
 
   if (error) {

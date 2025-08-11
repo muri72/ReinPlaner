@@ -11,12 +11,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Star, X } from "lucide-react";
-import { createOrderFeedback } from "@/app/dashboard/feedback/actions";
+import { createOrderFeedback, generateSignedUploadUrls } from "@/app/dashboard/feedback/actions";
 import Image from "next/image";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
-const MAX_TOTAL_FILES = 5;
+const MAX_TOTAL_FILES = 10; // Limit auf 10 erhöht
 
 const feedbackSchema = z.object({
   customerId: z.string().uuid("Bitte wählen Sie einen Kunden aus."),
@@ -133,29 +133,59 @@ export function GiveFeedbackForm() {
 
   const onSubmit = async (data: FeedbackFormValues) => {
     setIsSubmitting(true);
-    const formData = new FormData();
-    formData.append("orderId", data.orderId);
-    formData.append("rating", String(data.rating));
-    if (data.comment) {
-      formData.append("comment", data.comment);
-    }
-    files.forEach(file => {
-      formData.append("images", file);
-    });
+    try {
+      let uploadedImageUrls: string[] = [];
 
-    const result = await createOrderFeedback(formData);
+      if (files.length > 0) {
+        toast.info(`Lade ${files.length} Bilder hoch...`);
+        const fileDetails = files.map(f => ({ name: f.name, type: f.type }));
+        const signedUrlResult = await generateSignedUploadUrls('order', data.orderId, fileDetails);
 
-    if (result.success) {
-      toast.success(result.message);
-      form.reset();
-      setFiles([]);
-      if (userRole !== 'customer') {
-        setSelectedCustomerId(null);
+        if (!signedUrlResult.success || !signedUrlResult.uploads) {
+          throw new Error(signedUrlResult.message);
+        }
+
+        const uploadPromises = signedUrlResult.uploads.map((uploadInfo, index) => {
+          return fetch(uploadInfo.signedUrl, {
+            method: 'PUT',
+            headers: { 'Content-Type': files[index].type },
+            body: files[index],
+          }).then(response => {
+            if (!response.ok) {
+              throw new Error(`Fehler beim Hochladen von Bild: ${files[index].name}`);
+            }
+            return uploadInfo.publicUrl;
+          });
+        });
+
+        uploadedImageUrls = await Promise.all(uploadPromises);
+        toast.success("Alle Bilder erfolgreich hochgeladen!");
       }
-    } else {
-      toast.error(result.message);
+
+      toast.info("Speichere Feedback...");
+      const result = await createOrderFeedback({
+        orderId: data.orderId,
+        rating: data.rating,
+        comment: data.comment || null,
+        imageUrls: uploadedImageUrls,
+      });
+
+      if (result.success) {
+        toast.success(result.message);
+        form.reset();
+        setFiles([]);
+        if (userRole !== 'customer') {
+          setSelectedCustomerId(null);
+        }
+      } else {
+        throw new Error(result.message);
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Ein unerwarteter Fehler ist aufgetreten.");
+      console.error(error);
+    } finally {
+      setIsSubmitting(false);
     }
-    setIsSubmitting(false);
   };
 
   return (
@@ -213,10 +243,10 @@ export function GiveFeedbackForm() {
       </div>
 
       <div>
-        <Label htmlFor="images">{userRole === 'customer' ? '4. Bilder hinzufügen (optional, max. 5)' : '5. Bilder hinzufügen (optional, max. 5)'}</Label>
+        <Label htmlFor="images">{userRole === 'customer' ? '4. Bilder hinzufügen (optional, max. 10)' : '5. Bilder hinzufügen (optional, max. 10)'}</Label>
         <Input id="images" type="file" multiple accept="image/png, image/jpeg, image/webp" onChange={handleFileChange} ref={fileInputRef} className="hidden" />
         <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>Bilder auswählen</Button>
-        <div className="mt-2 grid grid-cols-3 gap-2">
+        <div className="mt-2 grid grid-cols-3 sm:grid-cols-5 gap-2">
           {files.map((file, index) => (
             <div key={index} className="relative">
               <Image src={URL.createObjectURL(file)} alt={`Vorschau ${index}`} width={100} height={100} className="rounded-md object-cover w-full h-24" />
