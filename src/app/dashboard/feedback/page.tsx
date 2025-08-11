@@ -62,25 +62,27 @@ export default async function FeedbackPage() {
     <div className="p-8 space-y-8">
       <h1 className="text-3xl font-bold">Feedback</h1>
       
-      <Card>
-        <CardHeader>
-          <CardTitle>Neues Feedback einreichen</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Tabs defaultValue="orders">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="orders">Auftragsbezogen</TabsTrigger>
-              <TabsTrigger value="general">Allgemein</TabsTrigger>
-            </TabsList>
-            <TabsContent value="orders" className="mt-6">
-              <GiveFeedbackForm />
-            </TabsContent>
-            <TabsContent value="general" className="mt-6">
-              <GeneralDashboardFeedbackForm />
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
+      {currentUserRole !== 'admin' && currentUserRole !== 'manager' && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Neues Feedback einreichen</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Tabs defaultValue="orders">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="orders">Auftragsbezogen</TabsTrigger>
+                <TabsTrigger value="general">Allgemein</TabsTrigger>
+              </TabsList>
+              <TabsContent value="orders" className="mt-6">
+                <GiveFeedbackForm />
+              </TabsContent>
+              <TabsContent value="general" className="mt-6">
+                <GeneralDashboardFeedbackForm />
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+        </Card>
+      )}
 
       <div>
         <h2 className="text-2xl font-bold mt-8 mb-4">Eingegangenes Feedback</h2>
