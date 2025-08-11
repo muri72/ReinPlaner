@@ -61,8 +61,7 @@ export function PersonnelCostTable({ data, totalHours, totalCost }: PersonnelCos
       </TableBody>
       <TableFooter>
         <TableRow>
-          <TableCell className="font-bold text-right">Gesamt</TableCell>
-          <TableCell className="text-right font-bold">{formatHours(totalHours)}</TableCell>
+          <TableCell colSpan={2} className="font-bold text-right">Gesamt</TableCell>
           <TableCell className="text-right font-bold text-destructive">{formatCurrency(totalCost)}</TableCell>
         </TableRow>
       </TableFooter>
