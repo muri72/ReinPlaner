@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import Image from "next/image"; // Importiere Next.js Image Komponente
 
 export default function LoginPage() {
   const supabase = createClient();
@@ -89,49 +90,68 @@ export default function LoginPage() {
           animation: gradient-xy 15s ease infinite;
         }
       `}</style>
-      <div className="relative z-10 w-full max-w-md p-8 space-y-6 bg-background/70 backdrop-blur-xl rounded-xl shadow-elevation-4 border border-border">
-        <h2 className="text-2xl font-bold text-center text-foreground">
-          Anmelden
-        </h2>
-        <form onSubmit={handleLogin} className="space-y-4">
-          <div>
-            <Label htmlFor="email">E-Mail</Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="Ihre E-Mail-Adresse"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
+      <div className="relative z-10 w-full max-w-4xl flex flex-col md:flex-row rounded-xl shadow-elevation-4 border border-border overflow-hidden">
+        {/* Left Side: Login Form */}
+        <div className="w-full md:w-1/2 p-8 space-y-6 bg-background/70 backdrop-blur-xl">
+          <h2 className="text-2xl font-bold text-center text-foreground">
+            Anmelden
+          </h2>
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div>
+              <Label htmlFor="email">E-Mail</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="Ihre E-Mail-Adresse"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="password">Passwort</Label>
+              <Input
+                id="password"
+                type="password"
+                placeholder="Ihr Passwort"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+            </div>
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? "Anmelden..." : "Anmelden"}
+            </Button>
+          </form>
+          <div className="relative flex justify-center text-xs uppercase">
+            <span className="bg-background/70 px-2 text-muted-foreground">
+              Oder
+            </span>
           </div>
-          <div>
-            <Label htmlFor="password">Passwort</Label>
-            <Input
-              id="password"
-              type="password"
-              placeholder="Ihr Passwort"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-          </div>
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? "Anmelden..." : "Anmelden"}
+          <Button
+            onClick={handleDemoLogin}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+            disabled={loading}
+          >
+            {loading ? "Demo-Anmeldung..." : "Als Demo-Benutzer anmelden"}
           </Button>
-        </form>
-        <div className="relative flex justify-center text-xs uppercase">
-          <span className="bg-background/70 px-2 text-muted-foreground">
-            Oder
-          </span>
         </div>
-        <Button
-          onClick={handleDemoLogin}
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-          disabled={loading}
-        >
-          {loading ? "Demo-Anmeldung..." : "Als Demo-Benutzer anmelden"}
-        </Button>
+
+        {/* Right Side: Logo and Description */}
+        <div className="hidden md:flex w-full md:w-1/2 bg-primary/90 text-primary-foreground p-8 flex-col items-center justify-center text-center">
+          <Image
+            src="/home.png" // Pfad zum Logo
+            alt="ARIS Management Logo"
+            width={200} // Angepasste Größe
+            height={200} // Angepasste Größe
+            className="mb-6"
+          />
+          <h3 className="text-2xl font-bold mb-2">Willkommen bei ARIS Management</h3>
+          <p className="text-sm opacity-90">
+            Ihre umfassende Lösung für Glas- und Gebäudereinigung.
+            Verwalten Sie Kunden, Objekte, Mitarbeiter und Aufträge effizient an einem Ort.
+          </p>
+        </div>
       </div>
     </div>
   );
