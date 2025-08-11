@@ -23,8 +23,8 @@ export default async function ReportsPage() {
   }
 
   return (
-    <div className="p-8 space-y-8">
-      <h1 className="text-3xl font-bold">Arbeitszeitnachweise</h1>
+    <div className="p-4 md:p-8 space-y-8">
+      <h1 className="text-2xl md:text-3xl font-bold">Arbeitszeitnachweise</h1>
       <WorkTimeReportForm />
     </div>
   );

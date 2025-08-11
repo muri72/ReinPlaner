@@ -42,22 +42,22 @@ export default async function CustomersPage({
 
   if (error) {
     console.error("Fehler beim Laden der Kunden:", error);
-    return <div className="p-8 text-sm">Fehler beim Laden der Kunden.</div>;
+    return <div className="p-4 md:p-8 text-sm">Fehler beim Laden der Kunden.</div>;
   }
 
   return (
-    <div className="p-8 space-y-8">
-      <h1 className="text-3xl font-bold">Ihre Kunden</h1>
+    <div className="p-4 md:p-8 space-y-8">
+      <h1 className="text-2xl md:text-3xl font-bold">Ihre Kunden</h1>
 
       <div className="mb-4">
         <SearchInput placeholder="Kunden suchen..." />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
         {customers.length === 0 && !query ? (
           <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30">
-            <Users className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-            <p className="text-lg font-semibold">Noch keine Kunden vorhanden</p>
+            <Users className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
+            <p className="text-base md:text-lg font-semibold">Noch keine Kunden vorhanden</p>
             <p className="text-sm">Fügen Sie Ihren ersten Kunden hinzu, um loszulegen.</p>
             <div className="mt-4">
               <Button onClick={() => { /* Logic to open create form or scroll to it */ }} className="transition-colors duration-200">
@@ -68,15 +68,15 @@ export default async function CustomersPage({
           </div>
         ) : customers.length === 0 && query ? (
           <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30">
-            <Users className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-            <p className="text-lg font-semibold">Keine Kunden gefunden</p>
+            <Users className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
+            <p className="text-base md:text-lg font-semibold">Keine Kunden gefunden</p>
             <p className="text-sm">Ihre Suche nach "{query}" ergab keine Treffer.</p>
           </div>
         ) : (
           customers.map((customer) => (
             <Card key={customer.id} className="shadow-elevation-1">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-lg font-semibold">{customer.name}</CardTitle>
+                <CardTitle className="text-base md:text-lg font-semibold">{customer.name}</CardTitle>
                 <div className="flex items-center space-x-2">
                   <CustomerEditDialog customer={customer} />
                   <DeleteCustomerButton customerId={customer.id} />
@@ -115,7 +115,7 @@ export default async function CustomersPage({
         )}
       </div>
 
-      <h2 className="text-2xl font-bold mt-8">Neuen Kunden hinzufügen</h2>
+      <h2 className="text-xl md:text-2xl font-bold mt-8">Neuen Kunden hinzufügen</h2>
       <CustomerForm onSubmit={createCustomer} submitButtonText="Kunden hinzufügen" />
     </div>
   );

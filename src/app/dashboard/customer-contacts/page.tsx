@@ -55,7 +55,7 @@ export default async function CustomerContactsPage({
 
   if (error) {
     console.error("Fehler beim Laden der Kundenkontakte:", error);
-    return <div className="p-8 text-sm">Fehler beim Laden der Kundenkontakte.</div>;
+    return <div className="p-4 md:p-8 text-sm">Fehler beim Laden der Kundenkontakte.</div>;
   }
 
   const displayContacts: DisplayCustomerContact[] = contacts?.map(contact => ({
@@ -71,18 +71,18 @@ export default async function CustomerContactsPage({
   })) || [];
 
   return (
-    <div className="p-8 space-y-8">
-      <h1 className="text-3xl font-bold">Ihre Kundenkontakte</h1>
+    <div className="p-4 md:p-8 space-y-8">
+      <h1 className="text-2xl md:text-3xl font-bold">Ihre Kundenkontakte</h1>
 
       <div className="mb-4">
         <SearchInput placeholder="Kundenkontakte suchen..." />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
         {displayContacts.length === 0 && !query ? (
           <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30">
-            <ContactRound className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-            <p className="text-lg font-semibold">Noch keine Kundenkontakte vorhanden</p>
+            <ContactRound className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
+            <p className="text-base md:text-lg font-semibold">Noch keine Kundenkontakte vorhanden</p>
             <p className="text-sm">Fügen Sie einen neuen Kontakt hinzu, um Ihre Kundenbeziehungen zu verwalten.</p>
             <div className="mt-4">
               <Button onClick={() => { /* Logic to open create form or scroll to it */ }} className="transition-colors duration-200">
@@ -93,15 +93,15 @@ export default async function CustomerContactsPage({
           </div>
         ) : displayContacts.length === 0 && query ? (
           <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30">
-            <ContactRound className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-            <p className="text-lg font-semibold">Keine Kundenkontakte gefunden</p>
+            <ContactRound className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
+            <p className="text-base md:text-lg font-semibold">Keine Kundenkontakte gefunden</p>
             <p className="text-sm">Ihre Suche nach "{query}" ergab keine Treffer.</p>
           </div>
         ) : (
           displayContacts.map((contact) => (
             <Card key={contact.id} className="shadow-elevation-1">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-lg font-semibold">{contact.first_name} {contact.last_name}</CardTitle>
+                <CardTitle className="text-base md:text-lg font-semibold">{contact.first_name} {contact.last_name}</CardTitle>
                 <div className="flex items-center space-x-2">
                   <CustomerContactEditDialog contact={contact} />
                   <DeleteCustomerContactButton contactId={contact.id} />
@@ -137,7 +137,7 @@ export default async function CustomerContactsPage({
         )}
       </div>
 
-      <h2 className="text-2xl font-bold mt-8">Neuen Kundenkontakt hinzufügen</h2>
+      <h2 className="text-xl md:text-2xl font-bold mt-8">Neuen Kundenkontakt hinzufügen</h2>
       <CustomerContactForm onSubmit={createCustomerContact} submitButtonText="Kundenkontakt hinzufügen" />
     </div>
   );

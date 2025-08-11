@@ -98,24 +98,24 @@ export default async function ObjectsPage({
 
   if (error) {
     console.error("Fehler beim Laden der Objekte:", error);
-    return <div className="p-8 text-sm">Fehler beim Laden der Objekte.</div>;
+    return <div className="p-4 md:p-8 text-sm">Fehler beim Laden der Objekte.</div>;
   }
 
   const dayNames = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 
   return (
-    <div className="p-8 space-y-8">
-      <h1 className="text-3xl font-bold">Ihre Objekte</h1>
+    <div className="p-4 md:p-8 space-y-8">
+      <h1 className="text-2xl md:text-3xl font-bold">Ihre Objekte</h1>
 
       <div className="mb-4">
         <SearchInput placeholder="Objekte suchen..." />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
         {objects && objects.length === 0 && !query ? (
           <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30">
-            <Building className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-            <p className="text-lg font-semibold">Noch keine Objekte vorhanden</p>
+            <Building className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
+            <p className="text-base md:text-lg font-semibold">Noch keine Objekte vorhanden</p>
             <p className="text-sm">Fügen Sie ein neues Objekt hinzu, um es zu verwalten.</p>
             <div className="mt-4">
               <Button onClick={() => { /* Logic to open create form or scroll to it */ }} className="transition-colors duration-200">
@@ -126,15 +126,15 @@ export default async function ObjectsPage({
           </div>
         ) : objects && objects.length === 0 && query ? (
           <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30">
-            <Building className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-            <p className="text-lg font-semibold">Keine Objekte gefunden</p>
+            <Building className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
+            <p className="text-base md:text-lg font-semibold">Keine Objekte gefunden</p>
             <p className="text-sm">Ihre Suche nach "{query}" ergab keine Treffer.</p>
           </div>
         ) : (
           objects?.map((object) => (
             <Card key={object.id} className="shadow-elevation-1">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-lg font-semibold">{object.name}</CardTitle>
+                <CardTitle className="text-base md:text-lg font-semibold">{object.name}</CardTitle>
                 <div className="flex items-center space-x-2">
                   <ObjectEditDialog object={object} />
                   <DeleteObjectButton objectId={object.id} />
@@ -234,7 +234,7 @@ export default async function ObjectsPage({
         )}
       </div>
 
-      <h2 className="text-2xl font-bold mt-8">Neues Objekt hinzufügen</h2>
+      <h2 className="text-xl md:text-2xl font-bold mt-8">Neues Objekt hinzufügen</h2>
       <ObjectForm onSubmit={createObject} submitButtonText="Objekt hinzufügen" />
     </div>
   );

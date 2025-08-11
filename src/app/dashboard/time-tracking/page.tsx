@@ -145,7 +145,7 @@ export default async function TimeTrackingPage({
 
   if (error) {
     console.error("Fehler beim Laden der Zeiteinträge:", error);
-    return <div className="p-8">Fehler beim Laden der Zeiteinträge.</div>;
+    return <div className="p-4 md:p-8">Fehler beim Laden der Zeiteinträge.</div>;
   }
 
   // Daten nach Woche und Monat aggregieren
@@ -207,8 +207,8 @@ export default async function TimeTrackingPage({
   };
 
   return (
-    <div className="p-8 space-y-8">
-      <h1 className="text-3xl font-bold">Zeiterfassung</h1>
+    <div className="p-4 md:p-8 space-y-8">
+      <h1 className="text-2xl md:text-3xl font-bold">Zeiterfassung</h1>
 
       {isAdmin ? (
         <>
@@ -224,23 +224,23 @@ export default async function TimeTrackingPage({
             </CardContent>
           </Card>
           <AdminTimeEntriesOverview currentUserId={currentUser.id} isAdmin={isAdmin} />
-          <h2 className="text-2xl font-bold mt-8">Neuen Zeiteintrag hinzufügen (Admin)</h2>
+          <h2 className="text-xl md:text-2xl font-bold mt-8">Neuen Zeiteintrag hinzufügen (Admin)</h2>
           <TimeEntryForm onSubmit={createTimeEntry} currentUserId={currentUser.id} isAdmin={isAdmin} submitButtonText="Zeiteintrag hinzufügen" />
         </>
       ) : (
         <>
-          <h2 className="text-2xl font-bold mt-8">Ihre Stempeluhr</h2>
+          <h2 className="text-xl md:text-2xl font-bold mt-8">Ihre Stempeluhr</h2>
           <EmployeeTimeTracker userId={currentUser.id} />
 
-          <h2 className="text-2xl font-bold mt-8">Ihre Stundenübersicht (letzte 3 Monate)</h2>
+          <h2 className="text-xl md:text-2xl font-bold mt-8">Ihre Stundenübersicht (letzte 3 Monate)</h2>
           <TimeTrackingCharts weeklyData={formattedWeeklyData} monthlyData={formattedMonthlyData} />
 
-          <h2 className="text-2xl font-bold mt-8">Ihre Zeiteinträge</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <h2 className="text-xl md:text-2xl font-bold mt-8">Ihre Zeiteinträge</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
             {timeEntries.length === 0 ? (
               <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30">
-                <Clock className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-                <p className="text-lg font-semibold">Noch keine Zeiteinträge vorhanden</p>
+                <Clock className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
+                <p className="text-base md:text-lg font-semibold">Noch keine Zeiteinträge vorhanden</p>
                 <p className="text-sm">Beginnen Sie, indem Sie Ihre Arbeitszeit erfassen oder einen Eintrag manuell hinzufügen.</p>
                 <div className="mt-4">
                   <TimeEntryCreateDialog
@@ -256,7 +256,7 @@ export default async function TimeTrackingPage({
               timeEntries.map((entry) => (
                 <Card key={entry.id} className="shadow-elevation-1">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-lg font-semibold">
+                    <CardTitle className="text-base md:text-lg font-semibold">
                       Zeiteintrag
                     </CardTitle>
                     <div className="flex items-center space-x-2">

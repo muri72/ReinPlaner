@@ -26,7 +26,7 @@ export default async function AbsenceRequestsPage() {
 
   if (profileError) {
     console.error("Fehler beim Laden des Benutzerprofils:", profileError);
-    return <div className="p-8">Fehler beim Laden der Benutzerberechtigungen.</div>;
+    return <div className="p-4 md:p-8">Fehler beim Laden der Benutzerberechtigungen.</div>;
   }
 
   const currentUserRole = profile.role as 'admin' | 'manager' | 'employee';
@@ -42,7 +42,7 @@ export default async function AbsenceRequestsPage() {
 
   if (error) {
     console.error("Fehler beim Laden der Abwesenheitsanträge:", error);
-    return <div className="p-8">Fehler beim Laden der Abwesenheitsanträge.</div>;
+    return <div className="p-4 md:p-8">Fehler beim Laden der Abwesenheitsanträge.</div>;
   }
 
   const getStatusBadgeVariant = (status: string) => {
@@ -71,24 +71,24 @@ export default async function AbsenceRequestsPage() {
   };
 
   return (
-    <div className="p-8 space-y-8">
-      <h1 className="text-3xl font-bold">Abwesenheitsverwaltung</h1>
+    <div className="p-4 md:p-8 space-y-8">
+      <h1 className="text-2xl md:text-3xl font-bold">Abwesenheitsverwaltung</h1>
 
       {isAdmin && (
         <div className="space-y-6">
-          <h2 className="text-2xl font-bold">Monatsübersicht Abwesenheiten</h2>
+          <h2 className="text-xl md:text-2xl font-bold">Monatsübersicht Abwesenheiten</h2>
           <AbsenceTimelineCalendar />
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-8">
         <div className="space-y-6">
-          <h2 className="text-2xl font-bold">Antragsübersicht</h2>
+          <h2 className="text-xl md:text-2xl font-bold">Antragsübersicht</h2>
           <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-4">
             {requests.length === 0 ? (
               <div className="text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30">
-                <CalendarOff className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-                <p className="text-lg font-semibold">Keine Anträge gefunden</p>
+                <CalendarOff className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
+                <p className="text-base md:text-lg font-semibold">Keine Anträge gefunden</p>
                 <p className="text-sm">Reichen Sie einen neuen Abwesenheitsantrag ein.</p>
                 <div className="mt-4">
                   <Button onClick={() => { /* Logic to open create form or scroll to it */ }} className="transition-colors duration-200">
@@ -101,7 +101,7 @@ export default async function AbsenceRequestsPage() {
               requests.map((request) => (
                 <Card key={request.id} className="shadow-elevation-1">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-lg font-semibold">
+                    <CardTitle className="text-base md:text-lg font-semibold">
                       {typeTranslations[request.type] || 'Abwesenheit'}
                     </CardTitle>
                     <div className="flex items-center space-x-2">
@@ -144,7 +144,7 @@ export default async function AbsenceRequestsPage() {
         </div>
 
         <div className="space-y-6">
-          <h2 className="text-2xl font-bold">Neuen Antrag einreichen</h2>
+          <h2 className="text-xl md:text-2xl font-bold">Neuen Antrag einreichen</h2>
           <AbsenceRequestForm
             onSubmit={createAbsenceRequest}
             submitButtonText="Antrag einreichen"

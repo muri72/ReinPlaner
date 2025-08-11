@@ -111,7 +111,7 @@ export default async function OrdersPage({
 
   if (error) {
     console.error("Fehler beim Laden der Aufträge:", error);
-    return <div className="p-8">Fehler beim Laden der Aufträge.</div>;
+    return <div className="p-4 md:p-8">Fehler beim Laden der Aufträge.</div>;
   }
 
   const pendingRequests = allOrders.filter(order => order.request_status === 'pending');
@@ -145,30 +145,30 @@ export default async function OrdersPage({
   };
 
   return (
-    <div className="p-8 space-y-8">
-      <h1 className="text-3xl font-bold">Auftragsverwaltung</h1>
+    <div className="p-4 md:p-8 space-y-8">
+      <h1 className="text-2xl md:text-3xl font-bold">Auftragsverwaltung</h1>
       <div className="mb-4">
         <SearchInput placeholder="Aufträge suchen..." />
       </div>
 
       {/* Section for Pending Requests */}
       <div className="space-y-4">
-        <h2 className="text-2xl font-bold flex items-center">
-          <AlertTriangle className="mr-2 h-6 w-6 text-warning" />
+        <h2 className="text-xl md:text-2xl font-bold flex items-center">
+          <AlertTriangle className="mr-2 h-5 w-5 md:h-6 md:w-6 text-warning" />
           Offene Anfragen ({pendingRequests.length})
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
           {pendingRequests.length === 0 ? (
             <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30">
-              <Briefcase className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-              <p className="text-lg font-semibold">Keine offenen Auftragsanfragen</p>
+              <Briefcase className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
+              <p className="text-base md:text-lg font-semibold">Keine offenen Auftragsanfragen</p>
               <p className="text-sm">Alle Anfragen wurden bearbeitet oder es gibt keine neuen.</p>
             </div>
           ) : (
             pendingRequests.map((order) => (
               <Card key={order.id} className="border-warning border-2 shadow-elevation-2">
                 <CardHeader>
-                  <CardTitle className="text-lg font-medium">{order.title}</CardTitle>
+                  <CardTitle className="text-base md:text-lg font-medium">{order.title}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2">
                   <p className="text-sm text-muted-foreground">{order.description}</p>
@@ -186,12 +186,12 @@ export default async function OrdersPage({
 
       {/* Section for Other Orders */}
       <div className="space-y-4 pt-8">
-        <h2 className="text-2xl font-bold">Bestehende Aufträge</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <h2 className="text-xl md:text-2xl font-bold">Bestehende Aufträge</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
           {otherOrders.length === 0 && !query ? (
             <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30">
-              <Briefcase className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-              <p className="text-lg font-semibold">Noch keine Aufträge vorhanden</p>
+              <Briefcase className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
+              <p className="text-base md:text-lg font-semibold">Noch keine Aufträge vorhanden</p>
               <p className="text-sm">Beginnen Sie, indem Sie einen neuen Auftrag hinzufügen.</p>
               <div className="mt-4">
                 <Button onClick={() => { /* Logic to open create form or scroll to it */ }} className="transition-colors duration-200">
@@ -202,8 +202,8 @@ export default async function OrdersPage({
             </div>
           ) : otherOrders.length === 0 && query ? (
             <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30">
-              <Briefcase className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-              <p className="text-lg font-semibold">Keine Aufträge gefunden</p>
+              <Briefcase className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
+              <p className="text-base md:text-lg font-semibold">Keine Aufträge gefunden</p>
               <p className="text-sm">Ihre Suche nach "{query}" ergab keine Treffer.</p>
             </div>
           ) : (
@@ -212,7 +212,7 @@ export default async function OrdersPage({
               return (
                 <Card key={order.id} className="shadow-elevation-1">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-lg font-medium">{order.title}</CardTitle>
+                    <CardTitle className="text-base md:text-lg font-medium">{order.title}</CardTitle>
                     <div className="flex items-center space-x-2">
                       <OrderEditDialog order={order} />
                       <DeleteOrderButton orderId={order.id} />
@@ -253,7 +253,7 @@ export default async function OrdersPage({
         </div>
       </div>
 
-      <h2 className="text-2xl font-bold mt-8">Neuen Auftrag hinzufügen</h2>
+      <h2 className="text-xl md:text-2xl font-bold mt-8">Neuen Auftrag hinzufügen</h2>
       <OrderForm onSubmit={createOrder} submitButtonText="Auftrag hinzufügen" />
     </div>
   );

@@ -49,7 +49,7 @@ export default async function UsersPage({
 
   if (authError) {
     console.error("Fehler beim Laden der Auth-Benutzer:", authError);
-    return <div className="p-8 text-sm">Fehler beim Laden der Benutzer.</div>;
+    return <div className="p-4 md:p-8 text-sm">Fehler beim Laden der Benutzer.</div>;
   }
 
   const userIds = authUsers.users.map(u => u.id);
@@ -59,7 +59,7 @@ export default async function UsersPage({
 
   if (profilesError) {
     console.error("Fehler beim Laden der Profile:", profilesError);
-    return <div className="p-8 text-sm">Fehler beim Laden der Benutzerprofile.</div>;
+    return <div className="p-4 md:p-8 text-sm">Fehler beim Laden der Benutzerprofile.</div>;
   }
 
   // Mitarbeiter- und Kundennamen für die Anzeige abrufen
@@ -125,18 +125,18 @@ export default async function UsersPage({
   };
 
   return (
-    <div className="p-8 space-y-8">
-      <h1 className="text-3xl font-bold">Benutzerverwaltung</h1>
+    <div className="p-4 md:p-8 space-y-8">
+      <h1 className="text-2xl md:text-3xl font-bold">Benutzerverwaltung</h1>
 
       <div className="mb-4">
         <SearchInput placeholder="Benutzer suchen..." />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
         {users.length === 0 && !query ? (
           <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30">
-            <UsersRound className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-            <p className="text-lg font-semibold">Noch keine Benutzer vorhanden</p>
+            <UsersRound className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
+            <p className="text-base md:text-lg font-semibold">Noch keine Benutzer vorhanden</p>
             <p className="text-sm">Registrieren Sie einen neuen Benutzer, um Ihr Team zu erweitern.</p>
             <div className="mt-4">
               <Button onClick={() => { /* Logic to open create form or scroll to it */ }} className="transition-colors duration-200">
@@ -147,15 +147,15 @@ export default async function UsersPage({
           </div>
         ) : users.length === 0 && query ? (
           <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30">
-            <UsersRound className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-            <p className="text-lg font-semibold">Keine Benutzer gefunden</p>
+            <UsersRound className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
+            <p className="text-base md:text-lg font-semibold">Keine Benutzer gefunden</p>
             <p className="text-sm">Ihre Suche nach "{query}" ergab keine Treffer.</p>
           </div>
         ) : (
           users.map((user) => (
             <Card key={user.id} className="shadow-elevation-1">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-lg font-semibold">{user.first_name} {user.last_name}</CardTitle>
+                <CardTitle className="text-base md:text-lg font-semibold">{user.first_name} {user.last_name}</CardTitle>
                 <div className="flex items-center space-x-2">
                   {user.role === 'manager' && (
                     <ManagerCustomerAssignmentDialog
@@ -194,7 +194,7 @@ export default async function UsersPage({
         )}
       </div>
 
-      <h2 className="text-2xl font-bold mt-8">Neuen Benutzer registrieren</h2>
+      <h2 className="text-xl md:text-2xl font-bold mt-8">Neuen Benutzer registrieren</h2>
       <UserForm onSubmit={registerUser} submitButtonText="Benutzer registrieren" />
     </div>
   );

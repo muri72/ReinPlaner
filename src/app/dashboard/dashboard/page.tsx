@@ -69,8 +69,8 @@ export default async function DashboardPage() {
   ];
 
   return (
-    <div className="p-8 space-y-8">
-      <h1 className="text-3xl font-bold">
+    <div className="p-4 md:p-8 space-y-8">
+      <h1 className="text-2xl md:text-3xl font-bold">
         Willkommen im Dashboard, {profile?.first_name || user.email}!
       </h1>
 
@@ -78,40 +78,40 @@ export default async function DashboardPage() {
         <Card className="shadow-elevation-2">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-semibold">Gesamtkunden</CardTitle>
-            <Users className="h-5 w-5 text-muted-foreground" />
+            <Users className="h-4 w-4 md:h-5 md:w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-xl font-bold">{customerCount ?? 0}</div>
+            <div className="text-xl md:text-2xl font-bold">{customerCount ?? 0}</div>
             <p className="text-xs text-muted-foreground">Kunden in Ihrem System</p>
           </CardContent>
         </Card>
         <Card className="shadow-elevation-2">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-semibold">Gesamtobjekte</CardTitle>
-            <Building className="h-5 w-5 text-muted-foreground" />
+            <Building className="h-4 w-4 md:h-5 md:w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-xl font-bold">{objectCount ?? 0}</div>
+            <div className="text-xl md:text-2xl font-bold">{objectCount ?? 0}</div>
             <p className="text-xs text-muted-foreground">Objekte, die Sie verwalten</p>
           </CardContent>
         </Card>
         <Card className="shadow-elevation-2">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-semibold">Gesamte Mitarbeiter</CardTitle>
-            <UsersRound className="h-5 w-5 text-muted-foreground" />
+            <UsersRound className="h-4 w-4 md:h-5 md:w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-xl font-bold">{employeeCount ?? 0}</div>
+            <div className="text-xl md:text-2xl font-bold">{employeeCount ?? 0}</div>
             <p className="text-xs text-muted-foreground">Mitarbeiter in Ihrem Team</p>
           </CardContent>
         </Card>
         <Card className="shadow-elevation-2">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-semibold">Ausstehende Aufträge</CardTitle>
-            <Briefcase className="h-5 w-5 text-muted-foreground" />
+            <Briefcase className="h-4 w-4 md:h-5 md:w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-xl font-bold">{pendingOrderCount ?? 0}</div>
+            <div className="text-xl md:text-2xl font-bold">{pendingOrderCount ?? 0}</div>
             <p className="text-xs text-muted-foreground">Aufträge, die noch bearbeitet werden müssen</p>
           </CardContent>
         </Card>
@@ -122,7 +122,7 @@ export default async function DashboardPage() {
         <OrderStatusChart data={chartData} />
       </div>
 
-      <h2 className="text-2xl font-bold mt-8">Ihr Profil</h2>
+      <h2 className="text-xl md:text-2xl font-bold mt-8">Ihr Profil</h2>
       {profile?.first_name && profile?.last_name && (
         <p className="text-base">
           Ihr vollständiger Name: {profile.first_name} {profile.last_name}
