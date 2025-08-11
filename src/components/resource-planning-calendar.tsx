@@ -45,7 +45,7 @@ function DraggableOrder({ order }: { order: UnassignedOrder }) {
       style={style}
       className={cn("mb-2 p-2 cursor-grab touch-none", isDragging && "shadow-lg z-50 opacity-75")}
     >
-      <CardContent>
+      <CardContent className="p-0"> {/* Adjusted padding */}
         <div className="flex items-center">
           <div {...listeners} {...attributes} className="p-1">
             <GripVertical className="h-5 w-5 text-muted-foreground" />
@@ -130,14 +130,14 @@ export function ResourcePlanningCalendar() {
 
   return (
     <DndContext onDragStart={({ active }) => setActiveId(active.id as string)} onDragEnd={handleDragEnd}>
-      <div className="flex gap-4">
-        <div className="w-1/4">
+      <div className="flex flex-col md:flex-row gap-4"> {/* Changed to flex-col on mobile */}
+        <div className="w-full md:w-1/4"> {/* Adjusted width */}
           <Card className="h-full">
             <CardHeader>
               <CardTitle className="text-lg font-semibold">Ungeplante Aufträge</CardTitle>
               <CardDescription className="text-sm">Ziehen Sie Aufträge auf den Kalender, um sie zuzuweisen.</CardDescription>
             </CardHeader>
-            <CardContent className="h-[60vh] overflow-y-auto">
+            <CardContent className="h-[40vh] md:h-[60vh] overflow-y-auto p-4"> {/* Adjusted height and padding */}
               {loading ? (
                 <>
                   <Skeleton className="h-20 w-full mb-2" />
@@ -157,11 +157,11 @@ export function ResourcePlanningCalendar() {
           </Card>
         </div>
 
-        <div className="w-3/4">
+        <div className="w-full md:w-3/4"> {/* Adjusted width */}
           <div className="p-4 border rounded-lg">
             <div className="flex justify-between items-center mb-4">
               <Button variant="outline" size="icon" onClick={() => setCurrentDate(subDays(currentDate, 7))}><ChevronLeft className="h-4 w-4" /></Button>
-              <h2 className="text-xl font-semibold">
+              <h2 className="text-base sm:text-xl font-semibold text-center"> {/* Adjusted font size */}
                 {format(weekStart, "dd. MMM", { locale: de })} - {format(weekEnd, "dd. MMM yyyy", { locale: de })}
               </h2>
               <Button variant="outline" size="icon" onClick={() => setCurrentDate(addDays(currentDate, 7))}><ChevronRight className="h-4 w-4" /></Button>
@@ -171,9 +171,9 @@ export function ResourcePlanningCalendar() {
               <Table className="min-w-full border-collapse">
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="sticky left-0 bg-card z-10 min-w-[200px] text-sm">Mitarbeiter</TableHead>
+                    <TableHead className="sticky left-0 bg-card z-10 min-w-[120px] sm:min-w-[200px] text-xs sm:text-sm">Mitarbeiter</TableHead> {/* Adjusted min-width and font size */}
                     {weekDays.map((day: Date) => (
-                      <TableHead key={day.toString()} className="text-center text-sm">
+                      <TableHead key={day.toString()} className="text-center text-xs sm:text-sm"> {/* Adjusted font size */}
                         {format(day, "E dd.", { locale: de })}
                       </TableHead>
                     ))}
@@ -196,7 +196,7 @@ export function ResourcePlanningCalendar() {
                       const employee = planningPageData!.planningData[id];
                       return (
                         <TableRow key={id}>
-                          <TableCell className="font-normal sticky left-0 bg-card z-10 text-sm">{employee.name}</TableCell>
+                          <TableCell className="font-normal sticky left-0 bg-card z-10 text-xs sm:text-sm">{employee.name}</TableCell> {/* Adjusted font size */}
                           {weekDays.map((day: Date) => {
                             const dateString = format(day, "yyyy-MM-dd");
                             const dayData = employee.schedule[dateString];
@@ -210,7 +210,7 @@ export function ResourcePlanningCalendar() {
                                   <TooltipProvider>
                                     <Tooltip>
                                       <TooltipTrigger asChild>
-                                        <div className={cn("w-full h-16 flex items-center justify-center font-semibold text-sm", absenceTypeColors[dayData.absenceType || 'other'])}>
+                                        <div className={cn("w-full h-16 flex items-center justify-center font-semibold text-xs sm:text-sm", absenceTypeColors[dayData.absenceType || 'other'])}> {/* Adjusted font size */}
                                           {absenceTypeTranslations[dayData.absenceType || 'other']?.charAt(0)}
                                         </div>
                                       </TooltipTrigger>
@@ -227,7 +227,7 @@ export function ResourcePlanningCalendar() {
                                   <Tooltip>
                                     <TooltipTrigger asChild>
                                       <div className={cn("w-full h-16 flex flex-col items-center justify-center", getWorkloadColor(dayData.totalHours))}>
-                                        <span className="font-semibold text-sm">{dayData.totalHours > 0 ? `${dayData.totalHours.toFixed(1)}h` : '-'}</span>
+                                        <span className="font-semibold text-xs sm:text-sm">{dayData.totalHours > 0 ? `${dayData.totalHours.toFixed(1)}h` : '-'}</span> {/* Adjusted font size */}
                                       </div>
                                     </TooltipTrigger>
                                     {dayData.assignments.length > 0 && (
@@ -247,7 +247,7 @@ export function ResourcePlanningCalendar() {
                 </TableBody>
               </Table>
             </div>
-            <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-sm">
+            <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-xs sm:text-sm"> {/* Adjusted font size */}
               <div className="flex items-center gap-2">
                 <div className="w-3 h-3 rounded-sm bg-success/50"></div>
                 <span>0-5.9 Stunden</span>
