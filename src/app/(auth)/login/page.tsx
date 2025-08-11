@@ -71,19 +71,26 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="relative min-h-screen flex items-center justify-center overflow-hidden">
-      {/* Parallax Background Element */}
-      <div 
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat" 
-        style={{ 
-          backgroundImage: "url('/public/window.svg')", // Replace with a suitable background image
-          backgroundAttachment: "fixed",
-          transform: "scale(1.05)", // Slightly scale for a subtle zoom effect
-          filter: "brightness(0.8) blur(2px)", // Darken and blur slightly
-        }}
-      ></div>
-      <div className="relative z-10 w-full max-w-md p-8 space-y-6 bg-white/80 dark:bg-gray-800/80 backdrop-blur-md rounded-xl shadow-lg border border-border">
-        <h2 className="text-2xl font-bold text-center text-gray-900 dark:text-white">
+    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-primary/20 to-accent/20 animate-gradient-xy">
+      <style jsx>{`
+        @keyframes gradient-xy {
+          0% {
+            background-position: 0% 0%;
+          }
+          50% {
+            background-position: 100% 100%;
+          }
+          100% {
+            background-position: 0% 0%;
+          }
+        }
+        .animate-gradient-xy {
+          background-size: 400% 400%;
+          animation: gradient-xy 15s ease infinite;
+        }
+      `}</style>
+      <div className="relative z-10 w-full max-w-md p-8 space-y-6 bg-background/70 backdrop-blur-xl rounded-xl shadow-elevation-4 border border-border">
+        <h2 className="text-2xl font-bold text-center text-foreground">
           Anmelden
         </h2>
         <form onSubmit={handleLogin} className="space-y-4">
@@ -114,7 +121,7 @@ export default function LoginPage() {
           </Button>
         </form>
         <div className="relative flex justify-center text-xs uppercase">
-          <span className="bg-white dark:bg-gray-800 px-2 text-muted-foreground">
+          <span className="bg-background/70 px-2 text-muted-foreground">
             Oder
           </span>
         </div>
