@@ -31,8 +31,13 @@ export async function updateProfile(formData: FormData) {
 
   // Handle avatar upload
   if (avatarFile && avatarFile.size > 0) {
+    // Sanitize names for the file path to remove special characters
+    const sanitizedFirstName = (firstName || 'user').replace(/[^a-zA-Z0-9]/g, '_');
+    const sanitizedLastName = (lastName || '').replace(/[^a-zA-Z0-9]/g, '_');
+    
     const fileExt = avatarFile.name.split('.').pop();
-    const filePath = `${user.id}/avatar.${fileExt}`;
+    // Create a more descriptive and organized file path
+    const filePath = `${user.id}_${sanitizedFirstName}_${sanitizedLastName}/avatar.${fileExt}`;
 
     const { error: uploadError } = await supabase.storage
       .from('avatars')
