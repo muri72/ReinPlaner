@@ -1,11 +1,11 @@
 import React from "react";
 import Link from "next/link";
-import { Home, ListTodo, User, Users, Briefcase, UsersRound, Building, ContactRound, Settings, Clock, FileText, CalendarOff, CalendarCheck, Star } from "lucide-react";
+import { Home, ListTodo, User, Users, Briefcase, UsersRound, Building, ContactRound, Settings, Clock, FileText, CalendarOff, CalendarCheck, Star, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { signOut } from "@/app/dashboard/actions";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { NotificationBell } from "@/components/notification-bell"; // Importiert
+import { NotificationBell } from "@/components/notification-bell";
 
 export default async function DashboardLayout({
   children,
@@ -86,12 +86,26 @@ export default async function DashboardLayout({
               </Button>
             </Link>
             {(isAdmin || isManager) && (
-              <Link href="/dashboard/planning" passHref>
-                <Button variant="ghost" className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
-                  <CalendarCheck className="mr-2 h-4 w-4" />
-                  Ressourcenplanung
-                </Button>
-              </Link>
+              <>
+                <Link href="/dashboard/planning" passHref>
+                  <Button variant="ghost" className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
+                    <CalendarCheck className="mr-2 h-4 w-4" />
+                    Ressourcenplanung
+                  </Button>
+                </Link>
+                <Link href="/dashboard/finances" passHref>
+                  <Button variant="ghost" className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
+                    <TrendingUp className="mr-2 h-4 w-4" />
+                    Finanzen
+                  </Button>
+                </Link>
+                <Link href="/dashboard/reports" passHref>
+                  <Button variant="ghost" className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
+                    <FileText className="mr-2 h-4 w-4" />
+                    Arbeitszeitnachweise
+                  </Button>
+                </Link>
+              </>
             )}
             <Link href="/dashboard/feedback" passHref>
               <Button variant="ghost" className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
@@ -99,14 +113,6 @@ export default async function DashboardLayout({
                 Feedback
               </Button>
             </Link>
-            {(isAdmin || isManager) && (
-              <Link href="/dashboard/reports" passHref>
-                <Button variant="ghost" className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
-                  <FileText className="mr-2 h-4 w-4" />
-                  Arbeitszeitnachweise
-                </Button>
-              </Link>
-            )}
             {isAdmin && (
               <Link href="/dashboard/users" passHref>
                 <Button variant="ghost" className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
