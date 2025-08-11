@@ -1,10 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { getFinancialOverview, getFinancialsForAllOrders } from "@/lib/actions/finances";
+import { getFinancialOverview } from "@/lib/actions/finances";
 import { FinancialSummaryCard } from "@/components/financial-summary-card";
 import { ServiceRateManager } from "@/components/service-rate-manager";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { OrderFinancialsTable } from "@/components/order-financials-table";
+import { OrderFinancialsAnalysis } from "@/components/order-financials-analysis";
+import { DefaultRateManager } from "@/components/default-rate-manager";
 
 export default async function FinancesPage() {
   const supabase = await createClient();
@@ -25,13 +26,7 @@ export default async function FinancesPage() {
   }
 
   const now = new Date();
-  const financialOverviewPromise = getFinancialOverview(now.getFullYear(), now.getMonth() + 1);
-  const allOrdersFinancialsPromise = getFinancialsForAllOrders();
-
-  const [
-    { data: financialData, message: overviewMessage, success: overviewSuccess },
-    { data: allOrdersData, message: allOrdersMessage, success: allOrdersSuccess }
-  ] = await Promise.all([financialOverviewPromise, allOrdersFinancialsPromise]);
+  const { data: financialData, message: overviewMessage, success: overviewSuccess } = await getFinancialOverview(now.getFullYear(), now.getMonth() + 1);
 
   return (
     <div className="p-8 space-y-8">
@@ -61,29 +56,38 @@ export default async function FinancesPage() {
         <CardHeader>
           <CardTitle>Rentabilitätsanalyse pro Auftrag</CardTitle>
           <CardDescription>
-            Eine detaillierte Aufschlüsselung der Finanzen für jeden einzelnen Auftrag.
+            Wählen Sie einen Monat aus, um eine detaillierte Aufschlüsselung der Finanzen für jeden Auftrag in diesem Zeitraum anzuzeigen.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {allOrdersSuccess && allOrdersData ? (
-            <OrderFinancialsTable data={allOrdersData} />
-          ) : (
-            <p className="text-destructive">{allOrdersMessage}</p>
-          )}
+          <OrderFinancialsAnalysis />
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Stundensätze verwalten</CardTitle>
-          <CardDescription>
-            Legen Sie hier die Netto-Stundensätze für Ihre verschiedenen Dienstleistungen fest.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ServiceRateManager />
-        </CardContent>
-      </Card>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <Card>
+          <CardHeader>
+            <CardTitle>Stundensätze verwalten</CardTitle>
+            <CardDescription>
+              Legen Sie hier die Netto-Stundensätze für Ihre verschiedenen Dienstleistungen fest.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ServiceRateManager />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Standard-Mitarbeiterstundenlohn</CardTitle>
+            <CardDescription>
+              Dieser Wert wird verwendet, wenn für einen Mitarbeiter kein individueller Stundenlohn hinterlegt ist.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <DefaultRateManager />
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

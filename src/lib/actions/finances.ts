@@ -80,11 +80,11 @@ export async function getFinancialOverview(year: number, month: number) {
   }
 }
 
-export async function getFinancialsForAllOrders() {
+export async function getMonthlyFinancialsForAllOrders(year: number, month: number) {
   const supabase = createAdminClient();
-  const { data, error } = await supabase.rpc('get_all_order_financials');
+  const { data, error } = await supabase.rpc('get_monthly_order_financials', { p_year: year, p_month: month });
   if (error) {
-    console.error("Fehler beim Abrufen der Finanzdaten für alle Aufträge:", error);
+    console.error("Fehler beim Abrufen der monatlichen Finanzdaten:", error);
     return { success: false, message: error.message, data: null };
   }
   return { success: true, message: "Daten geladen.", data };
@@ -109,4 +109,33 @@ export async function updateServiceRates(rates: { service_type: string; hourly_r
 
   revalidatePath('/dashboard/finances');
   return { success: true, message: "Stundensätze erfolgreich aktualisiert." };
+}
+
+export async function getDefaultHourlyRate() {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('app_settings')
+    .select('value')
+    .eq('key', 'default_employee_hourly_rate')
+    .single();
+
+  if (error) {
+    return { success: false, message: error.message, data: null };
+  }
+  return { success: true, message: "Standard-Stundensatz geladen.", data: data.value };
+}
+
+export async function updateDefaultHourlyRate(rate: number) {
+  const supabase = createAdminClient();
+  const { error } = await supabase
+    .from('app_settings')
+    .update({ value: String(rate), updated_at: new Date().toISOString() })
+    .eq('key', 'default_employee_hourly_rate');
+
+  if (error) {
+    return { success: false, message: error.message };
+  }
+
+  revalidatePath('/dashboard/finances');
+  return { success: true, message: "Standard-Stundensatz erfolgreich aktualisiert." };
 }
