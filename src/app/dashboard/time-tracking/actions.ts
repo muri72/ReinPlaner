@@ -3,13 +3,12 @@
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { TimeEntryFormValues } from "@/components/time-entry-form";
-import { sendNotification } from "@/lib/actions/notifications";
 
 export async function createTimeEntry(data: TimeEntryFormValues): Promise<{ success: boolean; message: string; newEntryId?: string }> {
   const supabase = await createClient();
-  const { data: { user: creator } } = await supabase.auth.getUser();
+  const { data: { user } } = await supabase.auth.getUser();
 
-  if (!creator) {
+  if (!user) {
     return { success: false, message: "Benutzer nicht authentifiziert." };
   }
 
@@ -28,14 +27,13 @@ export async function createTimeEntry(data: TimeEntryFormValues): Promise<{ succ
     notes,
   } = data;
 
-  let finalUserId = creator.id;
-  let employeeName = "Unbekannt";
+  let finalUserId = user.id;
 
   // If an admin/manager is creating an entry for a specific employee, find that employee's user_id
   if (employeeId) {
     const { data: employee, error: employeeError } = await supabase
       .from('employees')
-      .select('user_id, first_name, last_name')
+      .select('user_id')
       .eq('id', employeeId)
       .single();
 
@@ -44,7 +42,6 @@ export async function createTimeEntry(data: TimeEntryFormValues): Promise<{ succ
       return { success: false, message: "Der ausgewählte Mitarbeiter ist keinem Benutzerkonto zugeordnet." };
     }
     finalUserId = employee.user_id;
-    employeeName = `${employee.first_name} ${employee.last_name}`;
   }
 
   // Combine date and time for start_time
@@ -90,30 +87,17 @@ export async function createTimeEntry(data: TimeEntryFormValues): Promise<{ succ
     return { success: false, message: error.message };
   }
 
-  // Notify employee if the entry was created by someone else
-  if (creator.id !== finalUserId) {
-    await sendNotification({
-      userId: finalUserId,
-      title: "Neuer Zeiteintrag erstellt",
-      message: `Ein Vorgesetzter hat einen neuen Zeiteintrag für Sie am ${startDateTime.toLocaleDateString()} erstellt.`,
-      link: "/dashboard/time-tracking"
-    });
-  }
-
   revalidatePath("/dashboard/time-tracking");
   return { success: true, message: "Zeiteintrag erfolgreich hinzugefügt!", newEntryId: newEntry?.id };
 }
 
 export async function updateTimeEntry(entryId: string, data: Partial<TimeEntryFormValues>) {
   const supabase = await createClient();
-  const { data: { user: editor } } = await supabase.auth.getUser();
+  const { data: { user } } = await supabase.auth.getUser();
 
-  if (!editor) {
+  if (!user) {
     return { success: false, message: "Benutzer nicht authentifiziert." };
   }
-
-  // Get the original entry to find the user_id
-  const { data: originalEntry } = await supabase.from('time_entries').select('user_id').eq('id', entryId).single();
 
   const {
     employeeId,
@@ -175,16 +159,6 @@ export async function updateTimeEntry(entryId: string, data: Partial<TimeEntryFo
   if (error) {
     console.error("Fehler beim Aktualisieren des Zeiteintrags:", error);
     return { success: false, message: error.message };
-  }
-
-  // Notify employee if the entry was updated by someone else
-  if (originalEntry && originalEntry.user_id && editor.id !== originalEntry.user_id) {
-    await sendNotification({
-      userId: originalEntry.user_id,
-      title: "Zeiteintrag aktualisiert",
-      message: `Ein Vorgesetzter hat einen Ihrer Zeiteinträge bearbeitet.`,
-      link: "/dashboard/time-tracking"
-    });
   }
 
   revalidatePath("/dashboard/time-tracking");
