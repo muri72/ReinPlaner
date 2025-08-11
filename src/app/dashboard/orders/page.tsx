@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { OrderForm } from "@/components/order-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Trash2, CalendarDays, Clock, FileText, Wrench, UserRound, AlertTriangle, Star as StarIcon, PlusCircle, Briefcase } from "lucide-react"; // Briefcase hinzugefügt
+import { Trash2, CalendarDays, Clock, FileText, Wrench, UserRound, AlertTriangle, Star as StarIcon, PlusCircle, Briefcase } from "lucide-react";
 import { deleteOrder, createOrder } from "./actions";
 import { OrderEditDialog } from "@/components/order-edit-dialog";
 import { Badge } from "@/components/ui/badge";
@@ -193,6 +193,12 @@ export default async function OrdersPage({
               <Briefcase className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
               <p className="text-lg font-semibold">Noch keine Aufträge vorhanden</p>
               <p className="text-sm">Beginnen Sie, indem Sie einen neuen Auftrag hinzufügen.</p>
+              <div className="mt-4">
+                <Button onClick={() => { /* Logic to open create form or scroll to it */ }} className="transition-colors duration-200">
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Ersten Auftrag hinzufügen
+                </Button>
+              </div>
             </div>
           ) : otherOrders.length === 0 && query ? (
             <div className="col-span-full text-center text-muted-foreground py-8">

@@ -7,6 +7,7 @@ import { CustomerContactEditDialog } from "@/components/customer-contact-edit-di
 import { DeleteCustomerContactButton } from "@/components/delete-customer-contact-button";
 import { Mail, Phone, Briefcase, UserRound, PlusCircle, ContactRound } from "lucide-react";
 import { SearchInput } from "@/components/search-input";
+import { Button } from "@/components/ui/button"; // Hinzugefügt
 
 // Definieren Sie die Schnittstelle für die Kundenkontakt-Daten
 interface DisplayCustomerContact {
@@ -83,6 +84,12 @@ export default async function CustomerContactsPage({
             <ContactRound className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
             <p className="text-lg font-semibold">Noch keine Kundenkontakte vorhanden</p>
             <p className="text-sm">Fügen Sie einen neuen Kontakt hinzu, um Ihre Kundenbeziehungen zu verwalten.</p>
+            <div className="mt-4">
+              <Button onClick={() => { /* Logic to open create form or scroll to it */ }} className="transition-colors duration-200">
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Ersten Kundenkontakt hinzufügen
+              </Button>
+            </div>
           </div>
         ) : displayContacts.length === 0 && query ? (
           <div className="col-span-full text-center text-muted-foreground py-8">

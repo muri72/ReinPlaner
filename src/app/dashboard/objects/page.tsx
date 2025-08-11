@@ -8,6 +8,7 @@ import { DeleteObjectButton } from "@/components/delete-object-button";
 import { MapPin, FileText, Clock, Key, Lock, ShieldCheck, UserRound, PlusCircle, Building } from "lucide-react"; // Neue Icons
 import { SearchInput } from "@/components/search-input";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button"; // Hinzugefügt
 
 // Definieren Sie die Schnittstelle für die Objekt-Daten, wie sie auf dieser Seite verwendet werden
 interface DisplayObject {
@@ -116,6 +117,12 @@ export default async function ObjectsPage({
             <Building className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
             <p className="text-lg font-semibold">Noch keine Objekte vorhanden</p>
             <p className="text-sm">Fügen Sie ein neues Objekt hinzu, um es zu verwalten.</p>
+            <div className="mt-4">
+              <Button onClick={() => { /* Logic to open create form or scroll to it */ }} className="transition-colors duration-200">
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Erstes Objekt hinzufügen
+              </Button>
+            </div>
           </div>
         ) : objects && objects.length === 0 && query ? (
           <div className="col-span-full text-center text-muted-foreground py-8">

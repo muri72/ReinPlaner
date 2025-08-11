@@ -5,7 +5,8 @@ import { FeedbackCard } from "@/components/feedback-card";
 import { GiveFeedbackForm } from "@/components/give-feedback-form";
 import { GeneralDashboardFeedbackForm } from "@/components/general-dashboard-feedback-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { MessageSquare, Star } from "lucide-react";
+import { MessageSquare, Star, PlusCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export default async function FeedbackPage() {
   const supabase = await createClient();
@@ -99,6 +100,14 @@ export default async function FeedbackPage() {
                   <Star className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
                   <p className="text-lg font-semibold">Bisher kein auftragsbezogenes Feedback</p>
                   <p className="text-sm">Wenn Sie Feedback zu einem Auftrag haben, können Sie es hier einreichen.</p>
+                  {currentUserRole !== 'admin' && currentUserRole !== 'manager' && (
+                    <div className="mt-4">
+                      <Button onClick={() => { /* Logic to switch tab or scroll to form */ }} className="transition-colors duration-200">
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Feedback geben
+                      </Button>
+                    </div>
+                  )}
                 </div>
               ) : (
                 mappedOrderFeedback.map((feedback) => (
@@ -120,6 +129,14 @@ export default async function FeedbackPage() {
                   <MessageSquare className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
                   <p className="text-lg font-semibold">Kein allgemeines Feedback vorhanden</p>
                   <p className="text-sm">Wenn Sie allgemeines Feedback haben, können Sie es hier einreichen.</p>
+                  {currentUserRole !== 'admin' && currentUserRole !== 'manager' && (
+                    <div className="mt-4">
+                      <Button onClick={() => { /* Logic to switch tab or scroll to form */ }} className="transition-colors duration-200">
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Feedback geben
+                      </Button>
+                    </div>
+                  )}
                 </div>
               ) : (
                 mappedGeneralFeedback.map((feedback) => (

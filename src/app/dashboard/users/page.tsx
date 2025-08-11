@@ -9,6 +9,7 @@ import { Mail, Briefcase, ShieldCheck, UserRound, UsersRound, PlusCircle } from 
 import { Badge } from "@/components/ui/badge";
 import { SearchInput } from "@/components/search-input";
 import { ManagerCustomerAssignmentDialog } from "@/components/manager-customer-assignment-dialog";
+import { Button } from "@/components/ui/button"; // Hinzugefügt
 
 interface DisplayUser {
   id: string;
@@ -137,6 +138,12 @@ export default async function UsersPage({
             <UsersRound className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
             <p className="text-lg font-semibold">Noch keine Benutzer vorhanden</p>
             <p className="text-sm">Registrieren Sie einen neuen Benutzer, um Ihr Team zu erweitern.</p>
+            <div className="mt-4">
+              <Button onClick={() => { /* Logic to open create form or scroll to it */ }} className="transition-colors duration-200">
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Ersten Benutzer registrieren
+              </Button>
+            </div>
           </div>
         ) : users.length === 0 && query ? (
           <div className="col-span-full text-center text-muted-foreground py-8">

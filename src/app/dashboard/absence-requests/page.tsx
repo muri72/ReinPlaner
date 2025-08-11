@@ -8,6 +8,7 @@ import { createAbsenceRequest } from "./actions";
 import { AbsenceRequestEditDialog } from "@/components/absence-request-edit-dialog";
 import { DeleteAbsenceRequestButton } from "@/components/delete-absence-request-button";
 import { AbsenceTimelineCalendar } from "@/components/absence-timeline-calendar";
+import { Button } from "@/components/ui/button"; // Hinzugefügt
 
 export default async function AbsenceRequestsPage() {
   const supabase = await createClient();
@@ -89,6 +90,12 @@ export default async function AbsenceRequestsPage() {
                 <CalendarOff className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
                 <p className="text-lg font-semibold">Keine Anträge gefunden</p>
                 <p className="text-sm">Reichen Sie einen neuen Abwesenheitsantrag ein.</p>
+                <div className="mt-4">
+                  <Button onClick={() => { /* Logic to open create form or scroll to it */ }} className="transition-colors duration-200">
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Ersten Antrag einreichen
+                  </Button>
+                </div>
               </div>
             ) : (
               requests.map((request) => (

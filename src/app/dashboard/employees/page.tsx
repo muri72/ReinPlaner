@@ -8,6 +8,7 @@ import { DeleteEmployeeButton } from "@/components/delete-employee-button";
 import { Mail, Phone, CalendarDays, UserRoundCheck, UserRoundX, UserRoundMinus, Briefcase, DollarSign, Tag, Building2, FileText, MapPin, Cake, CreditCard, Shield, UsersRound, PlusCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { SearchInput } from "@/components/search-input";
+import { Button } from "@/components/ui/button"; // Hinzugefügt
 
 export default async function EmployeesPage({
   searchParams,
@@ -98,6 +99,12 @@ export default async function EmployeesPage({
             <UsersRound className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
             <p className="text-lg font-semibold">Noch keine Mitarbeiter vorhanden</p>
             <p className="text-sm">Fügen Sie einen neuen Mitarbeiter hinzu, um Ihr Team zu erweitern.</p>
+            <div className="mt-4">
+              <Button onClick={() => { /* Logic to open create form or scroll to it */ }} className="transition-colors duration-200">
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Ersten Mitarbeiter hinzufügen
+              </Button>
+            </div>
           </div>
         ) : employees.length === 0 && query ? (
           <div className="col-span-full text-center text-muted-foreground py-8">

@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { AdminTimeEntriesOverview } from "@/components/admin-time-entries-overview";
 import { TimeEntryEditDialog } from "@/components/time-entry-edit-dialog";
 import { TriggerAutoTimeEntryButton } from "@/components/trigger-auto-time-entry-button";
+import { TimeEntryCreateDialog } from "@/components/time-entry-create-dialog"; // Hinzugefügt
 
 // Definieren Sie die Schnittstelle für die Zeiteintrag-Daten, wie sie auf dieser Seite verwendet werden
 interface DisplayTimeEntry {
@@ -242,7 +243,13 @@ export default async function TimeTrackingPage({
                 <p className="text-lg font-semibold">Noch keine Zeiteinträge vorhanden</p>
                 <p className="text-sm">Beginnen Sie, indem Sie Ihre Arbeitszeit erfassen oder einen Eintrag manuell hinzufügen.</p>
                 <div className="mt-4">
-                  <TimeEntryForm onSubmit={createTimeEntry} currentUserId={currentUser.id} isAdmin={isAdmin} submitButtonText="Zeiteintrag hinzufügen" />
+                  <TimeEntryCreateDialog
+                    currentUserId={currentUser.id}
+                    isAdmin={isAdmin}
+                    triggerButtonText="Ersten Zeiteintrag hinzufügen"
+                    triggerButtonIcon={<PlusCircle className="mr-2 h-4 w-4" />}
+                    triggerButtonClassName="transition-colors duration-200"
+                  />
                 </div>
               </div>
             ) : (

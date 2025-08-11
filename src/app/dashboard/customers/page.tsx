@@ -8,6 +8,7 @@ import { DeleteCustomerButton } from "@/components/delete-customer-button";
 import { Mail, Phone, MapPin, Users, Handshake, PlusCircle } from "lucide-react"; // Neue Icons für Kundentyp
 import { SearchInput } from "@/components/search-input";
 import { Badge } from "@/components/ui/badge"; // Importiere Badge
+import { Button } from "@/components/ui/button"; // Hinzugefügt
 
 export default async function CustomersPage({
   searchParams,
@@ -58,6 +59,12 @@ export default async function CustomersPage({
             <Users className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
             <p className="text-lg font-semibold">Noch keine Kunden vorhanden</p>
             <p className="text-sm">Fügen Sie Ihren ersten Kunden hinzu, um loszulegen.</p>
+            <div className="mt-4">
+              <Button onClick={() => { /* Logic to open create form or scroll to it */ }} className="transition-colors duration-200">
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Ersten Kunden hinzufügen
+              </Button>
+            </div>
           </div>
         ) : customers.length === 0 && query ? (
           <div className="col-span-full text-center text-muted-foreground py-8">
