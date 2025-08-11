@@ -69,9 +69,9 @@ export function OrderPlanningDialog({ order }: OrderPlanningDialogProps) {
       <DialogTrigger asChild>
         <Button variant="default">Planen & Genehmigen</Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[500px]" aria-labelledby="order-planning-dialog-title">
         <DialogHeader>
-          <DialogTitle>Anfrage planen: {order.title}</DialogTitle>
+          <DialogTitle id="order-planning-dialog-title">Anfrage planen: {order.title}</DialogTitle>
           <DialogDescription>
             Wählen Sie einen Mitarbeiter aus, um diese Anfrage zu genehmigen oder lehnen Sie sie ab.
           </DialogDescription>

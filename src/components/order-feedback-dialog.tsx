@@ -20,9 +20,9 @@ export function OrderFeedbackDialog({ orderId }: OrderFeedbackDialogProps) {
           <Star className="mr-2 h-4 w-4" /> Feedback geben
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[425px]" aria-labelledby="order-feedback-dialog-title">
         <DialogHeader>
-          <DialogTitle>Feedback zum Auftrag</DialogTitle>
+          <DialogTitle id="order-feedback-dialog-title">Feedback zum Auftrag</DialogTitle>
         </DialogHeader>
         <OrderFeedbackForm orderId={orderId} onSuccess={() => setOpen(false)} />
       </DialogContent>

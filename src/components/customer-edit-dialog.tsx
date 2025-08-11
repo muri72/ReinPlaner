@@ -36,9 +36,9 @@ export function CustomerEditDialog({ customer }: CustomerEditDialogProps) {
           <Pencil className="h-4 w-4" />
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto" aria-labelledby="customer-edit-dialog-title">
         <DialogHeader>
-          <DialogTitle>Kunden bearbeiten</DialogTitle>
+          <DialogTitle id="customer-edit-dialog-title">Kunden bearbeiten</DialogTitle>
         </DialogHeader>
         <CustomerForm
           initialData={{

@@ -58,9 +58,9 @@ export function OrderFeedbackEditDialog({ feedback }: OrderFeedbackEditDialogPro
       <DialogTrigger asChild>
         <Button variant="ghost" size="icon"><Pencil className="h-4 w-4" /></Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent aria-labelledby="order-feedback-edit-dialog-title">
         <DialogHeader>
-          <DialogTitle>Feedback bearbeiten</DialogTitle>
+          <DialogTitle id="order-feedback-edit-dialog-title">Feedback bearbeiten</DialogTitle>
         </DialogHeader>
         <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
           <div>

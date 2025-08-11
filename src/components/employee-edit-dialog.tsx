@@ -59,9 +59,9 @@ export function EmployeeEditDialog({ employee }: EmployeeEditDialogProps) {
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
-      <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto" aria-labelledby="employee-edit-dialog-title">
         <DialogHeader>
-          <DialogTitle>Mitarbeiter bearbeiten</DialogTitle>
+          <DialogTitle id="employee-edit-dialog-title">Mitarbeiter bearbeiten</DialogTitle>
         </DialogHeader>
         <EmployeeForm
           initialData={{
