@@ -4,7 +4,7 @@ import "./globals.css";
 import { SessionContextProvider } from "@/components/supabase-session-provider";
 import { createClient } from "@/lib/supabase/server";
 import { Toaster } from "@/components/ui/sonner";
-import { ThemeProvider } from "next-themes"; // Import ThemeProvider
+import { ThemeProvider } from "next-themes";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -17,7 +17,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ARIS Management", // Geändert von CleanPro Management
+  title: "ARIS Management",
   description: "Management-Plattform für Reinigungsunternehmen",
 };
 
@@ -30,7 +30,7 @@ export default async function RootLayout({
   const { data: { session } } = await supabase.auth.getSession();
 
   return (
-    <html lang="de" suppressHydrationWarning> {/* suppressHydrationWarning added for next-themes */}
+    <html lang="de" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
