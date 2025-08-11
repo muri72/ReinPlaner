@@ -115,8 +115,9 @@
   body {
     @apply bg-background text-foreground;
     /* Subtle noise pattern for texture */
-    background-image: radial-gradient(circle at center, rgba(0,0,0,0.01) 1px, transparent 1px);
-    background-size: 2px 2px;
+    background-image: radial-gradient(circle at center, rgba(0,0,0,0.01) 1px, transparent 1px),
+                      linear-gradient(to bottom right, hsl(var(--primary) / 0.05), hsl(var(--accent) / 0.05)); /* Subtle gradient overlay */
+    background-size: 2px 2px, 100% 100%;
     background-attachment: fixed; /* Ensure background is fixed for parallax */
   }
 

@@ -6,7 +6,7 @@ const Table = React.forwardRef<
   HTMLTableElement,
   React.HTMLAttributes<HTMLTableElement>
 >(({ className, ...props }, ref) => (
-  <div className="relative w-full overflow-auto rounded-md border bg-background/60 backdrop-blur-sm shadow-elevation-1"> {/* Added styling for glassmorphism */}
+  <div className="w-full overflow-auto rounded-md border bg-card/60 backdrop-blur-sm shadow-elevation-1"> {/* Added glassmorphism to table container */}
     <table
       ref={ref}
       className={cn("w-full caption-bottom text-sm", className)}
@@ -42,10 +42,7 @@ const TableFooter = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <tfoot
     ref={ref}
-    className={cn(
-      "border-t bg-muted/50 font-medium [&>tr]:last:border-b-0",
-      className
-    )}
+    className={cn("border-t bg-muted/50 font-medium [&>tr]:last:text-base", className)}
     {...props}
   />
 ))
@@ -73,7 +70,7 @@ const TableHead = React.forwardRef<
   <th
     ref={ref}
     className={cn(
-      "h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0",
+      "h-12 px-4 text-left align-middle font-semibold text-muted-foreground [&:has([role=checkbox])]:pr-0", // Increased font-weight
       className
     )}
     {...props}
