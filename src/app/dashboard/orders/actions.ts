@@ -3,6 +3,7 @@
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { OrderFormValues } from "@/components/order-form";
+import { sendNotification } from "@/lib/actions/notifications";
 
 export async function createOrder(data: OrderFormValues) {
   const supabase = await createClient();
@@ -58,6 +59,22 @@ export async function createOrder(data: OrderFormValues) {
     return { success: false, message: error.message };
   }
 
+  // Benachrichtigung bei neuer Anfrage
+  if (requestStatus === 'pending') {
+    const supabaseAdmin = createAdminClient();
+    const { data: adminsAndManagers } = await supabaseAdmin.from('profiles').select('id').in('role', ['admin', 'manager']);
+    if (adminsAndManagers) {
+      for (const admin of adminsAndManagers) {
+        await sendNotification({
+          userId: admin.id,
+          title: "Neue Auftragsanfrage",
+          message: `Eine neue Auftragsanfrage "${title}" wurde erstellt.`,
+          link: "/dashboard/orders"
+        });
+      }
+    }
+  }
+
   revalidatePath("/dashboard/orders");
   return { success: true, message: "Auftrag erfolgreich hinzugefügt!" };
 }
@@ -69,6 +86,9 @@ export async function updateOrder(orderId: string, data: OrderFormValues) {
   if (!user) {
     return { success: false, message: "Benutzer nicht authentifiziert." };
   }
+
+  // Originalen Auftrag abrufen, um Änderungen zu vergleichen
+  const { data: originalOrder } = await supabase.from('orders').select('employee_id, title').eq('id', orderId).single();
 
   const { error } = await supabase
     .from('orders')
@@ -90,12 +110,26 @@ export async function updateOrder(orderId: string, data: OrderFormValues) {
       service_type: data.serviceType,
       request_status: data.requestStatus,
     })
-    .eq('id', orderId)
-    .eq('user_id', user.id);
+    .eq('id', orderId);
+    // RLS wird die Berechtigungsprüfung für Updates handhaben
 
   if (error) {
     console.error("Fehler beim Aktualisieren des Auftrags:", error);
     return { success: false, message: error.message };
+  }
+
+  // Benachrichtigung bei Mitarbeiterwechsel
+  if (originalOrder && originalOrder.employee_id !== data.employeeId && data.employeeId) {
+    const supabaseAdmin = createAdminClient();
+    const { data: employeeData } = await supabaseAdmin.from('employees').select('user_id').eq('id', data.employeeId).single();
+    if (employeeData?.user_id) {
+      await sendNotification({
+        userId: employeeData.user_id,
+        title: "Sie wurden einem Auftrag zugewiesen",
+        message: `Sie wurden dem Auftrag "${originalOrder.title}" zugewiesen.`,
+        link: "/dashboard/orders"
+      });
+    }
   }
 
   revalidatePath("/dashboard/orders");
@@ -115,8 +149,8 @@ export async function deleteOrder(formData: FormData): Promise<{ success: boolea
   const { error } = await supabase
     .from('orders')
     .delete()
-    .eq('id', orderId)
-    .eq('user_id', user.id);
+    .eq('id', orderId);
+    // RLS wird die Berechtigungsprüfung für Löschungen handhaben
 
   if (error) {
     console.error("Fehler beim Löschen des Auftrags:", error);
@@ -159,6 +193,22 @@ export async function processOrderRequest(formData: FormData): Promise<{ success
   if (error) {
     console.error("Fehler bei der Bearbeitung der Auftragsanfrage:", error);
     return { success: false, message: error.message };
+  }
+
+  // Benachrichtigung bei Genehmigung
+  if (decision === 'approved' && employeeId) {
+    const supabaseAdmin = createAdminClient();
+    const { data: employeeData } = await supabaseAdmin.from('employees').select('user_id').eq('id', employeeId).single();
+    const { data: orderData } = await supabaseAdmin.from('orders').select('title').eq('id', orderId).single();
+
+    if (employeeData?.user_id && orderData) {
+      await sendNotification({
+        userId: employeeData.user_id,
+        title: "Auftrag genehmigt & zugewiesen",
+        message: `Die Anfrage für "${orderData.title}" wurde genehmigt und Ihnen zugewiesen.`,
+        link: "/dashboard/orders"
+      });
+    }
   }
 
   revalidatePath("/dashboard/orders");
