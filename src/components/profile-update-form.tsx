@@ -1,6 +1,6 @@
 "use client";
 
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Input } from "@/components/ui/input";
@@ -10,12 +10,14 @@ import { toast } from "sonner";
 import { updateProfile } from "@/app/dashboard/actions";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useState, useRef } from "react";
+import { Switch } from "@/components/ui/switch";
 
 const MAX_AVATAR_SIZE = 10 * 1024 * 1024; // 10 MB
 
 const profileSchema = z.object({
   firstName: z.string().max(50, "Vorname ist zu lang").optional(),
   lastName: z.string().max(50, "Nachname ist zu lang").optional(),
+  emailNotificationsEnabled: z.boolean(),
 });
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
@@ -25,6 +27,7 @@ interface ProfileUpdateFormProps {
     firstName: string | null;
     lastName: string | null;
     avatarUrl: string | null;
+    emailNotificationsEnabled: boolean;
   };
 }
 
@@ -38,6 +41,7 @@ export function ProfileUpdateForm({ initialData }: ProfileUpdateFormProps) {
     defaultValues: {
       firstName: initialData.firstName || "",
       lastName: initialData.lastName || "",
+      emailNotificationsEnabled: initialData.emailNotificationsEnabled,
     },
     mode: "onChange",
   });
@@ -59,8 +63,9 @@ export function ProfileUpdateForm({ initialData }: ProfileUpdateFormProps) {
     if (data.firstName) formData.append('firstName', data.firstName);
     if (data.lastName) formData.append('lastName', data.lastName);
     if (file) formData.append('avatar', file);
+    formData.append('emailNotificationsEnabled', String(data.emailNotificationsEnabled));
 
-    if (!data.firstName && !data.lastName && !file) {
+    if (!data.firstName && !data.lastName && !file && data.emailNotificationsEnabled === initialData.emailNotificationsEnabled) {
         toast.info("Keine Änderungen zum Speichern.");
         return;
     }
@@ -116,6 +121,25 @@ export function ProfileUpdateForm({ initialData }: ProfileUpdateFormProps) {
         {form.formState.errors.lastName && (
           <p className="text-red-500 text-sm mt-1">{form.formState.errors.lastName.message}</p>
         )}
+      </div>
+      <div className="flex items-center justify-between rounded-lg border p-4">
+        <div className="space-y-0.5">
+          <Label htmlFor="emailNotificationsEnabled">E-Mail-Benachrichtigungen</Label>
+          <p className="text-sm text-muted-foreground">
+            Erhalten Sie E-Mails für wichtige Ereignisse.
+          </p>
+        </div>
+        <Controller
+          control={form.control}
+          name="emailNotificationsEnabled"
+          render={({ field }) => (
+            <Switch
+              id="emailNotificationsEnabled"
+              checked={field.value}
+              onCheckedChange={field.onChange}
+            />
+          )}
+        />
       </div>
       <Button type="submit" disabled={form.formState.isSubmitting}>
         {form.formState.isSubmitting ? "Speichern..." : "Profil speichern"}

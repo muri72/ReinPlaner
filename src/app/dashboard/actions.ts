@@ -21,13 +21,17 @@ export async function updateProfile(formData: FormData) {
   const firstName = formData.get('firstName') as string | null;
   const lastName = formData.get('lastName') as string | null;
   const avatarFile = formData.get('avatar') as File | null;
+  const emailNotificationsEnabledStr = formData.get('emailNotificationsEnabled') as string | null;
 
-  const profileUpdateData: { first_name?: string; last_name?: string; avatar_url?: string; updated_at: string } = {
+  const profileUpdateData: { first_name?: string; last_name?: string; avatar_url?: string; email_notifications_enabled?: boolean; updated_at: string } = {
     updated_at: new Date().toISOString(),
   };
 
   if (firstName) profileUpdateData.first_name = firstName;
   if (lastName) profileUpdateData.last_name = lastName;
+  if (emailNotificationsEnabledStr !== null) {
+    profileUpdateData.email_notifications_enabled = emailNotificationsEnabledStr === 'true';
+  }
 
   // Handle avatar upload
   if (avatarFile && avatarFile.size > 0) {
