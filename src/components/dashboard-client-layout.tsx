@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { NotificationBell } from "@/components/notification-bell";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { SidebarNav } from "@/components/sidebar-nav";
+import { UserMenu } from "@/components/user-menu"; // Import the new UserMenu component
 import { cn } from "@/lib/utils";
 
 interface DashboardClientLayoutProps {
@@ -31,7 +32,7 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut }: 
             <SheetContent side="left" className="w-64 bg-sidebar text-sidebar-foreground border-r border-sidebar-border p-4 flex flex-col bg-gradient-to-br from-sidebar-background to-sidebar-accent/20">
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-xl font-bold text-sidebar-primary-foreground tracking-tight">ARIS</h2>
-                <NotificationBell />
+                <NotificationBell /> {/* Keep notification bell in mobile sidebar */}
               </div>
               <nav className="flex-grow space-y-2">
                 {/* Mobile nav links will use the same SidebarNav component, but always expanded */}
@@ -41,7 +42,10 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut }: 
           </Sheet>
           <h2 className="text-xl font-bold text-sidebar-primary-foreground tracking-tight ml-4">ARIS</h2>
         </div>
-        <NotificationBell />
+        <div className="flex items-center space-x-2"> {/* Group notification and user menu */}
+          <NotificationBell />
+          <UserMenu currentUserRole={currentUserRole} onSignOut={onSignOut} />
+        </div>
       </header>
 
       {/* Desktop Sidebar */}
@@ -72,6 +76,10 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut }: 
         <SidebarNav isCollapsed={isCollapsed} currentUserRole={currentUserRole} onSignOut={onSignOut} />
       </aside>
       <main className="flex-grow p-4 md:p-8">
+        <div className="hidden md:flex justify-end items-center mb-4 space-x-4"> {/* Desktop header right side */}
+          <NotificationBell />
+          <UserMenu currentUserRole={currentUserRole} onSignOut={onSignOut} />
+        </div>
         {children}
       </main>
     </div>

@@ -7,8 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Home, Briefcase, Users, ContactRound, Building, UsersRound, Clock, CalendarOff,
-  CalendarCheck, TrendingUp, FileText, Star, Settings, User, LogOut
-} from "lucide-react";
+  CalendarCheck, TrendingUp, FileText, Star
+} from "lucide-react"; // Removed Settings, User, LogOut
 import { cn } from "@/lib/utils";
 
 // Definieren der Rollen-Typen
@@ -86,20 +86,6 @@ const navItems: NavItem[] = [
     href: "/dashboard/feedback",
     icon: Star,
     roles: ['admin', 'manager', 'employee', 'customer'],
-  },
-  // User Profile Submenu will be a separate component/section, not part of this direct nav list
-  // For now, keep Profile and Users here, but they will move to the user menu later.
-  {
-    title: "Profil",
-    href: "/dashboard/profile",
-    icon: User,
-    roles: ['admin', 'manager', 'employee', 'customer'],
-  },
-  {
-    title: "Benutzer",
-    href: "/dashboard/users",
-    icon: Settings,
-    roles: ['admin'],
   },
 ];
 
@@ -180,27 +166,6 @@ export function SidebarNav({ isCollapsed, currentUserRole, onSignOut }: SidebarN
           </Link>
         )
       ))}
-      {/* Logout button - will be moved to user menu later */}
-      <div className="pt-4">
-        <TooltipProvider delayDuration={300}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                onClick={onSignOut}
-                variant="destructive"
-                className={cn(
-                  "w-full",
-                  isCollapsed ? "justify-center" : "justify-start"
-                )}
-              >
-                <LogOut className={cn("h-5 w-5", !isCollapsed && "mr-2")} />
-                {!isCollapsed && "Abmelden"}
-              </Button>
-            </TooltipTrigger>
-            {isCollapsed && <TooltipContent side="right">Abmelden</TooltipContent>}
-          </Tooltip>
-        </TooltipProvider>
-      </div>
     </div>
   );
 }
