@@ -33,97 +33,97 @@ export default async function DashboardLayout({
       <aside className="w-64 bg-sidebar text-sidebar-foreground border-r border-sidebar-border p-4 flex flex-col">
         <div className="flex-grow">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-bold text-sidebar-primary-foreground tracking-tight">ARIS</h2> {/* Changed to text-xl and tracking-tight */}
+            <h2 className="text-xl font-bold text-sidebar-primary-foreground tracking-tight">ARIS</h2>
             <NotificationBell />
           </div>
           <nav className="space-y-2">
             <Link href="/dashboard" passHref>
-              <Button variant="ghost" className="w-full justify-start text-base text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"> {/* Changed to text-base */}
-                <Home className="mr-2 h-5 w-5" /> {/* Changed to h-5 w-5 */}
+              <Button variant="ghost" className="w-full justify-start text-base text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
+                <Home className="mr-2 h-5 w-5" />
                 Dashboard
               </Button>
             </Link>
             <Link href="/dashboard/orders" passHref>
-              <Button variant="ghost" className="w-full justify-start text-base text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"> {/* Changed to text-base */}
-                <Briefcase className="mr-2 h-5 w-5" /> {/* Changed to h-5 w-5 */}
+              <Button variant="ghost" className="w-full justify-start text-base text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
+                <Briefcase className="mr-2 h-5 w-5" />
                 Aufträge
               </Button>
             </Link>
             <Link href="/dashboard/customers" passHref>
-              <Button variant="ghost" className="w-full justify-start text-base text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"> {/* Changed to text-base */}
-                <Users className="mr-2 h-5 w-5" /> {/* Changed to h-5 w-5 */}
+              <Button variant="ghost" className="w-full justify-start text-base text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
+                <Users className="mr-2 h-5 w-5" />
                 Kunden
               </Button>
             </Link>
             <Link href="/dashboard/customer-contacts" passHref>
-              <Button variant="ghost" className="w-full justify-start text-base text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"> {/* Changed to text-base */}
-                <ContactRound className="mr-2 h-5 w-5" /> {/* Changed to h-5 w-5 */}
+              <Button variant="ghost" className="w-full justify-start text-base text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
+                <ContactRound className="mr-2 h-5 w-5" />
                 Kundenkontakte
               </Button>
             </Link>
             <Link href="/dashboard/objects" passHref>
-              <Button variant="ghost" className="w-full justify-start text-base text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"> {/* Changed to text-base */}
-                <Building className="mr-2 h-5 w-5" /> {/* Changed to h-5 w-5 */}
+              <Button variant="ghost" className="w-full justify-start text-base text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
+                <Building className="mr-2 h-5 w-5" />
                 Objekte
               </Button>
             </Link>
             <Link href="/dashboard/employees" passHref>
-              <Button variant="ghost" className="w-full justify-start text-base text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"> {/* Changed to text-base */}
-                <UsersRound className="mr-2 h-5 w-5" /> {/* Changed to h-5 w-5 */}
+              <Button variant="ghost" className="w-full justify-start text-base text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
+                <UsersRound className="mr-2 h-5 w-5" />
                 Mitarbeiter
               </Button>
             </Link>
             <Link href="/dashboard/time-tracking" passHref>
-              <Button variant="ghost" className="w-full justify-start text-base text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"> {/* Changed to text-base */}
-                <Clock className="mr-2 h-5 w-5" /> {/* Changed to h-5 w-5 */}
+              <Button variant="ghost" className="w-full justify-start text-base text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
+                <Clock className="mr-2 h-5 w-5" />
                 Zeiterfassung
               </Button>
             </Link>
             <Link href="/dashboard/absence-requests" passHref>
-              <Button variant="ghost" className="w-full justify-start text-base text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"> {/* Changed to text-base */}
-                <CalendarOff className="mr-2 h-5 w-5" /> {/* Changed to h-5 w-5 */}
+              <Button variant="ghost" className="w-full justify-start text-base text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
+                <CalendarOff className="mr-2 h-5 w-5" />
                 Abwesenheiten
               </Button>
             </Link>
             {(isAdmin || isManager) && (
               <>
                 <Link href="/dashboard/planning" passHref>
-                  <Button variant="ghost" className="w-full justify-start text-base text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"> {/* Changed to text-base */}
-                    <CalendarCheck className="mr-2 h-5 w-5" /> {/* Changed to h-5 w-5 */}
+                  <Button variant="ghost" className="w-full justify-start text-base text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
+                    <CalendarCheck className="mr-2 h-5 w-5" />
                     Ressourcenplanung
                   </Button>
                 </Link>
                 <Link href="/dashboard/finances" passHref>
-                  <Button variant="ghost" className="w-full justify-start text-base text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"> {/* Changed to text-base */}
-                    <TrendingUp className="mr-2 h-5 w-5" /> {/* Changed to h-5 w-5 */}
+                  <Button variant="ghost" className="w-full justify-start text-base text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
+                    <TrendingUp className="mr-2 h-5 w-5" />
                     Finanzen
                   </Button>
                 </Link>
                 <Link href="/dashboard/reports" passHref>
-                  <Button variant="ghost" className="w-full justify-start text-base text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"> {/* Changed to text-base */}
-                    <FileText className="mr-2 h-5 w-5" /> {/* Changed to h-5 w-5 */}
+                  <Button variant="ghost" className="w-full justify-start text-base text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
+                    <FileText className="mr-2 h-5 w-5" />
                     Arbeitszeitnachweise
                   </Button>
                 </Link>
               </>
             )}
             <Link href="/dashboard/feedback" passHref>
-              <Button variant="ghost" className="w-full justify-start text-base text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"> {/* Changed to text-base */}
-                <Star className="mr-2 h-5 w-5" /> {/* Changed to h-5 w-5 */}
+              <Button variant="ghost" className="w-full justify-start text-base text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
+                <Star className="mr-2 h-5 w-5" />
                 Feedback
               </Button>
             </Link>
             {isAdmin && (
               <Link href="/dashboard/users" passHref>
-                <Button variant="ghost" className="w-full justify-start text-base text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"> {/* Changed to text-base */}
-                  <Settings className="mr-2 h-5 w-5" /> {/* Changed to h-5 w-5 */}
+                <Button variant="ghost" className="w-full justify-start text-base text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
+                  <Settings className="mr-2 h-5 w-5" />
                   Benutzer
                 </Button>
               </Link>
             )}
             <Link href="/dashboard/profile" passHref>
-              <Button variant="ghost" className="w-full justify-start text-base text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"> {/* Changed to text-base */}
-                <User className="mr-2 h-5 w-5" /> {/* Changed to h-5 w-5 */}
+              <Button variant="ghost" className="w-full justify-start text-base text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
+                <User className="mr-2 h-5 w-5" />
                 Profil
               </Button>
             </Link>

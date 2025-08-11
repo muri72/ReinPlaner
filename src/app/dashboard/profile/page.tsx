@@ -29,15 +29,15 @@ export default async function ProfilePage() {
       <div className="grid gap-8 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg font-semibold">Profilinformationen</CardTitle> {/* Changed to text-lg font-semibold */}
-            <CardDescription className="text-sm"> {/* Changed to text-sm */}
+            <CardTitle className="text-lg font-semibold">Profilinformationen</CardTitle>
+            <CardDescription className="text-sm">
               Aktualisieren Sie hier Ihren Namen und Ihr Profilbild. Ihre E-Mail-Adresse kann nicht geändert werden.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-1">
-              <p className="text-sm font-medium text-muted-foreground">E-Mail</p> {/* Changed to text-sm */}
-              <p className="text-base font-semibold">{user.email}</p> {/* Changed to text-base */}
+              <p className="text-sm font-medium text-muted-foreground">E-Mail</p>
+              <p className="text-base font-semibold">{user.email}</p>
             </div>
             <ProfileUpdateForm
               initialData={{

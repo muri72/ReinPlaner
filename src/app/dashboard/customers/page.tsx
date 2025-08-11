@@ -41,7 +41,7 @@ export default async function CustomersPage({
 
   if (error) {
     console.error("Fehler beim Laden der Kunden:", error);
-    return <div className="p-8 text-sm">Fehler beim Laden der Kunden.</div>; {/* Changed to text-sm */}
+    return <div className="p-8 text-sm">Fehler beim Laden der Kunden.</div>;
   }
 
   return (
@@ -54,21 +54,21 @@ export default async function CustomersPage({
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {customers.length === 0 ? (
-          <p className="col-span-full text-center text-muted-foreground text-sm"> {/* Changed to text-sm */}
+          <p className="col-span-full text-center text-muted-foreground text-sm">
             {query ? "Keine Kunden gefunden, die Ihrer Suche entsprechen." : "Noch keine Kunden vorhanden. Fügen Sie einen hinzu!"}
           </p>
         ) : (
           customers.map((customer) => (
             <Card key={customer.id}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-lg font-semibold">{customer.name}</CardTitle> {/* Changed to text-lg font-semibold */}
+                <CardTitle className="text-lg font-semibold">{customer.name}</CardTitle>
                 <div className="flex items-center space-x-2">
                   <CustomerEditDialog customer={customer} />
                   <DeleteCustomerButton customerId={customer.id} />
                 </div>
               </CardHeader>
               <CardContent className="space-y-2">
-                <div className="flex items-center text-sm text-muted-foreground"> {/* Changed to text-sm */}
+                <div className="flex items-center text-sm text-muted-foreground">
                   {customer.customer_type === 'partner' ? (
                     <Handshake className="mr-2 h-4 w-4 flex-shrink-0" />
                   ) : (
@@ -77,19 +77,19 @@ export default async function CustomersPage({
                   <span>Typ: <Badge variant="secondary">{customer.customer_type === 'partner' ? 'Partner' : 'Kunde'}</Badge></span>
                 </div>
                 {customer.address && (
-                  <div className="flex items-center text-sm text-muted-foreground"> {/* Changed to text-sm */}
+                  <div className="flex items-center text-sm text-muted-foreground">
                     <MapPin className="mr-2 h-4 w-4 flex-shrink-0" />
                     <span>{customer.address}</span>
                   </div>
                 )}
                 {customer.contact_email && (
-                  <div className="flex items-center text-sm text-muted-foreground"> {/* Changed to text-sm */}
+                  <div className="flex items-center text-sm text-muted-foreground">
                     <Mail className="mr-2 h-4 w-4 flex-shrink-0" />
                     <span>{customer.contact_email}</span>
                   </div>
                 )}
                 {customer.contact_phone && (
-                  <div className="flex items-center text-sm text-muted-foreground"> {/* Changed to text-sm */}
+                  <div className="flex items-center text-sm text-muted-foreground">
                     <Phone className="mr-2 h-4 w-4 flex-shrink-0" />
                     <span>{customer.contact_phone}</span>
                   </div>

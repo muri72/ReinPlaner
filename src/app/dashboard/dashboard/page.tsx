@@ -77,42 +77,42 @@ export default async function DashboardPage() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-semibold">Gesamtkunden</CardTitle> {/* Changed to font-semibold */}
-            <Users className="h-5 w-5 text-muted-foreground" /> {/* Changed to h-5 w-5 */}
+            <CardTitle className="text-sm font-semibold">Gesamtkunden</CardTitle>
+            <Users className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-xl font-bold">{customerCount ?? 0}</div> {/* Changed to text-xl */}
-            <p className="text-xs text-muted-foreground">Kunden in Ihrem System</p> {/* Changed to text-xs */}
+            <div className="text-xl font-bold">{customerCount ?? 0}</div>
+            <p className="text-xs text-muted-foreground">Kunden in Ihrem System</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-semibold">Gesamtobjekte</CardTitle> {/* Changed to font-semibold */}
-            <Building className="h-5 w-5 text-muted-foreground" /> {/* Changed to h-5 w-5 */}
+            <CardTitle className="text-sm font-semibold">Gesamtobjekte</CardTitle>
+            <Building className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-xl font-bold">{objectCount ?? 0}</div> {/* Changed to text-xl */}
-            <p className="text-xs text-muted-foreground">Objekte, die Sie verwalten</p> {/* Changed to text-xs */}
+            <div className="text-xl font-bold">{objectCount ?? 0}</div>
+            <p className="text-xs text-muted-foreground">Objekte, die Sie verwalten</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-semibold">Gesamte Mitarbeiter</CardTitle> {/* Changed to font-semibold */}
-            <UsersRound className="h-5 w-5 text-muted-foreground" /> {/* Changed to h-5 w-5 */}
+            <CardTitle className="text-sm font-semibold">Gesamte Mitarbeiter</CardTitle>
+            <UsersRound className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-xl font-bold">{employeeCount ?? 0}</div> {/* Changed to text-xl */}
-            <p className="text-xs text-muted-foreground">Mitarbeiter in Ihrem Team</p> {/* Changed to text-xs */}
+            <div className="text-xl font-bold">{employeeCount ?? 0}</div>
+            <p className="text-xs text-muted-foreground">Mitarbeiter in Ihrem Team</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-semibold">Ausstehende Aufträge</CardTitle> {/* Changed to font-semibold */}
-            <Briefcase className="h-5 w-5 text-muted-foreground" /> {/* Changed to h-5 w-5 */}
+            <CardTitle className="text-sm font-semibold">Ausstehende Aufträge</CardTitle>
+            <Briefcase className="h-5 w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-xl font-bold">{pendingOrderCount ?? 0}</div> {/* Changed to text-xl */}
-            <p className="text-xs text-muted-foreground">Aufträge, die noch bearbeitet werden müssen</p> {/* Changed to text-xs */}
+            <div className="text-xl font-bold">{pendingOrderCount ?? 0}</div>
+            <p className="text-xs text-muted-foreground">Aufträge, die noch bearbeitet werden müssen</p>
           </CardContent>
         </Card>
       </div>
@@ -124,7 +124,7 @@ export default async function DashboardPage() {
 
       <h2 className="text-2xl font-bold mt-8">Ihr Profil</h2>
       {profile?.first_name && profile?.last_name && (
-        <p className="text-base"> {/* Changed to text-base */}
+        <p className="text-base">
           Ihr vollständiger Name: {profile.first_name} {profile.last_name}
         </p>
       )}
