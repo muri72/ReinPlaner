@@ -120,9 +120,9 @@ export function ResourcePlanningCalendar() {
   const employeeIds = planningPageData ? Object.keys(planningPageData.planningData) : [];
 
   const getWorkloadColor = (hours: number) => {
-    if (hours > 8) return "bg-destructive/30";
-    if (hours > 6) return "bg-warning/30";
-    if (hours > 0) return "bg-success/30";
+    if (hours > 8) return "bg-destructive/50"; // Erhöhte Deckkraft
+    if (hours > 6) return "bg-warning/50";     // Erhöhte Deckkraft
+    if (hours > 0) return "bg-success/50";     // Erhöhte Deckkraft
     return "bg-transparent";
   };
 
@@ -247,15 +247,15 @@ export function ResourcePlanningCalendar() {
             </div>
             <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-sm">
               <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-sm bg-success/30"></div>
+                <div className="w-3 h-3 rounded-sm bg-success/50"></div>
                 <span>0-6 Stunden</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-sm bg-warning/30"></div>
+                <div className="w-3 h-3 rounded-sm bg-warning/50"></div>
                 <span>6-8 Stunden</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-sm bg-destructive/30"></div>
+                <div className="w-3 h-3 rounded-sm bg-destructive/50"></div>
                 <span>&gt; 8 Stunden</span>
               </div>
               {Object.entries(absenceTypeTranslations).map(([key, label]) => (
