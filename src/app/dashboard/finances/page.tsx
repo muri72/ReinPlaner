@@ -35,8 +35,8 @@ export default async function FinancesPage() {
       
       <Card>
         <CardHeader>
-          <CardTitle>Monatsübersicht</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-lg font-semibold">Monatsübersicht</CardTitle>
+          <CardDescription className="text-sm">
             Eine Zusammenfassung Ihrer Finanzen für den aktuellen Monat.
           </CardDescription>
         </CardHeader>
@@ -48,15 +48,17 @@ export default async function FinancesPage() {
               <FinancialSummaryCard title="Gewinn" value={financialData.profit} isProfit />
             </div>
           ) : (
-            <p className="text-destructive">{overviewMessage}</p>
+            <p className="text-destructive text-sm">
+              {overviewMessage}
+            </p>
           )}
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>Rentabilitätsanalyse pro Auftrag</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-lg font-semibold">Rentabilitätsanalyse pro Auftrag</CardTitle>
+          <CardDescription className="text-sm">
             Wählen Sie einen Monat aus, um eine detaillierte Aufschlüsselung der Finanzen für jeden Auftrag in diesem Zeitraum anzuzeigen.
           </CardDescription>
         </CardHeader>
@@ -67,8 +69,8 @@ export default async function FinancesPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Personalkosten-Analyse</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-lg font-semibold">Personalkosten-Analyse</CardTitle>
+          <CardDescription className="text-sm">
             Detaillierte Aufschlüsselung der Personalkosten pro Mitarbeiter für den ausgewählten Monat.
           </CardDescription>
         </CardHeader>
@@ -80,8 +82,8 @@ export default async function FinancesPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         <Card>
           <CardHeader>
-            <CardTitle>Stundensätze verwalten</CardTitle>
-            <CardDescription>
+            <CardTitle className="text-lg font-semibold">Stundensätze verwalten</CardTitle>
+            <CardDescription className="text-sm">
               Legen Sie hier die Netto-Stundensätze für Ihre verschiedenen Dienstleistungen fest.
             </CardDescription>
           </CardHeader>
@@ -91,8 +93,8 @@ export default async function FinancesPage() {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Standard-Mitarbeiterstundenlohn</CardTitle>
-            <CardDescription>
+            <CardTitle className="text-lg font-semibold">Standard-Mitarbeiterstundenlohn</CardTitle>
+            <CardDescription className="text-sm">
               Dieser Wert wird verwendet, wenn für einen Mitarbeiter kein individueller Stundenlohn hinterlegt ist.
             </CardDescription>
           </CardHeader>

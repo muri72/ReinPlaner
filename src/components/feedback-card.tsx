@@ -87,7 +87,7 @@ export function FeedbackCard({ feedback, feedbackType, currentUserId, currentUse
         {feedback.rating !== undefined && (
           <div className="flex items-center gap-1">
             {[1, 2, 3, 4, 5].map((star) => (
-              <Star key={star} className={`h-5 w-5 ${feedback.rating! >= star ? "text-yellow-400 fill-yellow-400" : "text-gray-300"}`} />
+              <Star key={star} className={`h-5 w-5 ${feedback.rating! >= star ? "text-warning fill-warning" : "text-muted-foreground"}`} />
             ))}
           </div>
         )}

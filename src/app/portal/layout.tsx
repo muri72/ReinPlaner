@@ -1,12 +1,12 @@
 import React from "react";
 import Link from "next/link";
-import { LayoutDashboard, FilePlus2, User, Building } from "lucide-react"; // Building icon added
+import { LayoutDashboard, FilePlus2, User, Building } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { signOut } from "@/app/dashboard/actions"; // signOut action can be reused
+import { signOut } from "@/app/dashboard/actions";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 
-export default async function PortalLayout({
+export default async function DashboardLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
@@ -23,29 +23,29 @@ export default async function PortalLayout({
       {/* Simplified Sidebar for Customers */}
       <aside className="w-64 bg-sidebar text-sidebar-foreground border-r border-sidebar-border p-4 flex flex-col">
         <div className="flex-grow">
-          <h2 className="text-2xl font-bold mb-6 text-sidebar-primary-foreground">ARIS Portal</h2>
+          <h2 className="text-xl font-bold mb-6 text-sidebar-primary-foreground tracking-tight">ARIS Portal</h2>
           <nav className="space-y-2">
             <Link href="/portal/dashboard" passHref>
-              <Button variant="ghost" className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
-                <LayoutDashboard className="mr-2 h-4 w-4" />
+              <Button variant="ghost" className="w-full justify-start text-base text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
+                <LayoutDashboard className="mr-2 h-5 w-5" />
                 Übersicht
               </Button>
             </Link>
             <Link href="/portal/objects" passHref>
-              <Button variant="ghost" className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
-                <Building className="mr-2 h-4 w-4" />
+              <Button variant="ghost" className="w-full justify-start text-base text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
+                <Building className="mr-2 h-5 w-5" />
                 Meine Objekte
               </Button>
             </Link>
             <Link href="/portal/requests/new" passHref>
-              <Button variant="ghost" className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
-                <FilePlus2 className="mr-2 h-4 w-4" />
+              <Button variant="ghost" className="w-full justify-start text-base text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
+                <FilePlus2 className="mr-2 h-5 w-5" />
                 Neue Anfrage
               </Button>
             </Link>
             <Link href="/portal/profile" passHref>
-              <Button variant="ghost" className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
-                <User className="mr-2 h-4 w-4" />
+              <Button variant="ghost" className="w-full justify-start text-base text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
+                <User className="mr-2 h-5 w-5" />
                 Profil
               </Button>
             </Link>

@@ -31,7 +31,7 @@ export default async function NewRequestPage() {
   }
 
   if (!customerId) {
-      return <div className="p-8">Fehler: Es konnte kein zugehöriger Kunde für Ihr Benutzerkonto gefunden werden.</div>
+      return <div className="p-8 text-sm">Fehler: Es konnte kein zugehöriger Kunde für Ihr Benutzerkonto gefunden werden.</div>;
   }
 
   // Fetch objects associated with this customer
@@ -41,13 +41,13 @@ export default async function NewRequestPage() {
     .eq('customer_id', customerId);
 
   if (objectsError) {
-    return <div className="p-8">Fehler beim Laden Ihrer Objekte.</div>;
+    return <div className="p-8 text-sm">Fehler beim Laden Ihrer Objekte.</div>;
   }
 
   return (
     <div className="p-8 space-y-8">
       <h1 className="text-3xl font-bold">Neue Service-Anfrage stellen</h1>
-      <p className="text-muted-foreground">
+      <p className="text-base text-muted-foreground">
         Beschreiben Sie uns Ihr Anliegen und wir werden uns umgehend darum kümmern.
       </p>
       <div className="max-w-2xl">

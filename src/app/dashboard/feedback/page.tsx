@@ -65,7 +65,7 @@ export default async function FeedbackPage() {
       {currentUserRole !== 'admin' && currentUserRole !== 'manager' && (
         <Card>
           <CardHeader>
-            <CardTitle>Neues Feedback einreichen</CardTitle>
+            <CardTitle className="text-lg font-semibold">Neues Feedback einreichen</CardTitle>
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="orders">
@@ -94,12 +94,14 @@ export default async function FeedbackPage() {
           <TabsContent value="orders" className="mt-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {mappedOrderFeedback.length === 0 ? (
-                <p className="col-span-full text-center text-muted-foreground">Bisher wurde kein auftragsbezogenes Feedback abgegeben.</p>
+                <p className="col-span-full text-center text-muted-foreground text-sm">
+                  Bisher wurde kein auftragsbezogenes Feedback abgegeben.
+                </p>
               ) : (
                 mappedOrderFeedback.map((feedback) => (
                   <FeedbackCard
                     key={feedback.id}
-                    feedback={feedback}
+                    feedback={feedback as any}
                     feedbackType="order"
                     currentUserId={user.id}
                     currentUserRole={currentUserRole}
@@ -111,12 +113,14 @@ export default async function FeedbackPage() {
           <TabsContent value="general" className="mt-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {mappedGeneralFeedback.length === 0 ? (
-                <p className="col-span-full text-center text-muted-foreground">Kein allgemeines Feedback vorhanden.</p>
+                <p className="col-span-full text-center text-muted-foreground text-sm">
+                  Kein allgemeines Feedback vorhanden.
+                </p>
               ) : (
                 mappedGeneralFeedback.map((feedback) => (
                   <FeedbackCard
                     key={feedback.id}
-                    feedback={feedback}
+                    feedback={feedback as any}
                     feedbackType="general"
                     currentUserId={user.id}
                     currentUserRole={currentUserRole}

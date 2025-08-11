@@ -54,7 +54,7 @@ export default async function CustomerContactsPage({
 
   if (error) {
     console.error("Fehler beim Laden der Kundenkontakte:", error);
-    return <div className="p-8">Fehler beim Laden der Kundenkontakte.</div>;
+    return <div className="p-8 text-sm">Fehler beim Laden der Kundenkontakte.</div>;
   }
 
   const displayContacts: DisplayCustomerContact[] = contacts?.map(contact => ({
@@ -79,14 +79,14 @@ export default async function CustomerContactsPage({
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {displayContacts.length === 0 ? (
-          <p className="col-span-full text-center text-muted-foreground">
+          <p className="col-span-full text-center text-muted-foreground text-sm">
             {query ? "Keine Kundenkontakte gefunden, die Ihrer Suche entsprechen." : "Noch keine Kundenkontakte vorhanden. Fügen Sie einen hinzu!"}
           </p>
         ) : (
           displayContacts.map((contact) => (
             <Card key={contact.id}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-lg font-medium">{contact.first_name} {contact.last_name}</CardTitle>
+                <CardTitle className="text-lg font-semibold">{contact.first_name} {contact.last_name}</CardTitle>
                 <div className="flex items-center space-x-2">
                   <CustomerContactEditDialog contact={contact} />
                   <DeleteCustomerContactButton contactId={contact.id} />
@@ -94,7 +94,9 @@ export default async function CustomerContactsPage({
               </CardHeader>
               <CardContent className="space-y-2">
                 {contact.customer_name && (
-                  <p className="text-sm text-muted-foreground">Kunde: {contact.customer_name}</p>
+                  <p className="text-sm text-muted-foreground">
+                    Kunde: {contact.customer_name}
+                  </p>
                 )}
                 {contact.email && (
                   <div className="flex items-center text-sm text-muted-foreground">

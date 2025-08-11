@@ -25,7 +25,7 @@ export default async function ProfilePage() {
     <div className="p-8">
         <h1 className="text-3xl font-bold">Ihr Profil</h1>
         {profile?.first_name && profile?.last_name && (
-          <p className="text-lg mt-4">
+          <p className="text-base mt-4"> {/* Changed to text-base */}
             Aktueller Name: {profile.first_name} {profile.last_name}
           </p>
         )}

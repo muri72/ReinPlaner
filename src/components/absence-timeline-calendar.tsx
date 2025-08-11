@@ -25,10 +25,10 @@ const typeTranslations: { [key: string]: string } = {
 };
 
 const typeColors: { [key: string]: string } = {
-  vacation: "bg-blue-500 text-white",
-  sick_leave: "bg-yellow-500 text-white",
-  training: "bg-green-500 text-white",
-  other: "bg-gray-500 text-white",
+  vacation: "bg-primary text-primary-foreground", // Changed to primary
+  sick_leave: "bg-warning text-warning-foreground", // Changed to warning
+  training: "bg-success text-success-foreground", // Changed to success
+  other: "bg-muted text-muted-foreground", // Changed to muted
 };
 
 export function AbsenceTimelineCalendar() {
@@ -119,7 +119,7 @@ export function AbsenceTimelineCalendar() {
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <div className={`w-full h-10 flex items-center justify-center ${typeColors[absenceType] || 'bg-gray-200'}`}>
+                                <div className={`w-full h-10 flex items-center justify-center ${typeColors[absenceType] || 'bg-muted'}`}>
                                 </div>
                               </TooltipTrigger>
                               <TooltipContent>

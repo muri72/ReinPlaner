@@ -138,7 +138,7 @@ export default async function OrdersPage({
   const getRequestStatusBadgeVariant = (requestStatus: string) => {
     switch (requestStatus) {
       case 'approved': return 'default';
-      case 'pending': return 'secondary';
+      case 'pending': return 'warning'; // Changed to warning
       case 'rejected': return 'destructive';
       default: return 'outline';
     }
@@ -154,7 +154,7 @@ export default async function OrdersPage({
       {/* Section for Pending Requests */}
       <div className="space-y-4">
         <h2 className="text-2xl font-bold flex items-center">
-          <AlertTriangle className="mr-2 h-6 w-6 text-amber-500" />
+          <AlertTriangle className="mr-2 h-6 w-6 text-warning" /> {/* Changed to text-warning */}
           Offene Anfragen ({pendingRequests.length})
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -162,7 +162,7 @@ export default async function OrdersPage({
             <p className="col-span-full text-center text-muted-foreground">Keine offenen Anfragen vorhanden.</p>
           ) : (
             pendingRequests.map((order) => (
-              <Card key={order.id} className="border-amber-500 border-2">
+              <Card key={order.id} className="border-warning border-2"> {/* Changed to border-warning */}
                 <CardHeader>
                   <CardTitle className="text-lg font-medium">{order.title}</CardTitle>
                 </CardHeader>
@@ -220,7 +220,7 @@ export default async function OrdersPage({
                     {(order.order_type === "recurring" || order.order_type === "substitution") && order.recurring_end_date && <div className="flex items-center text-xs text-muted-foreground"><CalendarDays className="mr-1 h-3 w-3" /><span>Ende: {new Date(order.recurring_end_date).toLocaleDateString()}</span></div>}
                     
                     {feedback && (
-                      <div className="flex items-center text-xs text-amber-500 mt-2">
+                      <div className="flex items-center text-xs text-warning mt-2"> {/* Changed to text-warning */}
                         <StarIcon className="mr-1 h-3 w-3 fill-current" />
                         <span>Feedback vorhanden</span>
                       </div>

@@ -121,8 +121,8 @@ export function OrderFeedbackForm({ orderId, onSuccess }: OrderFeedbackFormProps
               key={star}
               className={`h-8 w-8 cursor-pointer transition-colors ${
                 (hoverRating || rating) >= star
-                  ? "text-yellow-400 fill-yellow-400"
-                  : "text-gray-300"
+                  ? "text-warning fill-warning" // Changed to text-warning and fill-warning
+                  : "text-muted-foreground"
               }`}
               onMouseEnter={() => setHoverRating(star)}
               onMouseLeave={() => setHoverRating(0)}

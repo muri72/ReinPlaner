@@ -25,7 +25,7 @@ export default async function PlanningPage() {
   return (
     <div className="p-8 space-y-8">
       <h1 className="text-3xl font-bold">Ressourcenplanung</h1>
-      <p className="text-muted-foreground">
+      <p className="text-base text-muted-foreground"> {/* Changed to text-base */}
         Hier sehen Sie die wöchentliche Auslastung Ihrer Mitarbeiter basierend auf zugewiesenen Daueraufträgen und genehmigten Abwesenheiten.
       </p>
       <ResourcePlanningCalendar />

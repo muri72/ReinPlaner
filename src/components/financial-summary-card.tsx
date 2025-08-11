@@ -22,9 +22,9 @@ export function FinancialSummaryCard({ title, value, isCost, isProfit }: Financi
       </CardHeader>
       <CardContent>
         <div className={cn(
-          "text-2xl font-bold",
+          "text-xl font-bold", // Changed to text-xl
           isCost && "text-destructive",
-          isProfit && (value >= 0 ? "text-green-600" : "text-destructive")
+          isProfit && (value >= 0 ? "text-success" : "text-destructive") // Changed to text-success
         )}>
           {formatCurrency(value)}
         </div>

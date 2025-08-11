@@ -335,17 +335,17 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
   };
 
   if (loading) {
-    return <div className="text-center py-4">Lade Zeiterfassung...</div>;
+    return <div className="text-center py-4 text-sm">Lade Zeiterfassung...</div>;
   }
 
   if (!employeeId) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Zeiterfassung nicht verfügbar</CardTitle>
+          <CardTitle className="text-lg font-semibold">Zeiterfassung nicht verfügbar</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-muted-foreground">
+          <p className="text-sm text-muted-foreground">
             Ihr Benutzerkonto ist keinem Mitarbeiter zugewiesen. Bitte kontaktieren Sie Ihren Administrator.
           </p>
         </CardContent>
@@ -396,12 +396,12 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
   return (
     <Card className="p-4 space-y-4">
       <CardHeader>
-        <CardTitle>Ihre Zeiterfassung</CardTitle>
+        <CardTitle className="text-lg font-semibold">Ihre Zeiterfassung</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         {activeEntry && (
-          <div className="space-y-2 mb-4 p-3 border rounded-md bg-green-50 dark:bg-green-950">
-            <p className="text-lg font-semibold text-green-600 dark:text-green-400 flex items-center">
+          <div className="space-y-2 mb-4 p-3 border rounded-md bg-success-foreground/10 dark:bg-success-foreground/20">
+            <p className="text-base font-semibold text-success flex items-center">
               <Clock className="inline-block mr-2 h-5 w-5" />
               {activeEntry.type === 'clock_in_out' ? 'Sie sind eingestempelt!' : 'Stoppuhr läuft!'}
             </p>
@@ -419,7 +419,7 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
               </p>
             )}
             {activeEntry.type === 'stopwatch' && (
-              <p className="text-xl font-bold text-green-700 dark:text-green-300">
+              <p className="text-2xl font-bold text-primary">
                 {formatTime(stopwatchElapsedTime)}
               </p>
             )}
@@ -448,18 +448,24 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
                     </SelectContent>
                   </Select>
                   {orders.length === 0 && (
-                    <p className="text-muted-foreground text-sm mt-1">Keine Aufträge für Sie gefunden.</p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Keine Aufträge für Sie gefunden.
+                    </p>
                   )}
                 </div>
 
                 {isScheduledOrder && suggestedStartTime && suggestedEndTime && (
-                  <div className="text-sm text-muted-foreground mt-2 p-2 border rounded-md bg-blue-50 dark:bg-blue-950">
+                  <div className="text-sm text-muted-foreground mt-2 p-2 border rounded-md bg-primary-foreground/10 dark:bg-primary-foreground/20">
                     <p>Vorgeschlagene Zeiten für diesen Auftrag heute:</p>
                     <p className="font-semibold">{suggestedStartTime} - {suggestedEndTime} ({suggestedDuration !== null ? (suggestedDuration / 60).toFixed(2) : 'N/A'} Stunden)</p>
                     {suggestedBreakMinutes !== null && suggestedBreakMinutes > 0 && (
-                      <p className="text-xs mt-1">Inkl. {suggestedBreakMinutes} Minuten Pause.</p>
+                      <p className="text-xs mt-1">
+                        Inkl. {suggestedBreakMinutes} Minuten Pause.
+                      </p>
                     )}
-                    <p className="text-xs mt-1">Klicken Sie auf "Einstempeln", um diese Stunden zu bestätigen.</p>
+                    <p className="text-xs mt-1">
+                      Klicken Sie auf "Einstempeln", um diese Stunden zu bestätigen.
+                    </p>
                   </div>
                 )}
 
@@ -469,7 +475,7 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
                     triggerButtonText="Einstempeln"
                     triggerButtonIcon={<Play className="mr-2 h-4 w-4" />}
                     triggerButtonVariant="default"
-                    triggerButtonClassName="w-full bg-green-600 hover:bg-green-700"
+                    triggerButtonClassName="w-full bg-success hover:bg-success/90"
                     dialogTitle={isScheduledOrder ? "Geplanten Zeiteintrag bestätigen" : "Neuen Zeiteintrag erstellen"}
                     onEntryCreated={() => {
                       // Nach erfolgreicher Erstellung den aktiven Eintrag neu laden
@@ -497,14 +503,14 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
                         });
                       setSelectedOrderId(null); // Auswahl zurücksetzen
                     }}
-                    currentUserId={userId} // Hinzugefügt
-                    isAdmin={false} // Mitarbeiter-Tracker ist nicht für Admins
+                    currentUserId={userId}
+                    isAdmin={false}
                   />
                 ) : (
                   <Button
                     onClick={handleClockOut}
                     disabled={loading}
-                    className="w-full bg-red-600 hover:bg-red-700"
+                    className="w-full bg-destructive hover:bg-destructive/90"
                   >
                     <StopCircle className="mr-2 h-4 w-4" />
                     Ausstempeln
@@ -512,7 +518,9 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
                 )}
               </>
             ) : (
-              <p className="text-muted-foreground text-center">Bitte stoppen Sie zuerst die Stoppuhr.</p>
+              <p className="text-sm text-muted-foreground text-center">
+                Bitte stoppen Sie zuerst die Stoppuhr.
+              </p>
             )}
           </TabsContent>
           <TabsContent value="stopwatch" className="mt-4 space-y-4">
@@ -532,19 +540,23 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
                     </SelectContent>
                   </Select>
                   {orders.length === 0 && (
-                    <p className="text-muted-foreground text-sm mt-1">Keine Aufträge für Sie gefunden.</p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Keine Aufträge für Sie gefunden.
+                    </p>
                   )}
                 </div>
 
                 {isScheduledOrder && suggestedStartTime && suggestedEndTime && (
-                  <div className="text-sm text-muted-foreground mt-2 p-2 border rounded-md bg-blue-50 dark:bg-blue-950">
+                  <div className="text-sm text-muted-foreground mt-2 p-2 border rounded-md bg-primary-foreground/10 dark:bg-primary-foreground/20">
                     <p>Vorgeschlagene Zeiten für diesen Auftrag heute:</p>
                     <p className="font-semibold">{suggestedStartTime} - {suggestedEndTime} ({suggestedDuration !== null ? (suggestedDuration / 60).toFixed(2) : 'N/A'} Stunden)</p>
-                    <p className="text-xs mt-1">Die Stoppuhr verfolgt die tatsächliche Zeit, aber dies ist der erwartete Zeitrahmen.</p>
+                    <p className="text-xs mt-1">
+                      Die Stoppuhr verfolgt die tatsächliche Zeit, aber dies ist der erwartete Zeitrahmen.
+                    </p>
                   </div>
                 )}
 
-                <div className="flex justify-center items-center text-4xl font-bold my-4">
+                <div className="flex justify-center items-center text-3xl font-bold my-4">
                   {formatTime(stopwatchElapsedTime)}
                 </div>
                 <div className="flex gap-2">
@@ -552,7 +564,7 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
                     <Button
                       onClick={handleStopwatchStart}
                       disabled={loading}
-                      className="flex-1 bg-green-600 hover:bg-green-700"
+                      className="flex-1 bg-success hover:bg-success/90"
                     >
                       <Play className="mr-2 h-4 w-4" />
                       Start
@@ -561,7 +573,7 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
                     <Button
                       onClick={handleStopwatchStop}
                       disabled={loading}
-                      className="flex-1 bg-red-600 hover:bg-red-700"
+                      className="flex-1 bg-destructive hover:bg-destructive/90"
                     >
                       <StopCircle className="mr-2 h-4 w-4" />
                       Stop
@@ -578,7 +590,9 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
                 </div>
               </>
             ) : (
-              <p className="text-muted-foreground text-center">Bitte stempeln Sie zuerst aus.</p>
+              <p className="text-sm text-muted-foreground text-center">
+                Bitte stempeln Sie zuerst aus.
+              </p>
             )}
           </TabsContent>
         </Tabs>

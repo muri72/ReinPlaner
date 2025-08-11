@@ -9,7 +9,7 @@ interface OrderStatusChartProps {
 }
 
 // Farben für die Segmente des Tortendiagramms
-const COLORS = ['#FFBB28', '#00C49F', '#0088FE']; // Gelb für Ausstehend, Grün für In Bearbeitung, Blau für Abgeschlossen
+const COLORS = ['hsl(var(--warning))', 'hsl(var(--secondary))', 'hsl(var(--primary))']; // Gelb für Ausstehend, Grau für In Bearbeitung, Blau für Abgeschlossen
 
 export function OrderStatusChart({ data }: OrderStatusChartProps) {
   // Filtern Sie Datenpunkte mit Wert 0 heraus, damit sie nicht im Diagramm erscheinen

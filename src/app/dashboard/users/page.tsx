@@ -48,7 +48,7 @@ export default async function UsersPage({
 
   if (authError) {
     console.error("Fehler beim Laden der Auth-Benutzer:", authError);
-    return <div className="p-8">Fehler beim Laden der Benutzer.</div>;
+    return <div className="p-8 text-sm">Fehler beim Laden der Benutzer.</div>; {/* Changed to text-sm */}
   }
 
   const userIds = authUsers.users.map(u => u.id);
@@ -58,7 +58,7 @@ export default async function UsersPage({
 
   if (profilesError) {
     console.error("Fehler beim Laden der Profile:", profilesError);
-    return <div className="p-8">Fehler beim Laden der Benutzerprofile.</div>;
+    return <div className="p-8 text-sm">Fehler beim Laden der Benutzerprofile.</div>; {/* Changed to text-sm */}
   }
 
   // Mitarbeiter- und Kundennamen für die Anzeige abrufen
@@ -133,14 +133,14 @@ export default async function UsersPage({
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {users.length === 0 ? (
-          <p className="col-span-full text-center text-muted-foreground">
+          <p className="col-span-full text-center text-muted-foreground text-sm"> {/* Changed to text-sm */}
             {query ? "Keine Benutzer gefunden, die Ihrer Suche entsprechen." : "Noch keine Benutzer vorhanden. Fügen Sie einen hinzu!"}
           </p>
         ) : (
           users.map((user) => (
             <Card key={user.id}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-lg font-medium">{user.first_name} {user.last_name}</CardTitle>
+                <CardTitle className="text-lg font-semibold">{user.first_name} {user.last_name}</CardTitle> {/* Changed to text-lg font-semibold */}
                 <div className="flex items-center space-x-2">
                   {user.role === 'manager' && (
                     <ManagerCustomerAssignmentDialog
@@ -153,22 +153,22 @@ export default async function UsersPage({
                 </div>
               </CardHeader>
               <CardContent className="space-y-2">
-                <div className="flex items-center text-sm text-muted-foreground">
+                <div className="flex items-center text-sm text-muted-foreground"> {/* Changed to text-sm */}
                   <Mail className="mr-2 h-4 w-4 flex-shrink-0" />
                   <span>{user.email}</span>
                 </div>
-                <div className="flex items-center text-sm text-muted-foreground">
+                <div className="flex items-center text-sm text-muted-foreground"> {/* Changed to text-sm */}
                   <Briefcase className="mr-2 h-4 w-4 flex-shrink-0" />
                   <span>Rolle: <Badge variant={getRoleBadgeVariant(user.role)}>{user.role}</Badge></span>
                 </div>
                 {user.assigned_employee_name && (
-                  <div className="flex items-center text-sm text-muted-foreground">
+                  <div className="flex items-center text-sm text-muted-foreground"> {/* Changed to text-sm */}
                     <UserRound className="mr-2 h-4 w-4 flex-shrink-0" />
                     <span>Zugewiesener Mitarbeiter: {user.assigned_employee_name}</span>
                   </div>
                 )}
                 {user.assigned_customer_name && (
-                  <div className="flex items-center text-sm text-muted-foreground">
+                  <div className="flex items-center text-sm text-muted-foreground"> {/* Changed to text-sm */}
                     <UserRound className="mr-2 h-4 w-4 flex-shrink-0" />
                     <span>Zugewiesener Kunde: {user.assigned_customer_name}</span>
                   </div>

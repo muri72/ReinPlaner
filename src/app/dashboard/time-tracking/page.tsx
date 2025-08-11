@@ -128,6 +128,7 @@ export default async function TimeTrackingPage({
     .from('time_entries')
     .select('start_time, end_time, duration_minutes, break_minutes') // break_minutes hinzugefügt
     .gte('start_time', threeMonthsAgo.toISOString())
+    .lt('start_time', new Date().toISOString()) // Ensure it's up to current date
     .order('start_time', { ascending: true });
 
   // Wenn der Benutzer KEIN Admin ist, filtern Sie auch hier nach seiner eigenen user_id
@@ -212,10 +213,10 @@ export default async function TimeTrackingPage({
         <>
           <Card>
             <CardHeader>
-              <CardTitle>Automatische Zeiterfassung</CardTitle>
+              <CardTitle className="text-lg font-semibold">Automatische Zeiterfassung</CardTitle> {/* Changed to text-lg font-semibold */}
             </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground mb-4">
+              <p className="text-sm text-muted-foreground mb-4"> {/* Changed to text-sm */}
                 Lösen Sie die automatische Erstellung von Zeiteinträgen für alle geplanten Aufträge aus. Dies füllt fehlende Einträge für vergangene Tage auf.
               </p>
               <TriggerAutoTimeEntryButton />
@@ -236,14 +237,14 @@ export default async function TimeTrackingPage({
           <h2 className="text-2xl font-bold mt-8">Ihre Zeiteinträge</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {timeEntries.length === 0 ? (
-              <p className="col-span-full text-center text-muted-foreground">
+              <p className="col-span-full text-center text-muted-foreground text-sm"> {/* Changed to text-sm */}
                 Noch keine Zeiteinträge vorhanden. Fügen Sie einen hinzu!
               </p>
             ) : (
               timeEntries.map((entry) => (
                 <Card key={entry.id}>
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-lg font-medium">
+                    <CardTitle className="text-lg font-semibold"> {/* Changed to text-lg font-semibold */}
                       Zeiteintrag
                     </CardTitle>
                     <div className="flex items-center space-x-2">

@@ -49,7 +49,7 @@ export default async function AbsenceRequestsPage() {
       case 'approved': return 'success';
       case 'rejected': return 'destructive';
       case 'pending':
-      default: return 'secondary';
+      default: return 'warning'; // Changed to warning
     }
   };
 
@@ -58,7 +58,7 @@ export default async function AbsenceRequestsPage() {
       case 'approved': return <CheckCircle2 className="mr-2 h-4 w-4 text-success-foreground" />;
       case 'rejected': return <XCircle className="mr-2 h-4 w-4 text-destructive-foreground" />;
       case 'pending':
-      default: return <AlertCircle className="mr-2 h-4 w-4 text-secondary-foreground" />;
+      default: return <AlertCircle className="mr-2 h-4 w-4 text-warning-foreground" />; // Changed to text-warning-foreground
     }
   };
 
@@ -85,12 +85,14 @@ export default async function AbsenceRequestsPage() {
           <h2 className="text-2xl font-bold">Antragsübersicht</h2>
           <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-4">
             {requests.length === 0 ? (
-              <p className="text-center text-muted-foreground">Keine Anträge gefunden.</p>
+              <p className="text-center text-muted-foreground text-sm">
+                Keine Anträge gefunden.
+              </p>
             ) : (
               requests.map((request) => (
                 <Card key={request.id}>
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-lg font-medium">
+                    <CardTitle className="text-lg font-semibold">
                       {typeTranslations[request.type] || 'Abwesenheit'}
                     </CardTitle>
                     <div className="flex items-center space-x-2">
@@ -112,16 +114,16 @@ export default async function AbsenceRequestsPage() {
                     {request.notes && (
                       <div className="flex items-start text-sm text-muted-foreground">
                         <FileText className="mr-2 h-4 w-4 mt-1 flex-shrink-0" />
-                        <p className="flex-grow">Mitarbeiter-Notiz: {request.notes}</p>
+                        <p className="flex-grow">{request.notes}</p>
                       </div>
                     )}
                     {request.admin_notes && (
                       <div className="flex items-start text-sm text-muted-foreground">
                         <FileText className="mr-2 h-4 w-4 mt-1 flex-shrink-0" />
-                        <p className="flex-grow">Admin-Notiz: {request.admin_notes}</p>
+                        <p className="flex-grow">{request.admin_notes}</p>
                       </div>
                     )}
-                    <Badge variant={getStatusBadgeVariant(request.status)} className="mt-2">
+                    <Badge variant={getStatusBadgeVariant(request.status) as any} className="mt-2">
                       {getStatusIcon(request.status)}
                       {request.status}
                     </Badge>

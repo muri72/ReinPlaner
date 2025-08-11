@@ -21,7 +21,7 @@ export default async function CustomerObjectsPage() {
     .single();
 
   if (!customer) {
-    return <div className="p-8">Fehler: Es konnte kein zugehöriger Kunde für Ihr Konto gefunden werden.</div>;
+    return <div className="p-8 text-sm">Fehler: Es konnte kein zugehöriger Kunde für Ihr Konto gefunden werden.</div>;
   }
 
   const { data: objects, error } = await supabase
@@ -32,7 +32,7 @@ export default async function CustomerObjectsPage() {
 
   if (error) {
     console.error("Fehler beim Laden der Kundenobjekte:", error);
-    return <div className="p-8">Fehler beim Laden Ihrer Objekte.</div>;
+    return <div className="p-8 text-sm">Fehler beim Laden Ihrer Objekte.</div>;
   }
 
   const handleCreateObject = async (formData: any) => {
@@ -48,12 +48,14 @@ export default async function CustomerObjectsPage() {
           <h2 className="text-2xl font-bold mb-4">Bestehende Objekte</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {objects.length === 0 ? (
-              <p className="col-span-full text-center text-muted-foreground">Sie haben noch keine Objekte angelegt.</p>
+              <p className="col-span-full text-center text-muted-foreground text-sm">
+                Sie haben noch keine Objekte angelegt.
+              </p>
             ) : (
               objects.map((object) => (
                 <Card key={object.id}>
                   <CardHeader>
-                    <CardTitle>{object.name}</CardTitle>
+                    <CardTitle className="text-lg font-semibold">{object.name}</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-2">
                     <div className="flex items-center text-sm text-muted-foreground">

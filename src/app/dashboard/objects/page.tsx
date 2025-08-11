@@ -97,7 +97,7 @@ export default async function ObjectsPage({
 
   if (error) {
     console.error("Fehler beim Laden der Objekte:", error);
-    return <div className="p-8">Fehler beim Laden der Objekte.</div>;
+    return <div className="p-8 text-sm">Fehler beim Laden der Objekte.</div>;
   }
 
   const dayNames = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
@@ -112,14 +112,14 @@ export default async function ObjectsPage({
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {objects && objects.length === 0 ? (
-          <p className="col-span-full text-center text-muted-foreground">
+          <p className="col-span-full text-center text-muted-foreground text-sm">
             {query ? "Keine Objekte gefunden, die Ihrer Suche entsprechen." : "Noch keine Objekte vorhanden. Fügen Sie eines hinzu!"}
           </p>
         ) : (
           objects?.map((object) => (
             <Card key={object.id}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-lg font-medium">{object.name}</CardTitle>
+                <CardTitle className="text-lg font-semibold">{object.name}</CardTitle>
                 <div className="flex items-center space-x-2">
                   <ObjectEditDialog object={object} />
                   <DeleteObjectButton objectId={object.id} />
@@ -127,7 +127,9 @@ export default async function ObjectsPage({
               </CardHeader>
               <CardContent className="space-y-2">
                 {object.customer_name && (
-                  <p className="text-sm text-muted-foreground">Kunde: {object.customer_name}</p>
+                  <p className="text-sm text-muted-foreground">
+                    Kunde: {object.customer_name}
+                  </p>
                 )}
                 {object.object_leader_first_name && object.object_leader_last_name && (
                   <div className="flex items-center text-sm text-muted-foreground">

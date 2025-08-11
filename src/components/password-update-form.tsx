@@ -58,8 +58,8 @@ export function PasswordUpdateForm() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Passwort ändern</CardTitle>
-        <CardDescription>
+        <CardTitle className="text-lg font-semibold">Passwort ändern</CardTitle>
+        <CardDescription className="text-sm">
           Hier können Sie Ihr Passwort ändern oder einen Link zum Zurücksetzen anfordern.
         </CardDescription>
       </CardHeader>
@@ -74,7 +74,7 @@ export function PasswordUpdateForm() {
               placeholder="••••••••"
             />
             {form.formState.errors.newPassword && (
-              <p className="text-red-500 text-sm mt-1">{form.formState.errors.newPassword.message}</p>
+              <p className="text-red-500 text-xs mt-1">{form.formState.errors.newPassword.message}</p>
             )}
           </div>
           <div>
@@ -86,7 +86,7 @@ export function PasswordUpdateForm() {
               placeholder="••••••••"
             />
             {form.formState.errors.confirmPassword && (
-              <p className="text-red-500 text-sm mt-1">{form.formState.errors.confirmPassword.message}</p>
+              <p className="text-red-500 text-xs mt-1">{form.formState.errors.confirmPassword.message}</p>
             )}
           </div>
           <Button type="submit" disabled={form.formState.isSubmitting}>

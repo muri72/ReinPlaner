@@ -40,6 +40,14 @@ export default {
   				DEFAULT: 'hsl(var(--destructive))',
   				foreground: 'hsl(var(--destructive-foreground))'
   			},
+            success: { /* Hinzugefügt */
+              DEFAULT: 'hsl(var(--success))',
+              foreground: 'hsl(var(--success-foreground))'
+            },
+            warning: { /* Hinzugefügt */
+              DEFAULT: 'hsl(var(--warning))',
+              foreground: 'hsl(var(--warning-foreground))'
+            },
   			border: 'hsl(var(--border))',
   			input: 'hsl(var(--input))',
   			ring: 'hsl(var(--ring))',
@@ -60,15 +68,47 @@ export default {
   				border: 'hsl(var(--sidebar-border))',
   				ring: 'hsl(var(--sidebar-ring))'
   			},
-            success: { /* Hinzugefügt */
-              DEFAULT: 'hsl(var(--success))',
-              foreground: 'hsl(var(--success-foreground))'
-            }
   		},
+        /* Typographic Scale (1.25 ratio) */
+        fontSize: {
+          xs: ['0.75rem', { lineHeight: '1.5' }],   // 12px
+          sm: ['0.9375rem', { lineHeight: '1.5' }], // 15px
+          base: ['1.125rem', { lineHeight: '1.5' }], // 18px
+          lg: ['1.5rem', { lineHeight: '1.2' }],    // 24px
+          xl: ['1.875rem', { lineHeight: '1.2' }],   // 30px
+          '2xl': ['2.3125rem', { lineHeight: '1.2' }], // 37px
+          '3xl': ['2.875rem', { lineHeight: '1.2' }],  // 46px
+        },
+        /* Line Heights */
+        lineHeight: {
+          'tight': '1.2',
+          'normal': '1.5',
+          'snug': '1.4',
+        },
+        /* Letter Spacing */
+        letterSpacing: {
+          tight: '-0.02em',
+          normal: '0',
+          wide: '0.05em', // For small caps
+        },
+        /* Spacing System (already aligned with 4px/8px base) */
+        spacing: {
+          '1': '4px',
+          '2': '8px',
+          '3': '12px',
+          '4': '16px',
+          '5': '20px', // Added for icon size
+          '6': '24px',
+          '8': '32px',
+          '12': '48px',
+          '16': '64px',
+        },
   		borderRadius: {
   			lg: 'var(--radius)',
-  			md: 'calc(var(--radius) - 2px)',
-  			sm: 'calc(var(--radius) - 4px)'
+  			md: 'var(--radius-md)',
+  			sm: 'var(--radius-sm)',
+            xl: 'var(--radius-xl)',
+            '2xl': 'var(--radius-2xl)',
   		},
   		keyframes: {
   			'accordion-down': {

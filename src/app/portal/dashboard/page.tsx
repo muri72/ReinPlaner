@@ -59,12 +59,14 @@ export default async function CustomerPortalDashboard() {
         <h2 className="text-2xl font-bold">Ihre Aufträge</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {orders.length === 0 ? (
-            <p className="col-span-full text-center text-muted-foreground">Sie haben noch keine Aufträge.</p>
+            <p className="col-span-full text-center text-muted-foreground text-sm">
+              Sie haben noch keine Aufträge.
+            </p>
           ) : (
             orders.map((order) => (
               <Card key={order.id}>
                 <CardHeader>
-                  <CardTitle className="text-lg font-medium">{order.title}</CardTitle>
+                  <CardTitle className="text-lg font-semibold">{order.title}</CardTitle>
                   <p className="text-sm text-muted-foreground">
                     Erstellt am: {new Date(order.created_at).toLocaleDateString()}
                   </p>
@@ -74,7 +76,7 @@ export default async function CustomerPortalDashboard() {
                     <Badge variant={getStatusBadgeVariant(order.status)}>{order.status}</Badge>
                     <Badge variant="outline">{order.service_type || 'Allgemein'}</Badge>
                   </div>
-                  <p className="text-sm text-muted-foreground line-clamp-3">
+                  <p className="text-sm text-muted-foreground leading-normal line-clamp-3">
                     {order.description || "Keine Beschreibung vorhanden."}
                   </p>
                   {order.status === 'completed' && order.order_feedback.length === 0 && (

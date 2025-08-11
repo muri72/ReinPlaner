@@ -24,10 +24,10 @@ const absenceTypeTranslations: { [key: string]: string } = {
 };
 
 const absenceTypeColors: { [key: string]: string } = {
-  vacation: "bg-blue-500 text-white",
-  sick_leave: "bg-yellow-500 text-white",
-  training: "bg-green-500 text-white",
-  other: "bg-gray-500 text-white",
+  vacation: "bg-primary text-primary-foreground",
+  sick_leave: "bg-warning text-warning-foreground",
+  training: "bg-success text-success-foreground",
+  other: "bg-muted text-muted-foreground",
 };
 
 function DraggableOrder({ order }: { order: UnassignedOrder }) {
@@ -120,9 +120,9 @@ export function ResourcePlanningCalendar() {
   const employeeIds = planningPageData ? Object.keys(planningPageData.planningData) : [];
 
   const getWorkloadColor = (hours: number) => {
-    if (hours > 8) return "bg-red-200 dark:bg-red-900";
-    if (hours > 6) return "bg-yellow-200 dark:bg-yellow-900";
-    if (hours > 0) return "bg-green-200 dark:bg-green-900";
+    if (hours > 8) return "bg-destructive-foreground/10 dark:bg-destructive-foreground/20";
+    if (hours > 6) return "bg-warning-foreground/10 dark:bg-warning-foreground/20";
+    if (hours > 0) return "bg-success-foreground/10 dark:bg-success-foreground/20";
     return "bg-transparent";
   };
 
@@ -132,8 +132,8 @@ export function ResourcePlanningCalendar() {
         <div className="w-1/4">
           <Card className="h-full">
             <CardHeader>
-              <CardTitle>Ungeplante Aufträge</CardTitle>
-              <CardDescription>Ziehen Sie Aufträge auf den Kalender, um sie zuzuweisen.</CardDescription>
+              <CardTitle className="text-lg font-semibold">Ungeplante Aufträge</CardTitle>
+              <CardDescription className="text-sm">Ziehen Sie Aufträge auf den Kalender, um sie zuzuweisen.</CardDescription>
             </CardHeader>
             <CardContent className="h-[60vh] overflow-y-auto">
               {loading ? (
@@ -143,9 +143,11 @@ export function ResourcePlanningCalendar() {
                   <Skeleton className="h-20 w-full mb-2" />
                 </>
               ) : planningPageData?.unassignedOrders.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center mt-8">Keine ungeplanten Aufträge.</p>
+                <p className="text-sm text-muted-foreground text-center mt-8">
+                  Keine ungeplanten Aufträge.
+                </p>
               ) : (
-                planningPageData?.unassignedOrders.map(order => (
+                planningPageData?.unassignedOrders.map((order) => (
                   <DraggableOrder key={order.id} order={order} />
                 ))
               )}
@@ -167,9 +169,9 @@ export function ResourcePlanningCalendar() {
               <Table className="min-w-full border-collapse">
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="sticky left-0 bg-card z-10 min-w-[200px]">Mitarbeiter</TableHead>
+                    <TableHead className="sticky left-0 bg-card z-10 min-w-[200px] text-sm">Mitarbeiter</TableHead>
                     {weekDays.map(day => (
-                      <TableHead key={day.toString()} className="text-center">
+                      <TableHead key={day.toString()} className="text-center text-sm">
                         {format(day, "E dd.", { locale: de })}
                       </TableHead>
                     ))}
@@ -185,14 +187,14 @@ export function ResourcePlanningCalendar() {
                     ))
                   ) : employeeIds.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center text-muted-foreground h-24">Keine Mitarbeiterdaten gefunden.</TableCell>
+                      <TableCell colSpan={8} className="text-center text-muted-foreground h-24 text-sm">Keine Mitarbeiterdaten gefunden.</TableCell>
                     </TableRow>
                   ) : (
                     employeeIds.map(id => {
                       const employee = planningPageData!.planningData[id];
                       return (
                         <TableRow key={id}>
-                          <TableCell className="font-medium sticky left-0 bg-card z-10">{employee.name}</TableCell>
+                          <TableCell className="font-normal sticky left-0 bg-card z-10 text-sm">{employee.name}</TableCell>
                           {weekDays.map(day => {
                             const dateString = format(day, "yyyy-MM-dd");
                             const dayData = employee.schedule[dateString];
@@ -206,11 +208,11 @@ export function ResourcePlanningCalendar() {
                                   <TooltipProvider>
                                     <Tooltip>
                                       <TooltipTrigger asChild>
-                                        <div className={cn("w-full h-16 flex items-center justify-center font-semibold", absenceTypeColors[dayData.absenceType || 'other'])}>
+                                        <div className={cn("w-full h-16 flex items-center justify-center font-semibold text-sm", absenceTypeColors[dayData.absenceType || 'other'])}>
                                           {absenceTypeTranslations[dayData.absenceType || 'other']?.charAt(0)}
                                         </div>
                                       </TooltipTrigger>
-                                      <TooltipContent><p>{absenceTypeTranslations[dayData.absenceType || 'other']}</p></TooltipContent>
+                                      <TooltipContent><p className="text-sm">{absenceTypeTranslations[dayData.absenceType || 'other']}</p></TooltipContent>
                                     </Tooltip>
                                   </TooltipProvider>
                                 </TableCell>
@@ -223,12 +225,12 @@ export function ResourcePlanningCalendar() {
                                   <Tooltip>
                                     <TooltipTrigger asChild>
                                       <div className={cn("w-full h-16 flex flex-col items-center justify-center", getWorkloadColor(dayData.totalHours))}>
-                                        <span className="font-semibold">{dayData.totalHours > 0 ? `${dayData.totalHours.toFixed(1)}h` : '-'}</span>
+                                        <span className="font-semibold text-sm">{dayData.totalHours > 0 ? `${dayData.totalHours.toFixed(1)}h` : '-'}</span>
                                       </div>
                                     </TooltipTrigger>
                                     {dayData.assignments.length > 0 && (
                                       <TooltipContent>
-                                        <ul>{dayData.assignments.map((a, i) => (<li key={i}>{a.title} ({a.hours.toFixed(1)}h)</li>))}</ul>
+                                        <ul className="text-sm">{dayData.assignments.map((a, i) => (<li key={i}>{a.title} ({a.hours.toFixed(1)}h)</li>))}</ul>
                                       </TooltipContent>
                                     )}
                                   </Tooltip>

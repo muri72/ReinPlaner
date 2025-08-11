@@ -108,7 +108,7 @@ export function ProfileUpdateForm({ initialData }: ProfileUpdateFormProps) {
           placeholder="Ihr Vorname"
         />
         {form.formState.errors.firstName && (
-          <p className="text-red-500 text-sm mt-1">{form.formState.errors.firstName.message}</p>
+          <p className="text-red-500 text-xs mt-1">{form.formState.errors.firstName.message}</p>
         )}
       </div>
       <div>
@@ -119,7 +119,7 @@ export function ProfileUpdateForm({ initialData }: ProfileUpdateFormProps) {
           placeholder="Ihr Nachname"
         />
         {form.formState.errors.lastName && (
-          <p className="text-red-500 text-sm mt-1">{form.formState.errors.lastName.message}</p>
+          <p className="text-red-500 text-xs mt-1">{form.formState.errors.lastName.message}</p>
         )}
       </div>
       <div className="flex items-center justify-between rounded-lg border p-4">

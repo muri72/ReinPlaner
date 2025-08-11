@@ -227,7 +227,9 @@ export function GiveFeedbackForm() {
           {[1, 2, 3, 4, 5].map((star) => (
             <Star
               key={star}
-              className={`h-8 w-8 cursor-pointer transition-colors ${(hoverRating || rating) >= star ? "text-yellow-400 fill-yellow-400" : "text-gray-300"}`}
+              className={`h-8 w-8 cursor-pointer transition-colors ${
+                (hoverRating || rating) >= star ? "text-warning fill-warning" : "text-muted-foreground"
+              }`}
               onMouseEnter={() => setHoverRating(star)}
               onMouseLeave={() => setHoverRating(0)}
               onClick={() => form.setValue("rating", star, { shouldValidate: true })}

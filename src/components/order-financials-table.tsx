@@ -41,38 +41,38 @@ export function OrderFinancialsTable({ data, totals }: OrderFinancialsTableProps
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>Auftrag</TableHead>
-          <TableHead>Kunde</TableHead>
-          <TableHead>Objekt</TableHead>
-          <TableHead>Mitarbeiter</TableHead>
-          <TableHead className="text-right">Einnahmen</TableHead>
-          <TableHead className="text-right">Kosten</TableHead>
-          <TableHead className="text-right">Gewinn</TableHead>
+          <TableHead className="text-sm">Auftrag</TableHead>
+          <TableHead className="text-sm">Kunde</TableHead>
+          <TableHead className="text-sm">Objekt</TableHead>
+          <TableHead className="text-sm">Mitarbeiter</TableHead>
+          <TableHead className="text-right text-sm">Einnahmen</TableHead>
+          <TableHead className="text-right text-sm">Kosten</TableHead>
+          <TableHead className="text-right text-sm">Gewinn</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {data.length === 0 ? (
           <TableRow>
-            <TableCell colSpan={7} className="h-24 text-center">
+            <TableCell colSpan={7} className="h-24 text-center text-sm text-muted-foreground">
               Keine Auftragsdaten zur Analyse gefunden.
             </TableCell>
           </TableRow>
         ) : (
           data.map((order) => (
             <TableRow key={order.order_id}>
-              <TableCell className="font-medium">{order.order_title}</TableCell>
-              <TableCell>{order.customer_name}</TableCell>
-              <TableCell>{order.object_name || 'N/A'}</TableCell>
-              <TableCell>
+              <TableCell className="font-normal text-sm">{order.order_title}</TableCell>
+              <TableCell className="text-sm">{order.customer_name}</TableCell>
+              <TableCell className="text-sm">{order.object_name || 'N/A'}</TableCell>
+              <TableCell className="text-sm">
                 {order.employee_first_name || order.employee_last_name
                   ? `${order.employee_first_name || ''} ${order.employee_last_name || ''}`.trim()
                   : 'N/A'}
               </TableCell>
-              <TableCell className="text-right">{formatCurrency(order.total_revenue)}</TableCell>
-              <TableCell className="text-right text-destructive">{formatCurrency(order.total_cost)}</TableCell>
+              <TableCell className="text-right text-sm">{formatCurrency(order.total_revenue)}</TableCell>
+              <TableCell className="text-right text-sm text-destructive">{formatCurrency(order.total_cost)}</TableCell>
               <TableCell className={cn(
-                "text-right font-semibold",
-                order.profit >= 0 ? "text-green-600" : "text-destructive"
+                "text-right font-normal text-sm",
+                order.profit >= 0 ? "text-success" : "text-destructive"
               )}>
                 {formatCurrency(order.profit)}
               </TableCell>
@@ -82,12 +82,12 @@ export function OrderFinancialsTable({ data, totals }: OrderFinancialsTableProps
       </TableBody>
       <TableFooter>
         <TableRow>
-          <TableCell colSpan={4} className="text-right font-bold">Gesamt</TableCell>
-          <TableCell className="text-right font-bold">{formatCurrency(totals.revenue)}</TableCell>
-          <TableCell className="text-right font-bold text-destructive">{formatCurrency(totals.cost)}</TableCell>
+          <TableCell colSpan={4} className="text-right font-semibold text-base">Gesamt</TableCell>
+          <TableCell className="text-right font-semibold text-base">{formatCurrency(totals.revenue)}</TableCell>
+          <TableCell className="text-right font-semibold text-base text-destructive">{formatCurrency(totals.cost)}</TableCell>
           <TableCell className={cn(
-            "text-right font-bold",
-            totals.profit >= 0 ? "text-green-600" : "text-destructive"
+            "text-right font-semibold text-base",
+            totals.profit >= 0 ? "text-success" : "text-destructive"
           )}>
             {formatCurrency(totals.profit)}
           </TableCell>

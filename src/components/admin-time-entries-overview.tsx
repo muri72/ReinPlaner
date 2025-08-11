@@ -184,7 +184,7 @@ export function AdminTimeEntriesOverview({ currentUserId, isAdmin }: AdminTimeEn
   };
 
   if (loading) {
-    return <div className="text-center py-4">Lade Zeiteinträge...</div>;
+    return <div className="text-center py-4 text-sm">Lade Zeiteinträge...</div>; {/* Changed to text-sm */}
   }
 
   return (
@@ -214,14 +214,14 @@ export function AdminTimeEntriesOverview({ currentUserId, isAdmin }: AdminTimeEn
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {timeEntries.length === 0 ? (
-          <p className="col-span-full text-center text-muted-foreground">
+          <p className="col-span-full text-center text-muted-foreground text-sm"> {/* Changed to text-sm */}
             {currentQuery || selectedEmployeeId ? "Keine Zeiteinträge für diese Filter gefunden." : "Noch keine Zeiteinträge vorhanden."}
           </p>
         ) : (
           timeEntries.map((entry) => (
             <Card key={entry.id}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-lg font-medium">
+                <CardTitle className="text-lg font-semibold"> {/* Changed to text-lg font-semibold */}
                   Zeiteintrag
                 </CardTitle>
                 <div className="flex items-center space-x-2">
@@ -230,7 +230,7 @@ export function AdminTimeEntriesOverview({ currentUserId, isAdmin }: AdminTimeEn
                   <DeleteTimeEntryButton entryId={entry.id} />
                 </div>
               </CardHeader>
-              <CardContent className="space-y-2 text-sm text-muted-foreground">
+              <CardContent className="space-y-2 text-sm text-muted-foreground"> {/* Changed to text-sm */}
                 <div className="flex items-center">
                   <Clock className="mr-2 h-4 w-4 flex-shrink-0" />
                   <span>Start: {new Date(entry.start_time).toLocaleString()}</span>
@@ -247,7 +247,7 @@ export function AdminTimeEntriesOverview({ currentUserId, isAdmin }: AdminTimeEn
                     <span>Dauer (Brutto): {formatDuration(entry.duration_minutes)}</span>
                   </div>
                 )}
-                {entry.break_minutes !== null && entry.break_minutes > 0 && ( // Neues Feld anzeigen
+                {entry.break_minutes !== null && entry.break_minutes > 0 && (
                   <div className="flex items-center">
                     <Clock className="mr-2 h-4 w-4 flex-shrink-0" />
                     <span>Pause: {formatDuration(entry.break_minutes)}</span>
