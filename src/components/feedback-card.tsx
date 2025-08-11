@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Star, MessageSquare, Image as ImageIcon, User, Briefcase, Building, Mail, Trash2, Pencil, CornerDownRight } from "lucide-react";
+import { Star, MessageSquare, Image as ImageIcon, Trash2, Pencil, CornerDownRight } from "lucide-react";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import NextImage from "next/image";
 import { toast } from "sonner";
@@ -20,6 +20,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { OrderFeedbackEditDialog } from "./order-feedback-edit-dialog";
+import { GeneralFeedbackEditDialog } from "./general-feedback-edit-dialog";
 
 // Typdefinitionen, die beide Feedback-Arten abdecken
 type Feedback = {
@@ -50,10 +52,9 @@ interface FeedbackCardProps {
   feedbackType: 'order' | 'general';
   currentUserId: string;
   currentUserRole: 'admin' | 'manager' | 'employee' | 'customer';
-  onEdit: () => void;
 }
 
-export function FeedbackCard({ feedback, feedbackType, currentUserId, currentUserRole, onEdit }: FeedbackCardProps) {
+export function FeedbackCard({ feedback, feedbackType, currentUserId, currentUserRole }: FeedbackCardProps) {
   const [isDeleting, setIsDeleting] = useState(false);
   const isManagerOrAdmin = currentUserRole === 'admin' || currentUserRole === 'manager';
   const canEditOrDelete = isManagerOrAdmin || feedback.user_id === currentUserId;
@@ -135,7 +136,11 @@ export function FeedbackCard({ feedback, feedbackType, currentUserId, currentUse
         )}
         {canEditOrDelete && (
           <div className="flex items-center gap-2 self-end mt-2">
-            <Button variant="ghost" size="icon" onClick={onEdit}><Pencil className="h-4 w-4" /></Button>
+            {feedbackType === 'order' ? (
+              <OrderFeedbackEditDialog feedback={feedback} />
+            ) : (
+              <GeneralFeedbackEditDialog feedback={feedback} />
+            )}
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button variant="ghost" size="icon" className="text-destructive"><Trash2 className="h-4 w-4" /></Button>
