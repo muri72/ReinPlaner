@@ -1,7 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { ProfileUpdateForm } from "@/components/profile-update-form";
+import { PasswordUpdateForm } from "@/components/password-update-form";
 import { MadeWithDyad } from "@/components/made-with-dyad";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default async function ProfilePage() {
   const supabase = await createClient();
@@ -22,18 +24,32 @@ export default async function ProfilePage() {
   }
 
   return (
-    <div className="grid grid-rows-[1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-1 items-center sm:items-start">
-        <h1 className="text-3xl font-bold">Ihr Profil</h1>
-        
-        <ProfileUpdateForm
-          initialData={{
-            firstName: profile?.first_name || null,
-            lastName: profile?.last_name || null,
-            avatarUrl: profile?.avatar_url || null,
-          }}
-        />
-      </main>
+    <div className="p-8 space-y-8">
+      <h1 className="text-3xl font-bold">Ihr Profil</h1>
+      <div className="grid gap-8 md:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Profilinformationen</CardTitle>
+            <CardDescription>
+              Aktualisieren Sie hier Ihren Namen und Ihr Profilbild. Ihre E-Mail-Adresse kann nicht geändert werden.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-muted-foreground">E-Mail</p>
+              <p className="text-sm font-semibold">{user.email}</p>
+            </div>
+            <ProfileUpdateForm
+              initialData={{
+                firstName: profile?.first_name || null,
+                lastName: profile?.last_name || null,
+                avatarUrl: profile?.avatar_url || null,
+              }}
+            />
+          </CardContent>
+        </Card>
+        <PasswordUpdateForm />
+      </div>
       <MadeWithDyad />
     </div>
   );

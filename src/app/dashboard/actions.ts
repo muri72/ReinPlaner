@@ -74,3 +74,47 @@ export async function updateProfile(formData: FormData) {
   revalidatePath("/dashboard");
   return { success: true, message: "Profil erfolgreich aktualisiert!" };
 }
+
+export async function updatePassword(password: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { success: false, message: "Benutzer nicht authentifiziert." };
+  }
+
+  const { error } = await supabase.auth.updateUser({ password });
+
+  if (error) {
+    console.error("Fehler beim Aktualisieren des Passworts:", error);
+    return { success: false, message: `Passwort-Update fehlgeschlagen: ${error.message}` };
+  }
+
+  // Melde den Benutzer aus Sicherheitsgründen ab.
+  await supabase.auth.signOut();
+
+  return { success: true, message: "Passwort erfolgreich aktualisiert! Sie werden nun abgemeldet." };
+}
+
+export async function sendPasswordResetEmail() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user || !user.email) {
+    return { success: false, message: "Benutzer nicht authentifiziert oder keine E-Mail-Adresse vorhanden." };
+  }
+
+  // WICHTIG: Stellen Sie sicher, dass NEXT_PUBLIC_BASE_URL in Ihren Umgebungsvariablen gesetzt ist.
+  const redirectTo = `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/auth/callback?next=/dashboard/profile`;
+
+  const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
+    redirectTo,
+  });
+
+  if (error) {
+    console.error("Fehler beim Senden der Passwort-Reset-E-Mail:", error);
+    return { success: false, message: `Fehler: ${error.message}` };
+  }
+
+  return { success: true, message: "E-Mail zum Zurücksetzen des Passworts wurde gesendet. Bitte überprüfen Sie Ihren Posteingang." };
+}
