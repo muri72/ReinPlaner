@@ -72,24 +72,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-primary/20 to-accent/20 animate-gradient-xy">
-      <style jsx>{`
-        @keyframes gradient-xy {
-          0% {
-            background-position: 0% 0%;
-          }
-          50% {
-            background-position: 100% 100%;
-          }
-          100% {
-            background-position: 0% 0%;
-          }
-        }
-        .animate-gradient-xy {
-          background-size: 400% 400%;
-          animation: gradient-xy 15s ease infinite;
-        }
-      `}</style>
+    <div className="min-h-screen flex items-center justify-center p-4 bg-background">
       <div className="relative z-10 w-full max-w-4xl flex flex-col md:flex-row rounded-xl shadow-elevation-4 border border-border overflow-hidden">
         {/* Left Side: Login Form */}
         <div className="w-full md:w-1/2 p-8 space-y-6 bg-background/70 backdrop-blur-xl">
