@@ -60,7 +60,7 @@ export default async function FeedbackPage() {
 
   return (
     <div className="p-8 space-y-8">
-      <h1 className="text-3xl font-bold">Feedback-Zentrale</h1>
+      <h1 className="text-3xl font-bold">Feedback</h1>
       
       <Card>
         <CardHeader>

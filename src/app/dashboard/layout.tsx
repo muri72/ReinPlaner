@@ -94,7 +94,7 @@ export default async function DashboardLayout({
             <Link href="/dashboard/feedback" passHref>
               <Button variant="ghost" className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
                 <Star className="mr-2 h-4 w-4" />
-                Feedback-Zentrale
+                Feedback
               </Button>
             </Link>
             {(isAdmin || isManager) && ( // Only show for admins and managers
