@@ -26,7 +26,7 @@ const absenceTypeTranslations: { [key: string]: string } = {
 const absenceTypeColors: { [key: string]: string } = {
   vacation: "bg-primary text-primary-foreground",
   sick_leave: "bg-warning text-warning-foreground",
-  training: "bg-success text-success-foreground",
+  training: "bg-accent text-accent-foreground", // Geändert zu accent
   other: "bg-muted text-muted-foreground",
 };
 
@@ -172,7 +172,7 @@ export function ResourcePlanningCalendar() {
                 <TableHeader>
                   <TableRow>
                     <TableHead className="sticky left-0 bg-card z-10 min-w-[200px] text-sm">Mitarbeiter</TableHead>
-                    {weekDays.map(day => (
+                    {weekDays.map((day: Date) => (
                       <TableHead key={day.toString()} className="text-center text-sm">
                         {format(day, "E dd.", { locale: de })}
                       </TableHead>
@@ -184,7 +184,7 @@ export function ResourcePlanningCalendar() {
                     Array.from({ length: 5 }).map((_, i) => (
                       <TableRow key={i}>
                         <TableCell className="sticky left-0 bg-card z-10"><Skeleton className="h-12 w-32" /></TableCell>
-                        {weekDays.map(day => <TableCell key={day.toString()}><Skeleton className="h-12 w-16 mx-auto" /></TableCell>)}
+                        {weekDays.map((day: Date) => <TableCell key={day.toString()}><Skeleton className="h-12 w-16 mx-auto" /></TableCell>)}
                       </TableRow>
                     ))
                   ) : employeeIds.length === 0 ? (
@@ -197,7 +197,7 @@ export function ResourcePlanningCalendar() {
                       return (
                         <TableRow key={id}>
                           <TableCell className="font-normal sticky left-0 bg-card z-10 text-sm">{employee.name}</TableCell>
-                          {weekDays.map(day => {
+                          {weekDays.map((day: Date) => {
                             const dateString = format(day, "yyyy-MM-dd");
                             const dayData = employee.schedule[dateString];
                             const droppableId = `${id}__${dateString}`;
