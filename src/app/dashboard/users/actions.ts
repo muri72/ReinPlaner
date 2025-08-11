@@ -3,6 +3,7 @@
 import { createClient, createAdminClient } from "@/lib/supabase/server"; // Importiere createAdminClient
 import { revalidatePath } from "next/cache";
 import { UserFormValues } from "@/components/user-form";
+import { sendNotification } from "@/lib/actions/notifications";
 
 export async function registerUser(data: UserFormValues) {
   const supabase = await createClient(); // Für die Überprüfung des aktuellen Benutzers
@@ -172,6 +173,14 @@ export async function registerUser(data: UserFormValues) {
     }
   }
 
+  // Send a welcome notification to the new user
+  await sendNotification({
+    userId: newUserId,
+    title: "Willkommen bei ARIS Management!",
+    message: "Ihr Konto wurde erfolgreich erstellt. Erkunden Sie das Dashboard, um loszulegen.",
+    link: "/dashboard"
+  });
+
   revalidatePath("/dashboard/users");
   revalidatePath("/dashboard/employees"); // Revalidiere Mitarbeiterseite, falls Zuweisung geändert
   revalidatePath("/dashboard/customers"); // Revalidiere Kundenseite, falls Zuweisung geändert
@@ -330,6 +339,14 @@ export async function assignCustomersToManager(managerId: string, customerIds: s
       return { success: false, message: `Fehler beim Aktualisieren der Zuweisungen: ${insertError.message}` };
     }
   }
+
+  // Notify the manager
+  await sendNotification({
+    userId: managerId,
+    title: "Ihre Kundenzuweisungen wurden aktualisiert",
+    message: "Ein Administrator hat die Liste der Ihnen zugewiesenen Kunden geändert.",
+    link: "/dashboard/customers"
+  });
 
   revalidatePath("/dashboard/users");
   revalidatePath("/dashboard/customers"); // Revalidiere auch Kunden, da sich deren Sichtbarkeit ändern könnte
