@@ -15,6 +15,9 @@ import { createOrderFeedback } from "@/app/dashboard/feedback/actions";
 import Image from "next/image";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+const MAX_TOTAL_FILES = 5;
+
 const feedbackSchema = z.object({
   customerId: z.string().uuid("Bitte wählen Sie einen Kunden aus."),
   orderId: z.string().uuid("Bitte wählen Sie einen Auftrag aus."),
@@ -106,11 +109,21 @@ export function GiveFeedbackForm() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const newFiles = Array.from(e.target.files);
-      if (files.length + newFiles.length > 5) {
-        toast.error("Sie können maximal 5 Bilder hochladen.");
+      const validFiles: File[] = [];
+      
+      for (const file of newFiles) {
+        if (file.size > MAX_FILE_SIZE) {
+          toast.error(`Datei "${file.name}" ist zu groß (max. 10 MB).`);
+        } else {
+          validFiles.push(file);
+        }
+      }
+
+      if (files.length + validFiles.length > MAX_TOTAL_FILES) {
+        toast.error(`Sie können maximal ${MAX_TOTAL_FILES} Bilder hochladen.`);
         return;
       }
-      setFiles((prevFiles) => [...prevFiles, ...newFiles]);
+      setFiles((prevFiles) => [...prevFiles, ...validFiles]);
     }
   };
 

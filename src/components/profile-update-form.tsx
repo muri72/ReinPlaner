@@ -11,6 +11,8 @@ import { updateProfile } from "@/app/dashboard/actions";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useState, useRef } from "react";
 
+const MAX_AVATAR_SIZE = 10 * 1024 * 1024; // 10 MB
+
 const profileSchema = z.object({
   firstName: z.string().max(50, "Vorname ist zu lang").optional(),
   lastName: z.string().max(50, "Nachname ist zu lang").optional(),
@@ -43,6 +45,10 @@ export function ProfileUpdateForm({ initialData }: ProfileUpdateFormProps) {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const selectedFile = e.target.files[0];
+      if (selectedFile.size > MAX_AVATAR_SIZE) {
+        toast.error(`Das Bild ist zu groß. Die maximale Größe beträgt 10 MB.`);
+        return;
+      }
       setFile(selectedFile);
       setPreview(URL.createObjectURL(selectedFile));
     }
