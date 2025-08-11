@@ -1,12 +1,10 @@
-import React from "react";
-import { createClient } from "@/lib/supabase/server";
-import { redirect } from "next/navigation";
-import { signOut } from "@/app/dashboard/actions"; // Import server action
-
-// New Client Component to manage sidebar state
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
+import { createClient } from "@/lib/supabase/server"; // This import will now be handled by the server component that wraps this client component
+import { redirect } from "next/navigation"; // This import will now be handled by the server component that wraps this client component
+import { signOut } from "@/app/dashboard/actions"; // Import server action
+
 import { Menu, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NotificationBell } from "@/components/notification-bell";
