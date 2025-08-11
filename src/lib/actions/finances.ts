@@ -79,6 +79,16 @@ export async function getFinancialOverview(year: number, month: number) {
   }
 }
 
+export async function getFinancialsForAllOrders() {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase.rpc('get_all_order_financials');
+  if (error) {
+    console.error("Fehler beim Abrufen der Finanzdaten für alle Aufträge:", error);
+    return { success: false, message: error.message, data: null };
+  }
+  return { success: true, message: "Daten geladen.", data };
+}
+
 export async function getServiceRates() {
   const supabase = await createClient();
   const { data, error } = await supabase.from('service_rates').select('*');

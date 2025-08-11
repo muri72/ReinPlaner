@@ -1,9 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { getFinancialOverview } from "@/lib/actions/finances";
+import { getFinancialOverview, getFinancialsForAllOrders } from "@/lib/actions/finances";
 import { FinancialSummaryCard } from "@/components/financial-summary-card";
 import { ServiceRateManager } from "@/components/service-rate-manager";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { OrderFinancialsTable } from "@/components/order-financials-table";
 
 export default async function FinancesPage() {
   const supabase = await createClient();
@@ -24,35 +25,65 @@ export default async function FinancesPage() {
   }
 
   const now = new Date();
-  const { data: financialData, message, success } = await getFinancialOverview(now.getFullYear(), now.getMonth() + 1);
+  const financialOverviewPromise = getFinancialOverview(now.getFullYear(), now.getMonth() + 1);
+  const allOrdersFinancialsPromise = getFinancialsForAllOrders();
+
+  const [
+    { data: financialData, message: overviewMessage, success: overviewSuccess },
+    { data: allOrdersData, message: allOrdersMessage, success: allOrdersSuccess }
+  ] = await Promise.all([financialOverviewPromise, allOrdersFinancialsPromise]);
 
   return (
     <div className="p-8 space-y-8">
       <h1 className="text-3xl font-bold">Finanzübersicht</h1>
-      <p className="text-muted-foreground">
-        Hier finden Sie eine Übersicht über Ihre Einnahmen, Kosten und den daraus resultierenden Gewinn für den aktuellen Monat.
-      </p>
+      
+      <Card>
+        <CardHeader>
+          <CardTitle>Monatsübersicht</CardTitle>
+          <CardDescription>
+            Eine Zusammenfassung Ihrer Finanzen für den aktuellen Monat.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {overviewSuccess && financialData ? (
+            <div className="grid gap-6 md:grid-cols-3">
+              <FinancialSummaryCard title="Einnahmen" value={financialData.totalRevenue} />
+              <FinancialSummaryCard title="Personalkosten" value={financialData.totalCosts} isCost />
+              <FinancialSummaryCard title="Gewinn" value={financialData.profit} isProfit />
+            </div>
+          ) : (
+            <p className="text-destructive">{overviewMessage}</p>
+          )}
+        </CardContent>
+      </Card>
 
-      {success && financialData ? (
-        <div className="grid gap-6 md:grid-cols-3">
-          <FinancialSummaryCard title="Einnahmen" value={financialData.totalRevenue} />
-          <FinancialSummaryCard title="Personalkosten" value={financialData.totalCosts} isCost />
-          <FinancialSummaryCard title="Gewinn" value={financialData.profit} isProfit />
-        </div>
-      ) : (
-        <p className="text-destructive">{message}</p>
-      )}
+      <Card>
+        <CardHeader>
+          <CardTitle>Rentabilitätsanalyse pro Auftrag</CardTitle>
+          <CardDescription>
+            Eine detaillierte Aufschlüsselung der Finanzen für jeden einzelnen Auftrag.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {allOrdersSuccess && allOrdersData ? (
+            <OrderFinancialsTable data={allOrdersData} />
+          ) : (
+            <p className="text-destructive">{allOrdersMessage}</p>
+          )}
+        </CardContent>
+      </Card>
 
-      <div className="grid grid-cols-1">
-        <Card>
-          <CardHeader>
-            <CardTitle>Stundensätze verwalten</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ServiceRateManager />
-          </CardContent>
-        </Card>
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Stundensätze verwalten</CardTitle>
+          <CardDescription>
+            Legen Sie hier die Netto-Stundensätze für Ihre verschiedenen Dienstleistungen fest.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ServiceRateManager />
+        </CardContent>
+      </Card>
     </div>
   );
 }
