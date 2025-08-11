@@ -1,7 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { MadeWithDyad } from "@/components/made-with-dyad";
 import { ProfileUpdateForm } from "@/components/profile-update-form";
 import { signOut } from "@/app/dashboard/actions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -69,7 +68,7 @@ export default async function DashboardPage() {
   ];
 
   return (
-    <div className="p-4 md:p-8 space-y-8">
+    <div className="p-8 space-y-8">
       <h1 className="text-2xl md:text-3xl font-bold">
         Willkommen im Dashboard, {profile?.first_name || user.email}!
       </h1>
@@ -77,7 +76,7 @@ export default async function DashboardPage() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card className="shadow-elevation-2">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-semibold">Gesamtkunden</CardTitle>
+            <CardTitle className="text-sm md:text-base font-semibold">Gesamtkunden</CardTitle>
             <Users className="h-4 w-4 md:h-5 md:w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -87,7 +86,7 @@ export default async function DashboardPage() {
         </Card>
         <Card className="shadow-elevation-2">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-semibold">Gesamtobjekte</CardTitle>
+            <CardTitle className="text-sm md:text-base font-semibold">Gesamtobjekte</CardTitle>
             <Building className="h-4 w-4 md:h-5 md:w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -97,7 +96,7 @@ export default async function DashboardPage() {
         </Card>
         <Card className="shadow-elevation-2">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-semibold">Gesamte Mitarbeiter</CardTitle>
+            <CardTitle className="text-sm md:text-base font-semibold">Gesamte Mitarbeiter</CardTitle>
             <UsersRound className="h-4 w-4 md:h-5 md:w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -107,7 +106,7 @@ export default async function DashboardPage() {
         </Card>
         <Card className="shadow-elevation-2">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-semibold">Ausstehende Aufträge</CardTitle>
+            <CardTitle className="text-sm md:text-base font-semibold">Ausstehende Aufträge</CardTitle>
             <Briefcase className="h-4 w-4 md:h-5 md:w-5 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -140,7 +139,6 @@ export default async function DashboardPage() {
       <form action={signOut} className="mt-8">
         <Button type="submit">Abmelden</Button>
       </form>
-      <MadeWithDyad />
     </div>
   );
 }
