@@ -3,14 +3,13 @@ import { redirect } from "next/navigation";
 import { OrderForm } from "@/components/order-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Trash2, CalendarDays, Clock, FileText, Wrench, UserRound, AlertTriangle, Star as StarIcon, DollarSign } from "lucide-react";
+import { Trash2, CalendarDays, Clock, FileText, Wrench, UserRound, AlertTriangle, Star as StarIcon } from "lucide-react";
 import { deleteOrder, createOrder } from "./actions";
 import { OrderEditDialog } from "@/components/order-edit-dialog";
 import { Badge } from "@/components/ui/badge";
 import { DeleteOrderButton } from "@/components/delete-order-button";
 import { SearchInput } from "@/components/search-input";
 import { OrderPlanningDialog } from "@/components/order-planning-dialog";
-import { OrderFinancialsDialog } from "@/components/order-financials-dialog"; // Importiert
 
 interface DisplayOrder {
   id: string;
@@ -195,7 +194,6 @@ export default async function OrdersPage({
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-lg font-medium">{order.title}</CardTitle>
                     <div className="flex items-center space-x-2">
-                      <OrderFinancialsDialog orderId={order.id} orderTitle={order.title} />
                       <OrderEditDialog order={order} />
                       <DeleteOrderButton orderId={order.id} />
                     </div>

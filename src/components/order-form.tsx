@@ -25,7 +25,6 @@ const availableServices = [
   "Grundreinigung",
   "Graffitientfernung",
   "Sonderreinigung",
-  "Intensivreinigung", // Hinzugefügt
 ] as const;
 
 export const orderSchema = z.object({
@@ -47,11 +46,7 @@ export const orderSchema = z.object({
   ),
   notes: z.string().max(500, "Notizen sind zu lang").optional().nullable(),
   serviceType: z.enum(availableServices).optional().nullable(),
-  requestStatus: z.enum(["pending", "approved", "rejected"]).default("approved"),
-  fixedMonthlyPrice: z.preprocess( // Neues Feld
-    (val) => (val === "" ? null : Number(val)),
-    z.nullable(z.number().min(0, "Preis muss positiv sein")).optional()
-  ),
+  requestStatus: z.enum(["pending", "approved", "rejected"]).default("approved"), // Neues Feld
 });
 
 export type OrderFormInput = z.input<typeof orderSchema>;
@@ -88,8 +83,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     estimatedHours: (initialData?.estimatedHours as number | null | undefined) ?? null,
     notes: initialData?.notes ?? null,
     serviceType: initialData?.serviceType ?? null,
-    requestStatus: initialData?.requestStatus ?? "approved",
-    fixedMonthlyPrice: (initialData?.fixedMonthlyPrice as number | null | undefined) ?? null, // Neues Feld
+    requestStatus: initialData?.requestStatus ?? "approved", // Initialwert für neues Feld
   };
 
   const form = useForm<OrderFormValues>({
@@ -186,7 +180,6 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
 
   return (
     <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 w-full max-w-md" suppressHydrationWarning>
-      {/* ... other fields ... */}
       <div>
         <Label htmlFor="title">Titel des Auftrags</Label>
         <Input
@@ -379,22 +372,6 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
             />
           )}
         </>
-      )}
-
-      {orderType === "permanent" && (
-        <div>
-          <Label htmlFor="fixedMonthlyPrice">Monatlicher Pauschalpreis (€, optional)</Label>
-          <Input
-            id="fixedMonthlyPrice"
-            type="number"
-            step="0.01"
-            {...form.register("fixedMonthlyPrice")}
-            placeholder="z.B. 500.00"
-          />
-          {form.formState.errors.fixedMonthlyPrice && (
-            <p className="text-red-500 text-sm mt-1">{form.formState.errors.fixedMonthlyPrice.message}</p>
-          )}
-        </div>
       )}
 
       <div>

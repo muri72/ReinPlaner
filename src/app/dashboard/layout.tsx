@@ -1,11 +1,11 @@
 import React from "react";
 import Link from "next/link";
-import { Home, ListTodo, User, Users, Briefcase, UsersRound, Building, ContactRound, Settings, Clock, FileText, CalendarOff, CalendarCheck, Star, DollarSign } from "lucide-react"; // DollarSign hinzugefügt
+import { Home, ListTodo, User, Users, Briefcase, UsersRound, Building, ContactRound, Settings, Clock, FileText, CalendarOff, CalendarCheck, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { signOut } from "@/app/dashboard/actions";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { NotificationBell } from "@/components/notification-bell";
+import { NotificationBell } from "@/components/notification-bell"; // Importiert
 
 export default async function DashboardLayout({
   children,
@@ -93,12 +93,6 @@ export default async function DashboardLayout({
                 </Button>
               </Link>
             )}
-            <Link href="/dashboard/finances" passHref>
-              <Button variant="ghost" className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
-                <DollarSign className="mr-2 h-4 w-4" />
-                Finanzen
-              </Button>
-            </Link>
             <Link href="/dashboard/feedback" passHref>
               <Button variant="ghost" className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
                 <Star className="mr-2 h-4 w-4" />

@@ -30,7 +30,6 @@ export async function createOrder(data: OrderFormValues) {
     notes,
     serviceType,
     requestStatus,
-    fixedMonthlyPrice, // Neues Feld
   } = data;
 
   const { error } = await supabase
@@ -53,7 +52,6 @@ export async function createOrder(data: OrderFormValues) {
       notes,
       service_type: serviceType,
       request_status: requestStatus,
-      fixed_monthly_price: fixedMonthlyPrice, // Neues Feld
     });
 
   if (error) {
@@ -111,7 +109,6 @@ export async function updateOrder(orderId: string, data: OrderFormValues) {
       notes: data.notes,
       service_type: data.serviceType,
       request_status: data.requestStatus,
-      fixed_monthly_price: data.fixedMonthlyPrice, // Neues Feld
     })
     .eq('id', orderId);
     // RLS wird die Berechtigungsprüfung für Updates handhaben
