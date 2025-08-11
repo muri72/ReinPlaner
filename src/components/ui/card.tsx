@@ -9,7 +9,7 @@ const Card = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      "rounded-xl border bg-card/90 text-card-foreground shadow-elevation-2 backdrop-blur-sm", // Increased rounded-xl and added bg-card/90 with backdrop-blur-sm
+      "rounded-xl border bg-card/60 backdrop-blur-sm text-card-foreground shadow-elevation-2", // Added backdrop-blur-sm and adjusted opacity
       className
     )}
     {...props}
