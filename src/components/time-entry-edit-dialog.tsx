@@ -21,8 +21,8 @@ interface TimeEntryEditDialogProps {
     type: string;
     notes: string | null;
   };
-  currentUserId: string; // Hinzugefügt
-  isAdmin: boolean; // Hinzugefügt
+  currentUserId: string;
+  isAdmin: boolean;
 }
 
 export function TimeEntryEditDialog({ timeEntry, currentUserId, isAdmin }: TimeEntryEditDialogProps) {
@@ -65,8 +65,8 @@ export function TimeEntryEditDialog({ timeEntry, currentUserId, isAdmin }: TimeE
           onSubmit={handleUpdate}
           submitButtonText="Änderungen speichern"
           onSuccess={() => setOpen(false)}
-          currentUserId={currentUserId} // Hinzugefügt
-          isAdmin={isAdmin} // Hinzugefügt
+          currentUserId={currentUserId}
+          isAdmin={isAdmin}
         />
       </DialogContent>
     </Dialog>

@@ -42,8 +42,6 @@ export function DatePicker({ label, placeholder, value, onChange, disabled, erro
       } else {
         onChange(null); // Ungültiges Datum
       }
-    } else if (text === "") {
-      onChange(null); // Eingabe gelöscht
     } else {
       // Bei teilweiser Eingabe oder ungültigem Format wird der Wert nicht sofort aktualisiert
       // Dies ermöglicht dem Benutzer, die Eingabe zu vervollständigen

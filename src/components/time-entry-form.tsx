@@ -73,8 +73,8 @@ interface TimeEntryFormProps {
   onSubmit: (data: TimeEntryFormValues) => Promise<{ success: boolean; message: string }>;
   submitButtonText: string;
   onSuccess?: () => void;
-  currentUserId: string; // Hinzugefügt
-  isAdmin: boolean; // Hinzugefügt
+  currentUserId: string;
+  isAdmin: boolean;
 }
 
 export function TimeEntryForm({ initialData, onSubmit, submitButtonText, onSuccess, currentUserId, isAdmin }: TimeEntryFormProps) {
@@ -267,7 +267,7 @@ export function TimeEntryForm({ initialData, onSubmit, submitButtonText, onSucce
             <SelectItem value="manual">Manuell</SelectItem>
             <SelectItem value="clock_in_out">Kommt/Geht</SelectItem>
             <SelectItem value="stopwatch">Stoppuhr</SelectItem>
-            <SelectItem value="automatic_scheduled_order">Automatischer geplanter Auftrag</SelectItem> {/* Neuer Typ */}
+            <SelectItem value="automatic_scheduled_order">Automatischer geplanter Auftrag</SelectItem>
           </SelectContent>
         </Select>
         {form.formState.errors.type && (
@@ -280,7 +280,7 @@ export function TimeEntryForm({ initialData, onSubmit, submitButtonText, onSucce
         <Select
           onValueChange={(value) => form.setValue("employeeId", value === "unassigned" ? null : value)}
           value={form.watch("employeeId") || "unassigned"}
-          disabled={!isAdmin && employees.length > 0} // Deaktiviert, wenn nicht Admin und Mitarbeiter zugewiesen
+          disabled={!isAdmin && employees.length > 0}
         >
           <SelectTrigger className="w-full">
             <SelectValue placeholder="Mitarbeiter auswählen" />
@@ -303,9 +303,9 @@ export function TimeEntryForm({ initialData, onSubmit, submitButtonText, onSucce
       <div>
         <Label htmlFor="customerId">Kunde (optional)</Label>
         <Select onValueChange={(value) => {
-          form.setValue("customerId", value === "unassigned" ? null : value);
-          form.setValue("objectId", null); // Reset object when customer changes
-          form.setValue("orderId", null); // Reset order when customer changes
+          form.setValue("customerId", value);
+          form.setValue("objectId", null);
+          form.setValue("orderId", null);
         }} value={selectedCustomerId || "unassigned"}>
           <SelectTrigger className="w-full">
             <SelectValue placeholder="Kunde auswählen" />
@@ -325,8 +325,8 @@ export function TimeEntryForm({ initialData, onSubmit, submitButtonText, onSucce
       <div>
         <Label htmlFor="objectId">Objekt (optional)</Label>
         <Select onValueChange={(value) => {
-          form.setValue("objectId", value === "unassigned" ? null : value);
-          form.setValue("orderId", null); // Reset order when object changes
+          form.setValue("objectId", value);
+          form.setValue("orderId", null);
         }} value={selectedObjectId || "unassigned"} disabled={!selectedCustomerId || filteredObjects.length === 0}>
           <SelectTrigger className="w-full">
             <SelectValue placeholder="Objekt auswählen" />

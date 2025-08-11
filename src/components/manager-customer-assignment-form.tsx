@@ -115,7 +115,7 @@ export function ManagerCustomerAssignmentForm({ managerId, onSuccess }: ManagerC
       </div>
       {form.formState.errors.customerIds && (
         <p className="text-red-500 text-sm mt-1">{form.formState.errors.customerIds.message}</p>
-      )}
+        )}
       <Button type="submit" className="w-full" disabled={loading || form.formState.isSubmitting}>
         {loading || form.formState.isSubmitting ? "Speichern..." : "Zuweisungen speichern"}
       </Button>
