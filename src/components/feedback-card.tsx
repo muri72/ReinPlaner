@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Star, MessageSquare, Image as ImageIcon, Trash2, Pencil, CornerDownRight } from "lucide-react";
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious, type CarouselApi } from "@/components/ui/carousel"; // useCarousel entfernt, CarouselApi hinzugefügt
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious, type CarouselApi } from "@/components/ui/carousel"; // useCarousel entfernt
 import NextImage from "next/image";
 import { toast } from "sonner";
 import { FeedbackReplyForm } from "./feedback-reply-form";
@@ -147,7 +147,7 @@ export function FeedbackCard({ feedback, feedbackType, currentUserId, currentUse
               <CarouselIndicators
                 totalSlides={totalSlides}
                 currentSlide={currentSlide}
-                onSlideChange={(index) => carouselApi?.scrollTo(index)}
+                carouselApi={carouselApi} // carouselApi direkt übergeben
               />
             </Carousel>
           </div>
@@ -235,11 +235,11 @@ export function FeedbackCard({ feedback, feedbackType, currentUserId, currentUse
 // Neue Komponente für die Carousel-Indikatoren
 interface CarouselIndicatorsProps {
   totalSlides: number;
-  currentSlide: number; // Hinzugefügt
-  onSlideChange: (index: number) => void;
+  currentSlide: number;
+  carouselApi: CarouselApi | undefined; // carouselApi als Prop hinzugefügt
 }
 
-function CarouselIndicators({ totalSlides, currentSlide, onSlideChange }: CarouselIndicatorsProps) {
+function CarouselIndicators({ totalSlides, currentSlide, carouselApi }: CarouselIndicatorsProps) {
   return (
     <div className="flex justify-center gap-2 mt-4">
       {Array.from({ length: totalSlides }).map((_, index) => (
@@ -249,7 +249,7 @@ function CarouselIndicators({ totalSlides, currentSlide, onSlideChange }: Carous
             "h-2 w-2 rounded-full bg-muted-foreground transition-colors",
             currentSlide === index && "bg-primary"
           )}
-          onClick={() => onSlideChange(index)}
+          onClick={() => carouselApi?.scrollTo(index)}
           aria-label={`Gehe zu Bild ${index + 1}`}
         />
       ))}
