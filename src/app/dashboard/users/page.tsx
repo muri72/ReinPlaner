@@ -143,19 +143,19 @@ export default async function UsersPage({
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
         {users.length === 0 && !query ? (
-          <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30 shadow-elevation-2">
+          <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30">
             <UsersRound className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
             <p className="text-base md:text-lg font-semibold">Noch keine Benutzer vorhanden</p>
-            <p className="text-sm">Registrieren Sie einen neuen Benutzer, um Ihr Team zu erweitern und Rollen zuzuweisen.</p>
+            <p className="text-sm">Registrieren Sie einen neuen Benutzer, um Ihr Team zu erweitern.</p>
             <div className="mt-4">
               {/* The button to open the dialog is now part of UserCreateDialog */}
             </div>
           </div>
         ) : users.length === 0 && query ? (
-          <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30 shadow-elevation-2">
+          <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30">
             <UsersRound className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
             <p className="text-base md:text-lg font-semibold">Keine Benutzer gefunden</p>
-            <p className="text-sm">Ihre Suche nach "{query}" ergab keine Treffer. Versuchen Sie eine andere Suchanfrage.</p>
+            <p className="text-sm">Ihre Suche nach "{query}" ergab keine Treffer.</p>
           </div>
         ) : (
           users.map((user) => (

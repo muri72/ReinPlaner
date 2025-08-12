@@ -1,7 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { WorkTimeReportForm } from "@/components/work-time-report-form";
-import { FileText } from "lucide-react"; // Import icon
 
 export default async function ReportsPage() {
   const supabase = await createClient();
@@ -26,9 +25,6 @@ export default async function ReportsPage() {
   return (
     <div className="p-4 md:p-8 space-y-8">
       <h1 className="text-2xl md:text-3xl font-bold">Arbeitszeitnachweise</h1>
-      <p className="text-sm md:text-base text-muted-foreground">
-        Generieren Sie detaillierte Arbeitszeitnachweise für Objekte oder Mitarbeiter für einen bestimmten Monat.
-      </p>
       <WorkTimeReportForm />
     </div>
   );

@@ -115,19 +115,19 @@ export default async function ObjectsPage({
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
         {objects && objects.length === 0 && !query ? (
-          <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30 shadow-elevation-2">
+          <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30">
             <Building className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
             <p className="text-base md:text-lg font-semibold">Noch keine Objekte vorhanden</p>
-            <p className="text-sm">Fügen Sie ein neues Objekt hinzu, um Ihre Standorte zu verwalten und Aufträge zuzuweisen.</p>
+            <p className="text-sm">Fügen Sie ein neues Objekt hinzu, um es zu verwalten.</p>
             <div className="mt-4">
               {/* The button to open the dialog is now part of ObjectCreateDialog */}
             </div>
           </div>
         ) : objects && objects.length === 0 && query ? (
-          <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30 shadow-elevation-2">
+          <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30">
             <Building className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
             <p className="text-base md:text-lg font-semibold">Keine Objekte gefunden</p>
-            <p className="text-sm">Ihre Suche nach "{query}" ergab keine Treffer. Versuchen Sie eine andere Suchanfrage.</p>
+            <p className="text-sm">Ihre Suche nach "{query}" ergab keine Treffer.</p>
           </div>
         ) : (
           objects?.map((object) => (
