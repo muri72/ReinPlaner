@@ -10,19 +10,18 @@ import { toast } from "sonner";
 import { FeedbackReplyForm } from "./feedback-reply-form";
 import { deleteOrderFeedback, deleteGeneralFeedback } from "@/app/dashboard/feedback/actions";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogClose, // Keep DialogClose
+} from "@/components/ui/dialog";
 import { OrderFeedbackEditDialog } from "./order-feedback-edit-dialog";
 import { GeneralFeedbackEditDialog } from "./general-feedback-edit-dialog";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"; // Import Tooltip components
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 // Typdefinitionen, die beide Feedback-Arten abdecken
 type Feedback = {
@@ -154,27 +153,29 @@ export function FeedbackCard({ feedback, feedbackType, currentUserId, currentUse
             <TooltipProvider delayDuration={300}>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
+                  <Dialog>
+                    <DialogTrigger asChild>
                       <Button variant="ghost" size="icon" className="text-destructive" disabled={isDeleting}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent key={`delete-feedback-${feedback.id}-open`} aria-labelledby="delete-feedback-alert-title">
-                      <AlertDialogHeader>
-                        <AlertDialogTitle id="delete-feedback-alert-title">Sind Sie sicher?</AlertDialogTitle>
-                        <AlertDialogDescription>
+                    </DialogTrigger>
+                    <DialogContent key={`delete-feedback-${feedback.id}-open`} aria-labelledby="delete-feedback-alert-title">
+                      <DialogHeader>
+                        <DialogTitle id="delete-feedback-alert-title">Sind Sie sicher?</DialogTitle>
+                        <DialogDescription>
                           Diese Aktion kann nicht rückgängig gemacht werden. Das Feedback wird dauerhaft gelöscht.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Abbrechen</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleDelete} disabled={isDeleting}>
+                        </DialogDescription>
+                      </DialogHeader>
+                      <DialogFooter>
+                        <DialogClose asChild>
+                          <Button variant="outline">Abbrechen</Button>
+                        </DialogClose>
+                        <Button onClick={handleDelete} disabled={isDeleting}> {/* Changed from DialogAction */}
                           {isDeleting ? "Löschen..." : "Löschen"}
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>Feedback löschen</p>

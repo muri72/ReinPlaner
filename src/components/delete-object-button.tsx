@@ -6,17 +6,16 @@ import { Button } from "@/components/ui/button";
 import { Trash2 } from "lucide-react";
 import { deleteObject } from "@/app/dashboard/objects/actions";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"; // Import Tooltip components
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogClose, // Keep DialogClose
+} from "@/components/ui/dialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface DeleteObjectButtonProps {
   objectId: string;
@@ -44,8 +43,8 @@ export function DeleteObjectButton({ objectId }: DeleteObjectButtonProps) {
     <TooltipProvider delayDuration={300}>
       <Tooltip>
         <TooltipTrigger asChild>
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
+          <Dialog>
+            <DialogTrigger asChild>
               <Button
                 variant="ghost"
                 size="icon"
@@ -54,22 +53,24 @@ export function DeleteObjectButton({ objectId }: DeleteObjectButtonProps) {
               >
                 <Trash2 className="h-4 w-4" />
               </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent key={`delete-object-${objectId}-open`} aria-labelledby="delete-object-alert-title">
-              <AlertDialogHeader>
-                <AlertDialogTitle id="delete-object-alert-title">Sind Sie sicher?</AlertDialogTitle>
-                <AlertDialogDescription>
+            </DialogTrigger>
+            <DialogContent key={`delete-object-${objectId}-open`} aria-labelledby="delete-object-alert-title">
+              <DialogHeader>
+                <DialogTitle id="delete-object-alert-title">Sind Sie sicher?</DialogTitle>
+                <DialogDescription>
                   Diese Aktion kann nicht rückgängig gemacht werden. Das Objekt und alle zugehörigen Daten werden dauerhaft gelöscht.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Abbrechen</AlertDialogCancel>
-                <AlertDialogAction onClick={handleDelete} disabled={loading}>
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter>
+                <DialogClose asChild>
+                  <Button variant="outline">Abbrechen</Button>
+                </DialogClose>
+                <Button onClick={handleDelete} disabled={loading}> {/* Changed from DialogAction */}
                   {loading ? "Löschen..." : "Löschen"}
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </TooltipTrigger>
         <TooltipContent>
           <p>Objekt löschen</p>
