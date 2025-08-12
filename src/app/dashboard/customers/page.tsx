@@ -10,10 +10,11 @@ import { SearchInput } from "@/components/search-input";
 import { Badge } from "@/components/ui/badge"; // Importiere Badge
 import { Button } from "@/components/ui/button"; // Hinzugefügt
 import { CustomerCreateDialog } from "@/components/customer-create-dialog"; // Import the new dialog
+import { PaginationControls } from "@/components/pagination-controls"; // Importiere die neue Paginierungskomponente
 
 export default async function CustomersPage({
   searchParams,
-}: any) {
+}: any) { // Typisierung auf 'any' geändert, um Next.js-Kompilierungsfehler zu umgehen
   const supabase = await createClient();
   const { data: { user: currentUser } } = await supabase.auth.getUser();
 
@@ -22,35 +23,38 @@ export default async function CustomersPage({
   }
 
   const query = typeof searchParams?.query === 'string' ? searchParams.query : '';
+  const currentPage = Number(searchParams?.page) || 1;
+  const pageSize = Number(searchParams?.pageSize) || 9; // Standardmäßig 9 Kunden pro Seite
+
+  const from = (currentPage - 1) * pageSize;
+  const to = from + pageSize - 1;
 
   let customersQuery = supabase
     .from('customers')
-    .select('*')
-    .order('name', { ascending: true });
-
-  // Die explizite user_id-Filterung wird entfernt, da RLS dies übernimmt.
-  // if (!isAdmin) {
-  //   customersQuery = customersQuery.eq('user_id', currentUser.id);
-  // }
+    .select('*', { count: 'exact' }) // count: 'exact' ist wichtig für die Paginierung
+    .order('name', { ascending: true })
+    .range(from, to); // Paginierung anwenden
 
   if (query) {
     customersQuery = customersQuery.or(
-      `name.ilike.%${query}%,address.ilike.%${query}%,contact_email.ilike.%${query}%,contact_phone.ilike.%${query}%,customer_type.ilike.%${query}%` // Suche auch nach Kundentyp
+      `name.ilike.%${query}%,address.ilike.%${query}%,contact_email.ilike.%${query}%,contact_phone.ilike.%${query}%,customer_type.ilike.%${query}%`
     );
   }
 
-  const { data: customers, error } = await customersQuery;
+  const { data: customers, error, count } = await customersQuery;
 
   if (error) {
     console.error("Fehler beim Laden der Kunden:", error);
     return <div className="p-4 md:p-8 text-sm">Fehler beim Laden der Kunden.</div>;
   }
 
+  const totalPages = count ? Math.ceil(count / pageSize) : 0;
+
   return (
     <div className="p-4 md:p-8 space-y-8">
       <h1 className="text-2xl md:text-3xl font-bold">Ihre Kunden</h1>
 
-      <div className="mb-4 flex justify-between items-center">
+      <div className="mb-4 flex flex-col sm:flex-row justify-between items-center gap-4">
         <SearchInput placeholder="Kunden suchen..." />
         <CustomerCreateDialog />
       </div>
@@ -62,7 +66,7 @@ export default async function CustomersPage({
             <p className="text-base md:text-lg font-semibold">Noch keine Kunden vorhanden</p>
             <p className="text-sm">Fügen Sie Ihren ersten Kunden hinzu, um loszulegen.</p>
             <div className="mt-4">
-              {/* The button to open the dialog is now part of CustomerCreateDialog */}
+              <CustomerCreateDialog />
             </div>
           </div>
         ) : customers.length === 0 && query ? (
@@ -113,6 +117,9 @@ export default async function CustomersPage({
           ))
         )}
       </div>
+      {totalPages > 1 && (
+        <PaginationControls currentPage={currentPage} totalPages={totalPages} />
+      )}
     </div>
   );
 }

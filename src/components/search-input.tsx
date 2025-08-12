@@ -16,6 +16,7 @@ export function SearchInput({ placeholder }: SearchInputProps) {
 
   const handleSearch = useDebouncedCallback((term: string) => {
     const params = new URLSearchParams(searchParams);
+    params.set('page', '1'); // Immer zur ersten Seite zurückkehren bei neuer Suche
     if (term) {
       params.set("query", term);
     } else {
