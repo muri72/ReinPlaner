@@ -8,8 +8,9 @@ import { DeleteObjectButton } from "@/components/delete-object-button";
 import { MapPin, FileText, Clock, Key, Lock, ShieldCheck, UserRound, PlusCircle, Building } from "lucide-react"; // Neue Icons
 import { SearchInput } from "@/components/search-input";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button"; // Hinzugefügt
-import { ObjectCreateDialog } from "@/components/object-create-dialog"; // Import the new dialog
+import { Button } from "@/components/ui/button";
+import { ObjectCreateDialog } from "@/components/object-create-dialog";
+import { PaginationControls } from "@/components/pagination-controls"; // Importiere die Paginierungskomponente
 
 // Definieren Sie die Schnittstelle für die Objekt-Daten, wie sie auf dieser Seite verwendet werden
 interface DisplayObject {
@@ -66,9 +67,15 @@ export default async function ObjectsPage({
   }
 
   const query = typeof searchParams?.query === 'string' ? searchParams.query : '';
+  const currentPage = Number(searchParams?.page) || 1;
+  const pageSize = Number(searchParams?.pageSize) || 9; // Standardmäßig 9 Objekte pro Seite
+
+  const from = (currentPage - 1) * pageSize;
+  const to = from + pageSize - 1;
 
   let objects: DisplayObject[] | null;
   let error: any;
+  let count: number | null;
 
   if (query) {
     // Verwende die vereinfachte RPC-Funktion für die Suche
@@ -77,16 +84,18 @@ export default async function ObjectsPage({
     });
     objects = data as DisplayObject[] | null;
     error = rpcError;
+    count = objects?.length || 0; // Zähle die Ergebnisse der RPC-Funktion
   } else {
     // Direkte Abfrage, die sich auf RLS verlässt
-    const { data, error: selectError } = await supabase
+    const { data, error: selectError, count: selectCount } = await supabase
       .from('objects')
       .select(`
         *,
         customers ( name ),
         customer_contacts ( first_name, last_name )
-      `)
-      .order('name', { ascending: true });
+      `, { count: 'exact' }) // count: 'exact' ist wichtig für die Paginierung
+      .order('name', { ascending: true })
+      .range(from, to); // Paginierung anwenden
 
     objects = data?.map(obj => ({
       ...obj,
@@ -95,6 +104,7 @@ export default async function ObjectsPage({
       object_leader_last_name: obj.customer_contacts?.last_name || null,
     })) || null;
     error = selectError;
+    count = selectCount;
   }
 
   if (error) {
@@ -102,13 +112,15 @@ export default async function ObjectsPage({
     return <div className="p-4 md:p-8 text-sm">Fehler beim Laden der Objekte.</div>;
   }
 
+  const totalPages = count ? Math.ceil(count / pageSize) : 0;
+
   const dayNames = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 
   return (
     <div className="p-4 md:p-8 space-y-8">
       <h1 className="text-2xl md:text-3xl font-bold">Ihre Objekte</h1>
 
-      <div className="mb-4 flex justify-between items-center">
+      <div className="mb-4 flex flex-col sm:flex-row justify-between items-center gap-4">
         <SearchInput placeholder="Objekte suchen..." />
         <ObjectCreateDialog />
       </div>
@@ -232,6 +244,9 @@ export default async function ObjectsPage({
           ))
         )}
       </div>
+      {totalPages > 1 && (
+        <PaginationControls currentPage={currentPage} totalPages={totalPages} />
+      )}
     </div>
   );
 }
