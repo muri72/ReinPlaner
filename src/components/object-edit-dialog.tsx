@@ -82,7 +82,7 @@ export function ObjectEditDialog({ object }: ObjectEditDialogProps) {
         key={open ? "object-edit-open" : "object-edit-closed"} 
         aria-labelledby={titleId} 
         aria-describedby={descriptionId}
-        className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto"
+        className="sm:max-w-[425px] max-h-[90vh] flex flex-col" // Added flex flex-col
       >
         <DialogHeader>
           <DialogTitle id={titleId}>Objekt bearbeiten</DialogTitle>
@@ -90,47 +90,49 @@ export function ObjectEditDialog({ object }: ObjectEditDialogProps) {
             <VisuallyHidden>Formular zum Bearbeiten der Objektdaten.</VisuallyHidden>
           </DialogDescription>
         </DialogHeader>
-        <ObjectForm
-          initialData={{
-            name: object.name,
-            address: object.address,
-            description: object.description,
-            customerId: object.customer_id,
-            customerContactId: object.customer_contact_id,
-            notes: object.notes,
-            priority: object.priority as ObjectFormValues["priority"],
-            timeOfDay: object.time_of_day as ObjectFormValues["timeOfDay"],
-            accessMethod: object.access_method as ObjectFormValues["accessMethod"],
-            pin: object.pin,
-            isAlarmSecured: object.is_alarm_secured,
-            alarmPassword: object.alarm_password,
-            securityCodeWord: object.security_code_word,
-            monday_start_time: object.monday_start_time,
-            monday_end_time: object.monday_end_time,
-            tuesday_start_time: object.tuesday_start_time,
-            tuesday_end_time: object.tuesday_end_time,
-            wednesday_start_time: object.wednesday_start_time,
-            wednesday_end_time: object.wednesday_end_time,
-            thursday_start_time: object.thursday_start_time,
-            thursday_end_time: object.thursday_end_time,
-            friday_start_time: object.friday_start_time,
-            friday_end_time: object.friday_end_time,
-            saturday_start_time: object.saturday_start_time,
-            saturday_end_time: object.saturday_end_time,
-            sunday_start_time: object.sunday_start_time,
-            sunday_end_time: object.sunday_end_time,
-            monday_hours: object.monday_hours,
-            tuesday_hours: object.tuesday_hours,
-            wednesday_hours: object.wednesday_hours,
-            thursday_hours: object.thursday_hours,
-            friday_hours: object.friday_hours,
-            saturday_hours: object.saturday_hours,
-            sunday_hours: object.sunday_hours,
-          }}
-          onSubmit={handleUpdate}
-          submitButtonText="Änderungen speichern"
-          onSuccess={() => setOpen(false)}
-        />
+        <div className="flex-grow overflow-y-auto pr-4"> {/* Added flex-grow and overflow-y-auto */}
+          <ObjectForm
+            initialData={{
+              name: object.name,
+              address: object.address,
+              description: object.description,
+              customerId: object.customer_id,
+              customerContactId: object.customer_contact_id,
+              notes: object.notes,
+              priority: object.priority as ObjectFormValues["priority"],
+              timeOfDay: object.time_of_day as ObjectFormValues["timeOfDay"],
+              accessMethod: object.access_method as ObjectFormValues["accessMethod"],
+              pin: object.pin,
+              isAlarmSecured: object.is_alarm_secured,
+              alarmPassword: object.alarm_password,
+              securityCodeWord: object.security_code_word,
+              monday_start_time: object.monday_start_time,
+              monday_end_time: object.monday_end_time,
+              tuesday_start_time: object.tuesday_start_time,
+              tuesday_end_time: object.tuesday_end_time,
+              wednesday_start_time: object.wednesday_start_time,
+              wednesday_end_time: object.wednesday_end_time,
+              thursday_start_time: object.thursday_start_time,
+              thursday_end_time: object.thursday_end_time,
+              friday_start_time: object.friday_start_time,
+              friday_end_time: object.friday_end_time,
+              saturday_start_time: object.saturday_start_time,
+              saturday_end_time: object.saturday_end_time,
+              sunday_start_time: object.sunday_start_time,
+              sunday_end_time: object.sunday_end_time,
+              monday_hours: object.monday_hours,
+              tuesday_hours: object.tuesday_hours,
+              wednesday_hours: object.wednesday_hours,
+              thursday_hours: object.thursday_hours,
+              friday_hours: object.friday_hours,
+              saturday_hours: object.saturday_hours,
+              sunday_hours: object.sunday_hours,
+            }}
+            onSubmit={handleUpdate}
+            submitButtonText="Änderungen speichern"
+            onSuccess={() => setOpen(false)}
+          />
+        </div>
       </DialogContent>
     </Dialog>
   );

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/button"; // Korrigierter Import
 import { PlusCircle } from "lucide-react";
 import { ObjectForm, ObjectFormValues } from "@/components/object-form";
 import { createObject } from "@/app/dashboard/objects/actions";
@@ -38,6 +38,7 @@ export function ObjectCreateDialog({ onObjectCreated }: ObjectCreateDialogProps)
         key={open ? "object-create-open" : "object-create-closed"} 
         aria-labelledby={titleId} 
         aria-describedby={descriptionId}
+        className="sm:max-w-[425px] max-h-[90vh] flex flex-col" // Added flex flex-col
       >
         <DialogHeader>
           <DialogTitle id={titleId}>Neues Objekt hinzufügen</DialogTitle>
@@ -45,11 +46,13 @@ export function ObjectCreateDialog({ onObjectCreated }: ObjectCreateDialogProps)
             <VisuallyHidden>Formular zum Hinzufügen eines neuen Objekts.</VisuallyHidden>
           </DialogDescription>
         </DialogHeader>
-        <ObjectForm
-          onSubmit={handleCreate}
-          submitButtonText="Objekt hinzufügen"
-          onSuccess={() => setOpen(false)}
-        />
+        <div className="flex-grow overflow-y-auto pr-4"> {/* Added flex-grow and overflow-y-auto */}
+          <ObjectForm
+            onSubmit={handleCreate}
+            submitButtonText="Objekt hinzufügen"
+            onSuccess={() => setOpen(false)}
+          />
+        </div>
       </DialogContent>
     </Dialog>
   );
