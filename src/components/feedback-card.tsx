@@ -23,6 +23,7 @@ import { OrderFeedbackEditDialog } from "./order-feedback-edit-dialog";
 import { GeneralFeedbackEditDialog } from "./general-feedback-edit-dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden"; // Import VisuallyHidden
+import { ImageViewerDialog } from "./image-viewer-dialog"; // Import the new image viewer
 
 // Typdefinitionen, die beide Feedback-Arten abdecken
 type Feedback = {
@@ -105,16 +106,19 @@ export function FeedbackCard({ feedback, feedbackType, currentUserId, currentUse
         {feedback.image_urls && feedback.image_urls.length > 0 && (
           <div>
             <h4 className="text-sm font-semibold mb-2 flex items-center"><ImageIcon className="h-4 w-4 mr-2 text-muted-foreground" />Bilder</h4>
-            <Carousel className="w-full max-w-sm mx-auto relative"> {/* Increased max-w and added relative */}
+            <Carousel className="w-full max-w-sm mx-auto relative">
               <CarouselContent>
                 {feedback.image_urls.map((url, index) => (
                   <CarouselItem key={index}>
-                    <div 
-                      className="cursor-pointer" 
-                      onClick={() => window.open(url, '_blank')}
-                    >
-                      <NextImage src={url} alt={`Feedback-Bild ${index + 1}`} width={200} height={200} className="rounded-md object-cover w-full h-40" />
-                    </div>
+                    <ImageViewerDialog
+                      src={url}
+                      alt={`Feedback-Bild ${index + 1}`}
+                      trigger={
+                        <div className="cursor-pointer">
+                          <NextImage src={url} alt={`Feedback-Bild ${index + 1}`} width={200} height={200} className="rounded-md object-cover w-full h-40" />
+                        </div>
+                      }
+                    />
                   </CarouselItem>
                 ))}
               </CarouselContent>
