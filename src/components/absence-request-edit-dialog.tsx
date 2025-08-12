@@ -50,7 +50,7 @@ export function AbsenceRequestEditDialog({ request, currentUserRole, currentUser
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
-      <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto" aria-labelledby="absence-request-edit-dialog-title">
+      <DialogContent key={open ? "absence-request-edit-open" : "absence-request-edit-closed"} className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto" aria-labelledby="absence-request-edit-dialog-title">
         <DialogHeader>
           <DialogTitle id="absence-request-edit-dialog-title">Abwesenheitsantrag bearbeiten</DialogTitle>
         </DialogHeader>

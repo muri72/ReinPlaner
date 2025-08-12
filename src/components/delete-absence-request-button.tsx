@@ -55,7 +55,7 @@ export function DeleteAbsenceRequestButton({ requestId }: DeleteAbsenceRequestBu
                 <Trash2 className="h-4 w-4" />
               </Button>
             </AlertDialogTrigger>
-            <AlertDialogContent aria-labelledby="delete-absence-request-alert-title">
+            <AlertDialogContent key={`delete-absence-request-${requestId}-open`} aria-labelledby="delete-absence-request-alert-title">
               <AlertDialogHeader>
                 <AlertDialogTitle id="delete-absence-request-alert-title">Sind Sie sicher?</AlertDialogTitle>
                 <AlertDialogDescription>

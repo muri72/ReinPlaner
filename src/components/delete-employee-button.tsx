@@ -55,7 +55,7 @@ export function DeleteEmployeeButton({ employeeId }: DeleteEmployeeButtonProps) 
                 <Trash2 className="h-4 w-4" />
               </Button>
             </AlertDialogTrigger>
-            <AlertDialogContent aria-labelledby="delete-employee-alert-title">
+            <AlertDialogContent key={`delete-employee-${employeeId}-open`} aria-labelledby="delete-employee-alert-title">
               <AlertDialogHeader>
                 <AlertDialogTitle id="delete-employee-alert-title">Sind Sie sicher?</AlertDialogTitle>
                 <AlertDialogDescription>

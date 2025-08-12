@@ -53,7 +53,7 @@ export function TimeEntryEditDialog({ timeEntry, currentUserId, isAdmin }: TimeE
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
-      <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto" aria-labelledby="time-entry-edit-dialog-title">
+      <DialogContent key={open ? "time-entry-edit-open" : "time-entry-edit-closed"} className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto" aria-labelledby="time-entry-edit-dialog-title">
         <DialogHeader>
           <DialogTitle id="time-entry-edit-dialog-title">Zeiteintrag bearbeiten</DialogTitle>
         </DialogHeader>

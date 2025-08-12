@@ -55,7 +55,7 @@ export function DeleteTimeEntryButton({ entryId }: DeleteTimeEntryButtonProps) {
                 <Trash2 className="h-4 w-4" />
               </Button>
             </AlertDialogTrigger>
-            <AlertDialogContent aria-labelledby="delete-time-entry-alert-title">
+            <AlertDialogContent key={`delete-time-entry-${entryId}-open`} aria-labelledby="delete-time-entry-alert-title">
               <AlertDialogHeader>
                 <AlertDialogTitle id="delete-time-entry-alert-title">Sind Sie sicher?</AlertDialogTitle>
                 <AlertDialogDescription>

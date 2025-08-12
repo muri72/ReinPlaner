@@ -75,7 +75,7 @@ export function ObjectEditDialog({ object }: ObjectEditDialogProps) {
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
-      <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto" aria-labelledby="object-edit-dialog-title">
+      <DialogContent key={open ? "object-edit-open" : "object-edit-closed"} className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto" aria-labelledby="object-edit-dialog-title">
         <DialogHeader>
           <DialogTitle id="object-edit-dialog-title">Objekt bearbeiten</DialogTitle>
         </DialogHeader>

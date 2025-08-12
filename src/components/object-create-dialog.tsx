@@ -31,7 +31,7 @@ export function ObjectCreateDialog({ onObjectCreated }: ObjectCreateDialogProps)
           Neues Objekt hinzufügen
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto" aria-labelledby="object-create-dialog-title">
+      <DialogContent key={open ? "object-create-open" : "object-create-closed"} className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto" aria-labelledby="object-create-dialog-title">
         <DialogHeader>
           <DialogTitle id="object-create-dialog-title">Neues Objekt hinzufügen</DialogTitle>
         </DialogHeader>

@@ -33,7 +33,7 @@ export function AbsenceRequestCreateDialog({ onAbsenceRequestCreated, currentUse
           Neuen Antrag einreichen
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto" aria-labelledby="absence-request-create-dialog-title">
+      <DialogContent key={open ? "absence-request-create-open" : "absence-request-create-closed"} className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto" aria-labelledby="absence-request-create-dialog-title">
         <DialogHeader>
           <DialogTitle id="absence-request-create-dialog-title">Neuen Abwesenheitsantrag einreichen</DialogTitle>
         </DialogHeader>

@@ -31,7 +31,7 @@ export function CustomerCreateDialog({ onCustomerCreated }: CustomerCreateDialog
           Neuen Kunden hinzufügen
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto" aria-labelledby="customer-create-dialog-title">
+      <DialogContent key={open ? "customer-create-open" : "customer-create-closed"} className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto" aria-labelledby="customer-create-dialog-title">
         <DialogHeader>
           <DialogTitle id="customer-create-dialog-title">Neuen Kunden hinzufügen</DialogTitle>
         </DialogHeader>

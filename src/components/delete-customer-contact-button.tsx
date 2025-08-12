@@ -55,7 +55,7 @@ export function DeleteCustomerContactButton({ contactId }: DeleteCustomerContact
                 <Trash2 className="h-4 w-4" />
               </Button>
             </AlertDialogTrigger>
-            <AlertDialogContent aria-labelledby="delete-customer-contact-alert-title">
+            <AlertDialogContent key={`delete-contact-${contactId}-open`} aria-labelledby="delete-customer-contact-alert-title">
               <AlertDialogHeader>
                 <AlertDialogTitle id="delete-customer-contact-alert-title">Sind Sie sicher?</AlertDialogTitle>
                 <AlertDialogDescription>

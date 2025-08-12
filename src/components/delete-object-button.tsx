@@ -55,7 +55,7 @@ export function DeleteObjectButton({ objectId }: DeleteObjectButtonProps) {
                 <Trash2 className="h-4 w-4" />
               </Button>
             </AlertDialogTrigger>
-            <AlertDialogContent aria-labelledby="delete-object-alert-title">
+            <AlertDialogContent key={`delete-object-${objectId}-open`} aria-labelledby="delete-object-alert-title">
               <AlertDialogHeader>
                 <AlertDialogTitle id="delete-object-alert-title">Sind Sie sicher?</AlertDialogTitle>
                 <AlertDialogDescription>

@@ -68,7 +68,7 @@ export function OrderFeedbackEditDialog({ feedback }: OrderFeedbackEditDialogPro
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
-      <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto" aria-labelledby="order-feedback-edit-dialog-title">
+      <DialogContent key={open ? "order-feedback-edit-open" : "order-feedback-edit-closed"} className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto" aria-labelledby="order-feedback-edit-dialog-title">
         <DialogHeader>
           <DialogTitle id="order-feedback-edit-dialog-title">Feedback bearbeiten</DialogTitle>
         </DialogHeader>

@@ -75,7 +75,7 @@ export function OrderEditDialog({ order }: OrderEditDialogProps) {
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
-      <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto" aria-labelledby="order-edit-dialog-title">
+      <DialogContent key={open ? "order-edit-open" : "order-edit-closed"} className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto" aria-labelledby="order-edit-dialog-title">
         <DialogHeader>
           <DialogTitle id="order-edit-dialog-title">Auftrag bearbeiten</DialogTitle>
         </DialogHeader>

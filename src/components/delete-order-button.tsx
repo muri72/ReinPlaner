@@ -55,7 +55,7 @@ export function DeleteOrderButton({ orderId }: DeleteOrderButtonProps) {
                 <Trash2 className="h-4 w-4" />
               </Button>
             </AlertDialogTrigger>
-            <AlertDialogContent aria-labelledby="delete-order-alert-title">
+            <AlertDialogContent key={`delete-order-${orderId}-open`} aria-labelledby="delete-order-alert-title">
               <AlertDialogHeader>
                 <AlertDialogTitle id="delete-order-alert-title">Sind Sie sicher?</AlertDialogTitle>
                 <AlertDialogDescription>

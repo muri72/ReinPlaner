@@ -31,7 +31,7 @@ export function UserCreateDialog({ onUserCreated }: UserCreateDialogProps) {
           Neuen Benutzer registrieren
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto" aria-labelledby="user-create-dialog-title">
+      <DialogContent key={open ? "user-create-open" : "user-create-closed"} className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto" aria-labelledby="user-create-dialog-title">
         <DialogHeader>
           <DialogTitle id="user-create-dialog-title">Neuen Benutzer registrieren</DialogTitle>
         </DialogHeader>

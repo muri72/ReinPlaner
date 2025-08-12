@@ -41,7 +41,7 @@ export function CustomerContactCreateDialog({ customerId, onContactCreated, disa
           <PlusCircle className="h-4 w-4" />
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto" aria-labelledby="customer-contact-create-dialog-title">
+      <DialogContent key={open ? "customer-contact-create-open" : "customer-contact-create-closed"} className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto" aria-labelledby="customer-contact-create-dialog-title">
         <DialogHeader>
           <DialogTitle id="customer-contact-create-dialog-title">Neuen Kundenkontakt erstellen</DialogTitle>
         </DialogHeader>

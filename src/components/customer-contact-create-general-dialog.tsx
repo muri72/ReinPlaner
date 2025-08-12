@@ -33,7 +33,7 @@ export function CustomerContactCreateGeneralDialog({ onContactCreated }: Custome
           Neuen Kundenkontakt hinzufügen
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto" aria-labelledby="customer-contact-create-general-dialog-title">
+      <DialogContent key={open ? "customer-contact-create-general-open" : "customer-contact-create-general-closed"} className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto" aria-labelledby="customer-contact-create-general-dialog-title">
         <DialogHeader>
           <DialogTitle id="customer-contact-create-general-dialog-title">Neuen Kundenkontakt hinzufügen</DialogTitle>
         </DialogHeader>
