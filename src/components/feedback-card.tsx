@@ -115,7 +115,7 @@ export function FeedbackCard({ feedback, feedbackType, currentUserId, currentUse
                   </CarouselItem>
                 ))}
               </CarouselContent>
-              <CarouselPrevious /><CarouselNext />
+              <CarouselPrevious className="z-10" /><CarouselNext className="z-10" />
             </Carousel>
           </div>
         )}
