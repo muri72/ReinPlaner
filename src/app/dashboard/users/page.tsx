@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { SearchInput } from "@/components/search-input";
 import { ManagerCustomerAssignmentDialog } from "@/components/manager-customer-assignment-dialog";
 import { Button } from "@/components/ui/button"; // Hinzugefügt
+import { UserCreateDialog } from "@/components/user-create-dialog"; // Import the new dialog
 
 interface DisplayUser {
   id: string;
@@ -71,12 +72,19 @@ export default async function UsersPage({
     .from('customers')
     .select('id, name, user_id');
 
+  const { data: customerContactsData, error: customerContactsError } = await supabase
+    .from('customer_contacts')
+    .select('id, first_name, last_name, user_id');
+
   if (employeesError) console.error("Fehler beim Laden der Mitarbeiterdaten:", employeesError);
   if (customersError) console.error("Fehler beim Laden der Kundendaten:", customersError);
+  if (customerContactsError) console.error("Fehler beim Laden der Kundenkontaktdaten:", customerContactsError);
 
   const profilesMap = new Map(profilesData?.map(p => [p.id, p]));
   const employeesMap = new Map(employeesData?.map(e => [e.user_id, `${e.first_name} ${e.last_name}`]));
   const customersMap = new Map(customersData?.map(c => [c.user_id, c.name]));
+  const customerContactsMap = new Map(customerContactsData?.map(cc => [cc.user_id, `${cc.first_name} ${cc.last_name}`]));
+
 
   const users: DisplayUser[] = authUsers.users.map(authUser => {
     const profile = profilesMap.get(authUser.id);
@@ -90,7 +98,7 @@ export default async function UsersPage({
       created_at: authUser.created_at,
       assigned_employee_name: employeesMap.get(authUser.id) || null,
       // Zeige zugewiesenen Kunden nur an, wenn die Rolle NICHT 'admin' ist
-      assigned_customer_name: userRole === 'admin' ? null : (customersMap.get(authUser.id) || null),
+      assigned_customer_name: userRole === 'admin' ? null : (customersMap.get(authUser.id) || customerContactsMap.get(authUser.id) || null),
     };
   }).filter(user => {
     if (!query) return true;
@@ -128,8 +136,9 @@ export default async function UsersPage({
     <div className="p-4 md:p-8 space-y-8">
       <h1 className="text-2xl md:text-3xl font-bold">Benutzerverwaltung</h1>
 
-      <div className="mb-4">
+      <div className="mb-4 flex justify-between items-center">
         <SearchInput placeholder="Benutzer suchen..." />
+        <UserCreateDialog />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
@@ -139,10 +148,7 @@ export default async function UsersPage({
             <p className="text-base md:text-lg font-semibold">Noch keine Benutzer vorhanden</p>
             <p className="text-sm">Registrieren Sie einen neuen Benutzer, um Ihr Team zu erweitern.</p>
             <div className="mt-4">
-              <Button onClick={() => { /* Placeholder for future scroll/dialog logic */ }} className="transition-colors duration-200">
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Ersten Benutzer registrieren
-              </Button>
+              {/* The button to open the dialog is now part of UserCreateDialog */}
             </div>
           </div>
         ) : users.length === 0 && query ? (
@@ -193,9 +199,6 @@ export default async function UsersPage({
           ))
         )}
       </div>
-
-      <h2 className="text-xl md:text-2xl font-bold mt-8">Neuen Benutzer registrieren</h2>
-      <UserForm onSubmit={registerUser} submitButtonText="Benutzer registrieren" />
     </div>
   );
 }

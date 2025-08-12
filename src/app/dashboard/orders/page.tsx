@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { DeleteOrderButton } from "@/components/delete-order-button";
 import { SearchInput } from "@/components/search-input";
 import { OrderPlanningDialog } from "@/components/order-planning-dialog";
+import { OrderCreateDialog } from "@/components/order-create-dialog"; // Import the new dialog
 
 interface DisplayOrder {
   id: string;
@@ -147,8 +148,9 @@ export default async function OrdersPage({
   return (
     <div className="p-4 md:p-8 space-y-8">
       <h1 className="text-2xl md:text-3xl font-bold">Auftragsverwaltung</h1>
-      <div className="mb-4">
+      <div className="mb-4 flex justify-between items-center">
         <SearchInput placeholder="Aufträge suchen..." />
+        <OrderCreateDialog />
       </div>
 
       {/* Section for Pending Requests */}
@@ -194,10 +196,7 @@ export default async function OrdersPage({
               <p className="text-base md:text-lg font-semibold">Noch keine Aufträge vorhanden</p>
               <p className="text-sm">Beginnen Sie, indem Sie einen neuen Auftrag hinzufügen.</p>
               <div className="mt-4">
-                <Button onClick={() => { /* Placeholder for future scroll/dialog logic */ }} className="transition-colors duration-200">
-                  <PlusCircle className="mr-2 h-4 w-4" />
-                  Ersten Auftrag hinzufügen
-                </Button>
+                {/* The button to open the dialog is now part of OrderCreateDialog */}
               </div>
             </div>
           ) : otherOrders.length === 0 && query ? (
@@ -252,9 +251,6 @@ export default async function OrdersPage({
           )}
         </div>
       </div>
-
-      <h2 className="text-xl md:text-2xl font-bold mt-8">Neuen Auftrag hinzufügen</h2>
-      <OrderForm onSubmit={createOrder} submitButtonText="Auftrag hinzufügen" />
     </div>
   );
 }

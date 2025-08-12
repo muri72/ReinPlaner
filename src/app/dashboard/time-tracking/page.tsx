@@ -225,7 +225,13 @@ export default async function TimeTrackingPage({
           </Card>
           <AdminTimeEntriesOverview currentUserId={currentUser.id} isAdmin={isAdmin} />
           <h2 className="text-xl md:text-2xl font-bold mt-8">Neuen Zeiteintrag hinzufügen (Admin)</h2>
-          <TimeEntryForm onSubmit={createTimeEntry} currentUserId={currentUser.id} isAdmin={isAdmin} submitButtonText="Zeiteintrag hinzufügen" />
+          <TimeEntryCreateDialog
+            currentUserId={currentUser.id}
+            isAdmin={isAdmin}
+            triggerButtonText="Neuen Zeiteintrag hinzufügen"
+            triggerButtonIcon={<PlusCircle className="mr-2 h-4 w-4" />}
+            triggerButtonClassName="transition-colors duration-200"
+          />
         </>
       ) : (
         <>
@@ -236,6 +242,15 @@ export default async function TimeTrackingPage({
           <TimeTrackingCharts weeklyData={formattedWeeklyData} monthlyData={formattedMonthlyData} />
 
           <h2 className="text-xl md:text-2xl font-bold mt-8">Ihre Zeiteinträge</h2>
+          <div className="flex justify-end mb-4">
+            <TimeEntryCreateDialog
+              currentUserId={currentUser.id}
+              isAdmin={isAdmin}
+              triggerButtonText="Neuen Zeiteintrag hinzufügen"
+              triggerButtonIcon={<PlusCircle className="mr-2 h-4 w-4" />}
+              triggerButtonClassName="transition-colors duration-200"
+            />
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
             {timeEntries.length === 0 ? (
               <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30">
@@ -243,13 +258,7 @@ export default async function TimeTrackingPage({
                 <p className="text-base md:text-lg font-semibold">Noch keine Zeiteinträge vorhanden</p>
                 <p className="text-sm">Beginnen Sie, indem Sie Ihre Arbeitszeit erfassen oder einen Eintrag manuell hinzufügen.</p>
                 <div className="mt-4">
-                  <TimeEntryCreateDialog
-                    currentUserId={currentUser.id}
-                    isAdmin={isAdmin}
-                    triggerButtonText="Ersten Zeiteintrag hinzufügen"
-                    triggerButtonIcon={<PlusCircle className="mr-2 h-4 w-4" />}
-                    triggerButtonClassName="transition-colors duration-200"
-                  />
+                  {/* The button to open the dialog is now part of TimeEntryCreateDialog */}
                 </div>
               </div>
             ) : (

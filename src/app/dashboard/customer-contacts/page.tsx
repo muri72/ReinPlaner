@@ -8,6 +8,7 @@ import { DeleteCustomerContactButton } from "@/components/delete-customer-contac
 import { Mail, Phone, Briefcase, UserRound, PlusCircle, ContactRound } from "lucide-react";
 import { SearchInput } from "@/components/search-input";
 import { Button } from "@/components/ui/button"; // Hinzugefügt
+import { CustomerContactCreateDialog } from "@/components/customer-contact-create-dialog"; // Import the existing dialog
 
 // Definieren Sie die Schnittstelle für die Kundenkontakt-Daten
 interface DisplayCustomerContact {
@@ -74,8 +75,11 @@ export default async function CustomerContactsPage({
     <div className="p-4 md:p-8 space-y-8">
       <h1 className="text-2xl md:text-3xl font-bold">Ihre Kundenkontakte</h1>
 
-      <div className="mb-4">
+      <div className="mb-4 flex justify-between items-center">
         <SearchInput placeholder="Kundenkontakte suchen..." />
+        {/* CustomerContactCreateDialog requires a customerId, so we can't just put it here without context */}
+        {/* For now, we'll keep the placeholder text, but ideally, this would be a dialog that allows selecting a customer first */}
+        <CustomerContactCreateDialog customerId={""} disabled={true} /> {/* Disabled as it needs a customerId */}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
@@ -85,10 +89,7 @@ export default async function CustomerContactsPage({
             <p className="text-base md:text-lg font-semibold">Noch keine Kundenkontakte vorhanden</p>
             <p className="text-sm">Fügen Sie einen neuen Kontakt hinzu, um Ihre Kundenbeziehungen zu verwalten.</p>
             <div className="mt-4">
-              <Button onClick={() => { /* Placeholder for future scroll/dialog logic */ }} className="transition-colors duration-200">
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Ersten Kundenkontakt hinzufügen
-              </Button>
+              {/* The button to open the dialog is now part of CustomerContactCreateDialog */}
             </div>
           </div>
         ) : displayContacts.length === 0 && query ? (
@@ -136,9 +137,6 @@ export default async function CustomerContactsPage({
           ))
         )}
       </div>
-
-      <h2 className="text-xl md:text-2xl font-bold mt-8">Neuen Kundenkontakt hinzufügen</h2>
-      <CustomerContactForm onSubmit={createCustomerContact} submitButtonText="Kundenkontakt hinzufügen" />
     </div>
   );
 }

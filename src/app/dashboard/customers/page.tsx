@@ -9,6 +9,7 @@ import { Mail, Phone, MapPin, Users, Handshake, PlusCircle } from "lucide-react"
 import { SearchInput } from "@/components/search-input";
 import { Badge } from "@/components/ui/badge"; // Importiere Badge
 import { Button } from "@/components/ui/button"; // Hinzugefügt
+import { CustomerCreateDialog } from "@/components/customer-create-dialog"; // Import the new dialog
 
 export default async function CustomersPage({
   searchParams,
@@ -49,8 +50,9 @@ export default async function CustomersPage({
     <div className="p-4 md:p-8 space-y-8">
       <h1 className="text-2xl md:text-3xl font-bold">Ihre Kunden</h1>
 
-      <div className="mb-4">
+      <div className="mb-4 flex justify-between items-center">
         <SearchInput placeholder="Kunden suchen..." />
+        <CustomerCreateDialog />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
@@ -60,10 +62,7 @@ export default async function CustomersPage({
             <p className="text-base md:text-lg font-semibold">Noch keine Kunden vorhanden</p>
             <p className="text-sm">Fügen Sie Ihren ersten Kunden hinzu, um loszulegen.</p>
             <div className="mt-4">
-              <Button onClick={() => { /* Placeholder for future scroll/dialog logic */ }} className="transition-colors duration-200">
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Ersten Kunden hinzufügen
-              </Button>
+              {/* The button to open the dialog is now part of CustomerCreateDialog */}
             </div>
           </div>
         ) : customers.length === 0 && query ? (
@@ -114,9 +113,6 @@ export default async function CustomersPage({
           ))
         )}
       </div>
-
-      <h2 className="text-xl md:text-2xl font-bold mt-8">Neuen Kunden hinzufügen</h2>
-      <CustomerForm onSubmit={createCustomer} submitButtonText="Kunden hinzufügen" />
     </div>
   );
 }

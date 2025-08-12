@@ -9,6 +9,7 @@ import { AbsenceRequestEditDialog } from "@/components/absence-request-edit-dial
 import { DeleteAbsenceRequestButton } from "@/components/delete-absence-request-button";
 import { AbsenceTimelineCalendar } from "@/components/absence-timeline-calendar";
 import { Button } from "@/components/ui/button"; // Hinzugefügt
+import { AbsenceRequestCreateDialog } from "@/components/absence-request-create-dialog"; // Import the new dialog
 
 export default async function AbsenceRequestsPage() {
   const supabase = await createClient();
@@ -84,6 +85,9 @@ export default async function AbsenceRequestsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-8">
         <div className="space-y-6">
           <h2 className="text-xl md:text-2xl font-bold">Antragsübersicht</h2>
+          <div className="flex justify-end mb-4">
+            <AbsenceRequestCreateDialog currentUserRole={currentUserRole} currentUserId={currentUser.id} />
+          </div>
           <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-4">
             {requests.length === 0 ? (
               <div className="text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30">
@@ -91,10 +95,7 @@ export default async function AbsenceRequestsPage() {
                 <p className="text-base md:text-lg font-semibold">Keine Anträge gefunden</p>
                 <p className="text-sm">Reichen Sie einen neuen Abwesenheitsantrag ein.</p>
                 <div className="mt-4">
-                  <Button onClick={() => { /* Placeholder for future scroll/dialog logic */ }} className="transition-colors duration-200">
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    Ersten Antrag einreichen
-                  </Button>
+                  {/* The button to open the dialog is now part of AbsenceRequestCreateDialog */}
                 </div>
               </div>
             ) : (
@@ -143,15 +144,8 @@ export default async function AbsenceRequestsPage() {
           </div>
         </div>
 
-        <div className="space-y-6">
-          <h2 className="text-xl md:text-2xl font-bold">Neuen Antrag einreichen</h2>
-          <AbsenceRequestForm
-            onSubmit={createAbsenceRequest}
-            submitButtonText="Antrag einreichen"
-            currentUserRole={currentUserRole}
-            currentUserId={currentUser.id}
-          />
-        </div>
+        {/* Removed the inline form section */}
+        <div className="hidden"></div>
       </div>
     </div>
   );

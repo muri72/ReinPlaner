@@ -9,6 +9,7 @@ import { MapPin, FileText, Clock, Key, Lock, ShieldCheck, UserRound, PlusCircle,
 import { SearchInput } from "@/components/search-input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button"; // Hinzugefügt
+import { ObjectCreateDialog } from "@/components/object-create-dialog"; // Import the new dialog
 
 // Definieren Sie die Schnittstelle für die Objekt-Daten, wie sie auf dieser Seite verwendet werden
 interface DisplayObject {
@@ -107,8 +108,9 @@ export default async function ObjectsPage({
     <div className="p-4 md:p-8 space-y-8">
       <h1 className="text-2xl md:text-3xl font-bold">Ihre Objekte</h1>
 
-      <div className="mb-4">
+      <div className="mb-4 flex justify-between items-center">
         <SearchInput placeholder="Objekte suchen..." />
+        <ObjectCreateDialog />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
@@ -118,10 +120,7 @@ export default async function ObjectsPage({
             <p className="text-base md:text-lg font-semibold">Noch keine Objekte vorhanden</p>
             <p className="text-sm">Fügen Sie ein neues Objekt hinzu, um es zu verwalten.</p>
             <div className="mt-4">
-              <Button onClick={() => { /* Placeholder for future scroll/dialog logic */ }} className="transition-colors duration-200">
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Erstes Objekt hinzufügen
-              </Button>
+              {/* The button to open the dialog is now part of ObjectCreateDialog */}
             </div>
           </div>
         ) : objects && objects.length === 0 && query ? (
@@ -233,9 +232,6 @@ export default async function ObjectsPage({
           ))
         )}
       </div>
-
-      <h2 className="text-xl md:text-2xl font-bold mt-8">Neues Objekt hinzufügen</h2>
-      <ObjectForm onSubmit={createObject} submitButtonText="Objekt hinzufügen" />
     </div>
   );
 }

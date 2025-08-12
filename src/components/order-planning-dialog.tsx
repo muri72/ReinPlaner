@@ -69,7 +69,7 @@ export function OrderPlanningDialog({ order }: OrderPlanningDialogProps) {
       <DialogTrigger asChild>
         <Button variant="default">Planen & Genehmigen</Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[500px]" aria-labelledby="order-planning-dialog-title">
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto" aria-labelledby="order-planning-dialog-title">
         <DialogHeader>
           <DialogTitle id="order-planning-dialog-title">Anfrage planen: {order.title}</DialogTitle>
           <DialogDescription>

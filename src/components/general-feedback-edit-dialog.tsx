@@ -68,7 +68,7 @@ export function GeneralFeedbackEditDialog({ feedback }: GeneralFeedbackEditDialo
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
-      <DialogContent aria-labelledby="general-feedback-edit-dialog-title">
+      <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto" aria-labelledby="general-feedback-edit-dialog-title">
         <DialogHeader>
           <DialogTitle id="general-feedback-edit-dialog-title">Feedback bearbeiten</DialogTitle>
         </DialogHeader>
