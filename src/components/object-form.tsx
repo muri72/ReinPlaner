@@ -215,23 +215,36 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
   const isAlarmSecured = form.watch("isAlarmSecured");
 
   return (
-    <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 w-full max-w-md"> {/* Removed max-h-full overflow-y-auto */}
+    <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 w-full max-w-md">
       {/* Grundlegende Objektinformationen */}
-      <Input id="name" {...form.register("name")} placeholder="Name des Objekts" />
-      {form.formState.errors.name && <p className="text-red-500 text-sm mt-1">{form.formState.errors.name.message}</p>}
-      <Textarea id="address" {...form.register("address")} placeholder="Adresse" rows={3} />
-      {form.formState.errors.address && <p className="text-red-500 text-sm mt-1">{form.formState.errors.address.message}</p>}
-      <Textarea id="description" {...form.register("description")} placeholder="Beschreibung (optional)" rows={3} />
+      <div>
+        <Label htmlFor="name">Name des Objekts</Label>
+        <Input id="name" {...form.register("name")} placeholder="Name des Objekts" />
+        {form.formState.errors.name && <p className="text-red-500 text-sm mt-1">{form.formState.errors.name.message}</p>}
+      </div>
+      <div>
+        <Label htmlFor="address">Adresse</Label>
+        <Textarea id="address" {...form.register("address")} placeholder="Adresse" rows={3} />
+        {form.formState.errors.address && <p className="text-red-500 text-sm mt-1">{form.formState.errors.address.message}</p>}
+      </div>
+      <div>
+        <Label htmlFor="description">Beschreibung (optional)</Label>
+        <Textarea id="description" {...form.register("description")} placeholder="Beschreibung (optional)" rows={3} />
+      </div>
       
       {/* Kunde und Kontakt */}
-      <Select onValueChange={(value) => form.setValue("customerId", value)} value={form.watch("customerId")}>
-        <SelectTrigger><SelectValue placeholder="Kunde auswählen" /></SelectTrigger>
-        <SelectContent>{customers.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
-      </Select>
-      {form.formState.errors.customerId && <p className="text-red-500 text-sm mt-1">{form.formState.errors.customerId.message}</p>}
+      <div>
+        <Label htmlFor="customerId">Kunde</Label>
+        <Select onValueChange={(value) => form.setValue("customerId", value)} value={form.watch("customerId")}>
+          <SelectTrigger><SelectValue placeholder="Kunde auswählen" /></SelectTrigger>
+          <SelectContent>{customers.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+        </Select>
+        {form.formState.errors.customerId && <p className="text-red-500 text-sm mt-1">{form.formState.errors.customerId.message}</p>}
+      </div>
 
       <div className="flex items-end gap-2">
         <div className="flex-grow">
+          <Label htmlFor="customerContactId">Objektleiter auswählen</Label>
           <Select onValueChange={(v) => form.setValue("customerContactId", v === "unassigned" ? null : v)} value={form.watch("customerContactId") || "unassigned"} disabled={!selectedCustomerId}>
             <SelectTrigger><SelectValue placeholder="Objektleiter auswählen" /></SelectTrigger>
             <SelectContent>
@@ -271,41 +284,58 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
 
       {/* Auftragseinstellungen */}
       <h3 className="text-lg font-semibold mt-6">Standard-Auftragseinstellungen</h3>
-      <Textarea id="notes" {...form.register("notes")} placeholder="Notizen für Aufträge (optional)" rows={3} />
-      {form.formState.errors.notes && <p className="text-red-500 text-sm mt-1">{form.formState.errors.notes.message}</p>}
-      <Select onValueChange={(v) => form.setValue("priority", v as any)} value={form.watch("priority")}>
-        <SelectTrigger><SelectValue placeholder="Priorität" /></SelectTrigger>
-        <SelectContent>
-          <SelectItem value="low">Niedrig</SelectItem>
-          <SelectItem value="medium">Mittel</SelectItem>
-          <SelectItem value="high">Hoch</SelectItem>
-        </SelectContent>
-      </Select>
-      {form.formState.errors.priority && <p className="text-red-500 text-sm mt-1">{form.formState.errors.priority.message}</p>}
-      <Select onValueChange={(v) => form.setValue("timeOfDay", v as any)} value={form.watch("timeOfDay")}>
-        <SelectTrigger><SelectValue placeholder="Tageszeit" /></SelectTrigger>
-        <SelectContent>
-          <SelectItem value="any">Beliebig</SelectItem>
-          <SelectItem value="morning">Vormittags</SelectItem>
-          <SelectItem value="noon">Mittags</SelectItem>
-          <SelectItem value="afternoon">Nachmittags</SelectItem>
-        </SelectContent>
-      </Select>
-      {form.formState.errors.timeOfDay && <p className="text-red-500 text-sm mt-1">{form.formState.errors.timeOfDay.message}</p>}
+      <div>
+        <Label htmlFor="notes">Notizen für Aufträge (optional)</Label>
+        <Textarea id="notes" {...form.register("notes")} placeholder="Notizen für Aufträge (optional)" rows={3} />
+        {form.formState.errors.notes && <p className="text-red-500 text-sm mt-1">{form.formState.errors.notes.message}</p>}
+      </div>
+      <div>
+        <Label htmlFor="priority">Priorität</Label>
+        <Select onValueChange={(v) => form.setValue("priority", v as any)} value={form.watch("priority")}>
+          <SelectTrigger><SelectValue placeholder="Priorität" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="low">Niedrig</SelectItem>
+            <SelectItem value="medium">Mittel</SelectItem>
+            <SelectItem value="high">Hoch</SelectItem>
+          </SelectContent>
+        </Select>
+        {form.formState.errors.priority && <p className="text-red-500 text-sm mt-1">{form.formState.errors.priority.message}</p>}
+      </div>
+      <div>
+        <Label htmlFor="timeOfDay">Tageszeit</Label>
+        <Select onValueChange={(v) => form.setValue("timeOfDay", v as any)} value={form.watch("timeOfDay")}>
+          <SelectTrigger><SelectValue placeholder="Tageszeit" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="any">Beliebig</SelectItem>
+            <SelectItem value="morning">Vormittags</SelectItem>
+            <SelectItem value="noon">Mittags</SelectItem>
+            <SelectItem value="afternoon">Nachmittags</SelectItem>
+          </SelectContent>
+        </Select>
+        {form.formState.errors.timeOfDay && <p className="text-red-500 text-sm mt-1">{form.formState.errors.timeOfDay.message}</p>}
+      </div>
 
       {/* Zugangsinformationen */}
       <h3 className="text-lg font-semibold mt-6">Zugangsinformationen</h3>
-      <Select onValueChange={(v) => form.setValue("accessMethod", v as any)} value={accessMethod}>
-        <SelectTrigger><SelectValue placeholder="Zugangsmethode" /></SelectTrigger>
-        <SelectContent>
-          <SelectItem value="key">Schlüssel</SelectItem>
-          <SelectItem value="card">Karte</SelectItem>
-          <SelectItem value="other">Andere</SelectItem>
-        </SelectContent>
-      </Select>
-      {form.formState.errors.accessMethod && <p className="text-red-500 text-sm mt-1">{form.formState.errors.accessMethod.message}</p>}
-      {accessMethod === "card" && <Input id="pin" {...form.register("pin")} placeholder="PIN (optional)" />}
-      {form.formState.errors.pin && <p className="text-red-500 text-sm mt-1">{form.formState.errors.pin.message}</p>}
+      <div>
+        <Label htmlFor="accessMethod">Zugangsmethode</Label>
+        <Select onValueChange={(v) => form.setValue("accessMethod", v as any)} value={accessMethod}>
+          <SelectTrigger><SelectValue placeholder="Zugangsmethode" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="key">Schlüssel</SelectItem>
+            <SelectItem value="card">Karte</SelectItem>
+            <SelectItem value="other">Andere</SelectItem>
+          </SelectContent>
+        </Select>
+        {form.formState.errors.accessMethod && <p className="text-red-500 text-sm mt-1">{form.formState.errors.accessMethod.message}</p>}
+      </div>
+      {accessMethod === "card" && (
+        <div>
+          <Label htmlFor="pin">PIN (optional)</Label>
+          <Input id="pin" {...form.register("pin")} placeholder="PIN (optional)" />
+          {form.formState.errors.pin && <p className="text-red-500 text-sm mt-1">{form.formState.errors.pin.message}</p>}
+        </div>
+      )}
       <div className="flex items-center justify-between space-x-2">
         <Label htmlFor="isAlarmSecured">Alarmgesichert?</Label>
         <Switch id="isAlarmSecured" checked={isAlarmSecured} onCheckedChange={(c) => form.setValue("isAlarmSecured", c)} />
@@ -313,10 +343,16 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
       {form.formState.errors.isAlarmSecured && <p className="text-red-500 text-sm mt-1">{form.formState.errors.isAlarmSecured.message}</p>}
       {isAlarmSecured && (
         <>
-          <Input id="alarmPassword" {...form.register("alarmPassword")} placeholder="Alarmkennwort (optional)" />
-          {form.formState.errors.alarmPassword && <p className="text-red-500 text-sm mt-1">{form.formState.errors.alarmPassword.message}</p>}
-          <Input id="securityCodeWord" {...form.register("securityCodeWord")} placeholder="Codewort für Security (optional)" />
-          {form.formState.errors.securityCodeWord && <p className="text-red-500 text-sm mt-1">{form.formState.errors.securityCodeWord.message}</p>}
+          <div>
+            <Label htmlFor="alarmPassword">Alarmkennwort (optional)</Label>
+            <Input id="alarmPassword" {...form.register("alarmPassword")} placeholder="Alarmkennwort (optional)" />
+            {form.formState.errors.alarmPassword && <p className="text-red-500 text-sm mt-1">{form.formState.errors.alarmPassword.message}</p>}
+          </div>
+          <div>
+            <Label htmlFor="securityCodeWord">Codewort für Security (optional)</Label>
+            <Input id="securityCodeWord" {...form.register("securityCodeWord")} placeholder="Codewort für Security (optional)" />
+            {form.formState.errors.securityCodeWord && <p className="text-red-500 text-sm mt-1">{form.formState.errors.securityCodeWord.message}</p>}
+          </div>
         </>
       )}
 
