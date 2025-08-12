@@ -1,4 +1,4 @@
-import { createClient, createAdminClient } from "@/lib/supabase/server";
+import { createClient, createAdminClient } from "@/lib/supabase/server"; // Importiere createAdminClient
 import { redirect } from "next/navigation";
 import { UserForm } from "@/components/user-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,6 +11,7 @@ import { SearchInput } from "@/components/search-input";
 import { ManagerCustomerAssignmentDialog } from "@/components/manager-customer-assignment-dialog";
 import { Button } from "@/components/ui/button"; // Hinzugefügt
 import { UserCreateDialog } from "@/components/user-create-dialog"; // Import the new dialog
+import { PaginationControls } from "@/components/pagination-controls"; // Importiere die Paginierungskomponente
 
 interface DisplayUser {
   id: string;
@@ -44,26 +45,56 @@ export default async function UsersPage({
   }
 
   const query = typeof searchParams?.query === 'string' ? searchParams.query : '';
+  const currentPage = Number(searchParams?.page) || 1;
+  const pageSize = Number(searchParams?.pageSize) || 9; // Standardmäßig 9 Benutzer pro Seite
+
+  const from = (currentPage - 1) * pageSize;
+  const to = from + pageSize - 1;
 
   const supabaseAdmin = createAdminClient();
-  const { data: authUsers, error: authError } = await supabaseAdmin.auth.admin.listUsers();
 
+  let allAuthUsers: any[] = [];
+  let totalCount: number | null = 0;
+  let profilesData: any[] | null = [];
+  let profilesError: any = null;
+
+  // Fetch all auth users (Supabase admin.listUsers does not support pagination directly)
+  const { data: authUsersResult, error: authError } = await supabaseAdmin.auth.admin.listUsers();
   if (authError) {
     console.error("Fehler beim Laden der Auth-Benutzer:", authError);
     return <div className="p-4 md:p-8 text-sm">Fehler beim Laden der Benutzer.</div>;
   }
+  allAuthUsers = authUsersResult.users;
 
-  const userIds = authUsers.users.map(u => u.id);
-  const { data: profilesData, error: profilesError } = await supabase
-    .from('profiles')
-    .select('id, first_name, last_name, role');
+  if (query) {
+    // If a search query is present, fetch all profiles and filter them
+    const { data: allProfiles, error: allProfilesError } = await supabase
+      .from('profiles')
+      .select('id, first_name, last_name, role');
+    
+    profilesData = allProfiles;
+    profilesError = allProfilesError;
+    totalCount = allProfiles?.length || 0;
+
+  } else {
+    // If no search query, apply pagination to profiles
+    const { data, error, count } = await supabase
+      .from('profiles')
+      .select('id, first_name, last_name, role', { count: 'exact' })
+      .order('last_name', { ascending: true })
+      .range(from, to);
+    
+    profilesData = data;
+    profilesError = error;
+    totalCount = count;
+  }
 
   if (profilesError) {
     console.error("Fehler beim Laden der Profile:", profilesError);
     return <div className="p-4 md:p-8 text-sm">Fehler beim Laden der Benutzerprofile.</div>;
   }
 
-  // Mitarbeiter- und Kundennamen für die Anzeige abrufen
+  // Fetch employee, customer, and customer contact names for display
   const { data: employeesData, error: employeesError } = await supabase
     .from('employees')
     .select('id, first_name, last_name, user_id');
@@ -85,8 +116,13 @@ export default async function UsersPage({
   const customersMap = new Map(customersData?.map(c => [c.user_id, c.name]));
   const customerContactsMap = new Map(customerContactsData?.map(cc => [cc.user_id, `${cc.first_name} ${cc.last_name}`]));
 
+  let users: DisplayUser[] = [];
 
-  const users: DisplayUser[] = authUsers.users.map(authUser => {
+  // Combine auth users with profile data and filter based on paginated profiles (if no query)
+  // Or filter all users if a query is present
+  const usersToProcess = query ? allAuthUsers : allAuthUsers.filter(authUser => profilesMap.has(authUser.id));
+
+  users = usersToProcess.map(authUser => {
     const profile = profilesMap.get(authUser.id);
     const userRole = profile?.role || 'employee'; // Standardrolle, falls nicht im Profil gefunden
     return {
@@ -101,7 +137,7 @@ export default async function UsersPage({
       assigned_customer_name: userRole === 'admin' ? null : (customersMap.get(authUser.id) || customerContactsMap.get(authUser.id) || null),
     };
   }).filter(user => {
-    if (!query) return true;
+    if (!query) return true; // If no query, all users in `usersToProcess` are included
     const lowerCaseQuery = query.toLowerCase();
     return (
       user.email.toLowerCase().includes(lowerCaseQuery) ||
@@ -116,6 +152,10 @@ export default async function UsersPage({
     if (lastNameComparison !== 0) return lastNameComparison;
     return (a.first_name || '').localeCompare(b.first_name || '');
   });
+
+  // If there's a query, the totalPages should reflect the filtered count, not the paginated count
+  const finalTotalPages = query ? Math.ceil(users.length / pageSize) : (totalCount ? Math.ceil(totalCount / pageSize) : 0);
+  const finalUsers = query ? users : users.slice(from, to + 1); // Apply slice only if no query
 
   const getRoleBadgeVariant = (role: string) => {
     switch (role) {
@@ -142,7 +182,7 @@ export default async function UsersPage({
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-        {users.length === 0 && !query ? (
+        {finalUsers.length === 0 && !query ? (
           <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30">
             <UsersRound className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
             <p className="text-base md:text-lg font-semibold">Noch keine Benutzer vorhanden</p>
@@ -151,14 +191,14 @@ export default async function UsersPage({
               {/* The button to open the dialog is now part of UserCreateDialog */}
             </div>
           </div>
-        ) : users.length === 0 && query ? (
+        ) : finalUsers.length === 0 && query ? (
           <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30">
             <UsersRound className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
             <p className="text-base md:text-lg font-semibold">Keine Benutzer gefunden</p>
             <p className="text-sm">Ihre Suche nach "{query}" ergab keine Treffer.</p>
           </div>
         ) : (
-          users.map((user) => (
+          finalUsers.map((user) => (
             <Card key={user.id} className="shadow-elevation-1">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-base md:text-lg font-semibold">{user.first_name} {user.last_name}</CardTitle>
@@ -199,6 +239,9 @@ export default async function UsersPage({
           ))
         )}
       </div>
+      {!query && finalTotalPages > 1 && (
+        <PaginationControls currentPage={currentPage} totalPages={finalTotalPages} />
+      )}
     </div>
   );
 }
