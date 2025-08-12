@@ -10,10 +10,11 @@ import { Badge } from "@/components/ui/badge";
 import { SearchInput } from "@/components/search-input";
 import { Button } from "@/components/ui/button"; // Hinzugefügt
 import { EmployeeCreateDialog } from "@/components/employee-create-dialog"; // Import the new dialog
+import { PaginationControls } from "@/components/pagination-controls"; // Importiere die Paginierungskomponente
 
 export default async function EmployeesPage({
   searchParams,
-}: any) {
+}: any) { // Typisierung auf 'any' geändert, um Next.js-Kompilierungsfehler zu umgehen
   const supabase = await createClient();
   const { data: { user: currentUser } } = await supabase.auth.getUser();
 
@@ -36,11 +37,17 @@ export default async function EmployeesPage({
   const isAdmin = userProfile?.role === 'admin';
 
   const query = typeof searchParams?.query === 'string' ? searchParams.query : '';
+  const currentPage = Number(searchParams?.page) || 1;
+  const pageSize = Number(searchParams?.pageSize) || 9; // Standardmäßig 9 Mitarbeiter pro Seite
+
+  const from = (currentPage - 1) * pageSize;
+  const to = from + pageSize - 1;
 
   let employeesQuery = supabase
     .from('employees')
-    .select('*')
-    .order('last_name', { ascending: true });
+    .select('*', { count: 'exact' }) // count: 'exact' ist wichtig für die Paginierung
+    .order('last_name', { ascending: true })
+    .range(from, to); // Paginierung anwenden
 
   // Apply user_id filter only if not an admin
   if (!isAdmin) {
@@ -53,12 +60,14 @@ export default async function EmployeesPage({
     );
   }
 
-  const { data: employees, error } = await employeesQuery;
+  const { data: employees, error, count } = await employeesQuery;
 
   if (error) {
     console.error("Fehler beim Laden der Mitarbeiter:", error);
     return <div className="p-4 md:p-8 text-sm">Fehler beim Laden der Mitarbeiter.</div>;
   }
+
+  const totalPages = count ? Math.ceil(count / pageSize) : 0;
 
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
@@ -90,7 +99,7 @@ export default async function EmployeesPage({
     <div className="p-4 md:p-8 space-y-8">
       <h1 className="text-2xl md:text-3xl font-bold">Ihre Mitarbeiter</h1>
 
-      <div className="mb-4 flex justify-between items-center">
+      <div className="mb-4 flex flex-col sm:flex-row justify-between items-center gap-4">
         <SearchInput placeholder="Mitarbeiter suchen..." />
         <EmployeeCreateDialog />
       </div>
@@ -215,6 +224,9 @@ export default async function EmployeesPage({
           ))
         )}
       </div>
+      {totalPages > 1 && (
+        <PaginationControls currentPage={currentPage} totalPages={totalPages} />
+      )}
     </div>
   );
 }
