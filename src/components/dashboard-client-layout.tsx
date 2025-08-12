@@ -28,7 +28,7 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut }: 
           <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon">
-                <Menu className="h-6 w-6" />
+                <Menu className="h-7 w-7" />
               </Button>
             </SheetTrigger>
             <SheetContent
@@ -89,9 +89,9 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut }: 
             className={cn(isCollapsed ? "mx-auto" : "ml-auto")}
           >
             {isCollapsed ? (
-              <ChevronRight className="h-5 w-5" />
+              <ChevronRight className="h-6 w-6" />
             ) : (
-              <ChevronLeft className="h-5 w-5" />
+              <ChevronLeft className="h-6 w-6" />
             )}
           </Button>
         </div>
@@ -99,11 +99,11 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut }: 
 
         {/* Notification Bell and User Menu at the bottom of the sidebar */}
         <div className={cn(
-          "mt-auto flex flex-col items-center", // Changed to flex-col
+          "mt-auto flex flex-col items-center",
           isCollapsed ? "justify-center" : "justify-between",
-          "pt-4 border-t border-sidebar-border"
+          "pt-4 border-t border-sidebar-border space-y-4" // Added space-y-4 for vertical spacing
         )}>
-          <NotificationBell /> {/* NotificationBell first */}
+          <NotificationBell />
           <UserMenu currentUserRole={currentUserRole} onSignOut={onSignOut} />
         </div>
       </aside>
@@ -111,8 +111,8 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut }: 
       {/* Main Content */}
       <main className={cn(
         "flex-grow p-4 md:p-8",
-        "pt-20 md:pt-8", // Adjusted desktop padding-top
-        isCollapsed ? "md:ml-20" : "md:ml-64" // Adjust margin-left for fixed sidebar on desktop
+        "pt-20 md:pt-8",
+        isCollapsed ? "md:ml-20" : "md:ml-64"
       )}>
         {children}
       </main>

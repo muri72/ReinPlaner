@@ -130,10 +130,10 @@ export function SidebarNav({ isCollapsed, currentUserRole, onSignOut, onLinkClic
                         className={cn(
                           "w-full",
                           isCollapsed ? "justify-center" : "justify-start",
-                          "text-sm text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors duration-200" // Changed text-base to text-sm
+                          "text-sm text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors duration-200"
                         )}
                       >
-                        <child.icon className={cn(isCollapsed ? "h-7 w-7" : "h-5 w-5", !isCollapsed && "mr-2")} />
+                        <child.icon className={cn(isCollapsed ? "h-8 w-8" : "h-6 w-6", !isCollapsed && "mr-2")} />
                         {!isCollapsed && child.title}
                       </Button>
                     </Link>
@@ -153,10 +153,10 @@ export function SidebarNav({ isCollapsed, currentUserRole, onSignOut, onLinkClic
                     className={cn(
                       "w-full",
                       isCollapsed ? "justify-center" : "justify-start",
-                      "text-sm text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors duration-200" // Changed text-base to text-sm
+                      "text-sm text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors duration-200"
                     )}
                   >
-                    <item.icon className={cn(isCollapsed ? "h-7 w-7" : "h-5 w-5", !isCollapsed && "mr-2")} />
+                    <item.icon className={cn(isCollapsed ? "h-8 w-8" : "h-6 w-6", !isCollapsed && "mr-2")} />
                     {!isCollapsed && item.title}
                   </Button>
                 </Link>
