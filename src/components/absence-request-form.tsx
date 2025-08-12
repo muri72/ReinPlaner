@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { DatePicker } from "@/components/date-picker";
+import { handleActionResponse } from "@/lib/toast-utils"; // Importiere die neue Utility
 
 // Define the schema for absence request form values
 export const absenceRequestSchema = z.object({
@@ -99,12 +100,10 @@ export function AbsenceRequestForm({ initialData, onSubmit, submitButtonText, on
     }
 
     const result = await onSubmit(data);
+    handleActionResponse(result); // Nutze die neue Utility
     if (result.success) {
-      toast.success(result.message);
       if (!initialData) form.reset();
       onSuccess?.();
-    } else {
-      toast.error(result.message);
     }
   };
 

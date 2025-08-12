@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
+import { handleActionResponse } from "@/lib/toast-utils"; // Importiere die neue Utility
 
 const defaultRateSchema = z.object({
   rate: z.coerce.number().min(0, "Stundensatz muss positiv sein."),
@@ -31,7 +32,7 @@ export function DefaultRateManager() {
       if (result.success && result.data) {
         form.setValue("rate", Number(result.data));
       } else {
-        toast.error("Fehler beim Laden des Standard-Stundensatzes.");
+        toast.error("Fehler beim Laden des Standard-Stundensatzes."); // Hier bleibt toast.error, da es ein Ladefehler ist, keine Action-Response
       }
       setLoading(false);
     };
@@ -40,11 +41,7 @@ export function DefaultRateManager() {
 
   const onSubmit = async (data: DefaultRateFormValues) => {
     const result = await updateDefaultHourlyRate(data.rate);
-    if (result.success) {
-      toast.success(result.message);
-    } else {
-      toast.error(result.message);
-    }
+    handleActionResponse(result); // Nutze die neue Utility
   };
 
   if (loading) {

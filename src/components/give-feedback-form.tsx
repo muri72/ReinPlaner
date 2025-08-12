@@ -14,6 +14,8 @@ import { Star, X } from "lucide-react";
 import { createOrderFeedback, generateSignedUploadUrls } from "@/app/dashboard/feedback/actions";
 import Image from "next/image";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { handleActionResponse } from "@/lib/toast-utils"; // Importiere die neue Utility
+import { v4 as uuidv4 } from 'uuid';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 const MAX_TOTAL_FILES = 10; // Limit auf 10 erhöht
@@ -174,16 +176,15 @@ export function GiveFeedbackForm({ onSuccess }: GiveFeedbackFormProps) {
         imageUrls: uploadedImageUrls,
       });
 
+      handleActionResponse(result); // Nutze die neue Utility
+
       if (result.success) {
-        toast.success(result.message);
         form.reset();
         setFiles([]);
         if (userRole !== 'customer') {
           setSelectedCustomerId(null);
         }
         onSuccess?.(); // onSuccess aufrufen
-      } else {
-        throw new Error(result.message);
       }
     } catch (error: any) {
       toast.error(error.message || "Ein unerwarteter Fehler ist aufgetreten.");

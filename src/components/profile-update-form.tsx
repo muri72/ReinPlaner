@@ -11,6 +11,7 @@ import { updateProfile } from "@/app/dashboard/actions";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useState, useRef } from "react";
 import { Switch } from "@/components/ui/switch";
+import { handleActionResponse } from "@/lib/toast-utils"; // Importiere die neue Utility
 
 const MAX_AVATAR_SIZE = 10 * 1024 * 1024; // 10 MB
 
@@ -72,15 +73,14 @@ export function ProfileUpdateForm({ initialData }: ProfileUpdateFormProps) {
 
     const result = await updateProfile(formData);
 
+    handleActionResponse(result); // Nutze die neue Utility
+
     if (result.success) {
-      toast.success(result.message);
       setFile(null);
       setPreview(null);
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
-    } else {
-      toast.error(result.message);
     }
   };
 

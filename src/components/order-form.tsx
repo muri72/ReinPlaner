@@ -17,6 +17,7 @@ import { ObjectForm, ObjectFormValues } from "@/components/object-form";
 import { createObject } from "@/app/dashboard/objects/actions";
 import { CustomerContactCreateDialog } from "@/components/customer-contact-create-dialog";
 import { DatePicker } from "@/components/date-picker"; // Importiere die neue DatePicker Komponente
+import { handleActionResponse } from "@/lib/toast-utils"; // Importiere die neue Utility
 
 // Definierte Liste der Dienstleistungen
 const availableServices = [
@@ -141,20 +142,20 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
   const handleFormSubmit: SubmitHandler<OrderFormValues> = async (data) => {
     const result = await onSubmit(data);
 
+    handleActionResponse(result); // Nutze die neue Utility
+
     if (result.success) {
-      toast.success(result.message);
       if (!initialData) {
         form.reset();
       }
       onSuccess?.();
-    } else {
-      toast.error(result.message);
     }
   };
 
   // Handler für die Objekterstellung im Dialog
   const handleCreateObject = async (data: ObjectFormValues) => {
     const result = await createObject(data);
+    handleActionResponse(result); // Nutze die neue Utility
     if (result.success) {
       const { data: newObjectsData, error: newObjectsError } = await supabase.from('objects').select('id, name, customer_id');
       if (newObjectsData) {

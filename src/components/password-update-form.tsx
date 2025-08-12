@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { updatePassword, sendPasswordResetEmail } from "@/app/dashboard/actions";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useRouter } from "next/navigation";
+import { handleActionResponse } from "@/lib/toast-utils"; // Importiere die neue Utility
 
 const passwordSchema = z.object({
   newPassword: z.string().min(6, "Das neue Passwort muss mindestens 6 Zeichen lang sein."),
@@ -34,25 +35,20 @@ export function PasswordUpdateForm() {
   const onSubmit = async (data: PasswordFormValues) => {
     const result = await updatePassword(data.newPassword);
 
+    handleActionResponse(result); // Nutze die neue Utility
+
     if (result.success) {
-      toast.success(result.message);
       form.reset();
       // Leite den Benutzer nach einer kurzen Verzögerung zur Anmeldeseite weiter
       setTimeout(() => {
         router.push('/login');
       }, 2000);
-    } else {
-      toast.error(result.message);
     }
   };
 
   const handleSendResetEmail = async () => {
     const result = await sendPasswordResetEmail();
-    if (result.success) {
-      toast.success(result.message);
-    } else {
-      toast.error(result.message);
-    }
+    handleActionResponse(result); // Nutze die neue Utility
   };
 
   return (

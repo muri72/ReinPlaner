@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Trash2, PlusCircle } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { handleActionResponse } from "@/lib/toast-utils"; // Importiere die neue Utility
 
 const serviceRateSchema = z.object({
   rates: z.array(z.object({
@@ -39,7 +40,7 @@ export function ServiceRateManager() {
       if (result.success && result.data) {
         form.reset({ rates: result.data });
       } else {
-        toast.error("Fehler beim Laden der Stundensätze.");
+        toast.error("Fehler beim Laden der Stundensätze."); // Hier bleibt toast.error, da es ein Ladefehler ist
       }
       setLoading(false);
     };
@@ -48,11 +49,7 @@ export function ServiceRateManager() {
 
   const onSubmit = async (data: ServiceRateFormValues) => {
     const result = await updateServiceRates(data.rates);
-    if (result.success) {
-      toast.success(result.message);
-    } else {
-      toast.error(result.message);
-    }
+    handleActionResponse(result); // Nutze die neue Utility
   };
 
   if (loading) {

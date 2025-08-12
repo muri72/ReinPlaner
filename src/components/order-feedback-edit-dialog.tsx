@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+import { handleActionResponse } from "@/lib/toast-utils"; // Importiere die neue Utility
 
 const editSchema = z.object({
   rating: z.number().min(1, "Bewertung ist erforderlich").max(5),
@@ -50,11 +51,10 @@ export function OrderFeedbackEditDialog({ feedback }: OrderFeedbackEditDialogPro
     if (data.comment) formData.append("comment", data.comment);
 
     const result = await updateOrderFeedback(feedback.id, formData);
+    handleActionResponse(result); // Nutze die neue Utility
     if (result.success) {
-      toast.success(result.message);
       setOpen(false);
     }
-    return result;
   };
 
   return (

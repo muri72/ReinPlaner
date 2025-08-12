@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { handleActionResponse } from "@/lib/toast-utils"; // Importiere die neue Utility
 
 export const customerContactSchema = z.object({
   customerId: z.string().uuid("Ungültige Kunden-ID").min(1, "Kunde ist erforderlich"),
@@ -62,14 +63,13 @@ export function CustomerContactForm({ initialData, onSubmit, submitButtonText, o
   const handleFormSubmit: SubmitHandler<CustomerContactFormValues> = async (data) => {
     const result = await onSubmit(data);
 
+    handleActionResponse(result); // Nutze die neue Utility
+
     if (result.success) {
-      toast.success(result.message);
       if (!initialData) {
         form.reset();
       }
       onSuccess?.();
-    } else {
-      toast.error(result.message);
     }
   };
 

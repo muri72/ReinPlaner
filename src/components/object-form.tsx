@@ -13,6 +13,7 @@ import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Switch } from "@/components/ui/switch";
 import { CustomerContactCreateDialog } from "@/components/customer-contact-create-dialog";
+import { handleActionResponse } from "@/lib/toast-utils"; // Importiere die neue Utility
 
 const preprocessNumber = (val: any) => (val === "" || isNaN(Number(val)) ? null : Number(val));
 const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
@@ -196,12 +197,10 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
 
   const handleFormSubmit: SubmitHandler<ObjectFormValues> = async (data) => {
     const result = await onSubmit(data);
+    handleActionResponse(result); // Nutze die neue Utility
     if (result.success) {
-      toast.success(result.message);
       if (!initialData) form.reset();
       onSuccess?.();
-    } else {
-      toast.error(result.message);
     }
   };
 

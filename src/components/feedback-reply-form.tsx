@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { replyToOrderFeedback, replyToGeneralFeedback } from "@/app/dashboard/feedback/actions";
+import { handleActionResponse } from "@/lib/toast-utils"; // Importiere die neue Utility
 
 const replySchema = z.object({
   replyText: z.string().min(1, "Antwort darf nicht leer sein.").max(2000, "Antwort ist zu lang."),
@@ -33,12 +34,11 @@ export function FeedbackReplyForm({ feedbackId, feedbackType, onSuccess }: Feedb
     const action = feedbackType === 'order' ? replyToOrderFeedback : replyToGeneralFeedback;
     const result = await action(feedbackId, data.replyText);
 
+    handleActionResponse(result); // Nutze die neue Utility
+
     if (result.success) {
-      toast.success(result.message);
       form.reset();
       onSuccess?.();
-    } else {
-      toast.error(result.message);
     }
     setIsSubmitting(false);
   };

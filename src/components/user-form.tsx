@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Checkbox } from "@/components/ui/checkbox"; // For multi-select
+import { handleActionResponse } from "@/lib/toast-utils"; // Importiere die neue Utility
 
 // Define the base schema first to avoid circular dependency
 const baseUserSchema = z.object({
@@ -231,14 +232,13 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
   const handleFormSubmit: SubmitHandler<UserFormValues> = async (data) => {
     const result = await onSubmit(data);
 
+    handleActionResponse(result); // Nutze die neue Utility
+
     if (result.success) {
-      toast.success(result.message);
       if (!initialData) {
         form.reset();
       }
       onSuccess?.();
-    } else {
-      toast.error(result.message);
     }
   };
 

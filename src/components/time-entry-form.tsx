@@ -13,6 +13,7 @@ import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { DatePicker } from "@/components/date-picker";
 import { calculateHours } from "@/lib/utils"; // Importiere von utils
+import { handleActionResponse } from "@/lib/toast-utils"; // Importiere die neue Utility
 
 export const timeEntrySchema = z.object({
   employeeId: z.string().uuid("Ungültige Mitarbeiter-ID").optional().nullable(),
@@ -229,8 +230,9 @@ export function TimeEntryForm({ initialData, onSubmit, submitButtonText, onSucce
   const handleFormSubmit: SubmitHandler<TimeEntryFormValues> = async (data) => {
     const result = await onSubmit(data);
 
+    handleActionResponse(result); // Nutze die neue Utility
+
     if (result.success) {
-      toast.success(result.message);
       if (!initialData) {
         form.reset({
           startDate: new Date(),
@@ -248,8 +250,6 @@ export function TimeEntryForm({ initialData, onSubmit, submitButtonText, onSucce
         });
       }
       onSuccess?.();
-    } else {
-      toast.error(result.message);
     }
   };
 

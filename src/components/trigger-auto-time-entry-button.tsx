@@ -5,21 +5,18 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Bot } from "lucide-react";
 import { triggerAutomaticTimeEntryCreation } from "@/app/dashboard/time-tracking/actions";
+import { handleActionResponse } from "@/lib/toast-utils"; // Importiere die neue Utility
 
 export function TriggerAutoTimeEntryButton() {
   const [loading, setLoading] = useState(false);
 
   const handleTrigger = async () => {
     setLoading(true);
-    toast.info("Starte die automatische Erstellung von Zeiteinträgen...");
+    toast.info("Starte die automatische Erstellung von Zeiteinträgen..."); // Dies ist eine Info-Nachricht, keine Erfolgs-/Fehlermeldung
 
     const result = await triggerAutomaticTimeEntryCreation();
 
-    if (result.success) {
-      toast.success(result.message);
-    } else {
-      toast.error(result.message);
-    }
+    handleActionResponse(result); // Nutze die neue Utility
 
     setLoading(false);
   };

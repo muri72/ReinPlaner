@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Star, X } from "lucide-react";
 import { createOrderFeedback, generateSignedUploadUrls } from "@/app/dashboard/feedback/actions";
 import Image from "next/image";
+import { handleActionResponse } from "@/lib/toast-utils"; // Importiere die neue Utility
 
 const feedbackSchema = z.object({
   rating: z.number().min(1, "Bewertung ist erforderlich").max(5),
@@ -95,13 +96,12 @@ export function OrderFeedbackForm({ orderId, onSuccess }: OrderFeedbackFormProps
         imageUrls: uploadedImageUrls,
       });
 
+      handleActionResponse(result); // Nutze die neue Utility
+
       if (result.success) {
-        toast.success(result.message);
         form.reset();
         setFiles([]);
         onSuccess?.();
-      } else {
-        throw new Error(result.message);
       }
     } catch (error: any) {
       toast.error(error.message || "Ein unerwarteter Fehler ist aufgetreten.");

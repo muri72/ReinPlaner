@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+import { handleActionResponse } from "@/lib/toast-utils"; // Importiere die neue Utility
 
 const editSchema = z.object({
   subject: z.string().max(200, "Betreff ist zu lang").optional(),
@@ -49,11 +50,9 @@ export function GeneralFeedbackEditDialog({ feedback }: GeneralFeedbackEditDialo
     formData.append("message", data.message);
 
     const result = await updateGeneralFeedback(feedback.id, formData);
+    handleActionResponse(result); // Nutze die neue Utility
     if (result.success) {
-      toast.success(result.message);
       setOpen(false);
-    } else {
-      toast.error(result.message);
     }
   };
 
