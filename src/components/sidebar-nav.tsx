@@ -116,15 +116,15 @@ export function SidebarNav({ isCollapsed, currentUserRole, onSignOut, onLinkClic
         item.isCategory ? (
           <div key={item.title} className="space-y-2">
             {!isCollapsed && (
-              <h3 className="text-xs font-semibold uppercase text-muted-foreground px-4 pt-4 pb-2">
+              <h3 className="text-sm font-semibold uppercase text-muted-foreground px-4 pt-4 pb-2">
                 {item.title}
               </h3>
             )}
             {item.children.map(child => (
-              <Link key={child.href} href={child.href} passHref onClick={onLinkClick}> {/* onClick hinzugefügt */}
-                <TooltipProvider delayDuration={300}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
+              <TooltipProvider key={child.href} delayDuration={300}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Link href={child.href} passHref onClick={onLinkClick}>
                       <Button
                         variant={pathname === child.href ? "secondary" : "ghost"}
                         className={cn(
@@ -136,18 +136,18 @@ export function SidebarNav({ isCollapsed, currentUserRole, onSignOut, onLinkClic
                         <child.icon className={cn("h-5 w-5", !isCollapsed && "mr-2")} />
                         {!isCollapsed && child.title}
                       </Button>
-                    </TooltipTrigger>
-                    {isCollapsed && <TooltipContent side="right">{child.title}</TooltipContent>}
-                  </Tooltip>
-                </TooltipProvider>
-              </Link>
+                    </Link>
+                  </TooltipTrigger>
+                  {isCollapsed && <TooltipContent side="right">{child.title}</TooltipContent>}
+                </Tooltip>
+              </TooltipProvider>
             ))}
           </div>
         ) : (
-          <Link key={item.href} href={item.href} passHref onClick={onLinkClick}> {/* onClick hinzugefügt */}
-            <TooltipProvider delayDuration={300}>
-              <Tooltip>
-                <TooltipTrigger asChild>
+          <TooltipProvider key={item.href} delayDuration={300}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Link href={item.href} passHref onClick={onLinkClick}>
                   <Button
                     variant={pathname === item.href ? "secondary" : "ghost"}
                     className={cn(
@@ -159,11 +159,11 @@ export function SidebarNav({ isCollapsed, currentUserRole, onSignOut, onLinkClic
                     <item.icon className={cn("h-5 w-5", !isCollapsed && "mr-2")} />
                     {!isCollapsed && item.title}
                   </Button>
-                </TooltipTrigger>
-                {isCollapsed && <TooltipContent side="right">{item.title}</TooltipContent>}
-              </Tooltip>
-            </TooltipProvider>
-          </Link>
+                </Link>
+              </TooltipTrigger>
+              {isCollapsed && <TooltipContent side="right">{item.title}</TooltipContent>}
+            </Tooltip>
+          </TooltipProvider>
         )
       ))}
     </div>
