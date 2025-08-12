@@ -106,7 +106,7 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut }: 
         className={cn(
           "hidden md:flex fixed top-0 right-0 h-16 text-foreground p-4 items-center justify-end z-50",
           isCollapsed ? "left-20 w-[calc(100%-80px)]" : "left-64 w-[calc(100%-256px)]",
-          "bg-sidebar" // Changed to solid bg-sidebar
+          "bg-gradient-to-br from-sidebar-background to-sidebar-accent" // Applied the same gradient as sidebar
         )}
       >
         <div className="flex items-center space-x-4">
