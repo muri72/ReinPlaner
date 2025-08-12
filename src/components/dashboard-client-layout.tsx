@@ -104,9 +104,9 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut }: 
       {/* Desktop Header (newly fixed) */}
       <header
         className={cn(
-          "hidden md:flex fixed top-0 right-0 h-16 bg-background text-foreground border-b border-border p-4 items-center justify-end z-50", // Changed z-45 to z-50
+          "hidden md:flex fixed top-0 right-0 h-16 text-foreground border-b border-border p-4 items-center justify-end z-50",
           isCollapsed ? "left-20 w-[calc(100%-80px)]" : "left-64 w-[calc(100%-256px)]",
-          "bg-background/80 backdrop-blur-xl"
+          "bg-gradient-to-br from-sidebar-background to-sidebar-accent" // Changed background to match sidebar
         )}
       >
         <div className="flex items-center space-x-4">
