@@ -109,9 +109,12 @@ export function FeedbackCard({ feedback, feedbackType, currentUserId, currentUse
               <CarouselContent>
                 {feedback.image_urls.map((url, index) => (
                   <CarouselItem key={index}>
-                    <a href={url} target="_blank" rel="noopener noreferrer">
+                    <div 
+                      className="cursor-pointer" 
+                      onClick={() => window.open(url, '_blank')}
+                    >
                       <NextImage src={url} alt={`Feedback-Bild ${index + 1}`} width={200} height={200} className="rounded-md object-cover w-full h-40" />
-                    </a>
+                    </div>
                   </CarouselItem>
                 ))}
               </CarouselContent>
