@@ -8,7 +8,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTrigger, SheetTitle } from "@/co
 import { SidebarNav } from "@/components/sidebar-nav";
 import { UserMenu } from "@/components/user-menu";
 import { cn } from "@/lib/utils";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden"; // Importiert
 
 interface DashboardClientLayoutProps {
   children: React.ReactNode;
@@ -40,8 +40,8 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut }: 
               aria-labelledby="aris-navigation-title"
             >
               <SheetHeader>
-                <SheetTitle id="aris-navigation-title"> {/* ID hinzugefügt */}
-                  <VisuallyHidden>ARIS Navigation</VisuallyHidden>
+                <SheetTitle id="aris-navigation-title"> {/* Hier ist der SheetTitle */}
+                  <VisuallyHidden>ARIS Navigation</VisuallyHidden> {/* Und hier ist VisuallyHidden */}
                 </SheetTitle>
                 <div className="flex justify-between items-center mb-6">
                   <h2 className="text-xl font-bold text-primary tracking-tight">ARIS</h2>
