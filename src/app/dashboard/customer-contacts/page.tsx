@@ -7,8 +7,9 @@ import { CustomerContactEditDialog } from "@/components/customer-contact-edit-di
 import { DeleteCustomerContactButton } from "@/components/delete-customer-contact-button";
 import { Mail, Phone, Briefcase, UserRound, PlusCircle, ContactRound } from "lucide-react";
 import { SearchInput } from "@/components/search-input";
-import { Button } from "@/components/ui/button"; // Hinzugefügt
-import { CustomerContactCreateGeneralDialog } from "@/components/customer-contact-create-general-dialog"; // Import the new general dialog
+import { Button } from "@/components/ui/button";
+import { CustomerContactCreateGeneralDialog } from "@/components/customer-contact-create-general-dialog";
+import { PaginationControls } from "@/components/pagination-controls"; // Importiere die Paginierungskomponente
 
 // Definieren Sie die Schnittstelle für die Kundenkontakt-Daten
 interface DisplayCustomerContact {
@@ -34,17 +35,20 @@ export default async function CustomerContactsPage({
   }
 
   const query = typeof searchParams?.query === 'string' ? searchParams.query : '';
+  const currentPage = Number(searchParams?.page) || 1;
+  const pageSize = Number(searchParams?.pageSize) || 9; // Standardmäßig 9 Kontakte pro Seite
+
+  const from = (currentPage - 1) * pageSize;
+  const to = from + pageSize - 1;
 
   let customerContactsQuery = supabase
     .from('customer_contacts')
     .select(`
       *,
       customers ( name )
-    `)
-    .order('last_name', { ascending: true });
-
-  // Die explizite Filterlogik basierend auf isAdmin oder customerIds wird entfernt,
-  // da RLS dies nun vollständig übernimmt.
+    `, { count: 'exact' }) // count: 'exact' ist wichtig für die Paginierung
+    .order('last_name', { ascending: true })
+    .range(from, to); // Paginierung anwenden
 
   if (query) {
     customerContactsQuery = customerContactsQuery.or(
@@ -52,7 +56,7 @@ export default async function CustomerContactsPage({
     );
   }
 
-  const { data: contacts, error } = await customerContactsQuery;
+  const { data: contacts, error, count } = await customerContactsQuery;
 
   if (error) {
     console.error("Fehler beim Laden der Kundenkontakte:", error);
@@ -71,13 +75,15 @@ export default async function CustomerContactsPage({
     customer_name: contact.customers?.name || null,
   })) || [];
 
+  const totalPages = count ? Math.ceil(count / pageSize) : 0;
+
   return (
     <div className="p-4 md:p-8 space-y-8">
       <h1 className="text-2xl md:text-3xl font-bold">Ihre Kundenkontakte</h1>
 
       <div className="mb-4 flex justify-between items-center">
         <SearchInput placeholder="Kundenkontakte suchen..." />
-        <CustomerContactCreateGeneralDialog /> {/* Ersetzt den alten, deaktivierten Dialog */}
+        <CustomerContactCreateGeneralDialog />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
@@ -87,7 +93,7 @@ export default async function CustomerContactsPage({
             <p className="text-base md:text-lg font-semibold">Noch keine Kundenkontakte vorhanden</p>
             <p className="text-sm">Fügen Sie einen neuen Kontakt hinzu, um Ihre Kundenbeziehungen zu verwalten.</p>
             <div className="mt-4">
-              <CustomerContactCreateGeneralDialog /> {/* Button im leeren Zustand */}
+              <CustomerContactCreateGeneralDialog />
             </div>
           </div>
         ) : displayContacts.length === 0 && query ? (
@@ -135,6 +141,9 @@ export default async function CustomerContactsPage({
           ))
         )}
       </div>
+      {totalPages > 1 && (
+        <PaginationControls currentPage={currentPage} totalPages={totalPages} />
+      )}
     </div>
   );
 }
