@@ -105,7 +105,7 @@ export function FeedbackCard({ feedback, feedbackType, currentUserId, currentUse
         {feedback.image_urls && feedback.image_urls.length > 0 && (
           <div>
             <h4 className="text-sm font-semibold mb-2 flex items-center"><ImageIcon className="h-4 w-4 mr-2 text-muted-foreground" />Bilder</h4>
-            <Carousel className="w-full max-w-xs mx-auto">
+            <Carousel className="w-full max-w-sm mx-auto relative"> {/* Increased max-w and added relative */}
               <CarouselContent>
                 {feedback.image_urls.map((url, index) => (
                   <CarouselItem key={index}>
@@ -115,7 +115,9 @@ export function FeedbackCard({ feedback, feedbackType, currentUserId, currentUse
                   </CarouselItem>
                 ))}
               </CarouselContent>
-              <CarouselPrevious className="z-10" /><CarouselNext className="z-10" />
+              {/* Explicit positioning for arrows */}
+              <CarouselPrevious className="absolute left-2 top-1/2 -translate-y-1/2 z-20" />
+              <CarouselNext className="absolute right-2 top-1/2 -translate-y-1/2 z-20" />
             </Carousel>
           </div>
         )}
