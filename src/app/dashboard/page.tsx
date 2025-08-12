@@ -120,25 +120,6 @@ export default async function DashboardPage() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2 mt-8">
         <OrderStatusChart data={chartData} />
       </div>
-
-      <h2 className="text-xl md:text-2xl font-bold mt-8">Ihr Profil</h2>
-      {profile?.first_name && profile?.last_name && (
-        <p className="text-base">
-          Ihr vollständiger Name: {profile.first_name} {profile.last_name}
-        </p>
-      )}
-      <ProfileUpdateForm
-        initialData={{
-          firstName: profile?.first_name || null,
-          lastName: profile?.last_name || null,
-          avatarUrl: profile?.avatar_url || null,
-          emailNotificationsEnabled: profile?.email_notifications_enabled ?? true,
-        }}
-      />
-
-      <form action={signOut} className="mt-8">
-        <Button type="submit">Abmelden</Button>
-      </form>
     </div>
   );
 }
