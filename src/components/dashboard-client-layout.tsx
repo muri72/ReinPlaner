@@ -104,9 +104,9 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut }: 
       {/* Desktop Header (newly fixed) */}
       <header
         className={cn(
-          "hidden md:flex fixed top-0 right-0 h-16 text-foreground p-4 items-center justify-end z-50", // Removed border-b border-border
+          "hidden md:flex fixed top-0 right-0 h-16 text-foreground p-4 items-center justify-end z-50",
           isCollapsed ? "left-20 w-[calc(100%-80px)]" : "left-64 w-[calc(100%-256px)]",
-          "bg-background" // Changed to bg-background
+          "bg-background bg-main-content-pattern" // Applied new class
         )}
       >
         <div className="flex items-center space-x-4">
