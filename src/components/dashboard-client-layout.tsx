@@ -37,9 +37,10 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut }: 
                 "w-64 text-sidebar-foreground border-r border-sidebar-border p-4 flex flex-col",
                 "bg-sidebar/80 backdrop-blur-xl"
               )}
+              aria-labelledby="aris-navigation-title"
             >
               <SheetHeader>
-                <SheetTitle>
+                <SheetTitle id="aris-navigation-title"> {/* ID hinzugefügt */}
                   <VisuallyHidden>ARIS Navigation</VisuallyHidden>
                 </SheetTitle>
                 <div className="flex justify-between items-center mb-6">
