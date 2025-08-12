@@ -20,9 +20,6 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut }: 
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
 
-  // Define desktop header height for padding calculation
-  const desktopHeaderHeight = '64px'; // Corresponds to h-16
-
   return (
     <div className="min-h-screen flex flex-col md:flex-row">
       {/* Mobile Header and Navigation (fixed) */}
@@ -102,30 +99,19 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut }: 
 
         {/* Notification Bell and User Menu at the bottom of the sidebar */}
         <div className={cn(
-          "mt-auto flex items-center",
+          "mt-auto flex flex-col items-center", // Changed to flex-col
           isCollapsed ? "justify-center" : "justify-between",
           "pt-4 border-t border-sidebar-border"
         )}>
-          <NotificationBell />
+          <NotificationBell /> {/* NotificationBell first */}
           <UserMenu currentUserRole={currentUserRole} onSignOut={onSignOut} />
         </div>
       </aside>
 
-      {/* Desktop Header (fixed) */}
-      <header
-        className={cn(
-          "hidden md:flex fixed top-0 right-0 h-16 text-foreground p-4 items-center justify-end z-50",
-          isCollapsed ? "left-20 w-[calc(100%-80px)]" : "left-64 w-[calc(100%-256px)]",
-          "bg-sidebar"
-        )}
-      >
-        {/* Removed NotificationBell and UserMenu from here */}
-      </header>
-
       {/* Main Content */}
       <main className={cn(
         "flex-grow p-4 md:p-8",
-        "pt-20 md:pt-[calc(64px+32px)]", // Mobile pt-20 (for mobile header), Desktop pt-64px (for new fixed header) + 32px (for md:p-8)
+        "pt-20 md:pt-8", // Adjusted desktop padding-top
         isCollapsed ? "md:ml-20" : "md:ml-64" // Adjust margin-left for fixed sidebar on desktop
       )}>
         {children}
