@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog"; // Import DialogDescription
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 import { CustomerForm, CustomerFormValues } from "@/components/customer-form";
 import { createCustomer } from "@/app/dashboard/customers/actions";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden"; // Import VisuallyHidden
 
 interface CustomerCreateDialogProps {
   onCustomerCreated?: () => void;
@@ -31,9 +32,12 @@ export function CustomerCreateDialog({ onCustomerCreated }: CustomerCreateDialog
           Neuen Kunden hinzufügen
         </Button>
       </DialogTrigger>
-      <DialogContent key={open ? "customer-create-open" : "customer-create-closed"} className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto" aria-labelledby="customer-create-dialog-title">
+      <DialogContent key={open ? "customer-create-open" : "customer-create-closed"} className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto" aria-labelledby="customer-create-dialog-title" aria-describedby="customer-create-dialog-description">
         <DialogHeader>
           <DialogTitle id="customer-create-dialog-title">Neuen Kunden hinzufügen</DialogTitle>
+          <DialogDescription id="customer-create-dialog-description">
+            <VisuallyHidden>Formular zum Hinzufügen eines neuen Kunden.</VisuallyHidden>
+          </DialogDescription>
         </DialogHeader>
         <CustomerForm
           onSubmit={handleCreate}

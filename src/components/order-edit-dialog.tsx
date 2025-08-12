@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog"; // Import DialogDescription
 import { Button } from "@/components/ui/button";
 import { Pencil } from "lucide-react";
 import { OrderForm, OrderFormValues } from "@/components/order-form";
 import { updateOrder } from "@/app/dashboard/orders/actions";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"; // Import Tooltip components
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden"; // Import VisuallyHidden
 
 // Definierte Liste der Dienstleistungen (muss mit order-form.tsx übereinstimmen)
 const availableServices = [
@@ -27,16 +28,15 @@ interface OrderEditDialogProps {
     customer_id: string | null;
     object_id: string | null;
     employee_id: string | null;
-    customer_contact_id: string | null; // Neues Feld
-    // Neue Felder
+    customer_contact_id: string | null;
     order_type: string;
     recurring_start_date: string | null;
     recurring_end_date: string | null;
     priority: string;
     estimated_hours: number | null;
     notes: string | null;
-    service_type: string | null; // Neues Feld
-    request_status: string; // Neues Feld
+    service_type: string | null;
+    request_status: string;
   };
 }
 
@@ -75,9 +75,12 @@ export function OrderEditDialog({ order }: OrderEditDialogProps) {
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
-      <DialogContent key={open ? "order-edit-open" : "order-edit-closed"} className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto" aria-labelledby="order-edit-dialog-title">
+      <DialogContent key={open ? "order-edit-open" : "order-edit-closed"} className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto" aria-labelledby="order-edit-dialog-title" aria-describedby="order-edit-dialog-description">
         <DialogHeader>
           <DialogTitle id="order-edit-dialog-title">Auftrag bearbeiten</DialogTitle>
+          <DialogDescription id="order-edit-dialog-description">
+            <VisuallyHidden>Formular zum Bearbeiten der Auftragsdetails.</VisuallyHidden>
+          </DialogDescription>
         </DialogHeader>
         <OrderForm
           initialData={{
@@ -88,15 +91,15 @@ export function OrderEditDialog({ order }: OrderEditDialogProps) {
             customerId: order.customer_id ?? undefined,
             objectId: order.object_id ?? undefined,
             employeeId: order.employee_id,
-            customerContactId: order.customer_contact_id ?? undefined, // Neues Feld
+            customerContactId: order.customer_contact_id ?? undefined,
             orderType: order.order_type as OrderFormValues["orderType"],
             recurringStartDate: order.recurring_start_date ? new Date(order.recurring_start_date) : undefined,
             recurringEndDate: order.recurring_end_date ? new Date(order.recurring_end_date) : undefined,
             priority: order.priority as OrderFormValues["priority"],
             estimatedHours: order.estimated_hours,
             notes: order.notes,
-            serviceType: getServiceTypeForForm(order.service_type), // Korrigierte Zuweisung
-            requestStatus: order.request_status as OrderFormValues["requestStatus"], // Neues Feld
+            serviceType: getServiceTypeForForm(order.service_type),
+            requestStatus: order.request_status as OrderFormValues["requestStatus"],
           }}
           onSubmit={handleUpdate}
           submitButtonText="Änderungen speichern"

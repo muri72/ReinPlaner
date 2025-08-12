@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog"; // Import DialogDescription
 import { Button } from "@/components/ui/button";
 import { Pencil } from "lucide-react";
 import { CustomerContactForm, CustomerContactFormValues } from "@/components/customer-contact-form";
 import { updateCustomerContact } from "@/app/dashboard/customer-contacts/actions";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"; // Import Tooltip components
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden"; // Import VisuallyHidden
 
 interface CustomerContactEditDialogProps {
   contact: {
@@ -47,9 +48,12 @@ export function CustomerContactEditDialog({ contact }: CustomerContactEditDialog
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
-      <DialogContent key={open ? "customer-contact-edit-open" : "customer-contact-edit-closed"} className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto" aria-labelledby="customer-contact-edit-dialog-title">
+      <DialogContent key={open ? "customer-contact-edit-open" : "customer-contact-edit-closed"} className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto" aria-labelledby="customer-contact-edit-dialog-title" aria-describedby="customer-contact-edit-dialog-description">
         <DialogHeader>
           <DialogTitle id="customer-contact-edit-dialog-title">Kundenkontakt bearbeiten</DialogTitle>
+          <DialogDescription id="customer-contact-edit-dialog-description">
+            <VisuallyHidden>Formular zum Bearbeiten des Kundenkontakts.</VisuallyHidden>
+          </DialogDescription>
         </DialogHeader>
         <CustomerContactForm
           initialData={{

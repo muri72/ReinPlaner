@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog"; // Import DialogDescription
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 import { TimeEntryForm, TimeEntryFormValues } from "@/components/time-entry-form";
 import { createTimeEntry } from "@/app/dashboard/time-tracking/actions";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden"; // Import VisuallyHidden
 
 interface TimeEntryCreateDialogProps {
   initialData?: Partial<TimeEntryFormValues>;
@@ -51,9 +52,12 @@ export function TimeEntryCreateDialog({
           {triggerButtonText}
         </Button>
       </DialogTrigger>
-      <DialogContent key={open ? "time-entry-create-open" : "time-entry-create-closed"} className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto" aria-labelledby="time-entry-create-dialog-title">
+      <DialogContent key={open ? "time-entry-create-open" : "time-entry-create-closed"} className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto" aria-labelledby="time-entry-create-dialog-title" aria-describedby="time-entry-create-dialog-description">
         <DialogHeader>
           <DialogTitle id="time-entry-create-dialog-title">{dialogTitle}</DialogTitle>
+          <DialogDescription id="time-entry-create-dialog-description">
+            <VisuallyHidden>Formular zum Erstellen eines neuen Zeiteintrags.</VisuallyHidden>
+          </DialogDescription>
         </DialogHeader>
         <TimeEntryForm
           initialData={initialData}

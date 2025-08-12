@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog"; // Import DialogDescription
 import { Button } from "@/components/ui/button";
 import { Pencil } from "lucide-react";
 import { TimeEntryForm, TimeEntryFormValues } from "@/components/time-entry-form";
 import { updateTimeEntry } from "@/app/dashboard/time-tracking/actions";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"; // Import Tooltip components
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden"; // Import VisuallyHidden
 
 interface TimeEntryEditDialogProps {
   timeEntry: {
@@ -18,7 +19,7 @@ interface TimeEntryEditDialogProps {
     start_time: string;
     end_time: string | null;
     duration_minutes: number | null;
-    break_minutes: number | null; // Neues Feld
+    break_minutes: number | null;
     type: string;
     notes: string | null;
   };
@@ -53,9 +54,12 @@ export function TimeEntryEditDialog({ timeEntry, currentUserId, isAdmin }: TimeE
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
-      <DialogContent key={open ? "time-entry-edit-open" : "time-entry-edit-closed"} className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto" aria-labelledby="time-entry-edit-dialog-title">
+      <DialogContent key={open ? "time-entry-edit-open" : "time-entry-edit-closed"} className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto" aria-labelledby="time-entry-edit-dialog-title" aria-describedby="time-entry-edit-dialog-description">
         <DialogHeader>
           <DialogTitle id="time-entry-edit-dialog-title">Zeiteintrag bearbeiten</DialogTitle>
+          <DialogDescription id="time-entry-edit-dialog-description">
+            <VisuallyHidden>Formular zum Bearbeiten des Zeiteintrags.</VisuallyHidden>
+          </DialogDescription>
         </DialogHeader>
         <TimeEntryForm
           initialData={{
@@ -68,7 +72,7 @@ export function TimeEntryEditDialog({ timeEntry, currentUserId, isAdmin }: TimeE
             endDate: timeEntry.end_time ? new Date(timeEntry.end_time) : null,
             endTime: timeEntry.end_time ? new Date(timeEntry.end_time).toTimeString().slice(0, 5) : null,
             durationMinutes: timeEntry.duration_minutes,
-            breakMinutes: timeEntry.break_minutes, // Neues Feld übergeben
+            breakMinutes: timeEntry.break_minutes,
             type: timeEntry.type as TimeEntryFormValues["type"],
             notes: timeEntry.notes,
           }}

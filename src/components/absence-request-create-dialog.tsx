@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog"; // Import DialogDescription
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 import { AbsenceRequestForm, AbsenceRequestFormValues } from "@/components/absence-request-form";
 import { createAbsenceRequest } from "@/app/dashboard/absence-requests/actions";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden"; // Import VisuallyHidden
 
 interface AbsenceRequestCreateDialogProps {
   onAbsenceRequestCreated?: () => void;
@@ -33,9 +34,12 @@ export function AbsenceRequestCreateDialog({ onAbsenceRequestCreated, currentUse
           Neuen Antrag einreichen
         </Button>
       </DialogTrigger>
-      <DialogContent key={open ? "absence-request-create-open" : "absence-request-create-closed"} className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto" aria-labelledby="absence-request-create-dialog-title">
+      <DialogContent key={open ? "absence-request-create-open" : "absence-request-create-closed"} className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto" aria-labelledby="absence-request-create-dialog-title" aria-describedby="absence-request-create-dialog-description">
         <DialogHeader>
           <DialogTitle id="absence-request-create-dialog-title">Neuen Abwesenheitsantrag einreichen</DialogTitle>
+          <DialogDescription id="absence-request-create-dialog-description">
+            <VisuallyHidden>Formular zum Einreichen eines neuen Abwesenheitsantrags.</VisuallyHidden>
+          </DialogDescription>
         </DialogHeader>
         <AbsenceRequestForm
           onSubmit={handleCreate}

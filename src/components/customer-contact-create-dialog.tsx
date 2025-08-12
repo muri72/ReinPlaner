@@ -1,15 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog"; // Import DialogDescription
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 import { CustomerContactForm, CustomerContactFormValues } from "@/components/customer-contact-form";
 import { createCustomerContact } from "@/app/dashboard/customer-contacts/actions";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden"; // Import VisuallyHidden
 
 interface CustomerContactCreateDialogProps {
   customerId: string;
-  onContactCreated?: (newContactId: string) => void; // Typ geändert, um die ID zu erwarten
+  onContactCreated?: (newContactId: string) => void;
   disabled?: boolean;
 }
 
@@ -21,7 +22,7 @@ export function CustomerContactCreateDialog({ customerId, onContactCreated, disa
     if (result.success) {
       setOpen(false);
       if (result.newContactId) {
-        onContactCreated?.(result.newContactId); // Die tatsächliche ID weitergeben
+        onContactCreated?.(result.newContactId);
       }
     }
     return result;
@@ -41,9 +42,12 @@ export function CustomerContactCreateDialog({ customerId, onContactCreated, disa
           <PlusCircle className="h-4 w-4" />
         </Button>
       </DialogTrigger>
-      <DialogContent key={open ? "customer-contact-create-open" : "customer-contact-create-closed"} className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto" aria-labelledby="customer-contact-create-dialog-title">
+      <DialogContent key={open ? "customer-contact-create-open" : "customer-contact-create-closed"} className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto" aria-labelledby="customer-contact-create-dialog-title" aria-describedby="customer-contact-create-dialog-description">
         <DialogHeader>
           <DialogTitle id="customer-contact-create-dialog-title">Neuen Kundenkontakt erstellen</DialogTitle>
+          <DialogDescription id="customer-contact-create-dialog-description">
+            <VisuallyHidden>Formular zum Erstellen eines neuen Kundenkontakts.</VisuallyHidden>
+          </DialogDescription>
         </DialogHeader>
         <CustomerContactForm
           initialData={{ customerId: customerId }}

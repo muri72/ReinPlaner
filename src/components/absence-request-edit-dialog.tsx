@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog"; // Import DialogDescription
 import { Button } from "@/components/ui/button";
 import { Pencil } from "lucide-react";
 import { AbsenceRequestForm, AbsenceRequestFormValues } from "@/components/absence-request-form";
 import { updateAbsenceRequest } from "@/app/dashboard/absence-requests/actions";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"; // Import Tooltip components
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden"; // Import VisuallyHidden
 
 interface AbsenceRequestEditDialogProps {
   request: {
@@ -50,9 +51,12 @@ export function AbsenceRequestEditDialog({ request, currentUserRole, currentUser
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
-      <DialogContent key={open ? "absence-request-edit-open" : "absence-request-edit-closed"} className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto" aria-labelledby="absence-request-edit-dialog-title">
+      <DialogContent key={open ? "absence-request-edit-open" : "absence-request-edit-closed"} className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto" aria-labelledby="absence-request-edit-dialog-title" aria-describedby="absence-request-edit-dialog-description">
         <DialogHeader>
           <DialogTitle id="absence-request-edit-dialog-title">Abwesenheitsantrag bearbeiten</DialogTitle>
+          <DialogDescription id="absence-request-edit-dialog-description">
+            <VisuallyHidden>Formular zum Bearbeiten des Abwesenheitsantrags.</VisuallyHidden>
+          </DialogDescription>
         </DialogHeader>
         <AbsenceRequestForm
           initialData={{

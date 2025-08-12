@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog"; // Import DialogDescription
 import { Button } from "@/components/ui/button";
 import { Pencil } from "lucide-react";
 import { ObjectForm, ObjectFormValues } from "@/components/object-form";
 import { updateObject } from "@/app/dashboard/objects/actions";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"; // Import Tooltip components
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden"; // Import VisuallyHidden
 
 interface ObjectEditDialogProps {
   object: {
@@ -75,9 +76,12 @@ export function ObjectEditDialog({ object }: ObjectEditDialogProps) {
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
-      <DialogContent key={open ? "object-edit-open" : "object-edit-closed"} className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto" aria-labelledby="object-edit-dialog-title">
+      <DialogContent key={open ? "object-edit-open" : "object-edit-closed"} className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto" aria-labelledby="object-edit-dialog-title" aria-describedby="object-edit-dialog-description">
         <DialogHeader>
           <DialogTitle id="object-edit-dialog-title">Objekt bearbeiten</DialogTitle>
+          <DialogDescription id="object-edit-dialog-description">
+            <VisuallyHidden>Formular zum Bearbeiten der Objektdaten.</VisuallyHidden>
+          </DialogDescription>
         </DialogHeader>
         <ObjectForm
           initialData={{

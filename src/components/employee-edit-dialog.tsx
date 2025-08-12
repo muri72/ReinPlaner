@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog"; // Import DialogDescription
 import { Button } from "@/components/ui/button";
 import { Pencil } from "lucide-react";
 import { EmployeeForm, EmployeeFormValues } from "@/components/employee-form";
 import { updateEmployee } from "@/app/dashboard/employees/actions";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"; // Import Tooltip components
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden"; // Import VisuallyHidden
 
 interface EmployeeEditDialogProps {
   employee: {
@@ -23,7 +24,6 @@ interface EmployeeEditDialogProps {
     job_title: string | null;
     department: string | null;
     notes: string | null;
-    // Neue Felder
     address: string | null;
     date_of_birth: string | null;
     social_security_number: string | null;
@@ -59,9 +59,12 @@ export function EmployeeEditDialog({ employee }: EmployeeEditDialogProps) {
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
-      <DialogContent key={open ? "employee-edit-open" : "employee-edit-closed"} className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto" aria-labelledby="employee-edit-dialog-title">
+      <DialogContent key={open ? "employee-edit-open" : "employee-edit-closed"} className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto" aria-labelledby="employee-edit-dialog-title" aria-describedby="employee-edit-dialog-description">
         <DialogHeader>
           <DialogTitle id="employee-edit-dialog-title">Mitarbeiter bearbeiten</DialogTitle>
+          <DialogDescription id="employee-edit-dialog-description">
+            <VisuallyHidden>Formular zum Bearbeiten der Mitarbeiterdaten.</VisuallyHidden>
+          </DialogDescription>
         </DialogHeader>
         <EmployeeForm
           initialData={{
@@ -77,7 +80,6 @@ export function EmployeeEditDialog({ employee }: EmployeeEditDialogProps) {
             jobTitle: employee.job_title,
             department: employee.department,
             notes: employee.notes,
-            // Neue Felder übergeben
             address: employee.address,
             dateOfBirth: employee.date_of_birth ? new Date(employee.date_of_birth) : undefined,
             socialSecurityNumber: employee.social_security_number,

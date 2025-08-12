@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { processOrderRequest } from "@/app/dashboard/orders/actions";
 import { Badge } from "./ui/badge";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden"; // Import VisuallyHidden
 
 interface OrderPlanningDialogProps {
   order: {
@@ -69,10 +70,10 @@ export function OrderPlanningDialog({ order }: OrderPlanningDialogProps) {
       <DialogTrigger asChild>
         <Button variant="default">Planen & Genehmigen</Button>
       </DialogTrigger>
-      <DialogContent key={open ? "order-planning-open" : "order-planning-closed"} className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto" aria-labelledby="order-planning-dialog-title">
+      <DialogContent key={open ? "order-planning-open" : "order-planning-closed"} className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto" aria-labelledby="order-planning-dialog-title" aria-describedby="order-planning-dialog-description">
         <DialogHeader>
           <DialogTitle id="order-planning-dialog-title">Anfrage planen: {order.title}</DialogTitle>
-          <DialogDescription>
+          <DialogDescription id="order-planning-dialog-description">
             Wählen Sie einen Mitarbeiter aus, um diese Anfrage zu genehmigen oder lehnen Sie sie ab.
           </DialogDescription>
         </DialogHeader>

@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog"; // Import DialogDescription
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 import { UserForm, UserFormValues } from "@/components/user-form";
 import { registerUser } from "@/app/dashboard/users/actions";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden"; // Import VisuallyHidden
 
 interface UserCreateDialogProps {
   onUserCreated?: () => void;
@@ -31,9 +32,12 @@ export function UserCreateDialog({ onUserCreated }: UserCreateDialogProps) {
           Neuen Benutzer registrieren
         </Button>
       </DialogTrigger>
-      <DialogContent key={open ? "user-create-open" : "user-create-closed"} className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto" aria-labelledby="user-create-dialog-title">
+      <DialogContent key={open ? "user-create-open" : "user-create-closed"} className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto" aria-labelledby="user-create-dialog-title" aria-describedby="user-create-dialog-description">
         <DialogHeader>
           <DialogTitle id="user-create-dialog-title">Neuen Benutzer registrieren</DialogTitle>
+          <DialogDescription id="user-create-dialog-description">
+            <VisuallyHidden>Formular zum Registrieren eines neuen Benutzers.</VisuallyHidden>
+          </DialogDescription>
         </DialogHeader>
         <UserForm
           onSubmit={handleCreate}

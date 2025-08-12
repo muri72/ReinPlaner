@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog"; // Import DialogDescription
 import { Button } from "@/components/ui/button";
 import { Pencil } from "lucide-react";
 import { useForm } from "react-hook-form";
@@ -12,7 +12,8 @@ import { updateGeneralFeedback } from "@/app/dashboard/feedback/actions";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"; // Import Tooltip components
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden"; // Import VisuallyHidden
 
 const editSchema = z.object({
   subject: z.string().max(200, "Betreff ist zu lang").optional(),
@@ -68,9 +69,12 @@ export function GeneralFeedbackEditDialog({ feedback }: GeneralFeedbackEditDialo
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
-      <DialogContent key={open ? "general-feedback-edit-open" : "general-feedback-edit-closed"} className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto" aria-labelledby="general-feedback-edit-dialog-title">
+      <DialogContent key={open ? "general-feedback-edit-open" : "general-feedback-edit-closed"} className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto" aria-labelledby="general-feedback-edit-dialog-title" aria-describedby="general-feedback-edit-dialog-description">
         <DialogHeader>
           <DialogTitle id="general-feedback-edit-dialog-title">Feedback bearbeiten</DialogTitle>
+          <DialogDescription id="general-feedback-edit-dialog-description">
+            <VisuallyHidden>Formular zum Bearbeiten des allgemeinen Feedbacks.</VisuallyHidden>
+          </DialogDescription>
         </DialogHeader>
         <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
           <div>
