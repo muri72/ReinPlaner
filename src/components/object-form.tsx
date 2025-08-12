@@ -215,7 +215,7 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
   const isAlarmSecured = form.watch("isAlarmSecured");
 
   return (
-    <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 w-full max-w-md">
+    <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 w-full max-w-md max-h-full overflow-y-auto">
       {/* Grundlegende Objektinformationen */}
       <Input id="name" {...form.register("name")} placeholder="Name des Objekts" />
       {form.formState.errors.name && <p className="text-red-500 text-sm mt-1">{form.formState.errors.name.message}</p>}
@@ -249,7 +249,7 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
       {dayNames.map(day => (
         <div key={day} className="p-3 border rounded-md space-y-2">
           <Label className="font-medium">{germanDayNames[day]}</Label>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
             <div>
               <Label htmlFor={`${day}_start_time`} className="text-xs">Start</Label>
               <Input id={`${day}_start_time`} type="time" {...form.register(`${day}_start_time` as keyof ObjectFormValues)} />
