@@ -17,7 +17,7 @@ import { calculateHours } from "@/lib/utils"; // Importiere von utils
 export const timeEntrySchema = z.object({
   employeeId: z.string().uuid("Ungültige Mitarbeiter-ID").optional().nullable(),
   customerId: z.string().uuid("Ungültige Kunden-ID").optional().nullable(),
-  objectId: z.string().uuid("Ungültige Objekt-ID").optional().nullable(),
+  objectId: z.string().uuid("Ungültiges Objekt-ID").optional().nullable(),
   orderId: z.string().uuid("Ungültige Auftrags-ID").optional().nullable(),
   startDate: z.date({ required_error: "Startdatum ist erforderlich" }),
   startTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Ungültiges Startzeitformat (HH:MM)"),
@@ -33,21 +33,17 @@ export const timeEntrySchema = z.object({
   ),
   type: z.enum(["manual", "clock_in_out", "stopwatch", "automatic_scheduled_order"]).default("manual"), // Typ umbenannt
   notes: z.string().max(500, "Notizen sind zu lang").optional().nullable(),
-}).refine((data) => {
-  // If end date is provided, end time must also be provided
-  if (data.endDate && !data.endTime) {
-    return false;
+}).superRefine((data, ctx) => {
+  // Wenn Enddatum und Endzeit angegeben sind, müssen sie gültig sein
+  if ((data.endDate && !data.endTime) || (!data.endDate && data.endTime)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Enddatum und Endzeit müssen beide angegeben oder beide weggelassen werden.",
+      path: ["endDate"],
+    });
   }
-  // If end time is provided, end date must also be provided
-  if (data.endTime && !data.endDate) {
-    return false;
-  }
-  return true;
-}, {
-  message: "Enddatum und Endzeit müssen beide angegeben oder beide weggelassen werden.",
-  path: ["endDate"],
-}).refine((data) => {
-  // If both start and end are provided, end must be after start
+
+  // Wenn Start- und Enddatum/zeit vorhanden sind, prüfen, ob Endzeit nach Startzeit liegt
   if (data.startDate && data.startTime && data.endDate && data.endTime) {
     const startDateTime = new Date(data.startDate);
     const [startH, startM] = data.startTime.split(':').map(Number);
@@ -57,12 +53,14 @@ export const timeEntrySchema = z.object({
     const [endH, endM] = data.endTime.split(':').map(Number);
     endDateTime.setHours(endH, endM, 0, 0);
 
-    return endDateTime >= startDateTime;
+    if (endDateTime < startDateTime) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Endzeit muss nach der Startzeit liegen.",
+        path: ["endTime"],
+      });
+    }
   }
-  return true;
-}, {
-  message: "Endzeit muss nach der Startzeit liegen.",
-  path: ["endTime"],
 });
 
 export type TimeEntryFormInput = z.input<typeof timeEntrySchema>;
@@ -383,7 +381,7 @@ export function TimeEntryForm({ initialData, onSubmit, submitButtonText, onSucce
           />
           {form.formState.errors.startTime && (
             <p className="text-red-500 text-sm mt-1">{form.formState.errors.startTime.message}</p>
-          )}
+        )}
         </div>
       </div>
 

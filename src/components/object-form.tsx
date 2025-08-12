@@ -17,6 +17,42 @@ import { CustomerContactCreateDialog } from "@/components/customer-contact-creat
 const preprocessNumber = (val: any) => (val === "" || isNaN(Number(val)) ? null : Number(val));
 const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
 
+// Helper function for time validation
+const validateTimePair = (start: string | null | undefined, end: string | null | undefined, ctx: z.RefinementCtx, pathPrefix: string) => {
+  if (start && !end) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Endzeit ist erforderlich, wenn Startzeit angegeben ist.",
+      path: [`${pathPrefix}_end_time`],
+    });
+  } else if (!start && end) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Startzeit ist erforderlich, wenn Endzeit angegeben ist.",
+      path: [`${pathPrefix}_start_time`],
+    });
+  } else if (start && end) {
+    const [startH, startM] = start.split(':').map(Number);
+    const [endH, endM] = end.split(':').map(Number);
+
+    const startTimeInMinutes = startH * 60 + startM;
+    let endTimeInMinutes = endH * 60 + endM;
+
+    // Handle times spanning midnight
+    if (endTimeInMinutes < startTimeInMinutes) {
+      endTimeInMinutes += 24 * 60; // Add 24 hours for the next day
+    }
+
+    if (endTimeInMinutes <= startTimeInMinutes) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Endzeit muss nach der Startzeit liegen.",
+        path: [`${pathPrefix}_end_time`],
+      });
+    }
+  }
+};
+
 export const objectSchema = z.object({
   name: z.string().min(1, "Name ist erforderlich").max(100, "Name ist zu lang"),
   address: z.string().min(1, "Adresse ist erforderlich").max(255, "Adresse ist zu lang"),
@@ -55,6 +91,15 @@ export const objectSchema = z.object({
   isAlarmSecured: z.boolean().default(false),
   alarmPassword: z.string().max(50, "Alarmkennwort ist zu lang").optional().nullable(),
   securityCodeWord: z.string().max(50, "Codewort ist zu lang").optional().nullable(),
+}).superRefine((data, ctx) => {
+  // Validate each day's time pair
+  validateTimePair(data.monday_start_time, data.monday_end_time, ctx, 'monday');
+  validateTimePair(data.tuesday_start_time, data.tuesday_end_time, ctx, 'tuesday');
+  validateTimePair(data.wednesday_start_time, data.wednesday_end_time, ctx, 'wednesday');
+  validateTimePair(data.thursday_start_time, data.thursday_end_time, ctx, 'thursday');
+  validateTimePair(data.friday_start_time, data.friday_end_time, ctx, 'friday');
+  validateTimePair(data.saturday_start_time, data.saturday_end_time, ctx, 'saturday');
+  validateTimePair(data.sunday_start_time, data.sunday_end_time, ctx, 'sunday');
 });
 
 export type ObjectFormInput = z.input<typeof objectSchema>;
@@ -174,7 +219,9 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
     <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 w-full max-w-md">
       {/* Grundlegende Objektinformationen */}
       <Input id="name" {...form.register("name")} placeholder="Name des Objekts" />
+      {form.formState.errors.name && <p className="text-red-500 text-sm mt-1">{form.formState.errors.name.message}</p>}
       <Textarea id="address" {...form.register("address")} placeholder="Adresse" rows={3} />
+      {form.formState.errors.address && <p className="text-red-500 text-sm mt-1">{form.formState.errors.address.message}</p>}
       <Textarea id="description" {...form.register("description")} placeholder="Beschreibung (optional)" rows={3} />
       
       {/* Kunde und Kontakt */}
@@ -193,6 +240,7 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
               {customerContacts.map(c => <SelectItem key={c.id} value={c.id}>{c.first_name} {c.last_name}</SelectItem>)}
             </SelectContent>
           </Select>
+          {form.formState.errors.customerContactId && <p className="text-red-500 text-sm mt-1">{form.formState.errors.customerContactId.message}</p>}
         </div>
         <CustomerContactCreateDialog customerId={selectedCustomerId} onContactCreated={handleCustomerContactCreated} disabled={!selectedCustomerId} />
       </div>
@@ -206,14 +254,17 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
             <div>
               <Label htmlFor={`${day}_start_time`} className="text-xs">Start</Label>
               <Input id={`${day}_start_time`} type="time" {...form.register(`${day}_start_time` as keyof ObjectFormValues)} />
+              {form.formState.errors[(`${day}_start_time`) as keyof ObjectFormValues] && <p className="text-red-500 text-xs mt-1">{form.formState.errors[(`${day}_start_time`) as keyof ObjectFormValues]?.message}</p>}
             </div>
             <div>
               <Label htmlFor={`${day}_end_time`} className="text-xs">Ende</Label>
               <Input id={`${day}_end_time`} type="time" {...form.register(`${day}_end_time` as keyof ObjectFormValues)} />
+              {form.formState.errors[(`${day}_end_time`) as keyof ObjectFormValues] && <p className="text-red-500 text-xs mt-1">{form.formState.errors[(`${day}_end_time`) as keyof ObjectFormValues]?.message}</p>}
             </div>
             <div>
               <Label htmlFor={`${day}_hours`} className="text-xs">Netto-Std.</Label>
               <Input id={`${day}_hours`} type="number" step="0.01" {...form.register(`${day}_hours` as keyof ObjectFormValues)} placeholder="z.B. 7.5" />
+              {form.formState.errors[(`${day}_hours`) as keyof ObjectFormValues] && <p className="text-red-500 text-xs mt-1">{form.formState.errors[(`${day}_hours`) as keyof ObjectFormValues]?.message}</p>}
             </div>
           </div>
         </div>
@@ -222,6 +273,7 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
       {/* Auftragseinstellungen */}
       <h3 className="text-lg font-semibold mt-6">Standard-Auftragseinstellungen</h3>
       <Textarea id="notes" {...form.register("notes")} placeholder="Notizen für Aufträge (optional)" rows={3} />
+      {form.formState.errors.notes && <p className="text-red-500 text-sm mt-1">{form.formState.errors.notes.message}</p>}
       <Select onValueChange={(v) => form.setValue("priority", v as any)} value={form.watch("priority")}>
         <SelectTrigger><SelectValue placeholder="Priorität" /></SelectTrigger>
         <SelectContent>
@@ -230,6 +282,7 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
           <SelectItem value="high">Hoch</SelectItem>
         </SelectContent>
       </Select>
+      {form.formState.errors.priority && <p className="text-red-500 text-sm mt-1">{form.formState.errors.priority.message}</p>}
       <Select onValueChange={(v) => form.setValue("timeOfDay", v as any)} value={form.watch("timeOfDay")}>
         <SelectTrigger><SelectValue placeholder="Tageszeit" /></SelectTrigger>
         <SelectContent>
@@ -239,6 +292,7 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
           <SelectItem value="afternoon">Nachmittags</SelectItem>
         </SelectContent>
       </Select>
+      {form.formState.errors.timeOfDay && <p className="text-red-500 text-sm mt-1">{form.formState.errors.timeOfDay.message}</p>}
 
       {/* Zugangsinformationen */}
       <h3 className="text-lg font-semibold mt-6">Zugangsinformationen</h3>
@@ -250,15 +304,20 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
           <SelectItem value="other">Andere</SelectItem>
         </SelectContent>
       </Select>
+      {form.formState.errors.accessMethod && <p className="text-red-500 text-sm mt-1">{form.formState.errors.accessMethod.message}</p>}
       {accessMethod === "card" && <Input id="pin" {...form.register("pin")} placeholder="PIN (optional)" />}
+      {form.formState.errors.pin && <p className="text-red-500 text-sm mt-1">{form.formState.errors.pin.message}</p>}
       <div className="flex items-center justify-between space-x-2">
         <Label htmlFor="isAlarmSecured">Alarmgesichert?</Label>
         <Switch id="isAlarmSecured" checked={isAlarmSecured} onCheckedChange={(c) => form.setValue("isAlarmSecured", c)} />
       </div>
+      {form.formState.errors.isAlarmSecured && <p className="text-red-500 text-sm mt-1">{form.formState.errors.isAlarmSecured.message}</p>}
       {isAlarmSecured && (
         <>
           <Input id="alarmPassword" {...form.register("alarmPassword")} placeholder="Alarmkennwort (optional)" />
+          {form.formState.errors.alarmPassword && <p className="text-red-500 text-sm mt-1">{form.formState.errors.alarmPassword.message}</p>}
           <Input id="securityCodeWord" {...form.register("securityCodeWord")} placeholder="Codewort für Security (optional)" />
+          {form.formState.errors.securityCodeWord && <p className="text-red-500 text-sm mt-1">{form.formState.errors.securityCodeWord.message}</p>}
         </>
       )}
 
