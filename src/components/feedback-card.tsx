@@ -166,6 +166,7 @@ export function FeedbackCard({ feedback, feedbackType, currentUserId, currentUse
                       key={`delete-feedback-${feedback.id}-open`} 
                       aria-labelledby={titleId} 
                       aria-describedby={descriptionId}
+                      className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto"
                     >
                       <DialogHeader>
                         <VisuallyHidden asChild>
