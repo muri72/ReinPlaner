@@ -8,7 +8,7 @@ import { deleteOrder, createOrder } from "./actions";
 import { OrderEditDialog } from "@/components/order-edit-dialog";
 import { Badge } from "@/components/ui/badge";
 import { DeleteOrderButton } from "@/components/delete-order-button";
-import { SearchInput } from "@/components/search-input";
+// import { SearchInput } from "@/components/search-input"; // Removed
 import { OrderPlanningDialog } from "@/components/order-planning-dialog";
 import { OrderCreateDialog } from "@/components/order-create-dialog"; // Import the new dialog
 
@@ -148,8 +148,8 @@ export default async function OrdersPage({
   return (
     <div className="p-4 md:p-8 space-y-8">
       <h1 className="text-2xl md:text-3xl font-bold">Auftragsverwaltung</h1>
-      <div className="mb-4 flex justify-between items-center">
-        <SearchInput placeholder="Aufträge suchen..." />
+      <div className="mb-4 flex justify-end items-center"> {/* Adjusted layout */}
+        {/* <SearchInput placeholder="Aufträge suchen..." /> */} {/* Removed */}
         <OrderCreateDialog />
       </div>
 

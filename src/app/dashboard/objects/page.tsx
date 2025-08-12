@@ -6,7 +6,7 @@ import { createObject } from "./actions";
 import { ObjectEditDialog } from "@/components/object-edit-dialog";
 import { DeleteObjectButton } from "@/components/delete-object-button";
 import { MapPin, FileText, Clock, Key, Lock, ShieldCheck, UserRound, PlusCircle, Building } from "lucide-react"; // Neue Icons
-import { SearchInput } from "@/components/search-input";
+// import { SearchInput } from "@/components/search-input"; // Removed
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button"; // Hinzugefügt
 import { ObjectCreateDialog } from "@/components/object-create-dialog"; // Import the new dialog
@@ -108,8 +108,8 @@ export default async function ObjectsPage({
     <div className="p-4 md:p-8 space-y-8">
       <h1 className="text-2xl md:text-3xl font-bold">Ihre Objekte</h1>
 
-      <div className="mb-4 flex justify-between items-center">
-        <SearchInput placeholder="Objekte suchen..." />
+      <div className="mb-4 flex justify-end items-center"> {/* Adjusted layout */}
+        {/* <SearchInput placeholder="Objekte suchen..." /> */} {/* Removed */}
         <ObjectCreateDialog />
       </div>
 

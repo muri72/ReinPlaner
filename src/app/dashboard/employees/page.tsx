@@ -7,7 +7,7 @@ import { EmployeeEditDialog } from "@/components/employee-edit-dialog";
 import { DeleteEmployeeButton } from "@/components/delete-employee-button";
 import { Mail, Phone, CalendarDays, UserRoundCheck, UserRoundX, UserRoundMinus, Briefcase, DollarSign, Tag, Building2, FileText, MapPin, Cake, CreditCard, Shield, UsersRound, PlusCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { SearchInput } from "@/components/search-input";
+// import { SearchInput } from "@/components/search-input"; // Removed
 import { Button } from "@/components/ui/button"; // Hinzugefügt
 import { EmployeeCreateDialog } from "@/components/employee-create-dialog"; // Import the new dialog
 
@@ -90,8 +90,8 @@ export default async function EmployeesPage({
     <div className="p-4 md:p-8 space-y-8">
       <h1 className="text-2xl md:text-3xl font-bold">Ihre Mitarbeiter</h1>
 
-      <div className="mb-4 flex justify-between items-center">
-        <SearchInput placeholder="Mitarbeiter suchen..." />
+      <div className="mb-4 flex justify-end items-center"> {/* Adjusted layout */}
+        {/* <SearchInput placeholder="Mitarbeiter suchen..." /> */} {/* Removed */}
         <EmployeeCreateDialog />
       </div>
 

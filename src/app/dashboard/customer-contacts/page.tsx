@@ -6,7 +6,7 @@ import { createCustomerContact } from "./actions";
 import { CustomerContactEditDialog } from "@/components/customer-contact-edit-dialog";
 import { DeleteCustomerContactButton } from "@/components/delete-customer-contact-button";
 import { Mail, Phone, Briefcase, UserRound, PlusCircle, ContactRound } from "lucide-react";
-import { SearchInput } from "@/components/search-input";
+// import { SearchInput } from "@/components/search-input"; // Removed
 import { Button } from "@/components/ui/button"; // Hinzugefügt
 import { CustomerContactCreateGeneralDialog } from "@/components/customer-contact-create-general-dialog"; // Import the new general dialog
 
@@ -75,8 +75,8 @@ export default async function CustomerContactsPage({
     <div className="p-4 md:p-8 space-y-8">
       <h1 className="text-2xl md:text-3xl font-bold">Ihre Kundenkontakte</h1>
 
-      <div className="mb-4 flex justify-between items-center">
-        <SearchInput placeholder="Kundenkontakte suchen..." />
+      <div className="mb-4 flex justify-end items-center"> {/* Adjusted layout */}
+        {/* <SearchInput placeholder="Kundenkontakte suchen..." /> */} {/* Removed */}
         <CustomerContactCreateGeneralDialog /> {/* Ersetzt den alten, deaktivierten Dialog */}
       </div>
 
