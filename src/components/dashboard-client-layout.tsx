@@ -23,7 +23,7 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut }: 
   return (
     <div className="min-h-screen flex flex-col md:flex-row">
       {/* Mobile Header and Navigation */}
-      <header className="md:hidden w-full bg-sidebar text-sidebar-foreground border-b border-sidebar-border p-4 flex items-center justify-between">
+      <header className="md:hidden fixed top-0 left-0 w-full bg-sidebar text-sidebar-foreground border-b border-sidebar-border p-4 flex items-center justify-between z-50">
         <div className="flex items-center">
           <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
             <SheetTrigger asChild>
@@ -73,7 +73,7 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut }: 
       {/* Desktop Sidebar */}
       <aside
         className={cn(
-          "hidden md:flex flex-col bg-sidebar text-sidebar-foreground border-r border-sidebar-border p-4 transition-all duration-300 ease-in-out",
+          "hidden md:flex flex-col fixed top-0 left-0 h-screen bg-sidebar text-sidebar-foreground border-r border-sidebar-border p-4 transition-all duration-300 ease-in-out z-40",
           isCollapsed ? "w-20" : "w-64",
           "bg-gradient-to-br from-sidebar-background to-sidebar-accent"
         )}
@@ -97,7 +97,11 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut }: 
         </div>
         <SidebarNav isCollapsed={isCollapsed} currentUserRole={currentUserRole} onSignOut={onSignOut} />
       </aside>
-      <main className="flex-grow p-4 md:p-8">
+      <main className={cn(
+        "flex-grow p-4 md:p-8",
+        "pt-20 md:pt-8", // Add padding-top for fixed header on mobile, keep md:p-8 for desktop
+        isCollapsed ? "md:ml-20" : "md:ml-64" // Adjust margin-left for fixed sidebar on desktop
+      )}>
         <div className="hidden md:flex justify-end items-center mb-4 space-x-4">
           <NotificationBell />
           <UserMenu currentUserRole={currentUserRole} onSignOut={onSignOut} />
