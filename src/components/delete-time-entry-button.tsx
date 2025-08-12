@@ -16,6 +16,7 @@ import {
   DialogClose, // Keep DialogClose
 } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden"; // Import VisuallyHidden
 
 interface DeleteTimeEntryButtonProps {
   entryId: string;
@@ -56,7 +57,9 @@ export function DeleteTimeEntryButton({ entryId }: DeleteTimeEntryButtonProps) {
             </DialogTrigger>
             <DialogContent key={`delete-time-entry-${entryId}-open`} aria-labelledby="delete-time-entry-alert-title">
               <DialogHeader>
-                <DialogTitle id="delete-time-entry-alert-title">Sind Sie sicher?</DialogTitle>
+                <VisuallyHidden asChild>
+                  <DialogTitle id="delete-time-entry-alert-title">Sind Sie sicher?</DialogTitle>
+                </VisuallyHidden>
                 <DialogDescription>
                   Diese Aktion kann nicht rückgängig gemacht werden. Der Zeiteintrag wird dauerhaft gelöscht.
                 </DialogDescription>

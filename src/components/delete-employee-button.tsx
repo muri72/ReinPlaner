@@ -16,6 +16,7 @@ import {
   DialogClose, // Keep DialogClose
 } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden"; // Import VisuallyHidden
 
 interface DeleteEmployeeButtonProps {
   employeeId: string;
@@ -56,7 +57,9 @@ export function DeleteEmployeeButton({ employeeId }: DeleteEmployeeButtonProps) 
             </DialogTrigger>
             <DialogContent key={`delete-employee-${employeeId}-open`} aria-labelledby="delete-employee-alert-title">
               <DialogHeader>
-                <DialogTitle id="delete-employee-alert-title">Sind Sie sicher?</DialogTitle>
+                <VisuallyHidden asChild>
+                  <DialogTitle id="delete-employee-alert-title">Sind Sie sicher?</DialogTitle>
+                </VisuallyHidden>
                 <DialogDescription>
                   Diese Aktion kann nicht rückgängig gemacht werden. Der Mitarbeiter und alle zugehörigen Daten werden dauerhaft gelöscht.
                 </DialogDescription>

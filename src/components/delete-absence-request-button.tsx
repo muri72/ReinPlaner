@@ -16,6 +16,7 @@ import {
   DialogClose, // Keep DialogClose
 } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden"; // Import VisuallyHidden
 
 interface DeleteAbsenceRequestButtonProps {
   requestId: string;
@@ -56,7 +57,9 @@ export function DeleteAbsenceRequestButton({ requestId }: DeleteAbsenceRequestBu
             </DialogTrigger>
             <DialogContent key={`delete-absence-request-${requestId}-open`} aria-labelledby="delete-absence-request-alert-title">
               <DialogHeader>
-                <DialogTitle id="delete-absence-request-alert-title">Sind Sie sicher?</DialogTitle>
+                <VisuallyHidden asChild>
+                  <DialogTitle id="delete-absence-request-alert-title">Sind Sie sicher?</DialogTitle>
+                </VisuallyHidden>
                 <DialogDescription>
                   Diese Aktion kann nicht rückgängig gemacht werden. Der Abwesenheitsantrag wird dauerhaft gelöscht.
                 </DialogDescription>

@@ -22,6 +22,7 @@ import {
 import { OrderFeedbackEditDialog } from "./order-feedback-edit-dialog";
 import { GeneralFeedbackEditDialog } from "./general-feedback-edit-dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden"; // Import VisuallyHidden
 
 // Typdefinitionen, die beide Feedback-Arten abdecken
 type Feedback = {
@@ -87,7 +88,7 @@ export function FeedbackCard({ feedback, feedbackType, currentUserId, currentUse
         {feedback.rating !== undefined && (
           <div className="flex items-center gap-1">
             {[1, 2, 3, 4, 5].map((star) => (
-              <Star key={star} className={`h-5 w-5 ${feedback.rating! >= star ? "text-warning fill-warning" : "text-muted-foreground"}`} />
+              <Star key={star} className={`h-4 w-4 ${feedback.rating! >= star ? "text-warning fill-warning" : "text-muted-foreground"}`} />
             ))}
           </div>
         )}
@@ -161,7 +162,9 @@ export function FeedbackCard({ feedback, feedbackType, currentUserId, currentUse
                     </DialogTrigger>
                     <DialogContent key={`delete-feedback-${feedback.id}-open`} aria-labelledby="delete-feedback-alert-title">
                       <DialogHeader>
-                        <DialogTitle id="delete-feedback-alert-title">Sind Sie sicher?</DialogTitle>
+                        <VisuallyHidden asChild>
+                          <DialogTitle id="delete-feedback-alert-title">Sind Sie sicher?</DialogTitle>
+                        </VisuallyHidden>
                         <DialogDescription>
                           Diese Aktion kann nicht rückgängig gemacht werden. Das Feedback wird dauerhaft gelöscht.
                         </DialogDescription>

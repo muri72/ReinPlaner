@@ -16,6 +16,7 @@ import {
   DialogClose, // Keep DialogClose
 } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden"; // Import VisuallyHidden
 
 interface DeleteObjectButtonProps {
   objectId: string;
@@ -56,7 +57,9 @@ export function DeleteObjectButton({ objectId }: DeleteObjectButtonProps) {
             </DialogTrigger>
             <DialogContent key={`delete-object-${objectId}-open`} aria-labelledby="delete-object-alert-title">
               <DialogHeader>
-                <DialogTitle id="delete-object-alert-title">Sind Sie sicher?</DialogTitle>
+                <VisuallyHidden asChild>
+                  <DialogTitle id="delete-object-alert-title">Sind Sie sicher?</DialogTitle>
+                </VisuallyHidden>
                 <DialogDescription>
                   Diese Aktion kann nicht rückgängig gemacht werden. Das Objekt und alle zugehörigen Daten werden dauerhaft gelöscht.
                 </DialogDescription>
