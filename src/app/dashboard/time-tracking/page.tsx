@@ -164,11 +164,6 @@ export default async function TimeTrackingPage({
       const week = getWeek(startDate, { weekStartsOn: 1 }); // Montag als Wochenanfang
       const weekKey = `${year}-${String(week).padStart(2, '0')}`;
       weeklyData[weekKey] = (weeklyData[weekKey] || 0) + netDurationHours; // Netto-Stunden verwenden
-
-      // Nach Monat aggregieren
-      const month = startDate.getMonth() + 1; // 1-12
-      const monthKey = `${year}-${String(month).padStart(2, '0')}`;
-      monthlyData[monthKey] = (monthlyData[monthKey] || 0) + netDurationHours; // Netto-Stunden verwenden
     }
   });
 
@@ -253,10 +248,10 @@ export default async function TimeTrackingPage({
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
             {timeEntries.length === 0 ? (
-              <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30">
+              <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30 shadow-elevation-2">
                 <Clock className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
                 <p className="text-base md:text-lg font-semibold">Noch keine Zeiteinträge vorhanden</p>
-                <p className="text-sm">Beginnen Sie, indem Sie Ihre Arbeitszeit erfassen oder einen Eintrag manuell hinzufügen.</p>
+                <p className="text-sm">Beginnen Sie, indem Sie Ihre Arbeitszeit erfassen oder einen Eintrag manuell hinzufügen, um Ihre Stunden zu verfolgen.</p>
                 <div className="mt-4">
                   {/* The button to open the dialog is now part of TimeEntryCreateDialog */}
                 </div>

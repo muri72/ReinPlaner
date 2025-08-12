@@ -90,10 +90,10 @@ export default async function AbsenceRequestsPage() {
           </div>
           <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-4">
             {requests.length === 0 ? (
-              <div className="text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30">
+              <div className="text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30 shadow-elevation-2">
                 <CalendarOff className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
-                <p className="text-base md:text-lg font-semibold">Keine Anträge gefunden</p>
-                <p className="text-sm">Reichen Sie einen neuen Abwesenheitsantrag ein.</p>
+                <p className="text-base md:text-lg font-semibold">Keine Abwesenheitsanträge gefunden</p>
+                <p className="text-sm">Reichen Sie einen neuen Abwesenheitsantrag ein, um Ihre Abwesenheiten zu verwalten.</p>
                 <div className="mt-4">
                   {/* The button to open the dialog is now part of AbsenceRequestCreateDialog */}
                 </div>

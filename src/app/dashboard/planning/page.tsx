@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { ResourcePlanningCalendar } from "@/components/resource-planning-calendar";
+import { CalendarCheck } from "lucide-react"; // Import icon
 
 export default async function PlanningPage() {
   const supabase = await createClient();
@@ -25,8 +26,8 @@ export default async function PlanningPage() {
   return (
     <div className="p-4 md:p-8 space-y-8">
       <h1 className="text-2xl md:text-3xl font-bold">Ressourcenplanung</h1>
-      <p className="text-sm md:text-base text-muted-foreground"> {/* Changed to text-base */}
-        Hier sehen Sie die wöchentliche Auslastung Ihrer Mitarbeiter basierend auf zugewiesenen Daueraufträgen und genehmigten Abwesenheiten.
+      <p className="text-sm md:text-base text-muted-foreground">
+        Hier sehen Sie die wöchentliche Auslastung Ihrer Mitarbeiter basierend auf zugewiesenen Daueraufträgen und genehmigten Abwesenheiten. Ziehen Sie ungeplante Aufträge auf die Mitarbeiter, um sie zuzuweisen.
       </p>
       <ResourcePlanningCalendar />
     </div>

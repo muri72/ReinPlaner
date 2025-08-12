@@ -38,7 +38,7 @@ export function PersonnelCostTable({ data, totalHours, totalCost }: PersonnelCos
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="text-base font-semibold min-w-[150px]">Mitarbeiter</TableHead><TableHead className="text-right text-base font-semibold min-w-[120px]">Geleistete Stunden</TableHead><TableHead className="text-right text-base font-semibold min-w-[120px]">Gesamtkosten</TableHead>
+            <TableHead className="text-sm font-semibold min-w-[150px]">Mitarbeiter</TableHead><TableHead className="text-right text-sm font-semibold min-w-[120px]">Geleistete Stunden</TableHead><TableHead className="text-right text-sm font-semibold min-w-[120px]">Gesamtkosten</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -51,14 +51,14 @@ export function PersonnelCostTable({ data, totalHours, totalCost }: PersonnelCos
           ) : (
             data.map((employee) => (
               <TableRow key={employee.employee_id}>
-                <TableCell className="font-medium text-sm">{`${employee.first_name} ${employee.last_name}`}</TableCell><TableCell className="text-right text-sm">{formatHours(employee.total_hours)}</TableCell><TableCell className="text-right text-sm text-destructive">{formatCurrency(employee.total_cost)}</TableCell>
+                <TableCell className="font-medium text-xs">{`${employee.first_name} ${employee.last_name}`}</TableCell><TableCell className="text-right text-xs">{formatHours(employee.total_hours)}</TableCell><TableCell className="text-right text-xs text-destructive">{formatCurrency(employee.total_cost)}</TableCell>
               </TableRow>
             ))
           )}
         </TableBody>
         <TableFooter>
           <TableRow>
-            <TableCell colSpan={2} className="font-bold text-base text-right">Gesamt</TableCell><TableCell className="text-right font-bold text-base text-destructive">{formatCurrency(totalCost)}</TableCell>
+            <TableCell colSpan={2} className="font-bold text-sm text-right">Gesamt</TableCell><TableCell className="text-right font-bold text-sm text-destructive">{formatCurrency(totalCost)}</TableCell>
           </TableRow>
         </TableFooter>
       </Table>

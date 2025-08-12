@@ -69,7 +69,7 @@
     --popover-foreground: 220 10% 90%;
 
     --primary: 210 80% 65%; /* Lighter Custom Blue for dark mode */
-    --primary-foreground: 220 10% 10%; /* Dark background */
+    --primary-foreground: 220 10% 10%;
 
     --secondary: 200 70% 30%; /* Darker Lighter Blue for dark mode */
     --secondary-foreground: 200 70% 70%; /* Lighter text */
@@ -152,7 +152,7 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background-color: transparent; /* Make thumb transparent by default */
+  background-color: hsl(var(--muted-foreground) / 0.3); /* Subtle thumb color */
   border-radius: 10px;
   border: 2px solid transparent; /* Add transparent border to make it thinner visually */
   background-clip: padding-box; /* Ensures border doesn't affect background-color area */
@@ -166,5 +166,5 @@
 /* For Firefox */
 * {
   scrollbar-width: thin; /* "auto" or "thin" */
-  scrollbar-color: transparent transparent; /* thumb color track color (transparent by default) */
+  scrollbar-color: hsl(var(--muted-foreground) / 0.3) transparent; /* thumb color track color */
 }

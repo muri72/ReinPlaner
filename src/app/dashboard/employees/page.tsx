@@ -97,19 +97,19 @@ export default async function EmployeesPage({
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
         {employees.length === 0 && !query ? (
-          <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30">
+          <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30 shadow-elevation-2">
             <UsersRound className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
             <p className="text-base md:text-lg font-semibold">Noch keine Mitarbeiter vorhanden</p>
-            <p className="text-sm">Fügen Sie einen neuen Mitarbeiter hinzu, um Ihr Team zu erweitern.</p>
+            <p className="text-sm">Fügen Sie Ihren ersten Mitarbeiter hinzu, um Ihr Team zu erweitern und die Planung zu starten.</p>
             <div className="mt-4">
               {/* The button to open the dialog is now part of EmployeeCreateDialog */}
             </div>
           </div>
         ) : employees.length === 0 && query ? (
-          <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30">
+          <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30 shadow-elevation-2">
             <UsersRound className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
             <p className="text-base md:text-lg font-semibold">Keine Mitarbeiter gefunden</p>
-            <p className="text-sm">Ihre Suche nach "{query}" ergab keine Treffer.</p>
+            <p className="text-sm">Ihre Suche nach "{query}" ergab keine Treffer. Versuchen Sie eine andere Suchanfrage.</p>
           </div>
         ) : (
           employees.map((employee) => (
