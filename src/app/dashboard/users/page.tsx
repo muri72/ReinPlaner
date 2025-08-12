@@ -7,7 +7,7 @@ import { UserEditDialog } from "@/components/user-edit-dialog";
 import { DeleteUserButton } from "@/components/delete-user-button";
 import { Mail, Briefcase, ShieldCheck, UserRound, UsersRound, PlusCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-// import { SearchInput } from "@/components/search-input"; // Removed
+import { SearchInput } from "@/components/search-input";
 import { ManagerCustomerAssignmentDialog } from "@/components/manager-customer-assignment-dialog";
 import { Button } from "@/components/ui/button"; // Hinzugefügt
 import { UserCreateDialog } from "@/components/user-create-dialog"; // Import the new dialog
@@ -136,8 +136,8 @@ export default async function UsersPage({
     <div className="p-4 md:p-8 space-y-8">
       <h1 className="text-2xl md:text-3xl font-bold">Benutzerverwaltung</h1>
 
-      <div className="mb-4 flex justify-end items-center"> {/* Adjusted layout */}
-        {/* <SearchInput placeholder="Benutzer suchen..." /> */} {/* Removed */}
+      <div className="mb-4 flex justify-between items-center">
+        <SearchInput placeholder="Benutzer suchen..." />
         <UserCreateDialog />
       </div>
 

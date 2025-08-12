@@ -6,7 +6,7 @@ import { createCustomer } from "./actions";
 import { CustomerEditDialog } from "@/components/customer-edit-dialog";
 import { DeleteCustomerButton } from "@/components/delete-customer-button";
 import { Mail, Phone, MapPin, Users, Handshake, PlusCircle } from "lucide-react"; // Neue Icons für Kundentyp
-// import { SearchInput } from "@/components/search-input"; // Removed
+import { SearchInput } from "@/components/search-input";
 import { Badge } from "@/components/ui/badge"; // Importiere Badge
 import { Button } from "@/components/ui/button"; // Hinzugefügt
 import { CustomerCreateDialog } from "@/components/customer-create-dialog"; // Import the new dialog
@@ -50,8 +50,8 @@ export default async function CustomersPage({
     <div className="p-4 md:p-8 space-y-8">
       <h1 className="text-2xl md:text-3xl font-bold">Ihre Kunden</h1>
 
-      <div className="mb-4 flex justify-end items-center"> {/* Adjusted layout */}
-        {/* <SearchInput placeholder="Kunden suchen..." /> */} {/* Removed */}
+      <div className="mb-4 flex justify-between items-center">
+        <SearchInput placeholder="Kunden suchen..." />
         <CustomerCreateDialog />
       </div>
 

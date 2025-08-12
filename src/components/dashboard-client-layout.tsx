@@ -9,8 +9,6 @@ import { SidebarNav } from "@/components/sidebar-nav";
 import { UserMenu } from "@/components/user-menu";
 import { cn } from "@/lib/utils";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
-import { SearchInput } from "@/components/search-input"; // Import SearchInput
-import { usePathname } from "next/navigation"; // Import usePathname
 
 interface DashboardClientLayoutProps {
   children: React.ReactNode;
@@ -21,35 +19,9 @@ interface DashboardClientLayoutProps {
 export function DashboardClientLayout({ children, currentUserRole, onSignOut }: DashboardClientLayoutProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
-  const pathname = usePathname(); // Get current pathname
 
   // Define desktop header height for padding calculation
   const desktopHeaderHeight = '64px'; // Corresponds to h-16
-
-  // Determine if search should be shown and what placeholder to use
-  const getSearchPlaceholder = (path: string) => {
-    if (path.startsWith('/dashboard/customers')) return 'Kunden suchen...';
-    if (path.startsWith('/dashboard/employees')) return 'Mitarbeiter suchen...';
-    if (path.startsWith('/dashboard/customer-contacts')) return 'Kundenkontakte suchen...';
-    if (path.startsWith('/dashboard/objects')) return 'Objekte suchen...';
-    if (path.startsWith('/dashboard/orders')) return 'Aufträge suchen...';
-    if (path.startsWith('/dashboard/users')) return 'Benutzer suchen...';
-    return 'Suchen...'; // Default placeholder
-  };
-
-  const showSearch = (path: string) => {
-    return [
-      '/dashboard/customers',
-      '/dashboard/employees',
-      '/dashboard/customer-contacts',
-      '/dashboard/objects',
-      '/dashboard/orders',
-      '/dashboard/users',
-    ].some(p => path.startsWith(p));
-  };
-
-  const currentSearchPlaceholder = getSearchPlaceholder(pathname);
-  const shouldShowSearch = showSearch(pathname);
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row">
@@ -137,11 +109,6 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut }: 
           "bg-sidebar" // Changed to solid bg-sidebar
         )}
       >
-        {shouldShowSearch && (
-          <div className="flex-grow max-w-md mr-4"> {/* Added max-w-md for better control */}
-            <SearchInput placeholder={currentSearchPlaceholder} />
-          </div>
-        )}
         <div className="flex items-center space-x-4">
           <NotificationBell />
           <UserMenu currentUserRole={currentUserRole} onSignOut={onSignOut} />
