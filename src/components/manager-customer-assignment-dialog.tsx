@@ -32,7 +32,7 @@ export function ManagerCustomerAssignmentDialog({ managerId, managerName }: Mana
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
-      <DialogContent key={open ? "manager-assignment-open" : "manager-assignment-closed"} className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto" aria-labelledby="manager-customer-assignment-dialog-title" aria-describedby="manager-customer-assignment-dialog-description">
+      <DialogContent key={open ? "manager-assignment-open" : "manager-assignment-closed"} aria-labelledby="manager-customer-assignment-dialog-title" aria-describedby="manager-customer-assignment-dialog-description">
         <DialogHeader>
           <DialogTitle id="manager-customer-assignment-dialog-title">Kunden für {managerName} zuweisen</DialogTitle>
           <DialogDescription id="manager-customer-assignment-dialog-description">

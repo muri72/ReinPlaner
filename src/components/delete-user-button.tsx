@@ -55,10 +55,10 @@ export function DeleteUserButton({ userId }: DeleteUserButtonProps) {
                 <Trash2 className="h-4 w-4" />
               </Button>
             </DialogTrigger>
-            <DialogContent key={`delete-user-${userId}-open`} aria-labelledby="delete-user-alert-title">
+            <DialogContent key={`delete-user-${userId}-open`} aria-labelledby={`delete-user-alert-title-${userId}`}>
               <DialogHeader>
                 <VisuallyHidden asChild>
-                  <DialogTitle id="delete-user-alert-title">Sind Sie sicher?</DialogTitle>
+                  <DialogTitle id={`delete-user-alert-title-${userId}`}>Sind Sie sicher?</DialogTitle>
                 </VisuallyHidden>
                 <DialogDescription>
                   Diese Aktion kann nicht rückgängig gemacht werden. Der Benutzer und alle zugehörigen Daten werden dauerhaft gelöscht.
@@ -68,7 +68,7 @@ export function DeleteUserButton({ userId }: DeleteUserButtonProps) {
                 <DialogClose asChild>
                   <Button variant="outline">Abbrechen</Button>
                 </DialogClose>
-                <Button onClick={handleDelete} disabled={loading}> {/* Changed from DialogAction */}
+                <Button onClick={handleDelete} disabled={loading}>
                   {loading ? "Löschen..." : "Löschen"}
                 </Button>
               </DialogFooter>

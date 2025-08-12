@@ -55,10 +55,10 @@ export function DeleteObjectButton({ objectId }: DeleteObjectButtonProps) {
                 <Trash2 className="h-4 w-4" />
               </Button>
             </DialogTrigger>
-            <DialogContent key={`delete-object-${objectId}-open`} aria-labelledby="delete-object-alert-title">
+            <DialogContent key={`delete-object-${objectId}-open`} aria-labelledby={`delete-object-alert-title-${objectId}`}>
               <DialogHeader>
                 <VisuallyHidden asChild>
-                  <DialogTitle id="delete-object-alert-title">Sind Sie sicher?</DialogTitle>
+                  <DialogTitle id={`delete-object-alert-title-${objectId}`}>Sind Sie sicher?</DialogTitle>
                 </VisuallyHidden>
                 <DialogDescription>
                   Diese Aktion kann nicht rückgängig gemacht werden. Das Objekt und alle zugehörigen Daten werden dauerhaft gelöscht.
@@ -68,7 +68,7 @@ export function DeleteObjectButton({ objectId }: DeleteObjectButtonProps) {
                 <DialogClose asChild>
                   <Button variant="outline">Abbrechen</Button>
                 </DialogClose>
-                <Button onClick={handleDelete} disabled={loading}> {/* Changed from DialogAction */}
+                <Button onClick={handleDelete} disabled={loading}>
                   {loading ? "Löschen..." : "Löschen"}
                 </Button>
               </DialogFooter>

@@ -21,7 +21,7 @@ export function GiveOrderFeedbackDialog({ onFeedbackSubmitted }: GiveOrderFeedba
           <Star className="mr-2 h-4 w-4" /> Auftrags-Feedback geben
         </Button>
       </DialogTrigger>
-      <DialogContent key={open ? "give-order-feedback-open" : "give-order-feedback-closed"} className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto" aria-labelledby="give-order-feedback-dialog-title" aria-describedby="give-order-feedback-dialog-description">
+      <DialogContent key={open ? "give-order-feedback-open" : "give-order-feedback-closed"} aria-labelledby="give-order-feedback-dialog-title" aria-describedby="give-order-feedback-dialog-description">
         <DialogHeader>
           <DialogTitle id="give-order-feedback-dialog-title">Auftragsbezogenes Feedback einreichen</DialogTitle>
           <DialogDescription id="give-order-feedback-dialog-description">

@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog"; // Import DialogDescription
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 import { CustomerContactForm, CustomerContactFormValues } from "@/components/customer-contact-form";
 import { createCustomerContact } from "@/app/dashboard/customer-contacts/actions";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden"; // Import VisuallyHidden
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 interface CustomerContactCreateGeneralDialogProps {
   onContactCreated?: (newContactId: string) => void;
@@ -34,7 +34,7 @@ export function CustomerContactCreateGeneralDialog({ onContactCreated }: Custome
           Neuen Kundenkontakt hinzufügen
         </Button>
       </DialogTrigger>
-      <DialogContent key={open ? "customer-contact-create-general-open" : "customer-contact-create-general-closed"} className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto" aria-labelledby="customer-contact-create-general-dialog-title" aria-describedby="customer-contact-create-general-dialog-description">
+      <DialogContent key={open ? "customer-contact-create-general-open" : "customer-contact-create-general-closed"} aria-labelledby="customer-contact-create-general-dialog-title" aria-describedby="customer-contact-create-general-dialog-description">
         <DialogHeader>
           <DialogTitle id="customer-contact-create-general-dialog-title">Neuen Kundenkontakt hinzufügen</DialogTitle>
           <DialogDescription id="customer-contact-create-general-dialog-description">

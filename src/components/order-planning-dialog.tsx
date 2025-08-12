@@ -70,7 +70,7 @@ export function OrderPlanningDialog({ order }: OrderPlanningDialogProps) {
       <DialogTrigger asChild>
         <Button variant="default">Planen & Genehmigen</Button>
       </DialogTrigger>
-      <DialogContent key={open ? "order-planning-open" : "order-planning-closed"} className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto" aria-labelledby="order-planning-dialog-title" aria-describedby="order-planning-dialog-description">
+      <DialogContent key={open ? "order-planning-open" : "order-planning-closed"} aria-labelledby="order-planning-dialog-title" aria-describedby="order-planning-dialog-description">
         <DialogHeader>
           <DialogTitle id="order-planning-dialog-title">Anfrage planen: {order.title}</DialogTitle>
           <DialogDescription id="order-planning-dialog-description">

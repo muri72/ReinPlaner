@@ -160,10 +160,10 @@ export function FeedbackCard({ feedback, feedbackType, currentUserId, currentUse
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </DialogTrigger>
-                    <DialogContent key={`delete-feedback-${feedback.id}-open`} aria-labelledby="delete-feedback-alert-title">
+                    <DialogContent key={`delete-feedback-${feedback.id}-open`} aria-labelledby={`delete-feedback-alert-title-${feedback.id}`}>
                       <DialogHeader>
                         <VisuallyHidden asChild>
-                          <DialogTitle id="delete-feedback-alert-title">Sind Sie sicher?</DialogTitle>
+                          <DialogTitle id={`delete-feedback-alert-title-${feedback.id}`}>Sind Sie sicher?</DialogTitle>
                         </VisuallyHidden>
                         <DialogDescription>
                           Diese Aktion kann nicht rückgängig gemacht werden. Das Feedback wird dauerhaft gelöscht.
@@ -173,7 +173,7 @@ export function FeedbackCard({ feedback, feedbackType, currentUserId, currentUse
                         <DialogClose asChild>
                           <Button variant="outline">Abbrechen</Button>
                         </DialogClose>
-                        <Button onClick={handleDelete} disabled={isDeleting}> {/* Changed from DialogAction */}
+                        <Button onClick={handleDelete} disabled={isDeleting}>
                           {isDeleting ? "Löschen..." : "Löschen"}
                         </Button>
                       </DialogFooter>

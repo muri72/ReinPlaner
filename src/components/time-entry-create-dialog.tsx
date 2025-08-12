@@ -52,7 +52,7 @@ export function TimeEntryCreateDialog({
           {triggerButtonText}
         </Button>
       </DialogTrigger>
-      <DialogContent key={open ? "time-entry-create-open" : "time-entry-create-closed"} className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto" aria-labelledby="time-entry-create-dialog-title" aria-describedby="time-entry-create-dialog-description">
+      <DialogContent key={open ? "time-entry-create-open" : "time-entry-create-closed"} aria-labelledby="time-entry-create-dialog-title" aria-describedby="time-entry-create-dialog-description">
         <DialogHeader>
           <DialogTitle id="time-entry-create-dialog-title">{dialogTitle}</DialogTitle>
           <DialogDescription id="time-entry-create-dialog-description">

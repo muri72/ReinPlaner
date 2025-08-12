@@ -55,10 +55,10 @@ export function DeleteCustomerButton({ customerId }: DeleteCustomerButtonProps) 
                 <Trash2 className="h-4 w-4" />
               </Button>
             </DialogTrigger>
-            <DialogContent key={`delete-customer-${customerId}-open`} aria-labelledby="delete-customer-alert-title">
+            <DialogContent key={`delete-customer-${customerId}-open`} aria-labelledby={`delete-customer-alert-title-${customerId}`}>
               <DialogHeader>
                 <VisuallyHidden asChild>
-                  <DialogTitle id="delete-customer-alert-title">Sind Sie sicher?</DialogTitle>
+                  <DialogTitle id={`delete-customer-alert-title-${customerId}`}>Sind Sie sicher?</DialogTitle>
                 </VisuallyHidden>
                 <DialogDescription>
                   Diese Aktion kann nicht rückgängig gemacht werden. Der Kunde und alle zugehörigen Daten (Objekte, Aufträge, Kontakte) werden dauerhaft gelöscht.
@@ -68,7 +68,7 @@ export function DeleteCustomerButton({ customerId }: DeleteCustomerButtonProps) 
                 <DialogClose asChild>
                   <Button variant="outline">Abbrechen</Button>
                 </DialogClose>
-                <Button onClick={handleDelete} disabled={loading}> {/* Changed from DialogAction */}
+                <Button onClick={handleDelete} disabled={loading}>
                   {loading ? "Löschen..." : "Löschen"}
                 </Button>
               </DialogFooter>

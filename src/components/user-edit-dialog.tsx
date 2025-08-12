@@ -46,7 +46,7 @@ export function UserEditDialog({ user }: UserEditDialogProps) {
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
-      <DialogContent key={open ? "user-edit-open" : "user-edit-closed"} className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto" aria-labelledby="user-edit-dialog-title" aria-describedby="user-edit-dialog-description">
+      <DialogContent key={open ? "user-edit-open" : "user-edit-closed"} aria-labelledby="user-edit-dialog-title" aria-describedby="user-edit-dialog-description">
         <DialogHeader>
           <DialogTitle id="user-edit-dialog-title">Benutzer bearbeiten</DialogTitle>
           <DialogDescription id="user-edit-dialog-description">

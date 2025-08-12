@@ -21,7 +21,7 @@ export function GiveGeneralFeedbackDialog({ onFeedbackSubmitted }: GiveGeneralFe
           <MessageSquare className="mr-2 h-4 w-4" /> Allgemeines Feedback geben
         </Button>
       </DialogTrigger>
-      <DialogContent key={open ? "give-general-feedback-open" : "give-general-feedback-closed"} className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto" aria-labelledby="give-general-feedback-dialog-title" aria-describedby="give-general-feedback-dialog-description">
+      <DialogContent key={open ? "give-general-feedback-open" : "give-general-feedback-closed"} aria-labelledby="give-general-feedback-dialog-title" aria-describedby="give-general-feedback-dialog-description">
         <DialogHeader>
           <DialogTitle id="give-general-feedback-dialog-title">Allgemeines Feedback einreichen</DialogTitle>
           <DialogDescription id="give-general-feedback-dialog-description">

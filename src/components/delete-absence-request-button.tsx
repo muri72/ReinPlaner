@@ -55,10 +55,10 @@ export function DeleteAbsenceRequestButton({ requestId }: DeleteAbsenceRequestBu
                 <Trash2 className="h-4 w-4" />
               </Button>
             </DialogTrigger>
-            <DialogContent key={`delete-absence-request-${requestId}-open`} aria-labelledby="delete-absence-request-alert-title">
+            <DialogContent key={`delete-absence-request-${requestId}-open`} aria-labelledby={`delete-absence-request-alert-title-${requestId}`}>
               <DialogHeader>
                 <VisuallyHidden asChild>
-                  <DialogTitle id="delete-absence-request-alert-title">Sind Sie sicher?</DialogTitle>
+                  <DialogTitle id={`delete-absence-request-alert-title-${requestId}`}>Sind Sie sicher?</DialogTitle>
                 </VisuallyHidden>
                 <DialogDescription>
                   Diese Aktion kann nicht rückgängig gemacht werden. Der Abwesenheitsantrag wird dauerhaft gelöscht.
@@ -68,7 +68,7 @@ export function DeleteAbsenceRequestButton({ requestId }: DeleteAbsenceRequestBu
                 <DialogClose asChild>
                   <Button variant="outline">Abbrechen</Button>
                 </DialogClose>
-                <Button onClick={handleDelete} disabled={loading}> {/* Changed from DialogAction */}
+                <Button onClick={handleDelete} disabled={loading}>
                   {loading ? "Löschen..." : "Löschen"}
                 </Button>
               </DialogFooter>

@@ -55,10 +55,10 @@ export function DeleteTimeEntryButton({ entryId }: DeleteTimeEntryButtonProps) {
                 <Trash2 className="h-4 w-4" />
               </Button>
             </DialogTrigger>
-            <DialogContent key={`delete-time-entry-${entryId}-open`} aria-labelledby="delete-time-entry-alert-title">
+            <DialogContent key={`delete-time-entry-${entryId}-open`} aria-labelledby={`delete-time-entry-alert-title-${entryId}`}>
               <DialogHeader>
                 <VisuallyHidden asChild>
-                  <DialogTitle id="delete-time-entry-alert-title">Sind Sie sicher?</DialogTitle>
+                  <DialogTitle id={`delete-time-entry-alert-title-${entryId}`}>Sind Sie sicher?</DialogTitle>
                 </VisuallyHidden>
                 <DialogDescription>
                   Diese Aktion kann nicht rückgängig gemacht werden. Der Zeiteintrag wird dauerhaft gelöscht.
@@ -68,7 +68,7 @@ export function DeleteTimeEntryButton({ entryId }: DeleteTimeEntryButtonProps) {
                 <DialogClose asChild>
                   <Button variant="outline">Abbrechen</Button>
                 </DialogClose>
-                <Button onClick={handleDelete} disabled={loading}> {/* Changed from DialogAction */}
+                <Button onClick={handleDelete} disabled={loading}>
                   {loading ? "Löschen..." : "Löschen"}
                 </Button>
               </DialogFooter>

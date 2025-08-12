@@ -21,7 +21,7 @@ export function OrderFeedbackDialog({ orderId }: OrderFeedbackDialogProps) {
           <Star className="mr-2 h-4 w-4" /> Feedback geben
         </Button>
       </DialogTrigger>
-      <DialogContent key={open ? "order-feedback-open" : "order-feedback-closed"} className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto" aria-labelledby="order-feedback-dialog-title" aria-describedby="order-feedback-dialog-description">
+      <DialogContent key={open ? "order-feedback-open" : "order-feedback-closed"} aria-labelledby="order-feedback-dialog-title" aria-describedby="order-feedback-dialog-description">
         <DialogHeader>
           <DialogTitle id="order-feedback-dialog-title">Feedback zum Auftrag</DialogTitle>
           <DialogDescription id="order-feedback-dialog-description">
