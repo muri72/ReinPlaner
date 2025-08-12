@@ -32,7 +32,11 @@ interface Customer {
   name: string;
 }
 
-export function GeneralDashboardFeedbackForm() {
+interface GeneralDashboardFeedbackFormProps {
+  onSuccess?: () => void; // Hinzugefügt
+}
+
+export function GeneralDashboardFeedbackForm({ onSuccess }: GeneralDashboardFeedbackFormProps) {
   const supabase = createClient();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [files, setFiles] = useState<File[]>([]);
@@ -134,6 +138,7 @@ export function GeneralDashboardFeedbackForm() {
         toast.success(result.message);
         form.reset();
         setFiles([]);
+        onSuccess?.(); // onSuccess aufrufen
       } else {
         throw new Error(result.message);
       }

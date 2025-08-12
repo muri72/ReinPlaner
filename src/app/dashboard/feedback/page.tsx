@@ -8,6 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MessageSquare, Star, PlusCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GradientDivider } from "@/components/gradient-divider"; // Import the new component
+import { GiveOrderFeedbackDialog } from "@/components/give-order-feedback-dialog"; // Import new dialog
+import { GiveGeneralFeedbackDialog } from "@/components/give-general-feedback-dialog"; // Import new dialog
 
 export default async function FeedbackPage() {
   const supabase = await createClient();
@@ -77,10 +79,10 @@ export default async function FeedbackPage() {
                 <TabsTrigger value="general">Allgemein</TabsTrigger>
               </TabsList>
               <TabsContent value="orders" className="mt-6">
-                <GiveFeedbackForm />
+                <GiveOrderFeedbackDialog /> {/* Replaced inline form */}
               </TabsContent>
               <TabsContent value="general" className="mt-6">
-                <GeneralDashboardFeedbackForm />
+                <GiveGeneralFeedbackDialog /> {/* Replaced inline form */}
               </TabsContent>
             </Tabs>
           </CardContent>
@@ -105,10 +107,7 @@ export default async function FeedbackPage() {
                   <p className="text-sm">Wenn Sie Feedback zu einem Auftrag haben, können Sie es hier einreichen.</p>
                   {currentUserRole !== 'admin' && currentUserRole !== 'manager' && (
                     <div className="mt-4">
-                      <Button onClick={() => { /* Placeholder for future scroll/tab switch logic */ }} className="transition-colors duration-200">
-                        <PlusCircle className="mr-2 h-4 w-4" />
-                        Feedback geben
-                      </Button>
+                      <GiveOrderFeedbackDialog /> {/* Button to open dialog */}
                     </div>
                   )}
                 </div>
@@ -134,10 +133,7 @@ export default async function FeedbackPage() {
                   <p className="text-sm">Wenn Sie allgemeines Feedback haben, können Sie es hier einreichen.</p>
                   {currentUserRole !== 'admin' && currentUserRole !== 'manager' && (
                     <div className="mt-4">
-                      <Button onClick={() => { /* Placeholder for future scroll/tab switch logic */ }} className="transition-colors duration-200">
-                        <PlusCircle className="mr-2 h-4 w-4" />
-                        Feedback geben
-                      </Button>
+                      <GiveGeneralFeedbackDialog /> {/* Button to open dialog */}
                     </div>
                   )}
                 </div>

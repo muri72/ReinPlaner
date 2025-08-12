@@ -37,7 +37,11 @@ interface Order {
   title: string;
 }
 
-export function GiveFeedbackForm() {
+interface GiveFeedbackFormProps {
+  onSuccess?: () => void; // Hinzugefügt
+}
+
+export function GiveFeedbackForm({ onSuccess }: GiveFeedbackFormProps) {
   const supabase = createClient();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
@@ -177,6 +181,7 @@ export function GiveFeedbackForm() {
         if (userRole !== 'customer') {
           setSelectedCustomerId(null);
         }
+        onSuccess?.(); // onSuccess aufrufen
       } else {
         throw new Error(result.message);
       }
