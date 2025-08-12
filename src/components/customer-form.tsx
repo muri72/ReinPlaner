@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"; // Import Select components
+import { handleActionResponse } from "@/lib/toast-utils"; // Importiere die neue Utility
 
 export const customerSchema = z.object({
   name: z.string().min(1, "Name ist erforderlich").max(100, "Name ist zu lang"),
@@ -45,14 +46,13 @@ export function CustomerForm({ initialData, onSubmit, submitButtonText, onSucces
   const handleFormSubmit: SubmitHandler<CustomerFormValues> = async (data) => {
     const result = await onSubmit(data);
 
+    handleActionResponse(result); // Nutze die neue Utility
+
     if (result.success) {
-      toast.success(result.message);
       if (!initialData) {
         form.reset();
       }
       onSuccess?.();
-    } else {
-      toast.error(result.message);
     }
   };
 

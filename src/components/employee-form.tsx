@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useEffect, useState } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { DatePicker } from "@/components/date-picker"; // Importiere die neue DatePicker Komponente
+import { handleActionResponse } from "@/lib/toast-utils"; // Importiere die neue Utility
 
 export const employeeSchema = z.object({
   firstName: z.string().min(1, "Vorname ist erforderlich").max(100, "Vorname ist zu lang"),
@@ -79,14 +80,13 @@ export function EmployeeForm({ initialData, onSubmit, submitButtonText, onSucces
   const handleFormSubmit: SubmitHandler<EmployeeFormValues> = async (data) => {
     const result = await onSubmit(data);
 
+    handleActionResponse(result); // Nutze die neue Utility
+
     if (result.success) {
-      toast.success(result.message);
       if (!initialData) {
         form.reset();
       }
       onSuccess?.();
-    } else {
-      toast.error(result.message);
     }
   };
 
