@@ -47,9 +47,9 @@ export function CustomerContactEditDialog({ contact }: CustomerContactEditDialog
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
-      <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto" aria-labelledby="customer-contact-edit-dialog-title">
         <DialogHeader>
-          <DialogTitle>Kundenkontakt bearbeiten</DialogTitle>
+          <DialogTitle id="customer-contact-edit-dialog-title">Kundenkontakt bearbeiten</DialogTitle>
         </DialogHeader>
         <CustomerContactForm
           initialData={{
