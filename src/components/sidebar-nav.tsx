@@ -133,7 +133,7 @@ export function SidebarNav({ isCollapsed, currentUserRole, onSignOut, onLinkClic
                           "text-base text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors duration-200"
                         )}
                       >
-                        <child.icon className={cn("h-5 w-5", !isCollapsed && "mr-2")} />
+                        <child.icon className={cn(isCollapsed ? "h-6 w-6" : "h-5 w-5", !isCollapsed && "mr-2")} />
                         {!isCollapsed && child.title}
                       </Button>
                     </Link>
@@ -156,7 +156,7 @@ export function SidebarNav({ isCollapsed, currentUserRole, onSignOut, onLinkClic
                       "text-base text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors duration-200"
                     )}
                   >
-                    <item.icon className={cn("h-5 w-5", !isCollapsed && "mr-2")} />
+                    <item.icon className={cn(isCollapsed ? "h-6 w-6" : "h-5 w-5", !isCollapsed && "mr-2")} />
                     {!isCollapsed && item.title}
                   </Button>
                 </Link>
