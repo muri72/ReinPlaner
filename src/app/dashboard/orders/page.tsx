@@ -11,6 +11,7 @@ import { DeleteOrderButton } from "@/components/delete-order-button";
 import { SearchInput } from "@/components/search-input";
 import { OrderPlanningDialog } from "@/components/order-planning-dialog";
 import { OrderCreateDialog } from "@/components/order-create-dialog"; // Import the new dialog
+import { PaginationControls } from "@/components/pagination-controls"; // Importiere die Paginierungskomponente
 
 interface DisplayOrder {
   id: string;
@@ -58,16 +59,26 @@ export default async function OrdersPage({
   }
 
   const query = typeof searchParams?.query === 'string' ? searchParams.query : '';
+  const currentPage = Number(searchParams?.page) || 1;
+  const pageSize = Number(searchParams?.pageSize) || 9; // Standardmäßig 9 Aufträge pro Seite
+
+  const from = (currentPage - 1) * pageSize;
+  const to = from + pageSize - 1;
 
   let allOrders: DisplayOrder[] = [];
   let error: any;
+  let count: number | null = 0;
 
   if (query) {
+    // Verwende die RPC-Funktion für die Suche. Beachte: Diese RPC unterstützt keine Paginierung.
+    // Daher werden bei aktiver Suche alle passenden Ergebnisse geladen.
     const { data, error: rpcError } = await supabase.rpc('search_orders', { search_query: query });
     allOrders = (data as DisplayOrder[] | null)?.map(o => ({ ...o, order_feedback: [] })) || [];
     error = rpcError;
+    count = allOrders.length; // Zähle die Ergebnisse der RPC-Funktion
   } else {
-    const { data, error: selectError } = await supabase
+    // Direkte Abfrage mit Paginierung, wenn keine Suche aktiv ist
+    const { data, error: selectError, count: selectCount } = await supabase
       .from('orders')
       .select(`
         *,
@@ -76,8 +87,9 @@ export default async function OrdersPage({
         employees ( first_name, last_name ),
         customer_contacts ( first_name, last_name ),
         order_feedback ( * )
-      `)
-      .order('created_at', { ascending: false });
+      `, { count: 'exact' }) // count: 'exact' ist wichtig für die Paginierung
+      .order('created_at', { ascending: false })
+      .range(from, to); // Paginierung anwenden
 
     allOrders = data?.map(order => ({
       id: order.id,
@@ -108,12 +120,15 @@ export default async function OrdersPage({
       order_feedback: order.order_feedback,
     })) || [];
     error = selectError;
+    count = selectCount;
   }
 
   if (error) {
     console.error("Fehler beim Laden der Aufträge:", error);
     return <div className="p-4 md:p-8">Fehler beim Laden der Aufträge.</div>;
   }
+
+  const totalPages = count ? Math.ceil(count / pageSize) : 0;
 
   const pendingRequests = allOrders.filter(order => order.request_status === 'pending');
   const otherOrders = allOrders.filter(order => order.request_status !== 'pending');
@@ -189,6 +204,11 @@ export default async function OrdersPage({
       {/* Section for Other Orders */}
       <div className="space-y-4 pt-8">
         <h2 className="text-xl md:text-2xl font-bold">Bestehende Aufträge</h2>
+        {query && (
+          <p className="text-sm text-muted-foreground mb-4">
+            Hinweis: Bei aktiver Suche wird die Paginierung deaktiviert und alle passenden Ergebnisse angezeigt.
+          </p>
+        )}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
           {otherOrders.length === 0 && !query ? (
             <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30">
@@ -250,6 +270,9 @@ export default async function OrdersPage({
             })
           )}
         </div>
+        {!query && totalPages > 1 && (
+          <PaginationControls currentPage={currentPage} totalPages={totalPages} />
+        )}
       </div>
     </div>
   );
