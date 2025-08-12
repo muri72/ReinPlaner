@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Star, MessageSquare, Image as ImageIcon, Trash2, Pencil, CornerDownRight } from "lucide-react";
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious, type CarouselApi } from "@/components/ui/carousel"; // useCarousel entfernt, CarouselApi hinzugefügt
 import NextImage from "next/image";
 import { toast } from "sonner";
 import { FeedbackReplyForm } from "./feedback-reply-form";
@@ -17,13 +17,13 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-  DialogClose, // Keep DialogClose
+  DialogClose,
 } from "@/components/ui/dialog";
 import { OrderFeedbackEditDialog } from "./order-feedback-edit-dialog";
 import { GeneralFeedbackEditDialog } from "./general-feedback-edit-dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden"; // Import VisuallyHidden
-import { ImageViewerDialog } from "./image-viewer-dialog"; // Import the new image viewer
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+import { cn } from "@/lib/utils";
 
 // Typdefinitionen, die beide Feedback-Arten abdecken
 type Feedback = {
@@ -75,6 +75,24 @@ export function FeedbackCard({ feedback, feedbackType, currentUserId, currentUse
     setIsDeleting(false);
   };
 
+  // Carousel-State für Indikatoren
+  const [carouselApi, setCarouselApi] = useState<CarouselApi>(); // State für CarouselApi
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const [totalSlides, setTotalSlides] = useState(0);
+
+  useEffect(() => {
+    if (!carouselApi) {
+      return;
+    }
+    setTotalSlides(carouselApi.scrollSnapList().length);
+    setCurrentSlide(carouselApi.selectedScrollSnap());
+
+    carouselApi.on("select", () => {
+      setCurrentSlide(carouselApi.selectedScrollSnap());
+    });
+  }, [carouselApi]);
+
+
   return (
     <Card className="flex flex-col h-full">
       <CardHeader>
@@ -106,25 +124,31 @@ export function FeedbackCard({ feedback, feedbackType, currentUserId, currentUse
         {feedback.image_urls && feedback.image_urls.length > 0 && (
           <div>
             <h4 className="text-sm font-semibold mb-2 flex items-center"><ImageIcon className="h-4 w-4 mr-2 text-muted-foreground" />Bilder</h4>
-            <Carousel className="w-full max-w-sm mx-auto relative">
+            <Carousel
+              className="w-full max-w-sm mx-auto relative"
+              opts={{
+                loop: true, // Optional: Für unendliches Scrollen
+              }}
+              setApi={setCarouselApi} // API setzen
+            >
               <CarouselContent>
                 {feedback.image_urls.map((url, index) => (
                   <CarouselItem key={index}>
-                    <ImageViewerDialog
-                      src={url}
-                      alt={`Feedback-Bild ${index + 1}`}
-                      trigger={
-                        <div className="cursor-pointer">
-                          <NextImage src={url} alt={`Feedback-Bild ${index + 1}`} width={200} height={200} className="rounded-md object-cover w-full h-40" />
-                        </div>
-                      }
-                    />
+                    <a href={url} target="_blank" rel="noopener noreferrer" className="block"> {/* Link zum Öffnen in neuem Tab */}
+                      <NextImage src={url} alt={`Feedback-Bild ${index + 1}`} width={200} height={200} className="rounded-md object-cover w-full h-40" />
+                    </a>
                   </CarouselItem>
                 ))}
               </CarouselContent>
               {/* Explicit positioning for arrows */}
               <CarouselPrevious className="absolute left-2 top-1/2 -translate-y-1/2 z-20" />
               <CarouselNext className="absolute right-2 top-1/2 -translate-y-1/2 z-20" />
+              {/* Indikatoren */}
+              <CarouselIndicators
+                totalSlides={totalSlides}
+                currentSlide={currentSlide}
+                onSlideChange={(index) => carouselApi?.scrollTo(index)}
+              />
             </Carousel>
           </div>
         )}
@@ -205,5 +229,30 @@ export function FeedbackCard({ feedback, feedbackType, currentUserId, currentUse
         )}
       </CardFooter>
     </Card>
+  );
+}
+
+// Neue Komponente für die Carousel-Indikatoren
+interface CarouselIndicatorsProps {
+  totalSlides: number;
+  currentSlide: number; // Hinzugefügt
+  onSlideChange: (index: number) => void;
+}
+
+function CarouselIndicators({ totalSlides, currentSlide, onSlideChange }: CarouselIndicatorsProps) {
+  return (
+    <div className="flex justify-center gap-2 mt-4">
+      {Array.from({ length: totalSlides }).map((_, index) => (
+        <button
+          key={index}
+          className={cn(
+            "h-2 w-2 rounded-full bg-muted-foreground transition-colors",
+            currentSlide === index && "bg-primary"
+          )}
+          onClick={() => onSlideChange(index)}
+          aria-label={`Gehe zu Bild ${index + 1}`}
+        />
+      ))}
+    </div>
   );
 }
