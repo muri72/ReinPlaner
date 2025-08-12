@@ -99,20 +99,27 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut }: 
           </Button>
         </div>
         <SidebarNav isCollapsed={isCollapsed} currentUserRole={currentUserRole} onSignOut={onSignOut} />
+
+        {/* Notification Bell and User Menu at the bottom of the sidebar */}
+        <div className={cn(
+          "mt-auto flex items-center",
+          isCollapsed ? "justify-center" : "justify-between",
+          "pt-4 border-t border-sidebar-border"
+        )}>
+          <NotificationBell />
+          <UserMenu currentUserRole={currentUserRole} onSignOut={onSignOut} />
+        </div>
       </aside>
 
-      {/* Desktop Header (newly fixed) */}
+      {/* Desktop Header (fixed) */}
       <header
         className={cn(
           "hidden md:flex fixed top-0 right-0 h-16 text-foreground p-4 items-center justify-end z-50",
           isCollapsed ? "left-20 w-[calc(100%-80px)]" : "left-64 w-[calc(100%-256px)]",
-          "bg-sidebar" // Set to solid bg-sidebar
+          "bg-sidebar"
         )}
       >
-        <div className="flex items-center space-x-4">
-          <NotificationBell />
-          <UserMenu currentUserRole={currentUserRole} onSignOut={onSignOut} />
-        </div>
+        {/* Removed NotificationBell and UserMenu from here */}
       </header>
 
       {/* Main Content */}
