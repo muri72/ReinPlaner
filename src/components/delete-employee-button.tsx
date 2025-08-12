@@ -55,9 +55,9 @@ export function DeleteEmployeeButton({ employeeId }: DeleteEmployeeButtonProps) 
                 <Trash2 className="h-4 w-4" />
               </Button>
             </AlertDialogTrigger>
-            <AlertDialogContent>
+            <AlertDialogContent aria-labelledby="delete-employee-alert-title">
               <AlertDialogHeader>
-                <AlertDialogTitle>Sind Sie sicher?</AlertDialogTitle>
+                <AlertDialogTitle id="delete-employee-alert-title">Sind Sie sicher?</AlertDialogTitle>
                 <AlertDialogDescription>
                   Diese Aktion kann nicht rückgängig gemacht werden. Der Mitarbeiter und alle zugehörigen Daten werden dauerhaft gelöscht.
                 </AlertDialogDescription>

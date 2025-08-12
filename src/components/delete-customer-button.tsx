@@ -55,9 +55,9 @@ export function DeleteCustomerButton({ customerId }: DeleteCustomerButtonProps) 
                 <Trash2 className="h-4 w-4" />
               </Button>
             </AlertDialogTrigger>
-            <AlertDialogContent>
+            <AlertDialogContent aria-labelledby="delete-customer-alert-title">
               <AlertDialogHeader>
-                <AlertDialogTitle>Sind Sie sicher?</AlertDialogTitle>
+                <AlertDialogTitle id="delete-customer-alert-title">Sind Sie sicher?</AlertDialogTitle>
                 <AlertDialogDescription>
                   Diese Aktion kann nicht rückgängig gemacht werden. Der Kunde und alle zugehörigen Daten (Objekte, Aufträge, Kontakte) werden dauerhaft gelöscht.
                 </AlertDialogDescription>
