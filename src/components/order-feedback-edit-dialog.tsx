@@ -75,6 +75,7 @@ export function OrderFeedbackEditDialog({ feedback }: OrderFeedbackEditDialogPro
         key={open ? "order-feedback-edit-open" : "order-feedback-edit-closed"} 
         aria-labelledby={titleId} 
         aria-describedby={descriptionId}
+        className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto"
       >
         <DialogHeader>
           <DialogTitle id={titleId}>Feedback bearbeiten</DialogTitle>

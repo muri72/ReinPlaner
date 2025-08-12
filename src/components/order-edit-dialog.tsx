@@ -81,6 +81,7 @@ export function OrderEditDialog({ order }: OrderEditDialogProps) {
         key={open ? "order-edit-open" : "order-edit-closed"} 
         aria-labelledby={titleId} 
         aria-describedby={descriptionId}
+        className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto"
       >
         <DialogHeader>
           <DialogTitle id={titleId}>Auftrag bearbeiten</DialogTitle>

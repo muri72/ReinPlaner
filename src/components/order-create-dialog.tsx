@@ -38,6 +38,7 @@ export function OrderCreateDialog({ onOrderCreated }: OrderCreateDialogProps) {
         key={open ? "order-create-open" : "order-create-closed"} 
         aria-labelledby={titleId} 
         aria-describedby={descriptionId}
+        className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto"
       >
         <DialogHeader>
           <DialogTitle id={titleId}>Neuen Auftrag hinzufügen</DialogTitle>
