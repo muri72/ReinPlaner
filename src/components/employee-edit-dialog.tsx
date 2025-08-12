@@ -1,13 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog"; // Import DialogDescription
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Pencil } from "lucide-react";
 import { EmployeeForm, EmployeeFormValues } from "@/components/employee-form";
 import { updateEmployee } from "@/app/dashboard/employees/actions";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden"; // Import VisuallyHidden
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 interface EmployeeEditDialogProps {
   employee: {
@@ -34,6 +34,8 @@ interface EmployeeEditDialogProps {
 
 export function EmployeeEditDialog({ employee }: EmployeeEditDialogProps) {
   const [open, setOpen] = useState(false);
+  const titleId = `employee-edit-dialog-title`;
+  const descriptionId = `employee-edit-dialog-description`;
 
   const handleUpdate = async (data: EmployeeFormValues) => {
     const result = await updateEmployee(employee.id, data);
@@ -59,10 +61,14 @@ export function EmployeeEditDialog({ employee }: EmployeeEditDialogProps) {
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
-      <DialogContent key={open ? "employee-edit-open" : "employee-edit-closed"} aria-labelledby="employee-edit-dialog-title" aria-describedby="employee-edit-dialog-description">
+      <DialogContent 
+        key={open ? "employee-edit-open" : "employee-edit-closed"} 
+        aria-labelledby={titleId} 
+        aria-describedby={descriptionId}
+      >
         <DialogHeader>
-          <DialogTitle id="employee-edit-dialog-title">Mitarbeiter bearbeiten</DialogTitle>
-          <DialogDescription id="employee-edit-dialog-description">
+          <DialogTitle id={titleId}>Mitarbeiter bearbeiten</DialogTitle>
+          <DialogDescription id={descriptionId}>
             <VisuallyHidden>Formular zum Bearbeiten der Mitarbeiterdaten.</VisuallyHidden>
           </DialogDescription>
         </DialogHeader>

@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog"; // Import DialogDescription
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 import { OrderForm, OrderFormValues } from "@/components/order-form";
 import { createOrder } from "@/app/dashboard/orders/actions";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden"; // Import VisuallyHidden
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 interface OrderCreateDialogProps {
   onOrderCreated?: () => void;
@@ -14,6 +14,8 @@ interface OrderCreateDialogProps {
 
 export function OrderCreateDialog({ onOrderCreated }: OrderCreateDialogProps) {
   const [open, setOpen] = useState(false);
+  const titleId = `order-create-dialog-title`;
+  const descriptionId = `order-create-dialog-description`;
 
   const handleCreate = async (data: OrderFormValues) => {
     const result = await createOrder(data);
@@ -32,10 +34,14 @@ export function OrderCreateDialog({ onOrderCreated }: OrderCreateDialogProps) {
           Neuen Auftrag hinzufügen
         </Button>
       </DialogTrigger>
-      <DialogContent key={open ? "order-create-open" : "order-create-closed"} aria-labelledby="order-create-dialog-title" aria-describedby="order-create-dialog-description">
+      <DialogContent 
+        key={open ? "order-create-open" : "order-create-closed"} 
+        aria-labelledby={titleId} 
+        aria-describedby={descriptionId}
+      >
         <DialogHeader>
-          <DialogTitle id="order-create-dialog-title">Neuen Auftrag hinzufügen</DialogTitle>
-          <DialogDescription id="order-create-dialog-description">
+          <DialogTitle id={titleId}>Neuen Auftrag hinzufügen</DialogTitle>
+          <DialogDescription id={descriptionId}>
             <VisuallyHidden>Formular zum Hinzufügen eines neuen Auftrags.</VisuallyHidden>
           </DialogDescription>
         </DialogHeader>

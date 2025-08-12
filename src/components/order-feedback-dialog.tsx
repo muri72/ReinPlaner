@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog"; // Import DialogDescription
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Star } from "lucide-react";
 import { OrderFeedbackForm } from "@/components/order-feedback-form";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden"; // Import VisuallyHidden
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 interface OrderFeedbackDialogProps {
   orderId: string;
@@ -13,6 +13,8 @@ interface OrderFeedbackDialogProps {
 
 export function OrderFeedbackDialog({ orderId }: OrderFeedbackDialogProps) {
   const [open, setOpen] = useState(false);
+  const titleId = `order-feedback-dialog-title`;
+  const descriptionId = `order-feedback-dialog-description`;
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -21,10 +23,14 @@ export function OrderFeedbackDialog({ orderId }: OrderFeedbackDialogProps) {
           <Star className="mr-2 h-4 w-4" /> Feedback geben
         </Button>
       </DialogTrigger>
-      <DialogContent key={open ? "order-feedback-open" : "order-feedback-closed"} aria-labelledby="order-feedback-dialog-title" aria-describedby="order-feedback-dialog-description">
+      <DialogContent 
+        key={open ? "order-feedback-open" : "order-feedback-closed"} 
+        aria-labelledby={titleId} 
+        aria-describedby={descriptionId}
+      >
         <DialogHeader>
-          <DialogTitle id="order-feedback-dialog-title">Feedback zum Auftrag</DialogTitle>
-          <DialogDescription id="order-feedback-dialog-description">
+          <DialogTitle id={titleId}>Feedback zum Auftrag</DialogTitle>
+          <DialogDescription id={descriptionId}>
             <VisuallyHidden>Formular zum Einreichen von Feedback zu einem Auftrag.</VisuallyHidden>
           </DialogDescription>
         </DialogHeader>

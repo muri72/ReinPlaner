@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog"; // Import DialogDescription
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 import { TimeEntryForm, TimeEntryFormValues } from "@/components/time-entry-form";
 import { createTimeEntry } from "@/app/dashboard/time-tracking/actions";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden"; // Import VisuallyHidden
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 interface TimeEntryCreateDialogProps {
   initialData?: Partial<TimeEntryFormValues>;
@@ -32,6 +32,8 @@ export function TimeEntryCreateDialog({
   isAdmin,
 }: TimeEntryCreateDialogProps) {
   const [open, setOpen] = useState(false);
+  const titleId = `time-entry-create-dialog-title`;
+  const descriptionId = `time-entry-create-dialog-description`;
 
   const handleCreate = async (data: TimeEntryFormValues) => {
     const result = await createTimeEntry(data);
@@ -52,10 +54,14 @@ export function TimeEntryCreateDialog({
           {triggerButtonText}
         </Button>
       </DialogTrigger>
-      <DialogContent key={open ? "time-entry-create-open" : "time-entry-create-closed"} aria-labelledby="time-entry-create-dialog-title" aria-describedby="time-entry-create-dialog-description">
+      <DialogContent 
+        key={open ? "time-entry-create-open" : "time-entry-create-closed"} 
+        aria-labelledby={titleId} 
+        aria-describedby={descriptionId}
+      >
         <DialogHeader>
-          <DialogTitle id="time-entry-create-dialog-title">{dialogTitle}</DialogTitle>
-          <DialogDescription id="time-entry-create-dialog-description">
+          <DialogTitle id={titleId}>{dialogTitle}</DialogTitle>
+          <DialogDescription id={descriptionId}>
             <VisuallyHidden>Formular zum Erstellen eines neuen Zeiteintrags.</VisuallyHidden>
           </DialogDescription>
         </DialogHeader>

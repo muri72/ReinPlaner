@@ -59,6 +59,8 @@ export function FeedbackCard({ feedback, feedbackType, currentUserId, currentUse
   const [isDeleting, setIsDeleting] = useState(false);
   const isManagerOrAdmin = currentUserRole === 'admin' || currentUserRole === 'manager';
   const canEditOrDelete = isManagerOrAdmin || feedback.user_id === currentUserId;
+  const titleId = `delete-feedback-alert-title-${feedback.id}`;
+  const descriptionId = `delete-feedback-alert-description-${feedback.id}`;
 
   const handleDelete = async () => {
     setIsDeleting(true);
@@ -160,12 +162,16 @@ export function FeedbackCard({ feedback, feedbackType, currentUserId, currentUse
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </DialogTrigger>
-                    <DialogContent key={`delete-feedback-${feedback.id}-open`} aria-labelledby={`delete-feedback-alert-title-${feedback.id}`}>
+                    <DialogContent 
+                      key={`delete-feedback-${feedback.id}-open`} 
+                      aria-labelledby={titleId} 
+                      aria-describedby={descriptionId}
+                    >
                       <DialogHeader>
                         <VisuallyHidden asChild>
-                          <DialogTitle id={`delete-feedback-alert-title-${feedback.id}`}>Sind Sie sicher?</DialogTitle>
+                          <DialogTitle id={titleId}>Sind Sie sicher?</DialogTitle>
                         </VisuallyHidden>
-                        <DialogDescription>
+                        <DialogDescription id={descriptionId}>
                           Diese Aktion kann nicht rückgängig gemacht werden. Das Feedback wird dauerhaft gelöscht.
                         </DialogDescription>
                       </DialogHeader>

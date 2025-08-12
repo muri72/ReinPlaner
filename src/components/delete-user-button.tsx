@@ -24,6 +24,8 @@ interface DeleteUserButtonProps {
 
 export function DeleteUserButton({ userId }: DeleteUserButtonProps) {
   const [loading, setLoading] = useState(false);
+  const titleId = `delete-user-alert-title-${userId}`;
+  const descriptionId = `delete-user-alert-description-${userId}`;
 
   const handleDelete = async () => {
     setLoading(true);
@@ -55,12 +57,16 @@ export function DeleteUserButton({ userId }: DeleteUserButtonProps) {
                 <Trash2 className="h-4 w-4" />
               </Button>
             </DialogTrigger>
-            <DialogContent key={`delete-user-${userId}-open`} aria-labelledby={`delete-user-alert-title-${userId}`}>
+            <DialogContent 
+              key={`delete-user-${userId}-open`} 
+              aria-labelledby={titleId} 
+              aria-describedby={descriptionId}
+            >
               <DialogHeader>
                 <VisuallyHidden asChild>
-                  <DialogTitle id={`delete-user-alert-title-${userId}`}>Sind Sie sicher?</DialogTitle>
+                  <DialogTitle id={titleId}>Sind Sie sicher?</DialogTitle>
                 </VisuallyHidden>
-                <DialogDescription>
+                <DialogDescription id={descriptionId}>
                   Diese Aktion kann nicht rückgängig gemacht werden. Der Benutzer und alle zugehörigen Daten werden dauerhaft gelöscht.
                 </DialogDescription>
               </DialogHeader>

@@ -24,6 +24,8 @@ interface DeleteOrderButtonProps {
 
 export function DeleteOrderButton({ orderId }: DeleteOrderButtonProps) {
   const [loading, setLoading] = useState(false);
+  const titleId = `delete-order-alert-title-${orderId}`;
+  const descriptionId = `delete-order-alert-description-${orderId}`;
 
   const handleDelete = async () => {
     setLoading(true);
@@ -55,12 +57,16 @@ export function DeleteOrderButton({ orderId }: DeleteOrderButtonProps) {
                 <Trash2 className="h-4 w-4" />
               </Button>
             </DialogTrigger>
-            <DialogContent key={`delete-order-${orderId}-open`} aria-labelledby={`delete-order-alert-title-${orderId}`}>
+            <DialogContent 
+              key={`delete-order-${orderId}-open`} 
+              aria-labelledby={titleId} 
+              aria-describedby={descriptionId}
+            >
               <DialogHeader>
                 <VisuallyHidden asChild>
-                  <DialogTitle id={`delete-order-alert-title-${orderId}`}>Sind Sie sicher?</DialogTitle>
+                  <DialogTitle id={titleId}>Sind Sie sicher?</DialogTitle>
                 </VisuallyHidden>
-                <DialogDescription>
+                <DialogDescription id={descriptionId}>
                   Diese Aktion kann nicht rückgängig gemacht werden. Der Auftrag und alle zugehörigen Daten werden dauerhaft gelöscht.
                 </DialogDescription>
               </DialogHeader>

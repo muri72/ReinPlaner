@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog"; // Import DialogDescription
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Pencil } from "lucide-react";
 import { useForm } from "react-hook-form";
@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden"; // Import VisuallyHidden
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 const editSchema = z.object({
   subject: z.string().max(200, "Betreff ist zu lang").optional(),
@@ -32,6 +32,8 @@ interface GeneralFeedbackEditDialogProps {
 
 export function GeneralFeedbackEditDialog({ feedback }: GeneralFeedbackEditDialogProps) {
   const [open, setOpen] = useState(false);
+  const titleId = `general-feedback-edit-dialog-title`;
+  const descriptionId = `general-feedback-edit-dialog-description`;
 
   const form = useForm<EditFormValues>({
     resolver: zodResolver(editSchema),
@@ -69,10 +71,14 @@ export function GeneralFeedbackEditDialog({ feedback }: GeneralFeedbackEditDialo
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
-      <DialogContent key={open ? "general-feedback-edit-open" : "general-feedback-edit-closed"} aria-labelledby="general-feedback-edit-dialog-title" aria-describedby="general-feedback-edit-dialog-description">
+      <DialogContent 
+        key={open ? "general-feedback-edit-open" : "general-feedback-edit-closed"} 
+        aria-labelledby={titleId} 
+        aria-describedby={descriptionId}
+      >
         <DialogHeader>
-          <DialogTitle id="general-feedback-edit-dialog-title">Feedback bearbeiten</DialogTitle>
-          <DialogDescription id="general-feedback-edit-dialog-description">
+          <DialogTitle id={titleId}>Feedback bearbeiten</DialogTitle>
+          <DialogDescription id={descriptionId}>
             <VisuallyHidden>Formular zum Bearbeiten des allgemeinen Feedbacks.</VisuallyHidden>
           </DialogDescription>
         </DialogHeader>

@@ -24,6 +24,8 @@ interface DeleteAbsenceRequestButtonProps {
 
 export function DeleteAbsenceRequestButton({ requestId }: DeleteAbsenceRequestButtonProps) {
   const [loading, setLoading] = useState(false);
+  const titleId = `delete-absence-request-alert-title-${requestId}`;
+  const descriptionId = `delete-absence-request-alert-description-${requestId}`;
 
   const handleDelete = async () => {
     setLoading(true);
@@ -55,12 +57,16 @@ export function DeleteAbsenceRequestButton({ requestId }: DeleteAbsenceRequestBu
                 <Trash2 className="h-4 w-4" />
               </Button>
             </DialogTrigger>
-            <DialogContent key={`delete-absence-request-${requestId}-open`} aria-labelledby={`delete-absence-request-alert-title-${requestId}`}>
+            <DialogContent 
+              key={`delete-absence-request-${requestId}-open`} 
+              aria-labelledby={titleId} 
+              aria-describedby={descriptionId}
+            >
               <DialogHeader>
                 <VisuallyHidden asChild>
-                  <DialogTitle id={`delete-absence-request-alert-title-${requestId}`}>Sind Sie sicher?</DialogTitle>
+                  <DialogTitle id={titleId}>Sind Sie sicher?</DialogTitle>
                 </VisuallyHidden>
-                <DialogDescription>
+                <DialogDescription id={descriptionId}>
                   Diese Aktion kann nicht rückgängig gemacht werden. Der Abwesenheitsantrag wird dauerhaft gelöscht.
                 </DialogDescription>
               </DialogHeader>

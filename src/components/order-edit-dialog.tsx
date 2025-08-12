@@ -1,13 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog"; // Import DialogDescription
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Pencil } from "lucide-react";
 import { OrderForm, OrderFormValues } from "@/components/order-form";
 import { updateOrder } from "@/app/dashboard/orders/actions";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden"; // Import VisuallyHidden
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 // Definierte Liste der Dienstleistungen (muss mit order-form.tsx übereinstimmen)
 const availableServices = [
@@ -42,6 +42,8 @@ interface OrderEditDialogProps {
 
 export function OrderEditDialog({ order }: OrderEditDialogProps) {
   const [open, setOpen] = useState(false);
+  const titleId = `order-edit-dialog-title`;
+  const descriptionId = `order-edit-dialog-description`;
 
   const handleUpdate = async (data: OrderFormValues) => {
     const result = await updateOrder(order.id, data);
@@ -75,10 +77,14 @@ export function OrderEditDialog({ order }: OrderEditDialogProps) {
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
-      <DialogContent key={open ? "order-edit-open" : "order-edit-closed"} aria-labelledby="order-edit-dialog-title" aria-describedby="order-edit-dialog-description">
+      <DialogContent 
+        key={open ? "order-edit-open" : "order-edit-closed"} 
+        aria-labelledby={titleId} 
+        aria-describedby={descriptionId}
+      >
         <DialogHeader>
-          <DialogTitle id="order-edit-dialog-title">Auftrag bearbeiten</DialogTitle>
-          <DialogDescription id="order-edit-dialog-description">
+          <DialogTitle id={titleId}>Auftrag bearbeiten</DialogTitle>
+          <DialogDescription id={descriptionId}>
             <VisuallyHidden>Formular zum Bearbeiten der Auftragsdetails.</VisuallyHidden>
           </DialogDescription>
         </DialogHeader>

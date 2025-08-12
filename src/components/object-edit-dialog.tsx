@@ -1,13 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog"; // Import DialogDescription
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Pencil } from "lucide-react";
 import { ObjectForm, ObjectFormValues } from "@/components/object-form";
 import { updateObject } from "@/app/dashboard/objects/actions";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden"; // Import VisuallyHidden
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 interface ObjectEditDialogProps {
   object: {
@@ -51,6 +51,8 @@ interface ObjectEditDialogProps {
 
 export function ObjectEditDialog({ object }: ObjectEditDialogProps) {
   const [open, setOpen] = useState(false);
+  const titleId = `object-edit-dialog-title`;
+  const descriptionId = `object-edit-dialog-description`;
 
   const handleUpdate = async (data: ObjectFormValues) => {
     const result = await updateObject(object.id, data);
@@ -76,10 +78,14 @@ export function ObjectEditDialog({ object }: ObjectEditDialogProps) {
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
-      <DialogContent key={open ? "object-edit-open" : "object-edit-closed"} aria-labelledby="object-edit-dialog-title" aria-describedby="object-edit-dialog-description">
+      <DialogContent 
+        key={open ? "object-edit-open" : "object-edit-closed"} 
+        aria-labelledby={titleId} 
+        aria-describedby={descriptionId}
+      >
         <DialogHeader>
-          <DialogTitle id="object-edit-dialog-title">Objekt bearbeiten</DialogTitle>
-          <DialogDescription id="object-edit-dialog-description">
+          <DialogTitle id={titleId}>Objekt bearbeiten</DialogTitle>
+          <DialogDescription id={descriptionId}>
             <VisuallyHidden>Formular zum Bearbeiten der Objektdaten.</VisuallyHidden>
           </DialogDescription>
         </DialogHeader>

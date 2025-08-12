@@ -24,6 +24,8 @@ interface DeleteCustomerButtonProps {
 
 export function DeleteCustomerButton({ customerId }: DeleteCustomerButtonProps) {
   const [loading, setLoading] = useState(false);
+  const titleId = `delete-customer-alert-title-${customerId}`;
+  const descriptionId = `delete-customer-alert-description-${customerId}`;
 
   const handleDelete = async () => {
     setLoading(true);
@@ -55,12 +57,16 @@ export function DeleteCustomerButton({ customerId }: DeleteCustomerButtonProps) 
                 <Trash2 className="h-4 w-4" />
               </Button>
             </DialogTrigger>
-            <DialogContent key={`delete-customer-${customerId}-open`} aria-labelledby={`delete-customer-alert-title-${customerId}`}>
+            <DialogContent 
+              key={`delete-customer-${customerId}-open`} 
+              aria-labelledby={titleId} 
+              aria-describedby={descriptionId}
+            >
               <DialogHeader>
                 <VisuallyHidden asChild>
-                  <DialogTitle id={`delete-customer-alert-title-${customerId}`}>Sind Sie sicher?</DialogTitle>
+                  <DialogTitle id={titleId}>Sind Sie sicher?</DialogTitle>
                 </VisuallyHidden>
-                <DialogDescription>
+                <DialogDescription id={descriptionId}>
                   Diese Aktion kann nicht rückgängig gemacht werden. Der Kunde und alle zugehörigen Daten (Objekte, Aufträge, Kontakte) werden dauerhaft gelöscht.
                 </DialogDescription>
               </DialogHeader>

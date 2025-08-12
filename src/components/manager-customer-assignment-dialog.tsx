@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog"; // Import DialogDescription
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Link as LinkIcon } from "lucide-react";
 import { ManagerCustomerAssignmentForm } from "@/components/manager-customer-assignment-form";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden"; // Import VisuallyHidden
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 interface ManagerCustomerAssignmentDialogProps {
   managerId: string;
@@ -15,6 +15,8 @@ interface ManagerCustomerAssignmentDialogProps {
 
 export function ManagerCustomerAssignmentDialog({ managerId, managerName }: ManagerCustomerAssignmentDialogProps) {
   const [open, setOpen] = useState(false);
+  const titleId = `manager-customer-assignment-dialog-title`;
+  const descriptionId = `manager-customer-assignment-dialog-description`;
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -32,10 +34,14 @@ export function ManagerCustomerAssignmentDialog({ managerId, managerName }: Mana
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
-      <DialogContent key={open ? "manager-assignment-open" : "manager-assignment-closed"} aria-labelledby="manager-customer-assignment-dialog-title" aria-describedby="manager-customer-assignment-dialog-description">
+      <DialogContent 
+        key={open ? "manager-assignment-open" : "manager-assignment-closed"} 
+        aria-labelledby={titleId} 
+        aria-describedby={descriptionId}
+      >
         <DialogHeader>
-          <DialogTitle id="manager-customer-assignment-dialog-title">Kunden für {managerName} zuweisen</DialogTitle>
-          <DialogDescription id="manager-customer-assignment-dialog-description">
+          <DialogTitle id={titleId}>Kunden für {managerName} zuweisen</DialogTitle>
+          <DialogDescription id={descriptionId}>
             <VisuallyHidden>Formular zur Zuweisung von Kunden zu einem Manager.</VisuallyHidden>
           </DialogDescription>
         </DialogHeader>

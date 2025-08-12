@@ -16,6 +16,8 @@ interface CustomerContactCreateDialogProps {
 
 export function CustomerContactCreateDialog({ customerId, onContactCreated, disabled }: CustomerContactCreateDialogProps) {
   const [open, setOpen] = useState(false);
+  const titleId = `customer-contact-create-dialog-title`;
+  const descriptionId = `customer-contact-create-dialog-description`;
 
   const handleCreate = async (data: CustomerContactFormValues) => {
     const result = await createCustomerContact(data);
@@ -42,10 +44,14 @@ export function CustomerContactCreateDialog({ customerId, onContactCreated, disa
           <PlusCircle className="h-4 w-4" />
         </Button>
       </DialogTrigger>
-      <DialogContent key={open ? "customer-contact-create-open" : "customer-contact-create-closed"} aria-labelledby="customer-contact-create-dialog-title" aria-describedby="customer-contact-create-dialog-description">
+      <DialogContent 
+        key={open ? "customer-contact-create-open" : "customer-contact-create-closed"} 
+        aria-labelledby={titleId} 
+        aria-describedby={descriptionId}
+      >
         <DialogHeader>
-          <DialogTitle id="customer-contact-create-dialog-title">Neuen Kundenkontakt erstellen</DialogTitle>
-          <DialogDescription id="customer-contact-create-dialog-description">
+          <DialogTitle id={titleId}>Neuen Kundenkontakt erstellen</DialogTitle>
+          <DialogDescription id={descriptionId}>
             <VisuallyHidden>Formular zum Erstellen eines neuen Kundenkontakts.</VisuallyHidden>
           </DialogDescription>
         </DialogHeader>

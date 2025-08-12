@@ -24,6 +24,8 @@ interface DeleteTimeEntryButtonProps {
 
 export function DeleteTimeEntryButton({ entryId }: DeleteTimeEntryButtonProps) {
   const [loading, setLoading] = useState(false);
+  const titleId = `delete-time-entry-alert-title-${entryId}`;
+  const descriptionId = `delete-time-entry-alert-description-${entryId}`;
 
   const handleDelete = async () => {
     setLoading(true);
@@ -55,12 +57,16 @@ export function DeleteTimeEntryButton({ entryId }: DeleteTimeEntryButtonProps) {
                 <Trash2 className="h-4 w-4" />
               </Button>
             </DialogTrigger>
-            <DialogContent key={`delete-time-entry-${entryId}-open`} aria-labelledby={`delete-time-entry-alert-title-${entryId}`}>
+            <DialogContent 
+              key={`delete-time-entry-${entryId}-open`} 
+              aria-labelledby={titleId} 
+              aria-describedby={descriptionId}
+            >
               <DialogHeader>
                 <VisuallyHidden asChild>
-                  <DialogTitle id={`delete-time-entry-alert-title-${entryId}`}>Sind Sie sicher?</DialogTitle>
+                  <DialogTitle id={titleId}>Sind Sie sicher?</DialogTitle>
                 </VisuallyHidden>
-                <DialogDescription>
+                <DialogDescription id={descriptionId}>
                   Diese Aktion kann nicht rückgängig gemacht werden. Der Zeiteintrag wird dauerhaft gelöscht.
                 </DialogDescription>
               </DialogHeader>

@@ -1,13 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog"; // Import DialogDescription
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Pencil } from "lucide-react";
 import { AbsenceRequestForm, AbsenceRequestFormValues } from "@/components/absence-request-form";
 import { updateAbsenceRequest } from "@/app/dashboard/absence-requests/actions";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden"; // Import VisuallyHidden
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 interface AbsenceRequestEditDialogProps {
   request: {
@@ -26,6 +26,8 @@ interface AbsenceRequestEditDialogProps {
 
 export function AbsenceRequestEditDialog({ request, currentUserRole, currentUserId }: AbsenceRequestEditDialogProps) {
   const [open, setOpen] = useState(false);
+  const titleId = `absence-request-edit-dialog-title`;
+  const descriptionId = `absence-request-edit-dialog-description`;
 
   const handleUpdate = async (data: AbsenceRequestFormValues) => {
     const result = await updateAbsenceRequest(request.id, data);
@@ -51,10 +53,14 @@ export function AbsenceRequestEditDialog({ request, currentUserRole, currentUser
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
-      <DialogContent key={open ? "absence-request-edit-open" : "absence-request-edit-closed"} aria-labelledby="absence-request-edit-dialog-title" aria-describedby="absence-request-edit-dialog-description">
+      <DialogContent 
+        key={open ? "absence-request-edit-open" : "absence-request-edit-closed"} 
+        aria-labelledby={titleId} 
+        aria-describedby={descriptionId}
+      >
         <DialogHeader>
-          <DialogTitle id="absence-request-edit-dialog-title">Abwesenheitsantrag bearbeiten</DialogTitle>
-          <DialogDescription id="absence-request-edit-dialog-description">
+          <DialogTitle id={titleId}>Abwesenheitsantrag bearbeiten</DialogTitle>
+          <DialogDescription id={descriptionId}>
             <VisuallyHidden>Formular zum Bearbeiten des Abwesenheitsantrags.</VisuallyHidden>
           </DialogDescription>
         </DialogHeader>

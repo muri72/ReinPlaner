@@ -24,6 +24,8 @@ interface DeleteEmployeeButtonProps {
 
 export function DeleteEmployeeButton({ employeeId }: DeleteEmployeeButtonProps) {
   const [loading, setLoading] = useState(false);
+  const titleId = `delete-employee-alert-title-${employeeId}`;
+  const descriptionId = `delete-employee-alert-description-${employeeId}`;
 
   const handleDelete = async () => {
     setLoading(true);
@@ -55,12 +57,16 @@ export function DeleteEmployeeButton({ employeeId }: DeleteEmployeeButtonProps) 
                 <Trash2 className="h-4 w-4" />
               </Button>
             </DialogTrigger>
-            <DialogContent key={`delete-employee-${employeeId}-open`} aria-labelledby={`delete-employee-alert-title-${employeeId}`}>
+            <DialogContent 
+              key={`delete-employee-${employeeId}-open`} 
+              aria-labelledby={titleId} 
+              aria-describedby={descriptionId}
+            >
               <DialogHeader>
                 <VisuallyHidden asChild>
-                  <DialogTitle id={`delete-employee-alert-title-${employeeId}`}>Sind Sie sicher?</DialogTitle>
+                  <DialogTitle id={titleId}>Sind Sie sicher?</DialogTitle>
                 </VisuallyHidden>
-                <DialogDescription>
+                <DialogDescription id={descriptionId}>
                   Diese Aktion kann nicht rückgängig gemacht werden. Der Mitarbeiter und alle zugehörigen Daten werden dauerhaft gelöscht.
                 </DialogDescription>
               </DialogHeader>

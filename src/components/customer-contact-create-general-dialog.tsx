@@ -14,6 +14,8 @@ interface CustomerContactCreateGeneralDialogProps {
 
 export function CustomerContactCreateGeneralDialog({ onContactCreated }: CustomerContactCreateGeneralDialogProps) {
   const [open, setOpen] = useState(false);
+  const titleId = `customer-contact-create-general-dialog-title`;
+  const descriptionId = `customer-contact-create-general-dialog-description`;
 
   const handleCreate = async (data: CustomerContactFormValues) => {
     const result = await createCustomerContact(data);
@@ -34,10 +36,14 @@ export function CustomerContactCreateGeneralDialog({ onContactCreated }: Custome
           Neuen Kundenkontakt hinzufügen
         </Button>
       </DialogTrigger>
-      <DialogContent key={open ? "customer-contact-create-general-open" : "customer-contact-create-general-closed"} aria-labelledby="customer-contact-create-general-dialog-title" aria-describedby="customer-contact-create-general-dialog-description">
+      <DialogContent 
+        key={open ? "customer-contact-create-general-open" : "customer-contact-create-general-closed"} 
+        aria-labelledby={titleId} 
+        aria-describedby={descriptionId}
+      >
         <DialogHeader>
-          <DialogTitle id="customer-contact-create-general-dialog-title">Neuen Kundenkontakt hinzufügen</DialogTitle>
-          <DialogDescription id="customer-contact-create-general-dialog-description">
+          <DialogTitle id={titleId}>Neuen Kundenkontakt hinzufügen</DialogTitle>
+          <DialogDescription id={descriptionId}>
             <VisuallyHidden>Formular zum Hinzufügen eines neuen Kundenkontakts.</VisuallyHidden>
           </DialogDescription>
         </DialogHeader>

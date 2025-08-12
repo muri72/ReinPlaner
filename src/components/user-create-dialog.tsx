@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog"; // Import DialogDescription
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 import { UserForm, UserFormValues } from "@/components/user-form";
 import { registerUser } from "@/app/dashboard/users/actions";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden"; // Import VisuallyHidden
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 interface UserCreateDialogProps {
   onUserCreated?: () => void;
@@ -14,6 +14,8 @@ interface UserCreateDialogProps {
 
 export function UserCreateDialog({ onUserCreated }: UserCreateDialogProps) {
   const [open, setOpen] = useState(false);
+  const titleId = `user-create-dialog-title`;
+  const descriptionId = `user-create-dialog-description`;
 
   const handleCreate = async (data: UserFormValues) => {
     const result = await registerUser(data);
@@ -32,10 +34,14 @@ export function UserCreateDialog({ onUserCreated }: UserCreateDialogProps) {
           Neuen Benutzer registrieren
         </Button>
       </DialogTrigger>
-      <DialogContent key={open ? "user-create-open" : "user-create-closed"} aria-labelledby="user-create-dialog-title" aria-describedby="user-create-dialog-description">
+      <DialogContent 
+        key={open ? "user-create-open" : "user-create-closed"} 
+        aria-labelledby={titleId} 
+        aria-describedby={descriptionId}
+      >
         <DialogHeader>
-          <DialogTitle id="user-create-dialog-title">Neuen Benutzer registrieren</DialogTitle>
-          <DialogDescription id="user-create-dialog-description">
+          <DialogTitle id={titleId}>Neuen Benutzer registrieren</DialogTitle>
+          <DialogDescription id={descriptionId}>
             <VisuallyHidden>Formular zum Registrieren eines neuen Benutzers.</VisuallyHidden>
           </DialogDescription>
         </DialogHeader>

@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog"; // Import DialogDescription
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, Star } from "lucide-react";
 import { GiveFeedbackForm } from "@/components/give-feedback-form";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden"; // Import VisuallyHidden
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 interface GiveOrderFeedbackDialogProps {
   onFeedbackSubmitted?: () => void;
@@ -13,6 +13,8 @@ interface GiveOrderFeedbackDialogProps {
 
 export function GiveOrderFeedbackDialog({ onFeedbackSubmitted }: GiveOrderFeedbackDialogProps) {
   const [open, setOpen] = useState(false);
+  const titleId = `give-order-feedback-dialog-title`;
+  const descriptionId = `give-order-feedback-dialog-description`;
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -21,10 +23,14 @@ export function GiveOrderFeedbackDialog({ onFeedbackSubmitted }: GiveOrderFeedba
           <Star className="mr-2 h-4 w-4" /> Auftrags-Feedback geben
         </Button>
       </DialogTrigger>
-      <DialogContent key={open ? "give-order-feedback-open" : "give-order-feedback-closed"} aria-labelledby="give-order-feedback-dialog-title" aria-describedby="give-order-feedback-dialog-description">
+      <DialogContent 
+        key={open ? "give-order-feedback-open" : "give-order-feedback-closed"} 
+        aria-labelledby={titleId} 
+        aria-describedby={descriptionId}
+      >
         <DialogHeader>
-          <DialogTitle id="give-order-feedback-dialog-title">Auftragsbezogenes Feedback einreichen</DialogTitle>
-          <DialogDescription id="give-order-feedback-dialog-description">
+          <DialogTitle id={titleId}>Auftragsbezogenes Feedback einreichen</DialogTitle>
+          <DialogDescription id={descriptionId}>
             <VisuallyHidden>Formular zum Einreichen von Feedback zu einem bestimmten Auftrag.</VisuallyHidden>
           </DialogDescription>
         </DialogHeader>

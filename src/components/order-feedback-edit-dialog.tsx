@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog"; // Import DialogDescription
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Pencil, Star } from "lucide-react";
 import { useForm } from "react-hook-form";
@@ -12,7 +12,7 @@ import { updateOrderFeedback } from "@/app/dashboard/feedback/actions";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden"; // Import VisuallyHidden
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 const editSchema = z.object({
   rating: z.number().min(1, "Bewertung ist erforderlich").max(5),
@@ -32,6 +32,8 @@ interface OrderFeedbackEditDialogProps {
 export function OrderFeedbackEditDialog({ feedback }: OrderFeedbackEditDialogProps) {
   const [open, setOpen] = useState(false);
   const [hoverRating, setHoverRating] = useState(0);
+  const titleId = `order-feedback-edit-dialog-title`;
+  const descriptionId = `order-feedback-edit-dialog-description`;
 
   const form = useForm<EditFormValues>({
     resolver: zodResolver(editSchema),
@@ -69,10 +71,14 @@ export function OrderFeedbackEditDialog({ feedback }: OrderFeedbackEditDialogPro
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
-      <DialogContent key={open ? "order-feedback-edit-open" : "order-feedback-edit-closed"} aria-labelledby="order-feedback-edit-dialog-title" aria-describedby="order-feedback-edit-dialog-description">
+      <DialogContent 
+        key={open ? "order-feedback-edit-open" : "order-feedback-edit-closed"} 
+        aria-labelledby={titleId} 
+        aria-describedby={descriptionId}
+      >
         <DialogHeader>
-          <DialogTitle id="order-feedback-edit-dialog-title">Feedback bearbeiten</DialogTitle>
-          <DialogDescription id="order-feedback-edit-dialog-description">
+          <DialogTitle id={titleId}>Feedback bearbeiten</DialogTitle>
+          <DialogDescription id={descriptionId}>
             <VisuallyHidden>Formular zum Bearbeiten des Auftrags-Feedbacks.</VisuallyHidden>
           </DialogDescription>
         </DialogHeader>

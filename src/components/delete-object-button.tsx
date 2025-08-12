@@ -24,6 +24,8 @@ interface DeleteObjectButtonProps {
 
 export function DeleteObjectButton({ objectId }: DeleteObjectButtonProps) {
   const [loading, setLoading] = useState(false);
+  const titleId = `delete-object-alert-title-${objectId}`;
+  const descriptionId = `delete-object-alert-description-${objectId}`;
 
   const handleDelete = async () => {
     setLoading(true);
@@ -55,12 +57,16 @@ export function DeleteObjectButton({ objectId }: DeleteObjectButtonProps) {
                 <Trash2 className="h-4 w-4" />
               </Button>
             </DialogTrigger>
-            <DialogContent key={`delete-object-${objectId}-open`} aria-labelledby={`delete-object-alert-title-${objectId}`}>
+            <DialogContent 
+              key={`delete-object-${objectId}-open`} 
+              aria-labelledby={titleId} 
+              aria-describedby={descriptionId}
+            >
               <DialogHeader>
                 <VisuallyHidden asChild>
-                  <DialogTitle id={`delete-object-alert-title-${objectId}`}>Sind Sie sicher?</DialogTitle>
+                  <DialogTitle id={titleId}>Sind Sie sicher?</DialogTitle>
                 </VisuallyHidden>
-                <DialogDescription>
+                <DialogDescription id={descriptionId}>
                   Diese Aktion kann nicht rückgängig gemacht werden. Das Objekt und alle zugehörigen Daten werden dauerhaft gelöscht.
                 </DialogDescription>
               </DialogHeader>

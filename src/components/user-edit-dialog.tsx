@@ -1,13 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog"; // Import DialogDescription
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Pencil } from "lucide-react";
 import { UserForm, UserFormValues } from "@/components/user-form";
 import { updateUser } from "@/app/dashboard/users/actions";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden"; // Import VisuallyHidden
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 interface UserEditDialogProps {
   user: {
@@ -21,6 +21,8 @@ interface UserEditDialogProps {
 
 export function UserEditDialog({ user }: UserEditDialogProps) {
   const [open, setOpen] = useState(false);
+  const titleId = `user-edit-dialog-title`;
+  const descriptionId = `user-edit-dialog-description`;
 
   const handleUpdate = async (data: UserFormValues) => {
     const result = await updateUser(user.id, data);
@@ -46,10 +48,14 @@ export function UserEditDialog({ user }: UserEditDialogProps) {
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
-      <DialogContent key={open ? "user-edit-open" : "user-edit-closed"} aria-labelledby="user-edit-dialog-title" aria-describedby="user-edit-dialog-description">
+      <DialogContent 
+        key={open ? "user-edit-open" : "user-edit-closed"} 
+        aria-labelledby={titleId} 
+        aria-describedby={descriptionId}
+      >
         <DialogHeader>
-          <DialogTitle id="user-edit-dialog-title">Benutzer bearbeiten</DialogTitle>
-          <DialogDescription id="user-edit-dialog-description">
+          <DialogTitle id={titleId}>Benutzer bearbeiten</DialogTitle>
+          <DialogDescription id={descriptionId}>
             <VisuallyHidden>Formular zum Bearbeiten der Benutzerdaten.</VisuallyHidden>
           </DialogDescription>
         </DialogHeader>

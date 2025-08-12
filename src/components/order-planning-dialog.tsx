@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { processOrderRequest } from "@/app/dashboard/orders/actions";
 import { Badge } from "./ui/badge";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden"; // Import VisuallyHidden
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 interface OrderPlanningDialogProps {
   order: {
@@ -33,6 +33,8 @@ export function OrderPlanningDialog({ order }: OrderPlanningDialogProps) {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("");
   const [loading, setLoading] = useState(false);
+  const titleId = `order-planning-dialog-title`;
+  const descriptionId = `order-planning-dialog-description`;
 
   useEffect(() => {
     if (open) {
@@ -70,10 +72,14 @@ export function OrderPlanningDialog({ order }: OrderPlanningDialogProps) {
       <DialogTrigger asChild>
         <Button variant="default">Planen & Genehmigen</Button>
       </DialogTrigger>
-      <DialogContent key={open ? "order-planning-open" : "order-planning-closed"} aria-labelledby="order-planning-dialog-title" aria-describedby="order-planning-dialog-description">
+      <DialogContent 
+        key={open ? "order-planning-open" : "order-planning-closed"} 
+        aria-labelledby={titleId} 
+        aria-describedby={descriptionId}
+      >
         <DialogHeader>
-          <DialogTitle id="order-planning-dialog-title">Anfrage planen: {order.title}</DialogTitle>
-          <DialogDescription id="order-planning-dialog-description">
+          <DialogTitle id={titleId}>Anfrage planen: {order.title}</DialogTitle>
+          <DialogDescription id={descriptionId}>
             Wählen Sie einen Mitarbeiter aus, um diese Anfrage zu genehmigen oder lehnen Sie sie ab.
           </DialogDescription>
         </DialogHeader>

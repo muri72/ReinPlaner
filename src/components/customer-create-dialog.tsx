@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog"; // Import DialogDescription
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 import { CustomerForm, CustomerFormValues } from "@/components/customer-form";
 import { createCustomer } from "@/app/dashboard/customers/actions";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden"; // Import VisuallyHidden
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 interface CustomerCreateDialogProps {
   onCustomerCreated?: () => void;
@@ -14,6 +14,8 @@ interface CustomerCreateDialogProps {
 
 export function CustomerCreateDialog({ onCustomerCreated }: CustomerCreateDialogProps) {
   const [open, setOpen] = useState(false);
+  const titleId = `customer-create-dialog-title`;
+  const descriptionId = `customer-create-dialog-description`;
 
   const handleCreate = async (data: CustomerFormValues) => {
     const result = await createCustomer(data);
@@ -32,10 +34,14 @@ export function CustomerCreateDialog({ onCustomerCreated }: CustomerCreateDialog
           Neuen Kunden hinzufügen
         </Button>
       </DialogTrigger>
-      <DialogContent key={open ? "customer-create-open" : "customer-create-closed"} aria-labelledby="customer-create-dialog-title" aria-describedby="customer-create-dialog-description">
+      <DialogContent 
+        key={open ? "customer-create-open" : "customer-create-closed"} 
+        aria-labelledby={titleId} 
+        aria-describedby={descriptionId}
+      >
         <DialogHeader>
-          <DialogTitle id="customer-create-dialog-title">Neuen Kunden hinzufügen</DialogTitle>
-          <DialogDescription id="customer-create-dialog-description">
+          <DialogTitle id={titleId}>Neuen Kunden hinzufügen</DialogTitle>
+          <DialogDescription id={descriptionId}>
             <VisuallyHidden>Formular zum Hinzufügen eines neuen Kunden.</VisuallyHidden>
           </DialogDescription>
         </DialogHeader>
