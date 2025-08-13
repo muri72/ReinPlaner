@@ -8,8 +8,15 @@ import { createAbsenceRequest } from "./actions";
 import { AbsenceRequestEditDialog } from "@/components/absence-request-edit-dialog";
 import { DeleteAbsenceRequestButton } from "@/components/delete-absence-request-button";
 import { AbsenceTimelineCalendar } from "@/components/absence-timeline-calendar";
-import { Button } from "@/components/ui/button"; // Hinzugefügt
-import { AbsenceRequestCreateDialog } from "@/components/absence-request-create-dialog"; // Import the new dialog
+import { Button } from "@/components/ui/button";
+import { AbsenceRequestCreateDialog } from "@/components/absence-request-create-dialog";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import { cn } from "@/lib/utils"; // Import cn for conditional styling
 
 export default async function AbsenceRequestsPage() {
   const supabase = await createClient();
@@ -101,47 +108,55 @@ export default async function AbsenceRequestsPage() {
                 </div>
               </div>
             ) : (
-              requests.map((request) => (
-                <Card key={request.id} className="shadow-neumorphic glassmorphism-card">
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-base md:text-lg font-semibold">
-                      {typeTranslations[request.type] || 'Abwesenheit'}
-                    </CardTitle>
-                    <div className="flex items-center space-x-2">
-                      <AbsenceRequestEditDialog request={request} currentUserRole={currentUserRole} currentUserId={currentUser.id} />
-                      <DeleteAbsenceRequestButton requestId={request.id} />
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-2">
-                    {currentUserRole !== 'employee' && request.employees && (
-                       <div className="flex items-center text-sm text-muted-foreground">
-                         <User className="mr-2 h-4 w-4" />
-                         <span>{request.employees.first_name} {request.employees.last_name}</span>
-                       </div>
-                    )}
-                    <div className="flex items-center text-sm text-muted-foreground">
-                      <CalendarOff className="mr-2 h-4 w-4" />
-                      <span>{new Date(request.start_date).toLocaleDateString()} - {new Date(request.end_date).toLocaleDateString()}</span>
-                    </div>
-                    {request.notes && (
-                      <div className="flex items-start text-sm text-muted-foreground">
-                        <FileText className="mr-2 h-4 w-4 mt-1 flex-shrink-0" />
-                        <p className="flex-grow">{request.notes}</p>
+              <Accordion type="single" collapsible className="w-full">
+                {requests.map((request) => (
+                  <AccordionItem
+                    key={request.id}
+                    value={request.id}
+                    className="border rounded-xl shadow-neumorphic glassmorphism-card mb-4 data-[state=open]:border-primary/50" // Added rounded-xl and mb-4 for spacing
+                  >
+                    <AccordionTrigger className="flex items-center justify-between p-4 text-left hover:no-underline">
+                      <div className="flex flex-col items-start flex-grow pr-4"> {/* Added pr-4 for spacing from buttons */}
+                        <h3 className="text-base md:text-lg font-semibold">
+                          {typeTranslations[request.type] || 'Abwesenheit'}
+                        </h3>
+                        {currentUserRole !== 'employee' && request.employees && (
+                          <div className="flex items-center text-sm text-muted-foreground">
+                            <User className="mr-2 h-4 w-4" />
+                            <span>{request.employees.first_name} {request.employees.last_name}</span>
+                          </div>
+                        )}
+                        <div className="flex items-center text-sm text-muted-foreground">
+                          <CalendarOff className="mr-2 h-4 w-4" />
+                          <span>{new Date(request.start_date).toLocaleDateString()} - {new Date(request.end_date).toLocaleDateString()}</span>
+                        </div>
+                        <Badge variant={getStatusBadgeVariant(request.status) as any} className="mt-2">
+                          {getStatusIcon(request.status)}
+                          {request.status}
+                        </Badge>
                       </div>
-                    )}
-                    {request.admin_notes && (
-                      <div className="flex items-start text-sm text-muted-foreground">
-                        <FileText className="mr-2 h-4 w-4 mt-1 flex-shrink-0" />
-                        <p className="flex-grow">{request.admin_notes}</p>
+                      <div className="flex items-center space-x-2" onClick={(e) => e.stopPropagation()}> {/* Stop propagation for buttons */}
+                        <AbsenceRequestEditDialog request={request} currentUserRole={currentUserRole} currentUserId={currentUser.id} />
+                        <DeleteAbsenceRequestButton requestId={request.id} />
                       </div>
-                    )}
-                    <Badge variant={getStatusBadgeVariant(request.status) as any} className="mt-2">
-                      {getStatusIcon(request.status)}
-                      {request.status}
-                    </Badge>
-                  </CardContent>
-                </Card>
-              ))
+                    </AccordionTrigger>
+                    <AccordionContent className="p-4 pt-0">
+                      {request.notes && (
+                        <div className="flex items-start text-sm text-muted-foreground mb-2">
+                          <FileText className="mr-2 h-4 w-4 mt-1 flex-shrink-0" />
+                          <p className="flex-grow">Notizen: {request.notes}</p>
+                        </div>
+                      )}
+                      {request.admin_notes && (
+                        <div className="flex items-start text-sm text-muted-foreground">
+                          <FileText className="mr-2 h-4 w-4 mt-1 flex-shrink-0" />
+                          <p className="flex-grow">Admin-Notizen: {request.admin_notes}</p>
+                        </div>
+                      )}
+                    </AccordionContent>
+                  </AccordionItem>
+                ))}
+              </Accordion>
             )}
           </div>
         </div>
