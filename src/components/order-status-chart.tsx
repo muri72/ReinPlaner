@@ -9,7 +9,7 @@ interface OrderStatusChartProps {
 }
 
 // Farben für die Segmente des Tortendiagramms
-const COLORS = ['hsl(var(--warning))', 'hsl(var(--secondary))', 'hsl(var(--primary))']; // Gelb für Ausstehend, Hellrosa für In Bearbeitung, Pastelblau für Abgeschlossen
+const COLORS = ['hsl(var(--warning))', 'hsl(var(--secondary))', 'hsl(var(--primary))']; // Gelb für Ausstehend, Hellblau für In Bearbeitung, Hauptblau für Abgeschlossen
 
 export function OrderStatusChart({ data }: OrderStatusChartProps) {
   // Filtern Sie Datenpunkte mit Wert 0 heraus, damit sie nicht im Diagramm erscheinen

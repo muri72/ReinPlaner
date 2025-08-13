@@ -14,18 +14,18 @@
     --popover: 0 0% 100%;
     --popover-foreground: 220 10% 15%;
 
-    /* Pastel Accent Colors */
-    --primary: 210 80% 65%; /* Pastel Blue */
-    --primary-foreground: 220 10% 15%; /* Dark text on primary */
+    /* Blue-centric Accent Colors (derived from logo) */
+    --primary: 210 80% 45%; /* A solid, clean blue */
+    --primary-foreground: 0 0% 100%; /* White text on primary */
 
-    --secondary: 330 80% 85%; /* Very light Pastel Pink */
+    --secondary: 210 50% 85%; /* A very light blue, replacing pink */
     --secondary-foreground: 220 10% 15%; /* Dark text on secondary */
 
     --muted: 210 20% 95%; /* Light Gray-Blue */
     --muted-foreground: 210 10% 45%; /* Medium Gray-Blue */
 
-    --accent: 270 70% 75%; /* Pastel Purple */
-    --accent-foreground: 220 10% 15%; /* Dark text on accent */
+    --accent: 200 70% 55%; /* A slightly different blue hue, replacing purple */
+    --accent-foreground: 0 0% 100%; /* White text on accent */
 
     --destructive: 0 80% 50%; /* Strong Red (for errors/danger) */
     --destructive-foreground: 0 0% 100%; /* White */
@@ -38,7 +38,7 @@
 
     --border: 210 20% 90%; /* Light Gray-Blue Border */
     --input: 210 20% 95%; /* Slightly darker input background */
-    --ring: 210 80% 65%; /* Primary color for focus ring */
+    --ring: 210 80% 45%; /* Primary color for focus ring */
 
     /* Border Radius - Increased for smooth rounded corners */
     --radius: 16px; /* Default for rounded-lg */
@@ -53,16 +53,16 @@
     /* Sidebar Specific Colors (adjusted to new palette) */
     --sidebar-background: 210 20% 98%; /* Very light gray-blue */
     --sidebar-foreground: 220 10% 20%; /* Darker text */
-    --sidebar-primary: 210 80% 55%; /* Slightly darker primary for contrast */
+    --sidebar-primary: 210 80% 40%; /* Slightly darker primary for contrast */
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 270 70% 70%; /* Slightly darker accent for hover */
+    --sidebar-accent: 200 70% 50%; /* Slightly darker accent for hover */
     --sidebar-accent-foreground: 220 10% 20%;
     --sidebar-border: 210 20% 90%;
-    --sidebar-ring: 210 80% 65%;
+    --sidebar-ring: 210 80% 45%;
   }
 
   .dark {
-    /* Dark Mode Colors - Adjusted for glassmorphism and pastel feel */
+    /* Dark Mode Colors - Adjusted for glassmorphism and blue-centric feel */
     --background: 220 10% 10%; /* Dark Gray-Blue */
     --foreground: 220 10% 90%; /* Light Gray-Blue */
 
@@ -72,17 +72,17 @@
     --popover: 220 10% 12%;
     --popover-foreground: 220 10% 90%;
 
-    /* Pastel Accent Colors (Dark Mode versions) */
-    --primary: 210 80% 75%; /* Lighter Pastel Blue for dark mode */
+    /* Blue-centric Accent Colors (Dark Mode versions) */
+    --primary: 210 80% 75%; /* Lighter blue for dark mode */
     --primary-foreground: 220 10% 10%; /* Dark text on primary */
 
-    --secondary: 330 80% 75%; /* Lighter Pastel Pink for dark mode */
-    --secondary-foreground: 220 10% 10%; /* Dark text on secondary */
+    --secondary: 210 50% 30%; /* Darker light blue for dark mode */
+    --secondary-foreground: 220 10% 90%;
 
     --muted: 210 15% 20%;
     --muted-foreground: 210 10% 60%;
 
-    --accent: 270 70% 85%; /* Lighter Pastel Purple for dark mode */
+    --accent: 200 70% 75%; /* Lighter accent blue for dark mode */
     --accent-foreground: 220 10% 10%;
 
     --destructive: 0 80% 60%; /* Lighter Red for dark mode */
@@ -103,7 +103,7 @@
     --sidebar-foreground: 220 10% 85%;
     --sidebar-primary: 210 80% 65%;
     --sidebar-primary-foreground: 220 10% 10%;
-    --sidebar-accent: 270 70% 70%;
+    --sidebar-accent: 200 70% 70%;
     --sidebar-accent-foreground: 220 10% 10%;
     --sidebar-border: 210 15% 20%;
     --sidebar-ring: 210 80% 75%;
