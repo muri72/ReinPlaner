@@ -7,7 +7,7 @@ import { Pencil } from "lucide-react";
 import { OrderForm, OrderFormValues } from "@/components/order-form";
 import { updateOrder } from "@/app/dashboard/orders/actions";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-// Removed import: VisuallyHidden
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 // Definierte Liste der Dienstleistungen (muss mit order-form.tsx übereinstimmen)
 const availableServices = [
@@ -86,7 +86,7 @@ export function OrderEditDialog({ order }: OrderEditDialogProps) {
         <DialogHeader>
           <DialogTitle id={titleId}>Auftrag bearbeiten</DialogTitle>
           <DialogDescription id={descriptionId}>
-            {/* Removed VisuallyHidden */}
+            <VisuallyHidden>Formular zum Bearbeiten der Auftragsdetails.</VisuallyHidden>
           </DialogDescription>
         </DialogHeader>
         <OrderForm

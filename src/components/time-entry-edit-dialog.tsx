@@ -7,7 +7,7 @@ import { Pencil } from "lucide-react";
 import { TimeEntryForm, TimeEntryFormValues } from "@/components/time-entry-form";
 import { updateTimeEntry } from "@/app/dashboard/time-tracking/actions";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-// Removed import: VisuallyHidden
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 interface TimeEntryEditDialogProps {
   timeEntry: {
@@ -65,7 +65,7 @@ export function TimeEntryEditDialog({ timeEntry, currentUserId, isAdmin }: TimeE
         <DialogHeader>
           <DialogTitle id={titleId}>Zeiteintrag bearbeiten</DialogTitle>
           <DialogDescription id={descriptionId}>
-            {/* Removed VisuallyHidden */}
+            <VisuallyHidden>Formular zum Bearbeiten des Zeiteintrags.</VisuallyHidden>
           </DialogDescription>
         </DialogHeader>
         <TimeEntryForm

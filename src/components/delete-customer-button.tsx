@@ -8,13 +8,15 @@ import { deleteCustomer } from "@/app/dashboard/customers/actions";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
+  DialogTitle,
   DialogTrigger,
   DialogClose,
 } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-// Removed import: VisuallyHidden
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 interface DeleteCustomerButtonProps {
   customerId: string;
@@ -22,7 +24,8 @@ interface DeleteCustomerButtonProps {
 
 export function DeleteCustomerButton({ customerId }: DeleteCustomerButtonProps) {
   const [loading, setLoading] = useState(false);
-  // Removed titleId and descriptionId
+  const titleId = `delete-customer-alert-title-${customerId}`;
+  const descriptionId = `delete-customer-alert-description-${customerId}`;
 
   const handleDelete = async () => {
     setLoading(true);
@@ -56,11 +59,19 @@ export function DeleteCustomerButton({ customerId }: DeleteCustomerButtonProps) 
             </DialogTrigger>
             <DialogContent 
               key={`delete-customer-${customerId}-open`} 
-              // Removed aria-labelledby and aria-describedby
+              aria-labelledby={titleId} 
+              aria-describedby={descriptionId}
               className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card"
             >
               <DialogHeader>
-                {/* Removed DialogTitle and DialogDescription */}
+                <DialogTitle id={titleId}>
+                  <VisuallyHidden>Sind Sie sicher?</VisuallyHidden>
+                </DialogTitle>
+                <DialogDescription id={descriptionId}>
+                  <VisuallyHidden>
+                    Diese Aktion kann nicht rückgängig gemacht werden. Der Kunde und alle zugehörigen Daten (Objekte, Aufträge, Kontakte) werden dauerhaft gelöscht.
+                  </VisuallyHidden>
+                </DialogDescription>
               </DialogHeader>
               <DialogFooter>
                 <DialogClose asChild>

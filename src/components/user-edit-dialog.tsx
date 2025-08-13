@@ -7,7 +7,7 @@ import { Pencil } from "lucide-react";
 import { UserForm, UserFormValues } from "@/components/user-form";
 import { updateUser } from "@/app/dashboard/users/actions";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-// Removed import: VisuallyHidden
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 interface UserEditDialogProps {
   user: {
@@ -57,7 +57,7 @@ export function UserEditDialog({ user }: UserEditDialogProps) {
         <DialogHeader>
           <DialogTitle id={titleId}>Benutzer bearbeiten</DialogTitle>
           <DialogDescription id={descriptionId}>
-            {/* Removed VisuallyHidden */}
+            <VisuallyHidden>Formular zum Bearbeiten der Benutzerdaten.</VisuallyHidden>
           </DialogDescription>
         </DialogHeader>
         <UserForm

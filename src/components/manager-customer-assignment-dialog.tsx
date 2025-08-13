@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Link as LinkIcon } from "lucide-react";
 import { ManagerCustomerAssignmentForm } from "@/components/manager-customer-assignment-form";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-// Removed import: VisuallyHidden
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 interface ManagerCustomerAssignmentDialogProps {
   managerId: string;
@@ -43,7 +43,7 @@ export function ManagerCustomerAssignmentDialog({ managerId, managerName }: Mana
         <DialogHeader>
           <DialogTitle id={titleId}>Kunden für {managerName} zuweisen</DialogTitle>
           <DialogDescription id={descriptionId}>
-            {/* Removed VisuallyHidden */}
+            <VisuallyHidden>Formular zur Zuweisung von Kunden zu einem Manager.</VisuallyHidden>
           </DialogDescription>
         </DialogHeader>
         <ManagerCustomerAssignmentForm

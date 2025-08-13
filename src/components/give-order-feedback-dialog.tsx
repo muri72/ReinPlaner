@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Button } from "@/components/ui/button";
 import { Star } from "lucide-react";
 import { GiveFeedbackForm } from "@/components/give-feedback-form";
-// Removed import: VisuallyHidden
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 interface GiveOrderFeedbackDialogProps {
   onFeedbackSubmitted?: () => void;
@@ -32,7 +32,7 @@ export function GiveOrderFeedbackDialog({ onFeedbackSubmitted }: GiveOrderFeedba
         <DialogHeader>
           <DialogTitle id={titleId}>Auftragsbezogenes Feedback einreichen</DialogTitle>
           <DialogDescription id={descriptionId}>
-            {/* Removed VisuallyHidden */}
+            <VisuallyHidden>Formular zum Einreichen von Feedback zu einem bestimmten Auftrag.</VisuallyHidden>
           </DialogDescription>
         </DialogHeader>
         <GiveFeedbackForm onSuccess={() => setOpen(false)} />

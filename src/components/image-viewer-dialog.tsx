@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
 import NextImage from "next/image";
-// Removed import: VisuallyHidden
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 interface ImageViewerDialogProps {
   src: string;
@@ -16,7 +16,8 @@ interface ImageViewerDialogProps {
 
 export function ImageViewerDialog({ src, alt, trigger, onOpenChange }: ImageViewerDialogProps) {
   const [open, setOpen] = useState(false);
-  // Removed titleId and descriptionId
+  const titleId = `image-viewer-dialog-title`;
+  const descriptionId = `image-viewer-dialog-description`;
 
   const handleOpenChange = (newOpen: boolean) => {
     setOpen(newOpen);
@@ -29,10 +30,16 @@ export function ImageViewerDialog({ src, alt, trigger, onOpenChange }: ImageView
       <DialogContent 
         key={open ? "image-viewer-open" : "image-viewer-closed"} 
         className="sm:max-w-[90vw] max-h-[90vh] overflow-hidden p-0 border-none bg-transparent shadow-none glassmorphism-card"
-        // Removed aria-labelledby and aria-describedby
+        aria-labelledby={titleId} 
+        aria-describedby={descriptionId}
       >
         <DialogHeader>
-          {/* Removed DialogTitle and DialogDescription */}
+          <DialogTitle id={titleId}>
+            <VisuallyHidden>Bildansicht</VisuallyHidden>
+          </DialogTitle>
+          <DialogDescription id={descriptionId}>
+            <VisuallyHidden>Vollansicht des Bildes.</VisuallyHidden>
+          </DialogDescription>
         </DialogHeader>
 
         {/* Close button, outside DialogHeader */}
