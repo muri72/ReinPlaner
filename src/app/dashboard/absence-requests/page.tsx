@@ -75,75 +75,73 @@ export default async function AbsenceRequestsPage() {
     <div className="p-4 md:p-8 space-y-8">
       <h1 className="text-2xl md:text-3xl font-bold">Abwesenheitsverwaltung</h1>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-8">
-        {isAdmin && (
-          <div className="space-y-6">
-            <h2 className="text-xl md:text-2xl font-bold">Monatsübersicht Abwesenheiten</h2>
-            <div className="p-4 border rounded-lg shadow-neumorphic glassmorphism-card">
-              <AbsenceTimelineCalendar />
-            </div>
-          </div>
-        )}
-
+      {isAdmin && (
         <div className="space-y-6">
-          <h2 className="text-xl md:text-2xl font-bold">Antragsübersicht</h2>
-          <div className="flex justify-end mb-4">
-            <AbsenceRequestCreateDialog currentUserRole={currentUserRole} currentUserId={currentUser.id} />
+          <h2 className="text-xl md:text-2xl font-bold">Monatsübersicht Abwesenheiten</h2>
+          <div className="p-4 border rounded-lg shadow-neumorphic glassmorphism-card">
+            <AbsenceTimelineCalendar />
           </div>
-          <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-4">
-            {requests.length === 0 ? (
-              <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30 shadow-neumorphic glassmorphism-card">
-                <CalendarOff className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
-                <p className="text-base md:text-lg font-semibold">Keine Anträge gefunden</p>
-                <p className="text-sm">Reichen Sie einen neuen Abwesenheitsantrag ein.</p>
-                <div className="mt-4">
-                  {/* The button to open the dialog is now part of AbsenceRequestCreateDialog */}
-                </div>
+        </div>
+      )}
+
+      <div className="space-y-6">
+        <h2 className="text-xl md:text-2xl font-bold">Antragsübersicht</h2>
+        <div className="flex justify-end mb-4">
+          <AbsenceRequestCreateDialog currentUserRole={currentUserRole} currentUserId={currentUser.id} />
+        </div>
+        <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-4">
+          {requests.length === 0 ? (
+            <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30 shadow-neumorphic glassmorphism-card">
+              <CalendarOff className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
+              <p className="text-base md:text-lg font-semibold">Keine Anträge gefunden</p>
+              <p className="text-sm">Reichen Sie einen neuen Abwesenheitsantrag ein.</p>
+              <div className="mt-4">
+                {/* The button to open the dialog is now part of AbsenceRequestCreateDialog */}
               </div>
-            ) : (
-              requests.map((request) => (
-                <Card key={request.id} className="shadow-neumorphic glassmorphism-card">
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-base md:text-lg font-semibold">
-                      {typeTranslations[request.type] || 'Abwesenheit'}
-                    </CardTitle>
-                    <div className="flex items-center space-x-2">
-                      <AbsenceRequestEditDialog request={request} currentUserRole={currentUserRole} currentUserId={currentUser.id} />
-                      <DeleteAbsenceRequestButton requestId={request.id} />
+            </div>
+          ) : (
+            requests.map((request) => (
+              <Card key={request.id} className="shadow-neumorphic glassmorphism-card">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-base md:text-lg font-semibold">
+                    {typeTranslations[request.type] || 'Abwesenheit'}
+                  </CardTitle>
+                  <div className="flex items-center space-x-2">
+                    <AbsenceRequestEditDialog request={request} currentUserRole={currentUserRole} currentUserId={currentUser.id} />
+                    <DeleteAbsenceRequestButton requestId={request.id} />
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {currentUserRole !== 'employee' && request.employees && (
+                     <div className="flex items-center text-sm text-muted-foreground">
+                       <User className="mr-2 h-4 w-4" />
+                       <span>{request.employees.first_name} {request.employees.last_name}</span>
+                     </div>
+                  )}
+                  <div className="flex items-center text-sm text-muted-foreground">
+                    <CalendarOff className="mr-2 h-4 w-4" />
+                    <span>{new Date(request.start_date).toLocaleDateString()} - {new Date(request.end_date).toLocaleDateString()}</span>
+                  </div>
+                  {request.notes && (
+                    <div className="flex items-start text-sm text-muted-foreground">
+                      <FileText className="mr-2 h-4 w-4 mt-1 flex-shrink-0" />
+                      <p className="flex-grow">{request.notes}</p>
                     </div>
-                  </CardHeader>
-                  <CardContent className="space-y-2">
-                    {currentUserRole !== 'employee' && request.employees && (
-                       <div className="flex items-center text-sm text-muted-foreground">
-                         <User className="mr-2 h-4 w-4" />
-                         <span>{request.employees.first_name} {request.employees.last_name}</span>
-                       </div>
-                    )}
-                    <div className="flex items-center text-sm text-muted-foreground">
-                      <CalendarOff className="mr-2 h-4 w-4" />
-                      <span>{new Date(request.start_date).toLocaleDateString()} - {new Date(request.end_date).toLocaleDateString()}</span>
+                  )}
+                  {request.admin_notes && (
+                    <div className="flex items-start text-sm text-muted-foreground">
+                      <FileText className="mr-2 h-4 w-4 mt-1 flex-shrink-0" />
+                      <p className="flex-grow">{request.admin_notes}</p>
                     </div>
-                    {request.notes && (
-                      <div className="flex items-start text-sm text-muted-foreground">
-                        <FileText className="mr-2 h-4 w-4 mt-1 flex-shrink-0" />
-                        <p className="flex-grow">{request.notes}</p>
-                      </div>
-                    )}
-                    {request.admin_notes && (
-                      <div className="flex items-start text-sm text-muted-foreground">
-                        <FileText className="mr-2 h-4 w-4 mt-1 flex-shrink-0" />
-                        <p className="flex-grow">{request.admin_notes}</p>
-                      </div>
-                    )}
-                    <Badge variant={getStatusBadgeVariant(request.status) as any} className="mt-2">
-                      {getStatusIcon(request.status)}
-                      {request.status}
-                    </Badge>
-                  </CardContent>
-                </Card>
-              ))
-            )}
-          </div>
+                  )}
+                  <Badge variant={getStatusBadgeVariant(request.status) as any} className="mt-2">
+                    {getStatusIcon(request.status)}
+                    {request.status}
+                  </Badge>
+                </CardContent>
+              </Card>
+            ))
+          )}
         </div>
       </div>
     </div>
