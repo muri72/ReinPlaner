@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Star, MessageSquare, Image as ImageIcon, Trash2, Pencil, CornerDownRight } from "lucide-react";
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious, type CarouselApi } from "@/components/ui/carousel"; // CarouselNext, CarouselPrevious hinzugefügt, CarouselApi importiert
+import { Carousel, CarouselContent, CarouselItem } from "@/components/ui/carousel"; // CarouselNext, CarouselPrevious, type CarouselApi entfernt
 import NextImage from "next/image";
 import { toast } from "sonner";
 import { FeedbackReplyForm } from "./feedback-reply-form";
@@ -76,27 +76,21 @@ export function FeedbackCard({ feedback, feedbackType, currentUserId, currentUse
   };
 
   // Carousel-State für Indikatoren und API sind nicht mehr notwendig
-  const [carouselApi, setCarouselApi] = useState<CarouselApi>(); // Re-add this state
+  // const [carouselApi, setCarouselApi] = useState<CarouselApi>();
+  // const [currentSlide, setCurrentSlide] = useState(0);
+  // const [totalSlides, setTotalSlides] = useState(0);
 
-  useEffect(() => {
-    if (!carouselApi) {
-      return;
-    }
-    // Diese Zeilen sind für die interne Funktionalität des Karussells wichtig,
-    // auch wenn wir die Indikatoren nicht direkt anzeigen.
-    // Sie stellen sicher, dass canScrollPrev/Next korrekt aktualisiert werden.
-    const onSelect = () => {
-      // Hier könnten Sie Logik für Indikatoren hinzufügen, falls benötigt
-    };
+  // useEffect(() => {
+  //   if (!carouselApi) {
+  //     return;
+  //   }
+  //   setTotalSlides(carouselApi.scrollSnapList().length);
+  //   setCurrentSlide(carouselApi.selectedScrollSnap());
 
-    carouselApi.on("select", onSelect);
-    carouselApi.on("reInit", onSelect);
-
-    return () => {
-      carouselApi.off("select", onSelect);
-      carouselApi.off("reInit", onSelect);
-    };
-  }, [carouselApi]);
+  //   carouselApi.on("select", () => {
+  //     setCurrentSlide(carouselApi.selectedScrollSnap());
+  //   });
+  // }, [carouselApi]);
 
 
   return (
@@ -135,7 +129,7 @@ export function FeedbackCard({ feedback, feedbackType, currentUserId, currentUse
               opts={{
                 loop: true, // Optional: Für unendliches Scrollen
               }}
-              setApi={setCarouselApi} // API wieder setzen
+              // setApi={setCarouselApi} // API setzen ist nicht mehr notwendig
             >
               <CarouselContent>
                 {feedback.image_urls.map((url, index) => (
@@ -146,8 +140,7 @@ export function FeedbackCard({ feedback, feedbackType, currentUserId, currentUse
                   </CarouselItem>
                 ))}
               </CarouselContent>
-              <CarouselPrevious /> {/* Navigationspfeil zurück */}
-              <CarouselNext /> {/* Navigationspfeil vorwärts */}
+              {/* Navigationspfeile entfernt */}
               {/* Indikatoren entfernt */}
             </Carousel>
           </div>
@@ -160,7 +153,7 @@ export function FeedbackCard({ feedback, feedbackType, currentUserId, currentUse
             <div className="bg-muted/50 p-3 rounded-md">
               <p className="text-sm text-foreground italic">"{feedback.reply}"</p>
               <p className="text-xs text-muted-foreground mt-2 text-right">
-                - {new Date(feedback.replied_at!).toLocaleString()}
+                - {feedback.replied_by_name || 'Admin'} am {new Date(feedback.replied_at!).toLocaleString()}
               </p>
             </div>
           </div>
