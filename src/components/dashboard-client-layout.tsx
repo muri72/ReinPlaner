@@ -98,15 +98,14 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut }: 
         <SidebarNav isCollapsed={isCollapsed} currentUserRole={currentUserRole} onSignOut={onSignOut} />
 
         {/* Notification Bell and User Menu at the bottom of the sidebar */}
-        {/* Diese Komponenten wurden entfernt, da sie jetzt als reguläre Navigationspunkte in SidebarNav enthalten sind. */}
-        {/* <div className={cn(
+        <div className={cn(
           "mt-auto flex flex-col items-center",
           isCollapsed ? "justify-center" : "justify-between",
-          "pt-4 border-t border-sidebar-border space-y-4"
+          "pt-4 border-t border-sidebar-border space-y-4" // Added space-y-4 for vertical spacing
         )}>
           <NotificationBell />
           <UserMenu currentUserRole={currentUserRole} onSignOut={onSignOut} />
-        </div> */}
+        </div>
       </aside>
 
       {/* Main Content */}

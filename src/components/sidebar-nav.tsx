@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Home, Briefcase, Users, ContactRound, Building, UsersRound, Clock, CalendarOff,
-  CalendarCheck, TrendingUp, FileText, Star, Bell, User // Importiere Bell und User Icons
+  CalendarCheck, TrendingUp, FileText, Star
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -85,18 +85,6 @@ const navItems: NavItem[] = [
     title: "Feedback",
     href: "/dashboard/feedback",
     icon: Star,
-    roles: ['admin', 'manager', 'employee', 'customer'],
-  },
-  {
-    title: "Benachrichtigungen", // Neuer Menüeintrag
-    href: "/dashboard/notifications",
-    icon: Bell,
-    roles: ['admin', 'manager', 'employee', 'customer'],
-  },
-  {
-    title: "Profil", // Neuer Menüeintrag
-    href: "/dashboard/profile",
-    icon: User,
     roles: ['admin', 'manager', 'employee', 'customer'],
   },
 ];
