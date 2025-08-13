@@ -12,7 +12,7 @@ import { updateOrderFeedback } from "@/app/dashboard/feedback/actions";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+// Removed import: VisuallyHidden
 import { handleActionResponse } from "@/lib/toast-utils"; // Importiere die neue Utility
 
 const editSchema = z.object({
@@ -32,7 +32,7 @@ interface OrderFeedbackEditDialogProps {
 
 export function OrderFeedbackEditDialog({ feedback }: OrderFeedbackEditDialogProps) {
   const [open, setOpen] = useState(false);
-  const [hoverRating, setHoverRating] = useState(0);
+  const [hoverRating, setHoverRating] = useState(0); // Added missing useState
   const titleId = `order-feedback-edit-dialog-title`;
   const descriptionId = `order-feedback-edit-dialog-description`;
 
@@ -80,7 +80,7 @@ export function OrderFeedbackEditDialog({ feedback }: OrderFeedbackEditDialogPro
         <DialogHeader>
           <DialogTitle id={titleId}>Feedback bearbeiten</DialogTitle>
           <DialogDescription id={descriptionId}>
-            <VisuallyHidden>Formular zum Bearbeiten des Auftrags-Feedbacks.</VisuallyHidden>
+            {/* Removed VisuallyHidden */}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">

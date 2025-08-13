@@ -7,7 +7,7 @@ import { Pencil } from "lucide-react";
 import { AbsenceRequestForm, AbsenceRequestFormValues } from "@/components/absence-request-form";
 import { updateAbsenceRequest } from "@/app/dashboard/absence-requests/actions";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+// Removed import: VisuallyHidden
 
 interface AbsenceRequestEditDialogProps {
   request: {
@@ -62,7 +62,7 @@ export function AbsenceRequestEditDialog({ request, currentUserRole, currentUser
         <DialogHeader>
           <DialogTitle id={titleId}>Abwesenheitsantrag bearbeiten</DialogTitle>
           <DialogDescription id={descriptionId}>
-            <VisuallyHidden>Formular zum Bearbeiten des Abwesenheitsantrags.</VisuallyHidden>
+            {/* Removed VisuallyHidden */}
           </DialogDescription>
         </DialogHeader>
         <AbsenceRequestForm

@@ -8,15 +8,13 @@ import { deleteObject } from "@/app/dashboard/objects/actions";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
-  DialogTitle,
   DialogTrigger,
   DialogClose,
 } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+// Removed import: VisuallyHidden
 
 interface DeleteObjectButtonProps {
   objectId: string;
@@ -24,8 +22,7 @@ interface DeleteObjectButtonProps {
 
 export function DeleteObjectButton({ objectId }: DeleteObjectButtonProps) {
   const [loading, setLoading] = useState(false);
-  const titleId = `delete-object-alert-title-${objectId}`;
-  const descriptionId = `delete-object-alert-description-${objectId}`;
+  // Removed titleId and descriptionId
 
   const handleDelete = async () => {
     setLoading(true);
@@ -59,19 +56,11 @@ export function DeleteObjectButton({ objectId }: DeleteObjectButtonProps) {
             </DialogTrigger>
             <DialogContent 
               key={`delete-object-${objectId}-open`} 
-              aria-labelledby={titleId} 
-              aria-describedby={descriptionId}
+              // Removed aria-labelledby and aria-describedby
               className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card"
             >
               <DialogHeader>
-                <DialogTitle id={titleId}>
-                  <VisuallyHidden>Sind Sie sicher?</VisuallyHidden>
-                </DialogTitle>
-                <DialogDescription id={descriptionId}>
-                  <VisuallyHidden>
-                    Diese Aktion kann nicht rückgängig gemacht werden. Das Objekt und alle zugehörigen Daten werden dauerhaft gelöscht.
-                  </VisuallyHidden>
-                </DialogDescription>
+                {/* Removed DialogTitle and DialogDescription */}
               </DialogHeader>
               <DialogFooter>
                 <DialogClose asChild>

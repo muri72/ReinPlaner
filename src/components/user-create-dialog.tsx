@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 import { UserForm, UserFormValues } from "@/components/user-form";
 import { registerUser } from "@/app/dashboard/users/actions";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+// Removed import: VisuallyHidden
 
 interface UserCreateDialogProps {
   onUserCreated?: () => void;
@@ -43,7 +43,7 @@ export function UserCreateDialog({ onUserCreated }: UserCreateDialogProps) {
         <DialogHeader>
           <DialogTitle id={titleId}>Neuen Benutzer registrieren</DialogTitle>
           <DialogDescription id={descriptionId}>
-            <VisuallyHidden>Formular zum Registrieren eines neuen Benutzers.</VisuallyHidden>
+            {/* Removed VisuallyHidden */}
           </DialogDescription>
         </DialogHeader>
         <UserForm

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"; // Korrigierter Import
 import { PlusCircle } from "lucide-react";
 import { ObjectForm, ObjectFormValues } from "@/components/object-form";
 import { createObject } from "@/app/dashboard/objects/actions";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+// Removed import: VisuallyHidden
 
 interface ObjectCreateDialogProps {
   onObjectCreated?: () => void;
@@ -43,7 +43,7 @@ export function ObjectCreateDialog({ onObjectCreated }: ObjectCreateDialogProps)
         <DialogHeader>
           <DialogTitle id={titleId}>Neues Objekt hinzufügen</DialogTitle>
           <DialogDescription id={descriptionId}>
-            <VisuallyHidden>Formular zum Hinzufügen eines neuen Objekts.</VisuallyHidden>
+            {/* Removed VisuallyHidden */}
           </DialogDescription>
         </DialogHeader>
         <div className="flex-grow overflow-y-auto pr-4"> {/* Added flex-grow and overflow-y-auto */}

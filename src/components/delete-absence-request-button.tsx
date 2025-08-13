@@ -8,15 +8,13 @@ import { deleteAbsenceRequest } from "@/app/dashboard/absence-requests/actions";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
-  DialogTitle,
   DialogTrigger,
   DialogClose,
 } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+// Removed import: VisuallyHidden
 
 interface DeleteAbsenceRequestButtonProps {
   requestId: string;
@@ -24,8 +22,7 @@ interface DeleteAbsenceRequestButtonProps {
 
 export function DeleteAbsenceRequestButton({ requestId }: DeleteAbsenceRequestButtonProps) {
   const [loading, setLoading] = useState(false);
-  const titleId = `delete-absence-request-alert-title-${requestId}`;
-  const descriptionId = `delete-absence-request-alert-description-${requestId}`;
+  // Removed titleId and descriptionId
 
   const handleDelete = async () => {
     setLoading(true);
@@ -59,19 +56,11 @@ export function DeleteAbsenceRequestButton({ requestId }: DeleteAbsenceRequestBu
             </DialogTrigger>
             <DialogContent 
               key={`delete-absence-request-${requestId}-open`} 
-              aria-labelledby={titleId} 
-              aria-describedby={descriptionId}
+              // Removed aria-labelledby and aria-describedby
               className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card"
             >
               <DialogHeader>
-                <DialogTitle id={titleId}>
-                  <VisuallyHidden>Sind Sie sicher?</VisuallyHidden>
-                </DialogTitle>
-                <DialogDescription id={descriptionId}>
-                  <VisuallyHidden>
-                    Diese Aktion kann nicht rückgängig gemacht werden. Der Abwesenheitsantrag wird dauerhaft gelöscht.
-                  </VisuallyHidden>
-                </DialogDescription>
+                {/* Removed DialogTitle and DialogDescription */}
               </DialogHeader>
               <DialogFooter>
                 <DialogClose asChild>

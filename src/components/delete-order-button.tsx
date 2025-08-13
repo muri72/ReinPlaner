@@ -8,15 +8,13 @@ import { deleteOrder } from "@/app/dashboard/orders/actions";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
-  DialogTitle,
   DialogTrigger,
   DialogClose, // Keep DialogClose
 } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+// Removed import: VisuallyHidden
 
 interface DeleteOrderButtonProps {
   orderId: string;
@@ -24,8 +22,7 @@ interface DeleteOrderButtonProps {
 
 export function DeleteOrderButton({ orderId }: DeleteOrderButtonProps) {
   const [loading, setLoading] = useState(false);
-  const titleId = `delete-order-alert-title-${orderId}`;
-  const descriptionId = `delete-order-alert-description-${orderId}`;
+  // Removed titleId and descriptionId
 
   const handleDelete = async () => {
     setLoading(true);
@@ -59,18 +56,10 @@ export function DeleteOrderButton({ orderId }: DeleteOrderButtonProps) {
             </DialogTrigger>
             <DialogContent 
               key={`delete-order-${orderId}-open`} 
-              aria-labelledby={titleId} 
-              aria-describedby={descriptionId}
+              // Removed aria-labelledby and aria-describedby
             >
               <DialogHeader>
-                <DialogTitle id={titleId}>
-                  <VisuallyHidden>Sind Sie sicher?</VisuallyHidden>
-                </DialogTitle>
-                <DialogDescription id={descriptionId}>
-                  <VisuallyHidden>
-                    Diese Aktion kann nicht rückgängig gemacht werden. Der Auftrag und alle zugehörigen Daten werden dauerhaft gelöscht.
-                  </VisuallyHidden>
-                </DialogDescription>
+                {/* Removed DialogTitle and DialogDescription */}
               </DialogHeader>
               <DialogFooter>
                 <DialogClose asChild>
