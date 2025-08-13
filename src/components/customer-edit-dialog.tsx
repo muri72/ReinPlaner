@@ -7,7 +7,7 @@ import { Pencil } from "lucide-react";
 import { CustomerForm, CustomerFormValues } from "@/components/customer-form";
 import { updateCustomer } from "@/app/dashboard/customers/actions";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"; // Import Tooltip components
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+// Removed unused import: import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 interface CustomerEditDialogProps {
   customer: {
@@ -57,8 +57,8 @@ export function CustomerEditDialog({ customer }: CustomerEditDialogProps) {
       >
         <DialogHeader>
           <DialogTitle id={titleId}>Kunden bearbeiten</DialogTitle>
-          <DialogDescription id={descriptionId}>
-            <VisuallyHidden>Formular zum Bearbeiten der Kundendaten.</VisuallyHidden>
+          <DialogDescription id={descriptionId} className="sr-only">
+            Formular zum Bearbeiten der Kundendaten.
           </DialogDescription>
         </DialogHeader>
         <CustomerForm

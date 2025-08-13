@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Link as LinkIcon } from "lucide-react";
 import { ManagerCustomerAssignmentForm } from "@/components/manager-customer-assignment-form";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-// VisuallyHidden is no longer needed for sr-only
+// Removed unused import: import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 interface ManagerCustomerAssignmentDialogProps {
   managerId: string;

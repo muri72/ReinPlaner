@@ -7,7 +7,7 @@ import { Pencil } from "lucide-react";
 import { ObjectForm, ObjectFormValues } from "@/components/object-form";
 import { updateObject } from "@/app/dashboard/objects/actions";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-// VisuallyHidden is no longer needed for sr-only
+// Removed unused import: import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 interface ObjectEditDialogProps {
   object: {

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 import { UserForm, UserFormValues } from "@/components/user-form";
 import { registerUser } from "@/app/dashboard/users/actions";
-// VisuallyHidden is no longer needed for sr-only
+// Removed unused import: import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 interface UserCreateDialogProps {
   onUserCreated?: () => void;

@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Button } from "@/components/ui/button";
 import { Star } from "lucide-react";
 import { OrderFeedbackForm } from "@/components/order-feedback-form";
-// VisuallyHidden is no longer needed for sr-only
+// Removed unused import: import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 interface OrderFeedbackDialogProps {
   orderId: string;

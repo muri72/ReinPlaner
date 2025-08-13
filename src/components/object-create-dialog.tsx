@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"; // Korrigierter Import
 import { PlusCircle } from "lucide-react";
 import { ObjectForm, ObjectFormValues } from "@/components/object-form";
 import { createObject } from "@/app/dashboard/objects/actions";
-// VisuallyHidden is no longer needed for sr-only
+// Removed unused import: import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 interface ObjectCreateDialogProps {
   onObjectCreated?: () => void;

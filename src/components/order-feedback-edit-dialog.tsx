@@ -12,7 +12,7 @@ import { updateOrderFeedback } from "@/app/dashboard/feedback/actions";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+// Removed unused import: import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { handleActionResponse } from "@/lib/toast-utils"; // Importiere die neue Utility
 
 const editSchema = z.object({
@@ -79,8 +79,8 @@ export function OrderFeedbackEditDialog({ feedback }: OrderFeedbackEditDialogPro
       >
         <DialogHeader>
           <DialogTitle id={titleId}>Feedback bearbeiten</DialogTitle>
-          <DialogDescription id={descriptionId}>
-            <VisuallyHidden>Formular zum Bearbeiten des Auftrags-Feedbacks.</VisuallyHidden>
+          <DialogDescription id={descriptionId} className="sr-only">
+            Formular zum Bearbeiten des Auftrags-Feedbacks.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">

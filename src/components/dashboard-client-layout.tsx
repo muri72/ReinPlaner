@@ -8,7 +8,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTrigger, SheetTitle, SheetDescri
 import { SidebarNav } from "@/components/sidebar-nav";
 import { UserMenu } from "@/components/user-menu";
 import { cn } from "@/lib/utils";
-// VisuallyHidden is no longer needed for sr-only
+// Removed unused import: import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 interface DashboardClientLayoutProps {
   children: React.ReactNode;

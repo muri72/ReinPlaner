@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 import { EmployeeForm, EmployeeFormValues } from "@/components/employee-form";
 import { createEmployee } from "@/app/dashboard/employees/actions";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+// Removed unused import: import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 interface EmployeeCreateDialogProps {
   onEmployeeCreated?: () => void;
@@ -42,8 +42,8 @@ export function EmployeeCreateDialog({ onEmployeeCreated }: EmployeeCreateDialog
       >
         <DialogHeader>
           <DialogTitle id={titleId}>Neuen Mitarbeiter hinzufügen</DialogTitle>
-          <DialogDescription id={descriptionId}>
-            <VisuallyHidden>Formular zum Hinzufügen eines neuen Mitarbeiters.</VisuallyHidden>
+          <DialogDescription id={descriptionId} className="sr-only">
+            Formular zum Hinzufügen eines neuen Mitarbeiters.
           </DialogDescription>
         </DialogHeader>
         <EmployeeForm

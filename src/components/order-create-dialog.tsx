@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 import { OrderForm, OrderFormValues } from "@/components/order-form";
 import { createOrder } from "@/app/dashboard/orders/actions";
-// VisuallyHidden is no longer needed for sr-only
+// Removed unused import: import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 interface OrderCreateDialogProps {
   onOrderCreated?: () => void;
