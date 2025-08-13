@@ -17,7 +17,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { cn } from "@/lib/utils"; // Import cn for conditional styling
-import { AbsenceRequestHeader } from "@/components/absence-request-header"; // Import the new component
+import { AbsenceRequestTriggerContent } from "@/components/absence-request-trigger-content"; // Import the renamed component
 
 export default async function AbsenceRequestsPage() {
   const supabase = await createClient();
@@ -115,14 +115,22 @@ export default async function AbsenceRequestsPage() {
                   value={request.id}
                   className="border rounded-xl shadow-neumorphic glassmorphism-card mb-4 data-[state=open]:border-primary/50"
                 >
-                  <AccordionTrigger asChild> {/* Use asChild here */}
-                    {/* Pass all necessary props to the new client component */}
-                    <AbsenceRequestHeader
-                      request={request}
-                      currentUserRole={currentUserRole}
-                      currentUserId={currentUser.id}
-                    />
-                  </AccordionTrigger>
+                  {/* This div acts as the visual header container */}
+                  <div className="flex items-center justify-between p-4">
+                    <AccordionTrigger className="flex-1 text-left hover:no-underline">
+                      {/* This component provides the main content for the trigger */}
+                      <AbsenceRequestTriggerContent
+                        request={request}
+                        currentUserRole={currentUserRole}
+                        currentUserId={currentUser.id}
+                      />
+                    </AccordionTrigger>
+                    {/* Action buttons are now siblings to the AccordionTrigger */}
+                    <div className="flex items-center space-x-2">
+                      <AbsenceRequestEditDialog request={request} currentUserRole={currentUserRole} currentUserId={currentUser.id} />
+                      <DeleteAbsenceRequestButton requestId={request.id} />
+                    </div>
+                  </div>
                   <AccordionContent className="p-4 pt-0">
                     {request.notes && (
                       <div className="flex items-start text-sm text-muted-foreground mb-2">
