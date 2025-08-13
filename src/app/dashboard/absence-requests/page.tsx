@@ -135,7 +135,7 @@ export default async function AbsenceRequestsPage() {
                           {request.status}
                         </Badge>
                       </div>
-                      <div className="flex items-center space-x-2" onClick={(e) => e.stopPropagation()}> {/* Stop propagation for buttons */}
+                      <div className="flex items-center space-x-2"> {/* Removed onClick={(e) => e.stopPropagation()} */}
                         <AbsenceRequestEditDialog request={request} currentUserRole={currentUserRole} currentUserId={currentUser.id} />
                         <DeleteAbsenceRequestButton requestId={request.id} />
                       </div>
