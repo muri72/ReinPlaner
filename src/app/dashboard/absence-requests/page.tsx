@@ -82,86 +82,81 @@ export default async function AbsenceRequestsPage() {
     <div className="p-4 md:p-8 space-y-8">
       <h1 className="text-2xl md:text-3xl font-bold">Abwesenheitsverwaltung</h1>
 
-      <div className={cn(
-        "grid gap-4 md:gap-8",
-        isAdmin ? "grid-cols-1 lg:grid-cols-[1fr_2fr]" : "grid-cols-1" // Make the second column wider if admin
-      )}>
-        {isAdmin && (
-          <div className="space-y-6">
-            <h2 className="text-xl md:text-2xl font-bold">Monatsübersicht Abwesenheiten</h2>
-            <div className="p-4 border rounded-lg shadow-neumorphic glassmorphism-card">
-              <AbsenceTimelineCalendar />
-            </div>
-          </div>
-        )}
-
+      {isAdmin && (
         <div className="space-y-6">
-          <h2 className="text-xl md:text-2xl font-bold">Antragsübersicht</h2>
-          <div className="flex justify-end mb-4">
-            <AbsenceRequestCreateDialog currentUserRole={currentUserRole} currentUserId={currentUser.id} />
+          <h2 className="text-xl md:text-2xl font-bold">Monatsübersicht Abwesenheiten</h2>
+          <div className="p-4 border rounded-lg shadow-neumorphic glassmorphism-card">
+            <AbsenceTimelineCalendar />
           </div>
-          <div className="max-h-[60vh] overflow-y-auto"> {/* Removed px-4 from here */}
-            {requests.length === 0 ? (
-              <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30 shadow-neumorphic glassmorphism-card">
-                <CalendarOff className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
-                <p className="text-base md:text-lg font-semibold">Keine Anträge gefunden</p>
-                <p className="text-sm">Reichen Sie einen neuen Abwesenheitsantrag ein.</p>
-                <div className="mt-4">
-                  {/* The button to open the dialog is now part of AbsenceRequestCreateDialog */}
-                </div>
+        </div>
+      )}
+
+      <div className="space-y-6">
+        <h2 className="text-xl md:text-2xl font-bold">Antragsübersicht</h2>
+        <div className="flex justify-end mb-4">
+          <AbsenceRequestCreateDialog currentUserRole={currentUserRole} currentUserId={currentUser.id} />
+        </div>
+        <div className="max-h-[60vh] overflow-y-auto">
+          {requests.length === 0 ? (
+            <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30 shadow-neumorphic glassmorphism-card">
+              <CalendarOff className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
+              <p className="text-base md:text-lg font-semibold">Keine Anträge gefunden</p>
+              <p className="text-sm">Reichen Sie einen neuen Abwesenheitsantrag ein.</p>
+              <div className="mt-4">
+                {/* The button to open the dialog is now part of AbsenceRequestCreateDialog */}
               </div>
-            ) : (
-              <Accordion type="single" collapsible className="w-full px-4"> {/* Added px-4 here */}
-                {requests.map((request) => (
-                  <AccordionItem
-                    key={request.id}
-                    value={request.id}
-                    className="border rounded-xl shadow-neumorphic glassmorphism-card mb-4 data-[state=open]:border-primary/50" // Added rounded-xl and mb-4 for spacing
-                  >
-                    <AccordionTrigger className="flex items-center justify-between p-4 text-left hover:no-underline">
-                      <div className="flex flex-col items-start flex-grow pr-4"> {/* Added pr-4 for spacing from buttons */}
-                        <h3 className="text-base md:text-lg font-semibold">
-                          {typeTranslations[request.type] || 'Abwesenheit'}
-                        </h3>
-                        {currentUserRole !== 'employee' && request.employees && (
-                          <div className="flex items-center text-sm text-muted-foreground">
-                            <User className="mr-2 h-4 w-4" />
-                            <span>{request.employees.first_name} {request.employees.last_name}</span>
-                          </div>
-                        )}
+            </div>
+          ) : (
+            <Accordion type="single" collapsible className="w-full px-4">
+              {requests.map((request) => (
+                <AccordionItem
+                  key={request.id}
+                  value={request.id}
+                  className="border rounded-xl shadow-neumorphic glassmorphism-card mb-4 data-[state=open]:border-primary/50"
+                >
+                  <AccordionTrigger className="flex items-center justify-between p-4 text-left hover:no-underline">
+                    <div className="flex flex-col items-start flex-grow pr-4">
+                      <h3 className="text-base md:text-lg font-semibold">
+                        {typeTranslations[request.type] || 'Abwesenheit'}
+                      </h3>
+                      {currentUserRole !== 'employee' && request.employees && (
                         <div className="flex items-center text-sm text-muted-foreground">
-                          <CalendarOff className="mr-2 h-4 w-4" />
-                          <span>{new Date(request.start_date).toLocaleDateString()} - {new Date(request.end_date).toLocaleDateString()}</span>
-                        </div>
-                        <Badge variant={getStatusBadgeVariant(request.status) as any} className="mt-2">
-                          {getStatusIcon(request.status)}
-                          {request.status}
-                        </Badge>
-                      </div>
-                      <div className="flex items-center space-x-2"> {/* Removed onClick={(e) => e.stopPropagation()} */}
-                        <AbsenceRequestEditDialog request={request} currentUserRole={currentUserRole} currentUserId={currentUser.id} />
-                        <DeleteAbsenceRequestButton requestId={request.id} />
-                      </div>
-                    </AccordionTrigger>
-                    <AccordionContent className="p-4 pt-0">
-                      {request.notes && (
-                        <div className="flex items-start text-sm text-muted-foreground mb-2">
-                          <FileText className="mr-2 h-4 w-4 mt-1 flex-shrink-0" />
-                          <p className="flex-grow">Notizen: {request.notes}</p>
+                          <User className="mr-2 h-4 w-4" />
+                          <span>{request.employees.first_name} {request.employees.last_name}</span>
                         </div>
                       )}
-                      {request.admin_notes && (
-                        <div className="flex items-start text-sm text-muted-foreground">
-                          <FileText className="mr-2 h-4 w-4 mt-1 flex-shrink-0" />
-                          <p className="flex-grow">Admin-Notizen: {request.admin_notes}</p>
-                        </div>
-                      )}
-                    </AccordionContent>
-                  </AccordionItem>
-                ))}
-              </Accordion>
-            )}
-          </div>
+                      <div className="flex items-center text-sm text-muted-foreground">
+                        <CalendarOff className="mr-2 h-4 w-4" />
+                        <span>{new Date(request.start_date).toLocaleDateString()} - {new Date(request.end_date).toLocaleDateString()}</span>
+                      </div>
+                      <Badge variant={getStatusBadgeVariant(request.status) as any} className="mt-2">
+                        {getStatusIcon(request.status)}
+                        {request.status}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <AbsenceRequestEditDialog request={request} currentUserRole={currentUserRole} currentUserId={currentUser.id} />
+                      <DeleteAbsenceRequestButton requestId={request.id} />
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="p-4 pt-0">
+                    {request.notes && (
+                      <div className="flex items-start text-sm text-muted-foreground mb-2">
+                        <FileText className="mr-2 h-4 w-4 mt-1 flex-shrink-0" />
+                        <p className="flex-grow">Notizen: {request.notes}</p>
+                      </div>
+                    )}
+                    {request.admin_notes && (
+                      <div className="flex items-start text-sm text-muted-foreground">
+                        <FileText className="mr-2 h-4 w-4 mt-1 flex-shrink-0" />
+                        <p className="flex-grow">Admin-Notizen: {request.admin_notes}</p>
+                      </div>
+                    )}
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          )}
         </div>
       </div>
     </div>
