@@ -6,17 +6,17 @@ import { Button } from "@/components/ui/button";
 import { Trash2 } from "lucide-react";
 import { deleteCustomerContact } from "@/app/dashboard/customer-contacts/actions";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"; // Import Tooltip components
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogClose,
+} from "@/components/ui/dialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 interface DeleteCustomerContactButtonProps {
   contactId: string;
@@ -24,6 +24,8 @@ interface DeleteCustomerContactButtonProps {
 
 export function DeleteCustomerContactButton({ contactId }: DeleteCustomerContactButtonProps) {
   const [loading, setLoading] = useState(false);
+  const titleId = `delete-contact-alert-title-${contactId}`;
+  const descriptionId = `delete-contact-alert-description-${contactId}`;
 
   const handleDelete = async () => {
     setLoading(true);
@@ -44,8 +46,8 @@ export function DeleteCustomerContactButton({ contactId }: DeleteCustomerContact
     <TooltipProvider delayDuration={300}>
       <Tooltip>
         <TooltipTrigger asChild>
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
+          <Dialog>
+            <DialogTrigger asChild>
               <Button
                 variant="ghost"
                 size="icon"
@@ -54,22 +56,33 @@ export function DeleteCustomerContactButton({ contactId }: DeleteCustomerContact
               >
                 <Trash2 className="h-4 w-4" />
               </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent key={`delete-contact-${contactId}-open`} className="glassmorphism-card" aria-labelledby="delete-customer-contact-alert-title">
-              <AlertDialogHeader>
-                <AlertDialogTitle id="delete-customer-contact-alert-title">Sind Sie sicher?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Diese Aktion kann nicht rückgängig gemacht werden. Der Kundenkontakt wird dauerhaft gelöscht.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Abbrechen</AlertDialogCancel>
-                <AlertDialogAction onClick={handleDelete} disabled={loading}>
+            </DialogTrigger>
+            <DialogContent 
+              key={`delete-contact-${contactId}-open`} 
+              aria-labelledby={titleId} 
+              aria-describedby={descriptionId}
+              className="glassmorphism-card"
+            >
+              <DialogHeader>
+                <DialogTitle id={titleId}>
+                  <VisuallyHidden>Sind Sie sicher?</VisuallyHidden>
+                </DialogTitle>
+                <DialogDescription id={descriptionId}>
+                  <VisuallyHidden>
+                    Diese Aktion kann nicht rückgängig gemacht werden. Der Kundenkontakt wird dauerhaft gelöscht.
+                  </VisuallyHidden>
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter>
+                <DialogClose asChild>
+                  <Button variant="outline">Abbrechen</Button>
+                </DialogClose>
+                <Button onClick={handleDelete} disabled={loading}>
                   {loading ? "Löschen..." : "Löschen"}
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </TooltipTrigger>
         <TooltipContent>
           <p>Kundenkontakt löschen</p>
