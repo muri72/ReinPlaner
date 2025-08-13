@@ -17,6 +17,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { cn } from "@/lib/utils"; // Import cn for conditional styling
+import { AbsenceRequestHeader } from "@/components/absence-request-header"; // Import the new component
 
 export default async function AbsenceRequestsPage() {
   const supabase = await createClient();
@@ -114,35 +115,14 @@ export default async function AbsenceRequestsPage() {
                   value={request.id}
                   className="border rounded-xl shadow-neumorphic glassmorphism-card mb-4 data-[state=open]:border-primary/50"
                 >
-                  {/* This div acts as the AccordionHeader, containing the trigger and action buttons */}
-                  <div className="flex items-center justify-between p-4">
-                    <AccordionTrigger className="flex-1 text-left hover:no-underline">
-                      <div className="flex flex-col items-start flex-grow pr-4">
-                        <h3 className="text-base md:text-lg font-semibold">
-                          {typeTranslations[request.type] || 'Abwesenheit'}
-                        </h3>
-                        {currentUserRole !== 'employee' && request.employees && (
-                          <div className="flex items-center text-sm text-muted-foreground">
-                            <User className="mr-2 h-4 w-4" />
-                            <span>{request.employees.first_name} {request.employees.last_name}</span>
-                          </div>
-                        )}
-                        <div className="flex items-center text-sm text-muted-foreground">
-                          <CalendarOff className="mr-2 h-4 w-4" />
-                          <span>{new Date(request.start_date).toLocaleDateString()} - {new Date(request.end_date).toLocaleDateString()}</span>
-                        </div>
-                        <Badge variant={getStatusBadgeVariant(request.status) as any} className="mt-2">
-                          {getStatusIcon(request.status)}
-                          {request.status}
-                        </Badge>
-                      </div>
-                    </AccordionTrigger>
-                    {/* Action buttons are now siblings to the AccordionTrigger */}
-                    <div className="flex items-center space-x-2">
-                      <AbsenceRequestEditDialog request={request} currentUserRole={currentUserRole} currentUserId={currentUser.id} />
-                      <DeleteAbsenceRequestButton requestId={request.id} />
-                    </div>
-                  </div>
+                  <AccordionTrigger asChild> {/* Use asChild here */}
+                    {/* Pass all necessary props to the new client component */}
+                    <AbsenceRequestHeader
+                      request={request}
+                      currentUserRole={currentUserRole}
+                      currentUserId={currentUser.id}
+                    />
+                  </AccordionTrigger>
                   <AccordionContent className="p-4 pt-0">
                     {request.notes && (
                       <div className="flex items-start text-sm text-muted-foreground mb-2">
