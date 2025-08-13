@@ -10,14 +10,22 @@ import { DeleteAbsenceRequestButton } from "@/components/delete-absence-request-
 import { AbsenceTimelineCalendar } from "@/components/absence-timeline-calendar";
 import { Button } from "@/components/ui/button";
 import { AbsenceRequestCreateDialog } from "@/components/absence-request-create-dialog";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
+// Accordion imports removed
+// AbsenceRequestTriggerContent import removed
 import { cn } from "@/lib/utils"; // Import cn for conditional styling
-import { AbsenceRequestTriggerContent } from "@/components/absence-request-trigger-content"; // Import the renamed component
+
+// Define the interface for the absence request data, as used on this page
+interface DisplayAbsenceRequest {
+  id: string;
+  employee_id: string;
+  start_date: string;
+  end_date: string;
+  type: string;
+  status: string;
+  notes: string | null;
+  admin_notes: string | null;
+  employees: { first_name: string | null; last_name: string | null } | null;
+}
 
 export default async function AbsenceRequestsPage() {
   const supabase = await createClient();
@@ -97,7 +105,7 @@ export default async function AbsenceRequestsPage() {
         <div className="flex justify-end mb-4">
           <AbsenceRequestCreateDialog currentUserRole={currentUserRole} currentUserId={currentUser.id} />
         </div>
-        <div className="max-h-[60vh] overflow-y-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
           {requests.length === 0 ? (
             <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30 shadow-neumorphic glassmorphism-card">
               <CalendarOff className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
@@ -108,46 +116,47 @@ export default async function AbsenceRequestsPage() {
               </div>
             </div>
           ) : (
-            <Accordion type="single" collapsible className="w-full px-4">
-              {requests.map((request) => (
-                <AccordionItem
-                  key={request.id}
-                  value={request.id}
-                  className="border rounded-xl shadow-neumorphic glassmorphism-card mb-4 data-[state=open]:border-primary/50"
-                >
-                  {/* This div acts as the visual header container */}
-                  <div className="flex items-center justify-between p-4">
-                    <AccordionTrigger className="flex-1 text-left hover:no-underline">
-                      {/* This component provides the main content for the trigger */}
-                      <AbsenceRequestTriggerContent
-                        request={request}
-                        currentUserRole={currentUserRole}
-                        currentUserId={currentUser.id}
-                      />
-                    </AccordionTrigger>
-                    {/* Action buttons are now siblings to the AccordionTrigger */}
-                    <div className="flex items-center space-x-2">
-                      <AbsenceRequestEditDialog request={request} currentUserRole={currentUserRole} currentUserId={currentUser.id} />
-                      <DeleteAbsenceRequestButton requestId={request.id} />
-                    </div>
+            requests.map((request) => (
+              <Card key={request.id} className="shadow-neumorphic glassmorphism-card">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-base md:text-lg font-semibold">
+                    {typeTranslations[request.type] || 'Abwesenheit'}
+                  </CardTitle>
+                  <div className="flex items-center space-x-2">
+                    <AbsenceRequestEditDialog request={request} currentUserRole={currentUserRole} currentUserId={currentUser.id} />
+                    <DeleteAbsenceRequestButton requestId={request.id} />
                   </div>
-                  <AccordionContent className="p-4 pt-0">
-                    {request.notes && (
-                      <div className="flex items-start text-sm text-muted-foreground mb-2">
-                        <FileText className="mr-2 h-4 w-4 mt-1 flex-shrink-0" />
-                        <p className="flex-grow">Notizen: {request.notes}</p>
-                      </div>
-                    )}
-                    {request.admin_notes && (
-                      <div className="flex items-start text-sm text-muted-foreground">
-                        <FileText className="mr-2 h-4 w-4 mt-1 flex-shrink-0" />
-                        <p className="flex-grow">Admin-Notizen: {request.admin_notes}</p>
-                      </div>
-                    )}
-                  </AccordionContent>
-                </AccordionItem>
-              ))}
-            </Accordion>
+                </CardHeader>
+                <CardContent className="space-y-2 text-sm text-muted-foreground">
+                  {currentUserRole !== 'employee' && request.employees && (
+                    <div className="flex items-center">
+                      <User className="mr-2 h-4 w-4 flex-shrink-0" />
+                      <span>Mitarbeiter: {request.employees.first_name} {request.employees.last_name}</span>
+                    </div>
+                  )}
+                  <div className="flex items-center">
+                    <CalendarOff className="mr-2 h-4 w-4 flex-shrink-0" />
+                    <span>Datum: {new Date(request.start_date).toLocaleDateString()} - {new Date(request.end_date).toLocaleDateString()}</span>
+                  </div>
+                  <div className="flex items-center">
+                    {getStatusIcon(request.status)}
+                    <Badge variant={getStatusBadgeVariant(request.status) as any}>{request.status}</Badge>
+                  </div>
+                  {request.notes && (
+                    <div className="flex items-start">
+                      <FileText className="mr-2 h-4 w-4 mt-1 flex-shrink-0" />
+                      <p className="flex-grow">Notizen: {request.notes}</p>
+                    </div>
+                  )}
+                  {request.admin_notes && (
+                    <div className="flex items-start">
+                      <FileText className="mr-2 h-4 w-4 mt-1 flex-shrink-0" />
+                      <p className="flex-grow">Admin-Notizen: {request.admin_notes}</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            ))
           )}
         </div>
       </div>
