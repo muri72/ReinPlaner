@@ -33,9 +33,10 @@ export function ImageViewerDialog({ src, alt, trigger, onOpenChange }: ImageView
         aria-labelledby={titleId} 
         aria-describedby={descriptionId}
       >
-        {/* Hidden Title and Description directly inside DialogContent */}
-        <DialogTitle id={titleId} className="sr-only">Bildansicht</DialogTitle>
-        <DialogDescription id={descriptionId} className="sr-only">Vollansicht des Bildes.</DialogDescription>
+        <DialogHeader> {/* Added DialogHeader */}
+          <DialogTitle id={titleId} className="sr-only">Bildansicht</DialogTitle>
+          <DialogDescription id={descriptionId} className="sr-only">Vollansicht des Bildes.</DialogDescription>
+        </DialogHeader>
 
         {/* Close button, outside DialogHeader */}
         <Button variant="ghost" size="icon" onClick={() => handleOpenChange(false)} className="absolute top-4 right-4 z-50 text-white hover:bg-white/20">
