@@ -16,7 +16,7 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+// Removed import: VisuallyHidden (as sr-only will be used)
 
 interface DeleteEmployeeButtonProps {
   employeeId: string;
@@ -64,13 +64,9 @@ export function DeleteEmployeeButton({ employeeId }: DeleteEmployeeButtonProps) 
               className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card"
             >
               <DialogHeader>
-                <DialogTitle id={titleId}>
-                  <VisuallyHidden>Sind Sie sicher?</VisuallyHidden>
-                </DialogTitle>
-                <DialogDescription id={descriptionId}>
-                  <VisuallyHidden>
-                    Diese Aktion kann nicht rückgängig gemacht werden. Der Mitarbeiter und alle zugehörigen Daten werden dauerhaft gelöscht.
-                  </VisuallyHidden>
+                <DialogTitle id={titleId} className="sr-only">Sind Sie sicher?</DialogTitle>
+                <DialogDescription id={descriptionId} className="sr-only">
+                  Diese Aktion kann nicht rückgängig gemacht werden. Der Mitarbeiter und alle zugehörigen Daten werden dauerhaft gelöscht.
                 </DialogDescription>
               </DialogHeader>
               <DialogFooter>

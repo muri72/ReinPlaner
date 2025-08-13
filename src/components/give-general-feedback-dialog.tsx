@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Button } from "@/components/ui/button";
 import { PlusCircle, MessageSquare } from "lucide-react";
 import { GeneralDashboardFeedbackForm } from "@/components/general-dashboard-feedback-form";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+// Removed import: VisuallyHidden (as sr-only will be used)
 
 interface GiveGeneralFeedbackDialogProps {
   onFeedbackSubmitted?: () => void;
@@ -31,8 +31,8 @@ export function GiveGeneralFeedbackDialog({ onFeedbackSubmitted }: GiveGeneralFe
       >
         <DialogHeader>
           <DialogTitle id={titleId}>Allgemeines Feedback einreichen</DialogTitle>
-          <DialogDescription id={descriptionId}>
-            <VisuallyHidden>Formular zum Einreichen von allgemeinem Feedback.</VisuallyHidden>
+          <DialogDescription id={descriptionId} className="sr-only">
+            Formular zum Einreichen von allgemeinem Feedback.
           </DialogDescription>
         </DialogHeader>
         <GeneralDashboardFeedbackForm onSuccess={() => setOpen(false)} />

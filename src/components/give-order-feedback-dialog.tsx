@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Button } from "@/components/ui/button";
 import { Star } from "lucide-react";
 import { GiveFeedbackForm } from "@/components/give-feedback-form";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+// Removed import: VisuallyHidden (as sr-only will be used)
 
 interface GiveOrderFeedbackDialogProps {
   onFeedbackSubmitted?: () => void;
@@ -31,8 +31,8 @@ export function GiveOrderFeedbackDialog({ onFeedbackSubmitted }: GiveOrderFeedba
       >
         <DialogHeader>
           <DialogTitle id={titleId}>Auftragsbezogenes Feedback einreichen</DialogTitle>
-          <DialogDescription id={descriptionId}>
-            <VisuallyHidden>Formular zum Einreichen von Feedback zu einem bestimmten Auftrag.</VisuallyHidden>
+          <DialogDescription id={descriptionId} className="sr-only">
+            Formular zum Einreichen von Feedback zu einem bestimmten Auftrag.
           </DialogDescription>
         </DialogHeader>
         <GiveFeedbackForm onSuccess={() => setOpen(false)} />

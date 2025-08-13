@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 import { TimeEntryForm, TimeEntryFormValues } from "@/components/time-entry-form";
 import { createTimeEntry } from "@/app/dashboard/time-tracking/actions";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+// Removed import: VisuallyHidden (as sr-only will be used)
 
 interface TimeEntryCreateDialogProps {
   initialData?: Partial<TimeEntryFormValues>;
@@ -62,8 +62,8 @@ export function TimeEntryCreateDialog({
       >
         <DialogHeader>
           <DialogTitle id={titleId}>{dialogTitle}</DialogTitle>
-          <DialogDescription id={descriptionId}>
-            <VisuallyHidden>Formular zum Erstellen eines neuen Zeiteintrags.</VisuallyHidden>
+          <DialogDescription id={descriptionId} className="sr-only">
+            Formular zum Erstellen eines neuen Zeiteintrags.
           </DialogDescription>
         </DialogHeader>
         <TimeEntryForm
