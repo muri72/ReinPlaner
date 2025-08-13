@@ -90,7 +90,7 @@ export default async function AbsenceRequestsPage() {
           <div className="flex justify-end mb-4">
             <AbsenceRequestCreateDialog currentUserRole={currentUserRole} currentUserId={currentUser.id} />
           </div>
-          <div className="space-y-4 max-h-[60vh] overflow-y-auto"> {/* Removed pr-4 here */}
+          <div className="space-y-4 max-h-[60vh] overflow-y-auto">
             {requests.length === 0 ? (
               <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30 shadow-neumorphic glassmorphism-card">
                 <CalendarOff className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
