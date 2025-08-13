@@ -7,7 +7,7 @@ import { Pencil } from "lucide-react";
 import { CustomerContactForm, CustomerContactFormValues } from "@/components/customer-contact-form";
 import { updateCustomerContact } from "@/app/dashboard/customer-contacts/actions";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-// Removed unused import: import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 interface CustomerContactEditDialogProps {
   contact: {
@@ -58,8 +58,8 @@ export function CustomerContactEditDialog({ contact }: CustomerContactEditDialog
       >
         <DialogHeader>
           <DialogTitle id={titleId}>Kundenkontakt bearbeiten</DialogTitle>
-          <DialogDescription id={descriptionId} className="sr-only">
-            Formular zum Bearbeiten des Kundenkontakts.
+          <DialogDescription id={descriptionId}>
+            <VisuallyHidden>Formular zum Bearbeiten des Kundenkontakts.</VisuallyHidden>
           </DialogDescription>
         </DialogHeader>
         <CustomerContactForm

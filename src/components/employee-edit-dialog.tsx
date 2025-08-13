@@ -7,7 +7,7 @@ import { Pencil } from "lucide-react";
 import { EmployeeForm, EmployeeFormValues } from "@/components/employee-form";
 import { updateEmployee } from "@/app/dashboard/employees/actions";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-// Removed unused import: import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 interface EmployeeEditDialogProps {
   employee: {
@@ -69,8 +69,8 @@ export function EmployeeEditDialog({ employee }: EmployeeEditDialogProps) {
       >
         <DialogHeader>
           <DialogTitle id={titleId}>Mitarbeiter bearbeiten</DialogTitle>
-          <DialogDescription id={descriptionId} className="sr-only">
-            Formular zum Bearbeiten der Mitarbeiterdaten.
+          <DialogDescription id={descriptionId}>
+            <VisuallyHidden>Formular zum Bearbeiten der Mitarbeiterdaten.</VisuallyHidden>
           </DialogDescription>
         </DialogHeader>
         <EmployeeForm

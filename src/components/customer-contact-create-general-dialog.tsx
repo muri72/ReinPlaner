@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 import { CustomerContactForm, CustomerContactFormValues } from "@/components/customer-contact-form";
 import { createCustomerContact } from "@/app/dashboard/customer-contacts/actions";
-// Removed unused import: import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 interface CustomerContactCreateGeneralDialogProps {
   onContactCreated?: (newContactId: string) => void;
@@ -44,8 +44,8 @@ export function CustomerContactCreateGeneralDialog({ onContactCreated }: Custome
       >
         <DialogHeader>
           <DialogTitle id={titleId}>Neuen Kundenkontakt hinzufügen</DialogTitle>
-          <DialogDescription id={descriptionId} className="sr-only">
-            Formular zum Hinzufügen eines neuen Kundenkontakts.
+          <DialogDescription id={descriptionId}>
+            <VisuallyHidden>Formular zum Hinzufügen eines neuen Kundenkontakts.</VisuallyHidden>
           </DialogDescription>
         </DialogHeader>
         <CustomerContactForm

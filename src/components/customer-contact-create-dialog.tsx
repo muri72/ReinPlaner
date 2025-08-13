@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 import { CustomerContactForm, CustomerContactFormValues } from "@/components/customer-contact-form";
 import { createCustomerContact } from "@/app/dashboard/customer-contacts/actions";
-// VisuallyHidden is no longer needed for sr-only
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 interface CustomerContactCreateDialogProps {
   customerId: string;
@@ -51,8 +51,8 @@ export function CustomerContactCreateDialog({ customerId, onContactCreated, disa
       >
         <DialogHeader>
           <DialogTitle id={titleId}>Neuen Kundenkontakt erstellen</DialogTitle>
-          <DialogDescription id={descriptionId} className="sr-only">
-            Formular zum Erstellen eines neuen Kundenkontakts.
+          <DialogDescription id={descriptionId}>
+            <VisuallyHidden>Formular zum Erstellen eines neuen Kundenkontakts.</VisuallyHidden>
           </DialogDescription>
         </DialogHeader>
         <CustomerContactForm

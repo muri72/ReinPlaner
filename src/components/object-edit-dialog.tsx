@@ -7,7 +7,7 @@ import { Pencil } from "lucide-react";
 import { ObjectForm, ObjectFormValues } from "@/components/object-form";
 import { updateObject } from "@/app/dashboard/objects/actions";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-// Removed unused import: import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 interface ObjectEditDialogProps {
   object: {
@@ -86,8 +86,8 @@ export function ObjectEditDialog({ object }: ObjectEditDialogProps) {
       >
         <DialogHeader>
           <DialogTitle id={titleId}>Objekt bearbeiten</DialogTitle>
-          <DialogDescription id={descriptionId} className="sr-only">
-            Formular zum Bearbeiten der Objektdaten.
+          <DialogDescription id={descriptionId}>
+            <VisuallyHidden>Formular zum Bearbeiten der Objektdaten.</VisuallyHidden>
           </DialogDescription>
         </DialogHeader>
         <div className="flex-grow overflow-y-auto pr-4"> {/* Added flex-grow and overflow-y-auto */}

@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
 import NextImage from "next/image";
-// VisuallyHidden is no longer needed for sr-only
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 interface ImageViewerDialogProps {
   src: string;
@@ -33,9 +33,13 @@ export function ImageViewerDialog({ src, alt, trigger, onOpenChange }: ImageView
         aria-labelledby={titleId} 
         aria-describedby={descriptionId}
       >
-        <DialogHeader> {/* Added DialogHeader */}
-          <DialogTitle id={titleId} className="sr-only">Bildansicht</DialogTitle>
-          <DialogDescription id={descriptionId} className="sr-only">Vollansicht des Bildes.</DialogDescription>
+        <DialogHeader>
+          <DialogTitle id={titleId}>
+            <VisuallyHidden>Bildansicht</VisuallyHidden>
+          </DialogTitle>
+          <DialogDescription id={descriptionId}>
+            <VisuallyHidden>Vollansicht des Bildes.</VisuallyHidden>
+          </DialogDescription>
         </DialogHeader>
 
         {/* Close button, outside DialogHeader */}

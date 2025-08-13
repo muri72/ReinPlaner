@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 import { OrderForm, OrderFormValues } from "@/components/order-form";
 import { createOrder } from "@/app/dashboard/orders/actions";
-// Removed unused import: import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 interface OrderCreateDialogProps {
   onOrderCreated?: () => void;
@@ -42,8 +42,8 @@ export function OrderCreateDialog({ onOrderCreated }: OrderCreateDialogProps) {
       >
         <DialogHeader>
           <DialogTitle id={titleId}>Neuen Auftrag hinzufügen</DialogTitle>
-          <DialogDescription id={descriptionId} className="sr-only">
-            Formular zum Hinzufügen eines neuen Auftrags.
+          <DialogDescription id={descriptionId}>
+            <VisuallyHidden>Formular zum Hinzufügen eines neuen Auftrags.</VisuallyHidden>
           </DialogDescription>
         </DialogHeader>
         <OrderForm

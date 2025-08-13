@@ -7,7 +7,7 @@ import { Pencil } from "lucide-react";
 import { UserForm, UserFormValues } from "@/components/user-form";
 import { updateUser } from "@/app/dashboard/users/actions";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-// VisuallyHidden is no longer needed for sr-only
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 interface UserEditDialogProps {
   user: {
@@ -56,8 +56,8 @@ export function UserEditDialog({ user }: UserEditDialogProps) {
       >
         <DialogHeader>
           <DialogTitle id={titleId}>Benutzer bearbeiten</DialogTitle>
-          <DialogDescription id={descriptionId} className="sr-only">
-            Formular zum Bearbeiten der Benutzerdaten.
+          <DialogDescription id={descriptionId}>
+            <VisuallyHidden>Formular zum Bearbeiten der Benutzerdaten.</VisuallyHidden>
           </DialogDescription>
         </DialogHeader>
         <UserForm
