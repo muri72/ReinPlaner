@@ -21,11 +21,12 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 
 interface UserMenuProps {
+  children: React.ReactNode; // Akzeptiert einen Trigger als Kind
   currentUserRole: 'admin' | 'manager' | 'employee' | 'customer';
   onSignOut: () => Promise<void>;
 }
 
-export function UserMenu({ currentUserRole, onSignOut }: UserMenuProps) {
+export function UserMenu({ children, currentUserRole, onSignOut }: UserMenuProps) {
   const supabase = createClient();
   const router = useRouter();
   const { theme, setTheme } = useTheme();
@@ -79,12 +80,7 @@ export function UserMenu({ currentUserRole, onSignOut }: UserMenuProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-          <Avatar className="h-8 w-8">
-            <AvatarImage src={profile?.avatarUrl || undefined} alt={displayName} />
-            <AvatarFallback>{avatarFallback}</AvatarFallback>
-          </Avatar>
-        </Button>
+        {children} {/* Der übergebene Trigger wird hier gerendert */}
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56" align="end" forceMount>
         <DropdownMenuLabel className="font-normal">

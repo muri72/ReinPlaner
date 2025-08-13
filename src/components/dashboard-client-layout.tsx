@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Menu, ChevronLeft, ChevronRight } from "lucide-react";
+import { Menu, ChevronLeft, ChevronRight, Bell } from "lucide-react"; // Bell hinzugefügt
 import { Button } from "@/components/ui/button";
 import { NotificationBell } from "@/components/notification-bell";
 import { Sheet, SheetContent, SheetHeader, SheetTrigger, SheetTitle, SheetDescription } from "@/components/ui/sheet";
@@ -9,6 +9,9 @@ import { SidebarNav } from "@/components/sidebar-nav";
 import { UserMenu } from "@/components/user-menu";
 import { cn } from "@/lib/utils";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"; // Import Avatar components
+import { createClient } from "@/lib/supabase/client"; // Import supabase client for user profile
+import { User } from "lucide-react"; // Import User icon
 
 interface DashboardClientLayoutProps {
   children: React.ReactNode;
@@ -19,6 +22,32 @@ interface DashboardClientLayoutProps {
 export function DashboardClientLayout({ children, currentUserRole, onSignOut }: DashboardClientLayoutProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const supabase = createClient();
+  const [profile, setProfile] = React.useState<{ firstName: string | null; lastName: string | null; avatarUrl: string | null } | null>(null);
+
+  React.useEffect(() => {
+    const fetchProfile = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data } = await supabase
+          .from('profiles')
+          .select('first_name, last_name, avatar_url')
+          .eq('id', user.id)
+          .single();
+        if (data) {
+          setProfile({
+            firstName: data.first_name,
+            lastName: data.last_name,
+            avatarUrl: data.avatar_url,
+          });
+        }
+      }
+    };
+    fetchProfile();
+  }, [supabase]);
+
+  const displayName = profile?.firstName || profile?.lastName ? `${profile.firstName || ''} ${profile.lastName || ''}`.trim() : "Mein Profil";
+  const avatarFallback = profile?.firstName?.[0] || profile?.lastName?.[0] || 'U';
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row">
@@ -49,12 +78,17 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut }: 
                 </SheetDescription>
                 <div className="flex justify-between items-center mb-6">
                   <h2 className="text-xl font-bold text-primary tracking-tight">ARIS</h2>
-                  <NotificationBell />
+                  {/* Mobile Notification Bell (icon only) */}
+                  <NotificationBell>
+                    <Button variant="ghost" size="icon" className="relative">
+                      <Bell className="h-5 w-5" />
+                    </Button>
+                  </NotificationBell>
                 </div>
               </SheetHeader>
               <nav className="flex-grow space-y-2">
                 <SidebarNav
-                  isCollapsed={false}
+                  isCollapsed={false} // Mobile sidebar is never collapsed
                   currentUserRole={currentUserRole}
                   onSignOut={onSignOut}
                   onLinkClick={() => setIsSheetOpen(false)}
@@ -65,8 +99,21 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut }: 
           <h2 className="text-xl font-bold text-primary tracking-tight ml-4">ARIS</h2>
         </div>
         <div className="flex items-center space-x-2">
-          <NotificationBell />
-          <UserMenu currentUserRole={currentUserRole} onSignOut={onSignOut} />
+          {/* Mobile Notification Bell (icon only) */}
+          <NotificationBell>
+            <Button variant="ghost" size="icon" className="relative">
+              <Bell className="h-5 w-5" />
+            </Button>
+          </NotificationBell>
+          {/* Mobile User Menu (icon only) */}
+          <UserMenu currentUserRole={currentUserRole} onSignOut={onSignOut}>
+            <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+              <Avatar className="h-8 w-8">
+                <AvatarImage src={profile?.avatarUrl || undefined} alt={displayName} />
+                <AvatarFallback>{avatarFallback}</AvatarFallback>
+              </Avatar>
+            </Button>
+          </UserMenu>
         </div>
       </header>
 
@@ -97,15 +144,9 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut }: 
         </div>
         <SidebarNav isCollapsed={isCollapsed} currentUserRole={currentUserRole} onSignOut={onSignOut} />
 
-        {/* Notification Bell and User Menu at the bottom of the sidebar */}
-        <div className={cn(
-          "mt-auto flex flex-col items-center",
-          isCollapsed ? "justify-center" : "justify-between",
-          "pt-4 border-t border-sidebar-border space-y-4" // Added space-y-4 for vertical spacing
-        )}>
-          <NotificationBell />
-          <UserMenu currentUserRole={currentUserRole} onSignOut={onSignOut} />
-        </div>
+        {/* Notification Bell and User Menu are now handled by SidebarNav */}
+        {/* This section is now empty as they are part of SidebarNav */}
+        <div className="hidden"></div>
       </aside>
 
       {/* Main Content */}

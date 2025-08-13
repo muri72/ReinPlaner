@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { Bell, BellRing } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
 import { de } from 'date-fns/locale';
@@ -18,7 +17,11 @@ interface Notification {
   created_at: string;
 }
 
-export function NotificationBell() {
+interface NotificationBellProps {
+  children: React.ReactNode; // Akzeptiert einen Trigger als Kind
+}
+
+export function NotificationBell({ children }: NotificationBellProps) {
   const supabase = createClient();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -65,14 +68,7 @@ export function NotificationBell() {
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative">
-          {unreadCount > 0 ? <BellRing className="h-5 w-5 text-destructive" /> : <Bell className="h-5 w-5" />}
-          {unreadCount > 0 && (
-            <span className="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-red-100 transform translate-x-1/2 -translate-y-1/2 bg-destructive rounded-full">
-              {unreadCount}
-            </span>
-          )}
-        </Button>
+        {children} {/* Der übergebene Trigger wird hier gerendert */}
       </PopoverTrigger>
       <PopoverContent className="w-80">
         <div className="grid gap-4">
