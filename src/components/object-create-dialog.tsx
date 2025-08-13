@@ -38,7 +38,7 @@ export function ObjectCreateDialog({ onObjectCreated }: ObjectCreateDialogProps)
         key={open ? "object-create-open" : "object-create-closed"} 
         aria-labelledby={titleId} 
         aria-describedby={descriptionId}
-        className="sm:max-w-[425px] max-h-[90vh] flex flex-col" // Added flex flex-col
+        className="sm:max-w-[425px] max-h-[90vh] flex flex-col glassmorphism-card" // Added flex flex-col
       >
         <DialogHeader>
           <DialogTitle id={titleId}>Neues Objekt hinzufügen</DialogTitle>

@@ -38,6 +38,7 @@ export function UserCreateDialog({ onUserCreated }: UserCreateDialogProps) {
         key={open ? "user-create-open" : "user-create-closed"} 
         aria-labelledby={titleId} 
         aria-describedby={descriptionId}
+        className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card"
       >
         <DialogHeader>
           <DialogTitle id={titleId}>Neuen Benutzer registrieren</DialogTitle>

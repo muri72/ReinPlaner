@@ -82,7 +82,7 @@ export function ObjectEditDialog({ object }: ObjectEditDialogProps) {
         key={open ? "object-edit-open" : "object-edit-closed"} 
         aria-labelledby={titleId} 
         aria-describedby={descriptionId}
-        className="sm:max-w-[425px] max-h-[90vh] flex flex-col" // Added flex flex-col
+        className="sm:max-w-[425px] max-h-[90vh] flex flex-col glassmorphism-card" // Added flex flex-col
       >
         <DialogHeader>
           <DialogTitle id={titleId}>Objekt bearbeiten</DialogTitle>

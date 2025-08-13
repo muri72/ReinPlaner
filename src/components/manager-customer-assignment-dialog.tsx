@@ -38,6 +38,7 @@ export function ManagerCustomerAssignmentDialog({ managerId, managerName }: Mana
         key={open ? "manager-assignment-open" : "manager-assignment-closed"} 
         aria-labelledby={titleId} 
         aria-describedby={descriptionId}
+        className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card"
       >
         <DialogHeader>
           <DialogTitle id={titleId}>Kunden für {managerName} zuweisen</DialogTitle>

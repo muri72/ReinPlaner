@@ -29,7 +29,7 @@ export function ImageViewerDialog({ src, alt, trigger, onOpenChange }: ImageView
       {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
       <DialogContent 
         key={open ? "image-viewer-open" : "image-viewer-closed"} 
-        className="sm:max-w-[90vw] max-h-[90vh] overflow-hidden p-0 border-none bg-transparent shadow-none"
+        className="sm:max-w-[90vw] max-h-[90vh] overflow-hidden p-0 border-none bg-transparent shadow-none glassmorphism-card"
         aria-labelledby={titleId} 
         aria-describedby={descriptionId}
       >

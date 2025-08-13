@@ -46,7 +46,7 @@ export function CustomerEditDialog({ customer }: CustomerEditDialogProps) {
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
-      <DialogContent key={open ? "customer-edit-open" : "customer-edit-closed"} className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto" aria-labelledby="customer-edit-dialog-title">
+      <DialogContent key={open ? "customer-edit-open" : "customer-edit-closed"} className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card" aria-labelledby="customer-edit-dialog-title">
         <DialogHeader>
           <DialogTitle id="customer-edit-dialog-title">Kunden bearbeiten</DialogTitle>
         </DialogHeader>

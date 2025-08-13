@@ -76,7 +76,7 @@ export function OrderPlanningDialog({ order }: OrderPlanningDialogProps) {
         key={open ? "order-planning-open" : "order-planning-closed"} 
         aria-labelledby={titleId} 
         aria-describedby={descriptionId}
-        className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto"
+        className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card"
       >
         <DialogHeader>
           <DialogTitle id={titleId}>Anfrage planen: {order.title}</DialogTitle>

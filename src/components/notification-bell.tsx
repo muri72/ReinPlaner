@@ -74,7 +74,7 @@ export function NotificationBell() {
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-80">
+      <PopoverContent className="w-80 glassmorphism-card">
         <div className="grid gap-4">
           <div className="space-y-2">
             <h4 className="font-medium leading-none">Benachrichtigungen</h4>

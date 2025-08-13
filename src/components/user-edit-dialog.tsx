@@ -52,6 +52,7 @@ export function UserEditDialog({ user }: UserEditDialogProps) {
         key={open ? "user-edit-open" : "user-edit-closed"} 
         aria-labelledby={titleId} 
         aria-describedby={descriptionId}
+        className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card"
       >
         <DialogHeader>
           <DialogTitle id={titleId}>Benutzer bearbeiten</DialogTitle>

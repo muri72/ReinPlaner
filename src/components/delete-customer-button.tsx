@@ -61,7 +61,7 @@ export function DeleteCustomerButton({ customerId }: DeleteCustomerButtonProps) 
               key={`delete-customer-${customerId}-open`} 
               aria-labelledby={titleId} 
               aria-describedby={descriptionId}
-              className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto"
+              className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card"
             >
               <DialogHeader>
                 <VisuallyHidden asChild>

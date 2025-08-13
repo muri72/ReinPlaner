@@ -27,7 +27,7 @@ export function OrderFeedbackDialog({ orderId }: OrderFeedbackDialogProps) {
         key={open ? "order-feedback-open" : "order-feedback-closed"} 
         aria-labelledby={titleId} 
         aria-describedby={descriptionId}
-        className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto"
+        className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card"
       >
         <DialogHeader>
           <DialogTitle id={titleId}>Feedback zum Auftrag</DialogTitle>

@@ -27,6 +27,7 @@ export function GiveGeneralFeedbackDialog({ onFeedbackSubmitted }: GiveGeneralFe
         key={open ? "give-general-feedback-open" : "give-general-feedback-closed"} 
         aria-labelledby={titleId} 
         aria-describedby={descriptionId}
+        className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card"
       >
         <DialogHeader>
           <DialogTitle id={titleId}>Allgemeines Feedback einreichen</DialogTitle>

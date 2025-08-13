@@ -54,6 +54,7 @@ export function CustomerContactEditDialog({ contact }: CustomerContactEditDialog
         key={open ? "customer-contact-edit-open" : "customer-contact-edit-closed"} 
         aria-labelledby={titleId} 
         aria-describedby={descriptionId}
+        className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card"
       >
         <DialogHeader>
           <DialogTitle id={titleId}>Kundenkontakt bearbeiten</DialogTitle>

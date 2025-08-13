@@ -40,6 +40,7 @@ export function AbsenceRequestCreateDialog({ onAbsenceRequestCreated, currentUse
         key={open ? "absence-request-create-open" : "absence-request-create-closed"} 
         aria-labelledby={titleId} 
         aria-describedby={descriptionId}
+        className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card"
       >
         <DialogHeader>
           <DialogTitle id={titleId}>Neuen Abwesenheitsantrag einreichen</DialogTitle>

@@ -58,6 +58,7 @@ export function TimeEntryCreateDialog({
         key={open ? "time-entry-create-open" : "time-entry-create-closed"} 
         aria-labelledby={titleId} 
         aria-describedby={descriptionId}
+        className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card"
       >
         <DialogHeader>
           <DialogTitle id={titleId}>{dialogTitle}</DialogTitle>

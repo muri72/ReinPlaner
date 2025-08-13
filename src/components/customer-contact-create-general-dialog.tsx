@@ -40,6 +40,7 @@ export function CustomerContactCreateGeneralDialog({ onContactCreated }: Custome
         key={open ? "customer-contact-create-general-open" : "customer-contact-create-general-closed"} 
         aria-labelledby={titleId} 
         aria-describedby={descriptionId}
+        className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card"
       >
         <DialogHeader>
           <DialogTitle id={titleId}>Neuen Kundenkontakt hinzufügen</DialogTitle>

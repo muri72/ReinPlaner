@@ -74,6 +74,7 @@ export function GeneralFeedbackEditDialog({ feedback }: GeneralFeedbackEditDialo
         key={open ? "general-feedback-edit-open" : "general-feedback-edit-closed"} 
         aria-labelledby={titleId} 
         aria-describedby={descriptionId}
+        className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card"
       >
         <DialogHeader>
           <DialogTitle id={titleId}>Feedback bearbeiten</DialogTitle>
