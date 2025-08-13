@@ -212,7 +212,7 @@ export default async function TimeTrackingPage({
 
       {isAdmin ? (
         <>
-          <Card className="shadow-elevation-2">
+          <Card className="shadow-neumorphic glassmorphism-card">
             <CardHeader>
               <CardTitle className="text-lg font-semibold">Automatische Zeiterfassung</CardTitle>
             </CardHeader>
@@ -253,7 +253,7 @@ export default async function TimeTrackingPage({
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
             {timeEntries.length === 0 ? (
-              <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30">
+              <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30 shadow-neumorphic glassmorphism-card">
                 <Clock className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
                 <p className="text-base md:text-lg font-semibold">Noch keine Zeiteinträge vorhanden</p>
                 <p className="text-sm">Beginnen Sie, indem Sie Ihre Arbeitszeit erfassen oder einen Eintrag manuell hinzufügen.</p>
@@ -263,7 +263,7 @@ export default async function TimeTrackingPage({
               </div>
             ) : (
               timeEntries.map((entry) => (
-                <Card key={entry.id} className="shadow-elevation-1">
+                <Card key={entry.id} className="shadow-neumorphic glassmorphism-card">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-base md:text-lg font-semibold">
                       Zeiteintrag

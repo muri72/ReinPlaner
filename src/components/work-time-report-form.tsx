@@ -140,7 +140,7 @@ export function WorkTimeReportForm() {
 
   return (
     <div className="space-y-6">
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 p-4 border rounded-md bg-card">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 p-4 border rounded-md bg-card shadow-neumorphic glassmorphism-card">
         <Tabs value={reportType} onValueChange={(value) => form.setValue('reportType', value as 'object' | 'employee')} className="w-full">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="object">Nach Objekt</TabsTrigger>
@@ -184,7 +184,7 @@ export function WorkTimeReportForm() {
 
       {(objectReportData || employeeReportData) && (
         <div className="space-y-4">
-          <div ref={reportTableRef} className="p-4 bg-white dark:bg-gray-900 rounded-md shadow-sm">
+          <div ref={reportTableRef} className="p-4 bg-white dark:bg-gray-900 rounded-md shadow-neumorphic glassmorphism-card">
             {objectReportData && (
               <>
                 <h3 className="text-lg font-bold mb-4">Bericht für {objects.find(obj => obj.id === form.getValues("objectId"))?.name} - {months.find(m => m.value === form.getValues("month"))?.label} {form.getValues("year")}</h3>

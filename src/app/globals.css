@@ -4,29 +4,30 @@
 
 @layer base {
   :root {
-    /* Colors */
-    --background: 0 0% 100%; /* White */
-    --foreground: 220 10% 15%; /* Dark Gray-Blue */
+    /* Base Colors - Light Mode */
+    --background: 0 0% 100%; /* Pure White */
+    --foreground: 220 10% 15%; /* Dark Gray-Blue for high contrast */
 
-    --card: 0 0% 100%;
+    --card: 0 0% 100%; /* White for card background */
     --card-foreground: 220 10% 15%;
 
     --popover: 0 0% 100%;
     --popover-foreground: 220 10% 15%;
 
-    --primary: 210 80% 45%; /* Custom Blue from Logo */
-    --primary-foreground: 0 0% 100%; /* White */
+    /* Pastel Accent Colors */
+    --primary: 210 80% 65%; /* Pastel Blue */
+    --primary-foreground: 220 10% 15%; /* Dark text on primary */
 
-    --secondary: 200 70% 70%; /* Lighter Blue from Logo */
-    --secondary-foreground: 210 80% 20%; /* Darker Blue */
+    --secondary: 330 80% 85%; /* Very light Pastel Pink */
+    --secondary-foreground: 220 10% 15%; /* Dark text on secondary */
 
-    --muted: 210 20% 95%; /* Lighter Gray-Blue */
+    --muted: 210 20% 95%; /* Light Gray-Blue */
     --muted-foreground: 210 10% 45%; /* Medium Gray-Blue */
 
-    --accent: 200 80% 60%; /* More vibrant blue accent */
-    --accent-foreground: 0 0% 100%; /* White */
+    --accent: 270 70% 75%; /* Pastel Purple */
+    --accent-foreground: 220 10% 15%; /* Dark text on accent */
 
-    --destructive: 0 80% 50%; /* Strong Red */
+    --destructive: 0 80% 50%; /* Strong Red (for errors/danger) */
     --destructive-foreground: 0 0% 100%; /* White */
 
     --success: 120 70% 40%; /* Vibrant Green */
@@ -35,49 +36,53 @@
     --warning: 40 90% 50%; /* Amber/Yellow */
     --warning-foreground: 0 0% 100%; /* White */
 
-    --border: 210 20% 85%; /* Light Gray-Blue Border */
-    --input: 210 20% 90%; /* Slightly darker input background */
-    --ring: 210 80% 45%; /* Primary color for focus ring */
+    --border: 210 20% 90%; /* Light Gray-Blue Border */
+    --input: 210 20% 95%; /* Slightly darker input background */
+    --ring: 210 80% 65%; /* Primary color for focus ring */
 
-    /* Border Radius */
-    --radius: 12px; /* Default for rounded-lg, increased */
-    --radius-sm: 4px; /* Increased */
-    --radius-md: 8px; /* Increased */
-    --radius-xl: 16px; /* New for larger rounding */
-    --radius-2xl: 24px; /* New for even larger rounding */
+    /* Border Radius - Increased for smooth rounded corners */
+    --radius: 16px; /* Default for rounded-lg */
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-xl: 24px;
+    --radius-2xl: 32px;
+
+    /* Glassmorphism Blur */
+    --glass-blur: 10px; /* Define blur amount */
 
     /* Sidebar Specific Colors (adjusted to new palette) */
     --sidebar-background: 210 20% 98%; /* Very light gray-blue */
     --sidebar-foreground: 220 10% 20%; /* Darker text */
-    --sidebar-primary: 210 80% 35%; /* Darker primary for contrast */
+    --sidebar-primary: 210 80% 55%; /* Slightly darker primary for contrast */
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 200 70% 70%; /* Secondary color for hover */
-    --sidebar-accent-foreground: 220 80% 20%;
-    --sidebar-border: 210 20% 85%;
-    --sidebar-ring: 210 80% 45%;
+    --sidebar-accent: 270 70% 70%; /* Slightly darker accent for hover */
+    --sidebar-accent-foreground: 220 10% 20%;
+    --sidebar-border: 210 20% 90%;
+    --sidebar-ring: 210 80% 65%;
   }
 
   .dark {
-    /* Colors */
+    /* Dark Mode Colors - Adjusted for glassmorphism and pastel feel */
     --background: 220 10% 10%; /* Dark Gray-Blue */
     --foreground: 220 10% 90%; /* Light Gray-Blue */
 
-    --card: 220 10% 12%;
+    --card: 220 10% 12%; /* Slightly lighter than background for depth */
     --card-foreground: 220 10% 90%;
 
     --popover: 220 10% 12%;
     --popover-foreground: 220 10% 90%;
 
-    --primary: 210 80% 65%; /* Lighter Custom Blue for dark mode */
-    --primary-foreground: 220 10% 10%; /* Dark background */
+    /* Pastel Accent Colors (Dark Mode versions) */
+    --primary: 210 80% 75%; /* Lighter Pastel Blue for dark mode */
+    --primary-foreground: 220 10% 10%; /* Dark text on primary */
 
-    --secondary: 200 70% 30%; /* Darker Lighter Blue for dark mode */
-    --secondary-foreground: 200 70% 70%; /* Lighter text */
+    --secondary: 330 80% 75%; /* Lighter Pastel Pink for dark mode */
+    --secondary-foreground: 220 10% 10%; /* Dark text on secondary */
 
     --muted: 210 15% 20%;
     --muted-foreground: 210 10% 60%;
 
-    --accent: 200 80% 40%; /* Darker vibrant blue accent for dark mode */
+    --accent: 270 70% 85%; /* Lighter Pastel Purple for dark mode */
     --accent-foreground: 220 10% 10%;
 
     --destructive: 0 80% 60%; /* Lighter Red for dark mode */
@@ -91,17 +96,17 @@
 
     --border: 210 15% 20%;
     --input: 210 15% 20%;
-    --ring: 210 80% 65%;
+    --ring: 210 80% 75%;
 
     /* Sidebar Specific Colors (adjusted to new palette) */
     --sidebar-background: 220 10% 15%;
     --sidebar-foreground: 220 10% 85%;
-    --sidebar-primary: 210 80% 75%;
+    --sidebar-primary: 210 80% 65%;
     --sidebar-primary-foreground: 220 10% 10%;
-    --sidebar-accent: 200 70% 30%;
-    --sidebar-accent-foreground: 200 70% 70%;
+    --sidebar-accent: 270 70% 70%;
+    --sidebar-accent-foreground: 220 10% 10%;
     --sidebar-border: 210 15% 20%;
-    --sidebar-ring: 210 80% 65%;
+    --sidebar-ring: 210 80% 75%;
   }
 }
 
@@ -116,7 +121,7 @@
     @apply bg-background text-foreground;
     /* Subtle noise pattern for texture */
     background-image: radial-gradient(circle at center, rgba(0,0,0,0.01) 1px, transparent 1px),
-                      linear-gradient(to bottom right, hsl(var(--primary) / 0.05), hsl(var(--accent) / 0.05)); /* Subtle gradient overlay */
+                      linear-gradient(to bottom right, hsl(var(--primary) / 0.1), hsl(var(--accent) / 0.1)); /* More prominent subtle gradient overlay */
     background-size: 2px 2px, 100% 100%;
     background-attachment: fixed; /* Ensure background is fixed for parallax */
   }
@@ -143,9 +148,17 @@
 @layer components {
   .bg-main-content-pattern {
     background-image: radial-gradient(circle at center, rgba(0,0,0,0.01) 1px, transparent 1px),
-                      linear-gradient(to bottom right, hsl(var(--primary) / 0.05), hsl(var(--accent) / 0.05));
+                      linear-gradient(to bottom right, hsl(var(--primary) / 0.1), hsl(var(--accent) / 0.1));
     background-size: 2px 2px, 100% 100%;
     background-attachment: fixed;
+  }
+
+  /* Glassmorphism effect for cards and other panels */
+  .glassmorphism-card {
+    background-color: hsl(var(--card) / 0.6); /* Semi-transparent background */
+    backdrop-filter: blur(var(--glass-blur)); /* Frosted glass effect */
+    border: 1px solid hsl(var(--border) / 0.3); /* Subtle border */
+    box-shadow: var(--shadow-neumorphic); /* Apply neumorphic shadow */
   }
 }
 

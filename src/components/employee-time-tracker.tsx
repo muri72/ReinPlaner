@@ -337,7 +337,7 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
 
   if (loading) {
     return (
-      <Card className="p-4 space-y-4">
+      <Card className="p-4 space-y-4 shadow-neumorphic glassmorphism-card">
         <CardHeader>
           <CardTitle className="text-lg font-semibold">Ihre Zeiterfassung</CardTitle>
         </CardHeader>
@@ -356,7 +356,7 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
 
   if (!employeeId) {
     return (
-      <Card>
+      <Card className="shadow-neumorphic glassmorphism-card">
         <CardHeader>
           <CardTitle className="text-lg font-semibold">Zeiterfassung nicht verfügbar</CardTitle>
         </CardHeader>
@@ -410,7 +410,7 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
   };
 
   return (
-    <Card className="p-4 space-y-4">
+    <Card className="p-4 space-y-4 shadow-neumorphic glassmorphism-card">
       <CardHeader>
         <CardTitle className="text-lg font-semibold">Ihre Zeiterfassung</CardTitle>
       </CardHeader>

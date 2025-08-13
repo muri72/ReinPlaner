@@ -94,7 +94,7 @@ export function FeedbackCard({ feedback, feedbackType, currentUserId, currentUse
 
 
   return (
-    <Card className="flex flex-col h-full">
+    <Card className="flex flex-col h-full shadow-neumorphic glassmorphism-card">
       <CardHeader>
         <CardTitle className="text-lg">{feedback.order?.title || feedback.subject || 'Feedback'}</CardTitle>
         <p className="text-sm text-muted-foreground">

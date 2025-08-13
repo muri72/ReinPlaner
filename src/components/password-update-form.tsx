@@ -52,7 +52,7 @@ export function PasswordUpdateForm() {
   };
 
   return (
-    <Card>
+    <Card className="shadow-neumorphic glassmorphism-card">
       <CardHeader>
         <CardTitle className="text-lg font-semibold">Passwort ändern</CardTitle>
         <CardDescription className="text-sm">

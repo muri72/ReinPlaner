@@ -9,7 +9,7 @@ interface OrderStatusChartProps {
 }
 
 // Farben für die Segmente des Tortendiagramms
-const COLORS = ['hsl(var(--warning))', 'hsl(var(--secondary))', 'hsl(var(--primary))']; // Gelb für Ausstehend, Grau für In Bearbeitung, Blau für Abgeschlossen
+const COLORS = ['hsl(var(--warning))', 'hsl(var(--secondary))', 'hsl(var(--primary))']; // Gelb für Ausstehend, Hellrosa für In Bearbeitung, Pastelblau für Abgeschlossen
 
 export function OrderStatusChart({ data }: OrderStatusChartProps) {
   // Filtern Sie Datenpunkte mit Wert 0 heraus, damit sie nicht im Diagramm erscheinen
@@ -17,7 +17,7 @@ export function OrderStatusChart({ data }: OrderStatusChartProps) {
 
   if (filteredData.length === 0) {
     return (
-      <Card className="col-span-full lg:col-span-2">
+      <Card className="col-span-full lg:col-span-2 shadow-neumorphic glassmorphism-card">
         <CardHeader>
           <CardTitle>Auftragsstatus-Verteilung</CardTitle>
         </CardHeader>
@@ -29,7 +29,7 @@ export function OrderStatusChart({ data }: OrderStatusChartProps) {
   }
 
   return (
-    <Card className="col-span-full lg:col-span-2"> {/* Nimmt mehr Platz ein */}
+    <Card className="col-span-full lg:col-span-2 shadow-neumorphic glassmorphism-card"> {/* Nimmt mehr Platz ein */}
       <CardHeader>
         <CardTitle>Auftragsstatus-Verteilung</CardTitle>
       </CardHeader>

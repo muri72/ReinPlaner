@@ -17,7 +17,7 @@ interface TimeTrackingChartsProps {
 export function TimeTrackingCharts({ weeklyData, monthlyData }: TimeTrackingChartsProps) {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <Card>
+      <Card className="shadow-neumorphic glassmorphism-card">
         <CardHeader>
           <CardTitle>Wöchentliche Stunden</CardTitle>
         </CardHeader>
@@ -39,7 +39,7 @@ export function TimeTrackingCharts({ weeklyData, monthlyData }: TimeTrackingChar
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="shadow-neumorphic glassmorphism-card">
         <CardHeader>
           <CardTitle>Monatliche Stunden</CardTitle>
         </CardHeader>

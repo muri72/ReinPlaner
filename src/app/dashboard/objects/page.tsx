@@ -127,7 +127,7 @@ export default async function ObjectsPage({
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
         {objects && objects.length === 0 && !query ? (
-          <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30">
+          <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30 shadow-neumorphic glassmorphism-card">
             <Building className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
             <p className="text-base md:text-lg font-semibold">Noch keine Objekte vorhanden</p>
             <p className="text-sm">Fügen Sie ein neues Objekt hinzu, um es zu verwalten.</p>
@@ -136,14 +136,14 @@ export default async function ObjectsPage({
             </div>
           </div>
         ) : objects && objects.length === 0 && query ? (
-          <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30">
+          <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30 shadow-neumorphic glassmorphism-card">
             <Building className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
             <p className="text-base md:text-lg font-semibold">Keine Objekte gefunden</p>
             <p className="text-sm">Ihre Suche nach "{query}" ergab keine Treffer.</p>
           </div>
         ) : (
           objects?.map((object) => (
-            <Card key={object.id} className="shadow-elevation-1">
+            <Card key={object.id} className="shadow-neumorphic glassmorphism-card">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-base md:text-lg font-semibold">{object.name}</CardTitle>
                 <div className="flex items-center space-x-2">

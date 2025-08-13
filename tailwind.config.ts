@@ -40,11 +40,11 @@ export default {
   				DEFAULT: 'hsl(var(--destructive))',
   				foreground: 'hsl(var(--destructive-foreground))'
   			},
-            success: { /* Hinzugefügt */
+            success: {
               DEFAULT: 'hsl(var(--success))',
               foreground: 'hsl(var(--success-foreground))'
             },
-            warning: { /* Hinzugefügt */
+            warning: {
               DEFAULT: 'hsl(var(--warning))',
               foreground: 'hsl(var(--warning-foreground))'
             },
@@ -111,11 +111,13 @@ export default {
             '2xl': 'var(--radius-2xl)',
   		},
         boxShadow: {
-          'elevation-1': '0px 1px 2px rgba(0, 0, 0, 0.05), 0px 1px 1px rgba(0, 0, 0, 0.03)',
-          'elevation-2': '0px 2px 4px rgba(0, 0, 0, 0.06), 0px 2px 2px rgba(0, 0, 0, 0.04)',
-          'elevation-3': '0px 4px 8px rgba(0, 0, 0, 0.08), 0px 4px 4px rgba(0, 0, 0, 0.05)',
-          'elevation-4': '0px 8px 16px rgba(0, 0, 0, 0.1), 0px 8px 8px rgba(0, 0, 0, 0.06)',
-          'elevation-5': '0px 16px 32px rgba(0, 0, 0, 0.12), 0px 16px 16px rgba(0, 0, 0, 0.08)',
+          // Neumorphic soft shadows
+          'neumorphic': '8px 8px 16px rgba(0, 0, 0, 0.05), -8px -8px 16px rgba(255, 255, 255, 0.8)',
+          'elevation-1': '0px 1px 2px rgba(0, 0, 0, 0.03), 0px 1px 1px rgba(0, 0, 0, 0.02)',
+          'elevation-2': '0px 2px 4px rgba(0, 0, 0, 0.04), 0px 2px 2px rgba(0, 0, 0, 0.03)',
+          'elevation-3': '0px 4px 8px rgba(0, 0, 0, 0.05), 0px 4px 4px rgba(0, 0, 0, 0.04)',
+          'elevation-4': '0px 8px 16px rgba(0, 0, 0, 0.06), 0px 8px 8px rgba(0, 0, 0, 0.05)',
+          'elevation-5': '0px 16px 32px rgba(0, 0, 0, 0.08), 0px 16px 16px rgba(0, 0, 0, 0.06)',
         },
   		keyframes: {
   			'accordion-down': {

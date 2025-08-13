@@ -43,7 +43,7 @@ function DraggableOrder({ order }: { order: UnassignedOrder }) {
     <Card
       ref={setNodeRef}
       style={style}
-      className={cn("mb-2 p-2 cursor-grab touch-none", isDragging && "shadow-lg z-50 opacity-75")}
+      className={cn("mb-2 p-2 cursor-grab touch-none shadow-neumorphic glassmorphism-card", isDragging && "shadow-lg z-50 opacity-75")}
     >
       <CardContent className="p-0"> {/* Adjusted padding */}
         <div className="flex items-center">
@@ -132,7 +132,7 @@ export function ResourcePlanningCalendar() {
     <DndContext onDragStart={({ active }) => setActiveId(active.id as string)} onDragEnd={handleDragEnd}>
       <div className="flex flex-col md:flex-row gap-4"> {/* Changed to flex-col on mobile */}
         <div className="w-full md:w-1/4"> {/* Adjusted width */}
-          <Card className="h-full">
+          <Card className="h-full shadow-neumorphic glassmorphism-card">
             <CardHeader>
               <CardTitle className="text-lg font-semibold">Ungeplante Aufträge</CardTitle>
               <CardDescription className="text-sm">Ziehen Sie Aufträge auf den Kalender, um sie zuzuweisen.</CardDescription>
@@ -158,7 +158,7 @@ export function ResourcePlanningCalendar() {
         </div>
 
         <div className="w-full md:w-3/4"> {/* Adjusted width */}
-          <div className="p-4 border rounded-lg">
+          <div className="p-4 border rounded-lg shadow-neumorphic glassmorphism-card">
             <div className="flex justify-between items-center mb-4">
               <Button variant="outline" size="icon" onClick={() => setCurrentDate(subDays(currentDate, 7))}><ChevronLeft className="h-4 w-4" /></Button>
               <h2 className="text-base sm:text-xl font-semibold text-center"> {/* Adjusted font size */}

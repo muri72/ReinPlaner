@@ -122,7 +122,7 @@ export function ProfileUpdateForm({ initialData }: ProfileUpdateFormProps) {
           <p className="text-red-500 text-xs mt-1">{form.formState.errors.lastName.message}</p>
         )}
       </div>
-      <div className="flex items-center justify-between rounded-lg border p-4">
+      <div className="flex items-center justify-between rounded-lg border p-4 shadow-neumorphic glassmorphism-card">
         <div className="space-y-0.5">
           <Label htmlFor="emailNotificationsEnabled">E-Mail-Benachrichtigungen</Label>
           <p className="text-sm text-muted-foreground">

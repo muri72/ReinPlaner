@@ -23,7 +23,7 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut }: 
   return (
     <div className="min-h-screen flex flex-col md:flex-row">
       {/* Mobile Header and Navigation (fixed) */}
-      <header className="md:hidden fixed top-0 left-0 w-full bg-sidebar text-sidebar-foreground border-b border-sidebar-border p-4 flex items-center justify-between z-50">
+      <header className="md:hidden fixed top-0 left-0 w-full bg-sidebar text-sidebar-foreground border-b border-sidebar-border p-4 flex items-center justify-between z-50 glassmorphism-card">
         <div className="flex items-center">
           <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
             <SheetTrigger asChild>
@@ -35,7 +35,7 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut }: 
               side="left"
               className={cn(
                 "w-64 text-sidebar-foreground border-r border-sidebar-border p-4 flex flex-col",
-                "bg-sidebar/80 backdrop-blur-xl"
+                "bg-sidebar/80 backdrop-blur-xl glassmorphism-card" // Apply glassmorphism here
               )}
               aria-labelledby="aris-navigation-title"
               aria-describedby="aris-navigation-description"
@@ -75,7 +75,7 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut }: 
         className={cn(
           "hidden md:flex flex-col fixed top-0 left-0 h-screen bg-sidebar text-sidebar-foreground border-r border-sidebar-border p-4 transition-all duration-300 ease-in-out z-40",
           isCollapsed ? "w-20" : "w-64",
-          "bg-gradient-to-br from-sidebar-background to-sidebar-accent"
+          "bg-gradient-to-br from-sidebar-background to-sidebar-accent glassmorphism-card" // Apply glassmorphism here
         )}
       >
         <div className="flex items-center justify-between mb-6">

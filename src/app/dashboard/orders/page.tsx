@@ -176,14 +176,14 @@ export default async function OrdersPage({
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
           {pendingRequests.length === 0 ? (
-            <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30">
+            <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30 shadow-neumorphic glassmorphism-card">
               <Briefcase className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
               <p className="text-base md:text-lg font-semibold">Keine offenen Auftragsanfragen</p>
               <p className="text-sm">Alle Anfragen wurden bearbeitet oder es gibt keine neuen.</p>
             </div>
           ) : (
             pendingRequests.map((order) => (
-              <Card key={order.id} className="border-warning border-2 shadow-elevation-2">
+              <Card key={order.id} className="border-warning border-2 shadow-neumorphic glassmorphism-card">
                 <CardHeader>
                   <CardTitle className="text-base md:text-lg font-medium">{order.title}</CardTitle>
                 </CardHeader>
@@ -211,7 +211,7 @@ export default async function OrdersPage({
         )}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
           {otherOrders.length === 0 && !query ? (
-            <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30">
+            <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30 shadow-neumorphic glassmorphism-card">
               <Briefcase className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
               <p className="text-base md:text-lg font-semibold">Noch keine Aufträge vorhanden</p>
               <p className="text-sm">Beginnen Sie, indem Sie einen neuen Auftrag hinzufügen.</p>
@@ -220,7 +220,7 @@ export default async function OrdersPage({
               </div>
             </div>
           ) : otherOrders.length === 0 && query ? (
-            <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30">
+            <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30 shadow-neumorphic glassmorphism-card">
               <Briefcase className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
               <p className="text-base md:text-lg font-semibold">Keine Aufträge gefunden</p>
               <p className="text-sm">Ihre Suche nach "{query}" ergab keine Treffer.</p>
@@ -229,7 +229,7 @@ export default async function OrdersPage({
             otherOrders.map((order) => {
               const feedback = order.order_feedback?.[0];
               return (
-                <Card key={order.id} className="shadow-elevation-1">
+                <Card key={order.id} className="shadow-neumorphic glassmorphism-card">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-base md:text-lg font-medium">{order.title}</CardTitle>
                     <div className="flex items-center space-x-2">

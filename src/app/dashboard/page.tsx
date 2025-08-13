@@ -74,7 +74,7 @@ export default async function DashboardPage() {
       </h1>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="shadow-elevation-2">
+        <Card className="shadow-neumorphic glassmorphism-card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm md:text-base font-semibold">Gesamtkunden</CardTitle>
             <Users className="h-4 w-4 md:h-5 md:w-5 text-muted-foreground" />
@@ -84,7 +84,7 @@ export default async function DashboardPage() {
             <p className="text-xs text-muted-foreground">Kunden in Ihrem System</p>
           </CardContent>
         </Card>
-        <Card className="shadow-elevation-2">
+        <Card className="shadow-neumorphic glassmorphism-card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm md:text-base font-semibold">Gesamtobjekte</CardTitle>
             <Building className="h-4 w-4 md:h-5 md:w-5 text-muted-foreground" />
@@ -94,7 +94,7 @@ export default async function DashboardPage() {
             <p className="text-xs text-muted-foreground">Objekte, die Sie verwalten</p>
           </CardContent>
         </Card>
-        <Card className="shadow-elevation-2">
+        <Card className="shadow-neumorphic glassmorphism-card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm md:text-base font-semibold">Gesamte Mitarbeiter</CardTitle>
             <UsersRound className="h-4 w-4 md:h-5 md:w-5 text-muted-foreground" />
@@ -104,7 +104,7 @@ export default async function DashboardPage() {
             <p className="text-xs text-muted-foreground">Mitarbeiter in Ihrem Team</p>
           </CardContent>
         </Card>
-        <Card className="shadow-elevation-2">
+        <Card className="shadow-neumorphic glassmorphism-card">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm md:text-base font-semibold">Ausstehende Aufträge</CardTitle>
             <Briefcase className="h-4 w-4 md:h-5 md:w-5 text-muted-foreground" />

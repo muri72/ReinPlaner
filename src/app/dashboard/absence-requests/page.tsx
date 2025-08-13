@@ -78,7 +78,9 @@ export default async function AbsenceRequestsPage() {
       {isAdmin && (
         <div className="space-y-6">
           <h2 className="text-xl md:text-2xl font-bold">Monatsübersicht Abwesenheiten</h2>
-          <AbsenceTimelineCalendar />
+          <div className="p-4 border rounded-lg shadow-neumorphic glassmorphism-card">
+            <AbsenceTimelineCalendar />
+          </div>
         </div>
       )}
 
@@ -90,7 +92,7 @@ export default async function AbsenceRequestsPage() {
           </div>
           <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-4">
             {requests.length === 0 ? (
-              <div className="text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30">
+              <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30 shadow-neumorphic glassmorphism-card">
                 <CalendarOff className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
                 <p className="text-base md:text-lg font-semibold">Keine Anträge gefunden</p>
                 <p className="text-sm">Reichen Sie einen neuen Abwesenheitsantrag ein.</p>
@@ -100,7 +102,7 @@ export default async function AbsenceRequestsPage() {
               </div>
             ) : (
               requests.map((request) => (
-                <Card key={request.id} className="shadow-elevation-1">
+                <Card key={request.id} className="shadow-neumorphic glassmorphism-card">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-base md:text-lg font-semibold">
                       {typeTranslations[request.type] || 'Abwesenheit'}

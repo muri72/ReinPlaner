@@ -212,7 +212,7 @@ export function AdminTimeEntriesOverview({ currentUserId, isAdmin }: AdminTimeEn
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {Array.from({ length: 6 }).map((_, i) => (
-            <Card key={i} className="shadow-elevation-1">
+            <Card key={i} className="shadow-neumorphic glassmorphism-card">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <Skeleton className="h-6 w-3/4" />
                 <div className="flex space-x-2">
@@ -238,7 +238,7 @@ export function AdminTimeEntriesOverview({ currentUserId, isAdmin }: AdminTimeEn
             </p>
           ) : (
             timeEntries.map((entry) => (
-              <Card key={entry.id}>
+              <Card key={entry.id} className="shadow-neumorphic glassmorphism-card">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-lg font-semibold"> {/* Changed to text-lg font-semibold */}
                     Zeiteintrag
