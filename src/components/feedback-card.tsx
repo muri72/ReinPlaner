@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Star, MessageSquare, Image as ImageIcon, Trash2, Pencil, CornerDownRight } from "lucide-react";
-import { Carousel, CarouselContent, CarouselItem } from "@/components/ui/carousel"; // CarouselNext, CarouselPrevious, type CarouselApi entfernt
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel"; // CarouselNext, CarouselPrevious hinzugefügt
 import NextImage from "next/image";
 import { toast } from "sonner";
 import { FeedbackReplyForm } from "./feedback-reply-form";
@@ -140,7 +140,8 @@ export function FeedbackCard({ feedback, feedbackType, currentUserId, currentUse
                   </CarouselItem>
                 ))}
               </CarouselContent>
-              {/* Navigationspfeile entfernt */}
+              <CarouselPrevious /> {/* Navigationspfeil zurück */}
+              <CarouselNext /> {/* Navigationspfeil vorwärts */}
               {/* Indikatoren entfernt */}
             </Carousel>
           </div>
