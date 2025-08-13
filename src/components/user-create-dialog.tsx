@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 import { UserForm, UserFormValues } from "@/components/user-form";
 import { registerUser } from "@/app/dashboard/users/actions";
-// Removed import: VisuallyHidden
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 interface UserCreateDialogProps {
   onUserCreated?: () => void;
@@ -14,7 +14,8 @@ interface UserCreateDialogProps {
 
 export function UserCreateDialog({ onUserCreated }: UserCreateDialogProps) {
   const [open, setOpen] = useState(false);
-  // Removed titleId and descriptionId
+  const titleId = `user-create-dialog-title`;
+  const descriptionId = `user-create-dialog-description`;
 
   const handleCreate = async (data: UserFormValues) => {
     const result = await registerUser(data);
@@ -35,11 +36,15 @@ export function UserCreateDialog({ onUserCreated }: UserCreateDialogProps) {
       </DialogTrigger>
       <DialogContent 
         key={open ? "user-create-open" : "user-create-closed"} 
-        // Removed aria-labelledby and aria-describedby
+        aria-labelledby={titleId} 
+        aria-describedby={descriptionId}
         className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card"
       >
         <DialogHeader>
-          {/* Removed DialogTitle and DialogDescription */}
+          <DialogTitle id={titleId}>Neuen Benutzer registrieren</DialogTitle>
+          <DialogDescription id={descriptionId}>
+            <VisuallyHidden>Formular zum Registrieren eines neuen Benutzers.</VisuallyHidden>
+          </DialogDescription>
         </DialogHeader>
         <UserForm
           onSubmit={handleCreate}

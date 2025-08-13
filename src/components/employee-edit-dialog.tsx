@@ -1,13 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Pencil } from "lucide-react";
 import { EmployeeForm, EmployeeFormValues } from "@/components/employee-form";
 import { updateEmployee } from "@/app/dashboard/employees/actions";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-// Removed import: VisuallyHidden
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 interface EmployeeEditDialogProps {
   employee: {
@@ -34,7 +34,8 @@ interface EmployeeEditDialogProps {
 
 export function EmployeeEditDialog({ employee }: EmployeeEditDialogProps) {
   const [open, setOpen] = useState(false);
-  // Removed titleId and descriptionId
+  const titleId = `employee-edit-dialog-title`;
+  const descriptionId = `employee-edit-dialog-description`;
 
   const handleUpdate = async (data: EmployeeFormValues) => {
     const result = await updateEmployee(employee.id, data);
@@ -62,11 +63,15 @@ export function EmployeeEditDialog({ employee }: EmployeeEditDialogProps) {
       </TooltipProvider>
       <DialogContent 
         key={open ? "employee-edit-open" : "employee-edit-closed"} 
-        // Removed aria-labelledby and aria-describedby
+        aria-labelledby={titleId} 
+        aria-describedby={descriptionId}
         className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card"
       >
         <DialogHeader>
-          {/* Removed DialogTitle and DialogDescription */}
+          <DialogTitle id={titleId}>Mitarbeiter bearbeiten</DialogTitle>
+          <DialogDescription id={descriptionId}>
+            <VisuallyHidden>Formular zum Bearbeiten der Mitarbeiterdaten.</VisuallyHidden>
+          </DialogDescription>
         </DialogHeader>
         <EmployeeForm
           initialData={{

@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Star } from "lucide-react";
 import { OrderFeedbackForm } from "@/components/order-feedback-form";
-// Removed import: VisuallyHidden
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 interface OrderFeedbackDialogProps {
   orderId: string;
@@ -13,7 +13,8 @@ interface OrderFeedbackDialogProps {
 
 export function OrderFeedbackDialog({ orderId }: OrderFeedbackDialogProps) {
   const [open, setOpen] = useState(false);
-  // Removed titleId and descriptionId
+  const titleId = `order-feedback-dialog-title`;
+  const descriptionId = `order-feedback-dialog-description`;
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -24,11 +25,15 @@ export function OrderFeedbackDialog({ orderId }: OrderFeedbackDialogProps) {
       </DialogTrigger>
       <DialogContent 
         key={open ? "order-feedback-open" : "order-feedback-closed"} 
-        // Removed aria-labelledby and aria-describedby
+        aria-labelledby={titleId} 
+        aria-describedby={descriptionId}
         className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card"
       >
         <DialogHeader>
-          {/* Removed DialogTitle and DialogDescription */}
+          <DialogTitle id={titleId}>Feedback zum Auftrag</DialogTitle>
+          <DialogDescription id={descriptionId}>
+            <VisuallyHidden>Formular zum Einreichen von Feedback zu einem Auftrag.</VisuallyHidden>
+          </DialogDescription>
         </DialogHeader>
         <OrderFeedbackForm orderId={orderId} onSuccess={() => setOpen(false)} />
       </DialogContent>

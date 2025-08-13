@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 import { AbsenceRequestForm, AbsenceRequestFormValues } from "@/components/absence-request-form";
 import { createAbsenceRequest } from "@/app/dashboard/absence-requests/actions";
-// Removed import: VisuallyHidden
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 interface AbsenceRequestCreateDialogProps {
   onAbsenceRequestCreated?: () => void;
@@ -16,7 +16,8 @@ interface AbsenceRequestCreateDialogProps {
 
 export function AbsenceRequestCreateDialog({ onAbsenceRequestCreated, currentUserRole, currentUserId }: AbsenceRequestCreateDialogProps) {
   const [open, setOpen] = useState(false);
-  // Removed titleId and descriptionId
+  const titleId = `absence-request-create-dialog-title`;
+  const descriptionId = `absence-request-create-dialog-description`;
 
   const handleCreate = async (data: AbsenceRequestFormValues) => {
     const result = await createAbsenceRequest(data);
@@ -37,11 +38,15 @@ export function AbsenceRequestCreateDialog({ onAbsenceRequestCreated, currentUse
       </DialogTrigger>
       <DialogContent 
         key={open ? "absence-request-create-open" : "absence-request-create-closed"} 
-        // Removed aria-labelledby and aria-describedby
+        aria-labelledby={titleId} 
+        aria-describedby={descriptionId}
         className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card"
       >
         <DialogHeader>
-          {/* Removed DialogTitle and DialogDescription */}
+          <DialogTitle id={titleId}>Neuen Abwesenheitsantrag einreichen</DialogTitle>
+          <DialogDescription id={descriptionId}>
+            <VisuallyHidden>Formular zum Einreichen eines neuen Abwesenheitsantrags.</VisuallyHidden>
+          </DialogDescription>
         </DialogHeader>
         <AbsenceRequestForm
           onSubmit={handleCreate}

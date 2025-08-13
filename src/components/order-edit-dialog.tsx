@@ -1,13 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Pencil } from "lucide-react";
 import { OrderForm, OrderFormValues } from "@/components/order-form";
 import { updateOrder } from "@/app/dashboard/orders/actions";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-// Removed import: VisuallyHidden
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 // Definierte Liste der Dienstleistungen (muss mit order-form.tsx übereinstimmen)
 const availableServices = [
@@ -42,7 +42,8 @@ interface OrderEditDialogProps {
 
 export function OrderEditDialog({ order }: OrderEditDialogProps) {
   const [open, setOpen] = useState(false);
-  // Removed titleId and descriptionId
+  const titleId = `order-edit-dialog-title`;
+  const descriptionId = `order-edit-dialog-description`;
 
   const handleUpdate = async (data: OrderFormValues) => {
     const result = await updateOrder(order.id, data);
@@ -78,11 +79,15 @@ export function OrderEditDialog({ order }: OrderEditDialogProps) {
       </TooltipProvider>
       <DialogContent 
         key={open ? "order-edit-open" : "order-edit-closed"} 
-        // Removed aria-labelledby and aria-describedby
+        aria-labelledby={titleId} 
+        aria-describedby={descriptionId}
         className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card"
       >
         <DialogHeader>
-          {/* Removed DialogTitle and DialogDescription */}
+          <DialogTitle id={titleId}>Auftrag bearbeiten</DialogTitle>
+          <DialogDescription id={descriptionId}>
+            <VisuallyHidden>Formular zum Bearbeiten der Auftragsdetails.</VisuallyHidden>
+          </DialogDescription>
         </DialogHeader>
         <OrderForm
           initialData={{

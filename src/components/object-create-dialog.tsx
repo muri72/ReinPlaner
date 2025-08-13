@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button"; // Korrigierter Import
 import { PlusCircle } from "lucide-react";
 import { ObjectForm, ObjectFormValues } from "@/components/object-form";
 import { createObject } from "@/app/dashboard/objects/actions";
-// Removed import: VisuallyHidden
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 interface ObjectCreateDialogProps {
   onObjectCreated?: () => void;
@@ -14,7 +14,8 @@ interface ObjectCreateDialogProps {
 
 export function ObjectCreateDialog({ onObjectCreated }: ObjectCreateDialogProps) {
   const [open, setOpen] = useState(false);
-  // Removed titleId and descriptionId
+  const titleId = `object-create-dialog-title`;
+  const descriptionId = `object-create-dialog-description`;
 
   const handleCreate = async (data: ObjectFormValues) => {
     const result = await createObject(data);
@@ -35,11 +36,15 @@ export function ObjectCreateDialog({ onObjectCreated }: ObjectCreateDialogProps)
       </DialogTrigger>
       <DialogContent 
         key={open ? "object-create-open" : "object-create-closed"} 
-        // Removed aria-labelledby and aria-describedby
+        aria-labelledby={titleId} 
+        aria-describedby={descriptionId}
         className="sm:max-w-[425px] max-h-[90vh] flex flex-col glassmorphism-card" // Added flex flex-col
       >
         <DialogHeader>
-          {/* Removed DialogTitle and DialogDescription */}
+          <DialogTitle id={titleId}>Neues Objekt hinzufügen</DialogTitle>
+          <DialogDescription id={descriptionId}>
+            <VisuallyHidden>Formular zum Hinzufügen eines neuen Objekts.</VisuallyHidden>
+          </DialogDescription>
         </DialogHeader>
         <div className="flex-grow overflow-y-auto pr-4"> {/* Added flex-grow and overflow-y-auto */}
           <ObjectForm

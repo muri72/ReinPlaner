@@ -8,13 +8,15 @@ import { deleteTimeEntry } from "@/app/dashboard/time-tracking/actions";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
+  DialogTitle,
   DialogTrigger,
   DialogClose,
 } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-// Removed import: VisuallyHidden
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 interface DeleteTimeEntryButtonProps {
   entryId: string;
@@ -22,7 +24,8 @@ interface DeleteTimeEntryButtonProps {
 
 export function DeleteTimeEntryButton({ entryId }: DeleteTimeEntryButtonProps) {
   const [loading, setLoading] = useState(false);
-  // Removed titleId and descriptionId
+  const titleId = `delete-time-entry-alert-title-${entryId}`;
+  const descriptionId = `delete-time-entry-alert-description-${entryId}`;
 
   const handleDelete = async () => {
     setLoading(true);
@@ -56,11 +59,19 @@ export function DeleteTimeEntryButton({ entryId }: DeleteTimeEntryButtonProps) {
             </DialogTrigger>
             <DialogContent 
               key={`delete-time-entry-${entryId}-open`} 
-              // Removed aria-labelledby and aria-describedby
+              aria-labelledby={titleId} 
+              aria-describedby={descriptionId}
               className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card"
             >
               <DialogHeader>
-                {/* Removed DialogTitle and DialogDescription */}
+                <DialogTitle id={titleId}>
+                  <VisuallyHidden>Sind Sie sicher?</VisuallyHidden>
+                </DialogTitle>
+                <DialogDescription id={descriptionId}>
+                  <VisuallyHidden>
+                    Diese Aktion kann nicht rückgängig gemacht werden. Der Zeiteintrag wird dauerhaft gelöscht.
+                  </VisuallyHidden>
+                </DialogDescription>
               </DialogHeader>
               <DialogFooter>
                 <DialogClose asChild>

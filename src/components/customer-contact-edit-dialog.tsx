@@ -1,13 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Pencil } from "lucide-react";
 import { CustomerContactForm, CustomerContactFormValues } from "@/components/customer-contact-form";
 import { updateCustomerContact } from "@/app/dashboard/customer-contacts/actions";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-// Removed import: VisuallyHidden
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 interface CustomerContactEditDialogProps {
   contact: {
@@ -23,7 +23,8 @@ interface CustomerContactEditDialogProps {
 
 export function CustomerContactEditDialog({ contact }: CustomerContactEditDialogProps) {
   const [open, setOpen] = useState(false);
-  // Removed titleId and descriptionId
+  const titleId = `customer-contact-edit-dialog-title`;
+  const descriptionId = `customer-contact-edit-dialog-description`;
 
   const handleUpdate = async (data: CustomerContactFormValues) => {
     const result = await updateCustomerContact(contact.id, data);
@@ -51,11 +52,15 @@ export function CustomerContactEditDialog({ contact }: CustomerContactEditDialog
       </TooltipProvider>
       <DialogContent 
         key={open ? "customer-contact-edit-open" : "customer-contact-edit-closed"} 
-        // Removed aria-labelledby and aria-describedby
+        aria-labelledby={titleId} 
+        aria-describedby={descriptionId}
         className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card"
       >
         <DialogHeader>
-          {/* Removed DialogTitle and DialogDescription */}
+          <DialogTitle id={titleId}>Kundenkontakt bearbeiten</DialogTitle>
+          <DialogDescription id={descriptionId}>
+            <VisuallyHidden>Formular zum Bearbeiten des Kundenkontakts.</VisuallyHidden>
+          </DialogDescription>
         </DialogHeader>
         <CustomerContactForm
           initialData={{

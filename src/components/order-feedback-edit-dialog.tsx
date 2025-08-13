@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Pencil, Star } from "lucide-react";
 import { useForm } from "react-hook-form";
@@ -12,7 +12,7 @@ import { updateOrderFeedback } from "@/app/dashboard/feedback/actions";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-// Removed import: VisuallyHidden
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { handleActionResponse } from "@/lib/toast-utils"; // Importiere die neue Utility
 
 const editSchema = z.object({
@@ -33,7 +33,8 @@ interface OrderFeedbackEditDialogProps {
 export function OrderFeedbackEditDialog({ feedback }: OrderFeedbackEditDialogProps) {
   const [open, setOpen] = useState(false);
   const [hoverRating, setHoverRating] = useState(0);
-  // Removed titleId and descriptionId
+  const titleId = `order-feedback-edit-dialog-title`;
+  const descriptionId = `order-feedback-edit-dialog-description`;
 
   const form = useForm<EditFormValues>({
     resolver: zodResolver(editSchema),
@@ -72,11 +73,15 @@ export function OrderFeedbackEditDialog({ feedback }: OrderFeedbackEditDialogPro
       </TooltipProvider>
       <DialogContent 
         key={open ? "order-feedback-edit-open" : "order-feedback-edit-closed"} 
-        // Removed aria-labelledby and aria-describedby
+        aria-labelledby={titleId} 
+        aria-describedby={descriptionId}
         className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card"
       >
         <DialogHeader>
-          {/* Removed DialogTitle and DialogDescription */}
+          <DialogTitle id={titleId}>Feedback bearbeiten</DialogTitle>
+          <DialogDescription id={descriptionId}>
+            <VisuallyHidden>Formular zum Bearbeiten des Auftrags-Feedbacks.</VisuallyHidden>
+          </DialogDescription>
         </DialogHeader>
         <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
           <div>

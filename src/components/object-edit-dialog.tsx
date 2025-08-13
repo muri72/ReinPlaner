@@ -1,13 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Pencil } from "lucide-react";
 import { ObjectForm, ObjectFormValues } from "@/components/object-form";
 import { updateObject } from "@/app/dashboard/objects/actions";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-// Removed import: VisuallyHidden
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 interface ObjectEditDialogProps {
   object: {
@@ -51,7 +51,8 @@ interface ObjectEditDialogProps {
 
 export function ObjectEditDialog({ object }: ObjectEditDialogProps) {
   const [open, setOpen] = useState(false);
-  // Removed titleId and descriptionId
+  const titleId = `object-edit-dialog-title`;
+  const descriptionId = `object-edit-dialog-description`;
 
   const handleUpdate = async (data: ObjectFormValues) => {
     const result = await updateObject(object.id, data);
@@ -79,11 +80,15 @@ export function ObjectEditDialog({ object }: ObjectEditDialogProps) {
       </TooltipProvider>
       <DialogContent 
         key={open ? "object-edit-open" : "object-edit-closed"} 
-        // Removed aria-labelledby and aria-describedby
+        aria-labelledby={titleId} 
+        aria-describedby={descriptionId}
         className="sm:max-w-[425px] max-h-[90vh] flex flex-col glassmorphism-card" // Added flex flex-col
       >
         <DialogHeader>
-          {/* Removed DialogTitle and DialogDescription */}
+          <DialogTitle id={titleId}>Objekt bearbeiten</DialogTitle>
+          <DialogDescription id={descriptionId}>
+            <VisuallyHidden>Formular zum Bearbeiten der Objektdaten.</VisuallyHidden>
+          </DialogDescription>
         </DialogHeader>
         <div className="flex-grow overflow-y-auto pr-4"> {/* Added flex-grow and overflow-y-auto */}
           <ObjectForm

@@ -1,13 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Pencil } from "lucide-react";
 import { TimeEntryForm, TimeEntryFormValues } from "@/components/time-entry-form";
 import { updateTimeEntry } from "@/app/dashboard/time-tracking/actions";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-// Removed import: VisuallyHidden
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 interface TimeEntryEditDialogProps {
   timeEntry: {
@@ -29,7 +29,8 @@ interface TimeEntryEditDialogProps {
 
 export function TimeEntryEditDialog({ timeEntry, currentUserId, isAdmin }: TimeEntryEditDialogProps) {
   const [open, setOpen] = useState(false);
-  // Removed titleId and descriptionId
+  const titleId = `time-entry-edit-dialog-title`;
+  const descriptionId = `time-entry-edit-dialog-description`;
 
   const handleUpdate = async (data: TimeEntryFormValues) => {
     const result = await updateTimeEntry(timeEntry.id, data);
@@ -57,11 +58,15 @@ export function TimeEntryEditDialog({ timeEntry, currentUserId, isAdmin }: TimeE
       </TooltipProvider>
       <DialogContent 
         key={open ? "time-entry-edit-open" : "time-entry-edit-closed"} 
-        // Removed aria-labelledby and aria-describedby
+        aria-labelledby={titleId} 
+        aria-describedby={descriptionId}
         className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card"
       >
         <DialogHeader>
-          {/* Removed DialogTitle and DialogDescription */}
+          <DialogTitle id={titleId}>Zeiteintrag bearbeiten</DialogTitle>
+          <DialogDescription id={descriptionId}>
+            <VisuallyHidden>Formular zum Bearbeiten des Zeiteintrags.</VisuallyHidden>
+          </DialogDescription>
         </DialogHeader>
         <TimeEntryForm
           initialData={{

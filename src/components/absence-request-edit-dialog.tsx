@@ -1,13 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Pencil } from "lucide-react";
 import { AbsenceRequestForm, AbsenceRequestFormValues } from "@/components/absence-request-form";
 import { updateAbsenceRequest } from "@/app/dashboard/absence-requests/actions";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-// Removed import: VisuallyHidden
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 interface AbsenceRequestEditDialogProps {
   request: {
@@ -26,7 +26,8 @@ interface AbsenceRequestEditDialogProps {
 
 export function AbsenceRequestEditDialog({ request, currentUserRole, currentUserId }: AbsenceRequestEditDialogProps) {
   const [open, setOpen] = useState(false);
-  // Removed titleId and descriptionId
+  const titleId = `absence-request-edit-dialog-title`;
+  const descriptionId = `absence-request-edit-dialog-description`;
 
   const handleUpdate = async (data: AbsenceRequestFormValues) => {
     const result = await updateAbsenceRequest(request.id, data);
@@ -54,11 +55,15 @@ export function AbsenceRequestEditDialog({ request, currentUserRole, currentUser
       </TooltipProvider>
       <DialogContent 
         key={open ? "absence-request-edit-open" : "absence-request-edit-closed"} 
-        // Removed aria-labelledby and aria-describedby
+        aria-labelledby={titleId} 
+        aria-describedby={descriptionId}
         className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card"
       >
         <DialogHeader>
-          {/* Removed DialogTitle and DialogDescription */}
+          <DialogTitle id={titleId}>Abwesenheitsantrag bearbeiten</DialogTitle>
+          <DialogDescription id={descriptionId}>
+            <VisuallyHidden>Formular zum Bearbeiten des Abwesenheitsantrags.</VisuallyHidden>
+          </DialogDescription>
         </DialogHeader>
         <AbsenceRequestForm
           initialData={{

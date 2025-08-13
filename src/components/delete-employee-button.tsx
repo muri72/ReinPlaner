@@ -8,13 +8,15 @@ import { deleteEmployee } from "@/app/dashboard/employees/actions";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
+  DialogTitle,
   DialogTrigger,
   DialogClose,
 } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-// Removed import: VisuallyHidden
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 interface DeleteEmployeeButtonProps {
   employeeId: string;
@@ -22,7 +24,8 @@ interface DeleteEmployeeButtonProps {
 
 export function DeleteEmployeeButton({ employeeId }: DeleteEmployeeButtonProps) {
   const [loading, setLoading] = useState(false);
-  // Removed titleId and descriptionId
+  const titleId = `delete-employee-alert-title-${employeeId}`;
+  const descriptionId = `delete-employee-alert-description-${employeeId}`;
 
   const handleDelete = async () => {
     setLoading(true);
@@ -56,11 +59,19 @@ export function DeleteEmployeeButton({ employeeId }: DeleteEmployeeButtonProps) 
             </DialogTrigger>
             <DialogContent 
               key={`delete-employee-${employeeId}-open`} 
-              // Removed aria-labelledby and aria-describedby
+              aria-labelledby={titleId} 
+              aria-describedby={descriptionId}
               className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card"
             >
               <DialogHeader>
-                {/* Removed DialogTitle and DialogDescription */}
+                <DialogTitle id={titleId}>
+                  <VisuallyHidden>Sind Sie sicher?</VisuallyHidden>
+                </DialogTitle>
+                <DialogDescription id={descriptionId}>
+                  <VisuallyHidden>
+                    Diese Aktion kann nicht rückgängig gemacht werden. Der Mitarbeiter und alle zugehörigen Daten werden dauerhaft gelöscht.
+                  </VisuallyHidden>
+                </DialogDescription>
               </DialogHeader>
               <DialogFooter>
                 <DialogClose asChild>
