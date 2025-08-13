@@ -76,7 +76,7 @@ export default async function AbsenceRequestsPage() {
       <h1 className="text-2xl md:text-3xl font-bold">Abwesenheitsverwaltung</h1>
 
       {isAdmin && (
-        <div className="space-y-6">
+        <div className="space-y-6 max-w-3xl mx-auto"> {/* Added max-w-3xl and mx-auto for compactness */}
           <h2 className="text-xl md:text-2xl font-bold">Monatsübersicht Abwesenheiten</h2>
           <div className="p-4 border rounded-lg shadow-neumorphic glassmorphism-card">
             <AbsenceTimelineCalendar />
