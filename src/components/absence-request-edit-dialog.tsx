@@ -7,7 +7,7 @@ import { Pencil } from "lucide-react";
 import { AbsenceRequestForm, AbsenceRequestFormValues } from "@/components/absence-request-form";
 import { updateAbsenceRequest } from "@/app/dashboard/absence-requests/actions";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+// VisuallyHidden is no longer needed for sr-only
 
 interface AbsenceRequestEditDialogProps {
   request: {
@@ -61,8 +61,8 @@ export function AbsenceRequestEditDialog({ request, currentUserRole, currentUser
       >
         <DialogHeader>
           <DialogTitle id={titleId}>Abwesenheitsantrag bearbeiten</DialogTitle>
-          <DialogDescription id={descriptionId}>
-            <VisuallyHidden>Formular zum Bearbeiten des Abwesenheitsantrags.</VisuallyHidden>
+          <DialogDescription id={descriptionId} className="sr-only">
+            Formular zum Bearbeiten des Abwesenheitsantrags.
           </DialogDescription>
         </DialogHeader>
         <AbsenceRequestForm

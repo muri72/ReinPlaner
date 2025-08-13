@@ -3,9 +3,8 @@
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Star } from "lucide-react";
+import { Star } from "lucide-react";
 import { GiveFeedbackForm } from "@/components/give-feedback-form";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 interface GiveOrderFeedbackDialogProps {
   onFeedbackSubmitted?: () => void;
@@ -31,8 +30,8 @@ export function GiveOrderFeedbackDialog({ onFeedbackSubmitted }: GiveOrderFeedba
       >
         <DialogHeader>
           <DialogTitle id={titleId}>Auftragsbezogenes Feedback einreichen</DialogTitle>
-          <DialogDescription id={descriptionId}>
-            <VisuallyHidden>Formular zum Einreichen von Feedback zu einem bestimmten Auftrag.</VisuallyHidden>
+          <DialogDescription id={descriptionId} className="sr-only">
+            Formular zum Einreichen von Feedback zu einem bestimmten Auftrag.
           </DialogDescription>
         </DialogHeader>
         <GiveFeedbackForm onSuccess={() => setOpen(false)} />

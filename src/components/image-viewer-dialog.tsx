@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
 import NextImage from "next/image";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+// VisuallyHidden is no longer needed for sr-only
 
 interface ImageViewerDialogProps {
   src: string;
@@ -33,17 +33,15 @@ export function ImageViewerDialog({ src, alt, trigger, onOpenChange }: ImageView
         aria-labelledby={titleId} 
         aria-describedby={descriptionId}
       >
-        <DialogHeader className="absolute top-4 right-4 z-50">
-          <VisuallyHidden asChild>
-            <DialogTitle id={titleId}>Bildansicht</DialogTitle>
-          </VisuallyHidden>
-          <VisuallyHidden asChild>
-            <DialogDescription id={descriptionId}>Vollansicht des Bildes.</DialogDescription>
-          </VisuallyHidden>
-          <Button variant="ghost" size="icon" onClick={() => handleOpenChange(false)} className="text-white hover:bg-white/20">
-            <X className="h-6 w-6" />
-          </Button>
-        </DialogHeader>
+        {/* Hidden Title and Description directly inside DialogContent */}
+        <DialogTitle id={titleId} className="sr-only">Bildansicht</DialogTitle>
+        <DialogDescription id={descriptionId} className="sr-only">Vollansicht des Bildes.</DialogDescription>
+
+        {/* Close button, outside DialogHeader */}
+        <Button variant="ghost" size="icon" onClick={() => handleOpenChange(false)} className="absolute top-4 right-4 z-50 text-white hover:bg-white/20">
+          <X className="h-6 w-6" />
+        </Button>
+
         <div className="relative w-full h-full flex items-center justify-center">
           <NextImage
             src={src}

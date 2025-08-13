@@ -16,7 +16,7 @@ import {
   DialogClose, // Keep DialogClose
 } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden"; // Import VisuallyHidden
+// VisuallyHidden is no longer needed for sr-only
 
 interface DeleteAbsenceRequestButtonProps {
   requestId: string;
@@ -64,10 +64,8 @@ export function DeleteAbsenceRequestButton({ requestId }: DeleteAbsenceRequestBu
               className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card"
             >
               <DialogHeader>
-                <VisuallyHidden asChild>
-                  <DialogTitle id={titleId}>Sind Sie sicher?</DialogTitle>
-                </VisuallyHidden>
-                <DialogDescription id={descriptionId}>
+                <DialogTitle id={titleId} className="sr-only">Sind Sie sicher?</DialogTitle>
+                <DialogDescription id={descriptionId} className="sr-only">
                   Diese Aktion kann nicht rückgängig gemacht werden. Der Abwesenheitsantrag wird dauerhaft gelöscht.
                 </DialogDescription>
               </DialogHeader>

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Link as LinkIcon } from "lucide-react";
 import { ManagerCustomerAssignmentForm } from "@/components/manager-customer-assignment-form";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+// VisuallyHidden is no longer needed for sr-only
 
 interface ManagerCustomerAssignmentDialogProps {
   managerId: string;
@@ -42,8 +42,8 @@ export function ManagerCustomerAssignmentDialog({ managerId, managerName }: Mana
       >
         <DialogHeader>
           <DialogTitle id={titleId}>Kunden für {managerName} zuweisen</DialogTitle>
-          <DialogDescription id={descriptionId}>
-            <VisuallyHidden>Formular zur Zuweisung von Kunden zu einem Manager.</VisuallyHidden>
+          <DialogDescription id={descriptionId} className="sr-only">
+            Formular zur Zuweisung von Kunden zu einem Manager.
           </DialogDescription>
         </DialogHeader>
         <ManagerCustomerAssignmentForm

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 import { AbsenceRequestForm, AbsenceRequestFormValues } from "@/components/absence-request-form";
 import { createAbsenceRequest } from "@/app/dashboard/absence-requests/actions";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+// VisuallyHidden is no longer needed for sr-only
 
 interface AbsenceRequestCreateDialogProps {
   onAbsenceRequestCreated?: () => void;
@@ -44,8 +44,8 @@ export function AbsenceRequestCreateDialog({ onAbsenceRequestCreated, currentUse
       >
         <DialogHeader>
           <DialogTitle id={titleId}>Neuen Abwesenheitsantrag einreichen</DialogTitle>
-          <DialogDescription id={descriptionId}>
-            <VisuallyHidden>Formular zum Einreichen eines neuen Abwesenheitsantrags.</VisuallyHidden>
+          <DialogDescription id={descriptionId} className="sr-only">
+            Formular zum Einreichen eines neuen Abwesenheitsantrags.
           </DialogDescription>
         </DialogHeader>
         <AbsenceRequestForm

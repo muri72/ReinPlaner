@@ -16,7 +16,7 @@ import {
   DialogClose, // Keep DialogClose
 } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden"; // Import VisuallyHidden
+// VisuallyHidden is no longer needed for sr-only
 
 interface DeleteOrderButtonProps {
   orderId: string;
@@ -63,9 +63,7 @@ export function DeleteOrderButton({ orderId }: DeleteOrderButtonProps) {
               aria-describedby={descriptionId}
             >
               <DialogHeader>
-                <VisuallyHidden asChild>
-                  <DialogTitle id={titleId}>Sind Sie sicher?</DialogTitle>
-                </VisuallyHidden>
+                <DialogTitle id={titleId} className="sr-only">Sind Sie sicher?</DialogTitle>
                 <DialogDescription id={descriptionId}>
                   Diese Aktion kann nicht rückgängig gemacht werden. Der Auftrag und alle zugehörigen Daten werden dauerhaft gelöscht.
                 </DialogDescription>

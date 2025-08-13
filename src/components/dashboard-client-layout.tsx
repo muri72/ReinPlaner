@@ -8,7 +8,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTrigger, SheetTitle, SheetDescri
 import { SidebarNav } from "@/components/sidebar-nav";
 import { UserMenu } from "@/components/user-menu";
 import { cn } from "@/lib/utils";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+// VisuallyHidden is no longer needed for sr-only
 
 interface DashboardClientLayoutProps {
   children: React.ReactNode;
@@ -41,11 +41,11 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut }: 
               aria-describedby="aris-navigation-description"
             >
               <SheetHeader>
-                <SheetTitle id="aris-navigation-title">
-                  <VisuallyHidden>ARIS Navigation</VisuallyHidden>
+                <SheetTitle id="aris-navigation-title" className="sr-only">
+                  ARIS Navigation
                 </SheetTitle>
-                <SheetDescription id="aris-navigation-description">
-                  <VisuallyHidden>Hauptnavigation der ARIS Management Plattform.</VisuallyHidden>
+                <SheetDescription id="aris-navigation-description" className="sr-only">
+                  Hauptnavigation der ARIS Management Plattform.
                 </SheetDescription>
                 <div className="flex justify-between items-center mb-6">
                   <h2 className="text-xl font-bold text-primary tracking-tight">ARIS</h2>
