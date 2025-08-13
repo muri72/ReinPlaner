@@ -82,7 +82,10 @@ export default async function AbsenceRequestsPage() {
     <div className="p-4 md:p-8 space-y-8">
       <h1 className="text-2xl md:text-3xl font-bold">Abwesenheitsverwaltung</h1>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-8">
+      <div className={cn(
+        "grid gap-4 md:gap-8",
+        isAdmin ? "grid-cols-1 lg:grid-cols-[1fr_2fr]" : "grid-cols-1" // Make the second column wider if admin
+      )}>
         {isAdmin && (
           <div className="space-y-6">
             <h2 className="text-xl md:text-2xl font-bold">Monatsübersicht Abwesenheiten</h2>
@@ -97,7 +100,7 @@ export default async function AbsenceRequestsPage() {
           <div className="flex justify-end mb-4">
             <AbsenceRequestCreateDialog currentUserRole={currentUserRole} currentUserId={currentUser.id} />
           </div>
-          <div className="space-y-4 max-h-[60vh] overflow-y-auto">
+          <div className="max-h-[60vh] overflow-y-auto"> {/* Removed px-4 from here */}
             {requests.length === 0 ? (
               <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30 shadow-neumorphic glassmorphism-card">
                 <CalendarOff className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
@@ -108,7 +111,7 @@ export default async function AbsenceRequestsPage() {
                 </div>
               </div>
             ) : (
-              <Accordion type="single" collapsible className="w-full">
+              <Accordion type="single" collapsible className="w-full px-4"> {/* Added px-4 here */}
                 {requests.map((request) => (
                   <AccordionItem
                     key={request.id}
