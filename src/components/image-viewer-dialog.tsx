@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
 import NextImage from "next/image";
-// Removed import: VisuallyHidden (as sr-only will be used)
+// Removed import: VisuallyHidden
 
 interface ImageViewerDialogProps {
   src: string;
@@ -16,8 +16,7 @@ interface ImageViewerDialogProps {
 
 export function ImageViewerDialog({ src, alt, trigger, onOpenChange }: ImageViewerDialogProps) {
   const [open, setOpen] = useState(false);
-  const titleId = `image-viewer-dialog-title`;
-  const descriptionId = `image-viewer-dialog-description`;
+  // Removed titleId and descriptionId
 
   const handleOpenChange = (newOpen: boolean) => {
     setOpen(newOpen);
@@ -30,14 +29,10 @@ export function ImageViewerDialog({ src, alt, trigger, onOpenChange }: ImageView
       <DialogContent 
         key={open ? "image-viewer-open" : "image-viewer-closed"} 
         className="sm:max-w-[90vw] max-h-[90vh] overflow-hidden p-0 border-none bg-transparent shadow-none glassmorphism-card"
-        aria-labelledby={titleId} 
-        aria-describedby={descriptionId}
+        // Removed aria-labelledby and aria-describedby
       >
         <DialogHeader>
-          <DialogTitle id={titleId} className="sr-only">Bildansicht</DialogTitle>
-          <DialogDescription id={descriptionId} className="sr-only">
-            Vollansicht des Bildes.
-          </DialogDescription>
+          {/* Removed DialogTitle and DialogDescription */}
         </DialogHeader>
 
         {/* Close button, outside DialogHeader */}

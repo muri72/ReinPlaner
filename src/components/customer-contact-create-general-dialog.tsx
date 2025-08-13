@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 import { CustomerContactForm, CustomerContactFormValues } from "@/components/customer-contact-form";
 import { createCustomerContact } from "@/app/dashboard/customer-contacts/actions";
-// Removed import: VisuallyHidden (as sr-only will be used)
+// Removed import: VisuallyHidden
 
 interface CustomerContactCreateGeneralDialogProps {
   onContactCreated?: (newContactId: string) => void;
@@ -14,8 +14,7 @@ interface CustomerContactCreateGeneralDialogProps {
 
 export function CustomerContactCreateGeneralDialog({ onContactCreated }: CustomerContactCreateGeneralDialogProps) {
   const [open, setOpen] = useState(false);
-  const titleId = `customer-contact-create-general-dialog-title`;
-  const descriptionId = `customer-contact-create-general-dialog-description`;
+  // Removed titleId and descriptionId
 
   const handleCreate = async (data: CustomerContactFormValues) => {
     const result = await createCustomerContact(data);
@@ -38,15 +37,11 @@ export function CustomerContactCreateGeneralDialog({ onContactCreated }: Custome
       </DialogTrigger>
       <DialogContent 
         key={open ? "customer-contact-create-general-open" : "customer-contact-create-general-closed"} 
-        aria-labelledby={titleId} 
-        aria-describedby={descriptionId}
+        // Removed aria-labelledby and aria-describedby
         className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card"
       >
         <DialogHeader>
-          <DialogTitle id={titleId}>Neuen Kundenkontakt hinzufügen</DialogTitle>
-          <DialogDescription id={descriptionId} className="sr-only">
-            Formular zum Hinzufügen eines neuen Kundenkontakts.
-          </DialogDescription>
+          {/* Removed DialogTitle and DialogDescription */}
         </DialogHeader>
         <CustomerContactForm
           onSubmit={handleCreate}

@@ -1,13 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Pencil } from "lucide-react";
 import { OrderForm, OrderFormValues } from "@/components/order-form";
 import { updateOrder } from "@/app/dashboard/orders/actions";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-// Removed import: VisuallyHidden (as sr-only will be used)
+// Removed import: VisuallyHidden
 
 // Definierte Liste der Dienstleistungen (muss mit order-form.tsx übereinstimmen)
 const availableServices = [
@@ -42,8 +42,7 @@ interface OrderEditDialogProps {
 
 export function OrderEditDialog({ order }: OrderEditDialogProps) {
   const [open, setOpen] = useState(false);
-  const titleId = `order-edit-dialog-title`;
-  const descriptionId = `order-edit-dialog-description`;
+  // Removed titleId and descriptionId
 
   const handleUpdate = async (data: OrderFormValues) => {
     const result = await updateOrder(order.id, data);
@@ -79,15 +78,11 @@ export function OrderEditDialog({ order }: OrderEditDialogProps) {
       </TooltipProvider>
       <DialogContent 
         key={open ? "order-edit-open" : "order-edit-closed"} 
-        aria-labelledby={titleId} 
-        aria-describedby={descriptionId}
+        // Removed aria-labelledby and aria-describedby
         className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card"
       >
         <DialogHeader>
-          <DialogTitle id={titleId}>Auftrag bearbeiten</DialogTitle>
-          <DialogDescription id={descriptionId} className="sr-only">
-            Formular zum Bearbeiten der Auftragsdetails.
-          </DialogDescription>
+          {/* Removed DialogTitle and DialogDescription */}
         </DialogHeader>
         <OrderForm
           initialData={{

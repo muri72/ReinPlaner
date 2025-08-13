@@ -4,11 +4,11 @@ import React, { useState } from "react";
 import { Menu, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NotificationBell } from "@/components/notification-bell";
-import { Sheet, SheetContent, SheetHeader, SheetTrigger, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTrigger } from "@/components/ui/sheet";
 import { SidebarNav } from "@/components/sidebar-nav";
 import { UserMenu } from "@/components/user-menu";
 import { cn } from "@/lib/utils";
-// Removed import: VisuallyHidden (as sr-only will be used)
+// Removed import: VisuallyHidden
 
 interface DashboardClientLayoutProps {
   children: React.ReactNode;
@@ -37,14 +37,10 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut }: 
                 "w-64 text-sidebar-foreground border-r border-sidebar-border p-4 flex flex-col",
                 "bg-sidebar/80 backdrop-blur-xl glassmorphism-card" // Apply glassmorphism here
               )}
-              aria-labelledby="aris-navigation-title"
-              aria-describedby="aris-navigation-description"
+              // Removed aria-labelledby and aria-describedby
             >
               <SheetHeader>
-                <SheetTitle id="aris-navigation-title" className="sr-only">ARIS Navigation</SheetTitle>
-                <SheetDescription id="aris-navigation-description" className="sr-only">
-                  Hauptnavigation der ARIS Management Plattform.
-                </SheetDescription>
+                {/* Removed SheetTitle and SheetDescription */}
                 <div className="flex justify-between items-center mb-6">
                   <h2 className="text-xl font-bold text-primary tracking-tight">ARIS</h2>
                   <NotificationBell />

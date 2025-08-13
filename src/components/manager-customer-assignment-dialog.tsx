@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Link as LinkIcon } from "lucide-react";
 import { ManagerCustomerAssignmentForm } from "@/components/manager-customer-assignment-form";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-// Removed import: VisuallyHidden (as sr-only will be used)
+// Removed import: VisuallyHidden
 
 interface ManagerCustomerAssignmentDialogProps {
   managerId: string;
@@ -15,8 +15,7 @@ interface ManagerCustomerAssignmentDialogProps {
 
 export function ManagerCustomerAssignmentDialog({ managerId, managerName }: ManagerCustomerAssignmentDialogProps) {
   const [open, setOpen] = useState(false);
-  const titleId = `manager-customer-assignment-dialog-title`;
-  const descriptionId = `manager-customer-assignment-dialog-description`;
+  // Removed titleId and descriptionId
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -36,15 +35,11 @@ export function ManagerCustomerAssignmentDialog({ managerId, managerName }: Mana
       </TooltipProvider>
       <DialogContent 
         key={open ? "manager-assignment-open" : "manager-assignment-closed"} 
-        aria-labelledby={titleId} 
-        aria-describedby={descriptionId}
+        // Removed aria-labelledby and aria-describedby
         className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card"
       >
         <DialogHeader>
-          <DialogTitle id={titleId}>Kunden für {managerName} zuweisen</DialogTitle>
-          <DialogDescription id={descriptionId} className="sr-only">
-            Formular zur Zuweisung von Kunden zu einem Manager.
-          </DialogDescription>
+          {/* Removed DialogTitle and DialogDescription */}
         </DialogHeader>
         <ManagerCustomerAssignmentForm
           managerId={managerId}

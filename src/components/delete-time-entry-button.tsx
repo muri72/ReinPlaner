@@ -8,14 +8,13 @@ import { deleteTimeEntry } from "@/app/dashboard/time-tracking/actions";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
-  DialogTitle,
   DialogTrigger,
   DialogClose,
 } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+// Removed import: VisuallyHidden
 
 interface DeleteTimeEntryButtonProps {
   entryId: string;
@@ -23,8 +22,7 @@ interface DeleteTimeEntryButtonProps {
 
 export function DeleteTimeEntryButton({ entryId }: DeleteTimeEntryButtonProps) {
   const [loading, setLoading] = useState(false);
-  const titleId = `delete-time-entry-alert-title-${entryId}`;
-  const descriptionId = `delete-time-entry-alert-description-${entryId}`;
+  // Removed titleId and descriptionId
 
   const handleDelete = async () => {
     setLoading(true);
@@ -58,15 +56,11 @@ export function DeleteTimeEntryButton({ entryId }: DeleteTimeEntryButtonProps) {
             </DialogTrigger>
             <DialogContent 
               key={`delete-time-entry-${entryId}-open`} 
-              aria-labelledby={titleId} 
-              aria-describedby={descriptionId}
+              // Removed aria-labelledby and aria-describedby
               className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card"
             >
               <DialogHeader>
-                <DialogTitle id={titleId} className="sr-only">Sind Sie sicher?</DialogTitle>
-                <DialogDescription id={descriptionId} className="sr-only">
-                  Diese Aktion kann nicht rückgängig gemacht werden. Der Zeiteintrag wird dauerhaft gelöscht.
-                </DialogDescription>
+                {/* Removed DialogTitle and DialogDescription */}
               </DialogHeader>
               <DialogFooter>
                 <DialogClose asChild>

@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button"; // Korrigierter Import
 import { PlusCircle } from "lucide-react";
 import { ObjectForm, ObjectFormValues } from "@/components/object-form";
 import { createObject } from "@/app/dashboard/objects/actions";
-// Removed import: VisuallyHidden (as sr-only will be used)
+// Removed import: VisuallyHidden
 
 interface ObjectCreateDialogProps {
   onObjectCreated?: () => void;
@@ -14,8 +14,7 @@ interface ObjectCreateDialogProps {
 
 export function ObjectCreateDialog({ onObjectCreated }: ObjectCreateDialogProps) {
   const [open, setOpen] = useState(false);
-  const titleId = `object-create-dialog-title`;
-  const descriptionId = `object-create-dialog-description`;
+  // Removed titleId and descriptionId
 
   const handleCreate = async (data: ObjectFormValues) => {
     const result = await createObject(data);
@@ -36,15 +35,11 @@ export function ObjectCreateDialog({ onObjectCreated }: ObjectCreateDialogProps)
       </DialogTrigger>
       <DialogContent 
         key={open ? "object-create-open" : "object-create-closed"} 
-        aria-labelledby={titleId} 
-        aria-describedby={descriptionId}
+        // Removed aria-labelledby and aria-describedby
         className="sm:max-w-[425px] max-h-[90vh] flex flex-col glassmorphism-card" // Added flex flex-col
       >
         <DialogHeader>
-          <DialogTitle id={titleId}>Neues Objekt hinzufügen</DialogTitle>
-          <DialogDescription id={descriptionId} className="sr-only">
-            Formular zum Hinzufügen eines neuen Objekts.
-          </DialogDescription>
+          {/* Removed DialogTitle and DialogDescription */}
         </DialogHeader>
         <div className="flex-grow overflow-y-auto pr-4"> {/* Added flex-grow and overflow-y-auto */}
           <ObjectForm

@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 import { CustomerContactForm, CustomerContactFormValues } from "@/components/customer-contact-form";
 import { createCustomerContact } from "@/app/dashboard/customer-contacts/actions";
-// Removed import: VisuallyHidden (as sr-only will be used)
+// Removed import: VisuallyHidden
 
 interface CustomerContactCreateDialogProps {
   customerId: string;
@@ -16,8 +16,7 @@ interface CustomerContactCreateDialogProps {
 
 export function CustomerContactCreateDialog({ customerId, onContactCreated, disabled }: CustomerContactCreateDialogProps) {
   const [open, setOpen] = useState(false);
-  const titleId = `customer-contact-create-dialog-title`;
-  const descriptionId = `customer-contact-create-dialog-description`;
+  // Removed titleId and descriptionId
 
   const handleCreate = async (data: CustomerContactFormValues) => {
     const result = await createCustomerContact(data);
@@ -46,14 +45,10 @@ export function CustomerContactCreateDialog({ customerId, onContactCreated, disa
       </DialogTrigger>
       <DialogContent 
         key={open ? "customer-contact-create-open" : "customer-contact-create-closed"} 
-        aria-labelledby={titleId} 
-        aria-describedby={descriptionId}
+        // Removed aria-labelledby and aria-describedby
       >
         <DialogHeader>
-          <DialogTitle id={titleId}>Neuen Kundenkontakt erstellen</DialogTitle>
-          <DialogDescription id={descriptionId} className="sr-only">
-            Formular zum Erstellen eines neuen Kundenkontakts.
-          </DialogDescription>
+          {/* Removed DialogTitle and DialogDescription */}
         </DialogHeader>
         <CustomerContactForm
           initialData={{ customerId: customerId }}

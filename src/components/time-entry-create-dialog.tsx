@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 import { TimeEntryForm, TimeEntryFormValues } from "@/components/time-entry-form";
 import { createTimeEntry } from "@/app/dashboard/time-tracking/actions";
-// Removed import: VisuallyHidden (as sr-only will be used)
+// Removed import: VisuallyHidden
 
 interface TimeEntryCreateDialogProps {
   initialData?: Partial<TimeEntryFormValues>;
@@ -32,8 +32,7 @@ export function TimeEntryCreateDialog({
   isAdmin,
 }: TimeEntryCreateDialogProps) {
   const [open, setOpen] = useState(false);
-  const titleId = `time-entry-create-dialog-title`;
-  const descriptionId = `time-entry-create-dialog-description`;
+  // Removed titleId and descriptionId
 
   const handleCreate = async (data: TimeEntryFormValues) => {
     const result = await createTimeEntry(data);
@@ -56,15 +55,11 @@ export function TimeEntryCreateDialog({
       </DialogTrigger>
       <DialogContent 
         key={open ? "time-entry-create-open" : "time-entry-create-closed"} 
-        aria-labelledby={titleId} 
-        aria-describedby={descriptionId}
+        // Removed aria-labelledby and aria-describedby
         className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card"
       >
         <DialogHeader>
-          <DialogTitle id={titleId}>{dialogTitle}</DialogTitle>
-          <DialogDescription id={descriptionId} className="sr-only">
-            Formular zum Erstellen eines neuen Zeiteintrags.
-          </DialogDescription>
+          {/* Removed DialogTitle and DialogDescription */}
         </DialogHeader>
         <TimeEntryForm
           initialData={initialData}

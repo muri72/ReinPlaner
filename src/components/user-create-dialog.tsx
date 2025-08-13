@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 import { UserForm, UserFormValues } from "@/components/user-form";
 import { registerUser } from "@/app/dashboard/users/actions";
-// Removed import: VisuallyHidden (as sr-only will be used)
+// Removed import: VisuallyHidden
 
 interface UserCreateDialogProps {
   onUserCreated?: () => void;
@@ -14,8 +14,7 @@ interface UserCreateDialogProps {
 
 export function UserCreateDialog({ onUserCreated }: UserCreateDialogProps) {
   const [open, setOpen] = useState(false);
-  const titleId = `user-create-dialog-title`;
-  const descriptionId = `user-create-dialog-description`;
+  // Removed titleId and descriptionId
 
   const handleCreate = async (data: UserFormValues) => {
     const result = await registerUser(data);
@@ -36,15 +35,11 @@ export function UserCreateDialog({ onUserCreated }: UserCreateDialogProps) {
       </DialogTrigger>
       <DialogContent 
         key={open ? "user-create-open" : "user-create-closed"} 
-        aria-labelledby={titleId} 
-        aria-describedby={descriptionId}
+        // Removed aria-labelledby and aria-describedby
         className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card"
       >
         <DialogHeader>
-          <DialogTitle id={titleId}>Neuen Benutzer registrieren</DialogTitle>
-          <DialogDescription id={descriptionId} className="sr-only">
-            Formular zum Registrieren eines neuen Benutzers.
-          </DialogDescription>
+          {/* Removed DialogTitle and DialogDescription */}
         </DialogHeader>
         <UserForm
           onSubmit={handleCreate}

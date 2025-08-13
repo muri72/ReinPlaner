@@ -1,13 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Pencil } from "lucide-react";
 import { UserForm, UserFormValues } from "@/components/user-form";
 import { updateUser } from "@/app/dashboard/users/actions";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-// Removed import: VisuallyHidden (as sr-only will be used)
+// Removed import: VisuallyHidden
 
 interface UserEditDialogProps {
   user: {
@@ -21,8 +21,7 @@ interface UserEditDialogProps {
 
 export function UserEditDialog({ user }: UserEditDialogProps) {
   const [open, setOpen] = useState(false);
-  const titleId = `user-edit-dialog-title`;
-  const descriptionId = `user-edit-dialog-description`;
+  // Removed titleId and descriptionId
 
   const handleUpdate = async (data: UserFormValues) => {
     const result = await updateUser(user.id, data);
@@ -50,15 +49,11 @@ export function UserEditDialog({ user }: UserEditDialogProps) {
       </TooltipProvider>
       <DialogContent 
         key={open ? "user-edit-open" : "user-edit-closed"} 
-        aria-labelledby={titleId} 
-        aria-describedby={descriptionId}
+        // Removed aria-labelledby and aria-describedby
         className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card"
       >
         <DialogHeader>
-          <DialogTitle id={titleId}>Benutzer bearbeiten</DialogTitle>
-          <DialogDescription id={descriptionId} className="sr-only">
-            Formular zum Bearbeiten der Benutzerdaten.
-          </DialogDescription>
+          {/* Removed DialogTitle and DialogDescription */}
         </DialogHeader>
         <UserForm
           initialData={{

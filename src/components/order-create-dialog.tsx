@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 import { OrderForm, OrderFormValues } from "@/components/order-form";
 import { createOrder } from "@/app/dashboard/orders/actions";
-// Removed import: VisuallyHidden (as sr-only will be used)
+// Removed import: VisuallyHidden
 
 interface OrderCreateDialogProps {
   onOrderCreated?: () => void;
@@ -14,8 +14,7 @@ interface OrderCreateDialogProps {
 
 export function OrderCreateDialog({ onOrderCreated }: OrderCreateDialogProps) {
   const [open, setOpen] = useState(false);
-  const titleId = `order-create-dialog-title`;
-  const descriptionId = `order-create-dialog-description`;
+  // Removed titleId and descriptionId
 
   const handleCreate = async (data: OrderFormValues) => {
     const result = await createOrder(data);
@@ -36,15 +35,11 @@ export function OrderCreateDialog({ onOrderCreated }: OrderCreateDialogProps) {
       </DialogTrigger>
       <DialogContent 
         key={open ? "order-create-open" : "order-create-closed"} 
-        aria-labelledby={titleId} 
-        aria-describedby={descriptionId}
+        // Removed aria-labelledby and aria-describedby
         className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card"
       >
         <DialogHeader>
-          <DialogTitle id={titleId}>Neuen Auftrag hinzufügen</DialogTitle>
-          <DialogDescription id={descriptionId} className="sr-only">
-            Formular zum Hinzufügen eines neuen Auftrags.
-          </DialogDescription>
+          {/* Removed DialogTitle and DialogDescription */}
         </DialogHeader>
         <OrderForm
           onSubmit={handleCreate}

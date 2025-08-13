@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, MessageSquare } from "lucide-react";
 import { GeneralDashboardFeedbackForm } from "@/components/general-dashboard-feedback-form";
-// Removed import: VisuallyHidden (as sr-only will be used)
+// Removed import: VisuallyHidden
 
 interface GiveGeneralFeedbackDialogProps {
   onFeedbackSubmitted?: () => void;
@@ -13,8 +13,7 @@ interface GiveGeneralFeedbackDialogProps {
 
 export function GiveGeneralFeedbackDialog({ onFeedbackSubmitted }: GiveGeneralFeedbackDialogProps) {
   const [open, setOpen] = useState(false);
-  const titleId = `give-general-feedback-dialog-title`;
-  const descriptionId = `give-general-feedback-dialog-description`;
+  // Removed titleId and descriptionId
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -25,15 +24,11 @@ export function GiveGeneralFeedbackDialog({ onFeedbackSubmitted }: GiveGeneralFe
       </DialogTrigger>
       <DialogContent 
         key={open ? "give-general-feedback-open" : "give-general-feedback-closed"} 
-        aria-labelledby={titleId} 
-        aria-describedby={descriptionId}
+        // Removed aria-labelledby and aria-describedby
         className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card"
       >
         <DialogHeader>
-          <DialogTitle id={titleId}>Allgemeines Feedback einreichen</DialogTitle>
-          <DialogDescription id={descriptionId} className="sr-only">
-            Formular zum Einreichen von allgemeinem Feedback.
-          </DialogDescription>
+          {/* Removed DialogTitle and DialogDescription */}
         </DialogHeader>
         <GeneralDashboardFeedbackForm onSuccess={() => setOpen(false)} />
       </DialogContent>

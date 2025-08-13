@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Star } from "lucide-react";
 import { OrderFeedbackForm } from "@/components/order-feedback-form";
-// Removed import: VisuallyHidden (as sr-only will be used)
+// Removed import: VisuallyHidden
 
 interface OrderFeedbackDialogProps {
   orderId: string;
@@ -13,8 +13,7 @@ interface OrderFeedbackDialogProps {
 
 export function OrderFeedbackDialog({ orderId }: OrderFeedbackDialogProps) {
   const [open, setOpen] = useState(false);
-  const titleId = `order-feedback-dialog-title`;
-  const descriptionId = `order-feedback-dialog-description`;
+  // Removed titleId and descriptionId
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -25,15 +24,11 @@ export function OrderFeedbackDialog({ orderId }: OrderFeedbackDialogProps) {
       </DialogTrigger>
       <DialogContent 
         key={open ? "order-feedback-open" : "order-feedback-closed"} 
-        aria-labelledby={titleId} 
-        aria-describedby={descriptionId}
+        // Removed aria-labelledby and aria-describedby
         className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card"
       >
         <DialogHeader>
-          <DialogTitle id={titleId}>Feedback zum Auftrag</DialogTitle>
-          <DialogDescription id={descriptionId} className="sr-only">
-            Formular zum Einreichen von Feedback zu einem Auftrag.
-          </DialogDescription>
+          {/* Removed DialogTitle and DialogDescription */}
         </DialogHeader>
         <OrderFeedbackForm orderId={orderId} onSuccess={() => setOpen(false)} />
       </DialogContent>
