@@ -75,16 +75,16 @@ export default async function AbsenceRequestsPage() {
     <div className="p-4 md:p-8 space-y-8">
       <h1 className="text-2xl md:text-3xl font-bold">Abwesenheitsverwaltung</h1>
 
-      {isAdmin && (
-        <div className="space-y-6">
-          <h2 className="text-xl md:text-2xl font-bold">Monatsübersicht Abwesenheiten</h2>
-          <div className="p-4 border rounded-lg shadow-neumorphic glassmorphism-card">
-            <AbsenceTimelineCalendar />
-          </div>
-        </div>
-      )}
-
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-8">
+        {isAdmin && (
+          <div className="space-y-6">
+            <h2 className="text-xl md:text-2xl font-bold">Monatsübersicht Abwesenheiten</h2>
+            <div className="p-4 border rounded-lg shadow-neumorphic glassmorphism-card">
+              <AbsenceTimelineCalendar />
+            </div>
+          </div>
+        )}
+
         <div className="space-y-6">
           <h2 className="text-xl md:text-2xl font-bold">Antragsübersicht</h2>
           <div className="flex justify-end mb-4">
@@ -145,9 +145,6 @@ export default async function AbsenceRequestsPage() {
             )}
           </div>
         </div>
-
-        {/* Removed the inline form section */}
-        <div className="hidden"></div>
       </div>
     </div>
   );
