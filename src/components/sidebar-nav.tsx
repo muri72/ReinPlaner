@@ -157,19 +157,19 @@ export function SidebarNav({ isCollapsed, currentUserRole, onSignOut, onLinkClic
   const avatarFallback = profile?.firstName?.[0] || profile?.lastName?.[0] || 'U';
 
   return (
-    <div className="flex-grow space-y-2">
-      {filteredNavItems.map((item) => {
-        if (item.isCategory) {
-          return (
-            <div key={item.title} className="space-y-2">
-              {!isCollapsed && (
-                <h3 className="text-sm font-semibold uppercase text-muted-foreground px-4 pt-4 pb-2">
-                  {item.title}
-                </h3>
-              )}
-              {item.children.map(child => (
-                <TooltipProvider key={child.href} delayDuration={300}>
-                  <Tooltip>
+    <TooltipProvider delayDuration={300}> {/* TooltipProvider hierher verschoben */}
+      <div className="flex-grow space-y-2">
+        {filteredNavItems.map((item) => {
+          if (item.isCategory) {
+            return (
+              <div key={item.title} className="space-y-2">
+                {!isCollapsed && (
+                  <h3 className="text-sm font-semibold uppercase text-muted-foreground px-4 pt-4 pb-2">
+                    {item.title}
+                  </h3>
+                )}
+                {item.children.map(child => (
+                  <Tooltip key={child.href}> {/* Tooltip direkt */}
                     <TooltipTrigger asChild>
                       <Link href={child.href} passHref onClick={onLinkClick}>
                         <Button
@@ -187,15 +187,13 @@ export function SidebarNav({ isCollapsed, currentUserRole, onSignOut, onLinkClic
                     </TooltipTrigger>
                     {isCollapsed && <TooltipContent side="right">{child.title}</TooltipContent>}
                   </Tooltip>
-                </TooltipProvider>
-              ))}
-            </div>
-          );
-        } else if (item.isSpecial === 'notification') {
-          return (
-            <NotificationBell key={item.href}>
-              <TooltipProvider delayDuration={300}>
-                <Tooltip>
+                ))}
+              </div>
+            );
+          } else if (item.isSpecial === 'notification') {
+            return (
+              <NotificationBell key={item.href}>
+                <Tooltip> {/* Tooltip direkt innerhalb von NotificationBell's children */}
                   <TooltipTrigger asChild>
                     <Link href={item.href} passHref onClick={onLinkClick}>
                       <Button
@@ -213,14 +211,12 @@ export function SidebarNav({ isCollapsed, currentUserRole, onSignOut, onLinkClic
                   </TooltipTrigger>
                   {isCollapsed && <TooltipContent side="right">{item.title}</TooltipContent>}
                 </Tooltip>
-              </TooltipProvider>
-            </NotificationBell>
-          );
-        } else if (item.isSpecial === 'user-menu') {
-          return (
-            <UserMenu key={item.href} currentUserRole={currentUserRole} onSignOut={onSignOut}>
-              <TooltipProvider delayDuration={300}>
-                <Tooltip>
+              </NotificationBell>
+            );
+          } else if (item.isSpecial === 'user-menu') {
+            return (
+              <UserMenu key={item.href} currentUserRole={currentUserRole} onSignOut={onSignOut}>
+                <Tooltip> {/* Tooltip direkt innerhalb von UserMenu's children */}
                   <TooltipTrigger asChild>
                     <Link href={item.href} passHref onClick={onLinkClick}>
                       <Button
@@ -241,13 +237,11 @@ export function SidebarNav({ isCollapsed, currentUserRole, onSignOut, onLinkClic
                   </TooltipTrigger>
                   {isCollapsed && <TooltipContent side="right">{displayName}</TooltipContent>}
                 </Tooltip>
-              </TooltipProvider>
-            </UserMenu>
-          );
-        } else {
-          return (
-            <TooltipProvider key={item.href} delayDuration={300}>
-              <Tooltip>
+              </UserMenu>
+            );
+          } else {
+            return (
+              <Tooltip key={item.href}> {/* Tooltip direkt */}
                 <TooltipTrigger asChild>
                   <Link href={item.href} passHref onClick={onLinkClick}>
                     <Button
@@ -265,13 +259,11 @@ export function SidebarNav({ isCollapsed, currentUserRole, onSignOut, onLinkClic
                 </TooltipTrigger>
                 {isCollapsed && <TooltipContent side="right">{item.title}</TooltipContent>}
               </Tooltip>
-            </TooltipProvider>
-          );
-        }
-      })}
-      {/* Sign Out Button at the very bottom */}
-      <TooltipProvider delayDuration={300}>
-        <Tooltip>
+            );
+          }
+        })}
+        {/* Sign Out Button at the very bottom */}
+        <Tooltip> {/* Tooltip direkt */}
           <TooltipTrigger asChild>
             <Button
               variant="ghost"
@@ -288,7 +280,7 @@ export function SidebarNav({ isCollapsed, currentUserRole, onSignOut, onLinkClic
           </TooltipTrigger>
           {isCollapsed && <TooltipContent side="right">Abmelden</TooltipContent>}
         </Tooltip>
-      </TooltipProvider>
-    </div>
+      </div>
+    </TooltipProvider>
   );
 }
