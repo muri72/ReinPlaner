@@ -45,9 +45,7 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut }: 
                   <VisuallyHidden>ARIS Navigation</VisuallyHidden>
                 </SheetTitle>
                 <SheetDescription id="aris-navigation-description">
-                  <VisuallyHidden>
-                    Hauptnavigation der ARIS Management Plattform.
-                  </VisuallyHidden>
+                  <VisuallyHidden>Hauptnavigation der ARIS Management Plattform.</VisuallyHidden>
                 </SheetDescription>
                 <div className="flex justify-between items-center mb-6">
                   <h2 className="text-xl font-bold text-primary tracking-tight">ARIS</h2>

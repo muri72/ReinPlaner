@@ -1,13 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Pencil } from "lucide-react";
 import { CustomerForm, CustomerFormValues } from "@/components/customer-form";
 import { updateCustomer } from "@/app/dashboard/customers/actions";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"; // Import Tooltip components
-// Removed unused import: import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 interface CustomerEditDialogProps {
   customer: {
@@ -22,8 +21,6 @@ interface CustomerEditDialogProps {
 
 export function CustomerEditDialog({ customer }: CustomerEditDialogProps) {
   const [open, setOpen] = useState(false);
-  const titleId = `customer-edit-dialog-title`;
-  const descriptionId = `customer-edit-dialog-description`;
 
   const handleUpdate = async (data: CustomerFormValues) => {
     const result = await updateCustomer(customer.id, data);
@@ -49,17 +46,9 @@ export function CustomerEditDialog({ customer }: CustomerEditDialogProps) {
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
-      <DialogContent 
-        key={open ? "customer-edit-open" : "customer-edit-closed"} 
-        aria-labelledby={titleId} 
-        aria-describedby={descriptionId}
-        className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card"
-      >
+      <DialogContent key={open ? "customer-edit-open" : "customer-edit-closed"} className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card" aria-labelledby="customer-edit-dialog-title">
         <DialogHeader>
-          <DialogTitle id={titleId}>Kunden bearbeiten</DialogTitle>
-          <DialogDescription id={descriptionId} className="sr-only">
-            Formular zum Bearbeiten der Kundendaten.
-          </DialogDescription>
+          <DialogTitle id="customer-edit-dialog-title">Kunden bearbeiten</DialogTitle>
         </DialogHeader>
         <CustomerForm
           initialData={{

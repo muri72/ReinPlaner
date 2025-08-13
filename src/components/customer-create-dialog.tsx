@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 import { CustomerForm, CustomerFormValues } from "@/components/customer-form";
 import { createCustomer } from "@/app/dashboard/customers/actions";
-// Removed unused import: import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 interface CustomerCreateDialogProps {
   onCustomerCreated?: () => void;
@@ -42,8 +42,8 @@ export function CustomerCreateDialog({ onCustomerCreated }: CustomerCreateDialog
       >
         <DialogHeader>
           <DialogTitle id={titleId}>Neuen Kunden hinzufügen</DialogTitle>
-          <DialogDescription id={descriptionId} className="sr-only">
-            Formular zum Hinzufügen eines neuen Kunden.
+          <DialogDescription id={descriptionId}>
+            <VisuallyHidden>Formular zum Hinzufügen eines neuen Kunden.</VisuallyHidden>
           </DialogDescription>
         </DialogHeader>
         <CustomerForm

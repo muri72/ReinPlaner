@@ -1,12 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 import { EmployeeForm, EmployeeFormValues } from "@/components/employee-form";
 import { createEmployee } from "@/app/dashboard/employees/actions";
-// Removed unused import: import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 interface EmployeeCreateDialogProps {
   onEmployeeCreated?: () => void;
@@ -14,8 +13,6 @@ interface EmployeeCreateDialogProps {
 
 export function EmployeeCreateDialog({ onEmployeeCreated }: EmployeeCreateDialogProps) {
   const [open, setOpen] = useState(false);
-  const titleId = `employee-create-dialog-title`;
-  const descriptionId = `employee-create-dialog-description`;
 
   const handleCreate = async (data: EmployeeFormValues) => {
     const result = await createEmployee(data);
@@ -34,17 +31,9 @@ export function EmployeeCreateDialog({ onEmployeeCreated }: EmployeeCreateDialog
           Neuen Mitarbeiter hinzufügen
         </Button>
       </DialogTrigger>
-      <DialogContent 
-        key={open ? "employee-create-open" : "employee-create-closed"} 
-        aria-labelledby={titleId} 
-        aria-describedby={descriptionId}
-        className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card"
-      >
+      <DialogContent key={open ? "employee-create-open" : "employee-create-closed"} className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card" aria-labelledby="employee-create-dialog-title">
         <DialogHeader>
-          <DialogTitle id={titleId}>Neuen Mitarbeiter hinzufügen</DialogTitle>
-          <DialogDescription id={descriptionId} className="sr-only">
-            Formular zum Hinzufügen eines neuen Mitarbeiters.
-          </DialogDescription>
+          <DialogTitle id="employee-create-dialog-title">Neuen Mitarbeiter hinzufügen</DialogTitle>
         </DialogHeader>
         <EmployeeForm
           onSubmit={handleCreate}

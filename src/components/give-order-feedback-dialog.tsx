@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Star } from "lucide-react";
+import { PlusCircle, Star } from "lucide-react";
 import { GiveFeedbackForm } from "@/components/give-feedback-form";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
