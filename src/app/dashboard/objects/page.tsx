@@ -73,23 +73,24 @@ export default function ObjectsPage({
   const isMobile = useIsMobile();
 
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [currentUserRole, setCurrentUserRole] = useState<'admin' | 'manager' | 'employee' | 'customer'>('employee');
   const [allObjects, setAllObjects] = useState<DisplayObject[]>([]);
   const [customers, setCustomers] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [totalCount, setTotalCount] = useState<number | null>(0);
 
-  const query = currentSearchParams.get('query') || '';
+  const query = (currentSearchParams.get('query') || '') as string;
   const currentPage = Number(currentSearchParams.get('page')) || 1;
   const pageSize = Number(currentSearchParams.get('pageSize')) || 9;
-  const customerIdFilter = currentSearchParams.get('customerId') || '';
-  const priorityFilter = currentSearchParams.get('priority') || '';
-  const timeOfDayFilter = currentSearchParams.get('timeOfDay') || '';
-  const accessMethodFilter = currentSearchParams.get('accessMethod') || '';
-  const viewMode = currentSearchParams.get('viewMode') === 'table' ? 'table' : 'grid';
+  const customerIdFilter = (currentSearchParams.get('customerId') || '') as string;
+  const priorityFilter = (currentSearchParams.get('priority') || '') as string;
+  const timeOfDayFilter = (currentSearchParams.get('timeOfDay') || '') as string;
+  const accessMethodFilter = (currentSearchParams.get('accessMethod') || '') as string;
+  const viewMode = (currentSearchParams.get('viewMode') || 'grid') as string;
 
   // Sorting parameters
-  const sortColumn = currentSearchParams.get('sortColumn') || 'name';
-  const sortDirection = currentSearchParams.get('sortDirection') || 'asc';
+  const sortColumn = (currentSearchParams.get('sortColumn') || 'name') as string;
+  const sortDirection = (currentSearchParams.get('sortDirection') || 'asc') as string;
 
   useEffect(() => {
     const fetchData = async () => {
@@ -100,6 +101,19 @@ export default function ObjectsPage({
         return;
       }
       setCurrentUser(user);
+
+      // Fetch user role
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+
+      if (profileError) {
+        console.error("Fehler beim Laden des Benutzerprofils:", profileError?.message || profileError);
+      }
+      const role = profile?.role as 'admin' | 'manager' | 'employee' | 'customer' || 'employee';
+      setCurrentUserRole(role);
 
       const from = (currentPage - 1) * pageSize;
       const to = from + pageSize - 1;
@@ -112,8 +126,31 @@ export default function ObjectsPage({
       let objectsError: any = null;
       let objectsCount: number | null = 0;
 
+      // Determine filter_user_id and filter_customer_id based on role
+      let filterUserId: string | null = null;
+      let filterCustomerId: string | null = null;
+
+      if (role === 'employee' || role === 'manager') {
+        filterUserId = user.id;
+      } else if (role === 'customer') {
+        const { data: customerData, error: customerDataError } = await supabase
+          .from('customers')
+          .select('id')
+          .eq('user_id', user.id)
+          .single();
+        if (customerDataError && customerDataError.code !== 'PGRST116') {
+          console.error("Error fetching customer ID for user:", customerDataError);
+        }
+        filterCustomerId = customerData?.id || null;
+      }
+
       if (query) {
-        const { data, error: rpcError } = await supabase.rpc('search_objects', { search_query: query });
+        // Explicitly pass all parameters to avoid ambiguity
+        const { data, error: rpcError } = await supabase.rpc('search_objects', {
+          search_query: query,
+          filter_user_id: filterUserId,
+          filter_customer_id: filterCustomerId
+        });
         objectsData = (data as DisplayObject[] | null) || [];
         objectsError = rpcError;
         objectsCount = objectsData.length;
@@ -126,6 +163,12 @@ export default function ObjectsPage({
             customer_contacts ( first_name, last_name )
           `, { count: 'exact' })
           .order(sortColumn, { ascending: sortDirection === 'asc' });
+
+        // Apply RLS-like filtering for non-admin roles if not already handled by RLS policies
+        // The RPC function handles this, but for direct table selects, we might need it.
+        // However, the existing RLS policies for 'objects' table should cover this.
+        // So, no explicit `eq('user_id', user.id)` or `in('customer_id', ...)` needed here
+        // as the RPC handles it and direct selects are covered by RLS.
 
         if (customerIdFilter) {
           selectQuery = selectQuery.eq('customer_id', customerIdFilter);
