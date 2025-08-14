@@ -62,22 +62,39 @@ export function TodaysOrdersOverview() {
         return;
       }
 
-      // Fetch user role and associated employee ID
+      // Fetch user role
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
-        .select('role, employees(id)')
+        .select('role')
         .eq('id', currentUserId)
         .single();
 
       if (profileError) {
-        console.error("Fehler beim Abrufen des Benutzerprofils:", profileError);
+        console.error("Fehler beim Abrufen des Benutzerprofils:", profileError?.message || profileError);
         toast.error("Fehler beim Laden der Benutzerberechtigungen.");
         setLoading(false);
         return;
       }
 
       const currentUserRole = profileData?.role || 'employee';
-      const currentEmployeeId = (profileData?.employees && Array.isArray(profileData.employees) ? profileData.employees[0]?.id : null) || null;
+      let currentEmployeeId: string | null = null;
+
+      // If the user is an employee, fetch their employee_id separately
+      if (currentUserRole === 'employee') {
+        const { data: employeeData, error: employeeDataError } = await supabase
+          .from('employees')
+          .select('id')
+          .eq('user_id', currentUserId)
+          .single();
+
+        if (employeeDataError && employeeDataError.code !== 'PGRST116') { // PGRST116 means no rows found, which is fine if no employee profile
+          console.error("Fehler beim Laden der Mitarbeiter-ID:", employeeDataError?.message || employeeDataError);
+          toast.error("Fehler beim Laden Ihrer Mitarbeiterdaten.");
+          setLoading(false);
+          return;
+        }
+        currentEmployeeId = employeeData?.id || null;
+      }
 
 
       let query = supabase
@@ -117,7 +134,7 @@ export function TodaysOrdersOverview() {
       const { data, error } = await query;
 
       if (error) {
-        console.error("Fehler beim Laden der heutigen Aufträge:", error);
+        console.error("Fehler beim Laden der heutigen Aufträge:", error?.message || error);
         toast.error("Fehler beim Laden der heutigen Aufträge.");
         setOrders([]);
       } else {
