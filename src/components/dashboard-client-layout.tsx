@@ -58,16 +58,7 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut, us
               <Link href={getHomeLink()} passHref onClick={() => setIsSheetOpen(false)}>
                 <h2 className="text-xl font-bold text-primary tracking-tight cursor-pointer">ARIS</h2>
               </Link>
-              <SheetClose asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                >
-                  <X className="h-5 w-5" />
-                  <span className="sr-only">Menü schließen</span>
-                </Button>
-              </SheetClose>
+              {/* Removed SheetClose button */}
             </SheetHeader>
             <nav className="flex-grow overflow-y-auto p-4">
               <SidebarNav
