@@ -2,10 +2,10 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { Menu, ChevronLeft, ChevronRight, X } from "lucide-react"; // X-Icon importieren
+import { Menu, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NotificationBell } from "@/components/notification-bell";
-import { Sheet, SheetContent, SheetHeader, SheetTrigger, SheetClose } from "@/components/ui/sheet"; // SheetClose importieren
+import { Sheet, SheetContent, SheetHeader, SheetTrigger, SheetClose } from "@/components/ui/sheet";
 import { SidebarNav } from "@/components/sidebar-nav";
 import { UserMenu } from "@/components/user-menu";
 import { cn } from "@/lib/utils";
@@ -54,7 +54,7 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut, us
               "h-full"
             )}
           >
-            <SheetHeader className="flex items-center justify-between p-4 mb-6"> {/* Angepasst für Top-Rechts-Positionierung */}
+            <SheetHeader className="flex items-center justify-between p-4 mb-6">
               <Link href={getHomeLink()} passHref onClick={() => setIsSheetOpen(false)}>
                 <h2 className="text-xl font-bold text-primary tracking-tight cursor-pointer">ARIS</h2>
               </Link>
@@ -62,7 +62,7 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut, us
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8" // Keine absolute Positionierung mehr nötig
+                  className="h-8 w-8"
                 >
                   <X className="h-5 w-5" />
                   <span className="sr-only">Menü schließen</span>
@@ -91,7 +91,7 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut, us
         </Sheet>
         {/* ARIS Text im mobilen Haupt-Header, zentriert */}
         <Link href={getHomeLink()} passHref>
-          <h2 className="text-xl font-bold text-primary tracking-tight absolute left-1/2 -translate-x-1/2 cursor-pointer">ARIS</h2>
+          <h2 className="text-xl font-bold text-primary tracking-tight absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 cursor-pointer">ARIS</h2>
         </Link>
         <div className="flex items-center space-x-2">
           <NotificationBell />
