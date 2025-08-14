@@ -21,7 +21,7 @@ export async function createAbsenceRequest(data: AbsenceRequestFormValues): Prom
     .single();
 
   if (employeeError || !employee || !employee.user_id) {
-    console.error("Fehler beim Abrufen des Mitarbeiter-Benutzers:", employeeError);
+    console.error("Fehler beim Abrufen des Mitarbeiter-Benutzers:", employeeError?.message || employeeError);
     return { success: false, message: "Der ausgewählte Mitarbeiter ist keinem Benutzerkonto zugeordnet." };
   }
 
@@ -39,7 +39,7 @@ export async function createAbsenceRequest(data: AbsenceRequestFormValues): Prom
     });
 
   if (error) {
-    console.error("Fehler beim Erstellen des Abwesenheitsantrags:", error);
+    console.error("Fehler beim Erstellen des Abwesenheitsantrags:", error?.message || error);
     return { success: false, message: `Fehler beim Erstellen des Antrags: ${error.message}` };
   }
 
@@ -81,7 +81,12 @@ export async function updateAbsenceRequest(requestId: string, data: Partial<Abse
   if (data.type) updateData.type = data.type;
   if (data.notes !== undefined) updateData.notes = data.notes;
 
-  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+  const { data: profile, error: profileError } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+  if (profileError) { // Added error logging for profile fetching
+    console.error("Fehler beim Abrufen des Benutzerprofils:", profileError?.message || profileError);
+    return { success: false, message: "Fehler beim Überprüfen der Berechtigungen." };
+  }
+
   if (profile?.role === 'admin' || profile?.role === 'manager') {
     if (data.status) updateData.status = data.status;
     if (data.adminNotes !== undefined) updateData.admin_notes = data.adminNotes;
@@ -93,7 +98,7 @@ export async function updateAbsenceRequest(requestId: string, data: Partial<Abse
     .eq('id', requestId);
 
   if (error) {
-    console.error("Fehler beim Aktualisieren des Abwesenheitsantrags:", error);
+    console.error("Fehler beim Aktualisieren des Abwesenheitsantrags:", error?.message || error);
     return { success: false, message: error.message };
   }
 
@@ -127,7 +132,7 @@ export async function deleteAbsenceRequest(formData: FormData): Promise<{ succes
     .eq('id', requestId);
 
   if (error) {
-    console.error("Fehler beim Löschen des Abwesenheitsantrags:", error);
+    console.error("Fehler beim Löschen des Abwesenheitsantrags:", error?.message || error);
     return { success: false, message: error.message };
   }
 
@@ -159,7 +164,7 @@ export async function getAbsencesForMonth(date: Date) {
     .gte('end_date', firstDay.toISOString().split('T')[0]);
 
   if (error) {
-    console.error("Fehler beim Laden der Abwesenheiten für den Kalender:", error);
+    console.error("Fehler beim Laden der Abwesenheiten für den Kalender:", error?.message || error);
     return { success: false, message: error.message, data: [] };
   }
 

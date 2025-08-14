@@ -30,7 +30,7 @@ export default async function DashboardPage() {
     .single();
 
   if (profileError && profileError.code !== 'PGRST116') {
-    console.error("Fehler beim Laden des Profils:", profileError);
+    console.error("Fehler beim Laden des Profils:", profileError?.message || profileError);
   }
 
   const currentUserRole = profile?.role || 'employee';
@@ -57,7 +57,7 @@ export default async function DashboardPage() {
   const totalScheduledToday = scheduledOrdersToday?.length || 0;
   const completedScheduledToday = scheduledOrdersToday?.filter(order => order.status === 'completed').length || 0;
 
-  if (scheduledOrdersError) console.error("Fehler beim Laden der geplanten Einsätze:", scheduledOrdersError);
+  if (scheduledOrdersError) console.error("Fehler beim Laden der geplanten Einsätze:", scheduledOrdersError?.message || scheduledOrdersError);
 
   // 2. Offene Kundenanfragen (request_status = 'pending')
   const { count: pendingCustomerRequests, error: pendingRequestsError } = await supabase
@@ -65,7 +65,7 @@ export default async function DashboardPage() {
     .select('*', { count: 'exact', head: true })
     .eq('request_status', 'pending');
 
-  if (pendingRequestsError) console.error("Fehler beim Laden der offenen Kundenanfragen:", pendingRequestsError);
+  if (pendingRequestsError) console.error("Fehler beim Laden der offenen Kundenanfragen:", pendingRequestsError?.message || pendingRequestsError);
 
   // 3. Aktive Mitarbeiter im Einsatz (time_entries mit end_time IS NULL)
   const { count: activeEmployeesCount, error: activeEmployeesError } = await supabase
@@ -75,7 +75,7 @@ export default async function DashboardPage() {
     .gte('start_time', today.toISOString()) // Only count entries started today
     .lte('start_time', tomorrow.toISOString()); // And not started tomorrow
 
-  if (activeEmployeesError) console.error("Fehler beim Laden der aktiven Mitarbeiter:", activeEmployeesError);
+  if (activeEmployeesError) console.error("Fehler beim Laden der aktiven Mitarbeiter:", activeEmployeesError?.message || activeEmployeesError);
 
   // 4. Offene Reklamationen heute (general_feedback & order_feedback, created_at = today, is_resolved = false)
   const { data: newGeneralFeedback, error: generalFeedbackError } = await supabase
@@ -94,8 +94,8 @@ export default async function DashboardPage() {
 
   const totalNewComplaintsToday = (newGeneralFeedback?.length || 0) + (newOrderFeedback?.length || 0);
 
-  if (generalFeedbackError) console.error("Fehler beim Laden des allgemeinen Feedbacks:", generalFeedbackError);
-  if (orderFeedbackError) console.error("Fehler beim Laden des Auftrags-Feedbacks:", orderFeedbackError);
+  if (generalFeedbackError) console.error("Fehler beim Laden des allgemeinen Feedbacks:", generalFeedbackError?.message || generalFeedbackError);
+  if (orderFeedbackError) console.error("Fehler beim Laden des Auftrags-Feedbacks:", orderFeedbackError?.message || orderFeedbackError);
 
   // 5. Umsatz der letzten 7 Tage
   const revenueResult = await getRevenueLast7Days();
@@ -126,10 +126,10 @@ export default async function DashboardPage() {
     .from('orders')
     .select('status');
 
-  if (customerCountError) console.error("Fehler beim Laden der Kundenzahl:", customerCountError);
-  if (objectCountError) console.error("Fehler beim Laden der Objektzahl:", objectCountError);
-  if (employeeCountError) console.error("Fehler beim Laden der Mitarbeiterzahl:", employeeCountError);
-  if (ordersStatusError) console.error("Fehler beim Laden der Auftragsstatusdaten:", ordersStatusError);
+  if (customerCountError) console.error("Fehler beim Laden der Kundenzahl:", customerCountError?.message || customerCountError);
+  if (objectCountError) console.error("Fehler beim Laden der Objektzahl:", objectCountError?.message || objectCountError);
+  if (employeeCountError) console.error("Fehler beim Laden der Mitarbeiterzahl:", employeeCountError?.message || employeeCountError);
+  if (ordersStatusError) console.error("Fehler beim Laden der Auftragsstatusdaten:", ordersStatusError?.message || ordersStatusError);
 
   // Auftragsstatus-Zählungen für die Grafik aufbereiten
   const statusCounts = ordersData?.reduce((acc, order) => {
@@ -171,8 +171,8 @@ export default async function DashboardPage() {
     .order('created_at', { ascending: false })
     .limit(3); // Limit to show only a few on dashboard
 
-  if (unresolvedOrderFeedbackError) console.error("Fehler beim Laden des ungelösten Auftrags-Feedbacks:", unresolvedOrderFeedbackError);
-  if (unresolvedGeneralFeedbackError) console.error("Fehler beim Laden des ungelösten allgemeinen Feedbacks:", unresolvedGeneralFeedbackError);
+  if (unresolvedOrderFeedbackError) console.error("Fehler beim Laden des ungelösten Auftrags-Feedbacks:", unresolvedOrderFeedbackError?.message || unresolvedOrderFeedbackError);
+  if (unresolvedGeneralFeedbackError) console.error("Fehler beim Laden des ungelösten allgemeinen Feedbacks:", unresolvedGeneralFeedbackError?.message || unresolvedGeneralFeedbackError);
 
   const mappedUnresolvedOrderFeedback = unresolvedOrderFeedback?.map(f => ({
     ...f,

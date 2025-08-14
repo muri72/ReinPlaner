@@ -55,7 +55,7 @@ export async function createOrder(data: OrderFormValues) {
     });
 
   if (error) {
-    console.error("Fehler beim Erstellen des Auftrags:", error);
+    console.error("Fehler beim Erstellen des Auftrags:", error?.message || error);
     return { success: false, message: error.message };
   }
 
@@ -114,7 +114,7 @@ export async function updateOrder(orderId: string, data: OrderFormValues) {
     // RLS wird die Berechtigungsprüfung für Updates handhaben
 
   if (error) {
-    console.error("Fehler beim Aktualisieren des Auftrags:", error);
+    console.error("Fehler beim Aktualisieren des Auftrags:", error?.message || error);
     return { success: false, message: error.message };
   }
 
@@ -153,7 +153,7 @@ export async function deleteOrder(formData: FormData): Promise<{ success: boolea
     // RLS wird die Berechtigungsprüfung für Löschungen handhaben
 
   if (error) {
-    console.error("Fehler beim Löschen des Auftrags:", error);
+    console.error("Fehler beim Löschen des Auftrags:", error?.message || error);
     return { success: false, message: error.message };
   }
 
@@ -191,7 +191,7 @@ export async function processOrderRequest(formData: FormData): Promise<{ success
     .eq('id', orderId);
 
   if (error) {
-    console.error("Fehler bei der Bearbeitung der Auftragsanfrage:", error);
+    console.error("Fehler bei der Bearbeitung der Auftragsanfrage:", error?.message || error);
     return { success: false, message: error.message };
   }
 

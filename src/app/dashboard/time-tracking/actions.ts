@@ -38,7 +38,7 @@ export async function createTimeEntry(data: TimeEntryFormValues): Promise<{ succ
       .single();
 
     if (employeeError || !employee || !employee.user_id) {
-      console.error("Fehler beim Abrufen des Mitarbeiter-Benutzers für Zeiteintrag:", employeeError);
+      console.error("Fehler beim Abrufen des Mitarbeiter-Benutzers für Zeiteintrag:", employeeError?.message || employeeError);
       return { success: false, message: "Der ausgewählte Mitarbeiter ist keinem Benutzerkonto zugeordnet." };
     }
     finalUserId = employee.user_id;
@@ -83,7 +83,7 @@ export async function createTimeEntry(data: TimeEntryFormValues): Promise<{ succ
     .single();
 
   if (error) {
-    console.error("Fehler beim Erstellen des Zeiteintrags:", error);
+    console.error("Fehler beim Erstellen des Zeiteintrags:", error?.message || error);
     return { success: false, message: error.message };
   }
 
@@ -157,7 +157,7 @@ export async function updateTimeEntry(entryId: string, data: Partial<TimeEntryFo
     // RLS will handle the permission check for updates
 
   if (error) {
-    console.error("Fehler beim Aktualisieren des Zeiteintrags:", error);
+    console.error("Fehler beim Aktualisieren des Zeiteintrags:", error?.message || error);
     return { success: false, message: error.message };
   }
 
@@ -182,7 +182,7 @@ export async function deleteTimeEntry(formData: FormData): Promise<{ success: bo
     // RLS will handle the permission check for deletes
 
   if (error) {
-    console.error("Fehler beim Löschen des Zeiteintrags:", error);
+    console.error("Fehler beim Löschen des Zeiteintrags:", error?.message || error);
     return { success: false, message: error.message };
   }
 
@@ -206,13 +206,14 @@ export async function triggerAutomaticTimeEntryCreation(): Promise<{ success: bo
     .single();
 
   if (profileError || profile?.role !== 'admin') {
+    console.error("Fehler beim Abrufen des Benutzerprofils:", profileError?.message || profileError);
     return { success: false, message: "Nur Admins können diese Aktion ausführen." };
   }
 
   const { data: createdCount, error: rpcError } = await supabase.rpc('create_missing_scheduled_time_entries');
 
   if (rpcError) {
-    console.error("Fehler beim Ausführen der DB-Funktion:", rpcError);
+    console.error("Fehler beim Ausführen der DB-Funktion:", rpcError?.message || rpcError);
     return { success: false, message: `Fehler bei der Erstellung: ${rpcError.message}` };
   }
 

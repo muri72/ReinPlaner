@@ -31,7 +31,7 @@ export async function generateSignedUploadUrls(
       .createSignedUploadUrl(filePath);
 
     if (error) {
-      console.error("Fehler beim Erstellen der Signed URL:", error);
+      console.error("Fehler beim Erstellen der Signed URL:", error?.message || error);
       return { success: false, message: `Fehler beim Erstellen der Upload-URL: ${error.message}` };
     }
 
@@ -77,7 +77,7 @@ export async function createOrderFeedback(data: {
     });
 
   if (error) {
-    console.error("Fehler beim Erstellen des Feedbacks:", error);
+    console.error("Fehler beim Erstellen des Feedbacks:", error?.message || error);
     return { success: false, message: `Fehler beim Speichern des Feedbacks: ${error.message}` };
   }
 
@@ -119,7 +119,7 @@ export async function updateOrderFeedback(feedbackId: string, formData: FormData
         .eq('id', feedbackId);
 
     if (error) {
-        console.error("Fehler beim Aktualisieren des Feedbacks:", error);
+        console.error("Fehler beim Aktualisieren des Feedbacks:", error?.message || error);
         return { success: false, message: `Fehler: ${error.message}` };
     }
 
@@ -145,7 +145,7 @@ export async function replyToOrderFeedback(feedbackId: string, replyText: string
     .eq('id', feedbackId);
 
   if (error) {
-    console.error("Fehler beim Antworten auf Feedback:", error);
+    console.error("Fehler beim Antworten auf Feedback:", error?.message || error);
     return { success: false, message: `Fehler: ${error.message}` };
   }
 
@@ -182,7 +182,7 @@ export async function resolveOrderFeedback(feedbackId: string): Promise<{ succes
     .eq('id', feedbackId);
 
   if (error) {
-    console.error("Fehler beim Markieren des Feedbacks als gelöst:", error);
+    console.error("Fehler beim Markieren des Feedbacks als gelöst:", error?.message || error);
     return { success: false, message: `Fehler: ${error.message}` };
   }
 
@@ -196,7 +196,7 @@ export async function deleteOrderFeedback(feedbackId: string): Promise<{ success
     const { error } = await supabase.from('order_feedback').delete().eq('id', feedbackId);
 
     if (error) {
-        console.error("Fehler beim Löschen des Feedbacks:", error);
+        console.error("Fehler beim Löschen des Feedbacks:", error?.message || error);
         return { success: false, message: `Fehler: ${error.message}` };
     }
 
@@ -236,6 +236,7 @@ export async function createGeneralFeedback(data: {
       .single();
     
     if (customerError || !customer) {
+      console.error("Fehler beim Abrufen des Kunden:", customerError?.message || customerError);
       return { success: false, message: "Ausgewählter Kunde konnte nicht gefunden werden." };
     }
     feedbackName = customer.name;
@@ -255,7 +256,7 @@ export async function createGeneralFeedback(data: {
     });
 
   if (error) {
-    console.error("Fehler beim Erstellen des allgemeinen Feedbacks:", error);
+    console.error("Fehler beim Erstellen des allgemeinen Feedbacks:", error?.message || error);
     return { success: false, message: `Fehler beim Speichern des Feedbacks: ${error.message}` };
   }
 
@@ -297,7 +298,7 @@ export async function updateGeneralFeedback(feedbackId: string, formData: FormDa
         .eq('id', feedbackId);
 
     if (error) {
-        console.error("Fehler beim Aktualisieren des Feedbacks:", error);
+        console.error("Fehler beim Aktualisieren des Feedbacks:", error?.message || error);
         return { success: false, message: `Fehler: ${error.message}` };
     }
 
@@ -323,7 +324,7 @@ export async function replyToGeneralFeedback(feedbackId: string, replyText: stri
     .eq('id', feedbackId);
 
   if (error) {
-    console.error("Fehler beim Antworten auf Feedback:", error);
+    console.error("Fehler beim Antworten auf Feedback:", error?.message || error);
     return { success: false, message: `Fehler: ${error.message}` };
   }
 
@@ -360,7 +361,7 @@ export async function resolveGeneralFeedback(feedbackId: string): Promise<{ succ
     .eq('id', feedbackId);
 
   if (error) {
-    console.error("Fehler beim Markieren des Feedbacks als gelöst:", error);
+    console.error("Fehler beim Markieren des Feedbacks als gelöst:", error?.message || error);
     return { success: false, message: `Fehler: ${error.message}` };
   }
 
@@ -374,7 +375,7 @@ export async function deleteGeneralFeedback(feedbackId: string): Promise<{ succe
     const { error } = await supabase.from('general_feedback').delete().eq('id', feedbackId);
 
     if (error) {
-        console.error("Fehler beim Löschen des Feedbacks:", error);
+        console.error("Fehler beim Löschen des Feedbacks:", error?.message || error);
         return { success: false, message: `Fehler: ${error.message}` };
     }
 

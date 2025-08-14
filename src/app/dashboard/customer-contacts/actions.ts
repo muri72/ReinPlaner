@@ -28,7 +28,7 @@ export async function createCustomerContact(data: CustomerContactFormValues): Pr
     .single();
 
   if (error) {
-    console.error("Fehler beim Erstellen des Kundenkontakts:", error);
+    console.error("Fehler beim Erstellen des Kundenkontakts:", error?.message || error);
     return { success: false, message: error.message };
   }
 
@@ -54,7 +54,7 @@ export async function updateCustomerContact(contactId: string, data: CustomerCon
     .single();
 
   if (profileError) {
-    console.error("Fehler beim Abrufen des Benutzerprofils:", profileError);
+    console.error("Fehler beim Abrufen des Benutzerprofils:", profileError?.message || profileError);
     return { success: false, message: "Fehler beim Überprüfen der Berechtigungen." };
   }
 
@@ -77,7 +77,7 @@ export async function updateCustomerContact(contactId: string, data: CustomerCon
       .eq('user_id', user.id);
 
     if (customerIdsError) {
-      console.error("Fehler beim Abrufen der Kunden-IDs für Berechtigungsprüfung:", customerIdsError);
+      console.error("Fehler beim Abrufen der Kunden-IDs für Berechtigungsprüfung:", customerIdsError?.message || customerIdsError);
       return { success: false, message: "Fehler beim Überprüfen der Berechtigungen." };
     }
     const allowedCustomerIds = customerIds.map(c => c.id);
@@ -87,7 +87,7 @@ export async function updateCustomerContact(contactId: string, data: CustomerCon
   const { data: updatedRows, error } = await query.select();
 
   if (error) {
-    console.error("Fehler beim Aktualisieren des Kundenkontakts:", error);
+    console.error("Fehler beim Aktualisieren des Kundenkontakts:", error?.message || error);
     return { success: false, message: error.message };
   }
 
@@ -118,7 +118,7 @@ export async function deleteCustomerContact(formData: FormData): Promise<{ succe
     .single();
 
   if (profileError) {
-    console.error("Fehler beim Abrufen des Benutzerprofils:", profileError);
+    console.error("Fehler beim Abrufen des Benutzerprofils:", profileError?.message || profileError);
     return { success: false, message: "Fehler beim Überprüfen der Berechtigungen." };
   }
 
@@ -137,7 +137,7 @@ export async function deleteCustomerContact(formData: FormData): Promise<{ succe
       .eq('user_id', user.id);
 
     if (customerIdsError) {
-      console.error("Fehler beim Abrufen der Kunden-IDs für Berechtigungsprüfung:", customerIdsError);
+      console.error("Fehler beim Abrufen der Kunden-IDs für Berechtigungsprüfung:", customerIdsError?.message || customerIdsError);
       return { success: false, message: "Fehler beim Überprüfen der Berechtigungen." };
     }
     const allowedCustomerIds = customerIds.map(c => c.id);
@@ -147,7 +147,7 @@ export async function deleteCustomerContact(formData: FormData): Promise<{ succe
   const { error } = await query;
 
   if (error) {
-    console.error("Fehler beim Löschen des Kundenkontakts:", error);
+    console.error("Fehler beim Löschen des Kundenkontakts:", error?.message || error);
     return { success: false, message: error.message };
   }
 

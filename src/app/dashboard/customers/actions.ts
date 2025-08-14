@@ -26,7 +26,7 @@ export async function createCustomer(data: CustomerFormValues) {
     });
 
   if (error) {
-    console.error("Fehler beim Erstellen des Kunden:", error);
+    console.error("Fehler beim Erstellen des Kunden:", error?.message || error);
     return { success: false, message: error.message };
   }
 
@@ -50,7 +50,7 @@ export async function updateCustomer(customerId: string, data: CustomerFormValue
     .single();
 
   if (profileError) {
-    console.error("Fehler beim Abrufen des Benutzerprofils:", profileError);
+    console.error("Fehler beim Abrufen des Benutzerprofils:", profileError?.message || profileError);
     return { success: false, message: "Fehler beim Überprüfen der Berechtigungen." };
   }
 
@@ -73,7 +73,7 @@ export async function updateCustomer(customerId: string, data: CustomerFormValue
   const { data: updatedRows, error } = await query.select();
 
   if (error) {
-    console.error("Fehler beim Aktualisieren des Kunden:", error);
+    console.error("Fehler beim Aktualisieren des Kunden:", error?.message || error);
     return { success: false, message: error.message };
   }
 
@@ -102,7 +102,7 @@ export async function deleteCustomer(formData: FormData): Promise<{ success: boo
     .single();
 
   if (profileError) {
-    console.error("Fehler beim Abrufen des Benutzerprofils:", profileError);
+    console.error("Fehler beim Abrufen des Benutzerprofils:", profileError?.message || profileError);
     return { success: false, message: "Fehler beim Überprüfen der Berechtigungen." };
   }
 
@@ -121,7 +121,7 @@ export async function deleteCustomer(formData: FormData): Promise<{ success: boo
   const { error } = await query;
 
   if (error) {
-    console.error("Fehler beim Löschen des Kunden:", error);
+    console.error("Fehler beim Löschen des Kunden:", error?.message || error);
     return { success: false, message: error.message };
   }
 

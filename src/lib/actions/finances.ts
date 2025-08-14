@@ -60,6 +60,8 @@ export async function getMultiMonthFinancialData(numberOfMonths: number = 6) {
         .or(`recurring_end_date.gte.${startDate.toISOString().split('T')[0]},recurring_end_date.is.null`); // Order ends after or in this month, or never ends
 
       if (fixedPriceError) throw fixedPriceError;
+      // For simplicity, if a permanent order was active at any point in the last 7 days,
+      // we'll include its full monthly price. A more accurate calculation would prorate.
       totalRevenue += fixedPriceOrders.reduce((acc, order) => acc + Number(order.fixed_monthly_price || 0), 0);
 
       // Revenue from hourly-based orders (time entries)
@@ -91,7 +93,7 @@ export async function getMultiMonthFinancialData(numberOfMonths: number = 6) {
 
     return { success: true, data: financialData.reverse(), message: "Finanzdaten erfolgreich geladen." }; // Reverse to show oldest first
   } catch (error: any) {
-    console.error("Fehler beim Laden der Finanzdaten für Charts:", error);
+    console.error("Fehler beim Laden der Finanzdaten für Charts:", error?.message || error);
     return { success: false, data: null, message: error.message };
   }
 }
@@ -149,7 +151,7 @@ export async function getMultiMonthEmployeeWorkload(numberOfMonths: number = 6) 
 
     return { success: true, data: workloadData.reverse(), message: "Mitarbeiter-Auslastungsdaten erfolgreich geladen." };
   } catch (error: any) {
-    console.error("Fehler beim Laden der Mitarbeiter-Auslastungsdaten:", error);
+    console.error("Fehler beim Laden der Mitarbeiter-Auslastungsdaten:", error?.message || error);
     return { success: false, data: null, message: error.message };
   }
 }
@@ -205,7 +207,7 @@ export async function getRevenueLast7Days() {
 
     return { success: true, data: parseFloat(totalRevenue.toFixed(2)), message: "Umsatz der letzten 7 Tage erfolgreich geladen." };
   } catch (error: any) {
-    console.error("Fehler beim Laden des Umsatzes der letzten 7 Tage:", error);
+    console.error("Fehler beim Laden des Umsatzes der letzten 7 Tage:", error?.message || error);
     return { success: false, data: null, message: error.message };
   }
 }
@@ -235,7 +237,7 @@ export async function getMostBookedServices(limit: number = 5) {
 
     return { success: true, data: sortedServices, message: "Meistgebuchte Leistungen erfolgreich geladen." };
   } catch (error: any) {
-    console.error("Fehler beim Laden der meistgebuchten Leistungen:", error);
+    console.error("Fehler beim Laden der meistgebuchten Leistungen:", error?.message || error);
     return { success: false, data: null, message: error.message };
   }
 }

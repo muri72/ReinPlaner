@@ -49,7 +49,7 @@ export async function updateProfile(formData: FormData) {
       .upload(filePath, avatarFile, { upsert: true });
 
     if (uploadError) {
-      console.error("Fehler beim Hochladen des Avatars:", uploadError);
+      console.error("Fehler beim Hochladen des Avatars:", uploadError?.message || uploadError);
       return { success: false, message: `Avatar-Upload fehlgeschlagen: ${uploadError.message}` };
     }
 
@@ -66,7 +66,7 @@ export async function updateProfile(formData: FormData) {
         .eq('id', user.id);
 
       if (error) {
-        console.error("Fehler beim Aktualisieren des Profils:", error);
+        console.error("Fehler beim Aktualisieren des Profils:", error?.message || error);
         return { success: false, message: error.message };
       }
   } else {
@@ -90,7 +90,7 @@ export async function updatePassword(password: string) {
   const { error } = await supabase.auth.updateUser({ password });
 
   if (error) {
-    console.error("Fehler beim Aktualisieren des Passworts:", error);
+    console.error("Fehler beim Aktualisieren des Passworts:", error?.message || error);
     return { success: false, message: `Passwort-Update fehlgeschlagen: ${error.message}` };
   }
 
@@ -116,7 +116,7 @@ export async function sendPasswordResetEmail() {
   });
 
   if (error) {
-    console.error("Fehler beim Senden der Passwort-Reset-E-Mail:", error);
+    console.error("Fehler beim Senden der Passwort-Reset-E-Mail:", error?.message || error);
     return { success: false, message: `Fehler: ${error.message}` };
   }
 

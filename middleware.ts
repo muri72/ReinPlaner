@@ -24,6 +24,10 @@ export async function middleware(request: NextRequest) {
     .eq('id', session.user.id)
     .single();
 
+  if (profileError) {
+    console.error("Fehler beim Abrufen des Benutzerprofils:", profileError?.message || profileError);
+  }
+
   const userRole = profileData?.role || 'employee'; // Standard auf 'employee', falls Rolle nicht gefunden
 
   // Den korrekten Basis-Dashboard-Pfad für die Benutzerrolle bestimmen

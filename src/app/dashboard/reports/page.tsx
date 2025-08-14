@@ -18,6 +18,7 @@ export default async function ReportsPage() {
     .single();
 
   if (profileError || profile?.role !== 'admin') {
+    console.error("Fehler beim Abrufen des Benutzerprofils:", profileError?.message || profileError);
     // If not an admin, redirect to dashboard or show an unauthorized message
     redirect("/dashboard");
   }

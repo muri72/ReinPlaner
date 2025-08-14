@@ -50,7 +50,7 @@ export async function generateSignedUploadUrlForDocument(
       .single();
 
     if (dbError) {
-      console.error("Fehler beim Erstellen des Dokumenteintrags in der DB:", dbError);
+      console.error("Fehler beim Erstellen des Dokumenteintrags in der DB:", dbError?.message || dbError);
       return { success: false, message: `Fehler beim Vorbereiten des Dokuments: ${dbError.message}` };
     }
 
@@ -60,7 +60,7 @@ export async function generateSignedUploadUrlForDocument(
       .createSignedUploadUrl(filePath);
 
     if (storageError) {
-      console.error("Fehler beim Erstellen der Signed URL:", storageError);
+      console.error("Fehler beim Erstellen der Signed URL:", storageError?.message || storageError);
       // If storage URL creation fails, delete the DB entry
       await supabaseAdmin.from('documents').delete().eq('id', newDocument.id);
       return { success: false, message: `Fehler beim Erstellen der Upload-URL: ${storageError.message}` };
@@ -76,7 +76,7 @@ export async function generateSignedUploadUrlForDocument(
       filePath: filePath,
     };
   } catch (error: any) {
-    console.error("Unerwarteter Fehler beim Generieren der Upload-URL:", error);
+    console.error("Unerwarteter Fehler beim Generieren der Upload-URL:", error?.message || error);
     return { success: false, message: `Ein unerwarteter Fehler ist aufgetreten: ${error.message}` };
   }
 }
@@ -106,7 +106,7 @@ export async function getDocuments(
   const { data, error } = await query;
 
   if (error) {
-    console.error("Fehler beim Laden der Dokumente:", error);
+    console.error("Fehler beim Laden der Dokumente:", error?.message || error);
     return { success: false, message: error.message };
   }
 
@@ -138,7 +138,7 @@ export async function deleteDocument(documentId: string, filePath: string): Prom
     .remove([filePath]);
 
   if (storageError) {
-    console.error("Fehler beim Löschen der Datei aus dem Speicher:", storageError);
+    console.error("Fehler beim Löschen der Datei aus dem Speicher:", storageError?.message || storageError);
     // Continue to delete DB entry even if file deletion fails, to avoid orphaned records
   }
 
@@ -149,7 +149,7 @@ export async function deleteDocument(documentId: string, filePath: string): Prom
     .eq('id', documentId);
 
   if (dbError) {
-    console.error("Fehler beim Löschen des Dokuments aus der DB:", dbError);
+    console.error("Fehler beim Löschen des Dokuments aus der DB:", dbError?.message || dbError);
     return { success: false, message: `Fehler beim Löschen des Dokuments: ${dbError.message}` };
   }
 

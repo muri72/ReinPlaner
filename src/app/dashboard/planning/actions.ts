@@ -24,7 +24,7 @@ export async function assignOrderToEmployee(orderId: string, employeeId: string,
     .eq('id', orderId);
 
   if (error) {
-    console.error("Fehler beim Zuweisen des Auftrags:", error);
+    console.error("Fehler beim Zuweisen des Auftrags:", error?.message || error);
     return { success: false, message: `Fehler beim Zuweisen: ${error.message}` };
   }
 

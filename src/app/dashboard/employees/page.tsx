@@ -33,7 +33,7 @@ export default async function EmployeesPage({
     .single();
 
   if (profileError) {
-    console.error("Fehler beim Laden des Benutzerprofils:", profileError);
+    console.error("Fehler beim Laden des Benutzerprofils:", profileError?.message || profileError);
     // Im Fehlerfall oder wenn kein Profil gefunden wird, behandeln wir es als Nicht-Admin
   }
 
@@ -66,7 +66,7 @@ export default async function EmployeesPage({
   const { data: employees, error, count } = await employeesQuery;
 
   if (error) {
-    console.error("Fehler beim Laden der Mitarbeiter:", error);
+    console.error("Fehler beim Laden der Mitarbeiter:", error?.message || error);
     return <div className="p-4 md:p-8 text-sm">Fehler beim Laden der Mitarbeiter.</div>;
   }
 

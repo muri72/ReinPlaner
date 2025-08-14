@@ -59,7 +59,7 @@ export default async function CustomerContactsPage({
   const { data: contacts, error, count } = await customerContactsQuery;
 
   if (error) {
-    console.error("Fehler beim Laden der Kundenkontakte:", error);
+    console.error("Fehler beim Laden der Kundenkontakte:", error?.message || error);
     return <div className="p-4 md:p-8 text-sm">Fehler beim Laden der Kundenkontakte.</div>;
   }
 

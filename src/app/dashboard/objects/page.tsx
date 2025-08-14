@@ -108,7 +108,7 @@ export default async function ObjectsPage({
   }
 
   if (error) {
-    console.error("Fehler beim Laden der Objekte:", error);
+    console.error("Fehler beim Laden der Objekte:", error?.message || error);
     return <div className="p-4 md:p-8 text-sm">Fehler beim Laden der Objekte.</div>;
   }
 

@@ -16,11 +16,15 @@ export default async function FinancesPage() {
     redirect("/login");
   }
 
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from('profiles')
     .select('role')
     .eq('id', user.id)
     .single();
+
+  if (profileError) { // Added error logging for profile fetching
+    console.error("Fehler beim Abrufen des Benutzerprofils:", profileError?.message || profileError);
+  }
 
   if (profile?.role !== 'admin' && profile?.role !== 'manager') {
     redirect("/dashboard");

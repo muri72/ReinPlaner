@@ -21,7 +21,7 @@ export async function registerUser(data: UserFormValues) {
     .single();
 
   if (profileError || adminProfile?.role !== 'admin') {
-    console.error("Berechtigungsfehler:", profileError);
+    console.error("Berechtigungsfehler:", profileError?.message || profileError);
     return { success: false, message: "Nicht autorisiert. Nur Admins können Benutzer registrieren." };
   }
 
@@ -44,7 +44,7 @@ export async function registerUser(data: UserFormValues) {
   });
 
   if (authError) {
-    console.error("Fehler bei der Benutzerregistrierung:", authError);
+    console.error("Fehler bei der Benutzerregistrierung:", authError?.message || authError);
     return { success: false, message: authError.message };
   }
 
@@ -63,7 +63,7 @@ export async function registerUser(data: UserFormValues) {
     .eq('id', newUserId);
 
   if (profileUpdateError) {
-    console.error("Fehler beim Aktualisieren des Benutzerprofils:", profileUpdateError);
+    console.error("Fehler beim Aktualisieren des Benutzerprofils:", profileUpdateError?.message || profileUpdateError);
     // Optional: Benutzer in Auth löschen, wenn Profil-Update fehlschlägt
     await supabaseAdmin.auth.admin.deleteUser(newUser.user?.id!); // Verwende den Admin Client
     return { success: false, message: profileUpdateError.message };
@@ -79,7 +79,7 @@ export async function registerUser(data: UserFormValues) {
       .single();
 
     if (fetchEmployeeError && fetchEmployeeError.code !== 'PGRST116') { // PGRST116 = no rows found
-      console.error("Fehler beim Abrufen des Mitarbeiters für Zuweisung:", fetchEmployeeError);
+      console.error("Fehler beim Abrufen des Mitarbeiters für Zuweisung:", fetchEmployeeError?.message || fetchEmployeeError);
       // Nicht abbrechen, da dies ein optionaler Schritt ist
     } else if (existingEmployee && existingEmployee.user_id && existingEmployee.user_id !== newUserId) {
       // Wenn der Mitarbeiter bereits einem ANDEREN Benutzer zugewiesen ist, diesen entknüpfen
@@ -88,7 +88,7 @@ export async function registerUser(data: UserFormValues) {
         .update({ user_id: null })
         .eq('user_id', existingEmployee.user_id)
         .eq('id', employeeId);
-      if (unlinkOtherUserError) console.error("Fehler beim Entknüpfen des Mitarbeiters von anderem Benutzer:", unlinkOtherUserError);
+      if (unlinkOtherUserError) console.error("Fehler beim Entknüpfen des Mitarbeiters von anderem Benutzer:", unlinkOtherUserError?.message || unlinkOtherUserError);
     }
 
     const { error: assignEmployeeError } = await supabaseAdmin
@@ -96,7 +96,7 @@ export async function registerUser(data: UserFormValues) {
       .update({ user_id: newUserId })
       .eq('id', employeeId);
     if (assignEmployeeError) {
-      console.error("Fehler beim Zuweisen des Mitarbeiters zum Benutzer:", assignEmployeeError);
+      console.error("Fehler beim Zuweisen des Mitarbeiters zum Benutzer:", assignEmployeeError?.message || assignEmployeeError);
       // Nicht abbrechen, da dies ein optionaler Schritt ist
     }
   }
@@ -111,7 +111,7 @@ export async function registerUser(data: UserFormValues) {
       .single();
 
     if (fetchCustomerError && fetchCustomerError.code !== 'PGRST116') { // PGRST116 = no rows found
-      console.error("Fehler beim Abrufen des Kunden für Zuweisung:", fetchCustomerError);
+      console.error("Fehler beim Abrufen des Kunden für Zuweisung:", fetchCustomerError?.message || fetchCustomerError);
       // Nicht abbrechen
     } else if (existingCustomer && existingCustomer.user_id && existingCustomer.user_id !== newUserId) {
       // Wenn der Kunde bereits einem ANDEREN Benutzer zugewiesen ist, diesen entknüpfen
@@ -120,7 +120,7 @@ export async function registerUser(data: UserFormValues) {
         .update({ user_id: null })
         .eq('user_id', existingCustomer.user_id)
         .eq('id', customerId);
-      if (unlinkOtherUserError) console.error("Fehler beim Entknüpfen des Kunden von anderem Benutzer:", unlinkOtherUserError);
+      if (unlinkOtherUserError) console.error("Fehler beim Entknüpfen des Kunden von anderem Benutzer:", unlinkOtherUserError?.message || unlinkOtherUserError);
     }
 
     const { error: assignCustomerError } = await supabaseAdmin
@@ -128,7 +128,7 @@ export async function registerUser(data: UserFormValues) {
       .update({ user_id: newUserId })
       .eq('id', customerId);
     if (assignCustomerError) {
-      console.error("Fehler beim Zuweisen des Kunden zum Benutzer:", assignCustomerError);
+      console.error("Fehler beim Zuweisen des Kunden zum Benutzer:", assignCustomerError?.message || assignCustomerError);
       // Nicht abbrechen
     }
   }
@@ -143,7 +143,7 @@ export async function registerUser(data: UserFormValues) {
       .single();
 
     if (fetchContactError && fetchContactError.code !== 'PGRST116') {
-      console.error("Fehler beim Abrufen des Kundenkontakts für Zuweisung:", fetchContactError);
+      console.error("Fehler beim Abrufen des Kundenkontakts für Zuweisung:", fetchContactError?.message || fetchContactError);
     } else if (existingContact && existingContact.user_id && existingContact.user_id !== newUserId) {
       // Wenn der Kontakt bereits einem ANDEREN Benutzer zugewiesen ist, diesen entknüpfen
       const { error: unlinkOtherUserError } = await supabaseAdmin
@@ -151,7 +151,7 @@ export async function registerUser(data: UserFormValues) {
         .update({ user_id: null })
         .eq('user_id', existingContact.user_id)
         .eq('id', customerContactId);
-      if (unlinkOtherUserError) console.error("Fehler beim Entknüpfen des Kundenkontakts von anderem Benutzer:", unlinkOtherUserError);
+      if (unlinkOtherUserError) console.error("Fehler beim Entknüpfen des Kundenkontakts von anderem Benutzer:", unlinkOtherUserError?.message || unlinkOtherUserError);
     }
 
     const { error: assignContactError } = await supabaseAdmin
@@ -159,7 +159,7 @@ export async function registerUser(data: UserFormValues) {
       .update({ user_id: newUserId })
       .eq('id', customerContactId);
     if (assignContactError) {
-      console.error("Fehler beim Zuweisen des Kundenkontakts zum Benutzer:", assignContactError);
+      console.error("Fehler beim Zuweisen des Kundenkontakts zum Benutzer:", assignContactError?.message || assignContactError);
     }
   }
 
@@ -204,7 +204,7 @@ export async function updateUser(userId: string, data: Partial<UserFormValues>) 
     .single();
 
   if (profileError || adminProfile?.role !== 'admin') {
-    console.error("Berechtigungsfehler:", profileError);
+    console.error("Berechtigungsfehler:", profileError?.message || profileError);
     return { success: false, message: "Nicht autorisiert. Nur Admins können Benutzer aktualisieren." };
   }
 
@@ -217,7 +217,7 @@ export async function updateUser(userId: string, data: Partial<UserFormValues>) 
     .eq('id', userId);
 
   if (profileUpdateError) {
-    console.error("Fehler beim Aktualisieren des Benutzerprofils:", profileUpdateError);
+    console.error("Fehler beim Aktualisieren des Benutzerprofils:", profileUpdateError?.message || profileUpdateError);
     return { success: false, message: profileUpdateError.message };
   }
 
@@ -241,7 +241,7 @@ export async function deleteUser(formData: FormData): Promise<{ success: boolean
     .single();
 
   if (profileError || adminProfile?.role !== 'admin') {
-    console.error("Berechtigungsfehler:", profileError);
+    console.error("Berechtigungsfehler:", profileError?.message || profileError);
     return { success: false, message: "Nicht autorisiert. Nur Admins können Benutzer löschen." };
   }
 
@@ -259,28 +259,28 @@ export async function deleteUser(formData: FormData): Promise<{ success: boolean
     .from('employees')
     .update({ user_id: null })
     .eq('user_id', userId);
-  if (employeeUnlinkError) console.error("Fehler beim Entknüpfen des Mitarbeiters:", employeeUnlinkError);
+  if (employeeUnlinkError) console.error("Fehler beim Entknüpfen des Mitarbeiters:", employeeUnlinkError?.message || employeeUnlinkError);
 
   // Kunden entknüpfen
   const { error: customerUnlinkError } = await supabaseAdmin
     .from('customers')
     .update({ user_id: null })
     .eq('user_id', userId);
-  if (customerUnlinkError) console.error("Fehler beim Entknüpfen des Kunden:", customerUnlinkError);
+  if (customerUnlinkError) console.error("Fehler beim Entknüpfen des Kunden:", customerUnlinkError?.message || customerUnlinkError);
 
   // Kundenkontakte entknüpfen (NEU)
   const { error: customerContactUnlinkError } = await supabaseAdmin
     .from('customer_contacts')
     .update({ user_id: null })
     .eq('user_id', userId);
-  if (customerContactUnlinkError) console.error("Fehler beim Entknüpfen des Kundenkontakts:", customerContactUnlinkError);
+  if (customerContactUnlinkError) console.error("Fehler beim Entknüpfen des Kundenkontakts:", customerContactUnlinkError?.message || customerContactUnlinkError);
 
 
   // Benutzer in Supabase Auth löschen (dies löscht auch das Profil aufgrund der CASCADE-Regel)
   const { error } = await supabaseAdmin.auth.admin.deleteUser(userId);
 
   if (error) {
-    console.error("Fehler beim Löschen des Benutzers:", error);
+    console.error("Fehler beim Löschen des Benutzers:", error?.message || error);
     return { success: false, message: error.message };
   }
 
@@ -307,7 +307,7 @@ export async function assignCustomersToManager(managerId: string, customerIds: s
     .single();
 
   if (profileError || adminProfile?.role !== 'admin') {
-    console.error("Berechtigungsfehler:", profileError);
+    console.error("Berechtigungsfehler:", profileError?.message || profileError);
     return { success: false, message: "Nicht autorisiert. Nur Admins können Zuweisungen vornehmen." };
   }
 
@@ -319,7 +319,7 @@ export async function assignCustomersToManager(managerId: string, customerIds: s
     .eq('manager_id', managerId);
 
   if (deleteError) {
-    console.error("Fehler beim Löschen alter Zuweisungen:", deleteError);
+    console.error("Fehler beim Löschen alter Zuweisungen:", deleteError?.message || deleteError);
     return { success: false, message: `Fehler beim Aktualisieren der Zuweisungen: ${deleteError.message}` };
   }
 
@@ -335,7 +335,7 @@ export async function assignCustomersToManager(managerId: string, customerIds: s
       .insert(assignmentsToInsert);
 
     if (insertError) {
-      console.error("Fehler beim Einfügen neuer Zuweisungen:", insertError);
+      console.error("Fehler beim Einfügen neuer Zuweisungen:", insertError?.message || insertError);
       return { success: false, message: `Fehler beim Aktualisieren der Zuweisungen: ${insertError.message}` };
     }
   }

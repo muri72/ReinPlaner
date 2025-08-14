@@ -20,7 +20,7 @@ export default async function ProfilePage() {
     .single();
 
   if (profileError && profileError.code !== 'PGRST116') {
-    console.error("Fehler beim Laden des Profils:", profileError);
+    console.error("Fehler beim Laden des Profils:", profileError?.message || profileError);
   }
 
   return (

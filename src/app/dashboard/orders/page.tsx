@@ -127,7 +127,7 @@ export default async function OrdersPage({
   }
 
   if (error) {
-    console.error("Fehler beim Laden der Aufträge:", error);
+    console.error("Fehler beim Laden der Aufträge:", error?.message || error);
     return <div className="p-4 md:p-8">Fehler beim Laden der Aufträge.</div>;
   }
 

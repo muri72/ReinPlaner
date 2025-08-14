@@ -23,7 +23,7 @@ export async function sendNotification({ userId, title, message, link }: Notific
     });
 
   if (notificationError) {
-    console.error(`Fehler beim Erstellen der Benachrichtigung für Benutzer ${userId}:`, notificationError);
+    console.error(`Fehler beim Erstellen der Benachrichtigung für Benutzer ${userId}:`, notificationError?.message || notificationError);
   }
 
   // 2. Prüfen, ob E-Mail-Benachrichtigungen aktiviert sind
@@ -42,7 +42,7 @@ export async function sendNotification({ userId, title, message, link }: Notific
   const { data: user, error: userError } = await supabaseAdmin.auth.admin.getUserById(userId);
 
   if (userError || !user.user?.email) {
-    console.error(`Fehler beim Abrufen der E-Mail für Benutzer ${userId}:`, userError);
+    console.error(`Fehler beim Abrufen der E-Mail für Benutzer ${userId}:`, userError?.message || userError);
     return;
   }
 
@@ -60,7 +60,7 @@ export async function sendNotification({ userId, title, message, link }: Notific
       throw functionError;
     }
     console.log(`E-Mail-Benachrichtigung an ${user.user.email} für Benutzer ${userId} gesendet.`);
-  } catch (error) {
-    console.error(`Fehler beim Aufrufen der send-email-Funktion für Benutzer ${userId}:`, error);
+  } catch (error: any) {
+    console.error(`Fehler beim Aufrufen der send-email-Funktion für Benutzer ${userId}:`, error?.message || error);
   }
 }

@@ -73,7 +73,7 @@ export async function getWorkTimeReport(objectId: string, month: number, year: n
     .order('start_time', { ascending: true });
 
   if (error) {
-    console.error("Fehler beim Laden des Arbeitszeitnachweises:", error);
+    console.error("Fehler beim Laden des Arbeitszeitnachweises:", error?.message || error);
     return { success: false, message: error.message, data: null };
   }
 
@@ -125,6 +125,7 @@ export async function getEmployeeWorkTimeReport(employeeId: string, month: numbe
     .single();
 
   if (employeeError || !employeeDetails) {
+    console.error("Fehler beim Laden der Mitarbeiterdetails:", employeeError?.message || employeeError);
     return { success: false, message: "Mitarbeiter nicht gefunden.", data: null };
   }
 
@@ -145,7 +146,7 @@ export async function getEmployeeWorkTimeReport(employeeId: string, month: numbe
     .order('start_time', { ascending: true });
 
   if (error) {
-    console.error("Fehler beim Laden des Mitarbeiter-Arbeitszeitnachweises:", error);
+    console.error("Fehler beim Laden des Mitarbeiter-Arbeitszeitnachweises:", error?.message || error);
     return { success: false, message: error.message, data: null };
   }
 

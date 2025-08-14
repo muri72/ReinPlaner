@@ -58,7 +58,7 @@ export async function createEmployee(data: EmployeeFormValues) {
     });
 
   if (error) {
-    console.error("Fehler beim Erstellen des Mitarbeiters:", error);
+    console.error("Fehler beim Erstellen des Mitarbeiters:", error?.message || error);
     return { success: false, message: error.message };
   }
 
@@ -82,7 +82,7 @@ export async function updateEmployee(employeeId: string, data: EmployeeFormValue
     .single();
 
   if (profileError) {
-    console.error("Fehler beim Abrufen des Benutzerprofils:", profileError);
+    console.error("Fehler beim Abrufen des Benutzerprofils:", profileError?.message || profileError);
     return { success: false, message: "Fehler beim Überprüfen der Berechtigungen." };
   }
 
@@ -118,7 +118,7 @@ export async function updateEmployee(employeeId: string, data: EmployeeFormValue
   const { data: updatedRows, error } = await query.select();
 
   if (error) {
-    console.error("Fehler beim Aktualisieren des Mitarbeiters:", error);
+    console.error("Fehler beim Aktualisieren des Mitarbeiters:", error?.message || error);
     return { success: false, message: error.message };
   }
 
@@ -147,7 +147,7 @@ export async function deleteEmployee(formData: FormData): Promise<{ success: boo
     .single();
 
   if (profileError) {
-    console.error("Fehler beim Abrufen des Benutzerprofils:", profileError);
+    console.error("Fehler beim Abrufen des Benutzerprofils:", profileError?.message || profileError);
     return { success: false, message: "Fehler beim Überprüfen der Berechtigungen." };
   }
 
@@ -166,7 +166,7 @@ export async function deleteEmployee(formData: FormData): Promise<{ success: boo
   const { error } = await query;
 
   if (error) {
-    console.error("Fehler beim Löschen des Mitarbeiters:", error);
+    console.error("Fehler beim Löschen des Mitarbeiters:", error?.message || error);
     return { success: false, message: error.message };
   }
 

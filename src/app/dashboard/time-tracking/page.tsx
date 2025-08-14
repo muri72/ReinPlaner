@@ -53,7 +53,7 @@ export default async function TimeTrackingPage({
     .single();
 
   if (profileError) {
-    console.error("Fehler beim Laden des Benutzerprofils:", profileError);
+    console.error("Fehler beim Laden des Benutzerprofils:", profileError?.message || profileError);
     // Standardmäßig als 'employee' behandeln, falls Profil nicht gefunden oder Fehler auftritt
   }
 
@@ -140,11 +140,11 @@ export default async function TimeTrackingPage({
   const { data: recentData, error: recentError } = await recentQueryBuilder;
 
   recentTimeEntries = recentData || [];
-  if (recentError) console.error("Fehler beim Laden der letzten Zeiteinträge für Charts:", recentError);
+  if (recentError) console.error("Fehler beim Laden der letzten Zeiteinträge für Charts:", recentError?.message || recentError);
 
 
   if (error) {
-    console.error("Fehler beim Laden der Zeiteinträge:", error);
+    console.error("Fehler beim Laden der Zeiteinträge:", error?.message || error);
     return <div className="p-4 md:p-8">Fehler beim Laden der Zeiteinträge.</div>;
   }
 

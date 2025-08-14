@@ -90,7 +90,7 @@ export async function createObject(data: ObjectFormValues) {
     });
 
   if (error) {
-    console.error("Fehler beim Erstellen des Objekts:", error);
+    console.error("Fehler beim Erstellen des Objekts:", error?.message || error);
     return { success: false, message: error.message };
   }
 
@@ -114,7 +114,7 @@ export async function updateObject(objectId: string, data: ObjectFormValues) {
     .single();
 
   if (profileError) {
-    console.error("Fehler beim Abrufen des Benutzerprofils:", profileError);
+    console.error("Fehler beim Abrufen des Benutzerprofils:", profileError?.message || profileError);
     return { success: false, message: "Fehler beim Überprüfen der Berechtigungen." };
   }
 
@@ -166,7 +166,7 @@ export async function updateObject(objectId: string, data: ObjectFormValues) {
   const { data: updatedRows, error } = await query.select();
 
   if (error) {
-    console.error("Fehler beim Aktualisieren des Objekts:", error);
+    console.error("Fehler beim Aktualisieren des Objekts:", error?.message || error);
     return { success: false, message: error.message };
   }
 
@@ -195,7 +195,7 @@ export async function deleteObject(formData: FormData): Promise<{ success: boole
     .single();
 
   if (profileError) {
-    console.error("Fehler beim Abrufen des Benutzerprofils:", profileError);
+    console.error("Fehler beim Abrufen des Benutzerprofils:", profileError?.message || profileError);
     return { success: false, message: "Fehler beim Überprüfen der Berechtigungen." };
   }
 
@@ -214,7 +214,7 @@ export async function deleteObject(formData: FormData): Promise<{ success: boole
   const { error } = await query;
 
   if (error) {
-    console.error("Fehler beim Löschen des Objekts:", error);
+    console.error("Fehler beim Löschen des Objekts:", error?.message || error);
     return { success: false, message: error.message };
   }
 

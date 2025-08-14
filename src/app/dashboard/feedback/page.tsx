@@ -19,7 +19,10 @@ export default async function FeedbackPage() {
     redirect("/login");
   }
 
-  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+  const { data: profile, error: profileError } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+  if (profileError) { // Added error logging for profile fetching
+    console.error("Fehler beim Abrufen des Benutzerprofils:", profileError?.message || profileError);
+  }
   const currentUserRole = profile?.role as 'admin' | 'manager' | 'employee' | 'customer' || 'employee';
 
   // Fetch order-specific feedback
@@ -45,8 +48,8 @@ export default async function FeedbackPage() {
     `)
     .order('created_at', { ascending: false });
 
-  if (orderFeedbackError) console.error("Fehler beim Laden des Auftrags-Feedbacks:", orderFeedbackError);
-  if (generalFeedbackError) console.error("Fehler beim Laden des allgemeinen Feedbacks:", generalFeedbackError);
+  if (orderFeedbackError) console.error("Fehler beim Laden des Auftrags-Feedbacks:", orderFeedbackError?.message || orderFeedbackError);
+  if (generalFeedbackError) console.error("Fehler beim Laden des allgemeinen Feedbacks:", generalFeedbackError?.message || generalFeedbackError);
 
   const mappedOrderFeedback = orderFeedbackData?.map(f => ({
     ...f,

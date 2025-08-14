@@ -18,6 +18,7 @@ export default async function PlanningPage() {
     .single();
 
   if (profileError || (profile?.role !== 'admin' && profile?.role !== 'manager')) {
+    console.error("Fehler beim Abrufen des Benutzerprofils:", profileError?.message || profileError);
     // If not an admin/manager, redirect to dashboard
     redirect("/dashboard");
   }

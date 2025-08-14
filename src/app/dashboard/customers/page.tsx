@@ -47,7 +47,7 @@ export default async function CustomersPage({
   const { data: customers, error, count } = await customersQuery;
 
   if (error) {
-    console.error("Fehler beim Laden der Kunden:", error);
+    console.error("Fehler beim Laden der Kunden:", error?.message || error);
     return <div className="p-4 md:p-8 text-sm">Fehler beim Laden der Kunden.</div>;
   }
 

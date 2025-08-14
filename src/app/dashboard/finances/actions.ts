@@ -7,8 +7,8 @@ import { startOfMonth, endOfMonth } from 'date-fns';
 export async function getFinancialOverview(year: number, month: number) {
   const supabase = createAdminClient();
 
-  const startDate = new Date(year, month - 1, 1);
-  const endDate = new Date(year, month, 1); // Start of next month for correct range
+  const startDate = startOfMonth(new Date(year, month - 1, 1)); // month is 1-indexed from form
+  const endDate = endOfMonth(new Date(year, month - 1, 1));
 
   try {
     // Get default hourly rate for employees
@@ -84,7 +84,7 @@ export async function getFinancialOverview(year: number, month: number) {
       },
     };
   } catch (error: any) {
-    console.error("Fehler beim Laden der Finanzübersicht:", error);
+    console.error("Fehler beim Laden der Finanzübersicht:", error?.message || error);
     return { success: false, message: error.message, data: null };
   }
 }
@@ -93,7 +93,7 @@ export async function getMonthlyFinancialsForAllOrders(year: number, month: numb
   const supabase = createAdminClient();
   const { data, error } = await supabase.rpc('get_monthly_order_financials', { p_year: year, p_month: month });
   if (error) {
-    console.error("Fehler beim Abrufen der monatlichen Finanzdaten:", error);
+    console.error("Fehler beim Abrufen der monatlichen Finanzdaten:", error?.message || error);
     return { success: false, message: error.message, data: null };
   }
   return { success: true, message: "Daten geladen.", data };
@@ -103,7 +103,7 @@ export async function getMonthlyPersonnelCosts(year: number, month: number) {
   const supabase = createAdminClient();
   const { data, error } = await supabase.rpc('get_monthly_personnel_costs', { p_year: year, p_month: month });
   if (error) {
-    console.error("Fehler beim Abrufen der monatlichen Personalkosten:", error);
+    console.error("Fehler beim Abrufen der monatlichen Personalkosten:", error?.message || error);
     return { success: false, message: error.message, data: null };
   }
   return { success: true, message: "Daten geladen.", data };
@@ -123,6 +123,7 @@ export async function updateServiceRates(rates: { service_type: string; hourly_r
   const { error } = await supabase.from('service_rates').upsert(rates, { onConflict: 'service_type' });
 
   if (error) {
+    console.error("Fehler beim Aktualisieren der Stundensätze:", error?.message || error);
     return { success: false, message: error.message };
   }
 
@@ -152,6 +153,7 @@ export async function updateDefaultHourlyRate(rate: number) {
     .eq('key', 'default_employee_hourly_rate');
 
   if (error) {
+    console.error("Fehler beim Aktualisieren des Standard-Stundensatzes:", error?.message || error);
     return { success: false, message: error.message };
   }
 

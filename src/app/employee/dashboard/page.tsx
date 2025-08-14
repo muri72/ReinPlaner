@@ -25,7 +25,11 @@ export default async function EmployeeDashboardPage() {
     .eq('id', user.id)
     .single();
 
-  if (profileError || profile?.role !== 'employee') {
+  if (profileError) { // Added error logging for profile fetching
+    console.error("Fehler beim Abrufen des Benutzerprofils:", profileError?.message || profileError);
+  }
+
+  if (profile?.role !== 'employee') {
     redirect("/dashboard"); // Ensure only employees access this page
   }
 
@@ -41,7 +45,7 @@ export default async function EmployeeDashboardPage() {
     .single();
 
   if (employeeDataError && employeeDataError.code !== 'PGRST116') {
-    console.error("Fehler beim Laden der Mitarbeiterdaten:", employeeDataError);
+    console.error("Fehler beim Laden der Mitarbeiterdaten:", employeeDataError?.message || employeeDataError);
   }
 
   const employeeId = employeeData?.id || null;
@@ -77,7 +81,7 @@ export default async function EmployeeDashboardPage() {
       .order('recurring_start_date', { ascending: true });
 
     if (ordersError) {
-      console.error("Fehler beim Laden der heutigen Aufträge für Mitarbeiter:", ordersError);
+      console.error("Fehler beim Laden der heutigen Aufträge für Mitarbeiter:", ordersError?.message || ordersError);
     } else {
       todaysAssignedOrders = orders.map(order => ({
         ...order,
@@ -119,7 +123,7 @@ export default async function EmployeeDashboardPage() {
           {todaysAssignedOrders.length === 0 ? (
             <div className="text-center text-muted-foreground py-4">
               <p className="text-base font-semibold">Keine Aufträge für heute zugewiesen.</p>
-              <p className="text-sm">Zeit für eine Pause!</p>
+              <p className="text-sm">Zeit für eine Tasse Kaffee!</p>
             </div>
           ) : (
             <div className="space-y-4">

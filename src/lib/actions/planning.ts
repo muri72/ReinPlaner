@@ -170,7 +170,7 @@ export async function getPlanningDataForWeek(currentDate: Date): Promise<{ succe
     return { success: true, data: pageData, message: "Plandaten erfolgreich geladen." };
 
   } catch (error: any) {
-    console.error("Fehler beim Laden der Plandaten:", error);
+    console.error("Fehler beim Laden der Plandaten:", error?.message || error);
     return { success: false, data: null, message: error.message };
   }
 }

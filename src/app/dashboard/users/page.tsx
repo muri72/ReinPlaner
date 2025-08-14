@@ -41,6 +41,7 @@ export default async function UsersPage({
     .single();
 
   if (profileError || adminProfile?.role !== 'admin') {
+    console.error("Fehler beim Abrufen des Benutzerprofils:", profileError?.message || profileError);
     redirect("/dashboard");
   }
 
@@ -61,7 +62,7 @@ export default async function UsersPage({
   // Fetch all auth users (Supabase admin.listUsers does not support pagination directly)
   const { data: authUsersResult, error: authError } = await supabaseAdmin.auth.admin.listUsers();
   if (authError) {
-    console.error("Fehler beim Laden der Auth-Benutzer:", authError);
+    console.error("Fehler beim Laden der Auth-Benutzer:", authError?.message || authError);
     return <div className="p-4 md:p-8 text-sm">Fehler beim Laden der Benutzer.</div>;
   }
   allAuthUsers = authUsersResult.users;
@@ -90,7 +91,7 @@ export default async function UsersPage({
   }
 
   if (profilesError) {
-    console.error("Fehler beim Laden der Profile:", profilesError);
+    console.error("Fehler beim Laden der Profile:", profilesError?.message || profilesError);
     return <div className="p-4 md:p-8 text-sm">Fehler beim Laden der Benutzerprofile.</div>;
   }
 
@@ -107,9 +108,9 @@ export default async function UsersPage({
     .from('customer_contacts')
     .select('id, first_name, last_name, user_id');
 
-  if (employeesError) console.error("Fehler beim Laden der Mitarbeiterdaten:", employeesError);
-  if (customersError) console.error("Fehler beim Laden der Kundendaten:", customersError);
-  if (customerContactsError) console.error("Fehler beim Laden der Kundenkontaktdaten:", customerContactsError);
+  if (employeesError) console.error("Fehler beim Laden der Mitarbeiterdaten:", employeesError?.message || employeesError);
+  if (customersError) console.error("Fehler beim Laden der Kundendaten:", customersError?.message || customersError);
+  if (customerContactsError) console.error("Fehler beim Laden der Kundenkontaktdaten:", customerContactsError?.message || customerContactsError);
 
   const profilesMap = new Map(profilesData?.map(p => [p.id, p]));
   const employeesMap = new Map(employeesData?.map(e => [e.user_id, `${e.first_name} ${e.last_name}`]));

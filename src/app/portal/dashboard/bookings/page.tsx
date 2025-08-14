@@ -50,7 +50,11 @@ export default async function CustomerBookingsPage() {
     .eq('id', user.id)
     .single();
 
-  if (profileError || profile?.role !== 'customer') {
+  if (profileError) { // Added error logging for profile fetching
+    console.error("Fehler beim Abrufen des Benutzerprofils:", profileError?.message || profileError);
+  }
+
+  if (profile?.role !== 'customer') {
     redirect("/dashboard"); // Ensure only customers access this page
   }
 
@@ -62,7 +66,7 @@ export default async function CustomerBookingsPage() {
     .single();
 
   if (customerError) {
-    console.error("Fehler beim Laden der Kundendaten:", customerError);
+    console.error("Fehler beim Laden der Kundendaten:", customerError?.message || customerError);
     return <div className="p-4 md:p-8">Fehler beim Laden Ihrer Kundendaten.</div>;
   }
 
@@ -114,7 +118,7 @@ export default async function CustomerBookingsPage() {
     .order('created_at', { ascending: false }); // Order by creation date, newest first
 
   if (ordersError) {
-    console.error("Fehler beim Laden der Buchungen:", ordersError);
+    console.error("Fehler beim Laden der Buchungen:", ordersError?.message || ordersError);
     return <div className="p-4 md:p-8">Fehler beim Laden Ihrer Buchungen.</div>;
   }
 

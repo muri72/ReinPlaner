@@ -32,7 +32,7 @@ serve(async (req: Request) => {
     });
 
     if (error) {
-      console.error("Resend API Fehler:", error);
+      console.error("Resend API Fehler:", error?.message || error);
       return new Response(JSON.stringify({ error: error.message }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -42,9 +42,9 @@ serve(async (req: Request) => {
     return new Response(JSON.stringify(data), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (err) {
-    console.error("Server Fehler:", err);
+  } catch (err: unknown) {
     const errorMessage = err instanceof Error ? err.message : "Ein unbekannter Fehler ist aufgetreten.";
+    console.error("Server Fehler:", errorMessage);
     return new Response(JSON.stringify({ error: errorMessage }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
