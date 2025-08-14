@@ -11,7 +11,7 @@ import { SearchInput } from "@/components/search-input";
 import { CustomerContactCreateGeneralDialog } from "@/components/customer-contact-create-general-dialog";
 import { PaginationControls } from "@/components/pagination-controls";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useState, useCallback } from "react";
 import { FilterSelect } from "@/components/filter-select";
 import { CustomerContactsTableView } from "@/components/customer-contacts-table-view"; // Import the new table view component
 import { useIsMobile } from "@/hooks/use-mobile"; // Import the hook
@@ -55,100 +55,96 @@ export default function CustomerContactsPage({
   const sortColumn = (currentSearchParams.get('sortColumn') || 'last_name') as string;
   const sortDirection = (currentSearchParams.get('sortDirection') || 'asc') as string;
 
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        redirect("/login");
-        return;
-      }
-      setCurrentUser(user);
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      redirect("/login");
+      return;
+    }
+    setCurrentUser(user);
 
-      const from = (currentPage - 1) * pageSize;
-      const to = from + pageSize - 1;
+    const from = (currentPage - 1) * pageSize;
+    const to = from + pageSize - 1;
 
-      const { data: customersData, error: customersError } = await supabase.from('customers').select('id, name').order('name', { ascending: true });
-      if (customersError) console.error("Fehler beim Laden der Kunden für Filter:", customersError.message);
-      setCustomers(customersData || []);
+    const { data: customersData, error: customersError } = await supabase.from('customers').select('id, name').order('name', { ascending: true });
+    if (customersError) console.error("Fehler beim Laden der Kunden für Filter:", customersError.message);
+    setCustomers(customersData || []);
 
-      let contactsData: DisplayCustomerContact[] = [];
-      let contactsError: any = null;
-      let contactsCount: number | null = 0;
+    let contactsData: DisplayCustomerContact[] = [];
+    let contactsError: any = null;
+    let contactsCount: number | null = 0;
 
-      if (query) {
-        // For search, fetch all and filter in memory
-        const { data, error: fetchError } = await supabase
-          .from('customer_contacts')
-          .select(`
-            *,
-            customers ( name )
-          `);
-        
-        if (fetchError) {
-          contactsError = fetchError;
-        } else {
-          const filteredData = data.filter(c => 
-            c.first_name.toLowerCase().includes(query.toLowerCase()) ||
-            c.last_name.toLowerCase().includes(query.toLowerCase()) ||
-            c.email?.toLowerCase().includes(query.toLowerCase()) ||
-            c.phone?.toLowerCase().includes(query.toLowerCase()) ||
-            c.role?.toLowerCase().includes(query.toLowerCase()) ||
-            c.customers?.name?.toLowerCase().includes(query.toLowerCase())
-          );
-          contactsData = filteredData.map(c => ({
-            id: c.id,
-            customer_id: c.customer_id,
-            first_name: c.first_name,
-            last_name: c.last_name,
-            email: c.email,
-            phone: c.phone,
-            role: c.role,
-            created_at: c.created_at,
-            customer_name: c.customers?.name || null,
-          }));
-          contactsCount = contactsData.length;
-        }
+    if (query) {
+      // For search, fetch all and filter in memory
+      const { data, error: fetchError } = await supabase
+        .from('customer_contacts')
+        .select(`
+          *,
+          customers ( name )
+        `);
+      
+      if (fetchError) {
+        contactsError = fetchError;
       } else {
-        let selectQuery = supabase
-          .from('customer_contacts')
-          .select(`
-            *,
-            customers ( name )
-          `, { count: 'exact' })
-          .order(sortColumn, { ascending: sortDirection === 'asc' });
+        const filteredData = data.filter(c => 
+          c.first_name.toLowerCase().includes(query.toLowerCase()) ||
+          c.last_name.toLowerCase().includes(query.toLowerCase()) ||
+          c.email?.toLowerCase().includes(query.toLowerCase()) ||
+          c.phone?.toLowerCase().includes(query.toLowerCase()) ||
+          c.role?.toLowerCase().includes(query.toLowerCase()) ||
+          c.customers?.name?.toLowerCase().includes(query.toLowerCase())
+        );
+        contactsData = filteredData.map(c => ({
+          id: c.id,
+          customer_id: c.customer_id,
+          first_name: c.first_name,
+          last_name: c.last_name,
+          email: c.email,
+          phone: c.phone,
+          role: c.role,
+          created_at: c.created_at,
+          customer_name: c.customers?.name || null,
+        }));
+        contactsCount = contactsData.length;
+      }
+    } else {
+      let selectQuery = supabase
+        .from('customer_contacts')
+        .select(`
+          *,
+          customers ( name )
+        `, { count: 'exact' })
+        .order(sortColumn, { ascending: sortDirection === 'asc' });
 
-        if (customerIdFilter) {
-          selectQuery = selectQuery.eq('customer_id', customerIdFilter);
-        }
-
-        const { data, error: selectError, count: selectCount } = await selectQuery
-          .range(from, to);
-
-        contactsData = data?.map(contact => ({
-          id: contact.id,
-          customer_id: contact.customer_id,
-          first_name: contact.first_name,
-          last_name: contact.last_name,
-          email: contact.email,
-          phone: contact.phone,
-          role: contact.role,
-          created_at: contact.created_at,
-          customer_name: contact.customers?.name || null,
-        })) || [];
-        contactsError = selectError;
-        contactsCount = selectCount;
+      if (customerIdFilter) {
+        selectQuery = selectQuery.eq('customer_id', customerIdFilter);
       }
 
-      if (contactsError) {
-        console.error("Fehler beim Laden der Kundenkontakte:", contactsError?.message || contactsError);
-      }
-      setAllContacts(contactsData);
-      setTotalCount(contactsCount);
-      setLoading(false);
-    };
+      const { data, error: selectError, count: selectCount } = await selectQuery
+        .range(from, to);
 
-    fetchData();
+      contactsData = data?.map(contact => ({
+        id: contact.id,
+        customer_id: contact.customer_id,
+        first_name: contact.first_name,
+        last_name: contact.last_name,
+        email: contact.email,
+        phone: contact.phone,
+        role: contact.role,
+        created_at: contact.created_at,
+        customer_name: contact.customers?.name || null,
+      })) || [];
+      contactsError = selectError;
+      contactsCount = selectCount;
+    }
+
+    if (contactsError) {
+      console.error("Fehler beim Laden der Kundenkontakte:", contactsError?.message || contactsError);
+    }
+    setAllContacts(contactsData);
+    setTotalCount(contactsCount);
+    setLoading(false);
   }, [
     supabase,
     query,
@@ -159,6 +155,10 @@ export default function CustomerContactsPage({
     sortDirection,
     currentSearchParams // Add currentSearchParams to dependency array
   ]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   if (loading || !currentUser) {
     return <div className="p-4 md:p-8">Lade Kundenkontakte...</div>;
@@ -227,7 +227,7 @@ export default function CustomerContactsPage({
                     <div className="flex items-center space-x-2">
                       <RecordDetailsDialog record={contact} title={`Details zu Kundenkontakt: ${contact.first_name} ${contact.last_name}`} />
                       <CustomerContactEditDialog contact={contact} />
-                      <DeleteCustomerContactButton contactId={contact.id} />
+                      <DeleteCustomerContactButton contactId={contact.id} onDeleteSuccess={fetchData} />
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-2">

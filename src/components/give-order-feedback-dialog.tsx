@@ -9,9 +9,10 @@ import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 interface GiveOrderFeedbackDialogProps {
   onFeedbackSubmitted?: () => void;
+  onSuccess?: () => void; // Hinzugefügt
 }
 
-export function GiveOrderFeedbackDialog({ onFeedbackSubmitted }: GiveOrderFeedbackDialogProps) {
+export function GiveOrderFeedbackDialog({ onFeedbackSubmitted, onSuccess }: GiveOrderFeedbackDialogProps) {
   const [open, setOpen] = useState(false);
   // Removed titleId and descriptionId as they are no longer needed for aria attributes
 
@@ -32,7 +33,10 @@ export function GiveOrderFeedbackDialog({ onFeedbackSubmitted }: GiveOrderFeedba
             Formular zum Einreichen von Feedback zu einem bestimmten Auftrag.
           </DialogDescription>
         </DialogHeader>
-        <GiveFeedbackForm onSuccess={() => setOpen(false)} />
+        <GiveFeedbackForm onSuccess={() => {
+          setOpen(false);
+          onSuccess?.(); // Ruft die onSuccess-Prop des Dialogs auf
+        }} />
       </DialogContent>
     </Dialog>
   );

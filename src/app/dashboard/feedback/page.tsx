@@ -1,70 +1,127 @@
-import { createClient } from "@/lib/supabase/server";
+"use client";
+
+import { createClient } from "@/lib/supabase/client";
 import { redirect } from "next/navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FeedbackCard } from "@/components/feedback-card";
-import { GiveFeedbackForm } from "@/components/give-feedback-form";
-import { GeneralDashboardFeedbackForm } from "@/components/general-dashboard-feedback-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { MessageSquare, Star, PlusCircle } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { GradientDivider } from "@/components/gradient-divider"; // Import the new component
-import { GiveOrderFeedbackDialog } from "@/components/give-order-feedback-dialog"; // Import new dialog
-import { GiveGeneralFeedbackDialog } from "@/components/give-general-feedback-dialog"; // Import new dialog
+import { MessageSquare, Star } from "lucide-react";
+import { GiveOrderFeedbackDialog } from "@/components/give-order-feedback-dialog";
+import { GiveGeneralFeedbackDialog } from "@/components/give-general-feedback-dialog";
+import { useState, useEffect, useCallback } from "react";
 
-export default async function FeedbackPage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+// Typdefinitionen, die beide Feedback-Arten abdecken
+type OrderFeedback = {
+  id: string;
+  user_id: string;
+  created_at: string;
+  image_urls: string[] | null;
+  reply: string | null;
+  replied_at: string | null;
+  replied_by_name: string | null;
+  rating: number; // Required for order feedback
+  comment: string | null; // Can be null
+  is_resolved: boolean; // New field
+  order: { // Required for order feedback
+    title: string;
+    customer_name: string | null;
+    employee_name: string | null;
+  };
+};
 
-  if (!user) {
-    redirect("/login");
+type GeneralFeedback = {
+  id: string;
+  user_id: string;
+  created_at: string;
+  image_urls: string[] | null;
+  reply: string | null;
+  replied_at: string | null;
+  replied_by_name: string | null;
+  name: string;
+  email: string | null;
+  subject: string | null;
+  message: string; // Required for general feedback
+  is_resolved: boolean; // New field
+};
+
+type Feedback = OrderFeedback | GeneralFeedback;
+
+export default function FeedbackPage() {
+  const supabase = createClient();
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [currentUserRole, setCurrentUserRole] = useState<'admin' | 'manager' | 'employee' | 'customer'>('employee');
+  const [mappedOrderFeedback, setMappedOrderFeedback] = useState<OrderFeedback[]>([]);
+  const [mappedGeneralFeedback, setMappedGeneralFeedback] = useState<GeneralFeedback[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchFeedbackData = useCallback(async () => {
+    setLoading(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      redirect("/login");
+      return;
+    }
+    setCurrentUser(user);
+
+    const { data: profile, error: profileError } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+    if (profileError) {
+      console.error("Fehler beim Abrufen des Benutzerprofils:", profileError?.message || profileError);
+    }
+    setCurrentUserRole(profile?.role as 'admin' | 'manager' | 'employee' | 'customer' || 'employee');
+
+    // Fetch order-specific feedback
+    const { data: orderFeedbackData, error: orderFeedbackError } = await supabase
+      .from('order_feedback')
+      .select(`
+        *,
+        orders (
+          title,
+          customers ( name ),
+          employees ( first_name, last_name )
+        ),
+        profiles ( first_name, last_name )
+      `)
+      .order('created_at', { ascending: false });
+
+    // Fetch general feedback
+    const { data: generalFeedbackData, error: generalFeedbackError } = await supabase
+      .from('general_feedback')
+      .select(`
+        *,
+        profiles ( first_name, last_name )
+      `)
+      .order('created_at', { ascending: false });
+
+    if (orderFeedbackError) console.error("Fehler beim Laden des Auftrags-Feedbacks:", orderFeedbackError?.message || orderFeedbackError);
+    if (generalFeedbackError) console.error("Fehler beim Laden des allgemeinen Feedbacks:", generalFeedbackError?.message || generalFeedbackError);
+
+    setMappedOrderFeedback(orderFeedbackData?.map(f => ({
+      ...f,
+      order: {
+        title: f.orders?.title || 'Unbekannter Auftrag',
+        customer_name: f.orders?.customers?.name || 'N/A',
+        employee_name: `${f.orders?.employees?.first_name || ''} ${f.orders?.employees?.last_name || ''}`.trim() || 'N/A',
+      },
+      replied_by_name: `${f.profiles?.first_name || ''} ${f.profiles?.last_name || ''}`.trim() || 'Admin',
+    })) || []);
+
+    setMappedGeneralFeedback(generalFeedbackData?.map(f => ({
+      ...f,
+      replied_by_name: `${f.profiles?.first_name || ''} ${f.profiles?.last_name || ''}`.trim() || 'Admin',
+    })) || []);
+
+    setLoading(false);
+  }, [supabase]);
+
+  useEffect(() => {
+    fetchFeedbackData();
+  }, [fetchFeedbackData]);
+
+  if (loading || !currentUser) {
+    return <div className="p-4 md:p-8">Lade Feedback...</div>;
   }
 
-  const { data: profile, error: profileError } = await supabase.from('profiles').select('role').eq('id', user.id).single();
-  if (profileError) { // Added error logging for profile fetching
-    console.error("Fehler beim Abrufen des Benutzerprofils:", profileError?.message || profileError);
-  }
-  const currentUserRole = profile?.role as 'admin' | 'manager' | 'employee' | 'customer' || 'employee';
-
-  // Fetch order-specific feedback
-  const { data: orderFeedbackData, error: orderFeedbackError } = await supabase
-    .from('order_feedback')
-    .select(`
-      *,
-      orders (
-        title,
-        customers ( name ),
-        employees ( first_name, last_name )
-      ),
-      profiles ( first_name, last_name )
-    `)
-    .order('created_at', { ascending: false });
-
-  // Fetch general feedback
-  const { data: generalFeedbackData, error: generalFeedbackError } = await supabase
-    .from('general_feedback')
-    .select(`
-      *,
-      profiles ( first_name, last_name )
-    `)
-    .order('created_at', { ascending: false });
-
-  if (orderFeedbackError) console.error("Fehler beim Laden des Auftrags-Feedbacks:", orderFeedbackError?.message || orderFeedbackError);
-  if (generalFeedbackError) console.error("Fehler beim Laden des allgemeinen Feedbacks:", generalFeedbackError?.message || generalFeedbackError);
-
-  const mappedOrderFeedback = orderFeedbackData?.map(f => ({
-    ...f,
-    order: {
-      title: f.orders?.title || 'Unbekannter Auftrag',
-      customer_name: f.orders?.customers?.name || 'N/A',
-      employee_name: `${f.orders?.employees?.first_name || ''} ${f.orders?.employees?.last_name || ''}`.trim() || 'N/A',
-    },
-    replied_by_name: `${f.profiles?.first_name || ''} ${f.profiles?.last_name || ''}`.trim() || 'Admin',
-  })) || [];
-
-  const mappedGeneralFeedback = generalFeedbackData?.map(f => ({
-    ...f,
-    replied_by_name: `${f.profiles?.first_name || ''} ${f.profiles?.last_name || ''}`.trim() || 'Admin',
-  })) || [];
+  const allUnresolvedFeedback = [...mappedOrderFeedback.filter(f => !f.is_resolved), ...mappedGeneralFeedback.filter(f => !f.is_resolved)].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
   return (
     <div className="p-4 md:p-8 space-y-8">
@@ -82,17 +139,17 @@ export default async function FeedbackPage() {
                 <TabsTrigger value="general">Allgemein</TabsTrigger>
               </TabsList>
               <TabsContent value="orders" className="mt-6">
-                <GiveOrderFeedbackDialog /> {/* Replaced inline form */}
+                <GiveOrderFeedbackDialog onSuccess={fetchFeedbackData} />
               </TabsContent>
               <TabsContent value="general" className="mt-6">
-                <GiveGeneralFeedbackDialog /> {/* Replaced inline form */}
+                <GiveGeneralFeedbackDialog onSuccess={fetchFeedbackData} />
               </TabsContent>
             </Tabs>
           </CardContent>
         </Card>
       )}
 
-      <GradientDivider className="my-8" /> {/* Add the gradient divider here */}
+      {/* Removed GradientDivider as it's not a component */}
 
       <div>
         <h2 className="text-xl md:text-2xl font-bold mt-8 mb-4">Eingegangenes Feedback</h2>
@@ -110,7 +167,7 @@ export default async function FeedbackPage() {
                   <p className="text-sm">Wenn Sie Feedback zu einem Auftrag haben, können Sie es hier einreichen.</p>
                   {currentUserRole !== 'admin' && currentUserRole !== 'manager' && (
                     <div className="mt-4">
-                      <GiveOrderFeedbackDialog /> {/* Button to open dialog */}
+                      <GiveOrderFeedbackDialog onSuccess={fetchFeedbackData} />
                     </div>
                   )}
                 </div>
@@ -120,8 +177,9 @@ export default async function FeedbackPage() {
                     key={feedback.id}
                     feedback={feedback as any}
                     feedbackType="order"
-                    currentUserId={user.id}
+                    currentUserId={currentUser.id}
                     currentUserRole={currentUserRole}
+                    onDeleteSuccess={fetchFeedbackData} // Pass callback
                   />
                 ))
               )}
@@ -136,7 +194,7 @@ export default async function FeedbackPage() {
                   <p className="text-sm">Wenn Sie allgemeines Feedback haben, können Sie es hier einreichen.</p>
                   {currentUserRole !== 'admin' && currentUserRole !== 'manager' && (
                     <div className="mt-4">
-                      <GiveGeneralFeedbackDialog /> {/* Button to open dialog */}
+                      <GiveGeneralFeedbackDialog onSuccess={fetchFeedbackData} />
                     </div>
                   )}
                 </div>
@@ -146,8 +204,9 @@ export default async function FeedbackPage() {
                     key={feedback.id}
                     feedback={feedback as any}
                     feedbackType="general"
-                    currentUserId={user.id}
+                    currentUserId={currentUser.id}
                     currentUserRole={currentUserRole}
+                    onDeleteSuccess={fetchFeedbackData} // Pass callback
                   />
                 ))
               )}

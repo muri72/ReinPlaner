@@ -14,7 +14,7 @@ import { PaginationControls } from "@/components/pagination-controls";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DocumentUploader } from "@/components/document-uploader";
 import { DocumentList } from "@/components/document-list";
-import { Suspense, useEffect, useState } from "react"; // Import useEffect and useState
+import { Suspense, useEffect, useState, useCallback } from "react"; // Import useEffect, useState, useCallback
 import { FilterSelect } from "@/components/filter-select";
 import { CustomersTableView } from "@/components/customers-table-view"; // Import the new table view component
 import { useIsMobile } from "@/hooks/use-mobile"; // Import the hook
@@ -56,81 +56,77 @@ export default function CustomersPage({
   const sortColumn = currentSearchParams.get('sortColumn') || 'name';
   const sortDirection = currentSearchParams.get('sortDirection') || 'asc';
 
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        redirect("/login");
-        return;
-      }
-      setCurrentUser(user);
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      redirect("/login");
+      return;
+    }
+    setCurrentUser(user);
 
-      const from = (currentPage - 1) * pageSize;
-      const to = from + pageSize - 1;
+    const from = (currentPage - 1) * pageSize;
+    const to = from + pageSize - 1;
 
-      let customersData: DisplayCustomer[] = [];
-      let customersError: any = null;
-      let customersCount: number | null = 0;
+    let customersData: DisplayCustomer[] = [];
+    let customersError: any = null;
+    let customersCount: number | null = 0;
 
-      if (query) {
-        // For search, fetch all and filter in memory (RPC for search doesn't support all joins/filters easily)
-        const { data, error: fetchError } = await supabase
-          .from('customers')
-          .select(`
-            *,
-            customer_contacts ( first_name, last_name )
-          `);
-        
-        if (fetchError) {
-          customersError = fetchError;
-        } else {
-          const filteredData = data.filter(c => 
-            c.name.toLowerCase().includes(query.toLowerCase()) ||
-            c.address?.toLowerCase().includes(query.toLowerCase()) ||
-            c.contact_email?.toLowerCase().includes(query.toLowerCase()) ||
-            c.contact_phone?.toLowerCase().includes(query.toLowerCase()) ||
-            c.customer_type.toLowerCase().includes(query.toLowerCase())
-          );
-          customersData = filteredData.map(c => ({
-            id: c.id,
-            user_id: c.user_id,
-            name: c.name,
-            address: c.address,
-            contact_email: c.contact_email,
-            contact_phone: c.contact_phone,
-            created_at: c.created_at,
-            customer_type: c.customer_type,
-          }));
-          customersCount = customersData.length;
-        }
+    if (query) {
+      // For search, fetch all and filter in memory (RPC for search doesn't support all joins/filters easily)
+      const { data, error: fetchError } = await supabase
+        .from('customers')
+        .select(`
+          *,
+          customer_contacts ( first_name, last_name )
+        `);
+      
+      if (fetchError) {
+        customersError = fetchError;
       } else {
-        let selectQuery = supabase
-          .from('customers')
-          .select(`*`, { count: 'exact' })
-          .order(sortColumn, { ascending: sortDirection === 'asc' });
+        const filteredData = data.filter(c => 
+          c.name.toLowerCase().includes(query.toLowerCase()) ||
+          c.address?.toLowerCase().includes(query.toLowerCase()) ||
+          c.contact_email?.toLowerCase().includes(query.toLowerCase()) ||
+          c.contact_phone?.toLowerCase().includes(query.toLowerCase()) ||
+          c.customer_type.toLowerCase().includes(query.toLowerCase())
+        );
+        customersData = filteredData.map(c => ({
+          id: c.id,
+          user_id: c.user_id,
+          name: c.name,
+          address: c.address,
+          contact_email: c.contact_email,
+          contact_phone: c.contact_phone,
+          created_at: c.created_at,
+          customer_type: c.customer_type,
+        }));
+        customersCount = customersData.length;
+      }
+    } else {
+      let selectQuery = supabase
+        .from('customers')
+        .select(`*`, { count: 'exact' })
+        .order(sortColumn, { ascending: sortDirection === 'asc' });
 
-        if (customerTypeFilter) {
-          selectQuery = selectQuery.eq('customer_type', customerTypeFilter);
-        }
-
-        const { data, error: selectError, count: selectCount } = await selectQuery
-          .range(from, to);
-
-        customersData = data || [];
-        customersError = selectError;
-        customersCount = selectCount;
+      if (customerTypeFilter) {
+        selectQuery = selectQuery.eq('customer_type', customerTypeFilter);
       }
 
-      if (customersError) {
-        console.error("Fehler beim Laden der Kunden:", customersError?.message || customersError);
-      }
-      setAllCustomers(customersData);
-      setTotalCount(customersCount);
-      setLoading(false);
-    };
+      const { data, error: selectError, count: selectCount } = await selectQuery
+        .range(from, to);
 
-    fetchData();
+      customersData = data || [];
+      customersError = selectError;
+      customersCount = selectCount;
+    }
+
+    if (customersError) {
+      console.error("Fehler beim Laden der Kunden:", customersError?.message || customersError);
+    }
+    setAllCustomers(customersData);
+    setTotalCount(customersCount);
+    setLoading(false);
   }, [
     supabase,
     query,
@@ -141,6 +137,10 @@ export default function CustomersPage({
     sortDirection,
     currentSearchParams // Add currentSearchParams to dependency array
   ]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   if (loading || !currentUser) {
     return <div className="p-4 md:p-8">Lade Kunden...</div>;
@@ -214,7 +214,7 @@ export default function CustomersPage({
                     <div className="flex items-center space-x-2">
                       <RecordDetailsDialog record={customer} title={`Details zu Kunde: ${customer.name}`} />
                       <CustomerEditDialog customer={customer} />
-                      <DeleteCustomerButton customerId={customer.id} />
+                      <DeleteCustomerButton customerId={customer.id} onDeleteSuccess={fetchData} />
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-2">

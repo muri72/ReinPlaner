@@ -66,9 +66,10 @@ interface FeedbackCardProps {
   feedbackType: 'order' | 'general';
   currentUserId: string;
   currentUserRole: 'admin' | 'manager' | 'employee' | 'customer';
+  onDeleteSuccess?: () => void; // Hinzugefügt
 }
 
-export function FeedbackCard({ feedback, feedbackType, currentUserId, currentUserRole }: FeedbackCardProps) {
+export function FeedbackCard({ feedback, feedbackType, currentUserId, currentUserRole, onDeleteSuccess }: FeedbackCardProps) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isResolving, setIsResolving] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false); // State for delete dialog
@@ -82,6 +83,7 @@ export function FeedbackCard({ feedback, feedbackType, currentUserId, currentUse
     if (result.success) {
       toast.success(result.message);
       setIsDeleteDialogOpen(false); // Close dialog on success
+      onDeleteSuccess?.(); // Callback aufrufen
     } else {
       toast.error(result.message);
     }

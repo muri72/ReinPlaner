@@ -1,5 +1,7 @@
-import { createClient } from "@/lib/supabase/server";
-import { redirect } from "next/navigation";
+"use client"; // This page needs to be a client component to use hooks like useIsMobile
+
+import { createClient } from "@/lib/supabase/client";
+import { redirect, useRouter, useSearchParams } from "next/navigation";
 import { TimeEntryForm } from "@/components/time-entry-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { createTimeEntry } from "./actions";
@@ -13,6 +15,7 @@ import { AdminTimeEntriesOverview } from "@/components/admin-time-entries-overvi
 import { TimeEntryEditDialog } from "@/components/time-entry-edit-dialog";
 import { TriggerAutoTimeEntryButton } from "@/components/trigger-auto-time-entry-button";
 import { TimeEntryCreateDialog } from "@/components/time-entry-create-dialog"; // Hinzugefügt
+import { useCallback, useEffect, useState } from "react"; // Import useCallback
 
 // Definieren Sie die Schnittstelle für die Zeiteintrag-Daten, wie sie auf dieser Seite verwendet werden
 interface DisplayTimeEntry {
@@ -35,117 +38,130 @@ interface DisplayTimeEntry {
   order_title: string | null;
 }
 
-export default async function TimeTrackingPage({
+export default function TimeTrackingPage({
   searchParams,
 }: any) {
-  const supabase = await createClient();
-  const { data: { user: currentUser } } = await supabase.auth.getUser();
+  const supabase = createClient();
+  const router = useRouter();
+  const currentSearchParams = useSearchParams();
 
-  if (!currentUser) {
-    redirect("/login");
-  }
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [timeEntries, setTimeEntries] = useState<DisplayTimeEntry[]>([]);
+  const [recentTimeEntries, setRecentTimeEntries] = useState<{ start_time: string; end_time: string | null; duration_minutes: number | null; break_minutes: number | null; }[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Rolle des aktuellen Benutzers abrufen
-  const { data: userProfile, error: profileError } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', currentUser.id)
-    .single();
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    const { data: { user: currentUser } } = await supabase.auth.getUser();
 
-  if (profileError) {
-    console.error("Fehler beim Laden des Benutzerprofils:", profileError?.message || profileError);
-    // Standardmäßig als 'employee' behandeln, falls Profil nicht gefunden oder Fehler auftritt
-  }
-
-  const isAdmin = userProfile?.role === 'admin';
-
-  // Zeiteinträge zur Anzeige abrufen
-  let timeEntries: DisplayTimeEntry[] = [];
-  let recentTimeEntries: { start_time: string; end_time: string | null; duration_minutes: number | null; break_minutes: number | null; }[] = []; // break_minutes hinzugefügt
-  let error: any = null; // Initialisiere error mit null
-
-  // Daten für die Hauptliste der Zeiteinträge abrufen
-  let queryBuilder = supabase
-    .from('time_entries')
-    .select(`
-      id,
-      user_id,
-      employee_id,
-      customer_id,
-      object_id,
-      order_id,
-      start_time,
-      end_time,
-      duration_minutes,
-      break_minutes,
-      type,
-      notes,
-      employees ( first_name, last_name ),
-      customers ( name ),
-      objects ( name ),
-      orders ( title )
-    `)
-    .order('start_time', { ascending: false });
-
-  // Wenn der Benutzer KEIN Admin ist, filtern Sie nach seiner eigenen user_id
-  if (!isAdmin) {
-    queryBuilder = queryBuilder.eq('user_id', currentUser.id);
-  }
-
-  const { data: entriesData, error: entriesError } = await queryBuilder;
-
-  timeEntries = entriesData?.map(entry => {
-    const employee = Array.isArray(entry.employees) ? entry.employees[0] : entry.employees;
-    const customer = Array.isArray(entry.customers) ? entry.customers[0] : entry.customers;
-    const object = Array.isArray(entry.objects) ? entry.objects[0] : entry.objects;
-    const order = Array.isArray(entry.orders) ? entry.orders[0] : entry.orders;
-    return {
-      id: entry.id,
-      user_id: entry.user_id,
-      employee_id: entry.employee_id,
-      customer_id: entry.customer_id,
-      object_id: entry.object_id,
-      order_id: entry.order_id,
-      start_time: entry.start_time,
-      end_time: entry.end_time,
-      duration_minutes: entry.duration_minutes,
-      break_minutes: entry.break_minutes, // Neues Feld mappen
-      type: entry.type,
-      notes: entry.notes,
-      employee_first_name: employee?.first_name || null,
-      employee_last_name: employee?.last_name || null,
-      customer_name: customer?.name || null,
-      object_name: object?.name || null,
-      order_title: order?.title || null,
+    if (!currentUser) {
+      redirect("/login");
+      return;
     }
-  }) || [];
-  error = entriesError;
+    setCurrentUser(currentUser);
 
-  // Daten für die Visualisierung (Charts) abrufen
-  const threeMonthsAgo = new Date();
-  threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+    // Rolle des aktuellen Benutzers abrufen
+    const { data: userProfile, error: profileError } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', currentUser.id)
+      .single();
 
-  let recentQueryBuilder = supabase
-    .from('time_entries')
-    .select('start_time, end_time, duration_minutes, break_minutes') // break_minutes hinzugefügt
-    .gte('start_time', threeMonthsAgo.toISOString())
-    .lt('start_time', new Date().toISOString()) // Ensure it's up to current date
-    .order('start_time', { ascending: true });
+    if (profileError) {
+      console.error("Fehler beim Laden des Benutzerprofils:", profileError?.message || profileError);
+    }
 
-  // Wenn der Benutzer KEIN Admin ist, filtern Sie auch hier nach seiner eigenen user_id
-  if (!isAdmin) {
-    recentQueryBuilder = recentQueryBuilder.eq('user_id', currentUser.id);
-  }
+    const isAdminUser = userProfile?.role === 'admin';
+    setIsAdmin(isAdminUser);
 
-  const { data: recentData, error: recentError } = await recentQueryBuilder;
+    // Zeiteinträge zur Anzeige abrufen
+    let queryBuilder = supabase
+      .from('time_entries')
+      .select(`
+        id,
+        user_id,
+        employee_id,
+        customer_id,
+        object_id,
+        order_id,
+        start_time,
+        end_time,
+        duration_minutes,
+        break_minutes,
+        type,
+        notes,
+        employees ( first_name, last_name ),
+        customers ( name ),
+        objects ( name ),
+        orders ( title )
+      `)
+      .order('start_time', { ascending: false });
 
-  recentTimeEntries = recentData || [];
-  if (recentError) console.error("Fehler beim Laden der letzten Zeiteinträge für Charts:", recentError?.message || recentError);
+    // Wenn der Benutzer KEIN Admin ist, filtern Sie nach seiner eigenen user_id
+    if (!isAdminUser) {
+      queryBuilder = queryBuilder.eq('user_id', currentUser.id);
+    }
 
+    const { data: entriesData, error: entriesError } = await queryBuilder;
 
-  if (error) {
-    console.error("Fehler beim Laden der Zeiteinträge:", error?.message || error);
-    return <div className="p-4 md:p-8">Fehler beim Laden der Zeiteinträge.</div>;
+    setTimeEntries(entriesData?.map(entry => {
+      const employee = Array.isArray(entry.employees) ? entry.employees[0] : entry.employees;
+      const customer = Array.isArray(entry.customers) ? entry.customers[0] : entry.customers;
+      const object = Array.isArray(entry.objects) ? entry.objects[0] : entry.objects;
+      const order = Array.isArray(entry.orders) ? entry.orders[0] : entry.orders;
+      return {
+        id: entry.id,
+        user_id: entry.user_id,
+        employee_id: entry.employee_id,
+        customer_id: entry.customer_id,
+        object_id: entry.object_id,
+        order_id: entry.order_id,
+        start_time: entry.start_time,
+        end_time: entry.end_time,
+        duration_minutes: entry.duration_minutes,
+        break_minutes: entry.break_minutes, // Neues Feld mappen
+        type: entry.type,
+        notes: entry.notes,
+        employee_first_name: employee?.first_name || null,
+        employee_last_name: employee?.last_name || null,
+        customer_name: customer?.name || null,
+        object_name: object?.name || null,
+        order_title: order?.title || null,
+      }
+    }) || []);
+    if (entriesError) console.error("Fehler beim Laden der Zeiteinträge:", entriesError?.message || entriesError);
+
+    // Daten für die Visualisierung (Charts) abrufen
+    const threeMonthsAgo = new Date();
+    threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+
+    let recentQueryBuilder = supabase
+      .from('time_entries')
+      .select('start_time, end_time, duration_minutes, break_minutes') // break_minutes hinzugefügt
+      .gte('start_time', threeMonthsAgo.toISOString())
+      .lt('start_time', new Date().toISOString()) // Ensure it's up to current date
+      .order('start_time', { ascending: true });
+
+    // Wenn der Benutzer KEIN Admin ist, filtern Sie auch hier nach seiner eigenen user_id
+    if (!isAdminUser) {
+      recentQueryBuilder = recentQueryBuilder.eq('user_id', currentUser.id);
+    }
+
+    const { data: recentData, error: recentError } = await recentQueryBuilder;
+
+    setRecentTimeEntries(recentData || []);
+    if (recentError) console.error("Fehler beim Laden der letzten Zeiteinträge für Charts:", recentError?.message || recentError);
+
+    setLoading(false);
+  }, [supabase]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  if (loading || !currentUser) {
+    return <div className="p-4 md:p-8">Lade Zeiteinträge.</div>;
   }
 
   // Daten nach Woche und Monat aggregieren
@@ -271,7 +287,7 @@ export default async function TimeTrackingPage({
                     <div className="flex items-center space-x-2">
                       <Badge variant={getTypeBadgeVariant(entry.type)}>{entry.type === 'automatic_scheduled_order' ? 'Automatisch' : entry.type}</Badge>
                       <TimeEntryEditDialog timeEntry={entry} currentUserId={currentUser.id} isAdmin={isAdmin} />
-                      <DeleteTimeEntryButton entryId={entry.id} />
+                      <DeleteTimeEntryButton entryId={entry.id} onDeleteSuccess={fetchData} />
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-2 text-sm text-muted-foreground">

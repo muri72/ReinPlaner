@@ -14,7 +14,7 @@ import { ManagerCustomerAssignmentDialog } from "@/components/manager-customer-a
 import { UserCreateDialog } from "@/components/user-create-dialog";
 import { PaginationControls } from "@/components/pagination-controls";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useState, useCallback } from "react";
 import { FilterSelect } from "@/components/filter-select";
 import { UsersTableView } from "@/components/users-table-view"; // Import the new table view component
 import { useIsMobile } from "@/hooks/use-mobile"; // Import the hook
@@ -96,143 +96,139 @@ export default function UsersPage({
   const sortColumn = (currentSearchParams.get('sortColumn') || 'last_name') as string;
   const sortDirection = (currentSearchParams.get('sortDirection') || 'asc') as string;
 
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser(); // Await here
-      if (!user) {
-        redirect("/login");
-        return;
-      }
-      setCurrentUser(user);
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    const { data: { user } } = await supabase.auth.getUser(); // Await here
+    if (!user) {
+      redirect("/login");
+      return;
+    }
+    setCurrentUser(user);
 
-      const { data: adminProfile, error: profileError } = await supabase
+    const { data: adminProfile, error: profileError } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+
+    if (profileError || adminProfile?.role !== 'admin') {
+      console.error("Fehler beim Abrufen des Benutzerprofils:", profileError?.message || profileError);
+      redirect("/dashboard"); // Redirect if not admin
+      return;
+    }
+
+    const from = (currentPage - 1) * pageSize;
+    const to = from + pageSize - 1;
+
+    let usersData: DisplayUser[] = [];
+    let usersError: any = null;
+    let usersCount: number | null = 0;
+
+    // Fetch employee, customer, and customer contact names for display
+    const { data: employeesData, error: employeesError } = await supabase
+      .from('employees')
+      .select('id, first_name, last_name, user_id');
+
+    const { data: customersData, error: customersError } = await supabase
+      .from('customers')
+      .select('id, name, user_id');
+
+    const { data: customerContactsData, error: customerContactsError } = await supabase
+      .from('customer_contacts')
+      .select('id, first_name, last_name, user_id');
+
+    if (employeesError) console.error("Fehler beim Laden der Mitarbeiterdaten:", employeesError?.message || employeesError);
+    if (customersError) console.error("Fehler beim Laden der Kundendaten:", customersError?.message || customersError);
+    if (customerContactsError) console.error("Fehler beim Laden der Kundenkontaktdaten:", customerContactsError?.message || customerContactsError);
+
+    const employeesMap = new Map(employeesData?.map((e: EmployeeData) => [e.user_id, `${e.first_name} ${e.last_name}`]));
+    const customersMap = new Map(customersData?.map((c: CustomerData) => [c.user_id, c.name]));
+    const customerContactsMap = new Map(customerContactsData?.map((cc: CustomerContactData) => [cc.user_id, `${cc.first_name} ${cc.last_name}`]));
+
+    if (query) {
+      // If a search query is present, fetch all profiles and filter them
+      const { data: allProfiles, error: allProfilesError } = await supabase
         .from('profiles')
-        .select('role')
-        .eq('id', user.id)
-        .single();
-
-      if (profileError || adminProfile?.role !== 'admin') {
-        console.error("Fehler beim Abrufen des Benutzerprofils:", profileError?.message || profileError);
-        redirect("/dashboard"); // Redirect if not admin
-        return;
-      }
-
-      const from = (currentPage - 1) * pageSize;
-      const to = from + pageSize - 1;
-
-      let usersData: DisplayUser[] = [];
-      let usersError: any = null;
-      let usersCount: number | null = 0;
-
-      // Fetch employee, customer, and customer contact names for display
-      const { data: employeesData, error: employeesError } = await supabase
-        .from('employees')
-        .select('id, first_name, last_name, user_id');
-
-      const { data: customersData, error: customersError } = await supabase
-        .from('customers')
-        .select('id, name, user_id');
-
-      const { data: customerContactsData, error: customerContactsError } = await supabase
-        .from('customer_contacts')
-        .select('id, first_name, last_name, user_id');
-
-      if (employeesError) console.error("Fehler beim Laden der Mitarbeiterdaten:", employeesError?.message || employeesError);
-      if (customersError) console.error("Fehler beim Laden der Kundendaten:", customersError?.message || customersError);
-      if (customerContactsError) console.error("Fehler beim Laden der Kundenkontaktdaten:", customerContactsError?.message || customerContactsError);
-
-      const employeesMap = new Map(employeesData?.map((e: EmployeeData) => [e.user_id, `${e.first_name} ${e.last_name}`]));
-      const customersMap = new Map(customersData?.map((c: CustomerData) => [c.user_id, c.name]));
-      const customerContactsMap = new Map(customerContactsData?.map((cc: CustomerContactData) => [cc.user_id, `${cc.first_name} ${cc.last_name}`]));
-
-      if (query) {
-        // If a search query is present, fetch all profiles and filter them
-        const { data: allProfiles, error: allProfilesError } = await supabase
-          .from('profiles')
-          .select('id, first_name, last_name, role');
-        
-        if (allProfilesError) {
-          usersError = allProfilesError;
-        } else {
-          const allAuthUsersResult = await supabase.auth.admin.listUsers(); // Use admin client for all auth users
-          const allAuthUsers: AuthUserData[] = allAuthUsersResult.data?.users || [];
-
-          const profilesMap = new Map(allProfiles?.map((p: ProfileData) => [p.id, p]));
-
-          const usersToFilter = allAuthUsers.map((authUser: AuthUserData) => {
-            const profile = profilesMap.get(authUser.id);
-            const userRole = profile?.role || 'employee';
-            return {
-              id: authUser.id,
-              email: authUser.email || 'N/A',
-              first_name: profile?.first_name || authUser.user_metadata.first_name || null,
-              last_name: profile?.last_name || authUser.user_metadata.last_name || null,
-              role: userRole,
-              created_at: authUser.created_at || null,
-              assigned_employee_name: employeesMap.get(authUser.id) || null,
-              assigned_customer_name: userRole === 'admin' ? null : (customersMap.get(authUser.id) || customerContactsMap.get(authUser.id) || null),
-            };
-          });
-
-          const lowerCaseQuery = query.toLowerCase();
-          const filteredUsers = usersToFilter.filter((u: DisplayUser) => 
-            u.email.toLowerCase().includes(lowerCaseQuery) ||
-            u.first_name?.toLowerCase().includes(lowerCaseQuery) ||
-            u.last_name?.toLowerCase().includes(lowerCaseQuery) ||
-            u.role.toLowerCase().includes(lowerCaseQuery) ||
-            u.assigned_employee_name?.toLowerCase().includes(lowerCaseQuery) ||
-            u.assigned_customer_name?.toLowerCase().includes(lowerCaseQuery)
-          );
-          usersData = filteredUsers;
-          usersCount = usersData.length;
-        }
+        .select('id, first_name, last_name, role');
+      
+      if (allProfilesError) {
+        usersError = allProfilesError;
       } else {
-        // If no search query, apply pagination and filters to profiles
-        let selectQuery = supabase
-          .from('profiles')
-          .select('id, first_name, last_name, role', { count: 'exact' })
-          .order(sortColumn, { ascending: sortDirection === 'asc' });
+        const allAuthUsersResult = await supabase.auth.admin.listUsers(); // Use admin client for all auth users
+        const allAuthUsers: AuthUserData[] = allAuthUsersResult.data?.users || [];
 
-        if (roleFilter) {
-          selectQuery = selectQuery.eq('role', roleFilter);
-        }
+        const profilesMap = new Map(allProfiles?.map((p: ProfileData) => [p.id, p]));
 
-        const { data, error: selectError, count: selectCount } = await selectQuery
-          .range(from, to);
-        
-        if (selectError) {
-          usersError = selectError;
-        } else {
-          const authUsersResult = await supabase.auth.admin.listUsers(); // Fetch all auth users
-          const authUsersMap = new Map(authUsersResult.data?.users.map((u: AuthUserData) => [u.id, u]) || []);
+        const usersToFilter = allAuthUsers.map((authUser: AuthUserData) => {
+          const profile = profilesMap.get(authUser.id);
+          const userRole = profile?.role || 'employee';
+          return {
+            id: authUser.id,
+            email: authUser.email || 'N/A',
+            first_name: profile?.first_name || authUser.user_metadata.first_name || null,
+            last_name: profile?.last_name || authUser.user_metadata.last_name || null,
+            role: userRole,
+            created_at: authUser.created_at || null,
+            assigned_employee_name: employeesMap.get(authUser.id) || null,
+            assigned_customer_name: userRole === 'admin' ? null : (customersMap.get(authUser.id) || customerContactsMap.get(authUser.id) || null),
+          };
+        });
 
-          usersData = data.map((profile: ProfileData) => {
-            const authUser = authUsersMap.get(profile.id);
-            return {
-              id: profile.id,
-              email: authUser?.email || 'N/A',
-              first_name: profile.first_name,
-              last_name: profile.last_name,
-              role: profile.role,
-              created_at: authUser?.created_at || null,
-              assigned_employee_name: employeesMap.get(profile.id) || null,
-              assigned_customer_name: profile.role === 'admin' ? null : (customersMap.get(profile.id) || customerContactsMap.get(profile.id) || null),
-            };
-          });
-          usersCount = selectCount;
-        }
+        const lowerCaseQuery = query.toLowerCase();
+        const filteredUsers = usersToFilter.filter((u: DisplayUser) => 
+          u.email.toLowerCase().includes(lowerCaseQuery) ||
+          u.first_name?.toLowerCase().includes(lowerCaseQuery) ||
+          u.last_name?.toLowerCase().includes(lowerCaseQuery) ||
+          u.role.toLowerCase().includes(lowerCaseQuery) ||
+          u.assigned_employee_name?.toLowerCase().includes(lowerCaseQuery) ||
+          u.assigned_customer_name?.toLowerCase().includes(lowerCaseQuery)
+        );
+        usersData = filteredUsers;
+        usersCount = usersData.length;
+      }
+    } else {
+      // If no search query, apply pagination and filters to profiles
+      let selectQuery = supabase
+        .from('profiles')
+        .select('id, first_name, last_name, role', { count: 'exact' })
+        .order(sortColumn, { ascending: sortDirection === 'asc' });
+
+      if (roleFilter) {
+        selectQuery = selectQuery.eq('role', roleFilter);
       }
 
-      if (usersError) {
-        console.error("Fehler beim Laden der Benutzer:", usersError?.message || usersError);
-      }
-      setAllUsers(usersData);
-      setTotalCount(usersCount);
-      setLoading(false);
-    };
+      const { data, error: selectError, count: selectCount } = await selectQuery
+        .range(from, to);
+      
+      if (selectError) {
+        usersError = selectError;
+      } else {
+        const authUsersResult = await supabase.auth.admin.listUsers(); // Fetch all auth users
+        const authUsersMap = new Map(authUsersResult.data?.users.map((u: AuthUserData) => [u.id, u]) || []);
 
-    fetchData();
+        usersData = data.map((profile: ProfileData) => {
+          const authUser = authUsersMap.get(profile.id);
+          return {
+            id: profile.id,
+            email: authUser?.email || 'N/A',
+            first_name: profile.first_name,
+            last_name: profile.last_name,
+            role: profile.role,
+            created_at: authUser?.created_at || null,
+            assigned_employee_name: employeesMap.get(profile.id) || null,
+            assigned_customer_name: profile.role === 'admin' ? null : (customersMap.get(profile.id) || customerContactsMap.get(profile.id) || null),
+          };
+        });
+        usersCount = selectCount;
+      }
+    }
+
+    if (usersError) {
+      console.error("Fehler beim Laden der Benutzer:", usersError?.message || usersError);
+    }
+    setAllUsers(usersData);
+    setTotalCount(usersCount);
+    setLoading(false);
   }, [
     supabase,
     query,
@@ -243,6 +239,10 @@ export default function UsersPage({
     sortDirection,
     currentSearchParams // Add currentSearchParams to dependency array
   ]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   if (loading || !currentUser) {
     return <div className="p-4 md:p-8">Lade Benutzer...</div>;
@@ -334,7 +334,7 @@ export default function UsersPage({
                         />
                       )}
                       <UserEditDialog user={user} />
-                      <DeleteUserButton userId={user.id} />
+                      <DeleteUserButton userId={user.id} onDeleteSuccess={fetchData} />
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-2">

@@ -14,7 +14,7 @@ import { PaginationControls } from "@/components/pagination-controls";
 import { DocumentUploader } from "@/components/document-uploader";
 import { DocumentList } from "@/components/document-list";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useState, useCallback } from "react";
 import { FilterSelect } from "@/components/filter-select";
 import { EmployeesTableView } from "@/components/employees-table-view"; // Import the new table view component
 import { useIsMobile } from "@/hooks/use-mobile"; // Import the hook
@@ -54,6 +54,7 @@ export default function EmployeesPage({
   const isMobile = useIsMobile();
 
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [currentUserRole, setCurrentUserRole] = useState<'admin' | 'manager' | 'employee' | 'customer'>('employee');
   const [allEmployees, setAllEmployees] = useState<DisplayEmployee[]>([]);
   const [loading, setLoading] = useState(true);
   const [totalCount, setTotalCount] = useState<number | null>(0);
@@ -69,96 +70,96 @@ export default function EmployeesPage({
   const sortColumn = currentSearchParams.get('sortColumn') || 'last_name';
   const sortDirection = currentSearchParams.get('sortDirection') || 'asc';
 
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        redirect("/login");
-        return;
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      redirect("/login");
+      return;
+    }
+    setCurrentUser(user);
+
+    // Fetch the current user's role to apply RLS correctly
+    const { data: userProfile, error: profileError } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+
+    if (profileError) {
+      console.error("Fehler beim Abrufen des Benutzerprofils:", profileError?.message || profileError);
+    }
+    const isAdmin = userProfile?.role === 'admin';
+    setCurrentUserRole(userProfile?.role as 'admin' | 'manager' | 'employee' | 'customer' || 'employee');
+
+    const from = (currentPage - 1) * pageSize;
+    const to = from + pageSize - 1;
+
+    let employeesData: DisplayEmployee[] = [];
+    let employeesError: any = null;
+    let employeesCount: number | null = 0;
+
+    if (query) {
+      // For search, fetch all and filter in memory (RPC for search doesn't support all joins/filters easily)
+      let fetchQuery = supabase
+        .from('employees')
+        .select(`*`);
+      
+      if (!isAdmin) {
+        fetchQuery = fetchQuery.eq('user_id', user.id);
       }
-      setCurrentUser(user);
 
-      // Fetch the current user's role to apply RLS correctly
-      const { data: userProfile, error: profileError } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', user.id)
-        .single();
-
-      const isAdmin = userProfile?.role === 'admin';
-
-      const from = (currentPage - 1) * pageSize;
-      const to = from + pageSize - 1;
-
-      let employeesData: DisplayEmployee[] = [];
-      let employeesError: any = null;
-      let employeesCount: number | null = 0;
-
-      if (query) {
-        // For search, fetch all and filter in memory (RPC for search doesn't support all joins/filters easily)
-        let fetchQuery = supabase
-          .from('employees')
-          .select(`*`);
-        
-        if (!isAdmin) {
-          fetchQuery = fetchQuery.eq('user_id', user.id);
-        }
-
-        const { data, error: fetchError } = await fetchQuery;
-        
-        if (fetchError) {
-          employeesError = fetchError;
-        } else {
-          const filteredData = data.filter(e => 
-            e.first_name.toLowerCase().includes(query.toLowerCase()) ||
-            e.last_name.toLowerCase().includes(query.toLowerCase()) ||
-            e.email?.toLowerCase().includes(query.toLowerCase()) ||
-            e.phone?.toLowerCase().includes(query.toLowerCase()) ||
-            e.job_title?.toLowerCase().includes(query.toLowerCase()) ||
-            e.department?.toLowerCase().includes(query.toLowerCase()) ||
-            e.address?.toLowerCase().includes(query.toLowerCase()) ||
-            e.social_security_number?.toLowerCase().includes(query.toLowerCase()) ||
-            e.tax_id_number?.toLowerCase().includes(query.toLowerCase()) ||
-            e.health_insurance_provider?.toLowerCase().includes(query.toLowerCase())
-          );
-          employeesData = filteredData;
-          employeesCount = employeesData.length;
-        }
+      const { data, error: fetchError } = await fetchQuery;
+      
+      if (fetchError) {
+        employeesError = fetchError;
       } else {
-        let selectQuery = supabase
-          .from('employees')
-          .select(`*`, { count: 'exact' })
-          .order(sortColumn, { ascending: sortDirection === 'asc' });
+        const filteredData = data.filter(e => 
+          e.first_name.toLowerCase().includes(query.toLowerCase()) ||
+          e.last_name.toLowerCase().includes(query.toLowerCase()) ||
+          e.email?.toLowerCase().includes(query.toLowerCase()) ||
+          e.phone?.toLowerCase().includes(query.toLowerCase()) ||
+          e.job_title?.toLowerCase().includes(query.toLowerCase()) ||
+          e.department?.toLowerCase().includes(query.toLowerCase()) ||
+          e.address?.toLowerCase().includes(query.toLowerCase()) ||
+          e.social_security_number?.toLowerCase().includes(query.toLowerCase()) ||
+          e.tax_id_number?.toLowerCase().includes(query.toLowerCase()) ||
+          e.health_insurance_provider?.toLowerCase().includes(query.toLowerCase())
+        );
+        employeesData = filteredData;
+        employeesCount = employeesData.length;
+      }
+    } else {
+      let selectQuery = supabase
+        .from('employees')
+        .select(`*`, { count: 'exact' })
+        .order(sortColumn, { ascending: sortDirection === 'asc' });
 
-        if (!isAdmin) {
-          selectQuery = selectQuery.eq('user_id', user.id);
-        }
-
-        if (statusFilter) {
-          selectQuery = selectQuery.eq('status', statusFilter);
-        }
-        if (contractTypeFilter) {
-          selectQuery = selectQuery.eq('contract_type', contractTypeFilter);
-        }
-
-        const { data, error: selectError, count: selectCount } = await selectQuery
-          .range(from, to);
-
-        employeesData = data || [];
-        employeesError = selectError;
-        employeesCount = selectCount;
+      if (!isAdmin) {
+        selectQuery = selectQuery.eq('user_id', user.id);
       }
 
-      if (employeesError) {
-        console.error("Fehler beim Laden der Mitarbeiter:", employeesError?.message || employeesError);
+      if (statusFilter) {
+        selectQuery = selectQuery.eq('status', statusFilter);
       }
-      setAllEmployees(employeesData);
-      setTotalCount(employeesCount);
-      setLoading(false);
-    };
+      if (contractTypeFilter) {
+        selectQuery = selectQuery.eq('contract_type', contractTypeFilter);
+      }
 
-    fetchData();
+      const { data, error: selectError, count: selectCount } = await selectQuery
+        .range(from, to);
+
+      employeesData = data || [];
+      employeesError = selectError;
+      employeesCount = selectCount;
+    }
+
+    if (employeesError) {
+      console.error("Fehler beim Laden der Mitarbeiter:", employeesError?.message || employeesError);
+    }
+    setAllEmployees(employeesData);
+    setTotalCount(employeesCount);
+    setLoading(false);
   }, [
     supabase,
     query,
@@ -170,6 +171,10 @@ export default function EmployeesPage({
     sortDirection,
     currentSearchParams // Add currentSearchParams to dependency array
   ]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   if (loading || !currentUser) {
     return <div className="p-4 md:p-8">Lade Mitarbeiter...</div>;
@@ -275,7 +280,7 @@ export default function EmployeesPage({
                     <div className="flex items-center space-x-2">
                       <RecordDetailsDialog record={employee} title={`Details zu Mitarbeiter: ${employee.first_name} ${employee.last_name}`} />
                       <EmployeeEditDialog employee={employee} />
-                      <DeleteEmployeeButton employeeId={employee.id} />
+                      <DeleteEmployeeButton employeeId={employee.id} onDeleteSuccess={fetchData} />
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-2">

@@ -21,9 +21,10 @@ import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 interface DeleteCustomerContactButtonProps {
   contactId: string;
+  onDeleteSuccess?: () => void; // Hinzugefügt
 }
 
-export function DeleteCustomerContactButton({ contactId }: DeleteCustomerContactButtonProps) {
+export function DeleteCustomerContactButton({ contactId, onDeleteSuccess }: DeleteCustomerContactButtonProps) {
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false); // State to control dialog open/close
 
@@ -37,6 +38,7 @@ export function DeleteCustomerContactButton({ contactId }: DeleteCustomerContact
     if (result.success) {
       toast.success(result.message);
       setOpen(false); // Close dialog on success
+      onDeleteSuccess?.(); // Callback aufrufen
     } else {
       toast.error(result.message);
     }

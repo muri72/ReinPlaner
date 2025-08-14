@@ -16,7 +16,7 @@ import { PaginationControls } from "@/components/pagination-controls";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DocumentUploader } from "@/components/document-uploader";
 import { DocumentList } from "@/components/document-list";
-import { Suspense, useEffect, useState } from "react"; // Import useEffect and useState
+import { Suspense, useEffect, useState, useCallback } from "react"; // Import useEffect, useState, useCallback
 import { FilterSelect } from "@/components/filter-select";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
@@ -100,152 +100,148 @@ export default function OrdersPage({
   const sortColumn = (currentSearchParams.get('sortColumn') || 'created_at') as string;
   const sortDirection = (currentSearchParams.get('sortDirection') || 'desc') as string;
 
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        redirect("/login");
-        return;
-      }
-      setCurrentUser(user);
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      redirect("/login");
+      return;
+    }
+    setCurrentUser(user);
 
-      // Fetch user role
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', user.id)
+    // Fetch user role
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+
+    if (profileError) {
+      console.error("Fehler beim Laden des Benutzerprofils:", profileError?.message || profileError);
+    }
+    const role = profile?.role as 'admin' | 'manager' | 'employee' | 'customer' || 'employee';
+    setCurrentUserRole(role);
+
+    const from = (currentPage - 1) * pageSize;
+    const to = from + pageSize - 1;
+
+    const { data: customersData, error: customersError } = await supabase.from('customers').select('id, name').order('name', { ascending: true });
+    const { data: employeesData, error: employeesError } = await supabase.from('employees').select('id, first_name, last_name').order('last_name', { ascending: true });
+
+    if (customersError) console.error("Fehler beim Laden der Kunden für Filter:", customersError.message);
+    if (employeesError) console.error("Fehler beim Laden der Mitarbeiter für Filter:", employeesError.message);
+
+    setCustomers(customersData || []);
+    setEmployees(employeesData || []);
+
+    let ordersData: DisplayOrder[] = [];
+    let ordersError: any = null;
+    let ordersCount: number | null = 0;
+
+    // Determine filter_user_id and filter_customer_id based on role
+    let filterUserId: string | null = null;
+    let filterCustomerId: string | null = null;
+
+    if (role === 'employee' || role === 'manager') {
+      filterUserId = user.id;
+    } else if (role === 'customer') {
+      const { data: customerData, error: customerDataError } = await supabase
+        .from('customers')
+        .select('id')
+        .eq('user_id', user.id)
         .single();
-
-      if (profileError) {
-        console.error("Fehler beim Laden des Benutzerprofils:", profileError?.message || profileError);
+      if (customerDataError && customerDataError.code !== 'PGRST116') {
+        console.error("Error fetching customer ID for user:", customerDataError);
       }
-      const role = profile?.role as 'admin' | 'manager' | 'employee' | 'customer' || 'employee';
-      setCurrentUserRole(role);
+      filterCustomerId = customerData?.id || null;
+    }
 
-      const from = (currentPage - 1) * pageSize;
-      const to = from + pageSize - 1;
+    if (query) {
+      // Explicitly pass all parameters to avoid ambiguity
+      const { data, error: rpcError } = await supabase.rpc('search_orders', {
+        search_query: query,
+        filter_user_id: filterUserId,
+        filter_customer_id: filterCustomerId
+      });
+      ordersData = (data as DisplayOrder[] | null)?.map(o => ({ ...o, order_feedback: [] })) || [];
+      ordersError = rpcError;
+      ordersCount = ordersData.length;
+    } else {
+      let selectQuery = supabase
+        .from('orders')
+        .select(`
+          *,
+          customers ( name ),
+          objects ( name ),
+          employees ( first_name, last_name ),
+          customer_contacts ( first_name, last_name ),
+          order_feedback ( id, rating, comment, image_urls, created_at )
+        `, { count: 'exact' })
+        .order(sortColumn, { ascending: sortDirection === 'asc' });
 
-      const { data: customersData, error: customersError } = await supabase.from('customers').select('id, name').order('name', { ascending: true });
-      const { data: employeesData, error: employeesError } = await supabase.from('employees').select('id, first_name, last_name').order('last_name', { ascending: true });
+      // Apply RLS-like filtering for non-admin roles if not already handled by RLS policies
+      // The RPC function handles this, but for direct table selects, we might need it.
+      // However, the existing RLS policies for 'orders' table should cover this.
+      // So, no explicit `eq('user_id', user.id)` or `in('customer_id', ...)` needed here
+      // as the RPC handles it and direct selects are covered by RLS.
 
-      if (customersError) console.error("Fehler beim Laden der Kunden für Filter:", customersError.message);
-      if (employeesError) console.error("Fehler beim Laden der Mitarbeiter für Filter:", employeesError.message);
-
-      setCustomers(customersData || []);
-      setEmployees(employeesData || []);
-
-      let ordersData: DisplayOrder[] = [];
-      let ordersError: any = null;
-      let ordersCount: number | null = 0;
-
-      // Determine filter_user_id and filter_customer_id based on role
-      let filterUserId: string | null = null;
-      let filterCustomerId: string | null = null;
-
-      if (role === 'employee' || role === 'manager') {
-        filterUserId = user.id;
-      } else if (role === 'customer') {
-        const { data: customerData, error: customerDataError } = await supabase
-          .from('customers')
-          .select('id')
-          .eq('user_id', user.id)
-          .single();
-        if (customerDataError && customerDataError.code !== 'PGRST116') {
-          console.error("Error fetching customer ID for user:", customerDataError);
-        }
-        filterCustomerId = customerData?.id || null;
+      if (statusFilter) {
+        selectQuery = selectQuery.eq('status', statusFilter);
       }
-
-      if (query) {
-        // Explicitly pass all parameters to avoid ambiguity
-        const { data, error: rpcError } = await supabase.rpc('search_orders', {
-          search_query: query,
-          filter_user_id: filterUserId,
-          filter_customer_id: filterCustomerId
-        });
-        ordersData = (data as DisplayOrder[] | null)?.map(o => ({ ...o, order_feedback: [] })) || [];
-        ordersError = rpcError;
-        ordersCount = ordersData.length;
-      } else {
-        let selectQuery = supabase
-          .from('orders')
-          .select(`
-            *,
-            customers ( name ),
-            objects ( name ),
-            employees ( first_name, last_name ),
-            customer_contacts ( first_name, last_name ),
-            order_feedback ( id, rating, comment, image_urls, created_at )
-          `, { count: 'exact' })
-          .order(sortColumn, { ascending: sortDirection === 'asc' });
-
-        // Apply RLS-like filtering for non-admin roles if not already handled by RLS policies
-        // The RPC function handles this, but for direct table selects, we might need it.
-        // However, the existing RLS policies for 'orders' table should cover this.
-        // So, no explicit `eq('user_id', user.id)` or `in('customer_id', ...)` needed here
-        // as the RPC handles it and direct selects are covered by RLS.
-
-        if (statusFilter) {
-          selectQuery = selectQuery.eq('status', statusFilter);
-        }
-        if (orderTypeFilter) {
-          selectQuery = selectQuery.eq('order_type', orderTypeFilter);
-        }
-        if (serviceTypeFilter) {
-          selectQuery = selectQuery.eq('service_type', serviceTypeFilter);
-        }
-        if (customerIdFilter) {
-          selectQuery = selectQuery.eq('customer_id', customerIdFilter);
-        }
-        if (employeeIdFilter) {
-          selectQuery = selectQuery.eq('employee_id', employeeIdFilter);
-        }
-
-        const { data, error: selectError, count: selectCount } = await selectQuery
-          .range(from, to);
-
-        ordersData = data?.map(order => ({
-          id: order.id,
-          user_id: order.user_id,
-          title: order.title,
-          description: order.description,
-          status: order.status,
-          due_date: order.due_date,
-          created_at: order.created_at,
-          customer_id: order.customer_id,
-          object_id: order.object_id,
-          employee_id: order.employee_id,
-          customer_contact_id: order.customer_contact_id,
-          customer_name: order.customers?.name || null,
-          object_name: order.objects?.name || null,
-          employee_first_name: order.employees?.first_name || null,
-          employee_last_name: order.employees?.last_name || null,
-          customer_contact_first_name: order.customer_contacts?.first_name || null,
-          customer_contact_last_name: order.customer_contacts?.last_name || null,
-          order_type: order.order_type,
-          recurring_start_date: order.recurring_start_date,
-          recurring_end_date: order.recurring_end_date,
-          priority: order.priority,
-          estimated_hours: order.estimated_hours,
-          notes: order.notes,
-          request_status: order.request_status,
-          service_type: order.service_type,
-          order_feedback: order.order_feedback,
-        })) || [];
-        ordersError = selectError;
-        ordersCount = selectCount;
+      if (orderTypeFilter) {
+        selectQuery = selectQuery.eq('order_type', orderTypeFilter);
+      }
+      if (serviceTypeFilter) {
+        selectQuery = selectQuery.eq('service_type', serviceTypeFilter);
+      }
+      if (customerIdFilter) {
+        selectQuery = selectQuery.eq('customer_id', customerIdFilter);
+      }
+      if (employeeIdFilter) {
+        selectQuery = selectQuery.eq('employee_id', employeeIdFilter);
       }
 
-      if (ordersError) {
-        console.error("Fehler beim Laden der Aufträge:", ordersError?.message || ordersError);
-      }
-      setAllOrders(ordersData);
-      setTotalCount(ordersCount);
-      setLoading(false);
-    };
+      const { data, error: selectError, count: selectCount } = await selectQuery
+        .range(from, to);
 
-    fetchData();
+      ordersData = data?.map(order => ({
+        id: order.id,
+        user_id: order.user_id,
+        title: order.title,
+        description: order.description,
+        status: order.status,
+        due_date: order.due_date,
+        created_at: order.created_at,
+        customer_id: order.customer_id,
+        object_id: order.object_id,
+        employee_id: order.employee_id,
+        customer_contact_id: order.customer_contact_id,
+        customer_name: order.customers?.name || null,
+        object_name: order.objects?.name || null,
+        employee_first_name: order.employees?.first_name || null,
+        employee_last_name: order.employees?.last_name || null,
+        customer_contact_first_name: order.customer_contacts?.first_name || null,
+        customer_contact_last_name: order.customer_contacts?.last_name || null,
+        order_type: order.order_type,
+        recurring_start_date: order.recurring_start_date,
+        recurring_end_date: order.recurring_end_date,
+        priority: order.priority,
+        estimated_hours: order.estimated_hours,
+        notes: order.notes,
+        request_status: order.request_status,
+        service_type: order.service_type,
+        order_feedback: order.order_feedback,
+      })) || [];
+      ordersError = selectError;
+      ordersCount = selectCount;
+    }
+
+    if (ordersError) {
+      console.error("Fehler beim Laden der Aufträge:", ordersError?.message || ordersError);
+    }
+    setAllOrders(ordersData);
+    setTotalCount(ordersCount);
+    setLoading(false);
   }, [
     supabase,
     query,
@@ -260,6 +256,10 @@ export default function OrdersPage({
     sortDirection,
     currentSearchParams // Add currentSearchParams to dependency array
   ]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   if (loading || !currentUser) {
     return <div className="p-4 md:p-8">Lade Aufträge...</div>; // Basic loading state
@@ -470,7 +470,7 @@ export default function OrdersPage({
                         <div className="flex items-center space-x-2">
                           <RecordDetailsDialog record={order} title={`Details zu Auftrag: ${order.title}`} />
                           <OrderEditDialog order={order} />
-                          <DeleteOrderButton orderId={order.id} />
+                          <DeleteOrderButton orderId={order.id} onDeleteSuccess={fetchData} />
                         </div>
                       </CardHeader>
                       <CardContent>

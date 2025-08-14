@@ -14,7 +14,7 @@ import { PaginationControls } from "@/components/pagination-controls";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DocumentUploader } from "@/components/document-uploader";
 import { DocumentList } from "@/components/document-list";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useState, useCallback } from "react";
 import { FilterSelect } from "@/components/filter-select";
 import { ObjectsTableView } from "@/components/objects-table-view"; // Import the new table view component
 import { useIsMobile } from "@/hooks/use-mobile"; // Import the hook
@@ -93,119 +93,115 @@ export default function ObjectsPage({
   const sortColumn = (currentSearchParams.get('sortColumn') || 'name') as string;
   const sortDirection = (currentSearchParams.get('sortDirection') || 'asc') as string;
 
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        redirect("/login");
-        return;
-      }
-      setCurrentUser(user);
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      redirect("/login");
+      return;
+    }
+    setCurrentUser(user);
 
-      // Fetch user role
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', user.id)
+    // Fetch user role
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+
+    if (profileError) {
+      console.error("Fehler beim Laden des Benutzerprofils:", profileError?.message || profileError);
+    }
+    const role = profile?.role as 'admin' | 'manager' | 'employee' | 'customer' || 'employee';
+    setCurrentUserRole(role);
+
+    const from = (currentPage - 1) * pageSize;
+    const to = from + pageSize - 1;
+
+    const { data: customersData, error: customersError } = await supabase.from('customers').select('id, name').order('name', { ascending: true });
+    if (customersError) console.error("Fehler beim Laden der Kunden für Filter:", customersError.message);
+    setCustomers(customersData || []);
+
+    let objectsData: DisplayObject[] = [];
+    let objectsError: any = null;
+    let objectsCount: number | null = 0;
+
+    // Determine filter_user_id and filter_customer_id based on role
+    let filterUserId: string | null = null;
+    let filterCustomerId: string | null = null;
+
+    if (role === 'employee' || role === 'manager') {
+      filterUserId = user.id;
+    } else if (role === 'customer') {
+      const { data: customerData, error: customerDataError } = await supabase
+        .from('customers')
+        .select('id')
+        .eq('user_id', user.id)
         .single();
-
-      if (profileError) {
-        console.error("Fehler beim Laden des Benutzerprofils:", profileError?.message || profileError);
+      if (customerDataError && customerDataError.code !== 'PGRST116') {
+        console.error("Error fetching customer ID for user:", customerDataError);
       }
-      const role = profile?.role as 'admin' | 'manager' | 'employee' | 'customer' || 'employee';
-      setCurrentUserRole(role);
+      filterCustomerId = customerData?.id || null;
+    }
 
-      const from = (currentPage - 1) * pageSize;
-      const to = from + pageSize - 1;
+    if (query) {
+      // Explicitly pass all parameters to avoid ambiguity
+      const { data, error: rpcError } = await supabase.rpc('search_objects', {
+        search_query: query,
+        filter_user_id: filterUserId,
+        filter_customer_id: filterCustomerId
+      });
+      objectsData = (data as DisplayObject[] | null) || [];
+      objectsError = rpcError;
+      objectsCount = objectsData.length;
+    } else {
+      let selectQuery = supabase
+        .from('objects')
+        .select(`
+          *,
+          customers ( name ),
+          customer_contacts ( first_name, last_name )
+        `, { count: 'exact' })
+        .order(sortColumn, { ascending: sortDirection === 'asc' });
 
-      const { data: customersData, error: customersError } = await supabase.from('customers').select('id, name').order('name', { ascending: true });
-      if (customersError) console.error("Fehler beim Laden der Kunden für Filter:", customersError.message);
-      setCustomers(customersData || []);
+      // Apply RLS-like filtering for non-admin roles if not already handled by RLS policies
+      // The RPC function handles this, but for direct table selects, we might need it.
+      // However, the existing RLS policies for 'objects' table should cover this.
+      // So, no explicit `eq('user_id', user.id)` or `in('customer_id', ...)` needed here
+      // as the RPC handles it and direct selects are covered by RLS.
 
-      let objectsData: DisplayObject[] = [];
-      let objectsError: any = null;
-      let objectsCount: number | null = 0;
-
-      // Determine filter_user_id and filter_customer_id based on role
-      let filterUserId: string | null = null;
-      let filterCustomerId: string | null = null;
-
-      if (role === 'employee' || role === 'manager') {
-        filterUserId = user.id;
-      } else if (role === 'customer') {
-        const { data: customerData, error: customerDataError } = await supabase
-          .from('customers')
-          .select('id')
-          .eq('user_id', user.id)
-          .single();
-        if (customerDataError && customerDataError.code !== 'PGRST116') {
-          console.error("Error fetching customer ID for user:", customerDataError);
-        }
-        filterCustomerId = customerData?.id || null;
+      if (customerIdFilter) {
+        selectQuery = selectQuery.eq('customer_id', customerIdFilter);
       }
-
-      if (query) {
-        // Explicitly pass all parameters to avoid ambiguity
-        const { data, error: rpcError } = await supabase.rpc('search_objects', {
-          search_query: query,
-          filter_user_id: filterUserId,
-          filter_customer_id: filterCustomerId
-        });
-        objectsData = (data as DisplayObject[] | null) || [];
-        objectsError = rpcError;
-        objectsCount = objectsData.length;
-      } else {
-        let selectQuery = supabase
-          .from('objects')
-          .select(`
-            *,
-            customers ( name ),
-            customer_contacts ( first_name, last_name )
-          `, { count: 'exact' })
-          .order(sortColumn, { ascending: sortDirection === 'asc' });
-
-        // Apply RLS-like filtering for non-admin roles if not already handled by RLS policies
-        // The RPC function handles this, but for direct table selects, we might need it.
-        // However, the existing RLS policies for 'objects' table should cover this.
-        // So, no explicit `eq('user_id', user.id)` or `in('customer_id', ...)` needed here
-        // as the RPC handles it and direct selects are covered by RLS.
-
-        if (customerIdFilter) {
-          selectQuery = selectQuery.eq('customer_id', customerIdFilter);
-        }
-        if (priorityFilter) {
-          selectQuery = selectQuery.eq('priority', priorityFilter);
-        }
-        if (timeOfDayFilter) {
-          selectQuery = selectQuery.eq('time_of_day', timeOfDayFilter);
-        }
-        if (accessMethodFilter) {
-          selectQuery = selectQuery.eq('access_method', accessMethodFilter);
-        }
-
-        const { data, error: selectError, count: selectCount } = await selectQuery
-          .range(from, to);
-
-        objectsData = data?.map(obj => ({
-          ...obj,
-          customer_name: obj.customers?.name || null,
-          object_leader_first_name: obj.customer_contacts?.first_name || null,
-          object_leader_last_name: obj.customer_contacts?.last_name || null,
-        })) || [];
-        objectsError = selectError;
-        objectsCount = selectCount;
+      if (priorityFilter) {
+        selectQuery = selectQuery.eq('priority', priorityFilter);
+      }
+      if (timeOfDayFilter) {
+        selectQuery = selectQuery.eq('time_of_day', timeOfDayFilter);
+      }
+      if (accessMethodFilter) {
+        selectQuery = selectQuery.eq('access_method', accessMethodFilter);
       }
 
-      if (objectsError) {
-        console.error("Fehler beim Laden der Objekte:", objectsError?.message || objectsError);
-      }
-      setAllObjects(objectsData);
-      setTotalCount(objectsCount);
-      setLoading(false);
-    };
+      const { data, error: selectError, count: selectCount } = await selectQuery
+        .range(from, to);
 
-    fetchData();
+      objectsData = data?.map(obj => ({
+        ...obj,
+        customer_name: obj.customers?.name || null,
+        object_leader_first_name: obj.customer_contacts?.first_name || null,
+        object_leader_last_name: obj.customer_contacts?.last_name || null,
+      })) || [];
+      objectsError = selectError;
+      objectsCount = selectCount;
+    }
+
+    if (objectsError) {
+      console.error("Fehler beim Laden der Objekte:", objectsError?.message || objectsError);
+    }
+    setAllObjects(objectsData);
+    setTotalCount(objectsCount);
+    setLoading(false);
   }, [
     supabase,
     query,
@@ -219,6 +215,10 @@ export default function ObjectsPage({
     sortDirection,
     currentSearchParams // Add currentSearchParams to dependency array
   ]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   if (loading || !currentUser) {
     return <div className="p-4 md:p-8">Lade Objekte...</div>;
@@ -333,7 +333,7 @@ export default function ObjectsPage({
                     <div className="flex items-center space-x-2">
                       <RecordDetailsDialog record={object} title={`Details zu Objekt: ${object.name}`} />
                       <ObjectEditDialog object={object} />
-                      <DeleteObjectButton objectId={object.id} />
+                      <DeleteObjectButton objectId={object.id} onDeleteSuccess={fetchData} />
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-2">

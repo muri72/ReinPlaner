@@ -9,9 +9,10 @@ import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 interface GiveGeneralFeedbackDialogProps {
   onFeedbackSubmitted?: () => void;
+  onSuccess?: () => void; // Hinzugefügt
 }
 
-export function GiveGeneralFeedbackDialog({ onFeedbackSubmitted }: GiveGeneralFeedbackDialogProps) {
+export function GiveGeneralFeedbackDialog({ onFeedbackSubmitted, onSuccess }: GiveGeneralFeedbackDialogProps) {
   const [open, setOpen] = useState(false);
   // Removed titleId and descriptionId as they are no longer needed for aria attributes
 
@@ -32,7 +33,10 @@ export function GiveGeneralFeedbackDialog({ onFeedbackSubmitted }: GiveGeneralFe
             Formular zum Einreichen von allgemeinem Feedback.
           </DialogDescription>
         </DialogHeader>
-        <GeneralDashboardFeedbackForm onSuccess={() => setOpen(false)} />
+        <GeneralDashboardFeedbackForm onSuccess={() => {
+          setOpen(false);
+          onSuccess?.(); // Ruft die onSuccess-Prop des Dialogs auf
+        }} />
       </DialogContent>
     </Dialog>
   );

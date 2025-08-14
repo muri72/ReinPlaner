@@ -20,9 +20,10 @@ import { VisuallyHidden } from "@radix-ui/react-visually-hidden"; // Import Visu
 
 interface DeleteObjectButtonProps {
   objectId: string;
+  onDeleteSuccess?: () => void; // Hinzugefügt
 }
 
-export function DeleteObjectButton({ objectId }: DeleteObjectButtonProps) {
+export function DeleteObjectButton({ objectId, onDeleteSuccess }: DeleteObjectButtonProps) {
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false); // State to control dialog open/close
 
@@ -36,6 +37,7 @@ export function DeleteObjectButton({ objectId }: DeleteObjectButtonProps) {
     if (result.success) {
       toast.success(result.message);
       setOpen(false); // Close dialog on success
+      onDeleteSuccess?.(); // Callback aufrufen
     } else {
       toast.error(result.message);
     }

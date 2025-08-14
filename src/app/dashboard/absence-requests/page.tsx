@@ -11,7 +11,7 @@ import { AbsenceTimelineCalendar } from "@/components/absence-timeline-calendar"
 import { Button } from "@/components/ui/button";
 import { AbsenceRequestCreateDialog } from "@/components/absence-request-create-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useState, useCallback } from "react";
 import { FilterSelect } from "@/components/filter-select";
 import { AbsenceRequestsTableView } from "@/components/absence-requests-table-view"; // Import the new table view component
 import { PaginationControls } from "@/components/pagination-controls";
@@ -60,114 +60,110 @@ export default function AbsenceRequestsPage({
   const sortColumn = (currentSearchParams.get('sortColumn') || 'start_date') as string;
   const sortDirection = (currentSearchParams.get('sortDirection') || 'desc') as string;
 
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        redirect("/login");
-        return;
-      }
-      setCurrentUser(user);
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      redirect("/login");
+      return;
+    }
+    setCurrentUser(user);
 
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', user.id)
-        .single();
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
 
-      if (profileError) {
-        console.error("Fehler beim Laden des Benutzerprofils:", profileError?.message || profileError);
-      }
-      const role = profile?.role as 'admin' | 'manager' | 'employee' || 'employee';
-      setCurrentUserRole(role);
+    if (profileError) {
+      console.error("Fehler beim Laden des Benutzerprofils:", profileError?.message || profileError);
+    }
+    const role = profile?.role as 'admin' | 'manager' | 'employee' || 'employee';
+    setCurrentUserRole(role);
 
-      const from = (currentPage - 1) * pageSize;
-      const to = from + pageSize - 1;
+    const from = (currentPage - 1) * pageSize;
+    const to = from + pageSize - 1;
 
-      const { data: employeesData, error: employeesError } = await supabase.from('employees').select('id, first_name, last_name').order('last_name', { ascending: true });
-      if (employeesError) console.error("Fehler beim Laden der Mitarbeiter für Filter:", employeesError.message);
-      setEmployees(employeesData || []);
+    const { data: employeesData, error: employeesError } = await supabase.from('employees').select('id, first_name, last_name').order('last_name', { ascending: true });
+    if (employeesError) console.error("Fehler beim Laden der Mitarbeiter für Filter:", employeesError.message);
+    setEmployees(employeesData || []);
 
-      let requestsData: DisplayAbsenceRequest[] = [];
-      let requestsError: any = null;
-      let requestsCount: number | null = 0;
+    let requestsData: DisplayAbsenceRequest[] = [];
+    let requestsError: any = null;
+    let requestsCount: number | null = 0;
 
-      if (query) {
-        // For search, fetch all and filter in memory
-        let fetchQuery = supabase
-          .from('absence_requests')
-          .select(`
+    if (query) {
+      // For search, fetch all and filter in memory
+      let fetchQuery = supabase
+        .from('absence_requests')
+        .select(`
             *,
             employees ( first_name, last_name )
           `);
-        
-        if (role === 'employee') {
-          fetchQuery = fetchQuery.eq('user_id', user.id);
-        }
+      
+      if (role === 'employee') {
+        fetchQuery = fetchQuery.eq('user_id', user.id);
+      }
 
-        const { data, error: fetchError } = await fetchQuery;
-        
-        if (fetchError) {
-          requestsError = fetchError;
-        } else {
-          const filteredData = data.filter(r => 
-            r.notes?.toLowerCase().includes(query.toLowerCase()) ||
-            r.admin_notes?.toLowerCase().includes(query.toLowerCase()) ||
-            r.type.toLowerCase().includes(query.toLowerCase()) ||
-            r.status.toLowerCase().includes(query.toLowerCase()) ||
-            r.employees?.first_name?.toLowerCase().includes(query.toLowerCase()) ||
-            r.employees?.last_name?.toLowerCase().includes(query.toLowerCase())
-          );
-          requestsData = filteredData.map(r => ({
-            ...r,
-            employees: Array.isArray(r.employees) ? r.employees[0] : r.employees,
-          }));
-          requestsCount = requestsData.length;
-        }
+      const { data, error: fetchError } = await fetchQuery;
+      
+      if (fetchError) {
+        requestsError = fetchError;
       } else {
-        let selectQuery = supabase
-          .from('absence_requests')
-          .select(`
+        const filteredData = data.filter(r => 
+          r.notes?.toLowerCase().includes(query.toLowerCase()) ||
+          r.admin_notes?.toLowerCase().includes(query.toLowerCase()) ||
+          r.type.toLowerCase().includes(query.toLowerCase()) ||
+          r.status.toLowerCase().includes(query.toLowerCase()) ||
+          r.employees?.first_name?.toLowerCase().includes(query.toLowerCase()) ||
+          r.employees?.last_name?.toLowerCase().includes(query.toLowerCase())
+        );
+        requestsData = filteredData.map(r => ({
+          ...r,
+          employees: Array.isArray(r.employees) ? r.employees[0] : r.employees,
+        }));
+        requestsCount = requestsData.length;
+      }
+    } else {
+      let selectQuery = supabase
+        .from('absence_requests')
+        .select(`
             *,
             employees ( first_name, last_name )
           `, { count: 'exact' })
-          .order(sortColumn, { ascending: sortDirection === 'asc' });
+        .order(sortColumn, { ascending: sortDirection === 'asc' });
 
-        if (role === 'employee') {
-          selectQuery = selectQuery.eq('user_id', user.id);
-        }
-
-        if (employeeIdFilter) {
-          selectQuery = selectQuery.eq('employee_id', employeeIdFilter);
-        }
-        if (typeFilter) {
-          selectQuery = selectQuery.eq('type', typeFilter);
-        }
-        if (statusFilter) {
-          selectQuery = selectQuery.eq('status', statusFilter);
-        }
-
-        const { data, error: selectError, count: selectCount } = await selectQuery
-          .range(from, to);
-
-        requestsData = data?.map(request => ({
-          ...request,
-          employees: Array.isArray(request.employees) ? request.employees[0] : request.employees,
-        })) || [];
-        requestsError = selectError;
-        requestsCount = selectCount;
+      if (role === 'employee') {
+        selectQuery = selectQuery.eq('user_id', user.id);
       }
 
-      if (requestsError) {
-        console.error("Fehler beim Laden der Abwesenheitsanträge:", requestsError?.message || requestsError);
+      if (employeeIdFilter) {
+        selectQuery = selectQuery.eq('employee_id', employeeIdFilter);
       }
-      setAllRequests(requestsData);
-      setTotalCount(requestsCount);
-      setLoading(false);
-    };
+      if (typeFilter) {
+        selectQuery = selectQuery.eq('type', typeFilter);
+      }
+      if (statusFilter) {
+        selectQuery = selectQuery.eq('status', statusFilter);
+      }
 
-    fetchData();
+      const { data, error: selectError, count: selectCount } = await selectQuery
+        .range(from, to);
+
+      requestsData = data?.map(request => ({
+        ...request,
+        employees: Array.isArray(request.employees) ? request.employees[0] : request.employees,
+      })) || [];
+      requestsError = selectError;
+      requestsCount = selectCount;
+    }
+
+    if (requestsError) {
+      console.error("Fehler beim Laden der Abwesenheitsanträge:", requestsError?.message || requestsError);
+    }
+    setAllRequests(requestsData);
+    setTotalCount(requestsCount);
+    setLoading(false);
   }, [
     supabase,
     query,
@@ -180,6 +176,10 @@ export default function AbsenceRequestsPage({
     sortDirection,
     currentSearchParams // Add currentSearchParams to dependency array
   ]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   if (loading || !currentUser) {
     return <div className="p-4 md:p-8">Lade Abwesenheitsanträge...</div>;
@@ -306,7 +306,7 @@ export default function AbsenceRequestsPage({
                       <div className="flex items-center space-x-2">
                         <RecordDetailsDialog record={request} title={`Details zu Abwesenheitsantrag`} />
                         <AbsenceRequestEditDialog request={request} currentUserRole={currentUserRole} currentUserId={currentUser.id} />
-                        <DeleteAbsenceRequestButton requestId={request.id} />
+                        <DeleteAbsenceRequestButton requestId={request.id} onDeleteSuccess={fetchData} />
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-2 text-sm text-muted-foreground">
