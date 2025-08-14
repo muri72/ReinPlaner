@@ -56,22 +56,24 @@ const navItems: NavItem[] = [
     roles: ['employee'],
   },
   {
-    title: "Management", // Changed from "Auftragsmanagement"
+    title: "Management",
     isCategory: true,
-    roles: ['admin', 'manager', 'employee'], // Removed 'customer'
+    roles: ['admin', 'manager', 'employee'],
     children: [
       { title: "Aufträge", href: "/dashboard/orders", icon: Briefcase, roles: ['admin', 'manager', 'employee'] },
       { title: "Objekte", href: "/dashboard/objects", icon: Building, roles: ['admin', 'manager', 'employee'] },
       { title: "Planung", href: "/dashboard/planning", icon: CalendarCheck, roles: ['admin', 'manager'] },
+      { title: "Berichte", href: "/dashboard/reports", icon: FileText, roles: ['admin'] }, // Moved here
     ],
   },
   {
-    title: "Kunden & Kontakte",
+    title: "Kunden", // Renamed from "Kunden & Kontakte"
     isCategory: true,
-    roles: ['admin', 'manager', 'employee'], // Removed 'customer'
+    roles: ['admin', 'manager', 'employee', 'customer'], // Expanded roles for the category
     children: [
       { title: "Kunden", href: "/dashboard/customers", icon: Users, roles: ['admin', 'manager', 'employee'] },
       { title: "Kontakte", href: "/dashboard/customer-contacts", icon: ContactRound, roles: ['admin', 'manager', 'employee'] },
+      { title: "Feedback", href: "/dashboard/feedback", icon: Star, roles: ['admin', 'manager', 'employee', 'customer'] }, // Moved here
     ],
   },
   {
@@ -85,25 +87,15 @@ const navItems: NavItem[] = [
     ],
   },
   {
-    title: "Finanzen & Berichte",
-    isCategory: true,
+    title: "Finanzen", // Now a standalone link
+    href: "/dashboard/finances",
+    icon: DollarSign,
     roles: ['admin', 'manager'],
-    children: [
-      { title: "Finanzen", href: "/dashboard/finances", icon: DollarSign, roles: ['admin', 'manager'] },
-      { title: "Berichte", href: "/dashboard/reports", icon: FileText, roles: ['admin'] },
-    ],
   },
-  {
-    title: "Feedback",
-    href: "/dashboard/feedback",
-    icon: Star,
-    roles: ['admin', 'manager', 'employee'], // Removed 'customer'
-  },
-  // Add specific customer bookings link
   {
     title: "Meine Buchungen",
     href: "/portal/dashboard/bookings",
-    icon: Briefcase, // Reusing Briefcase icon
+    icon: Briefcase,
     roles: ['customer'],
   },
 ];
