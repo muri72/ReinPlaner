@@ -71,7 +71,7 @@ const navItems: NavItem[] = [
     roles: ['admin', 'manager', 'employee'], // Removed 'customer'
     children: [
       { title: "Kunden", href: "/dashboard/customers", icon: Users, roles: ['admin', 'manager', 'employee'] },
-      { title: "Kundenkontakte", href: "/dashboard/customer-contacts", icon: ContactRound, roles: ['admin', 'manager', 'employee'] },
+      { title: "Kontakte", href: "/dashboard/customer-contacts", icon: ContactRound, roles: ['admin', 'manager', 'employee'] },
     ],
   },
   {
