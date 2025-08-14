@@ -6,7 +6,7 @@ import * as z from "zod";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+import { Textarea } from "@/components/ui/textarea"; // Hinzugefügt: Import der Textarea-Komponente
 import { toast } from "sonner";
 import { PlusCircle } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -34,7 +34,7 @@ export const orderSchema = z.object({
   dueDate: z.date().optional().nullable(),
   status: z.enum(["pending", "in_progress", "completed"]).default("pending"),
   customerId: z.string().uuid("Ungültige Kunden-ID").min(1, "Kunde ist erforderlich"),
-  objectId: z.string().uuid("Ungültige Objekt-ID").min(1, "Objekt ist erforderlich"),
+  objectId: z.string().uuid("Ungültiges Objekt-ID").optional().nullable(), // Geändert zu optional und nullable
   employeeId: z.string().uuid("Ungültige Mitarbeiter-ID").optional().nullable(),
   customerContactId: z.string().uuid("Ungültige Kundenkontakt-ID").optional().nullable(),
   orderType: z.enum(["one_time", "recurring", "substitution", "permanent"]).default("one_time"),
@@ -74,7 +74,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     dueDate: initialData?.dueDate ? new Date(initialData.dueDate) : null,
     status: initialData?.status ?? "pending",
     customerId: initialData?.customerId ?? "",
-    objectId: initialData?.objectId ?? "",
+    objectId: initialData?.objectId ?? null, // Geändert zu null
     employeeId: initialData?.employeeId ?? null,
     customerContactId: initialData?.customerContactId ?? null,
     orderType: initialData?.orderType ?? "one_time",
@@ -224,7 +224,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
         <Label htmlFor="customerId">Kunde</Label>
         <Select onValueChange={(value) => {
           form.setValue("customerId", value);
-          form.setValue("objectId", "");
+          form.setValue("objectId", null);
           form.setValue("customerContactId", null);
         }} value={form.watch("customerId")}>
           <SelectTrigger className="w-full">
@@ -287,11 +287,12 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
       <div className="flex items-end gap-2">
         <div className="flex-grow">
           <Label htmlFor="objectId">Objekt</Label>
-          <Select onValueChange={(value) => form.setValue("objectId", value)} value={form.watch("objectId")} disabled={!form.watch("customerId")}>
+          <Select onValueChange={(value) => form.setValue("objectId", value)} value={form.watch("objectId") || "unassigned"} disabled={!form.watch("customerId")}>
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Objekt auswählen" />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="unassigned">Kein Objekt zugewiesen</SelectItem>
               {filteredObjects.map(obj => (
                 <SelectItem key={obj.id} value={obj.id}>{obj.name}</SelectItem>
               ))}

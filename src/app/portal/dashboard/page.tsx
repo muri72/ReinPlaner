@@ -10,6 +10,7 @@ import { GiveGeneralFeedbackDialog } from "@/components/give-general-feedback-di
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
+import { CustomerOrderRequestDialog } from "@/components/customer-order-request-dialog"; // Import the new dialog
 
 export default async function CustomerDashboardPage() {
   const supabase = await createClient();
@@ -191,13 +192,13 @@ export default async function CustomerDashboardPage() {
         <CardContent>
           {nextOrder ? (
             <div className="space-y-2">
-              <p className="text-base font-semibold">{nextOrder.title} ({nextOrder.objects?.[0]?.name || 'N/A'})</p>
+              <p className="text-base font-semibold">{nextOrder.title} ({Array.isArray(nextOrder.objects) ? nextOrder.objects[0]?.name : 'N/A'})</p>
               <div className="flex items-center text-sm text-muted-foreground">
                 <CalendarDays className="mr-2 h-4 w-4" />
-                {nextOrder.order_type === 'one_time' && nextOrder.due_date && (
+                {nextOrder.order_type === "one_time" && nextOrder.due_date && (
                   <span>{format(new Date(nextOrder.due_date), 'dd.MM.yyyy', { locale: de })}</span>
                 )}
-                {(nextOrder.order_type === 'recurring' || nextOrder.order_type === 'permanent' || nextOrder.order_type === 'substitution') && nextOrder.recurring_start_date && (
+                {(nextOrder.order_type === "recurring" || nextOrder.order_type === "permanent" || nextOrder.order_type === "substitution") && nextOrder.recurring_start_date && (
                   <span>
                     {format(new Date(nextOrder.recurring_start_date), 'dd.MM.yyyy', { locale: de })}
                     {nextOrder.recurring_end_date && ` - ${format(new Date(nextOrder.recurring_end_date), 'dd.MM.yyyy', { locale: de })}`}
@@ -215,9 +216,7 @@ export default async function CustomerDashboardPage() {
           ) : (
             <div className="text-center text-muted-foreground py-4">
               <p>Keine zukünftigen Termine gefunden.</p>
-              <Button asChild className="mt-4">
-                <Link href="/portal/dashboard/bookings">Neue Buchung anfragen</Link>
-              </Button>
+              <CustomerOrderRequestDialog customerId={customerId} /> {/* New booking request button */}
             </div>
           )}
         </CardContent>
