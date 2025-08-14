@@ -70,7 +70,7 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut }: 
       {/* Desktop Sidebar (fixed) */}
       <aside
         className={cn(
-          "hidden md:flex flex-col fixed top-0 left-0 h-screen bg-sidebar text-sidebar-foreground border-r border-sidebar-border p-4 transition-all duration-300 ease-in-out z-40",
+          "hidden md:flex flex-col fixed top-0 left-0 h-screen bg-sidebar text-sidebar-foreground border-r border-sidebar-border p-4 transition-all duration-500 ease-in-out z-40 overflow-hidden", // Changed duration and added overflow-hidden
           isCollapsed ? "w-20" : "w-64",
           "bg-gradient-to-br from-sidebar-background to-sidebar-accent glassmorphism-card" // Apply glassmorphism here
         )}
@@ -100,7 +100,7 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut }: 
             currentUserRole={currentUserRole}
             onSignOut={onSignOut}
             // searchQuery={searchQuery} // Removed search query prop
-            // onSearchChange={setSearchQuery} // Removed search handler
+            // onSearchChange={setSearchChange} // Removed search handler
           />
         </nav>
 
@@ -119,6 +119,7 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut }: 
       <main className={cn(
         "flex-grow p-4 md:p-8",
         "pt-20 md:pt-8",
+        "transition-all duration-500 ease-in-out", // Changed duration
         isCollapsed ? "md:ml-20" : "md:ml-64"
       )}>
         {children}
