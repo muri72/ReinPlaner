@@ -39,6 +39,7 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut, us
   };
 
   // Determine if the current page is the root dashboard page
+  // This variable is no longer used for scrollbar hiding, but kept for potential future use.
   const isRootDashboardPage = pathname === '/dashboard';
 
   return (
@@ -148,8 +149,8 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut, us
         "flex-grow p-4 md:p-8",
         "pt-20 md:pt-8",
         "transition-all duration-150 ease-in-out",
-        isCollapsed ? "md:ml-20" : "md:ml-64",
-        isRootDashboardPage && "hide-visible-scrollbar" // Apply class conditionally
+        isCollapsed ? "md:ml-20" : "md:ml-64"
+        // Removed isRootDashboardPage && "hide-visible-scrollbar"
       )}>
         {children}
       </main>
