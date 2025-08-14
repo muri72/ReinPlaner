@@ -20,9 +20,9 @@ export function FilterSelect({ paramName, label, options, currentValue }: Filter
   const handleFilterChange = useCallback(
     (value: string) => {
       const params = new URLSearchParams(searchParams);
-      if (value) {
+      if (value && value !== "all") { // Wenn ein gültiger Filterwert (nicht "all") ausgewählt ist
         params.set(paramName, value);
-      } else {
+      } else { // Wenn "all" oder ein leerer Wert ausgewählt ist
         params.delete(paramName);
       }
       params.set('page', '1'); // Reset to first page on filter change
@@ -31,15 +31,19 @@ export function FilterSelect({ paramName, label, options, currentValue }: Filter
     [paramName, pathname, router, searchParams]
   );
 
+  // Bestimme den aktuell ausgewählten Wert für das Select-Feld.
+  // Wenn der Parameter nicht gesetzt ist (currentValue ist ""), soll "all" angezeigt werden.
+  const selectedValue = currentValue || "all";
+
   return (
     <div>
       <Label htmlFor={paramName}>{label}</Label>
-      <Select onValueChange={handleFilterChange} value={currentValue}>
+      <Select onValueChange={handleFilterChange} value={selectedValue}>
         <SelectTrigger className="w-full">
           <SelectValue placeholder={`Alle ${label.toLowerCase()}`} />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="">Alle</SelectItem>
+          <SelectItem value="all">Alle</SelectItem> {/* Wert auf "all" geändert */}
           {options.map(option => (
             <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
           ))}
