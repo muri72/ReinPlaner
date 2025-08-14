@@ -51,24 +51,24 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut, us
             className={cn(
               "w-64 text-sidebar-foreground border-r border-sidebar-border flex flex-col",
               "bg-sidebar/80 backdrop-blur-xl glassmorphism-card",
-              "h-full relative" // Sicherstellen, dass SheetContent relativ ist für absolute Kinder
+              "h-full" // Keine 'relative' hier, da der Button im Header ist
             )}
           >
-            <SheetHeader className="p-4 mb-6 flex items-center justify-center"> {/* Nur für den Titel */}
+            <SheetHeader className="flex items-center justify-between p-4 mb-6"> {/* Angepasst für Top-Rechts-Positionierung */}
               <Link href={getHomeLink()} passHref onClick={() => setIsSheetOpen(false)}>
                 <h2 className="text-xl font-bold text-primary tracking-tight cursor-pointer">ARIS</h2>
               </Link>
+              <SheetClose asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8" // Keine absolute Positionierung mehr nötig
+                >
+                  <X className="h-5 w-5" />
+                  <span className="sr-only">Menü schließen</span>
+                </Button>
+              </SheetClose>
             </SheetHeader>
-            <SheetClose asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="absolute top-4 right-4 h-8 w-8" // Absolute Positionierung oben rechts
-              >
-                <X className="h-5 w-5" />
-                <span className="sr-only">Menü schließen</span>
-              </Button>
-            </SheetClose>
             <nav className="flex-grow overflow-y-auto p-4">
               <SidebarNav
                 isCollapsed={false}
