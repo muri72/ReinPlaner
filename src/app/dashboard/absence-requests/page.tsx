@@ -17,6 +17,7 @@ import { AbsenceRequestsTableView } from "@/components/absence-requests-table-vi
 import { PaginationControls } from "@/components/pagination-controls";
 import { useIsMobile } from "@/hooks/use-mobile"; // Import the hook
 import { RecordDetailsDialog } from "@/components/record-details-dialog"; // Import RecordDetailsDialog
+import { LoadingOverlay } from "@/components/loading-overlay"; // Import the new LoadingOverlay
 
 interface DisplayAbsenceRequest {
   id: string;
@@ -42,7 +43,7 @@ export default function AbsenceRequestsPage({
   const isMobile = useIsMobile();
 
   const [currentUser, setCurrentUser] = useState<any>(null);
-  const [currentUserRole, setCurrentUserRole] = useState<'admin' | 'manager' | 'employee'>('employee');
+  const [currentUserRole, setCurrentUserRole] = useState<'admin' | 'manager' | 'employee' | 'customer'>('employee');
   const [allRequests, setAllRequests] = useState<DisplayAbsenceRequest[]>([]);
   const [employees, setEmployees] = useState<{ id: string; first_name: string; last_name: string }[]>([]);
   const [loading, setLoading] = useState(true);
@@ -78,7 +79,7 @@ export default function AbsenceRequestsPage({
     if (profileError) {
       console.error("Fehler beim Laden des Benutzerprofils:", profileError?.message || profileError);
     }
-    const role = profile?.role as 'admin' | 'manager' | 'employee' || 'employee';
+    const role = profile?.role as 'admin' | 'manager' | 'employee' | 'customer' || 'employee';
     setCurrentUserRole(role);
 
     const from = (currentPage - 1) * pageSize;
@@ -181,8 +182,8 @@ export default function AbsenceRequestsPage({
     fetchData();
   }, [fetchData]);
 
-  if (loading || !currentUser) {
-    return <div className="p-4 md:p-8">Lade Abwesenheitsanträge...</div>;
+  if (!currentUser) {
+    return null; // Render nothing or a global loading if user is not yet determined
   }
 
   const totalPages = totalCount ? Math.ceil(totalCount / pageSize) : 0;
@@ -229,6 +230,7 @@ export default function AbsenceRequestsPage({
 
   return (
     <div className="p-4 md:p-8 space-y-8">
+      {loading && <LoadingOverlay isLoading={loading} />}
       <h1 className="text-2xl md:text-3xl font-bold">Abwesenheitsverwaltung</h1>
 
       {currentUserRole === 'admin' && (
@@ -243,7 +245,10 @@ export default function AbsenceRequestsPage({
       <div className="space-y-6">
         <h2 className="text-xl md:text-2xl font-bold">Antragsübersicht</h2>
         <div className="flex justify-end mb-4">
-          <AbsenceRequestCreateDialog currentUserRole={currentUserRole} currentUserId={currentUser.id} />
+          <AbsenceRequestCreateDialog
+            currentUserRole={currentUserRole as 'admin' | 'manager' | 'employee'} // <-- Typ-Assertion
+            currentUserId={currentUser.id}
+          />
         </div>
 
         {/* Filter Section */}
@@ -305,7 +310,11 @@ export default function AbsenceRequestsPage({
                       </CardTitle>
                       <div className="flex items-center space-x-2">
                         <RecordDetailsDialog record={request} title={`Details zu Abwesenheitsantrag`} />
-                        <AbsenceRequestEditDialog request={request} currentUserRole={currentUserRole} currentUserId={currentUser.id} />
+                        <AbsenceRequestEditDialog
+                          request={request}
+                          currentUserRole={currentUserRole as 'admin' | 'manager' | 'employee'} // <-- Typ-Assertion
+                          currentUserId={currentUser.id}
+                        />
                         <DeleteAbsenceRequestButton requestId={request.id} onDeleteSuccess={fetchData} />
                       </div>
                     </CardHeader>
@@ -353,7 +362,7 @@ export default function AbsenceRequestsPage({
               statusFilter={statusFilter}
               sortColumn={sortColumn}
               sortDirection={sortDirection}
-              currentUserRole={currentUserRole}
+              currentUserRole={currentUserRole as 'admin' | 'manager' | 'employee'} // <-- Typ-Assertion
             />
           </TabsContent>
         </Tabs>

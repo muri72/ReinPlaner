@@ -16,6 +16,7 @@ import { TimeEntryEditDialog } from "@/components/time-entry-edit-dialog";
 import { TriggerAutoTimeEntryButton } from "@/components/trigger-auto-time-entry-button";
 import { TimeEntryCreateDialog } from "@/components/time-entry-create-dialog"; // Hinzugefügt
 import { useCallback, useEffect, useState } from "react"; // Import useCallback
+import { LoadingOverlay } from "@/components/loading-overlay"; // Import the new LoadingOverlay
 
 // Definieren Sie die Schnittstelle für die Zeiteintrag-Daten, wie sie auf dieser Seite verwendet werden
 interface DisplayTimeEntry {
@@ -160,8 +161,8 @@ export default function TimeTrackingPage({
     fetchData();
   }, [fetchData]);
 
-  if (loading || !currentUser) {
-    return <div className="p-4 md:p-8">Lade Zeiteinträge.</div>;
+  if (!currentUser) {
+    return null; // Render nothing or a global loading if user is not yet determined
   }
 
   // Daten nach Woche und Monat aggregieren
@@ -224,6 +225,7 @@ export default function TimeTrackingPage({
 
   return (
     <div className="p-4 md:p-8 space-y-8">
+      {loading && <LoadingOverlay isLoading={loading} />}
       <h1 className="text-2xl md:text-3xl font-bold">Zeiterfassung</h1>
 
       {isAdmin ? (

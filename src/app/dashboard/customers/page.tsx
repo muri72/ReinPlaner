@@ -8,7 +8,7 @@ import { Mail, Phone, MapPin, Users, Handshake, PlusCircle, FileStack } from "lu
 import { CustomerEditDialog } from "@/components/customer-edit-dialog";
 import { DeleteCustomerButton } from "@/components/delete-customer-button";
 import { SearchInput } from "@/components/search-input";
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "@/components/ui/badge"; // <-- Korrigierter Import
 import { CustomerCreateDialog } from "@/components/customer-create-dialog";
 import { PaginationControls } from "@/components/pagination-controls";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -19,6 +19,7 @@ import { FilterSelect } from "@/components/filter-select";
 import { CustomersTableView } from "@/components/customers-table-view"; // Import the new table view component
 import { useIsMobile } from "@/hooks/use-mobile"; // Import the hook
 import { RecordDetailsDialog } from "@/components/record-details-dialog"; // Import RecordDetailsDialog
+import { LoadingOverlay } from "@/components/loading-overlay"; // Import the new LoadingOverlay
 
 interface DisplayCustomer {
   id: string;
@@ -142,8 +143,8 @@ export default function CustomersPage({
     fetchData();
   }, [fetchData]);
 
-  if (loading || !currentUser) {
-    return <div className="p-4 md:p-8">Lade Kunden...</div>;
+  if (!currentUser) {
+    return null; // Render nothing or a global loading if user is not yet determined
   }
 
   const totalPages = totalCount ? Math.ceil(totalCount / pageSize) : 0;
@@ -163,6 +164,7 @@ export default function CustomersPage({
 
   return (
     <div className="p-4 md:p-8 space-y-8">
+      {loading && <LoadingOverlay isLoading={loading} />}
       <h1 className="text-2xl md:text-3xl font-bold">Ihre Kunden</h1>
 
       <div className="mb-4 flex flex-col sm:flex-row justify-between items-center gap-4">

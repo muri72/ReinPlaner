@@ -19,6 +19,7 @@ import { FilterSelect } from "@/components/filter-select";
 import { EmployeesTableView } from "@/components/employees-table-view"; // Import the new table view component
 import { useIsMobile } from "@/hooks/use-mobile"; // Import the hook
 import { RecordDetailsDialog } from "@/components/record-details-dialog"; // Import RecordDetailsDialog
+import { LoadingOverlay } from "@/components/loading-overlay"; // Import the new LoadingOverlay
 
 interface DisplayEmployee {
   id: string;
@@ -176,8 +177,8 @@ export default function EmployeesPage({
     fetchData();
   }, [fetchData]);
 
-  if (loading || !currentUser) {
-    return <div className="p-4 md:p-8">Lade Mitarbeiter...</div>;
+  if (!currentUser) {
+    return null; // Render nothing or a global loading if user is not yet determined
   }
 
   const totalPages = totalCount ? Math.ceil(totalCount / pageSize) : 0;
@@ -223,6 +224,7 @@ export default function EmployeesPage({
 
   return (
     <div className="p-4 md:p-8 space-y-8">
+      {loading && <LoadingOverlay isLoading={loading} />}
       <h1 className="text-2xl md:text-3xl font-bold">Ihre Mitarbeiter</h1>
 
       <div className="mb-4 flex flex-col sm:flex-row justify-between items-center gap-4">

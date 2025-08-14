@@ -9,6 +9,7 @@ import { MessageSquare, Star } from "lucide-react";
 import { GiveOrderFeedbackDialog } from "@/components/give-order-feedback-dialog";
 import { GiveGeneralFeedbackDialog } from "@/components/give-general-feedback-dialog";
 import { useState, useEffect, useCallback } from "react";
+import { LoadingOverlay } from "@/components/loading-overlay"; // Import the new LoadingOverlay
 
 // Typdefinitionen, die beide Feedback-Arten abdecken
 type OrderFeedback = {
@@ -117,14 +118,15 @@ export default function FeedbackPage() {
     fetchFeedbackData();
   }, [fetchFeedbackData]);
 
-  if (loading || !currentUser) {
-    return <div className="p-4 md:p-8">Lade Feedback...</div>;
+  if (!currentUser) {
+    return null; // Render nothing or a global loading if user is not yet determined
   }
 
   const allUnresolvedFeedback = [...mappedOrderFeedback.filter(f => !f.is_resolved), ...mappedGeneralFeedback.filter(f => !f.is_resolved)].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
   return (
     <div className="p-4 md:p-8 space-y-8">
+      {loading && <LoadingOverlay isLoading={loading} />}
       <h1 className="text-2xl md:text-3xl font-bold">Feedback</h1>
       
       {currentUserRole !== 'admin' && currentUserRole !== 'manager' && (

@@ -23,6 +23,7 @@ import { de } from "date-fns/locale";
 import { OrdersTableView } from "@/components/orders-table-view";
 import { useIsMobile } from "@/hooks/use-mobile"; // Import the hook
 import { RecordDetailsDialog } from "@/components/record-details-dialog"; // Import RecordDetailsDialog
+import { LoadingOverlay } from "@/components/loading-overlay"; // Import the new LoadingOverlay
 
 interface DisplayOrder {
   id: string;
@@ -261,8 +262,8 @@ export default function OrdersPage({
     fetchData();
   }, [fetchData]);
 
-  if (loading || !currentUser) {
-    return <div className="p-4 md:p-8">Lade Aufträge...</div>; // Basic loading state
+  if (!currentUser) {
+    return null; // Render nothing or a global loading if user is not yet determined
   }
 
   const totalPages = totalCount ? Math.ceil(totalCount / pageSize) : 0;
@@ -322,6 +323,7 @@ export default function OrdersPage({
 
   return (
     <div className="p-4 md:p-8 space-y-8">
+      {loading && <LoadingOverlay isLoading={loading} />}
       <h1 className="text-2xl md:text-3xl font-bold">Auftragsverwaltung</h1>
       <div className="mb-4 flex flex-col sm:flex-row justify-between items-center gap-4">
         <SearchInput placeholder="Aufträge suchen..." />
