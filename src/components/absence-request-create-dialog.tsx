@@ -42,7 +42,7 @@ export function AbsenceRequestCreateDialog({ onAbsenceRequestCreated, currentUse
       >
         <DialogHeader>
           <DialogTitle id={titleId}>Neuen Abwesenheitsantrag einreichen</DialogTitle>
-          <DialogDescription>
+          <DialogDescription id={descriptionId}>
             Formular zum Einreichen eines neuen Abwesenheitsantrags.
           </DialogDescription>
         </DialogHeader>

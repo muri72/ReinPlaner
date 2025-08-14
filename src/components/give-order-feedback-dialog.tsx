@@ -29,7 +29,7 @@ export function GiveOrderFeedbackDialog({ onFeedbackSubmitted }: GiveOrderFeedba
       >
         <DialogHeader>
           <DialogTitle id={titleId}>Auftragsbezogenes Feedback einreichen</DialogTitle>
-          <DialogDescription>
+          <DialogDescription id={descriptionId}>
             Formular zum Einreichen von Feedback zu einem bestimmten Auftrag.
           </DialogDescription>
         </DialogHeader>

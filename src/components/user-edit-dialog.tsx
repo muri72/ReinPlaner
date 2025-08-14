@@ -54,7 +54,7 @@ export function UserEditDialog({ user }: UserEditDialogProps) {
       >
         <DialogHeader>
           <DialogTitle id={titleId}>Benutzer bearbeiten</DialogTitle>
-          <DialogDescription>
+          <DialogDescription id={descriptionId}>
             Formular zum Bearbeiten der Benutzerdaten.
           </DialogDescription>
         </DialogHeader>

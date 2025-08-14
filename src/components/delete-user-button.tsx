@@ -63,7 +63,7 @@ export function DeleteUserButton({ userId }: DeleteUserButtonProps) {
             >
               <DialogHeader>
                 <DialogTitle id={titleId}>Sind Sie sicher?</DialogTitle>
-                <DialogDescription>
+                <DialogDescription id={descriptionId}>
                   Diese Aktion kann nicht rückgängig gemacht werden. Der Benutzer und alle zugehörigen Daten werden dauerhaft gelöscht.
                 </DialogDescription>
               </DialogHeader>

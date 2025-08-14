@@ -76,7 +76,7 @@ export function GeneralFeedbackEditDialog({ feedback }: GeneralFeedbackEditDialo
       >
         <DialogHeader>
           <DialogTitle id={titleId}>Feedback bearbeiten</DialogTitle>
-          <DialogDescription>
+          <DialogDescription id={descriptionId}>
             Formular zum Bearbeiten des allgemeinen Feedbacks.
           </DialogDescription>
         </DialogHeader>

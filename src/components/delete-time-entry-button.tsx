@@ -63,7 +63,7 @@ export function DeleteTimeEntryButton({ entryId }: DeleteTimeEntryButtonProps) {
             >
               <DialogHeader>
                 <DialogTitle id={titleId}>Sind Sie sicher?</DialogTitle>
-                <DialogDescription>
+                <DialogDescription id={descriptionId}>
                   Diese Aktion kann nicht rückgängig gemacht werden. Der Zeiteintrag wird dauerhaft gelöscht.
                 </DialogDescription>
               </DialogHeader>

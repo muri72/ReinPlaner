@@ -40,7 +40,7 @@ export function ObjectCreateDialog({ onObjectCreated }: ObjectCreateDialogProps)
       >
         <DialogHeader>
           <DialogTitle id={titleId}>Neues Objekt hinzufügen</DialogTitle>
-          <DialogDescription>
+          <DialogDescription id={descriptionId}>
             Formular zum Hinzufügen eines neuen Objekts.
           </DialogDescription>
         </DialogHeader>

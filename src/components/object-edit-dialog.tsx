@@ -84,7 +84,7 @@ export function ObjectEditDialog({ object }: ObjectEditDialogProps) {
       >
         <DialogHeader>
           <DialogTitle id={titleId}>Objekt bearbeiten</DialogTitle>
-          <DialogDescription>
+          <DialogDescription id={descriptionId}>
             Formular zum Bearbeiten der Objektdaten.
           </DialogDescription>
         </DialogHeader>

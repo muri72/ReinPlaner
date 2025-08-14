@@ -40,7 +40,7 @@ export function ManagerCustomerAssignmentDialog({ managerId, managerName }: Mana
       >
         <DialogHeader>
           <DialogTitle id={titleId}>Kunden für {managerName} zuweisen</DialogTitle>
-          <DialogDescription>
+          <DialogDescription id={descriptionId}>
             Formular zur Zuweisung von Kunden zu einem Manager.
           </DialogDescription>
         </DialogHeader>

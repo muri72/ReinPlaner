@@ -40,7 +40,7 @@ export function CustomerCreateDialog({ onCustomerCreated }: CustomerCreateDialog
       >
         <DialogHeader>
           <DialogTitle id={titleId}>Neuen Kunden hinzufügen</DialogTitle>
-          <DialogDescription>
+          <DialogDescription id={descriptionId}>
             Formular zum Hinzufügen eines neuen Kunden.
           </DialogDescription>
         </DialogHeader>

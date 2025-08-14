@@ -29,7 +29,7 @@ export function GiveGeneralFeedbackDialog({ onFeedbackSubmitted }: GiveGeneralFe
       >
         <DialogHeader>
           <DialogTitle id={titleId}>Allgemeines Feedback einreichen</DialogTitle>
-          <DialogDescription>
+          <DialogDescription id={descriptionId}>
             Formular zum Einreichen von allgemeinem Feedback.
           </DialogDescription>
         </DialogHeader>

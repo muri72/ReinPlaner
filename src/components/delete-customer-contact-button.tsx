@@ -64,7 +64,7 @@ export function DeleteCustomerContactButton({ contactId }: DeleteCustomerContact
             >
               <AlertDialogHeader>
                 <AlertDialogTitle id={titleId}>Sind Sie sicher?</AlertDialogTitle>
-                <AlertDialogDescription>
+                <AlertDialogDescription id={descriptionId}>
                   Diese Aktion kann nicht rückgängig gemacht werden. Der Kundenkontakt wird dauerhaft gelöscht.
                 </AlertDialogDescription>
               </AlertDialogHeader>

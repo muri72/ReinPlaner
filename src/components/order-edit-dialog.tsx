@@ -83,7 +83,7 @@ export function OrderEditDialog({ order }: OrderEditDialogProps) {
       >
         <DialogHeader>
           <DialogTitle id={titleId}>Auftrag bearbeiten</DialogTitle>
-          <DialogDescription>
+          <DialogDescription id={descriptionId}>
             Formular zum Bearbeiten der Auftragsdetails.
           </DialogDescription>
         </DialogHeader>

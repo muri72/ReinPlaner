@@ -67,7 +67,7 @@ export function EmployeeEditDialog({ employee }: EmployeeEditDialogProps) {
       >
         <DialogHeader>
           <DialogTitle id={titleId}>Mitarbeiter bearbeiten</DialogTitle>
-          <DialogDescription>
+          <DialogDescription id={descriptionId}>
             Formular zum Bearbeiten der Mitarbeiterdaten.
           </DialogDescription>
         </DialogHeader>

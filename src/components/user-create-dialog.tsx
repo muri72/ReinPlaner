@@ -40,7 +40,7 @@ export function UserCreateDialog({ onUserCreated }: UserCreateDialogProps) {
       >
         <DialogHeader>
           <DialogTitle id={titleId}>Neuen Benutzer registrieren</DialogTitle>
-          <DialogDescription>
+          <DialogDescription id={descriptionId}>
             Formular zum Registrieren eines neuen Benutzers.
           </DialogDescription>
         </DialogHeader>

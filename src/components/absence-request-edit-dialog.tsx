@@ -59,7 +59,7 @@ export function AbsenceRequestEditDialog({ request, currentUserRole, currentUser
       >
         <DialogHeader>
           <DialogTitle id={titleId}>Abwesenheitsantrag bearbeiten</DialogTitle>
-          <DialogDescription>
+          <DialogDescription id={descriptionId}>
             Formular zum Bearbeiten des Abwesenheitsantrags.
           </DialogDescription>
         </DialogHeader>

@@ -56,7 +56,7 @@ export function CustomerContactEditDialog({ contact }: CustomerContactEditDialog
       >
         <DialogHeader>
           <DialogTitle id={titleId}>Kundenkontakt bearbeiten</DialogTitle>
-          <DialogDescription>
+          <DialogDescription id={descriptionId}>
             Formular zum Bearbeiten des Kundenkontakts.
           </DialogDescription>
         </DialogHeader>

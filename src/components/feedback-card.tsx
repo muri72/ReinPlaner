@@ -186,7 +186,7 @@ export function FeedbackCard({ feedback, feedbackType, currentUserId, currentUse
                     >
                       <DialogHeader>
                         <DialogTitle id={titleId}>Sind Sie sicher?</DialogTitle>
-                        <DialogDescription>
+                        <DialogDescription id={descriptionId}>
                           Diese Aktion kann nicht rückgängig gemacht werden. Das Feedback wird dauerhaft gelöscht.
                         </DialogDescription>
                       </DialogHeader>

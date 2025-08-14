@@ -62,7 +62,7 @@ export function TimeEntryEditDialog({ timeEntry, currentUserId, isAdmin }: TimeE
       >
         <DialogHeader>
           <DialogTitle id={titleId}>Zeiteintrag bearbeiten</DialogTitle>
-          <DialogDescription>
+          <DialogDescription id={descriptionId}>
             Formular zum Bearbeiten des Zeiteintrags.
           </DialogDescription>
         </DialogHeader>

@@ -60,7 +60,7 @@ export function TimeEntryCreateDialog({
       >
         <DialogHeader>
           <DialogTitle id={titleId}>{dialogTitle}</DialogTitle>
-          <DialogDescription>
+          <DialogDescription id={descriptionId}>
             Formular zum Erstellen eines neuen Zeiteintrags.
           </DialogDescription>
         </DialogHeader>

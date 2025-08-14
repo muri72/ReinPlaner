@@ -55,7 +55,7 @@ export function CustomerEditDialog({ customer }: CustomerEditDialogProps) {
       >
         <DialogHeader>
           <DialogTitle id={titleId}>Kunden bearbeiten</DialogTitle>
-          <DialogDescription>
+          <DialogDescription id={descriptionId}>
             Formular zum Bearbeiten der Kundendaten.
           </DialogDescription>
         </DialogHeader>

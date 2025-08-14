@@ -40,7 +40,7 @@ export function OrderCreateDialog({ onOrderCreated }: OrderCreateDialogProps) {
       >
         <DialogHeader>
           <DialogTitle id={titleId}>Neuen Auftrag hinzufügen</DialogTitle>
-          <DialogDescription>
+          <DialogDescription id={descriptionId}>
             Formular zum Hinzufügen eines neuen Auftrags.
           </DialogDescription>
         </DialogHeader>

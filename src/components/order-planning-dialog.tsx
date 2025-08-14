@@ -78,7 +78,7 @@ export function OrderPlanningDialog({ order }: OrderPlanningDialogProps) {
       >
         <DialogHeader>
           <DialogTitle id={titleId}>Anfrage planen: {order.title}</DialogTitle>
-          <DialogDescription>
+          <DialogDescription id={descriptionId}>
             Wählen Sie einen Mitarbeiter aus, um diese Anfrage zu genehmigen oder lehnen Sie sie ab.
           </DialogDescription>
         </DialogHeader>

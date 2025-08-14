@@ -29,7 +29,7 @@ export function OrderFeedbackDialog({ orderId }: OrderFeedbackDialogProps) {
       >
         <DialogHeader>
           <DialogTitle id={titleId}>Feedback zum Auftrag</DialogTitle>
-          <DialogDescription>
+          <DialogDescription id={descriptionId}>
             Formular zum Einreichen von Feedback zu einem Auftrag.
           </DialogDescription>
         </DialogHeader>

@@ -63,7 +63,7 @@ export function DeleteAbsenceRequestButton({ requestId }: DeleteAbsenceRequestBu
             >
               <DialogHeader>
                 <DialogTitle id={titleId}>Sind Sie sicher?</DialogTitle>
-                <DialogDescription>
+                <DialogDescription id={descriptionId}>
                   Diese Aktion kann nicht rückgängig gemacht werden. Der Abwesenheitsantrag wird dauerhaft gelöscht.
                 </DialogDescription>
               </DialogHeader>

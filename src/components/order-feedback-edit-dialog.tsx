@@ -77,7 +77,7 @@ export function OrderFeedbackEditDialog({ feedback }: OrderFeedbackEditDialogPro
       >
         <DialogHeader>
           <DialogTitle id={titleId}>Feedback bearbeiten</DialogTitle>
-          <DialogDescription>
+          <DialogDescription id={descriptionId}>
             Formular zum Bearbeiten des Auftrags-Feedbacks.
           </DialogDescription>
         </DialogHeader>

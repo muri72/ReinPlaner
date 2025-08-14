@@ -42,7 +42,7 @@ export function CustomerContactCreateGeneralDialog({ onContactCreated }: Custome
       >
         <DialogHeader>
           <DialogTitle id={titleId}>Neuen Kundenkontakt hinzufügen</DialogTitle>
-          <DialogDescription>
+          <DialogDescription id={descriptionId}>
             Formular zum Hinzufügen eines neuen Kundenkontakts.
           </DialogDescription>
         </DialogHeader>
