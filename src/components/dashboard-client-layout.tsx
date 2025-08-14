@@ -5,11 +5,12 @@ import Link from "next/link";
 import { Menu, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NotificationBell } from "@/components/notification-bell";
-import { Sheet, SheetContent, SheetHeader, SheetTrigger, SheetClose } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTrigger, SheetClose, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { SidebarNav } from "@/components/sidebar-nav";
 import { UserMenu } from "@/components/user-menu";
 import { cn } from "@/lib/utils";
 import { usePathname } from "next/navigation"; // Import usePathname
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden"; // Import VisuallyHidden
 
 interface DashboardClientLayoutProps {
   children: React.ReactNode;
@@ -62,6 +63,12 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut, us
             )}
           >
             <SheetHeader className="flex items-center justify-between p-4 mb-4">
+              <SheetTitle>
+                <VisuallyHidden>Mobiles Navigationsmenü</VisuallyHidden>
+              </SheetTitle>
+              <SheetDescription>
+                <VisuallyHidden>Navigation und Benutzeroptionen für mobile Geräte.</VisuallyHidden>
+              </SheetDescription>
               <Link href={getHomeLink()} passHref onClick={() => setIsSheetOpen(false)}>
                 <h2 className="text-xl font-bold text-primary tracking-tight cursor-pointer">ARIS</h2>
               </Link>
