@@ -15,6 +15,7 @@ import { PaginationControls } from "@/components/pagination-controls"; // Import
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"; // Import Tabs
 import { DocumentUploader } from "@/components/document-uploader"; // Import DocumentUploader
 import { DocumentList } from "@/components/document-list"; // Import DocumentList
+import { Suspense } from "react"; // Import Suspense for client components
 
 interface DisplayOrder {
   id: string;
@@ -51,9 +52,20 @@ interface DisplayOrder {
   }[];
 }
 
+// Definierte Liste der Dienstleistungen (muss mit order-form.tsx übereinstimmen)
+const availableServices = [
+  "Unterhaltsreinigung",
+  "Glasreinigung",
+  "Grundreinigung",
+  "Graffitientfernung",
+  "Sonderreinigung",
+];
+
 export default async function OrdersPage({
   searchParams,
-}: any) {
+}: {
+  searchParams?: Record<string, string | string[] | undefined>;
+}) {
   const supabase = await createClient();
   const { data: { user: currentUser } } = await supabase.auth.getUser();
 
@@ -64,6 +76,11 @@ export default async function OrdersPage({
   const query = typeof searchParams?.query === 'string' ? searchParams.query : '';
   const currentPage = Number(searchParams?.page) || 1;
   const pageSize = Number(searchParams?.pageSize) || 9; // Standardmäßig 9 Aufträge pro Seite
+  const statusFilter = searchParams?.status || '';
+  const orderTypeFilter = searchParams?.orderType || '';
+  const serviceTypeFilter = searchParams?.serviceType || '';
+  const customerIdFilter = searchParams?.customerId || '';
+  const employeeIdFilter = searchParams?.employeeId || '';
 
   const from = (currentPage - 1) * pageSize;
   const to = from + pageSize - 1;
@@ -72,16 +89,28 @@ export default async function OrdersPage({
   let error: any;
   let count: number | null = 0;
 
+  // Fetch customers and employees for filter dropdowns
+  const { data: customersData, error: customersError } = await supabase.from('customers').select('id, name').order('name', { ascending: true });
+  const { data: employeesData, error: employeesError } = await supabase.from('employees').select('id, first_name, last_name').order('last_name', { ascending: true });
+
+  if (customersError) console.error("Fehler beim Laden der Kunden für Filter:", customersError.message);
+  if (employeesError) console.error("Fehler beim Laden der Mitarbeiter für Filter:", employeesError.message);
+
+  const customers = customersData || [];
+  const employees = employeesData || [];
+
   if (query) {
-    // Verwende die RPC-Funktion für die Suche. Beachte: Diese RPC unterstützt keine Paginierung.
-    // Daher werden bei aktiver Suche alle passenden Ergebnisse geladen.
+    // Verwende die RPC-Funktion für die Suche.
+    // Die RPC-Funktion hat bereits Parameter für user_id und customer_id,
+    // aber da RLS aktiv ist, wird die clientseitige Abfrage automatisch gefiltert.
+    // Daher übergeben wir hier keine expliziten user/customer IDs an die RPC.
     const { data, error: rpcError } = await supabase.rpc('search_orders', { search_query: query });
     allOrders = (data as DisplayOrder[] | null)?.map(o => ({ ...o, order_feedback: [] })) || [];
     error = rpcError;
     count = allOrders.length; // Zähle die Ergebnisse der RPC-Funktion
   } else {
-    // Direkte Abfrage mit Paginierung, wenn keine Suche aktiv ist
-    const { data, error: selectError, count: selectCount } = await supabase
+    // Direkte Abfrage mit Paginierung und Filtern, wenn keine Suche aktiv ist
+    let selectQuery = supabase
       .from('orders')
       .select(`
         *,
@@ -89,10 +118,28 @@ export default async function OrdersPage({
         objects ( name ),
         employees ( first_name, last_name ),
         customer_contacts ( first_name, last_name ),
-        order_feedback ( * )
-      `, { count: 'exact' }) // count: 'exact' ist wichtig für die Paginierung
-      .order('created_at', { ascending: false })
-      .range(from, to); // Paginierung anwenden
+        order_feedback ( id, rating, comment, image_urls, created_at )
+      `, { count: 'exact' })
+      .order('created_at', { ascending: false });
+
+    if (statusFilter) {
+      selectQuery = selectQuery.eq('status', statusFilter);
+    }
+    if (orderTypeFilter) {
+      selectQuery = selectQuery.eq('order_type', orderTypeFilter);
+    }
+    if (serviceTypeFilter) {
+      selectQuery = selectQuery.eq('service_type', serviceTypeFilter);
+    }
+    if (customerIdFilter) {
+      selectQuery = selectQuery.eq('customer_id', customerIdFilter);
+    }
+    if (employeeIdFilter) {
+      selectQuery = selectQuery.eq('employee_id', employeeIdFilter);
+    }
+
+    const { data, error: selectError, count: selectCount } = await selectQuery
+      .range(from, to);
 
     allOrders = data?.map(order => ({
       id: order.id,
@@ -163,13 +210,62 @@ export default async function OrdersPage({
     }
   };
 
+  const orderStatusOptions = [
+    { value: 'pending', label: 'Ausstehend' },
+    { value: 'in_progress', label: 'In Bearbeitung' },
+    { value: 'completed', label: 'Abgeschlossen' },
+  ];
+
+  const orderTypeOptions = [
+    { value: 'one_time', label: 'Einmalig' },
+    { value: 'recurring', label: 'Wiederkehrend' },
+    { value: 'substitution', label: 'Vertretung' },
+    { value: 'permanent', label: 'Permanent' },
+  ];
+
   return (
     <div className="p-4 md:p-8 space-y-8">
       <h1 className="text-2xl md:text-3xl font-bold">Auftragsverwaltung</h1>
-      <div className="mb-4 flex justify-between items-center">
+      <div className="mb-4 flex flex-col sm:flex-row justify-between items-center gap-4">
         <SearchInput placeholder="Aufträge suchen..." />
         <OrderCreateDialog />
       </div>
+
+      {/* Filter Section */}
+      <Suspense fallback={<div>Lade Filter...</div>}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-8">
+          <FilterSelect
+            paramName="status"
+            label="Status"
+            options={orderStatusOptions}
+            currentValue={statusFilter}
+          />
+          <FilterSelect
+            paramName="orderType"
+            label="Auftragstyp"
+            options={orderTypeOptions}
+            currentValue={orderTypeFilter}
+          />
+          <FilterSelect
+            paramName="serviceType"
+            label="Dienstleistung"
+            options={availableServices.map(s => ({ value: s, label: s }))}
+            currentValue={serviceTypeFilter}
+          />
+          <FilterSelect
+            paramName="customerId"
+            label="Kunde"
+            options={customers.map(c => ({ value: c.id, label: c.name }))}
+            currentValue={customerIdFilter}
+          />
+          <FilterSelect
+            paramName="employeeId"
+            label="Mitarbeiter"
+            options={employees.map(e => ({ value: e.id, label: `${e.first_name} ${e.last_name}` }))}
+            currentValue={employeeIdFilter}
+          />
+        </div>
+      </Suspense>
 
       {/* Section for Pending Requests */}
       <div className="space-y-4">
@@ -213,7 +309,7 @@ export default async function OrdersPage({
           </p>
         )}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-          {otherOrders.length === 0 && !query ? (
+          {otherOrders.length === 0 && !query && !statusFilter && !orderTypeFilter && !serviceTypeFilter && !customerIdFilter && !employeeIdFilter ? (
             <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30 shadow-neumorphic glassmorphism-card">
               <Briefcase className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
               <p className="text-base md:text-lg font-semibold">Noch keine Aufträge vorhanden</p>
@@ -222,11 +318,11 @@ export default async function OrdersPage({
                 {/* The button to open the dialog is now part of OrderCreateDialog */}
               </div>
             </div>
-          ) : otherOrders.length === 0 && query ? (
+          ) : otherOrders.length === 0 && (query || statusFilter || orderTypeFilter || serviceTypeFilter || customerIdFilter || employeeIdFilter) ? (
             <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30 shadow-neumorphic glassmorphism-card">
               <Briefcase className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
               <p className="text-base md:text-lg font-semibold">Keine Aufträge gefunden</p>
-              <p className="text-sm">Ihre Suche nach "{query}" ergab keine Treffer.</p>
+              <p className="text-sm">Ihre Filter ergaben keine Treffer.</p>
             </div>
           ) : (
             otherOrders.map((order) => {
@@ -292,6 +388,60 @@ export default async function OrdersPage({
           <PaginationControls currentPage={currentPage} totalPages={totalPages} />
         )}
       </div>
+    </div>
+  );
+}
+
+// Client Component for Filters
+// This component is separated to allow it to use useRouter/useSearchParams
+// without making the entire page a client component.
+"use client";
+
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useCallback } from "react";
+
+interface FilterSelectProps {
+  paramName: string;
+  label: string;
+  options: { value: string; label: string }[];
+  currentValue: string;
+}
+
+function FilterSelect({ paramName, label, options, currentValue }: FilterSelectProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const handleFilterChange = useCallback(
+    (value: string) => {
+      const params = new URLSearchParams(searchParams);
+      if (value) {
+        params.set(paramName, value);
+      } else {
+        params.delete(paramName);
+      }
+      params.set('page', '1'); // Reset to first page on filter change
+      router.replace(`${pathname}?${params.toString()}`);
+    },
+    [paramName, pathname, router, searchParams]
+  );
+
+  return (
+    <div>
+      <Label htmlFor={paramName}>{label}</Label>
+      <Select onValueChange={handleFilterChange} value={currentValue}>
+        <SelectTrigger className="w-full">
+          <SelectValue placeholder={`Alle ${label.toLowerCase()}`} />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="">Alle</SelectItem>
+          {options.map(option => (
+            <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </div>
   );
 }
