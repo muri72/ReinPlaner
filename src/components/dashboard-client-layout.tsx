@@ -54,7 +54,7 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut, us
               "h-full"
             )}
           >
-            <SheetHeader className="flex items-center justify-between p-4 mb-6">
+            <SheetHeader className="flex items-center justify-between p-4 mb-4"> {/* Changed mb-6 to mb-4 */}
               <Link href={getHomeLink()} passHref onClick={() => setIsSheetOpen(false)}>
                 <h2 className="text-xl font-bold text-primary tracking-tight cursor-pointer">ARIS</h2>
               </Link>
@@ -100,7 +100,7 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut, us
         )}
       >
         {/* ARIS Text und Toggle-Button, immer zentriert */}
-        <div className="flex flex-col items-center justify-center mb-6">
+        <div className="flex flex-col items-center justify-center mb-4"> {/* Changed mb-6 to mb-4 */}
           <Link href={getHomeLink()} passHref>
             <h2 className="text-xl font-bold text-primary tracking-tight cursor-pointer">ARIS</h2>
           </Link>
