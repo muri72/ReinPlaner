@@ -5,12 +5,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { createEmployee } from "./actions";
 import { EmployeeEditDialog } from "@/components/employee-edit-dialog";
 import { DeleteEmployeeButton } from "@/components/delete-employee-button";
-import { Mail, Phone, CalendarDays, UserRoundCheck, UserRoundX, UserRoundMinus, Briefcase, DollarSign, Tag, Building2, FileText, MapPin, Cake, CreditCard, Shield, UsersRound, PlusCircle } from "lucide-react";
+import { Mail, Phone, CalendarDays, UserRoundCheck, UserRoundX, UserRoundMinus, Briefcase, DollarSign, Tag, Building2, FileText, MapPin, Cake, CreditCard, Shield, UsersRound, PlusCircle, FileStack } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { SearchInput } from "@/components/search-input";
 import { Button } from "@/components/ui/button"; // Hinzugefügt
 import { EmployeeCreateDialog } from "@/components/employee-create-dialog"; // Import the new dialog
 import { PaginationControls } from "@/components/pagination-controls"; // Importiere die Paginierungskomponente
+import { DocumentUploader } from "@/components/document-uploader"; // Import DocumentUploader
+import { DocumentList } from "@/components/document-list"; // Import DocumentList
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"; // Import Tabs
 
 export default async function EmployeesPage({
   searchParams,
@@ -131,94 +134,115 @@ export default async function EmployeesPage({
                 </div>
               </CardHeader>
               <CardContent className="space-y-2">
-                {employee.email && (
-                  <div className="flex items-center text-sm text-muted-foreground">
-                    <Mail className="mr-2 h-4 w-4 flex-shrink-0" />
-                    <span>{employee.email}</span>
-                  </div>
-                )}
-                {employee.phone && (
-                  <div className="flex items-center text-sm text-muted-foreground">
-                    <Phone className="mr-2 h-4 w-4 flex-shrink-0" />
-                    <span>{employee.phone}</span>
-                  </div>
-                )}
-                {employee.job_title && (
-                  <div className="flex items-center text-sm text-muted-foreground">
-                    <Tag className="mr-2 h-4 w-4 flex-shrink-0" />
-                    <span>Position: {employee.job_title}</span>
-                  </div>
-                )}
-                {employee.department && (
-                  <div className="flex items-center text-sm text-muted-foreground">
-                    <Building2 className="mr-2 h-4 w-4 flex-shrink-0" />
-                    <span>Abteilung: {employee.department}</span>
-                  </div>
-                )}
-                {employee.hire_date && (
-                  <div className="flex items-center text-sm text-muted-foreground">
-                    <CalendarDays className="mr-2 h-4 w-4 flex-shrink-0" />
-                    <span>Einstellungsdatum: {new Date(employee.hire_date).toLocaleDateString()}</span>
-                  </div>
-                )}
-                {employee.start_date && (
-                  <div className="flex items-center text-sm text-muted-foreground">
-                    <CalendarDays className="mr-2 h-4 w-4 flex-shrink-0" />
-                    <span>Vertragsstart: {new Date(employee.start_date).toLocaleDateString()}</span>
-                  </div>
-                )}
-                {employee.contract_type && (
-                  <div className="flex items-center text-sm text-muted-foreground">
-                    <Briefcase className="mr-2 h-4 w-4 flex-shrink-0" />
-                    <span>Vertragsart: <Badge variant="secondary">{employee.contract_type}</Badge></span>
-                  </div>
-                )}
-                {employee.hourly_rate !== null && employee.hourly_rate !== undefined && (
-                  <div className="flex items-center text-sm text-muted-foreground">
-                    <DollarSign className="mr-2 h-4 w-4 flex-shrink-0" />
-                    <span>Stundenlohn: {employee.hourly_rate.toFixed(2)} €</span>
-                  </div>
-                )}
-                {employee.notes && (
-                  <div className="flex items-center text-sm text-muted-foreground">
-                    <FileText className="mr-2 h-4 w-4 flex-shrink-0" />
-                    <span>Notizen: {employee.notes}</span>
-                  </div>
-                )}
-                {employee.address && (
-                  <div className="flex items-center text-sm text-muted-foreground">
-                    <MapPin className="mr-2 h-4 w-4 flex-shrink-0" />
-                    <span>Adresse: {employee.address}</span>
-                  </div>
-                )}
-                {employee.date_of_birth && (
-                  <div className="flex items-center text-sm text-muted-foreground">
-                    <Cake className="mr-2 h-4 w-4 flex-shrink-0" />
-                    <span>Geburtsdatum: {new Date(employee.date_of_birth).toLocaleDateString()}</span>
-                  </div>
-                )}
-                {employee.social_security_number && (
-                  <div className="flex items-center text-sm text-muted-foreground">
-                    <CreditCard className="mr-2 h-4 w-4 flex-shrink-0" />
-                    <span>SV-Nummer: {employee.social_security_number}</span>
-                  </div>
-                )}
-                {employee.tax_id_number && (
-                  <div className="flex items-center text-sm text-muted-foreground">
-                    <CreditCard className="mr-2 h-4 w-4 flex-shrink-0" />
-                    <span>Steuer-ID: {employee.tax_id_number}</span>
-                  </div>
-                )}
-                {employee.health_insurance_provider && (
-                  <div className="flex items-center text-sm text-muted-foreground">
-                    <Shield className="mr-2 h-4 w-4 flex-shrink-0" />
-                    <span>Krankenkasse: {employee.health_insurance_provider}</span>
-                  </div>
-                )}
-                <div className="flex items-center text-sm text-muted-foreground">
-                  {getStatusIcon(employee.status)}
-                  <Badge variant={getStatusBadgeVariant(employee.status)}>{employee.status}</Badge>
-                </div>
+                <Tabs defaultValue="details" className="w-full">
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="details">Details</TabsTrigger>
+                    <TabsTrigger value="documents">Dokumente</TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="details" className="pt-4 space-y-2 text-sm text-muted-foreground">
+                    {employee.email && (
+                      <div className="flex items-center">
+                        <Mail className="mr-2 h-4 w-4 flex-shrink-0" />
+                        <span>{employee.email}</span>
+                      </div>
+                    )}
+                    {employee.phone && (
+                      <div className="flex items-center">
+                        <Phone className="mr-2 h-4 w-4 flex-shrink-0" />
+                        <span>{employee.phone}</span>
+                      </div>
+                    )}
+                    {employee.job_title && (
+                      <div className="flex items-center">
+                        <Tag className="mr-2 h-4 w-4 flex-shrink-0" />
+                        <span>Position: {employee.job_title}</span>
+                      </div>
+                    )}
+                    {employee.department && (
+                      <div className="flex items-center">
+                        <Building2 className="mr-2 h-4 w-4 flex-shrink-0" />
+                        <span>Abteilung: {employee.department}</span>
+                      </div>
+                    )}
+                    {employee.hire_date && (
+                      <div className="flex items-center">
+                        <CalendarDays className="mr-2 h-4 w-4 flex-shrink-0" />
+                        <span>Einstellungsdatum: {new Date(employee.hire_date).toLocaleDateString()}</span>
+                      </div>
+                    )}
+                    {employee.start_date && (
+                      <div className="flex items-center">
+                        <CalendarDays className="mr-2 h-4 w-4 flex-shrink-0" />
+                        <span>Vertragsstart: {new Date(employee.start_date).toLocaleDateString()}</span>
+                      </div>
+                    )}
+                    {employee.contract_type && (
+                      <div className="flex items-center">
+                        <Briefcase className="mr-2 h-4 w-4 flex-shrink-0" />
+                        <span>Vertragsart: <Badge variant="secondary">{employee.contract_type}</Badge></span>
+                      </div>
+                    )}
+                    {employee.contract_type === 'fixed_term' && employee.contract_end_date && (
+                      <div className="flex items-center">
+                        <CalendarDays className="mr-2 h-4 w-4 flex-shrink-0" />
+                        <span>Vertragsende: {new Date(employee.contract_end_date).toLocaleDateString()}</span>
+                      </div>
+                    )}
+                    {employee.hourly_rate !== null && employee.hourly_rate !== undefined && (
+                      <div className="flex items-center">
+                        <DollarSign className="mr-2 h-4 w-4 flex-shrink-0" />
+                        <span>Stundenlohn: {employee.hourly_rate.toFixed(2)} €</span>
+                      </div>
+                    )}
+                    {employee.notes && (
+                      <div className="flex items-center">
+                        <FileText className="mr-2 h-4 w-4 flex-shrink-0" />
+                        <span>Notizen: {employee.notes}</span>
+                      </div>
+                    )}
+                    {employee.address && (
+                      <div className="flex items-center">
+                        <MapPin className="mr-2 h-4 w-4 flex-shrink-0" />
+                        <span>Adresse: {employee.address}</span>
+                      </div>
+                    )}
+                    {employee.date_of_birth && (
+                      <div className="flex items-center">
+                        <Cake className="mr-2 h-4 w-4 flex-shrink-0" />
+                        <span>Geburtsdatum: {new Date(employee.date_of_birth).toLocaleDateString()}</span>
+                      </div>
+                    )}
+                    {employee.social_security_number && (
+                      <div className="flex items-center">
+                        <CreditCard className="mr-2 h-4 w-4 flex-shrink-0" />
+                        <span>SV-Nummer: {employee.social_security_number}</span>
+                      </div>
+                    )}
+                    {employee.tax_id_number && (
+                      <div className="flex items-center">
+                        <CreditCard className="mr-2 h-4 w-4 flex-shrink-0" />
+                        <span>Steuer-ID: {employee.tax_id_number}</span>
+                      </div>
+                    )}
+                    {employee.health_insurance_provider && (
+                      <div className="flex items-center">
+                        <Shield className="mr-2 h-4 w-4 flex-shrink-0" />
+                        <span>Krankenkasse: {employee.health_insurance_provider}</span>
+                      </div>
+                    )}
+                    <div className="flex items-center">
+                      {getStatusIcon(employee.status)}
+                      <Badge variant={getStatusBadgeVariant(employee.status)}>{employee.status}</Badge>
+                    </div>
+                  </TabsContent>
+                  <TabsContent value="documents" className="pt-4 space-y-4">
+                    <h3 className="text-md font-semibold flex items-center">
+                      <FileStack className="mr-2 h-5 w-5" /> Dokumente
+                    </h3>
+                    <DocumentUploader associatedEmployeeId={employee.id} />
+                    <DocumentList associatedEmployeeId={employee.id} />
+                  </TabsContent>
+                </Tabs>
               </CardContent>
             </Card>
           ))

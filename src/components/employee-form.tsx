@@ -24,7 +24,8 @@ export const employeeSchema = z.object({
   phone: z.string().max(50, "Telefonnummer ist zu lang").optional().nullable(),
   hireDate: z.date().optional().nullable(),
   status: z.enum(["active", "inactive", "on_leave"]).default("active"),
-  contractType: z.enum(["minijob", "part_time", "full_time"]).default("full_time"), // 'fixed_term' entfernt
+  contractType: z.enum(["minijob", "part_time", "full_time", "fixed_term"]).default("full_time"), // 'fixed_term' hinzugefügt
+  contractEndDate: z.date().optional().nullable(), // Neues Feld
   hourlyRate: z.preprocess(
     (val) => (val === "" ? null : Number(val)),
     z.nullable(z.number().min(0, "Stundenlohn muss positiv sein").max(9999.99, "Stundenlohn ist zu hoch")).optional()
@@ -39,6 +40,14 @@ export const employeeSchema = z.object({
   socialSecurityNumber: z.string().max(50, "SV-Nummer ist zu lang").optional().nullable(),
   taxIdNumber: z.string().max(50, "Steuer-ID ist zu lang").optional().nullable(),
   healthInsuranceProvider: z.string().max(100, "Krankenkasse ist zu lang").optional().nullable(),
+}).superRefine((data, ctx) => {
+  if (data.contractType === 'fixed_term' && !data.contractEndDate) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Enddatum ist für befristete Verträge erforderlich.",
+      path: ["contractEndDate"],
+    });
+  }
 });
 
 export type EmployeeFormInput = z.input<typeof employeeSchema>;
@@ -60,6 +69,7 @@ export function EmployeeForm({ initialData, onSubmit, submitButtonText, onSucces
     hireDate: initialData?.hireDate ? new Date(initialData.hireDate) : null,
     status: initialData?.status ?? "active",
     contractType: initialData?.contractType ?? "full_time",
+    contractEndDate: initialData?.contractEndDate ? new Date(initialData.contractEndDate) : null, // Initialwert für neues Feld
     hourlyRate: typeof initialData?.hourlyRate === 'number' ? initialData.hourlyRate : null,
     startDate: initialData?.startDate ? new Date(initialData.startDate) : null,
     jobTitle: initialData?.jobTitle ?? null,
@@ -89,6 +99,8 @@ export function EmployeeForm({ initialData, onSubmit, submitButtonText, onSucces
       onSuccess?.();
     }
   };
+
+  const contractType = form.watch("contractType");
 
   return (
     <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 w-full max-w-md" suppressHydrationWarning>
@@ -163,7 +175,12 @@ export function EmployeeForm({ initialData, onSubmit, submitButtonText, onSucces
 
       <div>
         <Label htmlFor="contractType">Vertragsart</Label>
-        <Select onValueChange={(value) => form.setValue("contractType", value as "minijob" | "part_time" | "full_time")} value={form.watch("contractType")}>
+        <Select onValueChange={(value) => {
+          form.setValue("contractType", value as "minijob" | "part_time" | "full_time" | "fixed_term");
+          if (value !== "fixed_term") {
+            form.setValue("contractEndDate", null); // Enddatum zurücksetzen, wenn nicht befristet
+          }
+        }} value={form.watch("contractType")}>
           <SelectTrigger className="w-full">
             <SelectValue placeholder="Vertragsart auswählen" />
           </SelectTrigger>
@@ -171,13 +188,23 @@ export function EmployeeForm({ initialData, onSubmit, submitButtonText, onSucces
             <SelectItem value="minijob">Minijob</SelectItem>
             <SelectItem value="part_time">Teilzeit</SelectItem>
             <SelectItem value="full_time">Vollzeit</SelectItem>
-            {/* <SelectItem value="fixed_term">Befristet</SelectItem> */} {/* Entfernt */}
+            <SelectItem value="fixed_term">Befristet</SelectItem>
           </SelectContent>
         </Select>
         {form.formState.errors.contractType && (
           <p className="text-red-500 text-sm mt-1">{form.formState.errors.contractType.message}</p>
         )}
       </div>
+
+      {contractType === "fixed_term" && (
+        <DatePicker
+          label="Vertragsenddatum"
+          value={form.watch("contractEndDate")}
+          onChange={(date) => form.setValue("contractEndDate", date)}
+          error={form.formState.errors.contractEndDate?.message}
+        />
+      )}
+
       <div>
         <Label htmlFor="hourlyRate">Stundenlohn (optional)</Label>
         <Input

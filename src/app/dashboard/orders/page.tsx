@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { OrderForm } from "@/components/order-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Trash2, CalendarDays, Clock, FileText, Wrench, UserRound, AlertTriangle, Star as StarIcon, PlusCircle, Briefcase } from "lucide-react";
+import { Trash2, CalendarDays, Clock, FileText, Wrench, UserRound, AlertTriangle, Star as StarIcon, PlusCircle, Briefcase, FileStack } from "lucide-react";
 import { deleteOrder, createOrder } from "./actions";
 import { OrderEditDialog } from "@/components/order-edit-dialog";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +12,9 @@ import { SearchInput } from "@/components/search-input";
 import { OrderPlanningDialog } from "@/components/order-planning-dialog";
 import { OrderCreateDialog } from "@/components/order-create-dialog"; // Import the new dialog
 import { PaginationControls } from "@/components/pagination-controls"; // Importiere die Paginierungskomponente
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"; // Import Tabs
+import { DocumentUploader } from "@/components/document-uploader"; // Import DocumentUploader
+import { DocumentList } from "@/components/document-list"; // Import DocumentList
 
 interface DisplayOrder {
   id: string;
@@ -231,39 +234,54 @@ export default async function OrdersPage({
               return (
                 <Card key={order.id} className="shadow-neumorphic glassmorphism-card">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-base md:text-lg font-medium">{order.title}</CardTitle>
+                    <CardTitle className="text-base md:text-lg font-semibold">{order.title}</CardTitle>
                     <div className="flex items-center space-x-2">
                       <OrderEditDialog order={order} />
                       <DeleteOrderButton orderId={order.id} />
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-sm text-muted-foreground">{order.description}</p>
-                    {order.customer_name && <p className="text-xs text-muted-foreground mt-1">Kunde: {order.customer_name}</p>}
-                    {order.object_name && <p className="text-xs text-muted-foreground">Objekt: {order.object_name}</p>}
-                    {order.customer_contact_first_name && order.customer_contact_last_name && (
-                      <div className="flex items-center text-xs text-muted-foreground"><UserRound className="mr-1 h-3 w-3" /><span>Auftraggeber: {order.customer_contact_first_name} {order.customer_contact_last_name}</span></div>
-                    )}
-                    {order.employee_first_name && order.employee_last_name && <p className="text-xs text-muted-foreground">Mitarbeiter: {order.employee_first_name} {order.employee_last_name}</p>}
-                    {order.service_type && <div className="flex items-center text-xs text-muted-foreground mt-1"><Wrench className="mr-1 h-3 w-3" /><span>Dienstleistung: {order.service_type}</span></div>}
-                    <div className="flex items-center mt-2 space-x-2">
-                      <Badge variant={getStatusBadgeVariant(order.status)}>{order.status}</Badge>
-                      <Badge variant="outline">{order.order_type}</Badge>
-                      <Badge variant={getPriorityBadgeVariant(order.priority)}>Priorität: {order.priority}</Badge>
-                      <Badge variant={getRequestStatusBadgeVariant(order.request_status)}>Anfrage: {order.request_status}</Badge>
-                    </div>
-                    {order.estimated_hours && <div className="flex items-center text-xs text-muted-foreground mt-1"><Clock className="mr-1 h-3 w-3" /><span>Geschätzte Stunden: {order.estimated_hours}</span></div>}
-                    {order.notes && <div className="flex items-center text-xs text-muted-foreground mt-1"><FileText className="mr-1 h-3 w-3" /><span>Notizen: {order.notes}</span></div>}
-                    {order.order_type === "one_time" && order.due_date && <p className="text-xs text-muted-foreground ml-auto mt-1">Fällig: {new Date(order.due_date).toLocaleDateString()}</p>}
-                    {(order.order_type === "recurring" || order.order_type === "substitution" || order.order_type === "permanent") && order.recurring_start_date && <div className="flex items-center text-xs text-muted-foreground mt-1"><CalendarDays className="mr-1 h-3 w-3" /><span>Start: {new Date(order.recurring_start_date).toLocaleDateString()}</span></div>}
-                    {(order.order_type === "recurring" || order.order_type === "substitution") && order.recurring_end_date && <div className="flex items-center text-xs text-muted-foreground"><CalendarDays className="mr-1 h-3 w-3" /><span>Ende: {new Date(order.recurring_end_date).toLocaleDateString()}</span></div>}
-                    
-                    {feedback && (
-                      <div className="flex items-center text-xs text-warning mt-2">
-                        <StarIcon className="mr-1 h-3 w-3 fill-current" />
-                        <span>Feedback vorhanden</span>
-                      </div>
-                    )}
+                    <Tabs defaultValue="details" className="w-full">
+                      <TabsList className="grid w-full grid-cols-2">
+                        <TabsTrigger value="details">Details</TabsTrigger>
+                        <TabsTrigger value="documents">Dokumente</TabsTrigger>
+                      </TabsList>
+                      <TabsContent value="details" className="pt-4 space-y-2 text-sm text-muted-foreground">
+                        <p className="text-sm text-muted-foreground">{order.description}</p>
+                        {order.customer_name && <p className="text-xs text-muted-foreground mt-1">Kunde: {order.customer_name}</p>}
+                        {order.object_name && <p className="text-xs text-muted-foreground">Objekt: {order.object_name}</p>}
+                        {order.customer_contact_first_name && order.customer_contact_last_name && (
+                          <div className="flex items-center text-xs text-muted-foreground"><UserRound className="mr-1 h-3 w-3" /><span>Auftraggeber: {order.customer_contact_first_name} {order.customer_contact_last_name}</span></div>
+                        )}
+                        {order.employee_first_name && order.employee_last_name && <p className="text-xs text-muted-foreground">Mitarbeiter: {order.employee_first_name} {order.employee_last_name}</p>}
+                        {order.service_type && <div className="flex items-center text-xs text-muted-foreground mt-1"><Wrench className="mr-1 h-3 w-3" /><span>Dienstleistung: {order.service_type}</span></div>}
+                        <div className="flex items-center mt-2 space-x-2">
+                          <Badge variant={getStatusBadgeVariant(order.status)}>{order.status}</Badge>
+                          <Badge variant="outline">{order.order_type}</Badge>
+                          <Badge variant={getPriorityBadgeVariant(order.priority)}>Priorität: {order.priority}</Badge>
+                          <Badge variant={getRequestStatusBadgeVariant(order.request_status)}>Anfrage: {order.request_status}</Badge>
+                        </div>
+                        {order.estimated_hours && <div className="flex items-center text-xs text-muted-foreground mt-1"><Clock className="mr-1 h-3 w-3" /><span>Geschätzte Stunden: {order.estimated_hours}</span></div>}
+                        {order.notes && <div className="flex items-center text-xs text-muted-foreground mt-1"><FileText className="mr-1 h-3 w-3" /><span>Notizen: {order.notes}</span></div>}
+                        {order.order_type === "one_time" && order.due_date && <p className="text-xs text-muted-foreground ml-auto mt-1">Fällig: {new Date(order.due_date).toLocaleDateString()}</p>}
+                        {(order.order_type === "recurring" || order.order_type === "substitution" || order.order_type === "permanent") && order.recurring_start_date && <div className="flex items-center text-xs text-muted-foreground mt-1"><CalendarDays className="mr-1 h-3 w-3" /><span>Start: {new Date(order.recurring_start_date).toLocaleDateString()}</span></div>}
+                        {(order.order_type === "recurring" || order.order_type === "substitution") && order.recurring_end_date && <div className="flex items-center text-xs text-muted-foreground"><CalendarDays className="mr-1 h-3 w-3" /><span>Ende: {new Date(order.recurring_end_date).toLocaleDateString()}</span></div>}
+                        
+                        {feedback && (
+                          <div className="flex items-center text-xs text-warning mt-2">
+                            <StarIcon className="mr-1 h-3 w-3 fill-current" />
+                            <span>Feedback vorhanden</span>
+                          </div>
+                        )}
+                      </TabsContent>
+                      <TabsContent value="documents" className="pt-4 space-y-4">
+                        <h3 className="text-md font-semibold flex items-center">
+                          <FileStack className="mr-2 h-5 w-5" /> Dokumente
+                        </h3>
+                        <DocumentUploader associatedOrderId={order.id} />
+                        <DocumentList associatedOrderId={order.id} />
+                      </TabsContent>
+                    </Tabs>
                   </CardContent>
                 </Card>
               )

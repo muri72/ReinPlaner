@@ -20,6 +20,7 @@ export async function createEmployee(data: EmployeeFormValues) {
     hireDate,
     status,
     contractType,
+    contractEndDate, // Neues Feld
     hourlyRate,
     startDate,
     jobTitle,
@@ -43,6 +44,7 @@ export async function createEmployee(data: EmployeeFormValues) {
       hire_date: hireDate ? hireDate.toISOString() : null,
       status,
       contract_type: contractType,
+      contract_end_date: contractEndDate ? contractEndDate.toISOString().split('T')[0] : null, // Neues Feld
       hourly_rate: hourlyRate,
       start_date: startDate ? startDate.toISOString().split('T')[0] : null,
       job_title: jobTitle,
@@ -94,6 +96,7 @@ export async function updateEmployee(employeeId: string, data: EmployeeFormValue
       hire_date: data.hireDate ? data.hireDate.toISOString() : null,
       status: data.status,
       contract_type: data.contractType,
+      contract_end_date: data.contractEndDate ? data.contractEndDate.toISOString().split('T')[0] : null, // Neues Feld
       hourly_rate: data.hourlyRate,
       start_date: data.startDate ? data.startDate.toISOString().split('T')[0] : null,
       job_title: data.jobTitle,

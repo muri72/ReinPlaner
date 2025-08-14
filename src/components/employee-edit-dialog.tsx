@@ -19,6 +19,7 @@ interface EmployeeEditDialogProps {
     hire_date: string | null;
     status: string;
     contract_type: string | null;
+    contract_end_date: string | null; // Neues Feld
     hourly_rate: number | null;
     start_date: string | null;
     job_title: string | null;
@@ -79,6 +80,7 @@ export function EmployeeEditDialog({ employee }: EmployeeEditDialogProps) {
             hireDate: employee.hire_date ? new Date(employee.hire_date) : undefined,
             status: employee.status as EmployeeFormValues["status"],
             contractType: employee.contract_type as EmployeeFormValues["contractType"],
+            contractEndDate: employee.contract_end_date ? new Date(employee.contract_end_date) : undefined, // Neues Feld
             hourlyRate: employee.hourly_rate,
             startDate: employee.start_date ? new Date(employee.start_date) : undefined,
             jobTitle: employee.job_title,
