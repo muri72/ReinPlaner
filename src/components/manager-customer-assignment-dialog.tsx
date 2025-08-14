@@ -36,14 +36,12 @@ export function ManagerCustomerAssignmentDialog({ managerId, managerName }: Mana
       </TooltipProvider>
       <DialogContent 
         key={open ? "manager-assignment-open" : "manager-assignment-closed"} 
-        aria-labelledby={titleId} 
-        aria-describedby={descriptionId}
         className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card"
       >
         <DialogHeader>
           <DialogTitle id={titleId}>Kunden für {managerName} zuweisen</DialogTitle>
-          <DialogDescription id={descriptionId}>
-            <VisuallyHidden>Formular zur Zuweisung von Kunden zu einem Manager.</VisuallyHidden>
+          <DialogDescription>
+            Formular zur Zuweisung von Kunden zu einem Manager.
           </DialogDescription>
         </DialogHeader>
         <ManagerCustomerAssignmentForm

@@ -25,14 +25,12 @@ export function GiveOrderFeedbackDialog({ onFeedbackSubmitted }: GiveOrderFeedba
       </DialogTrigger>
       <DialogContent 
         key={open ? "give-order-feedback-open" : "give-order-feedback-closed"} 
-        aria-labelledby={titleId} 
-        aria-describedby={descriptionId}
         className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card"
       >
         <DialogHeader>
           <DialogTitle id={titleId}>Auftragsbezogenes Feedback einreichen</DialogTitle>
-          <DialogDescription id={descriptionId}>
-            <VisuallyHidden>Formular zum Einreichen von Feedback zu einem bestimmten Auftrag.</VisuallyHidden>
+          <DialogDescription>
+            Formular zum Einreichen von Feedback zu einem bestimmten Auftrag.
           </DialogDescription>
         </DialogHeader>
         <GiveFeedbackForm onSuccess={() => setOpen(false)} />

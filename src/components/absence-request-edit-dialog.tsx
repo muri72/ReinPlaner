@@ -55,14 +55,12 @@ export function AbsenceRequestEditDialog({ request, currentUserRole, currentUser
       </TooltipProvider>
       <DialogContent 
         key={open ? "absence-request-edit-open" : "absence-request-edit-closed"} 
-        aria-labelledby={titleId} 
-        aria-describedby={descriptionId}
         className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card"
       >
         <DialogHeader>
           <DialogTitle id={titleId}>Abwesenheitsantrag bearbeiten</DialogTitle>
-          <DialogDescription id={descriptionId}>
-            <VisuallyHidden>Formular zum Bearbeiten des Abwesenheitsantrags.</VisuallyHidden>
+          <DialogDescription>
+            Formular zum Bearbeiten des Abwesenheitsantrags.
           </DialogDescription>
         </DialogHeader>
         <AbsenceRequestForm

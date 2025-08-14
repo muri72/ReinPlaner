@@ -36,14 +36,12 @@ export function CustomerCreateDialog({ onCustomerCreated }: CustomerCreateDialog
       </DialogTrigger>
       <DialogContent 
         key={open ? "customer-create-open" : "customer-create-closed"} 
-        aria-labelledby={titleId} 
-        aria-describedby={descriptionId}
         className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card"
       >
         <DialogHeader>
           <DialogTitle id={titleId}>Neuen Kunden hinzufügen</DialogTitle>
-          <DialogDescription id={descriptionId}>
-            <VisuallyHidden>Formular zum Hinzufügen eines neuen Kunden.</VisuallyHidden>
+          <DialogDescription>
+            Formular zum Hinzufügen eines neuen Kunden.
           </DialogDescription>
         </DialogHeader>
         <CustomerForm

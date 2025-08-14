@@ -61,13 +61,11 @@ export function DeleteCustomerContactButton({ contactId }: DeleteCustomerContact
             <AlertDialogContent 
               key={`delete-contact-${contactId}-open`} 
               className="glassmorphism-card" 
-              aria-labelledby={titleId}
-              aria-describedby={descriptionId}
             >
               <AlertDialogHeader>
                 <AlertDialogTitle id={titleId}>Sind Sie sicher?</AlertDialogTitle>
-                <AlertDialogDescription id={descriptionId}>
-                  <VisuallyHidden>Diese Aktion kann nicht rückgängig gemacht werden. Der Kundenkontakt wird dauerhaft gelöscht.</VisuallyHidden>
+                <AlertDialogDescription>
+                  Diese Aktion kann nicht rückgängig gemacht werden. Der Kundenkontakt wird dauerhaft gelöscht.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>

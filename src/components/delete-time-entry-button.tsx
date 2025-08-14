@@ -59,15 +59,11 @@ export function DeleteTimeEntryButton({ entryId }: DeleteTimeEntryButtonProps) {
             </DialogTrigger>
             <DialogContent 
               key={`delete-time-entry-${entryId}-open`} 
-              aria-labelledby={titleId} 
-              aria-describedby={descriptionId}
               className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card"
             >
               <DialogHeader>
-                <VisuallyHidden asChild>
-                  <DialogTitle id={titleId}>Sind Sie sicher?</DialogTitle>
-                </VisuallyHidden>
-                <DialogDescription id={descriptionId}>
+                <DialogTitle id={titleId}>Sind Sie sicher?</DialogTitle>
+                <DialogDescription>
                   Diese Aktion kann nicht rückgängig gemacht werden. Der Zeiteintrag wird dauerhaft gelöscht.
                 </DialogDescription>
               </DialogHeader>

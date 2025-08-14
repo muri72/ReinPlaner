@@ -38,14 +38,12 @@ export function CustomerContactCreateGeneralDialog({ onContactCreated }: Custome
       </DialogTrigger>
       <DialogContent 
         key={open ? "customer-contact-create-general-open" : "customer-contact-create-general-closed"} 
-        aria-labelledby={titleId} 
-        aria-describedby={descriptionId}
         className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card"
       >
         <DialogHeader>
           <DialogTitle id={titleId}>Neuen Kundenkontakt hinzufügen</DialogTitle>
-          <DialogDescription id={descriptionId}>
-            <VisuallyHidden>Formular zum Hinzufügen eines neuen Kundenkontakts.</VisuallyHidden>
+          <DialogDescription>
+            Formular zum Hinzufügen eines neuen Kundenkontakts.
           </DialogDescription>
         </DialogHeader>
         <CustomerContactForm

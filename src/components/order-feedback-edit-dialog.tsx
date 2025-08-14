@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Pencil, Star } from "lucide-react";
+import { Pencil, Star } from "lucide-react"; // Added Star import
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -11,9 +11,9 @@ import { toast } from "sonner";
 import { updateOrderFeedback } from "@/app/dashboard/feedback/actions";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
-import { handleActionResponse } from "@/lib/toast-utils"; // Importiere die neue Utility
+import { handleActionResponse } from "@/lib/toast-utils";
 
 const editSchema = z.object({
   rating: z.number().min(1, "Bewertung ist erforderlich").max(5),
@@ -25,8 +25,8 @@ type EditFormValues = z.infer<typeof editSchema>;
 interface OrderFeedbackEditDialogProps {
   feedback: {
     id: string;
-    rating?: number;
-    comment?: string | null;
+    rating: number;
+    comment: string | null;
   };
 }
 
@@ -51,7 +51,7 @@ export function OrderFeedbackEditDialog({ feedback }: OrderFeedbackEditDialogPro
     if (data.comment) formData.append("comment", data.comment);
 
     const result = await updateOrderFeedback(feedback.id, formData);
-    handleActionResponse(result); // Nutze die neue Utility
+    handleActionResponse(result);
     if (result.success) {
       setOpen(false);
     }
@@ -73,14 +73,12 @@ export function OrderFeedbackEditDialog({ feedback }: OrderFeedbackEditDialogPro
       </TooltipProvider>
       <DialogContent 
         key={open ? "order-feedback-edit-open" : "order-feedback-edit-closed"} 
-        aria-labelledby={titleId} 
-        aria-describedby={descriptionId}
         className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card"
       >
         <DialogHeader>
           <DialogTitle id={titleId}>Feedback bearbeiten</DialogTitle>
-          <DialogDescription id={descriptionId}>
-            <VisuallyHidden>Formular zum Bearbeiten des Auftrags-Feedbacks.</VisuallyHidden>
+          <DialogDescription>
+            Formular zum Bearbeiten des Auftrags-Feedbacks.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">

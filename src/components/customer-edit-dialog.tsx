@@ -52,13 +52,11 @@ export function CustomerEditDialog({ customer }: CustomerEditDialogProps) {
       <DialogContent 
         key={open ? "customer-edit-open" : "customer-edit-closed"} 
         className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card" 
-        aria-labelledby={titleId}
-        aria-describedby={descriptionId}
       >
         <DialogHeader>
           <DialogTitle id={titleId}>Kunden bearbeiten</DialogTitle>
-          <DialogDescription id={descriptionId}>
-            <VisuallyHidden>Formular zum Bearbeiten der Kundendaten.</VisuallyHidden>
+          <DialogDescription>
+            Formular zum Bearbeiten der Kundendaten.
           </DialogDescription>
         </DialogHeader>
         <CustomerForm

@@ -74,13 +74,11 @@ export function OrderPlanningDialog({ order }: OrderPlanningDialogProps) {
       </DialogTrigger>
       <DialogContent 
         key={open ? "order-planning-open" : "order-planning-closed"} 
-        aria-labelledby={titleId} 
-        aria-describedby={descriptionId}
         className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card"
       >
         <DialogHeader>
           <DialogTitle id={titleId}>Anfrage planen: {order.title}</DialogTitle>
-          <DialogDescription id={descriptionId}>
+          <DialogDescription>
             Wählen Sie einen Mitarbeiter aus, um diese Anfrage zu genehmigen oder lehnen Sie sie ab.
           </DialogDescription>
         </DialogHeader>
@@ -105,7 +103,7 @@ export function OrderPlanningDialog({ order }: OrderPlanningDialogProps) {
             <div className="space-y-2">
               <Label htmlFor="employeeId">Mitarbeiter zuweisen</Label>
               <Select name="employeeId" onValueChange={setSelectedEmployeeId} value={selectedEmployeeId}>
-                <SelectTrigger>
+                <SelectTrigger id="employeeId">
                   <SelectValue placeholder="Mitarbeiter auswählen" />
                 </SelectTrigger>
                 <SelectContent>

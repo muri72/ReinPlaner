@@ -36,14 +36,12 @@ export function ObjectCreateDialog({ onObjectCreated }: ObjectCreateDialogProps)
       </DialogTrigger>
       <DialogContent 
         key={open ? "object-create-open" : "object-create-closed"} 
-        aria-labelledby={titleId} 
-        aria-describedby={descriptionId}
         className="sm:max-w-[425px] max-h-[90vh] flex flex-col glassmorphism-card" // Added flex flex-col
       >
         <DialogHeader>
           <DialogTitle id={titleId}>Neues Objekt hinzufügen</DialogTitle>
-          <DialogDescription id={descriptionId}>
-            <VisuallyHidden>Formular zum Hinzufügen eines neuen Objekts.</VisuallyHidden>
+          <DialogDescription>
+            Formular zum Hinzufügen eines neuen Objekts.
           </DialogDescription>
         </DialogHeader>
         <div className="flex-grow overflow-y-auto pr-4"> {/* Added flex-grow and overflow-y-auto */}

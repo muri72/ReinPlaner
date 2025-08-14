@@ -36,14 +36,12 @@ export function OrderCreateDialog({ onOrderCreated }: OrderCreateDialogProps) {
       </DialogTrigger>
       <DialogContent 
         key={open ? "order-create-open" : "order-create-closed"} 
-        aria-labelledby={titleId} 
-        aria-describedby={descriptionId}
         className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card"
       >
         <DialogHeader>
           <DialogTitle id={titleId}>Neuen Auftrag hinzufügen</DialogTitle>
-          <DialogDescription id={descriptionId}>
-            <VisuallyHidden>Formular zum Hinzufügen eines neuen Auftrags.</VisuallyHidden>
+          <DialogDescription>
+            Formular zum Hinzufügen eines neuen Auftrags.
           </DialogDescription>
         </DialogHeader>
         <OrderForm

@@ -25,14 +25,12 @@ export function GiveGeneralFeedbackDialog({ onFeedbackSubmitted }: GiveGeneralFe
       </DialogTrigger>
       <DialogContent 
         key={open ? "give-general-feedback-open" : "give-general-feedback-closed"} 
-        aria-labelledby={titleId} 
-        aria-describedby={descriptionId}
         className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card"
       >
         <DialogHeader>
           <DialogTitle id={titleId}>Allgemeines Feedback einreichen</DialogTitle>
-          <DialogDescription id={descriptionId}>
-            <VisuallyHidden>Formular zum Einreichen von allgemeinem Feedback.</VisuallyHidden>
+          <DialogDescription>
+            Formular zum Einreichen von allgemeinem Feedback.
           </DialogDescription>
         </DialogHeader>
         <GeneralDashboardFeedbackForm onSuccess={() => setOpen(false)} />

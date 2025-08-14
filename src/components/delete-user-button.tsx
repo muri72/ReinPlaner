@@ -59,15 +59,11 @@ export function DeleteUserButton({ userId }: DeleteUserButtonProps) {
             </DialogTrigger>
             <DialogContent 
               key={`delete-user-${userId}-open`} 
-              aria-labelledby={titleId} 
-              aria-describedby={descriptionId}
               className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card"
             >
               <DialogHeader>
-                <VisuallyHidden asChild>
-                  <DialogTitle id={titleId}>Sind Sie sicher?</DialogTitle>
-                </VisuallyHidden>
-                <DialogDescription id={descriptionId}>
+                <DialogTitle id={titleId}>Sind Sie sicher?</DialogTitle>
+                <DialogDescription>
                   Diese Aktion kann nicht rückgängig gemacht werden. Der Benutzer und alle zugehörigen Daten werden dauerhaft gelöscht.
                 </DialogDescription>
               </DialogHeader>

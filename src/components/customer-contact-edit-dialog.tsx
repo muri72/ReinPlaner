@@ -52,14 +52,12 @@ export function CustomerContactEditDialog({ contact }: CustomerContactEditDialog
       </TooltipProvider>
       <DialogContent 
         key={open ? "customer-contact-edit-open" : "customer-contact-edit-closed"} 
-        aria-labelledby={titleId} 
-        aria-describedby={descriptionId}
         className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card"
       >
         <DialogHeader>
           <DialogTitle id={titleId}>Kundenkontakt bearbeiten</DialogTitle>
-          <DialogDescription id={descriptionId}>
-            <VisuallyHidden>Formular zum Bearbeiten des Kundenkontakts.</VisuallyHidden>
+          <DialogDescription>
+            Formular zum Bearbeiten des Kundenkontakts.
           </DialogDescription>
         </DialogHeader>
         <CustomerContactForm

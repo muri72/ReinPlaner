@@ -72,14 +72,12 @@ export function GeneralFeedbackEditDialog({ feedback }: GeneralFeedbackEditDialo
       </TooltipProvider>
       <DialogContent 
         key={open ? "general-feedback-edit-open" : "general-feedback-edit-closed"} 
-        aria-labelledby={titleId} 
-        aria-describedby={descriptionId}
         className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card"
       >
         <DialogHeader>
           <DialogTitle id={titleId}>Feedback bearbeiten</DialogTitle>
-          <DialogDescription id={descriptionId}>
-            <VisuallyHidden>Formular zum Bearbeiten des allgemeinen Feedbacks.</VisuallyHidden>
+          <DialogDescription>
+            Formular zum Bearbeiten des allgemeinen Feedbacks.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">

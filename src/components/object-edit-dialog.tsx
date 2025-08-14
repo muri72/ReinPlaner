@@ -80,14 +80,12 @@ export function ObjectEditDialog({ object }: ObjectEditDialogProps) {
       </TooltipProvider>
       <DialogContent 
         key={open ? "object-edit-open" : "object-edit-closed"} 
-        aria-labelledby={titleId} 
-        aria-describedby={descriptionId}
         className="sm:max-w-[425px] max-h-[90vh] flex flex-col glassmorphism-card" // Added flex flex-col
       >
         <DialogHeader>
           <DialogTitle id={titleId}>Objekt bearbeiten</DialogTitle>
-          <DialogDescription id={descriptionId}>
-            <VisuallyHidden>Formular zum Bearbeiten der Objektdaten.</VisuallyHidden>
+          <DialogDescription>
+            Formular zum Bearbeiten der Objektdaten.
           </DialogDescription>
         </DialogHeader>
         <div className="flex-grow overflow-y-auto pr-4"> {/* Added flex-grow and overflow-y-auto */}

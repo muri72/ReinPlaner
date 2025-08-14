@@ -37,15 +37,13 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut }: 
                 "w-64 text-sidebar-foreground border-r border-sidebar-border p-4 flex flex-col",
                 "bg-sidebar/80 backdrop-blur-xl glassmorphism-card" // Apply glassmorphism here
               )}
-              aria-labelledby="aris-navigation-title"
-              aria-describedby="aris-navigation-description"
             >
               <SheetHeader>
-                <SheetTitle id="aris-navigation-title">
-                  <VisuallyHidden>ARIS Navigation</VisuallyHidden>
+                <SheetTitle>
+                  ARIS Navigation
                 </SheetTitle>
-                <SheetDescription id="aris-navigation-description">
-                  <VisuallyHidden>Hauptnavigation der ARIS Management Plattform.</VisuallyHidden>
+                <SheetDescription>
+                  Hauptnavigation der ARIS Management Plattform.
                 </SheetDescription>
                 <div className="flex justify-between items-center mb-6">
                   <h2 className="text-xl font-bold text-primary tracking-tight">ARIS</h2>

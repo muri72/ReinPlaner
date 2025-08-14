@@ -59,14 +59,10 @@ export function DeleteOrderButton({ orderId }: DeleteOrderButtonProps) {
             </DialogTrigger>
             <DialogContent 
               key={`delete-order-${orderId}-open`} 
-              aria-labelledby={titleId} 
-              aria-describedby={descriptionId}
             >
               <DialogHeader>
-                <VisuallyHidden asChild>
-                  <DialogTitle id={titleId}>Sind Sie sicher?</DialogTitle>
-                </VisuallyHidden>
-                <DialogDescription id={descriptionId}>
+                <DialogTitle id={titleId}>Sind Sie sicher?</DialogTitle>
+                <DialogDescription>
                   Diese Aktion kann nicht rückgängig gemacht werden. Der Auftrag und alle zugehörigen Daten werden dauerhaft gelöscht.
                 </DialogDescription>
               </DialogHeader>

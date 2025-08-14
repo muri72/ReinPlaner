@@ -30,16 +30,10 @@ export function ImageViewerDialog({ src, alt, trigger, onOpenChange }: ImageView
       <DialogContent 
         key={open ? "image-viewer-open" : "image-viewer-closed"} 
         className="sm:max-w-[90vw] max-h-[90vh] overflow-hidden p-0 border-none bg-transparent shadow-none glassmorphism-card"
-        aria-labelledby={titleId} 
-        aria-describedby={descriptionId}
       >
         <DialogHeader className="absolute top-4 right-4 z-50">
-          <VisuallyHidden asChild>
-            <DialogTitle id={titleId}>Bildansicht</DialogTitle>
-          </VisuallyHidden>
-          <VisuallyHidden asChild>
-            <DialogDescription id={descriptionId}>Vollansicht des Bildes.</DialogDescription>
-          </VisuallyHidden>
+          <DialogTitle id={titleId}>Bildansicht</DialogTitle>
+          <DialogDescription>Vollansicht des Bildes.</DialogDescription>
           <Button variant="ghost" size="icon" onClick={() => handleOpenChange(false)} className="text-white hover:bg-white/20">
             <X className="h-6 w-6" />
           </Button>

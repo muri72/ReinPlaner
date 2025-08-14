@@ -58,14 +58,12 @@ export function TimeEntryEditDialog({ timeEntry, currentUserId, isAdmin }: TimeE
       </TooltipProvider>
       <DialogContent 
         key={open ? "time-entry-edit-open" : "time-entry-edit-closed"} 
-        aria-labelledby={titleId} 
-        aria-describedby={descriptionId}
         className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card"
       >
         <DialogHeader>
           <DialogTitle id={titleId}>Zeiteintrag bearbeiten</DialogTitle>
-          <DialogDescription id={descriptionId}>
-            <VisuallyHidden>Formular zum Bearbeiten des Zeiteintrags.</VisuallyHidden>
+          <DialogDescription>
+            Formular zum Bearbeiten des Zeiteintrags.
           </DialogDescription>
         </DialogHeader>
         <TimeEntryForm

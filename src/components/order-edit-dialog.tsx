@@ -79,14 +79,12 @@ export function OrderEditDialog({ order }: OrderEditDialogProps) {
       </TooltipProvider>
       <DialogContent 
         key={open ? "order-edit-open" : "order-edit-closed"} 
-        aria-labelledby={titleId} 
-        aria-describedby={descriptionId}
         className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card"
       >
         <DialogHeader>
           <DialogTitle id={titleId}>Auftrag bearbeiten</DialogTitle>
-          <DialogDescription id={descriptionId}>
-            <VisuallyHidden>Formular zum Bearbeiten der Auftragsdetails.</VisuallyHidden>
+          <DialogDescription>
+            Formular zum Bearbeiten der Auftragsdetails.
           </DialogDescription>
         </DialogHeader>
         <OrderForm

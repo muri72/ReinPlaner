@@ -50,14 +50,12 @@ export function UserEditDialog({ user }: UserEditDialogProps) {
       </TooltipProvider>
       <DialogContent 
         key={open ? "user-edit-open" : "user-edit-closed"} 
-        aria-labelledby={titleId} 
-        aria-describedby={descriptionId}
         className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card"
       >
         <DialogHeader>
           <DialogTitle id={titleId}>Benutzer bearbeiten</DialogTitle>
-          <DialogDescription id={descriptionId}>
-            <VisuallyHidden>Formular zum Bearbeiten der Benutzerdaten.</VisuallyHidden>
+          <DialogDescription>
+            Formular zum Bearbeiten der Benutzerdaten.
           </DialogDescription>
         </DialogHeader>
         <UserForm

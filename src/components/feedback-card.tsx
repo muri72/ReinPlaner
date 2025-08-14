@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Star, MessageSquare, Image as ImageIcon, Trash2, Pencil, CornerDownRight } from "lucide-react";
-import { Carousel, CarouselContent, CarouselItem } from "@/components/ui/carousel"; // CarouselNext, CarouselPrevious, type CarouselApi entfernt
+import { Carousel, CarouselContent, CarouselItem } from "@/components/ui/carousel";
 import NextImage from "next/image";
 import { toast } from "sonner";
 import { FeedbackReplyForm } from "./feedback-reply-form";
@@ -23,10 +23,9 @@ import { OrderFeedbackEditDialog } from "./order-feedback-edit-dialog";
 import { GeneralFeedbackEditDialog } from "./general-feedback-edit-dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
-// import { cn } from "@/lib/utils"; // cn wird nicht mehr benötigt, da CarouselIndicators entfernt wird
 
 // Typdefinitionen, die beide Feedback-Arten abdecken
-type Feedback = {
+type OrderFeedback = {
   id: string;
   user_id: string;
   created_at: string;
@@ -34,20 +33,30 @@ type Feedback = {
   reply: string | null;
   replied_at: string | null;
   replied_by_name: string | null;
-  // Order-specific
-  rating?: number;
-  comment?: string | null;
-  order?: {
+  rating: number; // Required for order feedback
+  comment: string | null; // Can be null
+  order: { // Required for order feedback
     title: string;
     customer_name: string | null;
     employee_name: string | null;
   };
-  // General-specific
-  name?: string;
-  email?: string | null;
-  subject?: string | null;
-  message?: string;
 };
+
+type GeneralFeedback = {
+  id: string;
+  user_id: string;
+  created_at: string;
+  image_urls: string[] | null;
+  reply: string | null;
+  replied_at: string | null;
+  replied_by_name: string | null;
+  name: string;
+  email: string | null;
+  subject: string | null;
+  message: string; // Required for general feedback
+};
+
+type Feedback = OrderFeedback | GeneralFeedback;
 
 interface FeedbackCardProps {
   feedback: Feedback;
@@ -75,30 +84,14 @@ export function FeedbackCard({ feedback, feedbackType, currentUserId, currentUse
     setIsDeleting(false);
   };
 
-  // Carousel-State für Indikatoren und API sind nicht mehr notwendig
-  // const [carouselApi, setCarouselApi] = useState<CarouselApi>();
-  // const [currentSlide, setCurrentSlide] = useState(0);
-  // const [totalSlides, setTotalSlides] = useState(0);
-
-  // useEffect(() => {
-  //   if (!carouselApi) {
-  //     return;
-  //   }
-  //   setTotalSlides(carouselApi.scrollSnapList().length);
-  //   setCurrentSlide(carouselApi.selectedScrollSnap());
-
-  //   carouselApi.on("select", () => {
-  //     setCurrentSlide(carouselApi.selectedScrollSnap());
-  //   });
-  // }, [carouselApi]);
-
-
   return (
     <Card className="flex flex-col h-full shadow-neumorphic glassmorphism-card">
       <CardHeader>
-        <CardTitle className="text-lg">{feedback.order?.title || feedback.subject || 'Feedback'}</CardTitle>
+        <CardTitle className="text-lg">
+          {feedbackType === 'order' ? (feedback as OrderFeedback).order.title : (feedback as GeneralFeedback).subject || 'Feedback'}
+        </CardTitle>
         <p className="text-sm text-muted-foreground">
-          {feedbackType === 'order' ? `Kunde: ${feedback.order?.customer_name || 'N/A'}` : `Von: ${feedback.name || 'N/A'}`}
+          {feedbackType === 'order' ? `Kunde: ${(feedback as OrderFeedback).order.customer_name || 'N/A'}` : `Von: ${(feedback as GeneralFeedback).name || 'N/A'}`}
         </p>
         <p className="text-xs text-muted-foreground">
           Eingegangen am: {new Date(feedback.created_at).toLocaleString()}
@@ -106,10 +99,10 @@ export function FeedbackCard({ feedback, feedbackType, currentUserId, currentUse
       </CardHeader>
       <CardContent className="flex-grow space-y-4">
         {/* Rating */}
-        {feedback.rating !== undefined && (
+        {feedbackType === 'order' && (
           <div className="flex items-center gap-1">
             {[1, 2, 3, 4, 5].map((star) => (
-              <Star key={star} className={`h-4 w-4 ${feedback.rating! >= star ? "text-warning fill-warning" : "text-muted-foreground"}`} />
+              <Star key={star} className={`h-4 w-4 ${(feedback as OrderFeedback).rating >= star ? "text-warning fill-warning" : "text-muted-foreground"}`} />
             ))}
           </div>
         )}
@@ -117,7 +110,9 @@ export function FeedbackCard({ feedback, feedbackType, currentUserId, currentUse
         {/* Comment/Message */}
         <div className="flex items-start gap-2">
           <MessageSquare className="h-4 w-4 mt-1 text-muted-foreground flex-shrink-0" />
-          <p className="text-sm text-foreground italic">"{feedback.comment || feedback.message}"</p>
+          <p className="text-sm text-foreground italic">
+            "{feedbackType === 'order' ? (feedback as OrderFeedback).comment : (feedback as GeneralFeedback).message}"
+          </p>
         </div>
 
         {/* Images */}
@@ -127,21 +122,18 @@ export function FeedbackCard({ feedback, feedbackType, currentUserId, currentUse
             <Carousel
               className="w-full max-w-sm mx-auto relative"
               opts={{
-                loop: true, // Optional: Für unendliches Scrollen
+                loop: true,
               }}
-              // setApi={setCarouselApi} // API setzen ist nicht mehr notwendig
             >
               <CarouselContent>
                 {feedback.image_urls.map((url, index) => (
                   <CarouselItem key={index}>
-                    <a href={url} target="_blank" rel="noopener noreferrer" className="block"> {/* Link zum Öffnen in neuem Tab */}
+                    <a href={url} target="_blank" rel="noopener noreferrer" className="block">
                       <NextImage src={url} alt={`Feedback-Bild ${index + 1}`} width={200} height={200} className="rounded-md object-cover w-full h-40" />
                     </a>
                   </CarouselItem>
                 ))}
               </CarouselContent>
-              {/* Navigationspfeile entfernt */}
-              {/* Indikatoren entfernt */}
             </Carousel>
           </div>
         )}
@@ -169,9 +161,9 @@ export function FeedbackCard({ feedback, feedbackType, currentUserId, currentUse
               <Tooltip>
                 <TooltipTrigger asChild>
                   {feedbackType === 'order' ? (
-                    <OrderFeedbackEditDialog feedback={feedback} />
+                    <OrderFeedbackEditDialog feedback={feedback as OrderFeedback} />
                   ) : (
-                    <GeneralFeedbackEditDialog feedback={feedback} />
+                    <GeneralFeedbackEditDialog feedback={feedback as GeneralFeedback} />
                   )}
                 </TooltipTrigger>
                 <TooltipContent>
@@ -190,15 +182,11 @@ export function FeedbackCard({ feedback, feedbackType, currentUserId, currentUse
                     </DialogTrigger>
                     <DialogContent 
                       key={`delete-feedback-${feedback.id}-open`} 
-                      aria-labelledby={titleId} 
-                      aria-describedby={descriptionId}
                       className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto"
                     >
                       <DialogHeader>
-                        <VisuallyHidden asChild>
-                          <DialogTitle id={titleId}>Sind Sie sicher?</DialogTitle>
-                        </VisuallyHidden>
-                        <DialogDescription id={descriptionId}>
+                        <DialogTitle id={titleId}>Sind Sie sicher?</DialogTitle>
+                        <DialogDescription>
                           Diese Aktion kann nicht rückgängig gemacht werden. Das Feedback wird dauerhaft gelöscht.
                         </DialogDescription>
                       </DialogHeader>
@@ -224,5 +212,3 @@ export function FeedbackCard({ feedback, feedbackType, currentUserId, currentUse
     </Card>
   );
 }
-
-// CarouselIndicators Komponente entfernt, da sie nicht mehr benötigt wird

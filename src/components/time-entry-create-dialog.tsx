@@ -56,14 +56,12 @@ export function TimeEntryCreateDialog({
       </DialogTrigger>
       <DialogContent 
         key={open ? "time-entry-create-open" : "time-entry-create-closed"} 
-        aria-labelledby={titleId} 
-        aria-describedby={descriptionId}
         className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card"
       >
         <DialogHeader>
           <DialogTitle id={titleId}>{dialogTitle}</DialogTitle>
-          <DialogDescription id={descriptionId}>
-            <VisuallyHidden>Formular zum Erstellen eines neuen Zeiteintrags.</VisuallyHidden>
+          <DialogDescription>
+            Formular zum Erstellen eines neuen Zeiteintrags.
           </DialogDescription>
         </DialogHeader>
         <TimeEntryForm
