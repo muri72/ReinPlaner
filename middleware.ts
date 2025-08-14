@@ -40,19 +40,6 @@ export async function middleware(request: NextRequest) {
     baseDashboardPath = '/dashboard';
   }
 
-  // Explizit erlaubte gemeinsame /dashboard-Pfade für Mitarbeiter (Ausnahmen zur allgemeinen Regel)
-  const allowedEmployeeSharedDashboardPaths = [
-    '/dashboard/orders',
-    '/dashboard/objects',
-    '/dashboard/employees',
-    '/dashboard/absence-requests',
-    '/dashboard/time-tracking',
-    '/dashboard/feedback',
-    '/dashboard/profile',
-    '/dashboard/customer-contacts',
-    '/dashboard/notifications',
-  ];
-
   // --- 3. Rollenbasierte Routen-Erzwingung ---
 
   // Wenn der Benutzer auf '/login' oder '/' ist, leite ihn zu seinem korrekten Basis-Dashboard um
@@ -67,9 +54,8 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL('/portal/dashboard', request.url));
     }
   } else if (userRole === 'employee') {
-    // Mitarbeiter MÜSSEN sich in /employee/* ODER in erlaubten /dashboard/* Pfaden befinden
-    const isAllowedPath = pathname.startsWith('/employee') || allowedEmployeeSharedDashboardPaths.some(path => pathname.startsWith(path));
-    if (!isAllowedPath) {
+    // Mitarbeiter MÜSSEN sich in /employee/* befinden
+    if (!pathname.startsWith('/employee')) {
       return NextResponse.redirect(new URL('/employee/dashboard', request.url));
     }
   } else if (userRole === 'admin' || userRole === 'manager') {
