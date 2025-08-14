@@ -5,9 +5,19 @@ import { cookies } from 'next/headers'
 export async function createClient() {
   const cookieStore = await cookies()
 
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!supabaseUrl) {
+    throw new Error('Environment variable NEXT_PUBLIC_SUPABASE_URL is not set.');
+  }
+  if (!supabaseAnonKey) {
+    throw new Error('Environment variable NEXT_PUBLIC_SUPABASE_ANON_KEY is not set.');
+  }
+
   return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    supabaseUrl,
+    supabaseAnonKey,
     {
       cookies: {
         get(name: string) {
@@ -39,9 +49,19 @@ export function createAdminClient() {
   // Dieser Client ist für serverseitige Operationen und verwendet den Service Role Key.
   // Er benötigt kein Cookie-Management, da er RLS umgeht.
   // Wir verwenden hier den Standard-Client von @supabase/supabase-js.
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseUrl) {
+    throw new Error('Environment variable NEXT_PUBLIC_SUPABASE_URL is not set.');
+  }
+  if (!serviceRoleKey) {
+    throw new Error('Environment variable SUPABASE_SERVICE_ROLE_KEY is not set.');
+  }
+
   return createStandardClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    supabaseUrl,
+    serviceRoleKey,
     {
       auth: {
         // Es ist wichtig, die Sitzungspersistenz auf dem Server zu deaktivieren.
