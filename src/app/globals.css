@@ -165,20 +165,18 @@
 /* Minimalistic Scrollbar Styling */
 /* For Webkit browsers (Chrome, Safari, Edge) */
 ::-webkit-scrollbar {
-  width: 8px; /* Adjust width as needed */
-  height: 8px; /* For horizontal scrollbars */
+  width: 4px; /* Reduced width */
+  height: 4px; /* Reduced height */
 }
 
 ::-webkit-scrollbar-track {
-  background: transparent; /* Make track transparent */
+  background: transparent; /* Keep track transparent */
   border-radius: 10px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background-color: transparent; /* Make thumb transparent by default */
+  background-color: hsl(var(--foreground) / 0.1); /* Very subtle color */
   border-radius: 10px;
-  border: 2px solid transparent; /* Add transparent border to make it thinner visually */
-  background-clip: padding-box; /* Ensures border doesn't affect background-color area */
 }
 
 /* On hover, make the thumb more visible */
@@ -189,7 +187,7 @@
 /* For Firefox */
 * {
   scrollbar-width: thin; /* "auto" or "thin" */
-  scrollbar-color: transparent transparent; /* thumb color track color (transparent by default) */
+  scrollbar-color: hsl(var(--foreground) / 0.1) transparent; /* thumb color track color */
 }
 
 /* Class to completely hide the scrollbar for specific elements */
