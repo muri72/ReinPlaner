@@ -1,15 +1,14 @@
 "use client";
 
 import React, { useState } from "react";
-import Link from "next/link"; // Import Link
+import Link from "next/link";
 import { Menu, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NotificationBell } from "@/components/notification-bell";
-import { Sheet, SheetContent, SheetHeader, SheetTrigger } from "@/components/ui/sheet"; // Removed SheetTitle, SheetDescription
+import { Sheet, SheetContent, SheetHeader, SheetTrigger } from "@/components/ui/sheet";
 import { SidebarNav } from "@/components/sidebar-nav";
 import { UserMenu } from "@/components/user-menu";
 import { cn } from "@/lib/utils";
-// import { VisuallyHidden } from "@radix-ui/react-visually-hidden"; // Not directly used in this file anymore
 
 interface DashboardClientLayoutProps {
   children: React.ReactNode;
@@ -20,7 +19,6 @@ interface DashboardClientLayoutProps {
 export function DashboardClientLayout({ children, currentUserRole, onSignOut }: DashboardClientLayoutProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
-  // const [searchQuery, setSearchQuery = useState(""); // Removed search query state
 
   const getHomeLink = () => {
     if (currentUserRole === 'customer') {
@@ -28,12 +26,12 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut }: 
     } else if (currentUserRole === 'employee') {
       return '/employee/dashboard';
     }
-    return '/dashboard'; // Default for admin/manager
+    return '/dashboard'; // Standard für Admin/Manager
   };
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row">
-      {/* Mobile Header and Navigation (fixed) */}
+      {/* Mobiler Header und Navigation (fest) */}
       <header className="md:hidden fixed top-0 left-0 w-full bg-sidebar text-sidebar-foreground border-b border-sidebar-border p-4 flex items-center justify-between z-50 glassmorphism-card">
         <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
           <SheetTrigger asChild>
@@ -45,28 +43,25 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut }: 
             side="left"
             className={cn(
               "w-64 text-sidebar-foreground border-r border-sidebar-border p-4 flex flex-col",
-              "bg-sidebar/80 backdrop-blur-xl glassmorphism-card" // Apply glassmorphism here
+              "bg-sidebar/80 backdrop-blur-xl glassmorphism-card"
             )}
           >
-            <SheetHeader className="flex flex-col items-center justify-center mb-6"> {/* Centered header */}
+            <SheetHeader className="flex flex-col items-center justify-center mb-6">
               <Link href={getHomeLink()} passHref onClick={() => setIsSheetOpen(false)}>
                 <h2 className="text-xl font-bold text-primary tracking-tight cursor-pointer">ARIS</h2>
               </Link>
-              {/* Removed SheetTitle, SheetDescription, and NotificationBell from here */}
             </SheetHeader>
-            <nav className="flex-grow space-y-2 pt-4 border-t border-sidebar-border"> {/* Added border-t and pt-4 */}
+            <nav className="flex-grow space-y-2 pt-4 border-t border-sidebar-border">
               <SidebarNav
                 isCollapsed={false}
                 currentUserRole={currentUserRole}
                 onSignOut={onSignOut}
                 onLinkClick={() => setIsSheetOpen(false)}
-                // searchQuery={searchQuery} // Removed search query prop
-                // onSearchChange={setSearchQuery} // Removed search handler
               />
             </nav>
           </SheetContent>
         </Sheet>
-        {/* ARIS text in the main mobile header, centered */}
+        {/* ARIS Text im mobilen Haupt-Header, zentriert */}
         <Link href={getHomeLink()} passHref>
           <h2 className="text-xl font-bold text-primary tracking-tight absolute left-1/2 -translate-x-1/2 cursor-pointer">ARIS</h2>
         </Link>
@@ -76,16 +71,16 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut }: 
         </div>
       </header>
 
-      {/* Desktop Sidebar (fixed) */}
+      {/* Desktop Sidebar (fest) */}
       <aside
         className={cn(
-          "hidden md:flex flex-col fixed top-0 left-0 h-screen bg-sidebar text-sidebar-foreground border-r border-sidebar-border p-4 transition-all duration-150 ease-in-out z-40 overflow-hidden", // Changed duration to 150ms
+          "hidden md:flex flex-col fixed top-0 left-0 h-screen bg-sidebar text-sidebar-foreground border-r border-sidebar-border p-4 transition-all duration-150 ease-in-out z-40 overflow-hidden",
           isCollapsed ? "w-20" : "w-64",
-          "bg-gradient-to-br from-sidebar-background to-sidebar-accent glassmorphism-card" // Apply glassmorphism here
+          "bg-gradient-to-br from-sidebar-background to-sidebar-accent glassmorphism-card"
         )}
       >
-        {/* ARIS text and toggle button, always centered */}
-        <div className="flex flex-col items-center justify-center mb-6"> {/* Changed to flex-col and items-center */}
+        {/* ARIS Text und Toggle-Button, immer zentriert */}
+        <div className="flex flex-col items-center justify-center mb-6">
           <Link href={getHomeLink()} passHref>
             <h2 className="text-xl font-bold text-primary tracking-tight cursor-pointer">ARIS</h2>
           </Link>
@@ -93,7 +88,7 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut }: 
             variant="ghost"
             size="icon"
             onClick={() => setIsCollapsed(!isCollapsed)}
-            className="mt-4" // Added margin-top for spacing
+            className="mt-4"
           >
             {isCollapsed ? (
               <ChevronRight className="h-6 w-6" />
@@ -103,32 +98,30 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut }: 
           </Button>
         </div>
 
-        <nav className="flex-grow space-y-2 pt-4 border-t border-sidebar-border"> {/* Added border-t and pt-4 */}
+        <nav className="flex-grow space-y-2 pt-4 border-t border-sidebar-border">
           <SidebarNav
             isCollapsed={isCollapsed}
             currentUserRole={currentUserRole}
             onSignOut={onSignOut}
-            // searchQuery={searchQuery} // Removed search query prop
-            // onSearchChange={setSearchChange} // Removed search handler
           />
         </nav>
 
-        {/* Notification Bell and User Menu at the bottom of the sidebar */}
+        {/* Benachrichtigungsglocke und Benutzermenü am unteren Rand der Sidebar */}
         <div className={cn(
           "mt-auto flex flex-col items-center",
           isCollapsed ? "justify-center" : "justify-between",
-          "pt-4 border-t border-sidebar-border space-y-4" // Added space-y-4 for vertical spacing
+          "pt-4 border-t border-sidebar-border space-y-4"
         )}>
           <NotificationBell />
           <UserMenu currentUserRole={currentUserRole} onSignOut={onSignOut} />
         </div>
       </aside>
 
-      {/* Main Content */}
+      {/* Hauptinhalt */}
       <main className={cn(
         "flex-grow p-4 md:p-8",
         "pt-20 md:pt-8",
-        "transition-all duration-150 ease-in-out", // Changed duration to 150ms
+        "transition-all duration-150 ease-in-out",
         isCollapsed ? "md:ml-20" : "md:ml-64"
       )}>
         {children}

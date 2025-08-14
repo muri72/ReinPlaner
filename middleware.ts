@@ -6,41 +6,37 @@ export async function middleware(request: NextRequest) {
   const { data: { session } } = await supabase.auth.getSession()
   const { pathname } = request.nextUrl;
 
-  // Define public paths that don't require authentication or specific role checks
-  const publicPaths = ['/login', '/auth/callback'];
-
-  // If no session, redirect protected routes to login
+  // --- 1. Behandlung von nicht authentifizierten Benutzern ---
   if (!session) {
-    // If trying to access any dashboard-related path without a session, redirect to login
-    if (pathname.startsWith('/dashboard') || pathname.startsWith('/portal') || pathname.startsWith('/employee')) {
-      return NextResponse.redirect(new URL('/login', request.url));
+    // Erlaube Zugriff auf öffentliche Pfade (Login, Auth Callback)
+    if (pathname === '/login' || pathname.startsWith('/auth/callback')) {
+      return response;
     }
-    return response; // Allow access to other public paths
+    // Leite alle anderen Pfade zum Login um
+    return NextResponse.redirect(new URL('/login', request.url));
   }
 
-  // If session exists, fetch user role
+  // --- 2. Behandlung von authentifizierten Benutzern ---
+  // Benutzerrolle abrufen
   const { data: profileData, error: profileError } = await supabase
     .from('profiles')
     .select('role')
     .eq('id', session.user.id)
     .single();
 
-  const userRole = profileData?.role || 'employee'; // Default to employee if role not found
+  const userRole = profileData?.role || 'employee'; // Standard auf 'employee', falls Rolle nicht gefunden
 
-  // Determine the correct dashboard path based on role
-  let correctDashboardPath = '/dashboard';
+  // Den korrekten Basis-Dashboard-Pfad für die Benutzerrolle bestimmen
+  let baseDashboardPath: string;
   if (userRole === 'customer') {
-    correctDashboardPath = '/portal/dashboard';
+    baseDashboardPath = '/portal/dashboard';
   } else if (userRole === 'employee') {
-    correctDashboardPath = '/employee/dashboard';
+    baseDashboardPath = '/employee/dashboard';
+  } else { // admin oder manager
+    baseDashboardPath = '/dashboard';
   }
 
-  // Redirect from login page or root to the correct dashboard if already logged in
-  if (pathname === '/login' || pathname === '/') {
-    return NextResponse.redirect(new URL(correctDashboardPath, request.url));
-  }
-
-  // Define explicitly allowed shared /dashboard paths for employees
+  // Explizit erlaubte gemeinsame /dashboard-Pfade für Mitarbeiter (Ausnahmen zur allgemeinen Regel)
   const allowedEmployeeSharedDashboardPaths = [
     '/dashboard/orders',
     '/dashboard/objects',
@@ -53,38 +49,44 @@ export async function middleware(request: NextRequest) {
     '/dashboard/notifications',
   ];
 
-  // Strict Role-based Route Enforcement for authenticated users
-  // Rule 1: Customer can ONLY access /portal/* routes
+  // --- 3. Rollenbasierte Routen-Erzwingung ---
+
+  // Wenn der Benutzer auf '/login' oder '/' ist, leite ihn zu seinem korrekten Basis-Dashboard um
+  if (pathname === '/login' || pathname === '/') {
+    return NextResponse.redirect(new URL(baseDashboardPath, request.url));
+  }
+
+  // Spezifische Regeln für jede Rolle, um sicherzustellen, dass sie in ihren erlaubten Bereichen bleiben
   if (userRole === 'customer') {
+    // Kunden MÜSSEN sich in /portal/* befinden
     if (!pathname.startsWith('/portal')) {
       return NextResponse.redirect(new URL('/portal/dashboard', request.url));
     }
-  }
-  // Rule 2: Employee can ONLY access /employee/* routes OR specific shared /dashboard/* routes
-  else if (userRole === 'employee') {
-    const isAllowedEmployeePath = pathname.startsWith('/employee') || allowedEmployeeSharedDashboardPaths.some(path => pathname.startsWith(path));
-    if (!isAllowedEmployeePath) {
+  } else if (userRole === 'employee') {
+    // Mitarbeiter MÜSSEN sich in /employee/* ODER in erlaubten /dashboard/* Pfaden befinden
+    const isAllowedPath = pathname.startsWith('/employee') || allowedEmployeeSharedDashboardPaths.some(path => pathname.startsWith(path));
+    if (!isAllowedPath) {
       return NextResponse.redirect(new URL('/employee/dashboard', request.url));
     }
-  }
-  // Rule 3: Admin/Manager can NOT access /portal/* or /employee/* routes
-  else if (userRole === 'admin' || userRole === 'manager') {
+  } else if (userRole === 'admin' || userRole === 'manager') {
+    // Admins/Manager DÜRFEN NICHT in /portal/* oder /employee/* sein
     if (pathname.startsWith('/portal') || pathname.startsWith('/employee')) {
       return NextResponse.redirect(new URL('/dashboard', request.url));
     }
   }
-  
-  return response
+
+  // Wenn keine der oben genannten Umleitungsregeln zutrifft, erlaube die Anfrage.
+  return response;
 }
 
 export const config = {
   matcher: [
     /*
-     * Match all request paths except for the ones starting with:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - any files in the public folder (e.g. /vercel.svg)
+     * Alle Anfragewege abgleichen, außer denen, die beginnen mit:
+     * - _next/static (statische Dateien)
+     * - _next/image (Bildoptimierungsdateien)
+     * - favicon.ico (Favicon-Datei)
+     * - beliebige Dateien im öffentlichen Ordner (z.B. /vercel.svg)
      */
     '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
