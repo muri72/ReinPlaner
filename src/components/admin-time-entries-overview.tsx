@@ -57,12 +57,12 @@ export function AdminTimeEntriesOverview({ currentUserId, isAdmin }: AdminTimeEn
   const [timeEntries, setTimeEntries] = useState<DisplayTimeEntry[]>([]);
   const [employees, setEmployees] = useState<EmployeeFilterItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(searchParams.get("employeeId") || null);
-  const currentQuery = searchParams.get("query") || "";
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>((searchParams.get("employeeId") || '') as string);
+  const [currentQuery, setCurrentQuery] = useState((searchParams.get("query") || '') as string); // Use local state for query
 
   // Sorting parameters
-  const sortColumn = searchParams.get('sortColumn') || 'start_time';
-  const sortDirection = searchParams.get('sortDirection') || 'desc';
+  const sortColumn = (searchParams.get('sortColumn') || 'start_time') as string;
+  const sortDirection = (searchParams.get('sortDirection') || 'desc') as string;
 
   // Fetch employees for the filter dropdown
   useEffect(() => {
@@ -155,7 +155,8 @@ export function AdminTimeEntriesOverview({ currentUserId, isAdmin }: AdminTimeEn
     fetchTimeEntries();
   }, [selectedEmployeeId, currentQuery, supabase, sortColumn, sortDirection]);
 
-  const handleSearch = useDebouncedCallback((term: string) => {
+  const handleSearch = useCallback((term: string) => {
+    setCurrentQuery(term); // Update local state
     const params = new URLSearchParams(searchParams);
     if (term) {
       params.set("query", term);
@@ -163,7 +164,7 @@ export function AdminTimeEntriesOverview({ currentUserId, isAdmin }: AdminTimeEn
       params.delete("query");
     }
     replace(`${pathname}?${params.toString()}`);
-  }, 300);
+  }, [searchParams, pathname, replace]);
 
   const handleEmployeeFilterChange = (employeeId: string) => {
     const params = new URLSearchParams(searchParams);
@@ -215,7 +216,7 @@ export function AdminTimeEntriesOverview({ currentUserId, isAdmin }: AdminTimeEn
 
       <div className="flex flex-col sm:flex-row gap-4 mb-4">
         <div className="flex-grow">
-          <SearchInput placeholder="Zeiteinträge suchen..." />
+          <SearchInput placeholder="Zeiteinträge suchen..." defaultValue={currentQuery} onSearchChange={handleSearch} />
         </div>
         <div className="w-full sm:w-auto">
           <Select onValueChange={handleEmployeeFilterChange} value={selectedEmployeeId || "all"}>

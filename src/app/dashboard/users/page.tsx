@@ -84,7 +84,10 @@ export default function UsersPage({
   const [loading, setLoading] = useState(true);
   const [totalCount, setTotalCount] = useState<number | null>(0);
 
-  const query = (currentSearchParams.get('query') || '') as string;
+  // Use local state for query, initialized from searchParams
+  const initialQuery = (currentSearchParams.get('query') || '') as string;
+  const [query, setQuery] = useState(initialQuery);
+
   const currentPage = Number(currentSearchParams.get('page')) || 1;
   const pageSize = Number(currentSearchParams.get('pageSize')) || 9;
   const roleFilter = (currentSearchParams.get('role') || '') as string;
@@ -93,6 +96,11 @@ export default function UsersPage({
   // Sorting parameters
   const sortColumn = (currentSearchParams.get('sortColumn') || 'last_name') as string;
   const sortDirection = (currentSearchParams.get('sortDirection') || 'asc') as string;
+
+  // Effect to update local query state if URL searchParams change (e.g., back/forward button)
+  useEffect(() => {
+    setQuery((currentSearchParams.get('query') || '') as string);
+  }, [currentSearchParams]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -230,16 +238,19 @@ export default function UsersPage({
       setLoading(false);
     };
 
+    // Depend on query, currentPage, and filters to trigger data fetch
     fetchData();
   }, [
     supabase,
-    query,
+    query, // Now depends on local query state
     currentPage,
     pageSize,
     roleFilter,
     sortColumn,
     sortDirection,
-    currentSearchParams // Add currentSearchParams to dependency array
+    // currentSearchParams is no longer needed as a direct dependency for data fetching
+    // because local states (query, filters, sort) are derived from it and trigger fetch.
+    // It's still used for router.replace, but that doesn't trigger fetch.
   ]);
 
   if (loading || !currentUser) {
@@ -278,7 +289,7 @@ export default function UsersPage({
       <h1 className="text-2xl md:text-3xl font-bold">Benutzerverwaltung</h1>
 
       <div className="mb-4 flex justify-between items-center">
-        <SearchInput placeholder="Benutzer suchen..." />
+        <SearchInput placeholder="Benutzer suchen..." defaultValue={initialQuery} onSearchChange={setQuery} />
         <UserCreateDialog />
       </div>
 

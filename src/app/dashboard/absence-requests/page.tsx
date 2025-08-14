@@ -47,7 +47,10 @@ export default function AbsenceRequestsPage({
   const [loading, setLoading] = useState(true);
   const [totalCount, setTotalCount] = useState<number | null>(0);
 
-  const query = (currentSearchParams.get('query') || '') as string;
+  // Use local state for query, initialized from searchParams
+  const initialQuery = (currentSearchParams.get('query') || '') as string;
+  const [query, setQuery] = useState(initialQuery);
+
   const currentPage = Number(currentSearchParams.get('page')) || 1;
   const pageSize = Number(currentSearchParams.get('pageSize')) || 9;
   const employeeIdFilter = (currentSearchParams.get('employeeId') || '') as string;
@@ -58,6 +61,11 @@ export default function AbsenceRequestsPage({
   // Sorting parameters
   const sortColumn = (currentSearchParams.get('sortColumn') || 'start_date') as string;
   const sortDirection = (currentSearchParams.get('sortDirection') || 'desc') as string;
+
+  // Effect to update local query state if URL searchParams change (e.g., back/forward button)
+  useEffect(() => {
+    setQuery((currentSearchParams.get('query') || '') as string);
+  }, [currentSearchParams]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -166,10 +174,11 @@ export default function AbsenceRequestsPage({
       setLoading(false);
     };
 
+    // Depend on query, currentPage, and filters to trigger data fetch
     fetchData();
   }, [
     supabase,
-    query,
+    query, // Now depends on local query state
     currentPage,
     pageSize,
     employeeIdFilter,
@@ -177,7 +186,9 @@ export default function AbsenceRequestsPage({
     statusFilter,
     sortColumn,
     sortDirection,
-    currentSearchParams // Add currentSearchParams to dependency array
+    // currentSearchParams is no longer needed as a direct dependency for data fetching
+    // because local states (query, filters, sort) are derived from it and trigger fetch.
+    // It's still used for router.replace, but that doesn't trigger fetch.
   ]);
 
   if (loading || !currentUser) {

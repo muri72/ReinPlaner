@@ -87,7 +87,10 @@ export default function OrdersPage({
   const [loading, setLoading] = useState(true);
   const [totalCount, setTotalCount] = useState<number | null>(0);
 
-  const query = (currentSearchParams.get('query') || '') as string;
+  // Use local state for query, initialized from searchParams
+  const initialQuery = (currentSearchParams.get('query') || '') as string;
+  const [query, setQuery] = useState(initialQuery);
+
   const currentPage = Number(currentSearchParams.get('page')) || 1;
   const pageSize = Number(currentSearchParams.get('pageSize')) || 9;
   const statusFilter = (currentSearchParams.get('status') || '') as string;
@@ -98,6 +101,12 @@ export default function OrdersPage({
   const viewMode = (currentSearchParams.get('viewMode') || 'grid') as string;
   const sortColumn = (currentSearchParams.get('sortColumn') || 'created_at') as string;
   const sortDirection = (currentSearchParams.get('sortDirection') || 'desc') as string;
+
+  // Effect to update local query state if URL searchParams change (e.g., back/forward button)
+  useEffect(() => {
+    setQuery((currentSearchParams.get('query') || '') as string);
+  }, [currentSearchParams]);
+
 
   useEffect(() => {
     const fetchData = async () => {
@@ -244,10 +253,11 @@ export default function OrdersPage({
       setLoading(false);
     };
 
+    // Depend on query, currentPage, and filters to trigger data fetch
     fetchData();
   }, [
     supabase,
-    query,
+    query, // Now depends on local query state
     currentPage,
     pageSize,
     statusFilter,
@@ -257,7 +267,9 @@ export default function OrdersPage({
     employeeIdFilter,
     sortColumn,
     sortDirection,
-    currentSearchParams // Add currentSearchParams to dependency array
+    // currentSearchParams is no longer needed as a direct dependency for data fetching
+    // because local states (query, filters, sort) are derived from it and trigger fetch.
+    // It's still used for router.replace, but that doesn't trigger fetch.
   ]);
 
   if (loading || !currentUser) {
@@ -323,7 +335,7 @@ export default function OrdersPage({
     <div className="p-4 md:p-8 space-y-8">
       <h1 className="text-2xl md:text-3xl font-bold">Auftragsverwaltung</h1>
       <div className="mb-4 flex flex-col sm:flex-row justify-between items-center gap-4">
-        <SearchInput placeholder="Aufträge suchen..." />
+        <SearchInput placeholder="Aufträge suchen..." defaultValue={initialQuery} onSearchChange={setQuery} />
         <OrderCreateDialog />
       </div>
 

@@ -79,7 +79,10 @@ export default function ObjectsPage({
   const [loading, setLoading] = useState(true);
   const [totalCount, setTotalCount] = useState<number | null>(0);
 
-  const query = (currentSearchParams.get('query') || '') as string;
+  // Use local state for query, initialized from searchParams
+  const initialQuery = (currentSearchParams.get('query') || '') as string;
+  const [query, setQuery] = useState(initialQuery);
+
   const currentPage = Number(currentSearchParams.get('page')) || 1;
   const pageSize = Number(currentSearchParams.get('pageSize')) || 9;
   const customerIdFilter = (currentSearchParams.get('customerId') || '') as string;
@@ -91,6 +94,11 @@ export default function ObjectsPage({
   // Sorting parameters
   const sortColumn = (currentSearchParams.get('sortColumn') || 'name') as string;
   const sortDirection = (currentSearchParams.get('sortDirection') || 'asc') as string;
+
+  // Effect to update local query state if URL searchParams change (e.g., back/forward button)
+  useEffect(() => {
+    setQuery((currentSearchParams.get('query') || '') as string);
+  }, [currentSearchParams]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -164,12 +172,6 @@ export default function ObjectsPage({
           `, { count: 'exact' })
           .order(sortColumn, { ascending: sortDirection === 'asc' });
 
-        // Apply RLS-like filtering for non-admin roles if not already handled by RLS policies
-        // The RPC function handles this, but for direct table selects, we might need it.
-        // However, the existing RLS policies for 'objects' table should cover this.
-        // So, no explicit `eq('user_id', user.id)` or `in('customer_id', ...)` needed here
-        // as the RPC handles it and direct selects are covered by RLS.
-
         if (customerIdFilter) {
           selectQuery = selectQuery.eq('customer_id', customerIdFilter);
         }
@@ -204,10 +206,11 @@ export default function ObjectsPage({
       setLoading(false);
     };
 
+    // Depend on query, currentPage, and filters to trigger data fetch
     fetchData();
   }, [
     supabase,
-    query,
+    query, // Now depends on local query state
     currentPage,
     pageSize,
     customerIdFilter,
@@ -216,7 +219,9 @@ export default function ObjectsPage({
     accessMethodFilter,
     sortColumn,
     sortDirection,
-    currentSearchParams // Add currentSearchParams to dependency array
+    // currentSearchParams is no longer needed as a direct dependency for data fetching
+    // because local states (query, filters, sort) are derived from it and trigger fetch.
+    // It's still used for router.replace, but that doesn't trigger fetch.
   ]);
 
   if (loading || !currentUser) {
@@ -266,7 +271,7 @@ export default function ObjectsPage({
       <h1 className="text-2xl md:text-3xl font-bold">Ihre Objekte</h1>
 
       <div className="mb-4 flex flex-col sm:flex-row justify-between items-center gap-4">
-        <SearchInput placeholder="Objekte suchen..." />
+        <SearchInput placeholder="Objekte suchen..." defaultValue={initialQuery} onSearchChange={setQuery} />
         <ObjectCreateDialog />
       </div>
 
