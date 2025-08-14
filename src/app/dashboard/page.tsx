@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Building, UsersRound, Briefcase, Clock, DollarSign, AlertTriangle, MessageSquare, CheckCircle2 } from "lucide-react";
+import { Users, Building, UsersRound, Briefcase, Clock, DollarSign, AlertTriangle, MessageSquare, CheckCircle2, TrendingUp, ListOrdered } from "lucide-react";
 import { OrderStatusChart } from "@/components/order-status-chart";
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
@@ -11,6 +11,8 @@ import { EmployeeWorkloadChart } from "@/components/employee-workload-chart"; //
 import { KpiCard } from "@/components/kpi-card"; // Import the new KpiCard
 import { TodaysOrdersOverview } from "@/components/todays-orders-overview"; // Import the new component
 import { FeedbackCard } from "@/components/feedback-card"; // Import FeedbackCard
+import { getRevenueLast7Days, getMostBookedServices } from "@/lib/actions/finances"; // Import new finance actions
+import { Badge } from "@/components/ui/badge"; // Hinzugefügt: Import der Badge-Komponente
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -95,8 +97,16 @@ export default async function DashboardPage() {
   if (generalFeedbackError) console.error("Fehler beim Laden des allgemeinen Feedbacks:", generalFeedbackError);
   if (orderFeedbackError) console.error("Fehler beim Laden des Auftrags-Feedbacks:", orderFeedbackError);
 
-  // 5. Offene Rechnungen (€) - Placeholder, da keine Rechnungsdatenbank vorhanden
-  const openInvoicesAmount = 0; // Placeholder
+  // 5. Umsatz der letzten 7 Tage
+  const revenueResult = await getRevenueLast7Days();
+  const revenueLast7Days = revenueResult.success ? revenueResult.data : 0;
+  if (!revenueResult.success) console.error("Fehler beim Laden des Umsatzes der letzten 7 Tage:", revenueResult.message);
+
+  // 6. Meistgebuchte Leistungen
+  const servicesResult = await getMostBookedServices();
+  const mostBookedServices = servicesResult.success ? servicesResult.data : [];
+  if (!servicesResult.success) console.error("Fehler beim Laden der meistgebuchten Leistungen:", servicesResult.message);
+
 
   // --- Existing Dashboard Data ---
   const { count: customerCount, error: customerCountError } = await supabase
@@ -222,12 +232,12 @@ export default async function DashboardPage() {
           valueColorClass="text-success"
         />
         <KpiCard
-          title="Offene Rechnungen"
-          value={`${openInvoicesAmount.toFixed(2)} €`}
-          description="Gesamtbetrag ausstehender Zahlungen"
-          icon={DollarSign}
-          // linkHref="/dashboard/finances" // Link to finances page
-          valueColorClass="text-destructive"
+          title="Umsatz letzte 7 Tage"
+          value={`${(revenueLast7Days ?? 0).toFixed(2)} €`}
+          description="Geschätzter Umsatz der letzten 7 Tage"
+          icon={TrendingUp}
+          linkHref="/dashboard/finances"
+          valueColorClass="text-primary"
         />
         <KpiCard
           title="Reklamationen heute"
@@ -268,6 +278,27 @@ export default async function DashboardPage() {
           )}
         </div>
       </div>
+
+      {/* Meistgebuchte Leistungen */}
+      {(currentUserRole === 'admin' || currentUserRole === 'manager') && mostBookedServices && mostBookedServices.length > 0 && (
+        <Card className="shadow-neumorphic glassmorphism-card">
+          <CardHeader>
+            <CardTitle className="text-lg font-semibold flex items-center">
+              <ListOrdered className="mr-2 h-5 w-5" /> Meistgebuchte Leistungen
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="space-y-2">
+              {mostBookedServices.map((service, index) => (
+                <li key={service.service} className="flex justify-between items-center text-sm">
+                  <span>{index + 1}. {service.service}</span>
+                  <Badge variant="secondary">{service.count} Aufträge</Badge>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Existing Dashboard Cards (Gesamtkunden, Objekte, Mitarbeiter) */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

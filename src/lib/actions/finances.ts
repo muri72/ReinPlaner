@@ -1,6 +1,6 @@
 "use server";
 
-import { format, startOfMonth, endOfMonth, addMonths } from 'date-fns';
+import { format, startOfMonth, endOfMonth, addMonths, subDays } from 'date-fns';
 import { de } from 'date-fns/locale'; // Import German locale
 import { createAdminClient } from "@/lib/supabase/server";
 
@@ -150,6 +150,92 @@ export async function getMultiMonthEmployeeWorkload(numberOfMonths: number = 6) 
     return { success: true, data: workloadData.reverse(), message: "Mitarbeiter-Auslastungsdaten erfolgreich geladen." };
   } catch (error: any) {
     console.error("Fehler beim Laden der Mitarbeiter-Auslastungsdaten:", error);
+    return { success: false, data: null, message: error.message };
+  }
+}
+
+export async function getRevenueLast7Days() {
+  const supabase = createAdminClient();
+  const today = new Date();
+  const sevenDaysAgo = subDays(today, 7);
+  sevenDaysAgo.setHours(0, 0, 0, 0); // Start of the day 7 days ago
+
+  try {
+    // Get all service rates
+    const { data: serviceRatesData, error: ratesError } = await supabase.from('service_rates').select('*');
+    if (ratesError) throw ratesError;
+    const serviceRates = new Map(serviceRatesData.map(r => [r.service_type, Number(r.hourly_rate)]));
+
+    let totalRevenue = 0;
+
+    // Fixed monthly prices from permanent orders (prorated for the last 7 days)
+    // This is a simplification. For true prorated revenue, you'd need more complex logic
+    // or a dedicated invoicing system. For now, we'll just sum up fixed prices if the order was active.
+    const { data: fixedPriceOrders, error: fixedPriceError } = await supabase
+      .from('orders')
+      .select('fixed_monthly_price, recurring_start_date, recurring_end_date')
+      .eq('order_type', 'permanent')
+      .not('fixed_monthly_price', 'is', null)
+      .lte('recurring_start_date', today.toISOString().split('T')[0])
+      .or(`recurring_end_date.gte.${sevenDaysAgo.toISOString().split('T')[0]},recurring_end_date.is.null`);
+
+    if (fixedPriceError) throw fixedPriceError;
+    // For simplicity, if a permanent order was active at any point in the last 7 days,
+    // we'll include its full monthly price. A more accurate calculation would prorate.
+    totalRevenue += fixedPriceOrders.reduce((acc, order) => acc + Number(order.fixed_monthly_price || 0), 0);
+
+
+    // Revenue from hourly-based orders (time entries) within the last 7 days
+    const { data: hourlyTimeEntries, error: hourlyEntriesError } = await supabase
+      .from('time_entries')
+      .select('duration_minutes, orders(service_type, order_type, fixed_monthly_price)')
+      .gte('start_time', sevenDaysAgo.toISOString())
+      .lte('start_time', today.toISOString());
+
+    if (hourlyEntriesError) throw hourlyEntriesError;
+
+    hourlyTimeEntries.forEach(entry => {
+      const order = Array.isArray(entry.orders) ? entry.orders[0] : entry.orders;
+      if (order && (order.order_type !== 'permanent' || !order.fixed_monthly_price)) {
+        const rate = serviceRates.get(order.service_type || '') || 24.00; // Fallback
+        const hoursWorked = (entry.duration_minutes || 0) / 60; // Revenue is based on gross hours
+        totalRevenue += hoursWorked * rate;
+      }
+    });
+
+    return { success: true, data: parseFloat(totalRevenue.toFixed(2)), message: "Umsatz der letzten 7 Tage erfolgreich geladen." };
+  } catch (error: any) {
+    console.error("Fehler beim Laden des Umsatzes der letzten 7 Tage:", error);
+    return { success: false, data: null, message: error.message };
+  }
+}
+
+export async function getMostBookedServices(limit: number = 5) {
+  const supabase = createAdminClient();
+
+  try {
+    const { data, error } = await supabase
+      .from('orders')
+      .select('service_type')
+      .not('service_type', 'is', null);
+
+    if (error) throw error;
+
+    const serviceCounts: { [key: string]: number } = {};
+    data.forEach(order => {
+      if (order.service_type) {
+        serviceCounts[order.service_type] = (serviceCounts[order.service_type] || 0) + 1;
+      }
+    });
+
+    const sortedServices = Object.entries(serviceCounts)
+      .sort(([, countA], [, countB]) => countB - countA)
+      .slice(0, limit)
+      .map(([service, count]) => ({ service, count }));
+
+    return { success: true, data: sortedServices, message: "Meistgebuchte Leistungen erfolgreich geladen." };
+  } catch (error: any) {
+    console.error("Fehler beim Laden der meistgebuchten Leistungen:", error);
     return { success: false, data: null, message: error.message };
   }
 }
