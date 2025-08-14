@@ -57,7 +57,8 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut, us
             className={cn(
               "w-64 text-sidebar-foreground border-r border-sidebar-border flex flex-col",
               "bg-sidebar/80 backdrop-blur-xl glassmorphism-card",
-              "h-full"
+              "h-full",
+              "overflow-x-hidden" // Added to prevent horizontal scrolling
             )}
           >
             <SheetHeader className="flex items-center justify-between p-4 mb-4">
