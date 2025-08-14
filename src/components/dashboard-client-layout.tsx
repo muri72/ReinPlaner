@@ -2,10 +2,10 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { Menu, ChevronLeft, ChevronRight } from "lucide-react"; // X-Icon entfernt
+import { Menu, ChevronLeft, ChevronRight, X } from "lucide-react"; // X-Icon wieder hinzugefügt
 import { Button } from "@/components/ui/button";
 import { NotificationBell } from "@/components/notification-bell";
-import { Sheet, SheetContent, SheetHeader, SheetTrigger } from "@/components/ui/sheet"; // SheetClose entfernt
+import { Sheet, SheetContent, SheetHeader, SheetTrigger, SheetClose } from "@/components/ui/sheet"; // SheetClose wieder hinzugefügt
 import { SidebarNav } from "@/components/sidebar-nav";
 import { UserMenu } from "@/components/user-menu";
 import { cn } from "@/lib/utils";
@@ -59,7 +59,17 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut, us
                 <h2 className="text-xl font-bold text-primary tracking-tight cursor-pointer">ARIS</h2>
               </Link>
             </SheetHeader>
-            {/* Der Schließen-Button wurde hier komplett entfernt */}
+            {/* Unsichtbarer Schließen-Button für die Funktionalität */}
+            <SheetClose asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute top-4 right-4 h-8 w-8 sr-only" // sr-only hinzugefügt, um ihn visuell zu verstecken
+              >
+                <X className="h-5 w-5" />
+                <span className="sr-only">Menü schließen</span>
+              </Button>
+            </SheetClose>
             <nav className="flex-grow overflow-y-auto p-4">
               <SidebarNav
                 isCollapsed={false}
