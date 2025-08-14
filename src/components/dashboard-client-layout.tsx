@@ -70,13 +70,13 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut }: 
       {/* Desktop Sidebar (fixed) */}
       <aside
         className={cn(
-          "hidden md:flex flex-col fixed top-0 left-0 h-screen bg-sidebar text-sidebar-foreground border-r border-sidebar-border p-4 transition-all duration-150 ease-in-out z-[100] overflow-hidden",
+          "hidden md:flex flex-col fixed top-0 left-0 h-screen bg-sidebar text-sidebar-foreground border-r border-sidebar-border p-4 transition-all duration-150 ease-in-out z-40 overflow-hidden", // Changed duration to 150ms
           isCollapsed ? "w-20" : "w-64",
-          "bg-gradient-to-br from-sidebar-background to-sidebar-accent glassmorphism-card"
+          "bg-gradient-to-br from-sidebar-background to-sidebar-accent glassmorphism-card" // Apply glassmorphism here
         )}
       >
         {/* ARIS text and toggle button, always centered */}
-        <div className="flex flex-col items-center justify-center mb-6">
+        <div className="flex flex-col items-center justify-center mb-6"> {/* Changed to flex-col and items-center */}
           <Link href="/dashboard" passHref>
             <h2 className="text-xl font-bold text-primary tracking-tight cursor-pointer">ARIS</h2>
           </Link>
@@ -84,7 +84,7 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut }: 
             variant="ghost"
             size="icon"
             onClick={() => setIsCollapsed(!isCollapsed)}
-            className="mt-4"
+            className="mt-4" // Added margin-top for spacing
           >
             {isCollapsed ? (
               <ChevronRight className="h-6 w-6" />
@@ -94,13 +94,13 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut }: 
           </Button>
         </div>
 
-        <nav className="flex-grow space-y-2 pt-4 border-t border-sidebar-border">
+        <nav className="flex-grow space-y-2 pt-4 border-t border-sidebar-border"> {/* Added border-t and pt-4 */}
           <SidebarNav
             isCollapsed={isCollapsed}
             currentUserRole={currentUserRole}
             onSignOut={onSignOut}
-            // searchQuery={searchQuery}
-            // onSearchChange={setSearchChange}
+            // searchQuery={searchQuery} // Removed search query prop
+            // onSearchChange={setSearchChange} // Removed search handler
           />
         </nav>
 
@@ -108,7 +108,7 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut }: 
         <div className={cn(
           "mt-auto flex flex-col items-center",
           isCollapsed ? "justify-center" : "justify-between",
-          "pt-4 border-t border-sidebar-border space-y-4"
+          "pt-4 border-t border-sidebar-border space-y-4" // Added space-y-4 for vertical spacing
         )}>
           <NotificationBell />
           <UserMenu currentUserRole={currentUserRole} onSignOut={onSignOut} />
@@ -119,9 +119,8 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut }: 
       <main className={cn(
         "flex-grow p-4 md:p-8",
         "pt-20 md:pt-8",
-        "transition-all duration-150 ease-in-out",
-        isCollapsed ? "md:ml-20" : "md:ml-64",
-        "relative z-0" // Added relative z-0 to ensure it forms a stacking context below the sidebar
+        "transition-all duration-150 ease-in-out", // Changed duration to 150ms
+        isCollapsed ? "md:ml-20" : "md:ml-64"
       )}>
         {children}
       </main>

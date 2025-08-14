@@ -4,10 +4,11 @@ import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Home, Briefcase, Users, ContactRound, Building, UsersRound, Clock, CalendarOff,
   CalendarCheck, TrendingUp, FileText, Star
-} from "lucide-react";
+} from "lucide-react"; // Removed Search icon
 import { cn } from "@/lib/utils";
 
 // Definieren der Rollen-Typen
@@ -49,7 +50,7 @@ const navItems: NavItem[] = [
     children: [
       { title: "Aufträge", href: "/dashboard/orders", icon: Briefcase, roles: ['admin', 'manager', 'employee', 'customer'] },
       { title: "Objekte", href: "/dashboard/objects", icon: Building, roles: ['admin', 'manager', 'employee', 'customer'] },
-      { title: "Planung", href: "/dashboard/planning", icon: CalendarCheck, roles: ['admin', 'manager'] },
+      { title: "Planung", href: "/dashboard/planning", icon: CalendarCheck, roles: ['admin', 'manager'] }, // Umbenannt
     ],
   },
   {
@@ -64,7 +65,7 @@ const navItems: NavItem[] = [
   {
     title: "Personal",
     isCategory: true,
-    roles: ['admin', 'manager', 'employee'],
+    roles: ['admin', 'manager', 'employee'], // Customers don't manage personnel
     children: [
       { title: "Mitarbeiter", href: "/dashboard/employees", icon: UsersRound, roles: ['admin', 'manager', 'employee'] },
       { title: "Abwesenheiten", href: "/dashboard/absence-requests", icon: CalendarOff, roles: ['admin', 'manager', 'employee'] },
@@ -77,7 +78,7 @@ const navItems: NavItem[] = [
     roles: ['admin', 'manager'],
     children: [
       { title: "Finanzen", href: "/dashboard/finances", icon: TrendingUp, roles: ['admin', 'manager'] },
-      { title: "Berichte", href: "/dashboard/reports", icon: FileText, roles: ['admin'] },
+      { title: "Berichte", href: "/dashboard/reports", icon: FileText, roles: ['admin'] }, // Umbenannt
     ],
   },
   {
@@ -92,7 +93,9 @@ interface SidebarNavProps {
   isCollapsed: boolean;
   currentUserRole: UserRole;
   onSignOut: () => Promise<void>;
-  onLinkClick?: () => void;
+  onLinkClick?: () => void; // Neue Prop
+  // searchQuery: string; // Removed search query prop
+  // onSearchChange: (query: string) => void; // Removed search change handler
 }
 
 export function SidebarNav({ isCollapsed, currentUserRole, onSignOut, onLinkClick }: SidebarNavProps) {
@@ -100,16 +103,21 @@ export function SidebarNav({ isCollapsed, currentUserRole, onSignOut, onLinkClic
 
   const filteredNavItems = navItems.filter(item => {
     if (item.isCategory) {
-      item.children = item.children.filter(child =>
+      // Filter children based on roles
+      item.children = item.children.filter(child => 
         child.roles.includes(currentUserRole)
       );
+      // Show category only if it has children
       return item.children.length > 0;
     }
+    // Show single link only if role matches
     return item.roles.includes(currentUserRole);
   });
 
   return (
     <div className="flex-grow space-y-2">
+      {/* Search Input removed */}
+
       {filteredNavItems.map((item) => (
         item.isCategory ? (
           <div key={item.title} className="space-y-2">
@@ -119,47 +127,53 @@ export function SidebarNav({ isCollapsed, currentUserRole, onSignOut, onLinkClic
               </h3>
             )}
             {item.children.map(child => (
-              <Link key={child.href} href={child.href} passHref onClick={onLinkClick}>
-                <Button
-                  variant={pathname === child.href ? "secondary" : "ghost"}
-                  className={cn(
-                    "w-full relative", // Added relative for positioning the hover text
-                    isCollapsed ? "justify-center" : "justify-start",
-                    "text-sm text-sidebar-foreground transition-colors duration-200",
-                    pathname === child.href ? "bg-primary text-primary-foreground hover:bg-primary/90" : "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                  )}
-                >
-                  <child.icon className={cn(isCollapsed ? "h-8 w-8" : "h-6 w-6", !isCollapsed && "mr-2")} />
-                  {!isCollapsed && child.title}
-                  {isCollapsed && (
-                    <span className="absolute left-full ml-3 px-3 py-1.5 rounded-md bg-popover text-popover-foreground text-sm whitespace-nowrap shadow-md opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-[99999]">
-                      {child.title}
-                    </span>
-                  )}
-                </Button>
-              </Link>
+              <TooltipProvider key={child.href} delayDuration={300}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Link href={child.href} passHref onClick={onLinkClick}>
+                      <Button
+                        variant={pathname === child.href ? "secondary" : "ghost"}
+                        className={cn(
+                          "w-full",
+                          isCollapsed ? "justify-center" : "justify-start",
+                          "text-sm text-sidebar-foreground transition-colors duration-200",
+                          // Active state: stronger highlight with primary accent
+                          pathname === child.href ? "bg-primary text-primary-foreground hover:bg-primary/90" : "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                        )}
+                      >
+                        <child.icon className={cn(isCollapsed ? "h-8 w-8" : "h-6 w-6", !isCollapsed && "mr-2")} />
+                        {!isCollapsed && child.title}
+                      </Button>
+                    </Link>
+                  </TooltipTrigger>
+                  {isCollapsed && <TooltipContent side="right">{child.title}</TooltipContent>}
+                </Tooltip>
+              </TooltipProvider>
             ))}
           </div>
         ) : (
-          <Link key={item.href} href={item.href} passHref onClick={onLinkClick}>
-            <Button
-              variant={pathname === item.href ? "secondary" : "ghost"}
-              className={cn(
-                "w-full relative group", // Added relative and group for positioning the hover text
-                isCollapsed ? "justify-center" : "justify-start",
-                "text-sm text-sidebar-foreground transition-colors duration-200",
-                pathname === item.href ? "bg-primary text-primary-foreground hover:bg-primary/90" : "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-              )}
-            >
-              <item.icon className={cn(isCollapsed ? "h-8 w-8" : "h-6 w-6", !isCollapsed && "mr-2")} />
-              {!isCollapsed && item.title}
-              {isCollapsed && (
-                <span className="absolute left-full ml-3 px-3 py-1.5 rounded-md bg-popover text-popover-foreground text-sm whitespace-nowrap shadow-md opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-[99999]">
-                  {item.title}
-                </span>
-              )}
-            </Button>
-          </Link>
+          <TooltipProvider key={item.href} delayDuration={300}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Link href={item.href} passHref onClick={onLinkClick}>
+                  <Button
+                    variant={pathname === item.href ? "secondary" : "ghost"}
+                    className={cn(
+                      "w-full",
+                      isCollapsed ? "justify-center" : "justify-start",
+                      "text-sm text-sidebar-foreground transition-colors duration-200",
+                      // Active state: stronger highlight with primary accent
+                      pathname === item.href ? "bg-primary text-primary-foreground hover:bg-primary/90" : "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                    )}
+                  >
+                    <item.icon className={cn(isCollapsed ? "h-8 w-8" : "h-6 w-6", !isCollapsed && "mr-2")} />
+                    {!isCollapsed && item.title}
+                  </Button>
+                </Link>
+              </TooltipTrigger>
+              {isCollapsed && <TooltipContent side="right">{item.title}</TooltipContent>}
+            </Tooltip>
+          </TooltipProvider>
         )
       ))}
     </div>
