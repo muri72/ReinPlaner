@@ -3,8 +3,8 @@
 import { Input } from "@/components/ui/input";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useDebouncedCallback } from "use-debounce";
+import { useState, useEffect, useRef } from "react"; // Import useRef
 import { Search as SearchIcon } from "lucide-react";
-import { useState, useEffect } from "react"; // Import useState and useEffect
 
 interface SearchInputProps {
   placeholder: string;
@@ -15,6 +15,8 @@ export function SearchInput({ placeholder }: SearchInputProps) {
   const pathname = usePathname();
   const { replace } = useRouter();
 
+  const inputRef = useRef<HTMLInputElement>(null); // Create a ref for the input element
+
   // State to hold the input's current value
   const [inputValue, setInputValue] = useState<string>(searchParams.get("query") || '');
 
@@ -22,6 +24,13 @@ export function SearchInput({ placeholder }: SearchInputProps) {
   useEffect(() => {
     setInputValue(searchParams.get("query") || '');
   }, [searchParams]);
+
+  // Effect to set focus on the input if there's an inputValue
+  useEffect(() => {
+    if (inputValue && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [inputValue]); // Re-run when inputValue changes
 
   const handleSearch = useDebouncedCallback((term: string) => {
     const params = new URLSearchParams(searchParams);
@@ -44,6 +53,7 @@ export function SearchInput({ placeholder }: SearchInputProps) {
           setInputValue(e.target.value); // Update local state immediately
           handleSearch(e.target.value); // Trigger debounced search
         }}
+        ref={inputRef} // Attach the ref to the input element
         className="pl-10 pr-4 py-2 text-sm"
       />
       <SearchIcon className="absolute left-3 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-muted-foreground" />
