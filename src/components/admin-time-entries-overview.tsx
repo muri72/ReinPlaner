@@ -7,7 +7,7 @@ import { SearchInput } from "@/components/search-input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Clock, UserRound, Building, Briefcase, FileText, ArrowUp, ArrowDown } from "lucide-react"; // Import ArrowUp, ArrowDown
-import { DeleteTimeEntryButton } from "@/components/delete-time-entry-button";
+import { DeleteTimeEntryButton } from "@/components/delete-time-entry-button"; // Corrected import syntax
 import { TimeEntryEditDialog } from "@/components/time-entry-edit-dialog";
 import { useSearchParams, usePathname, useRouter } from "next/navigation";
 import { useDebouncedCallback } from "use-debounce";

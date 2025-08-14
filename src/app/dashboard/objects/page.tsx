@@ -78,18 +78,18 @@ export default function ObjectsPage({
   const [loading, setLoading] = useState(true);
   const [totalCount, setTotalCount] = useState<number | null>(0);
 
-  const query = typeof searchParams?.query === 'string' ? searchParams.query : '';
-  const currentPage = Number(searchParams?.page) || 1;
-  const pageSize = Number(searchParams?.pageSize) || 9;
-  const customerIdFilter = searchParams?.customerId || '';
-  const priorityFilter = searchParams?.priority || '';
-  const timeOfDayFilter = searchParams?.timeOfDay || '';
-  const accessMethodFilter = searchParams?.accessMethod || '';
-  const viewMode = searchParams?.viewMode === 'table' ? 'table' : 'grid';
+  const query = currentSearchParams.get('query') || '';
+  const currentPage = Number(currentSearchParams.get('page')) || 1;
+  const pageSize = Number(currentSearchParams.get('pageSize')) || 9;
+  const customerIdFilter = currentSearchParams.get('customerId') || '';
+  const priorityFilter = currentSearchParams.get('priority') || '';
+  const timeOfDayFilter = currentSearchParams.get('timeOfDay') || '';
+  const accessMethodFilter = currentSearchParams.get('accessMethod') || '';
+  const viewMode = currentSearchParams.get('viewMode') === 'table' ? 'table' : 'grid';
 
   // Sorting parameters
-  const sortColumn = Array.isArray(searchParams?.sortColumn) ? searchParams.sortColumn[0] : searchParams?.sortColumn || 'name';
-  const sortDirection = Array.isArray(searchParams?.sortDirection) ? searchParams.sortDirection[0] : searchParams?.sortDirection || 'asc';
+  const sortColumn = currentSearchParams.get('sortColumn') || 'name';
+  const sortDirection = currentSearchParams.get('sortDirection') || 'asc';
 
   useEffect(() => {
     const fetchData = async () => {
@@ -173,6 +173,7 @@ export default function ObjectsPage({
     accessMethodFilter,
     sortColumn,
     sortDirection,
+    currentSearchParams // Add currentSearchParams to dependency array
   ]);
 
   if (loading || !currentUser) {

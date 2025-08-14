@@ -86,17 +86,17 @@ export default function OrdersPage({
   const [loading, setLoading] = useState(true);
   const [totalCount, setTotalCount] = useState<number | null>(0);
 
-  const query = typeof searchParams?.query === 'string' ? searchParams.query : '';
-  const currentPage = Number(searchParams?.page) || 1;
-  const pageSize = Number(searchParams?.pageSize) || 9;
-  const statusFilter = searchParams?.status || '';
-  const orderTypeFilter = searchParams?.orderType || '';
-  const serviceTypeFilter = searchParams?.serviceType || '';
-  const customerIdFilter = searchParams?.customerId || '';
-  const employeeIdFilter = searchParams?.employeeId || '';
-  const viewMode = searchParams?.viewMode === 'table' ? 'table' : 'grid';
-  const sortColumn = searchParams?.sortColumn || 'created_at';
-  const sortDirection = searchParams?.sortDirection || 'desc';
+  const query = currentSearchParams.get('query') || '';
+  const currentPage = Number(currentSearchParams.get('page')) || 1;
+  const pageSize = Number(currentSearchParams.get('pageSize')) || 9;
+  const statusFilter = currentSearchParams.get('status') || '';
+  const orderTypeFilter = currentSearchParams.get('orderType') || '';
+  const serviceTypeFilter = currentSearchParams.get('serviceType') || '';
+  const customerIdFilter = currentSearchParams.get('customerId') || '';
+  const employeeIdFilter = currentSearchParams.get('employeeId') || '';
+  const viewMode = currentSearchParams.get('viewMode') === 'table' ? 'table' : 'grid';
+  const sortColumn = currentSearchParams.get('sortColumn') || 'created_at';
+  const sortDirection = currentSearchParams.get('sortDirection') || 'desc';
 
   useEffect(() => {
     const fetchData = async () => {
@@ -214,6 +214,7 @@ export default function OrdersPage({
     employeeIdFilter,
     sortColumn,
     sortDirection,
+    currentSearchParams // Add currentSearchParams to dependency array
   ]);
 
   if (loading || !currentUser) {

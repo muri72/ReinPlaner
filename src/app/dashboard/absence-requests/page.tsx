@@ -47,17 +47,17 @@ export default function AbsenceRequestsPage({
   const [loading, setLoading] = useState(true);
   const [totalCount, setTotalCount] = useState<number | null>(0);
 
-  const query = typeof searchParams?.query === 'string' ? searchParams.query : '';
-  const currentPage = Number(searchParams?.page) || 1;
-  const pageSize = Number(searchParams?.pageSize) || 9;
-  const employeeIdFilter = searchParams?.employeeId || '';
-  const typeFilter = searchParams?.type || '';
-  const statusFilter = searchParams?.status || '';
-  const viewMode = searchParams?.viewMode === 'table' ? 'table' : 'grid';
+  const query = (currentSearchParams.get('query') || '') as string;
+  const currentPage = Number(currentSearchParams.get('page')) || 1;
+  const pageSize = Number(currentSearchParams.get('pageSize')) || 9;
+  const employeeIdFilter = (currentSearchParams.get('employeeId') || '') as string;
+  const typeFilter = (currentSearchParams.get('type') || '') as string;
+  const statusFilter = (currentSearchParams.get('status') || '') as string;
+  const viewMode = (currentSearchParams.get('viewMode') || 'grid') as string;
 
   // Sorting parameters
-  const sortColumn = Array.isArray(searchParams?.sortColumn) ? searchParams.sortColumn[0] : searchParams?.sortColumn || 'start_date';
-  const sortDirection = Array.isArray(searchParams?.sortDirection) ? searchParams.sortDirection[0] : searchParams?.sortDirection || 'desc';
+  const sortColumn = (currentSearchParams.get('sortColumn') || 'start_date') as string;
+  const sortDirection = (currentSearchParams.get('sortDirection') || 'desc') as string;
 
   useEffect(() => {
     const fetchData = async () => {
@@ -177,6 +177,7 @@ export default function AbsenceRequestsPage({
     statusFilter,
     sortColumn,
     sortDirection,
+    currentSearchParams // Add currentSearchParams to dependency array
   ]);
 
   if (loading || !currentUser) {

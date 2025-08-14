@@ -44,15 +44,15 @@ export default function CustomerContactsPage({
   const [loading, setLoading] = useState(true);
   const [totalCount, setTotalCount] = useState<number | null>(0);
 
-  const query = typeof searchParams?.query === 'string' ? searchParams.query : '';
-  const currentPage = Number(searchParams?.page) || 1;
-  const pageSize = Number(searchParams?.pageSize) || 9;
-  const customerIdFilter = searchParams?.customerId || '';
-  const viewMode = searchParams?.viewMode === 'table' ? 'table' : 'grid';
+  const query = (currentSearchParams.get('query') || '') as string;
+  const currentPage = Number(currentSearchParams.get('page')) || 1;
+  const pageSize = Number(currentSearchParams.get('pageSize')) || 9;
+  const customerIdFilter = (currentSearchParams.get('customerId') || '') as string;
+  const viewMode = (currentSearchParams.get('viewMode') || 'grid') as string;
 
   // Sorting parameters
-  const sortColumn = Array.isArray(searchParams?.sortColumn) ? searchParams.sortColumn[0] : searchParams?.sortColumn || 'last_name';
-  const sortDirection = Array.isArray(searchParams?.sortDirection) ? searchParams.sortDirection[0] : searchParams?.sortDirection || 'asc';
+  const sortColumn = (currentSearchParams.get('sortColumn') || 'last_name') as string;
+  const sortDirection = (currentSearchParams.get('sortDirection') || 'asc') as string;
 
   useEffect(() => {
     const fetchData = async () => {
@@ -156,6 +156,7 @@ export default function CustomerContactsPage({
     customerIdFilter,
     sortColumn,
     sortDirection,
+    currentSearchParams // Add currentSearchParams to dependency array
   ]);
 
   if (loading || !currentUser) {
