@@ -14,9 +14,16 @@ interface DashboardClientLayoutProps {
   children: React.ReactNode;
   currentUserRole: 'admin' | 'manager' | 'employee' | 'customer';
   onSignOut: () => Promise<void>;
+  // Add userProfile prop
+  userProfile: {
+    first_name: string | null;
+    last_name: string | null;
+    avatar_url: string | null;
+    role: string;
+  } | null;
 }
 
-export function DashboardClientLayout({ children, currentUserRole, onSignOut }: DashboardClientLayoutProps) {
+export function DashboardClientLayout({ children, currentUserRole, onSignOut, userProfile }: DashboardClientLayoutProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
 
@@ -67,7 +74,8 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut }: 
         </Link>
         <div className="flex items-center space-x-2">
           <NotificationBell />
-          <UserMenu currentUserRole={currentUserRole} onSignOut={onSignOut} />
+          {/* Pass userProfile to UserMenu */}
+          <UserMenu currentUserRole={currentUserRole} onSignOut={onSignOut} userProfile={userProfile} />
         </div>
       </header>
 
@@ -113,7 +121,8 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut }: 
           "pt-4 border-t border-sidebar-border space-y-4"
         )}>
           <NotificationBell />
-          <UserMenu currentUserRole={currentUserRole} onSignOut={onSignOut} />
+          {/* Pass userProfile to UserMenu */}
+          <UserMenu currentUserRole={currentUserRole} onSignOut={onSignOut} userProfile={userProfile} />
         </div>
       </aside>
 

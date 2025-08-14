@@ -18,7 +18,7 @@ export default async function PortalLayout({
 
   const { data: userProfile, error: profileError } = await supabase
     .from('profiles')
-    .select('role')
+    .select('first_name, last_name, avatar_url, role') // Fetch avatar_url and role
     .eq('id', user.id)
     .single();
 
@@ -37,6 +37,7 @@ export default async function PortalLayout({
     <DashboardClientLayout
       currentUserRole={currentUserRole}
       onSignOut={signOut}
+      userProfile={userProfile} // Pass the fetched userProfile
     >
       {children}
     </DashboardClientLayout>

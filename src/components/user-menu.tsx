@@ -18,46 +18,28 @@ import { Moon, Sun, User, Settings, LogOut, UsersRound } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
+import { useIsMobile } from "@/hooks/use-mobile"; // Import useIsMobile
 
 interface UserMenuProps {
   currentUserRole: 'admin' | 'manager' | 'employee' | 'customer';
   onSignOut: () => Promise<void>;
+  // Accept userProfile directly as a prop
+  userProfile: {
+    first_name: string | null;
+    last_name: string | null;
+    avatar_url: string | null;
+    role: string; // Include role in userProfile type
+  } | null;
 }
 
-export function UserMenu({ currentUserRole, onSignOut }: UserMenuProps) {
-  const supabase = createClient();
+export function UserMenu({ currentUserRole, onSignOut, userProfile }: UserMenuProps) {
   const router = useRouter();
   const { theme, setTheme } = useTheme();
-  const [profile, setProfile] = useState<{ firstName: string | null; lastName: string | null; avatarUrl: string | null } | null>(null);
-  const [loading, setLoading] = useState(true);
+  const isMobile = useIsMobile(); // Use the hook
 
-  useEffect(() => {
-    const fetchProfile = async () => {
-      setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('first_name, last_name, avatar_url')
-          .eq('id', user.id)
-          .single();
-
-        if (error && error.code !== 'PGRST116') {
-          console.error("Fehler beim Laden des Profils:", error);
-          toast.error("Fehler beim Laden Ihrer Profildaten.");
-        } else if (data) {
-          setProfile({
-            firstName: data.first_name,
-            lastName: data.last_name,
-            avatarUrl: data.avatar_url,
-          });
-        }
-      }
-      setLoading(false);
-    };
-    fetchProfile();
-  }, [supabase]);
+  // Use the passed userProfile directly
+  const profile = userProfile;
+  const loading = profile === null; // Determine loading based on whether profile data is available
 
   const handleSignOut = async () => {
     await onSignOut();
@@ -65,8 +47,8 @@ export function UserMenu({ currentUserRole, onSignOut }: UserMenuProps) {
     router.push("/login");
   };
 
-  const displayName = profile?.firstName || profile?.lastName ? `${profile.firstName || ''} ${profile.lastName || ''}`.trim() : "Mein Profil";
-  const avatarFallback = profile?.firstName?.[0] || profile?.lastName?.[0] || 'U';
+  const displayName = profile?.first_name || profile?.last_name ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() : "Mein Profil";
+  const avatarFallback = profile?.first_name?.[0] || profile?.last_name?.[0] || 'U';
 
   if (loading) {
     return (
@@ -81,7 +63,7 @@ export function UserMenu({ currentUserRole, onSignOut }: UserMenuProps) {
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-8 w-8 rounded-full">
           <Avatar className="h-8 w-8">
-            <AvatarImage src={profile?.avatarUrl || undefined} alt={displayName} />
+            <AvatarImage src={profile?.avatar_url || undefined} alt={displayName} />
             <AvatarFallback>{avatarFallback}</AvatarFallback>
           </Avatar>
         </Button>
