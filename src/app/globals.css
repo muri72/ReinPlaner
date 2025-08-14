@@ -15,16 +15,16 @@
     --popover-foreground: 220 10% 15%;
 
     /* Blue-centric Accent Colors (derived from logo) */
-    --primary: 210 80% 45%; /* A solid, clean blue */
+    --primary: 217 90% 47%; /* A solid, clean blue (#3B82F6) */
     --primary-foreground: 0 0% 100%; /* White text on primary */
 
-    --secondary: 210 50% 85%; /* A very light blue, replacing pink */
+    --secondary: 210 50% 85%; /* A very light blue */
     --secondary-foreground: 220 10% 15%; /* Dark text on secondary */
 
     --muted: 210 20% 95%; /* Light Gray-Blue */
     --muted-foreground: 210 10% 45%; /* Medium Gray-Blue */
 
-    --accent: 200 70% 55%; /* A slightly different blue hue, replacing purple */
+    --accent: 217 70% 55%; /* A slightly different blue hue for accent */
     --accent-foreground: 0 0% 100%; /* White text on accent */
 
     --destructive: 0 80% 50%; /* Strong Red (for errors/danger) */
@@ -38,7 +38,7 @@
 
     --border: 210 20% 90%; /* Light Gray-Blue Border */
     --input: 210 20% 95%; /* Slightly darker input background */
-    --ring: 210 80% 45%; /* Primary color for focus ring */
+    --ring: 217 90% 47%; /* Primary color for focus ring */
 
     /* Border Radius - Increased for smooth rounded corners */
     --radius: 16px; /* Default for rounded-lg */
@@ -53,12 +53,12 @@
     /* Sidebar Specific Colors (adjusted to new palette) */
     --sidebar-background: 210 20% 98%; /* Very light gray-blue */
     --sidebar-foreground: 220 10% 20%; /* Darker text */
-    --sidebar-primary: 210 80% 40%; /* Slightly darker primary for contrast */
+    --sidebar-primary: 217 90% 40%; /* Slightly darker primary for contrast */
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 200 70% 50%; /* Slightly darker accent for hover */
+    --sidebar-accent: 217 70% 50%; /* Slightly darker accent for hover */
     --sidebar-accent-foreground: 220 10% 20%;
     --sidebar-border: 210 20% 90%;
-    --sidebar-ring: 210 80% 45%;
+    --sidebar-ring: 217 90% 47%;
   }
 
   .dark {
@@ -73,7 +73,7 @@
     --popover-foreground: 220 10% 90%;
 
     /* Blue-centric Accent Colors (Dark Mode versions) */
-    --primary: 210 80% 75%; /* Lighter blue for dark mode */
+    --primary: 217 90% 75%; /* Lighter blue for dark mode */
     --primary-foreground: 220 10% 10%; /* Dark text on primary */
 
     --secondary: 210 50% 30%; /* Darker light blue for dark mode */
@@ -82,7 +82,7 @@
     --muted: 210 15% 20%;
     --muted-foreground: 210 10% 60%;
 
-    --accent: 200 70% 75%; /* Lighter accent blue for dark mode */
+    --accent: 217 70% 75%; /* Lighter accent blue for dark mode */
     --accent-foreground: 220 10% 10%;
 
     --destructive: 0 80% 60%; /* Lighter Red for dark mode */
@@ -96,17 +96,17 @@
 
     --border: 210 15% 20%;
     --input: 210 15% 20%;
-    --ring: 210 80% 75%;
+    --ring: 217 90% 75%;
 
     /* Sidebar Specific Colors (adjusted to new palette) */
     --sidebar-background: 220 10% 15%;
     --sidebar-foreground: 220 10% 85%;
-    --sidebar-primary: 210 80% 65%;
+    --sidebar-primary: 217 90% 65%;
     --sidebar-primary-foreground: 220 10% 10%;
-    --sidebar-accent: 200 70% 70%;
+    --sidebar-accent: 217 70% 70%;
     --sidebar-accent-foreground: 220 10% 10%;
     --sidebar-border: 210 15% 20%;
-    --sidebar-ring: 210 80% 75%;
+    --sidebar-ring: 217 90% 75%;
   }
 }
 
