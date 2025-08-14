@@ -68,6 +68,10 @@ export async function generateSignedUploadUrlForDocument(
 
     const { data: publicUrlData } = supabaseAdmin.storage.from("documents").getPublicUrl(filePath);
     
+    revalidatePath("/dashboard/employees"); // Revalidate relevant pages
+    revalidatePath("/dashboard/orders");
+    revalidatePath("/dashboard/customers"); // If customer documents are ever displayed directly
+
     return {
       success: true,
       message: "Upload-URL erfolgreich erstellt.",

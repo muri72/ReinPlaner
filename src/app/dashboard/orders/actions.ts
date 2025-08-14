@@ -126,7 +126,7 @@ export async function updateOrder(orderId: string, data: OrderFormValues) {
       await sendNotification({
         userId: employeeData.user_id,
         title: "Sie wurden einem Auftrag zugewiesen",
-        message: `Sie wurden dem Auftrag "${originalOrder.title}" zugewiesen.`,
+        message: `Ihnen wurde dem Auftrag "${originalOrder.title}" zugewiesen.`,
         link: "/dashboard/orders"
       });
     }
