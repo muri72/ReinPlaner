@@ -54,7 +54,7 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut, us
               "h-full"
             )}
           >
-            <SheetHeader className="flex flex-col items-center justify-center p-4 mb-6 relative"> {/* Relative für absolute Positionierung des Buttons */}
+            <SheetHeader className="flex items-center justify-between p-4 mb-6"> {/* Angepasst für Top-Rechts-Positionierung */}
               <Link href={getHomeLink()} passHref onClick={() => setIsSheetOpen(false)}>
                 <h2 className="text-xl font-bold text-primary tracking-tight cursor-pointer">ARIS</h2>
               </Link>
@@ -62,7 +62,7 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut, us
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="absolute top-4 right-4 h-8 w-8" // Positionierung des Schließen-Buttons
+                  className="h-8 w-8" // Keine absolute Positionierung mehr nötig
                 >
                   <X className="h-5 w-5" />
                   <span className="sr-only">Menü schließen</span>
