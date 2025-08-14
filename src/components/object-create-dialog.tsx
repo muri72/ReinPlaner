@@ -14,8 +14,7 @@ interface ObjectCreateDialogProps {
 
 export function ObjectCreateDialog({ onObjectCreated }: ObjectCreateDialogProps) {
   const [open, setOpen] = useState(false);
-  const titleId = `object-create-dialog-title`;
-  const descriptionId = `object-create-dialog-description`;
+  // Removed titleId and descriptionId as they are no longer needed for aria attributes
 
   const handleCreate = async (data: ObjectFormValues) => {
     const result = await createObject(data);
@@ -39,8 +38,8 @@ export function ObjectCreateDialog({ onObjectCreated }: ObjectCreateDialogProps)
         className="sm:max-w-[425px] max-h-[90vh] flex flex-col glassmorphism-card" // Added flex flex-col
       >
         <DialogHeader>
-          <DialogTitle id={titleId}>Neues Objekt hinzufügen</DialogTitle>
-          <DialogDescription id={descriptionId}>
+          <DialogTitle>Neues Objekt hinzufügen</DialogTitle>
+          <DialogDescription>
             Formular zum Hinzufügen eines neuen Objekts.
           </DialogDescription>
         </DialogHeader>

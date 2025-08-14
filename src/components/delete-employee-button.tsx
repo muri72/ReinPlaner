@@ -24,8 +24,7 @@ interface DeleteEmployeeButtonProps {
 
 export function DeleteEmployeeButton({ employeeId }: DeleteEmployeeButtonProps) {
   const [loading, setLoading] = useState(false);
-  const titleId = `delete-employee-alert-title-${employeeId}`;
-  const descriptionId = `delete-employee-alert-description-${employeeId}`;
+  // Removed titleId and descriptionId as they are no longer needed for aria attributes
 
   const handleDelete = async () => {
     setLoading(true);
@@ -62,8 +61,8 @@ export function DeleteEmployeeButton({ employeeId }: DeleteEmployeeButtonProps) 
               className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card"
             >
               <DialogHeader>
-                <DialogTitle id={titleId}>Sind Sie sicher?</DialogTitle>
-                <DialogDescription id={descriptionId}>
+                <DialogTitle>Sind Sie sicher?</DialogTitle>
+                <DialogDescription>
                   Diese Aktion kann nicht rückgängig gemacht werden. Der Mitarbeiter und alle zugehörigen Daten werden dauerhaft gelöscht.
                 </DialogDescription>
               </DialogHeader>

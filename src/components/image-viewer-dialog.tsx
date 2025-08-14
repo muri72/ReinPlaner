@@ -16,8 +16,7 @@ interface ImageViewerDialogProps {
 
 export function ImageViewerDialog({ src, alt, trigger, onOpenChange }: ImageViewerDialogProps) {
   const [open, setOpen] = useState(false);
-  const titleId = `image-viewer-dialog-title`;
-  const descriptionId = `image-viewer-dialog-description`;
+  // Removed titleId and descriptionId as they are no longer needed for aria attributes
 
   const handleOpenChange = (newOpen: boolean) => {
     setOpen(newOpen);
@@ -32,8 +31,8 @@ export function ImageViewerDialog({ src, alt, trigger, onOpenChange }: ImageView
         className="sm:max-w-[90vw] max-h-[90vh] overflow-hidden p-0 border-none bg-transparent shadow-none glassmorphism-card"
       >
         <DialogHeader className="absolute top-4 right-4 z-50">
-          <DialogTitle id={titleId}>Bildansicht</DialogTitle>
-          <DialogDescription id={descriptionId}>Vollansicht des Bildes.</DialogDescription>
+          <DialogTitle>Bildansicht</DialogTitle>
+          <DialogDescription>Vollansicht des Bildes.</DialogDescription>
           <Button variant="ghost" size="icon" onClick={() => handleOpenChange(false)} className="text-white hover:bg-white/20">
             <X className="h-6 w-6" />
           </Button>

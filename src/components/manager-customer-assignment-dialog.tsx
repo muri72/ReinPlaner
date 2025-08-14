@@ -15,8 +15,7 @@ interface ManagerCustomerAssignmentDialogProps {
 
 export function ManagerCustomerAssignmentDialog({ managerId, managerName }: ManagerCustomerAssignmentDialogProps) {
   const [open, setOpen] = useState(false);
-  const titleId = `manager-customer-assignment-dialog-title`;
-  const descriptionId = `manager-customer-assignment-dialog-description`;
+  // Removed titleId and descriptionId as they are no longer needed for aria attributes
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -39,8 +38,8 @@ export function ManagerCustomerAssignmentDialog({ managerId, managerName }: Mana
         className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card"
       >
         <DialogHeader>
-          <DialogTitle id={titleId}>Kunden für {managerName} zuweisen</DialogTitle>
-          <DialogDescription id={descriptionId}>
+          <DialogTitle>Kunden für {managerName} zuweisen</DialogTitle>
+          <DialogDescription>
             Formular zur Zuweisung von Kunden zu einem Manager.
           </DialogDescription>
         </DialogHeader>

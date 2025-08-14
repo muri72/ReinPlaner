@@ -33,8 +33,7 @@ export function OrderPlanningDialog({ order }: OrderPlanningDialogProps) {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("");
   const [loading, setLoading] = useState(false);
-  const titleId = `order-planning-dialog-title`;
-  const descriptionId = `order-planning-dialog-description`;
+  // Removed titleId and descriptionId as they are no longer needed for aria attributes
 
   useEffect(() => {
     if (open) {
@@ -77,8 +76,8 @@ export function OrderPlanningDialog({ order }: OrderPlanningDialogProps) {
         className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card"
       >
         <DialogHeader>
-          <DialogTitle id={titleId}>Anfrage planen: {order.title}</DialogTitle>
-          <DialogDescription id={descriptionId}>
+          <DialogTitle>Anfrage planen: {order.title}</DialogTitle>
+          <DialogDescription>
             Wählen Sie einen Mitarbeiter aus, um diese Anfrage zu genehmigen oder lehnen Sie sie ab.
           </DialogDescription>
         </DialogHeader>

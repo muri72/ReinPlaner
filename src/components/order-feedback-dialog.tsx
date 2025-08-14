@@ -13,8 +13,7 @@ interface OrderFeedbackDialogProps {
 
 export function OrderFeedbackDialog({ orderId }: OrderFeedbackDialogProps) {
   const [open, setOpen] = useState(false);
-  const titleId = `order-feedback-dialog-title`;
-  const descriptionId = `order-feedback-dialog-description`;
+  // Removed titleId and descriptionId as they are no longer needed for aria attributes
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -28,8 +27,8 @@ export function OrderFeedbackDialog({ orderId }: OrderFeedbackDialogProps) {
         className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card"
       >
         <DialogHeader>
-          <DialogTitle id={titleId}>Feedback zum Auftrag</DialogTitle>
-          <DialogDescription id={descriptionId}>
+          <DialogTitle>Feedback zum Auftrag</DialogTitle>
+          <DialogDescription>
             Formular zum Einreichen von Feedback zu einem Auftrag.
           </DialogDescription>
         </DialogHeader>

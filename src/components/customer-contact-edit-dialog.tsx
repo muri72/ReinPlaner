@@ -7,7 +7,6 @@ import { Pencil } from "lucide-react";
 import { CustomerContactForm, CustomerContactFormValues } from "@/components/customer-contact-form";
 import { updateCustomerContact } from "@/app/dashboard/customer-contacts/actions";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 interface CustomerContactEditDialogProps {
   contact: {
@@ -23,8 +22,7 @@ interface CustomerContactEditDialogProps {
 
 export function CustomerContactEditDialog({ contact }: CustomerContactEditDialogProps) {
   const [open, setOpen] = useState(false);
-  const titleId = `customer-contact-edit-dialog-title`;
-  const descriptionId = `customer-contact-edit-dialog-description`;
+  // Removed titleId and descriptionId as they are no longer needed for aria attributes
 
   const handleUpdate = async (data: CustomerContactFormValues) => {
     const result = await updateCustomerContact(contact.id, data);
@@ -55,8 +53,8 @@ export function CustomerContactEditDialog({ contact }: CustomerContactEditDialog
         className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card"
       >
         <DialogHeader>
-          <DialogTitle id={titleId}>Kundenkontakt bearbeiten</DialogTitle>
-          <DialogDescription id={descriptionId}>
+          <DialogTitle>Kundenkontakt bearbeiten</DialogTitle>
+          <DialogDescription>
             Formular zum Bearbeiten des Kundenkontakts.
           </DialogDescription>
         </DialogHeader>

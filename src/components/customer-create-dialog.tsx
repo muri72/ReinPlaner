@@ -14,8 +14,7 @@ interface CustomerCreateDialogProps {
 
 export function CustomerCreateDialog({ onCustomerCreated }: CustomerCreateDialogProps) {
   const [open, setOpen] = useState(false);
-  const titleId = `customer-create-dialog-title`;
-  const descriptionId = `customer-create-dialog-description`;
+  // Removed titleId and descriptionId as they are no longer needed for aria attributes
 
   const handleCreate = async (data: CustomerFormValues) => {
     const result = await createCustomer(data);
@@ -39,8 +38,8 @@ export function CustomerCreateDialog({ onCustomerCreated }: CustomerCreateDialog
         className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card"
       >
         <DialogHeader>
-          <DialogTitle id={titleId}>Neuen Kunden hinzufügen</DialogTitle>
-          <DialogDescription id={descriptionId}>
+          <DialogTitle>Neuen Kunden hinzufügen</DialogTitle>
+          <DialogDescription>
             Formular zum Hinzufügen eines neuen Kunden.
           </DialogDescription>
         </DialogHeader>

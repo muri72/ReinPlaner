@@ -29,8 +29,7 @@ interface TimeEntryEditDialogProps {
 
 export function TimeEntryEditDialog({ timeEntry, currentUserId, isAdmin }: TimeEntryEditDialogProps) {
   const [open, setOpen] = useState(false);
-  const titleId = `time-entry-edit-dialog-title`;
-  const descriptionId = `time-entry-edit-dialog-description`;
+  // Removed titleId and descriptionId as they are no longer needed for aria attributes
 
   const handleUpdate = async (data: TimeEntryFormValues) => {
     const result = await updateTimeEntry(timeEntry.id, data);
@@ -61,8 +60,8 @@ export function TimeEntryEditDialog({ timeEntry, currentUserId, isAdmin }: TimeE
         className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card"
       >
         <DialogHeader>
-          <DialogTitle id={titleId}>Zeiteintrag bearbeiten</DialogTitle>
-          <DialogDescription id={descriptionId}>
+          <DialogTitle>Zeiteintrag bearbeiten</DialogTitle>
+          <DialogDescription>
             Formular zum Bearbeiten des Zeiteintrags.
           </DialogDescription>
         </DialogHeader>

@@ -69,8 +69,7 @@ export function FeedbackCard({ feedback, feedbackType, currentUserId, currentUse
   const [isDeleting, setIsDeleting] = useState(false);
   const isManagerOrAdmin = currentUserRole === 'admin' || currentUserRole === 'manager';
   const canEditOrDelete = isManagerOrAdmin || feedback.user_id === currentUserId;
-  const titleId = `delete-feedback-alert-title-${feedback.id}`;
-  const descriptionId = `delete-feedback-alert-description-${feedback.id}`;
+  // Removed titleId and descriptionId as they are no longer needed for aria attributes
 
   const handleDelete = async () => {
     setIsDeleting(true);
@@ -185,8 +184,8 @@ export function FeedbackCard({ feedback, feedbackType, currentUserId, currentUse
                       className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto"
                     >
                       <DialogHeader>
-                        <DialogTitle id={titleId}>Sind Sie sicher?</DialogTitle>
-                        <DialogDescription id={descriptionId}>
+                        <DialogTitle>Sind Sie sicher?</DialogTitle>
+                        <DialogDescription>
                           Diese Aktion kann nicht rückgängig gemacht werden. Das Feedback wird dauerhaft gelöscht.
                         </DialogDescription>
                       </DialogHeader>

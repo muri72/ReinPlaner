@@ -33,7 +33,7 @@ export function EmployeeCreateDialog({ onEmployeeCreated }: EmployeeCreateDialog
       </DialogTrigger>
       <DialogContent key={open ? "employee-create-open" : "employee-create-closed"} className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card" aria-labelledby="employee-create-dialog-title">
         <DialogHeader>
-          <DialogTitle id="employee-create-dialog-title">Neuen Mitarbeiter hinzufügen</DialogTitle>
+          <DialogTitle>Neuen Mitarbeiter hinzufügen</DialogTitle>
         </DialogHeader>
         <EmployeeForm
           onSubmit={handleCreate}

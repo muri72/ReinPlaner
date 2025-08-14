@@ -33,8 +33,7 @@ interface OrderFeedbackEditDialogProps {
 export function OrderFeedbackEditDialog({ feedback }: OrderFeedbackEditDialogProps) {
   const [open, setOpen] = useState(false);
   const [hoverRating, setHoverRating] = useState(0);
-  const titleId = `order-feedback-edit-dialog-title`;
-  const descriptionId = `order-feedback-edit-dialog-description`;
+  // Removed titleId and descriptionId as they are no longer needed for aria attributes
 
   const form = useForm<EditFormValues>({
     resolver: zodResolver(editSchema),
@@ -76,8 +75,8 @@ export function OrderFeedbackEditDialog({ feedback }: OrderFeedbackEditDialogPro
         className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card"
       >
         <DialogHeader>
-          <DialogTitle id={titleId}>Feedback bearbeiten</DialogTitle>
-          <DialogDescription id={descriptionId}>
+          <DialogTitle>Feedback bearbeiten</DialogTitle>
+          <DialogDescription>
             Formular zum Bearbeiten des Auftrags-Feedbacks.
           </DialogDescription>
         </DialogHeader>

@@ -16,8 +16,7 @@ interface AbsenceRequestCreateDialogProps {
 
 export function AbsenceRequestCreateDialog({ onAbsenceRequestCreated, currentUserRole, currentUserId }: AbsenceRequestCreateDialogProps) {
   const [open, setOpen] = useState(false);
-  const titleId = `absence-request-create-dialog-title`;
-  const descriptionId = `absence-request-create-dialog-description`;
+  // Removed titleId and descriptionId as they are no longer needed for aria attributes
 
   const handleCreate = async (data: AbsenceRequestFormValues) => {
     const result = await createAbsenceRequest(data);
@@ -41,8 +40,8 @@ export function AbsenceRequestCreateDialog({ onAbsenceRequestCreated, currentUse
         className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card"
       >
         <DialogHeader>
-          <DialogTitle id={titleId}>Neuen Abwesenheitsantrag einreichen</DialogTitle>
-          <DialogDescription id={descriptionId}>
+          <DialogTitle>Neuen Abwesenheitsantrag einreichen</DialogTitle>
+          <DialogDescription>
             Formular zum Einreichen eines neuen Abwesenheitsantrags.
           </DialogDescription>
         </DialogHeader>

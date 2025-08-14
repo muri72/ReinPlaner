@@ -24,8 +24,7 @@ interface DeleteUserButtonProps {
 
 export function DeleteUserButton({ userId }: DeleteUserButtonProps) {
   const [loading, setLoading] = useState(false);
-  const titleId = `delete-user-alert-title-${userId}`;
-  const descriptionId = `delete-user-alert-description-${userId}`;
+  // Removed titleId and descriptionId as they are no longer needed for aria attributes
 
   const handleDelete = async () => {
     setLoading(true);
@@ -62,8 +61,8 @@ export function DeleteUserButton({ userId }: DeleteUserButtonProps) {
               className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card"
             >
               <DialogHeader>
-                <DialogTitle id={titleId}>Sind Sie sicher?</DialogTitle>
-                <DialogDescription id={descriptionId}>
+                <DialogTitle>Sind Sie sicher?</DialogTitle>
+                <DialogDescription>
                   Diese Aktion kann nicht rückgängig gemacht werden. Der Benutzer und alle zugehörigen Daten werden dauerhaft gelöscht.
                 </DialogDescription>
               </DialogHeader>

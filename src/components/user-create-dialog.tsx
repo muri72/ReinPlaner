@@ -14,8 +14,7 @@ interface UserCreateDialogProps {
 
 export function UserCreateDialog({ onUserCreated }: UserCreateDialogProps) {
   const [open, setOpen] = useState(false);
-  const titleId = `user-create-dialog-title`;
-  const descriptionId = `user-create-dialog-description`;
+  // Removed titleId and descriptionId as they are no longer needed for aria attributes
 
   const handleCreate = async (data: UserFormValues) => {
     const result = await registerUser(data);
@@ -39,8 +38,8 @@ export function UserCreateDialog({ onUserCreated }: UserCreateDialogProps) {
         className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card"
       >
         <DialogHeader>
-          <DialogTitle id={titleId}>Neuen Benutzer registrieren</DialogTitle>
-          <DialogDescription id={descriptionId}>
+          <DialogTitle>Neuen Benutzer registrieren</DialogTitle>
+          <DialogDescription>
             Formular zum Registrieren eines neuen Benutzers.
           </DialogDescription>
         </DialogHeader>

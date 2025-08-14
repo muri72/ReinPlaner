@@ -51,8 +51,7 @@ interface ObjectEditDialogProps {
 
 export function ObjectEditDialog({ object }: ObjectEditDialogProps) {
   const [open, setOpen] = useState(false);
-  const titleId = `object-edit-dialog-title`;
-  const descriptionId = `object-edit-dialog-description`;
+  // Removed titleId and descriptionId as they are no longer needed for aria attributes
 
   const handleUpdate = async (data: ObjectFormValues) => {
     const result = await updateObject(object.id, data);
@@ -83,8 +82,8 @@ export function ObjectEditDialog({ object }: ObjectEditDialogProps) {
         className="sm:max-w-[425px] max-h-[90vh] flex flex-col glassmorphism-card" // Added flex flex-col
       >
         <DialogHeader>
-          <DialogTitle id={titleId}>Objekt bearbeiten</DialogTitle>
-          <DialogDescription id={descriptionId}>
+          <DialogTitle>Objekt bearbeiten</DialogTitle>
+          <DialogDescription>
             Formular zum Bearbeiten der Objektdaten.
           </DialogDescription>
         </DialogHeader>

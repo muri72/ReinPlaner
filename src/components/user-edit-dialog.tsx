@@ -21,8 +21,7 @@ interface UserEditDialogProps {
 
 export function UserEditDialog({ user }: UserEditDialogProps) {
   const [open, setOpen] = useState(false);
-  const titleId = `user-edit-dialog-title`;
-  const descriptionId = `user-edit-dialog-description`;
+  // Removed titleId and descriptionId as they are no longer needed for aria attributes
 
   const handleUpdate = async (data: UserFormValues) => {
     const result = await updateUser(user.id, data);
@@ -53,8 +52,8 @@ export function UserEditDialog({ user }: UserEditDialogProps) {
         className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card"
       >
         <DialogHeader>
-          <DialogTitle id={titleId}>Benutzer bearbeiten</DialogTitle>
-          <DialogDescription id={descriptionId}>
+          <DialogTitle>Benutzer bearbeiten</DialogTitle>
+          <DialogDescription>
             Formular zum Bearbeiten der Benutzerdaten.
           </DialogDescription>
         </DialogHeader>

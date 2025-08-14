@@ -13,8 +13,7 @@ interface GiveOrderFeedbackDialogProps {
 
 export function GiveOrderFeedbackDialog({ onFeedbackSubmitted }: GiveOrderFeedbackDialogProps) {
   const [open, setOpen] = useState(false);
-  const titleId = `give-order-feedback-dialog-title`;
-  const descriptionId = `give-order-feedback-dialog-description`;
+  // Removed titleId and descriptionId as they are no longer needed for aria attributes
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -28,8 +27,8 @@ export function GiveOrderFeedbackDialog({ onFeedbackSubmitted }: GiveOrderFeedba
         className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card"
       >
         <DialogHeader>
-          <DialogTitle id={titleId}>Auftragsbezogenes Feedback einreichen</DialogTitle>
-          <DialogDescription id={descriptionId}>
+          <DialogTitle>Auftragsbezogenes Feedback einreichen</DialogTitle>
+          <DialogDescription>
             Formular zum Einreichen von Feedback zu einem bestimmten Auftrag.
           </DialogDescription>
         </DialogHeader>

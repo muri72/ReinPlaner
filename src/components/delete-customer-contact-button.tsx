@@ -25,8 +25,7 @@ interface DeleteCustomerContactButtonProps {
 
 export function DeleteCustomerContactButton({ contactId }: DeleteCustomerContactButtonProps) {
   const [loading, setLoading] = useState(false);
-  const titleId = `delete-customer-contact-alert-title-${contactId}`;
-  const descriptionId = `delete-customer-contact-alert-description-${contactId}`;
+  // Removed titleId and descriptionId as they are no longer needed for aria attributes
 
   const handleDelete = async () => {
     setLoading(true);
@@ -63,8 +62,8 @@ export function DeleteCustomerContactButton({ contactId }: DeleteCustomerContact
               className="glassmorphism-card" 
             >
               <AlertDialogHeader>
-                <AlertDialogTitle id={titleId}>Sind Sie sicher?</AlertDialogTitle>
-                <AlertDialogDescription id={descriptionId}>
+                <AlertDialogTitle>Sind Sie sicher?</AlertDialogTitle>
+                <AlertDialogDescription>
                   Diese Aktion kann nicht rückgängig gemacht werden. Der Kundenkontakt wird dauerhaft gelöscht.
                 </AlertDialogDescription>
               </AlertDialogHeader>

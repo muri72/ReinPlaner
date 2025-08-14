@@ -32,8 +32,7 @@ export function TimeEntryCreateDialog({
   isAdmin,
 }: TimeEntryCreateDialogProps) {
   const [open, setOpen] = useState(false);
-  const titleId = `time-entry-create-dialog-title`;
-  const descriptionId = `time-entry-create-dialog-description`;
+  // Removed titleId and descriptionId as they are no longer needed for aria attributes
 
   const handleCreate = async (data: TimeEntryFormValues) => {
     const result = await createTimeEntry(data);
@@ -59,8 +58,8 @@ export function TimeEntryCreateDialog({
         className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card"
       >
         <DialogHeader>
-          <DialogTitle id={titleId}>{dialogTitle}</DialogTitle>
-          <DialogDescription id={descriptionId}>
+          <DialogTitle>{dialogTitle}</DialogTitle>
+          <DialogDescription>
             Formular zum Erstellen eines neuen Zeiteintrags.
           </DialogDescription>
         </DialogHeader>

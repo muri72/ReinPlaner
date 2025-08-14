@@ -42,8 +42,7 @@ interface OrderEditDialogProps {
 
 export function OrderEditDialog({ order }: OrderEditDialogProps) {
   const [open, setOpen] = useState(false);
-  const titleId = `order-edit-dialog-title`;
-  const descriptionId = `order-edit-dialog-description`;
+  // Removed titleId and descriptionId as they are no longer needed for aria attributes
 
   const handleUpdate = async (data: OrderFormValues) => {
     const result = await updateOrder(order.id, data);
@@ -82,8 +81,8 @@ export function OrderEditDialog({ order }: OrderEditDialogProps) {
         className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card"
       >
         <DialogHeader>
-          <DialogTitle id={titleId}>Auftrag bearbeiten</DialogTitle>
-          <DialogDescription id={descriptionId}>
+          <DialogTitle>Auftrag bearbeiten</DialogTitle>
+          <DialogDescription>
             Formular zum Bearbeiten der Auftragsdetails.
           </DialogDescription>
         </DialogHeader>

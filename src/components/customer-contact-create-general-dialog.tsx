@@ -14,8 +14,7 @@ interface CustomerContactCreateGeneralDialogProps {
 
 export function CustomerContactCreateGeneralDialog({ onContactCreated }: CustomerContactCreateGeneralDialogProps) {
   const [open, setOpen] = useState(false);
-  const titleId = `customer-contact-create-general-dialog-title`;
-  const descriptionId = `customer-contact-create-general-dialog-description`;
+  // Removed titleId and descriptionId as they are no longer needed for aria attributes
 
   const handleCreate = async (data: CustomerContactFormValues) => {
     const result = await createCustomerContact(data);
@@ -41,8 +40,8 @@ export function CustomerContactCreateGeneralDialog({ onContactCreated }: Custome
         className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card"
       >
         <DialogHeader>
-          <DialogTitle id={titleId}>Neuen Kundenkontakt hinzufügen</DialogTitle>
-          <DialogDescription id={descriptionId}>
+          <DialogTitle>Neuen Kundenkontakt hinzufügen</DialogTitle>
+          <DialogDescription>
             Formular zum Hinzufügen eines neuen Kundenkontakts.
           </DialogDescription>
         </DialogHeader>

@@ -22,8 +22,7 @@ interface CustomerEditDialogProps {
 
 export function CustomerEditDialog({ customer }: CustomerEditDialogProps) {
   const [open, setOpen] = useState(false);
-  const titleId = `customer-edit-dialog-title`;
-  const descriptionId = `customer-edit-dialog-description`;
+  // Removed titleId and descriptionId as they are no longer needed for aria attributes
 
   const handleUpdate = async (data: CustomerFormValues) => {
     const result = await updateCustomer(customer.id, data);
@@ -54,12 +53,11 @@ export function CustomerEditDialog({ customer }: CustomerEditDialogProps) {
         className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card" 
       >
         <DialogHeader>
-  <DialogTitle>Kunden bearbeiten</DialogTitle>
-  <DialogDescription>
-    Formular zum Bearbeiten der Kundendaten.
-  </DialogDescription>
-</DialogHeader>
-
+          <DialogTitle>Kunden bearbeiten</DialogTitle>
+          <DialogDescription>
+            Formular zum Bearbeiten der Kundendaten.
+          </DialogDescription>
+        </DialogHeader>
         <CustomerForm
           initialData={{
             name: customer.name,

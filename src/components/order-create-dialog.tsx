@@ -14,8 +14,7 @@ interface OrderCreateDialogProps {
 
 export function OrderCreateDialog({ onOrderCreated }: OrderCreateDialogProps) {
   const [open, setOpen] = useState(false);
-  const titleId = `order-create-dialog-title`;
-  const descriptionId = `order-create-dialog-description`;
+  // Removed titleId and descriptionId as they are no longer needed for aria attributes
 
   const handleCreate = async (data: OrderFormValues) => {
     const result = await createOrder(data);
@@ -39,8 +38,8 @@ export function OrderCreateDialog({ onOrderCreated }: OrderCreateDialogProps) {
         className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card"
       >
         <DialogHeader>
-          <DialogTitle id={titleId}>Neuen Auftrag hinzufügen</DialogTitle>
-          <DialogDescription id={descriptionId}>
+          <DialogTitle>Neuen Auftrag hinzufügen</DialogTitle>
+          <DialogDescription>
             Formular zum Hinzufügen eines neuen Auftrags.
           </DialogDescription>
         </DialogHeader>

@@ -26,8 +26,7 @@ interface AbsenceRequestEditDialogProps {
 
 export function AbsenceRequestEditDialog({ request, currentUserRole, currentUserId }: AbsenceRequestEditDialogProps) {
   const [open, setOpen] = useState(false);
-  const titleId = `absence-request-edit-dialog-title`;
-  const descriptionId = `absence-request-edit-dialog-description`;
+  // Removed titleId and descriptionId as they are no longer needed for aria attributes
 
   const handleUpdate = async (data: AbsenceRequestFormValues) => {
     const result = await updateAbsenceRequest(request.id, data);
@@ -58,8 +57,8 @@ export function AbsenceRequestEditDialog({ request, currentUserRole, currentUser
         className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card"
       >
         <DialogHeader>
-          <DialogTitle id={titleId}>Abwesenheitsantrag bearbeiten</DialogTitle>
-          <DialogDescription id={descriptionId}>
+          <DialogTitle>Abwesenheitsantrag bearbeiten</DialogTitle>
+          <DialogDescription>
             Formular zum Bearbeiten des Abwesenheitsantrags.
           </DialogDescription>
         </DialogHeader>

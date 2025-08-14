@@ -34,8 +34,7 @@ interface EmployeeEditDialogProps {
 
 export function EmployeeEditDialog({ employee }: EmployeeEditDialogProps) {
   const [open, setOpen] = useState(false);
-  const titleId = `employee-edit-dialog-title`;
-  const descriptionId = `employee-edit-dialog-description`;
+  // Removed titleId and descriptionId as they are no longer needed for aria attributes
 
   const handleUpdate = async (data: EmployeeFormValues) => {
     const result = await updateEmployee(employee.id, data);
@@ -66,8 +65,8 @@ export function EmployeeEditDialog({ employee }: EmployeeEditDialogProps) {
         className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card"
       >
         <DialogHeader>
-          <DialogTitle id={titleId}>Mitarbeiter bearbeiten</DialogTitle>
-          <DialogDescription id={descriptionId}>
+          <DialogTitle>Mitarbeiter bearbeiten</DialogTitle>
+          <DialogDescription>
             Formular zum Bearbeiten der Mitarbeiterdaten.
           </DialogDescription>
         </DialogHeader>

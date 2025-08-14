@@ -13,8 +13,7 @@ interface GiveGeneralFeedbackDialogProps {
 
 export function GiveGeneralFeedbackDialog({ onFeedbackSubmitted }: GiveGeneralFeedbackDialogProps) {
   const [open, setOpen] = useState(false);
-  const titleId = `give-general-feedback-dialog-title`;
-  const descriptionId = `give-general-feedback-dialog-description`;
+  // Removed titleId and descriptionId as they are no longer needed for aria attributes
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -28,8 +27,8 @@ export function GiveGeneralFeedbackDialog({ onFeedbackSubmitted }: GiveGeneralFe
         className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card"
       >
         <DialogHeader>
-          <DialogTitle id={titleId}>Allgemeines Feedback einreichen</DialogTitle>
-          <DialogDescription id={descriptionId}>
+          <DialogTitle>Allgemeines Feedback einreichen</DialogTitle>
+          <DialogDescription>
             Formular zum Einreichen von allgemeinem Feedback.
           </DialogDescription>
         </DialogHeader>
