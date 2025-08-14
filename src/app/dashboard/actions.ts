@@ -1,6 +1,6 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 
@@ -39,45 +39,47 @@ export async function updateProfile(formData: FormData) {
     // Use user.id as the folder name for simpler RLS
     const filePath = `${user.id}/avatar.${fileExt}`;
 
-    // First, try to delete any existing avatar for this user to ensure upsert works cleanly
-    // This is a good practice to avoid orphaned files if the extension changes.
-    // We need to list files in the user's folder and delete them.
-    const { data: existingFiles, error: listError } = await supabase.storage
+    // Verwenden Sie den Admin-Client für Speicheroperationen, um Berechtigungsprobleme zu vermeiden
+    const supabaseAdmin = createAdminClient();
+
+    // Zuerst versuchen, vorhandene Avatare zu löschen
+    const { data: existingFiles, error: listError } = await supabaseAdmin.storage
       .from('avatars')
       .list(user.id, {
-        limit: 1, // We only expect one avatar file per user
-        search: 'avatar.' // Search for files starting with 'avatar.'
+        limit: 1, // Wir erwarten nur eine Avatar-Datei pro Benutzer
+        search: 'avatar.' // Suche nach Dateien, die mit 'avatar.' beginnen
       });
 
     if (listError) {
-      console.error("Fehler beim Auflisten bestehender Avatare:", listError.message);
-      // Continue, as this might not be critical for the upload itself
+      console.error("Fehler beim Auflisten bestehender Avatare (Admin Client):", listError.message);
+      // Fahren Sie fort, da dies für den Upload selbst nicht kritisch sein muss
     } else if (existingFiles && existingFiles.length > 0) {
       const oldFilePath = `${user.id}/${existingFiles[0].name}`;
-      const { error: deleteOldError } = await supabase.storage
+      const { error: deleteOldError } = await supabaseAdmin.storage
         .from('avatars')
         .remove([oldFilePath]);
       if (deleteOldError) {
-        console.warn("Fehler beim Löschen des alten Avatars:", deleteOldError.message);
-        // Continue, as the new file will still be uploaded
+        console.warn("Fehler beim Löschen des alten Avatars (Admin Client):", deleteOldError.message);
+        // Fahren Sie fort, da die neue Datei trotzdem hochgeladen wird
       }
     }
 
-    const { error: uploadError } = await supabase.storage
+    // Laden Sie den neuen Avatar hoch
+    const { error: uploadError } = await supabaseAdmin.storage
       .from('avatars')
-      .upload(filePath, avatarFile, { upsert: true }); // upsert: true will overwrite if path exists
+      .upload(filePath, avatarFile, { upsert: true }); // upsert: true überschreibt, falls der Pfad existiert
 
     if (uploadError) {
-      console.error("Fehler beim Hochladen des Avatars:", uploadError?.message || uploadError);
+      console.error("Fehler beim Hochladen des Avatars (Admin Client):", uploadError?.message || uploadError);
       return { success: false, message: `Avatar-Upload fehlgeschlagen: ${uploadError.message}` };
     }
 
-    const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(filePath);
-    // Add a timestamp to the URL to bypass cache
+    const { data: urlData } = supabaseAdmin.storage.from('avatars').getPublicUrl(filePath);
+    // Fügen Sie einen Zeitstempel zur URL hinzu, um den Cache zu umgehen
     profileUpdateData.avatar_url = `${urlData.publicUrl}?t=${new Date().getTime()}`;
   }
 
-  // Only update if there's something to update (name fields or avatar)
+  // Nur aktualisieren, wenn es etwas zu aktualisieren gibt (Namensfelder oder Avatar)
   if (Object.keys(profileUpdateData).length > 1) {
       const { error } = await supabase
         .from('profiles')
@@ -89,7 +91,7 @@ export async function updateProfile(formData: FormData) {
         return { success: false, message: error.message };
       }
   } else {
-    // Nothing to update
+    // Nichts zu aktualisieren
     return { success: true, message: "Keine Änderungen zum Speichern." };
   }
 
