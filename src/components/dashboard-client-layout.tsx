@@ -9,6 +9,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTrigger, SheetClose } from "@/co
 import { SidebarNav } from "@/components/sidebar-nav";
 import { UserMenu } from "@/components/user-menu";
 import { cn } from "@/lib/utils";
+import { usePathname } from "next/navigation"; // Import usePathname
 
 interface DashboardClientLayoutProps {
   children: React.ReactNode;
@@ -26,6 +27,7 @@ interface DashboardClientLayoutProps {
 export function DashboardClientLayout({ children, currentUserRole, onSignOut, userProfile }: DashboardClientLayoutProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const pathname = usePathname(); // Get current pathname
 
   const getHomeLink = () => {
     if (currentUserRole === 'customer') {
@@ -35,6 +37,9 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut, us
     }
     return '/dashboard'; // Standard für Admin/Manager
   };
+
+  // Determine if the current page is the root dashboard page
+  const isRootDashboardPage = pathname === '/dashboard';
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row">
@@ -54,7 +59,7 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut, us
               "h-full"
             )}
           >
-            <SheetHeader className="flex items-center justify-between p-4 mb-4"> {/* Changed mb-6 to mb-4 */}
+            <SheetHeader className="flex items-center justify-between p-4 mb-4">
               <Link href={getHomeLink()} passHref onClick={() => setIsSheetOpen(false)}>
                 <h2 className="text-xl font-bold text-primary tracking-tight cursor-pointer">ARIS</h2>
               </Link>
@@ -100,7 +105,7 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut, us
         )}
       >
         {/* ARIS Text und Toggle-Button, immer zentriert */}
-        <div className="flex flex-col items-center justify-center mb-4"> {/* Changed mb-6 to mb-4 */}
+        <div className="flex flex-col items-center justify-center mb-4">
           <Link href={getHomeLink()} passHref>
             <h2 className="text-xl font-bold text-primary tracking-tight cursor-pointer">ARIS</h2>
           </Link>
@@ -143,7 +148,8 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut, us
         "flex-grow p-4 md:p-8",
         "pt-20 md:pt-8",
         "transition-all duration-150 ease-in-out",
-        isCollapsed ? "md:ml-20" : "md:ml-64"
+        isCollapsed ? "md:ml-20" : "md:ml-64",
+        isRootDashboardPage && "hide-visible-scrollbar" // Apply class conditionally
       )}>
         {children}
       </main>

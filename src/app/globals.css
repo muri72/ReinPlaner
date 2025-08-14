@@ -191,3 +191,24 @@
   scrollbar-width: thin; /* "auto" or "thin" */
   scrollbar-color: transparent transparent; /* thumb color track color (transparent by default) */
 }
+
+/* Class to completely hide the scrollbar for specific elements */
+.hide-visible-scrollbar::-webkit-scrollbar {
+  width: 0px !important;
+  height: 0px !important;
+  background: transparent !important;
+}
+
+.hide-visible-scrollbar::-webkit-scrollbar-thumb {
+  background-color: transparent !important;
+}
+
+.hide-visible-scrollbar::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+
+/* For Firefox */
+.hide-visible-scrollbar {
+  scrollbar-width: none !important; /* Firefox */
+  -ms-overflow-style: none !important;  /* IE and Edge */
+}
