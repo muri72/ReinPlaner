@@ -5,12 +5,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { createCustomer } from "./actions";
 import { CustomerEditDialog } from "@/components/customer-edit-dialog";
 import { DeleteCustomerButton } from "@/components/delete-customer-button";
-import { Mail, Phone, MapPin, Users, Handshake, PlusCircle } from "lucide-react"; // Neue Icons für Kundentyp
+import { Mail, Phone, MapPin, Users, Handshake, PlusCircle, FileStack } from "lucide-react"; // Neue Icons für Kundentyp
 import { SearchInput } from "@/components/search-input";
 import { Badge } from "@/components/ui/badge"; // Importiere Badge
 import { Button } from "@/components/ui/button"; // Hinzugefügt
 import { CustomerCreateDialog } from "@/components/customer-create-dialog"; // Import the new dialog
 import { PaginationControls } from "@/components/pagination-controls"; // Importiere die neue Paginierungskomponente
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"; // Import Tabs
+import { DocumentUploader } from "@/components/document-uploader"; // Import DocumentUploader
+import { DocumentList } from "@/components/document-list"; // Import DocumentList
 
 export default async function CustomersPage({
   searchParams,
@@ -86,32 +89,47 @@ export default async function CustomersPage({
                 </div>
               </CardHeader>
               <CardContent className="space-y-2">
-                <div className="flex items-center text-sm text-muted-foreground">
-                  {customer.customer_type === 'partner' ? (
-                    <Handshake className="mr-2 h-4 w-4 flex-shrink-0" />
-                  ) : (
-                    <Users className="mr-2 h-4 w-4 flex-shrink-0" />
-                  )}
-                  <span>Typ: <Badge variant="secondary">{customer.customer_type === 'partner' ? 'Partner' : 'Kunde'}</Badge></span>
-                </div>
-                {customer.address && (
-                  <div className="flex items-center text-sm text-muted-foreground">
-                    <MapPin className="mr-2 h-4 w-4 flex-shrink-0" />
-                    <span>{customer.address}</span>
-                  </div>
-                )}
-                {customer.contact_email && (
-                  <div className="flex items-center text-sm text-muted-foreground">
-                    <Mail className="mr-2 h-4 w-4 flex-shrink-0" />
-                    <span>{customer.contact_email}</span>
-                  </div>
-                )}
-                {customer.contact_phone && (
-                  <div className="flex items-center text-sm text-muted-foreground">
-                    <Phone className="mr-2 h-4 w-4 flex-shrink-0" />
-                    <span>{customer.contact_phone}</span>
-                  </div>
-                )}
+                <Tabs defaultValue="details" className="w-full">
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="details">Details</TabsTrigger>
+                    <TabsTrigger value="documents">Dokumente</TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="details" className="pt-4 space-y-2 text-sm text-muted-foreground">
+                    <div className="flex items-center text-sm text-muted-foreground">
+                      {customer.customer_type === 'partner' ? (
+                        <Handshake className="mr-2 h-4 w-4 flex-shrink-0" />
+                      ) : (
+                        <Users className="mr-2 h-4 w-4 flex-shrink-0" />
+                      )}
+                      <span>Typ: <Badge variant="secondary">{customer.customer_type === 'partner' ? 'Partner' : 'Kunde'}</Badge></span>
+                    </div>
+                    {customer.address && (
+                      <div className="flex items-center text-sm text-muted-foreground">
+                        <MapPin className="mr-2 h-4 w-4 flex-shrink-0" />
+                        <span>{customer.address}</span>
+                      </div>
+                    )}
+                    {customer.contact_email && (
+                      <div className="flex items-center text-sm text-muted-foreground">
+                        <Mail className="mr-2 h-4 w-4 flex-shrink-0" />
+                        <span>{customer.contact_email}</span>
+                      </div>
+                    )}
+                    {customer.contact_phone && (
+                      <div className="flex items-center text-sm text-muted-foreground">
+                        <Phone className="mr-2 h-4 w-4 flex-shrink-0" />
+                        <span>{customer.contact_phone}</span>
+                      </div>
+                    )}
+                  </TabsContent>
+                  <TabsContent value="documents" className="pt-4 space-y-4">
+                    <h3 className="text-md font-semibold flex items-center">
+                      <FileStack className="mr-2 h-5 w-5" /> Dokumente
+                    </h3>
+                    <DocumentUploader associatedCustomerId={customer.id} />
+                    <DocumentList associatedCustomerId={customer.id} />
+                  </TabsContent>
+                </Tabs>
               </CardContent>
             </Card>
           ))
