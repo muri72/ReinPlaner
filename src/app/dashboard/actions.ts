@@ -35,18 +35,37 @@ export async function updateProfile(formData: FormData) {
 
   // Handle avatar upload
   if (avatarFile && avatarFile.size > 0) {
-    // Sanitize names for the file path to remove special characters
-    const sanitizedFirstName = (firstName || 'user').replace(/[^a-zA-Z0-9]/g, '_');
-    const sanitizedLastName = (lastName || '').replace(/[^a-zA-Z0-9]/g, '_');
-    
     const fileExt = avatarFile.name.split('.').pop();
-    // Create a more descriptive and organized file path in the format: vorname-nachname-userid
-    const folderName = `${sanitizedFirstName}-${sanitizedLastName}-${user.id}`.replace(/--/g, '-').replace(/^-|-$/g, '');
-    const filePath = `${folderName}/avatar.${fileExt}`;
+    // Use user.id as the folder name for simpler RLS
+    const filePath = `${user.id}/avatar.${fileExt}`;
+
+    // First, try to delete any existing avatar for this user to ensure upsert works cleanly
+    // This is a good practice to avoid orphaned files if the extension changes.
+    // We need to list files in the user's folder and delete them.
+    const { data: existingFiles, error: listError } = await supabase.storage
+      .from('avatars')
+      .list(user.id, {
+        limit: 1, // We only expect one avatar file per user
+        search: 'avatar.' // Search for files starting with 'avatar.'
+      });
+
+    if (listError) {
+      console.error("Fehler beim Auflisten bestehender Avatare:", listError.message);
+      // Continue, as this might not be critical for the upload itself
+    } else if (existingFiles && existingFiles.length > 0) {
+      const oldFilePath = `${user.id}/${existingFiles[0].name}`;
+      const { error: deleteOldError } = await supabase.storage
+        .from('avatars')
+        .remove([oldFilePath]);
+      if (deleteOldError) {
+        console.warn("Fehler beim Löschen des alten Avatars:", deleteOldError.message);
+        // Continue, as the new file will still be uploaded
+      }
+    }
 
     const { error: uploadError } = await supabase.storage
       .from('avatars')
-      .upload(filePath, avatarFile, { upsert: true });
+      .upload(filePath, avatarFile, { upsert: true }); // upsert: true will overwrite if path exists
 
     if (uploadError) {
       console.error("Fehler beim Hochladen des Avatars:", uploadError?.message || uploadError);
