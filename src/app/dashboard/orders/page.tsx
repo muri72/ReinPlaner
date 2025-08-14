@@ -78,12 +78,19 @@ export default async function OrdersPage({
   const query = typeof searchParams?.query === 'string' ? searchParams.query : '';
   const currentPage = Number(searchParams?.page) || 1;
   const pageSize = Number(searchParams?.pageSize) || 9;
-  const statusFilter = searchParams?.status || '';
-  const orderTypeFilter = searchParams?.orderType || '';
-  const serviceTypeFilter = searchParams?.serviceType || '';
-  const customerIdFilter = searchParams?.customerId || '';
-  const employeeIdFilter = searchParams?.employeeId || '';
+  
+  // Ensure filter values are always strings
+  const statusFilter = Array.isArray(searchParams?.status) ? searchParams.status[0] : searchParams?.status || '';
+  const orderTypeFilter = Array.isArray(searchParams?.orderType) ? searchParams.orderType[0] : searchParams?.orderType || '';
+  const serviceTypeFilter = Array.isArray(searchParams?.serviceType) ? searchParams.serviceType[0] : searchParams?.serviceType || '';
+  const customerIdFilter = Array.isArray(searchParams?.customerId) ? searchParams.customerId[0] : searchParams?.customerId || '';
+  const employeeIdFilter = Array.isArray(searchParams?.employeeId) ? searchParams.employeeId[0] : searchParams?.employeeId || '';
   const viewMode = searchParams?.viewMode === 'table' ? 'table' : 'grid'; // New: default to grid
+
+  // Sorting parameters
+  const sortColumn = Array.isArray(searchParams?.sortColumn) ? searchParams.sortColumn[0] : searchParams?.sortColumn || 'created_at';
+  const sortDirection = Array.isArray(searchParams?.sortDirection) ? searchParams.sortDirection[0] : searchParams?.sortDirection || 'desc';
+
 
   const from = (currentPage - 1) * pageSize;
   const to = from + pageSize - 1;
@@ -116,8 +123,10 @@ export default async function OrdersPage({
         employees ( first_name, last_name ),
         customer_contacts ( first_name, last_name ),
         order_feedback ( id, rating, comment, image_urls, created_at )
-      `, { count: 'exact' })
-      .order('created_at', { ascending: false });
+      `, { count: 'exact' });
+      
+    // Apply sorting
+    selectQuery = selectQuery.order(sortColumn, { ascending: sortDirection === 'asc' });
 
     if (statusFilter) {
       selectQuery = selectQuery.eq('status', statusFilter);
@@ -434,6 +443,8 @@ export default async function OrdersPage({
               customers={customers}
               employees={employees}
               availableServices={availableServices}
+              sortColumn={sortColumn}
+              sortDirection={sortDirection}
             />
           </TabsContent>
         </Tabs>
