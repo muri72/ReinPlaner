@@ -58,20 +58,20 @@ const navItems: NavItem[] = [
   {
     title: "Auftragsmanagement",
     isCategory: true,
-    roles: ['admin', 'manager', 'employee', 'customer'],
+    roles: ['admin', 'manager', 'employee'], // Removed 'customer'
     children: [
-      { title: "Aufträge", href: "/dashboard/orders", icon: Briefcase, roles: ['admin', 'manager', 'employee', 'customer'] },
-      { title: "Objekte", href: "/dashboard/objects", icon: Building, roles: ['admin', 'manager', 'employee', 'customer'] },
+      { title: "Aufträge", href: "/dashboard/orders", icon: Briefcase, roles: ['admin', 'manager', 'employee'] },
+      { title: "Objekte", href: "/dashboard/objects", icon: Building, roles: ['admin', 'manager', 'employee'] },
       { title: "Planung", href: "/dashboard/planning", icon: CalendarCheck, roles: ['admin', 'manager'] },
     ],
   },
   {
     title: "Kunden & Kontakte",
     isCategory: true,
-    roles: ['admin', 'manager', 'employee', 'customer'],
+    roles: ['admin', 'manager', 'employee'], // Removed 'customer'
     children: [
-      { title: "Kunden", href: "/dashboard/customers", icon: Users, roles: ['admin', 'manager', 'employee', 'customer'] },
-      { title: "Kundenkontakte", href: "/dashboard/customer-contacts", icon: ContactRound, roles: ['admin', 'manager', 'employee', 'customer'] },
+      { title: "Kunden", href: "/dashboard/customers", icon: Users, roles: ['admin', 'manager', 'employee'] },
+      { title: "Kundenkontakte", href: "/dashboard/customer-contacts", icon: ContactRound, roles: ['admin', 'manager', 'employee'] },
     ],
   },
   {
@@ -97,7 +97,14 @@ const navItems: NavItem[] = [
     title: "Feedback",
     href: "/dashboard/feedback",
     icon: Star,
-    roles: ['admin', 'manager', 'employee', 'customer'],
+    roles: ['admin', 'manager', 'employee'], // Removed 'customer'
+  },
+  // Add specific customer bookings link
+  {
+    title: "Meine Buchungen",
+    href: "/portal/dashboard/bookings",
+    icon: Briefcase, // Reusing Briefcase icon
+    roles: ['customer'],
   },
 ];
 
@@ -147,7 +154,7 @@ export function SidebarNav({ isCollapsed, currentUserRole, onSignOut, onLinkClic
                         // Active state: stronger highlight with primary accent
                         pathname === child.href ? "bg-primary text-primary-foreground hover:bg-primary/90" : "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                       )}
-                      asChild // Make Button render as a child of Link
+                      asChild
                     >
                       <Link href={child.href} passHref onClick={onLinkClick}>
                         <child.icon className={cn(isCollapsed ? "h-8 w-8" : "h-6 w-6", !isCollapsed && "mr-2")} />
@@ -173,7 +180,7 @@ export function SidebarNav({ isCollapsed, currentUserRole, onSignOut, onLinkClic
                     // Active state: stronger highlight with primary accent
                     pathname === item.href ? "bg-primary text-primary-foreground hover:bg-primary/90" : "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                   )}
-                  asChild // Make Button render as a child of Link
+                  asChild
                 >
                   <Link href={item.href} passHref onClick={onLinkClick}>
                     <item.icon className={cn(isCollapsed ? "h-8 w-8" : "h-6 w-6", !isCollapsed && "mr-2")} />
