@@ -27,7 +27,7 @@ export default async function CustomerDashboardPage() {
     .single();
 
   if (profileError) { // Added error logging for profile fetching
-    console.error("Fehler beim Abrufen des Benutzerprofils:", profileError?.message || profileError);
+    console.error("Fehler beim Abrufen des Benutzerprofils:", profileError?.message || JSON.stringify(profileError));
   }
 
   if (profile?.role !== 'customer') {
@@ -46,7 +46,7 @@ export default async function CustomerDashboardPage() {
     .single();
 
   if (customerError && customerError.code !== 'PGRST116') {
-    console.error("Fehler beim Laden der Kundendaten:", customerError?.message || customerError);
+    console.error("Fehler beim Laden der Kundendaten:", customerError?.message || JSON.stringify(customerError));
   }
 
   const customerId = customerData?.id || null;
@@ -75,7 +75,7 @@ export default async function CustomerDashboardPage() {
       .limit(5); // Fetch a few to find the next one
 
     if (upcomingOrdersError) {
-      console.error("Fehler beim Laden der kommenden Aufträge:", upcomingOrdersError?.message || upcomingOrdersError);
+      console.error("Fehler beim Laden der kommenden Aufträge:", upcomingOrdersError?.message || JSON.stringify(upcomingOrdersError));
     } else {
       const now = new Date();
       now.setHours(0, 0, 0, 0);
@@ -160,7 +160,7 @@ export default async function CustomerDashboardPage() {
     .eq('customer_id', customerId)
     .order('created_at', { ascending: false });
 
-  if (allOrdersError) console.error("Fehler beim Laden aller Kundenaufträge:", allOrdersError?.message || allOrdersError);
+  if (allOrdersError) console.error("Fehler beim Laden aller Kundenaufträge:", allOrdersError?.message || JSON.stringify(allOrdersError));
 
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {

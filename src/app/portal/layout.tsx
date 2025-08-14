@@ -22,6 +22,10 @@ export default async function PortalLayout({
     .eq('id', user.id)
     .single();
 
+  if (profileError) {
+    console.error("Fehler beim Laden des Benutzerprofils:", profileError?.message || JSON.stringify(profileError));
+  }
+
   const currentUserRole = userProfile?.role as 'admin' | 'manager' | 'employee' | 'customer' || 'customer';
 
   // Ensure only customers can access this layout

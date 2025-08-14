@@ -25,7 +25,7 @@ export async function middleware(request: NextRequest) {
     .single();
 
   if (profileError) {
-    console.error("Fehler beim Abrufen des Benutzerprofils:", profileError?.message || profileError);
+    console.error("Fehler beim Abrufen des Benutzerprofils:", profileError?.message || JSON.stringify(profileError));
   }
 
   const userRole = profileData?.role || 'employee'; // Standard auf 'employee', falls Rolle nicht gefunden

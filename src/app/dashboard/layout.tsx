@@ -22,6 +22,10 @@ export default async function DashboardLayout({
     .eq('id', user.id)
     .single();
 
+  if (profileError) {
+    console.error("Fehler beim Laden des Benutzerprofils:", profileError?.message || JSON.stringify(profileError));
+  }
+
   const currentUserRole = userProfile?.role as 'admin' | 'manager' | 'employee' | 'customer' || 'employee';
 
   // Middleware handles the primary redirection. This layout is for admin/manager.

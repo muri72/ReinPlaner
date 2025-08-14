@@ -30,7 +30,7 @@ export default async function DashboardPage() {
     .single();
 
   if (profileError && profileError.code !== 'PGRST116') {
-    console.error("Fehler beim Laden des Profils:", profileError?.message || profileError);
+    console.error("Fehler beim Laden des Profils:", profileError?.message || JSON.stringify(profileError));
   }
 
   const currentUserRole = profile?.role || 'employee';

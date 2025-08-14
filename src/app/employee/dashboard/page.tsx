@@ -26,7 +26,7 @@ export default async function EmployeeDashboardPage() {
     .single();
 
   if (profileError) { // Added error logging for profile fetching
-    console.error("Fehler beim Abrufen des Benutzerprofils:", profileError?.message || profileError);
+    console.error("Fehler beim Abrufen des Benutzerprofils:", profileError?.message || JSON.stringify(profileError));
   }
 
   if (profile?.role !== 'employee') {
@@ -45,7 +45,7 @@ export default async function EmployeeDashboardPage() {
     .single();
 
   if (employeeDataError && employeeDataError.code !== 'PGRST116') {
-    console.error("Fehler beim Laden der Mitarbeiterdaten:", employeeDataError?.message || employeeDataError);
+    console.error("Fehler beim Laden der Mitarbeiterdaten:", employeeDataError?.message || JSON.stringify(employeeDataError));
   }
 
   const employeeId = employeeData?.id || null;
@@ -81,7 +81,7 @@ export default async function EmployeeDashboardPage() {
       .order('recurring_start_date', { ascending: true });
 
     if (ordersError) {
-      console.error("Fehler beim Laden der heutigen Aufträge für Mitarbeiter:", ordersError?.message || ordersError);
+      console.error("Fehler beim Laden der heutigen Aufträge für Mitarbeiter:", ordersError?.message || JSON.stringify(ordersError));
     } else {
       todaysAssignedOrders = orders.map(order => ({
         ...order,
