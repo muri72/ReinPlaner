@@ -44,10 +44,7 @@ export default function CustomerContactsPage({
   const [loading, setLoading] = useState(true);
   const [totalCount, setTotalCount] = useState<number | null>(0);
 
-  // Use local state for query, initialized from searchParams
-  const initialQuery = (currentSearchParams.get('query') || '') as string;
-  const [query, setQuery] = useState(initialQuery);
-
+  const query = (currentSearchParams.get('query') || '') as string;
   const currentPage = Number(currentSearchParams.get('page')) || 1;
   const pageSize = Number(currentSearchParams.get('pageSize')) || 9;
   const customerIdFilter = (currentSearchParams.get('customerId') || '') as string;
@@ -56,11 +53,6 @@ export default function CustomerContactsPage({
   // Sorting parameters
   const sortColumn = (currentSearchParams.get('sortColumn') || 'last_name') as string;
   const sortDirection = (currentSearchParams.get('sortDirection') || 'asc') as string;
-
-  // Effect to update local query state if URL searchParams change (e.g., back/forward button)
-  useEffect(() => {
-    setQuery((currentSearchParams.get('query') || '') as string);
-  }, [currentSearchParams]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -155,19 +147,16 @@ export default function CustomerContactsPage({
       setLoading(false);
     };
 
-    // Depend on query, currentPage, and filters to trigger data fetch
     fetchData();
   }, [
     supabase,
-    query, // Now depends on local query state
+    query,
     currentPage,
     pageSize,
     customerIdFilter,
     sortColumn,
     sortDirection,
-    // currentSearchParams is no longer needed as a direct dependency for data fetching
-    // because local states (query, filters, sort) are derived from it and trigger fetch.
-    // It's still used for router.replace, but that doesn't trigger fetch.
+    currentSearchParams // Add currentSearchParams to dependency array
   ]);
 
   if (loading || !currentUser) {
@@ -189,7 +178,7 @@ export default function CustomerContactsPage({
       <h1 className="text-2xl md:text-3xl font-bold">Ihre Kundenkontakte</h1>
 
       <div className="mb-4 flex justify-between items-center">
-        <SearchInput placeholder="Kundenkontakte suchen..." defaultValue={initialQuery} onSearchChange={setQuery} />
+        <SearchInput placeholder="Kundenkontakte suchen..." />
         <CustomerContactCreateGeneralDialog />
       </div>
 

@@ -57,24 +57,16 @@ export default function EmployeesPage({
   const [loading, setLoading] = useState(true);
   const [totalCount, setTotalCount] = useState<number | null>(0);
 
-  // Use local state for query, initialized from searchParams
-  const initialQuery = (currentSearchParams.get('query') || '') as string;
-  const [query, setQuery] = useState(initialQuery);
-
+  const query = currentSearchParams.get('query') || '';
   const currentPage = Number(currentSearchParams.get('page')) || 1;
   const pageSize = Number(currentSearchParams.get('pageSize')) || 9;
-  const statusFilter = (currentSearchParams.get('status') || '') as string;
-  const contractTypeFilter = (currentSearchParams.get('contractType') || '') as string;
-  const viewMode = (currentSearchParams.get('viewMode') || 'grid') as string;
+  const statusFilter = currentSearchParams.get('status') || '';
+  const contractTypeFilter = currentSearchParams.get('contractType') || '';
+  const viewMode = currentSearchParams.get('viewMode') === 'table' ? 'table' : 'grid';
 
   // Sorting parameters
-  const sortColumn = (currentSearchParams.get('sortColumn') || 'last_name') as string;
-  const sortDirection = (currentSearchParams.get('sortDirection') || 'asc') as string;
-
-  // Effect to update local query state if URL searchParams change (e.g., back/forward button)
-  useEffect(() => {
-    setQuery((currentSearchParams.get('query') || '') as string);
-  }, [currentSearchParams]);
+  const sortColumn = currentSearchParams.get('sortColumn') || 'last_name';
+  const sortDirection = currentSearchParams.get('sortDirection') || 'asc';
 
   useEffect(() => {
     const fetchData = async () => {
@@ -165,20 +157,17 @@ export default function EmployeesPage({
       setLoading(false);
     };
 
-    // Depend on query, currentPage, and filters to trigger data fetch
     fetchData();
   }, [
     supabase,
-    query, // Now depends on local query state
+    query,
     currentPage,
     pageSize,
     statusFilter,
     contractTypeFilter,
     sortColumn,
     sortDirection,
-    // currentSearchParams is no longer needed as a direct dependency for data fetching
-    // because local states (query, filters, sort) are derived from it and trigger fetch.
-    // It's still used for router.replace, but that doesn't trigger fetch.
+    currentSearchParams // Add currentSearchParams to dependency array
   ]);
 
   if (loading || !currentUser) {
@@ -231,7 +220,7 @@ export default function EmployeesPage({
       <h1 className="text-2xl md:text-3xl font-bold">Ihre Mitarbeiter</h1>
 
       <div className="mb-4 flex flex-col sm:flex-row justify-between items-center gap-4">
-        <SearchInput placeholder="Mitarbeiter suchen..." defaultValue={initialQuery} onSearchChange={setQuery} />
+        <SearchInput placeholder="Mitarbeiter suchen..." />
         <EmployeeCreateDialog />
       </div>
 
