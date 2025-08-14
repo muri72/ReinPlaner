@@ -54,11 +54,12 @@ export function CustomerEditDialog({ customer }: CustomerEditDialogProps) {
         className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card" 
       >
         <DialogHeader>
-          <DialogTitle id={titleId}>Kunden bearbeiten</DialogTitle>
-          <DialogDescription id={descriptionId}>
-            Formular zum Bearbeiten der Kundendaten.
-          </DialogDescription>
-        </DialogHeader>
+  <DialogTitle>Kunden bearbeiten</DialogTitle>
+  <DialogDescription>
+    Formular zum Bearbeiten der Kundendaten.
+  </DialogDescription>
+</DialogHeader>
+
         <CustomerForm
           initialData={{
             name: customer.name,
