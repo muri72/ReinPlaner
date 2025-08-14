@@ -49,16 +49,17 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut, us
           <SheetContent
             side="left"
             className={cn(
-              "w-64 text-sidebar-foreground border-r border-sidebar-border p-4 flex flex-col",
-              "bg-sidebar/80 backdrop-blur-xl glassmorphism-card"
+              "w-64 text-sidebar-foreground border-r border-sidebar-border flex flex-col", // Removed p-4 here, will add to inner div
+              "bg-sidebar/80 backdrop-blur-xl glassmorphism-card",
+              "h-full" // Ensure SheetContent takes full height available
             )}
           >
-            <SheetHeader className="flex flex-col items-center justify-center mb-6">
+            <SheetHeader className="flex flex-col items-center justify-center p-4 mb-6"> {/* Added p-4 here */}
               <Link href={getHomeLink()} passHref onClick={() => setIsSheetOpen(false)}>
                 <h2 className="text-xl font-bold text-primary tracking-tight cursor-pointer">ARIS</h2>
               </Link>
             </SheetHeader>
-            <nav className="flex-grow space-y-2 pt-4 border-t border-sidebar-border">
+            <nav className="flex-grow overflow-y-auto p-4"> {/* Added p-4 and overflow-y-auto here, removed border-t and pt-4 */}
               <SidebarNav
                 isCollapsed={false}
                 currentUserRole={currentUserRole}
@@ -66,6 +67,16 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut, us
                 onLinkClick={() => setIsSheetOpen(false)}
               />
             </nav>
+            {/* Benachrichtigungsglocke und Benutzermenü am unteren Rand der Sidebar */}
+            <div className={cn(
+              "mt-auto flex flex-col items-center",
+              isCollapsed ? "justify-center" : "justify-between",
+              "p-4 border-t border-sidebar-border space-y-4" // Added p-4 here
+            )}>
+              <NotificationBell />
+              {/* Pass userProfile to UserMenu */}
+              <UserMenu currentUserRole={currentUserRole} onSignOut={onSignOut} userProfile={userProfile} />
+            </div>
           </SheetContent>
         </Sheet>
         {/* ARIS Text im mobilen Haupt-Header, zentriert */}
