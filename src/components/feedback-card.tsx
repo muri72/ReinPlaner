@@ -71,6 +71,7 @@ interface FeedbackCardProps {
 export function FeedbackCard({ feedback, feedbackType, currentUserId, currentUserRole }: FeedbackCardProps) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isResolving, setIsResolving] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false); // State for delete dialog
   const isManagerOrAdmin = currentUserRole === 'admin' || currentUserRole === 'manager';
   const canEditOrDelete = isManagerOrAdmin || feedback.user_id === currentUserId;
 
@@ -80,6 +81,7 @@ export function FeedbackCard({ feedback, feedbackType, currentUserId, currentUse
     const result = await action(feedback.id);
     if (result.success) {
       toast.success(result.message);
+      setIsDeleteDialogOpen(false); // Close dialog on success
     } else {
       toast.error(result.message);
     }
@@ -210,7 +212,7 @@ export function FeedbackCard({ feedback, feedbackType, currentUserId, currentUse
             <TooltipProvider delayDuration={300}>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Dialog>
+                  <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}> {/* Pass open state and setter */}
                     <DialogTrigger asChild>
                       <Button variant="ghost" size="icon" className="text-destructive" disabled={isDeleting}>
                         <Trash2 className="h-4 w-4" />

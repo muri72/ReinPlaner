@@ -25,7 +25,7 @@ interface DeleteCustomerContactButtonProps {
 
 export function DeleteCustomerContactButton({ contactId }: DeleteCustomerContactButtonProps) {
   const [loading, setLoading] = useState(false);
-  // Removed titleId and descriptionId as they are no longer needed for aria attributes
+  const [open, setOpen] = useState(false); // State to control dialog open/close
 
   const handleDelete = async () => {
     setLoading(true);
@@ -36,6 +36,7 @@ export function DeleteCustomerContactButton({ contactId }: DeleteCustomerContact
 
     if (result.success) {
       toast.success(result.message);
+      setOpen(false); // Close dialog on success
     } else {
       toast.error(result.message);
     }
@@ -46,7 +47,7 @@ export function DeleteCustomerContactButton({ contactId }: DeleteCustomerContact
     <TooltipProvider delayDuration={300}>
       <Tooltip>
         <TooltipTrigger asChild>
-          <AlertDialog>
+          <AlertDialog open={open} onOpenChange={setOpen}> {/* Pass open state and setter */}
             <AlertDialogTrigger asChild>
               <Button
                 variant="ghost"
