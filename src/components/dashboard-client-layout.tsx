@@ -70,7 +70,7 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut }: 
       {/* Desktop Sidebar (fixed) */}
       <aside
         className={cn(
-          "hidden md:flex flex-col fixed top-0 left-0 h-screen bg-sidebar text-sidebar-foreground border-r border-sidebar-border p-4 transition-all duration-150 ease-in-out z-40 overflow-hidden", // Changed duration to 150ms
+          "hidden md:flex flex-col fixed top-0 left-0 h-screen bg-sidebar text-sidebar-foreground border-r border-sidebar-border p-4 transition-all duration-150 ease-in-out z-[100] overflow-hidden", // Changed z-40 to z-[100]
           isCollapsed ? "w-20" : "w-64",
           "bg-gradient-to-br from-sidebar-background to-sidebar-accent glassmorphism-card" // Apply glassmorphism here
         )}
