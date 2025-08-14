@@ -115,7 +115,9 @@ export function SidebarNav({ isCollapsed, currentUserRole, onSignOut, onLinkClic
   });
 
   return (
-    <div className="flex-grow space-y-2 pt-4 border-t border-sidebar-border"> {/* Added pt-4 and border-t for separation */}
+    <div className="flex-grow space-y-2">
+      {/* Search Input removed */}
+
       {filteredNavItems.map((item) => (
         item.isCategory ? (
           <div key={item.title} className="space-y-2">
@@ -133,13 +135,13 @@ export function SidebarNav({ isCollapsed, currentUserRole, onSignOut, onLinkClic
                         variant={pathname === child.href ? "secondary" : "ghost"}
                         className={cn(
                           "w-full",
-                          isCollapsed ? "h-10 w-10 justify-center" : "justify-start", // Explicitly set size for collapsed, center horizontally
+                          isCollapsed ? "justify-center" : "justify-start",
                           "text-sm text-sidebar-foreground transition-colors duration-200",
                           // Active state: stronger highlight with primary accent
                           pathname === child.href ? "bg-primary text-primary-foreground hover:bg-primary/90" : "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                         )}
                       >
-                        <child.icon className={cn("h-6 w-6", !isCollapsed && "mr-2")} /> {/* Keep icon h-6 w-6 */}
+                        <child.icon className={cn(isCollapsed ? "h-8 w-8" : "h-6 w-6", !isCollapsed && "mr-2")} />
                         {!isCollapsed && child.title}
                       </Button>
                     </Link>
@@ -158,13 +160,13 @@ export function SidebarNav({ isCollapsed, currentUserRole, onSignOut, onLinkClic
                     variant={pathname === item.href ? "secondary" : "ghost"}
                     className={cn(
                       "w-full",
-                      isCollapsed ? "h-10 w-10 justify-center" : "justify-start", // Explicitly set size for collapsed, center horizontally
+                      isCollapsed ? "justify-center" : "justify-start",
                       "text-sm text-sidebar-foreground transition-colors duration-200",
                       // Active state: stronger highlight with primary accent
                       pathname === item.href ? "bg-primary text-primary-foreground hover:bg-primary/90" : "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                     )}
                   >
-                    <item.icon className={cn("h-6 w-6", !isCollapsed && "mr-2")} /> {/* Keep icon h-6 w-6 */}
+                    <item.icon className={cn(isCollapsed ? "h-8 w-8" : "h-6 w-6", !isCollapsed && "mr-2")} />
                     {!isCollapsed && item.title}
                   </Button>
                 </Link>
