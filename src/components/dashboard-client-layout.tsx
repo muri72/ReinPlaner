@@ -70,15 +70,17 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut }: 
           "bg-gradient-to-br from-sidebar-background to-sidebar-accent glassmorphism-card" // Apply glassmorphism here
         )}
       >
-        <div className="relative flex items-center justify-center mb-6"> {/* Changed to justify-center, added relative */}
-          {!isCollapsed && (
-            <h2 className="text-xl font-bold text-primary tracking-tight">ARIS</h2>
-          )}
+        {/* ARIS text always visible, centered */}
+        <div className={cn("flex items-center", isCollapsed ? "justify-center" : "justify-start")} >
+          <h2 className="text-xl font-bold text-primary tracking-tight">ARIS</h2>
+        </div>
+
+        {/* Toggle button below ARIS, centered when collapsed */}
+        <div className={cn("flex", isCollapsed ? "justify-center" : "justify-end", "mt-4 mb-6")}> {/* Added margin-top and margin-bottom */}
           <Button
             variant="ghost"
             size="icon"
             onClick={() => setIsCollapsed(!isCollapsed)}
-            className={cn(isCollapsed ? "mx-auto" : "absolute right-0")} // Adjusted positioning
           >
             {isCollapsed ? (
               <ChevronRight className="h-6 w-6" />
@@ -87,6 +89,7 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut }: 
             )}
           </Button>
         </div>
+
         <SidebarNav
           isCollapsed={isCollapsed}
           currentUserRole={currentUserRole}
