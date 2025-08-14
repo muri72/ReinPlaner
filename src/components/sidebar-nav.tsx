@@ -63,17 +63,18 @@ const navItems: NavItem[] = [
       { title: "Aufträge", href: "/dashboard/orders", icon: Briefcase, roles: ['admin', 'manager', 'employee'] },
       { title: "Objekte", href: "/dashboard/objects", icon: Building, roles: ['admin', 'manager', 'employee'] },
       { title: "Planung", href: "/dashboard/planning", icon: CalendarCheck, roles: ['admin', 'manager'] },
-      { title: "Berichte", href: "/dashboard/reports", icon: FileText, roles: ['admin'] }, // Moved here
+      { title: "Berichte", href: "/dashboard/reports", icon: FileText, roles: ['admin'] },
+      { title: "Finanzen", href: "/dashboard/finances", icon: DollarSign, roles: ['admin', 'manager'] }, // Moved here
     ],
   },
   {
-    title: "Kunden", // Renamed from "Kunden & Kontakte"
+    title: "Kunden",
     isCategory: true,
-    roles: ['admin', 'manager', 'employee', 'customer'], // Expanded roles for the category
+    roles: ['admin', 'manager', 'employee', 'customer'],
     children: [
       { title: "Kunden", href: "/dashboard/customers", icon: Users, roles: ['admin', 'manager', 'employee'] },
       { title: "Kontakte", href: "/dashboard/customer-contacts", icon: ContactRound, roles: ['admin', 'manager', 'employee'] },
-      { title: "Feedback", href: "/dashboard/feedback", icon: Star, roles: ['admin', 'manager', 'employee', 'customer'] }, // Moved here
+      { title: "Feedback", href: "/dashboard/feedback", icon: Star, roles: ['admin', 'manager', 'employee', 'customer'] },
     ],
   },
   {
@@ -85,12 +86,6 @@ const navItems: NavItem[] = [
       { title: "Abwesenheiten", href: "/dashboard/absence-requests", icon: CalendarOff, roles: ['admin', 'manager', 'employee'] },
       { title: "Zeiterfassung", href: "/dashboard/time-tracking", icon: Clock, roles: ['admin', 'manager', 'employee'] },
     ],
-  },
-  {
-    title: "Finanzen", // Now a standalone link
-    href: "/dashboard/finances",
-    icon: DollarSign,
-    roles: ['admin', 'manager'],
   },
   {
     title: "Meine Buchungen",
