@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link"; // Import Link
 import { Menu, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NotificationBell } from "@/components/notification-bell";
@@ -39,7 +40,9 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut }: 
             )}
           >
             <SheetHeader className="flex flex-col items-center justify-center mb-6"> {/* Centered header */}
-              <h2 className="text-xl font-bold text-primary tracking-tight">ARIS</h2>
+              <Link href="/dashboard" passHref onClick={() => setIsSheetOpen(false)}>
+                <h2 className="text-xl font-bold text-primary tracking-tight cursor-pointer">ARIS</h2>
+              </Link>
               {/* Removed SheetTitle, SheetDescription, and NotificationBell from here */}
             </SheetHeader>
             <nav className="flex-grow space-y-2 pt-4 border-t border-sidebar-border"> {/* Added border-t and pt-4 */}
@@ -55,7 +58,9 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut }: 
           </SheetContent>
         </Sheet>
         {/* ARIS text in the main mobile header, centered */}
-        <h2 className="text-xl font-bold text-primary tracking-tight absolute left-1/2 -translate-x-1/2">ARIS</h2>
+        <Link href="/dashboard" passHref>
+          <h2 className="text-xl font-bold text-primary tracking-tight absolute left-1/2 -translate-x-1/2 cursor-pointer">ARIS</h2>
+        </Link>
         <div className="flex items-center space-x-2">
           <NotificationBell />
           <UserMenu currentUserRole={currentUserRole} onSignOut={onSignOut} />
@@ -72,7 +77,9 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut }: 
       >
         {/* ARIS text and toggle button, always centered */}
         <div className="flex flex-col items-center justify-center mb-6"> {/* Changed to flex-col and items-center */}
-          <h2 className="text-xl font-bold text-primary tracking-tight">ARIS</h2>
+          <Link href="/dashboard" passHref>
+            <h2 className="text-xl font-bold text-primary tracking-tight cursor-pointer">ARIS</h2>
+          </Link>
           <Button
             variant="ghost"
             size="icon"
