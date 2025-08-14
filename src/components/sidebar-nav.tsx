@@ -7,8 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Home, Briefcase, Users, ContactRound, Building, UsersRound, Clock, CalendarOff,
-  CalendarCheck, TrendingUp, FileText, Star
-} from "lucide-react"; // Removed Search icon
+  CalendarCheck, TrendingUp, FileText, Star, DollarSign, ListOrdered
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // Definieren der Rollen-Typen
@@ -39,9 +39,21 @@ type NavItem = NavLinkItem | NavCategoryItem;
 const navItems: NavItem[] = [
   {
     title: "Dashboard",
-    href: "/dashboard",
+    href: "/dashboard", // Default dashboard for admin/manager
     icon: Home,
-    roles: ['admin', 'manager', 'employee', 'customer'],
+    roles: ['admin', 'manager'],
+  },
+  {
+    title: "Kunden-Dashboard",
+    href: "/portal/dashboard",
+    icon: Home,
+    roles: ['customer'],
+  },
+  {
+    title: "Mitarbeiter-Dashboard",
+    href: "/employee/dashboard",
+    icon: Home,
+    roles: ['employee'],
   },
   {
     title: "Auftragsmanagement",
@@ -50,7 +62,7 @@ const navItems: NavItem[] = [
     children: [
       { title: "Aufträge", href: "/dashboard/orders", icon: Briefcase, roles: ['admin', 'manager', 'employee', 'customer'] },
       { title: "Objekte", href: "/dashboard/objects", icon: Building, roles: ['admin', 'manager', 'employee', 'customer'] },
-      { title: "Planung", href: "/dashboard/planning", icon: CalendarCheck, roles: ['admin', 'manager'] }, // Umbenannt
+      { title: "Planung", href: "/dashboard/planning", icon: CalendarCheck, roles: ['admin', 'manager'] },
     ],
   },
   {
@@ -65,7 +77,7 @@ const navItems: NavItem[] = [
   {
     title: "Personal",
     isCategory: true,
-    roles: ['admin', 'manager', 'employee'], // Customers don't manage personnel
+    roles: ['admin', 'manager', 'employee'],
     children: [
       { title: "Mitarbeiter", href: "/dashboard/employees", icon: UsersRound, roles: ['admin', 'manager', 'employee'] },
       { title: "Abwesenheiten", href: "/dashboard/absence-requests", icon: CalendarOff, roles: ['admin', 'manager', 'employee'] },
@@ -77,8 +89,8 @@ const navItems: NavItem[] = [
     isCategory: true,
     roles: ['admin', 'manager'],
     children: [
-      { title: "Finanzen", href: "/dashboard/finances", icon: TrendingUp, roles: ['admin', 'manager'] },
-      { title: "Berichte", href: "/dashboard/reports", icon: FileText, roles: ['admin'] }, // Umbenannt
+      { title: "Finanzen", href: "/dashboard/finances", icon: DollarSign, roles: ['admin', 'manager'] },
+      { title: "Berichte", href: "/dashboard/reports", icon: FileText, roles: ['admin'] },
     ],
   },
   {
@@ -93,9 +105,7 @@ interface SidebarNavProps {
   isCollapsed: boolean;
   currentUserRole: UserRole;
   onSignOut: () => Promise<void>;
-  onLinkClick?: () => void; // Neue Prop
-  // searchQuery: string; // Removed search query prop
-  // onSearchChange: (query: string) => void; // Removed search change handler
+  onLinkClick?: () => void;
 }
 
 export function SidebarNav({ isCollapsed, currentUserRole, onSignOut, onLinkClick }: SidebarNavProps) {
@@ -116,8 +126,6 @@ export function SidebarNav({ isCollapsed, currentUserRole, onSignOut, onLinkClic
 
   return (
     <div className="flex-grow space-y-2">
-      {/* Search Input removed */}
-
       {filteredNavItems.map((item) => (
         item.isCategory ? (
           <div key={item.title} className="space-y-2">
@@ -130,21 +138,22 @@ export function SidebarNav({ isCollapsed, currentUserRole, onSignOut, onLinkClic
               <TooltipProvider key={child.href} delayDuration={300}>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Link href={child.href} passHref onClick={onLinkClick}>
-                      <Button
-                        variant={pathname === child.href ? "secondary" : "ghost"}
-                        className={cn(
-                          "w-full",
-                          isCollapsed ? "justify-center" : "justify-start",
-                          "text-sm text-sidebar-foreground transition-colors duration-200",
-                          // Active state: stronger highlight with primary accent
-                          pathname === child.href ? "bg-primary text-primary-foreground hover:bg-primary/90" : "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                        )}
-                      >
+                    <Button
+                      variant={pathname === child.href ? "secondary" : "ghost"}
+                      className={cn(
+                        "w-full",
+                        isCollapsed ? "justify-center" : "justify-start",
+                        "text-sm text-sidebar-foreground transition-colors duration-200",
+                        // Active state: stronger highlight with primary accent
+                        pathname === child.href ? "bg-primary text-primary-foreground hover:bg-primary/90" : "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                      )}
+                      asChild // Make Button render as a child of Link
+                    >
+                      <Link href={child.href} passHref onClick={onLinkClick}>
                         <child.icon className={cn(isCollapsed ? "h-8 w-8" : "h-6 w-6", !isCollapsed && "mr-2")} />
                         {!isCollapsed && child.title}
-                      </Button>
-                    </Link>
+                      </Link>
+                    </Button>
                   </TooltipTrigger>
                   {isCollapsed && <TooltipContent side="right">{child.title}</TooltipContent>}
                 </Tooltip>
@@ -155,21 +164,22 @@ export function SidebarNav({ isCollapsed, currentUserRole, onSignOut, onLinkClic
           <TooltipProvider key={item.href} delayDuration={300}>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Link href={item.href} passHref onClick={onLinkClick}>
-                  <Button
-                    variant={pathname === item.href ? "secondary" : "ghost"}
-                    className={cn(
-                      "w-full",
-                      isCollapsed ? "justify-center" : "justify-start",
-                      "text-sm text-sidebar-foreground transition-colors duration-200",
-                      // Active state: stronger highlight with primary accent
-                      pathname === item.href ? "bg-primary text-primary-foreground hover:bg-primary/90" : "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                    )}
-                  >
+                <Button
+                  variant={pathname === item.href ? "secondary" : "ghost"}
+                  className={cn(
+                    "w-full",
+                    isCollapsed ? "justify-center" : "justify-start",
+                    "text-sm text-sidebar-foreground transition-colors duration-200",
+                    // Active state: stronger highlight with primary accent
+                    pathname === item.href ? "bg-primary text-primary-foreground hover:bg-primary/90" : "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                  )}
+                  asChild // Make Button render as a child of Link
+                >
+                  <Link href={item.href} passHref onClick={onLinkClick}>
                     <item.icon className={cn(isCollapsed ? "h-8 w-8" : "h-6 w-6", !isCollapsed && "mr-2")} />
                     {!isCollapsed && item.title}
-                  </Button>
-                </Link>
+                  </Link>
+                </Button>
               </TooltipTrigger>
               {isCollapsed && <TooltipContent side="right">{item.title}</TooltipContent>}
             </Tooltip>

@@ -1,10 +1,10 @@
 import React from "react";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { signOut } from "@/app/dashboard/actions"; // Import server action
-import { DashboardClientLayout } from "@/components/dashboard-client-layout"; // Import the new client component
+import { signOut } from "@/app/dashboard/actions"; // Reuse existing signOut action
+import { DashboardClientLayout } from "@/components/dashboard-client-layout"; // Reuse existing layout component
 
-export default async function DashboardLayout({
+export default async function EmployeeLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
@@ -24,8 +24,10 @@ export default async function DashboardLayout({
 
   const currentUserRole = userProfile?.role as 'admin' | 'manager' | 'employee' | 'customer' || 'employee';
 
-  // Middleware handles the primary redirection. This layout is for admin/manager.
-  // If a non-admin/manager somehow lands here, they will be redirected by middleware.
+  // Ensure only employees can access this layout
+  if (currentUserRole !== 'employee') {
+    redirect("/dashboard"); // Redirect to main dashboard if not an employee
+  }
 
   return (
     <DashboardClientLayout
