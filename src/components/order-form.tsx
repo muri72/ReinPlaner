@@ -94,6 +94,8 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
 
   const orderType = form.watch("orderType");
   const selectedCustomerId = form.watch("customerId");
+  const selectedObjectId = form.watch("objectId");
+  const selectedEmployeeId = form.watch("employeeId");
 
   // Funktion zum Laden der Kundenkontakte
   const fetchCustomerContacts = async (customerId: string) => {
@@ -133,6 +135,24 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
       form.setValue("customerContactId", null);
     }
   }, [selectedCustomerId, supabase, form]);
+
+  // Automatische Titelgenerierung
+  useEffect(() => {
+    if (!initialData) { // Nur wenn ein neuer Auftrag erstellt wird
+      const customerName = customers.find(c => c.id === selectedCustomerId)?.name || '';
+      const objectName = objects.find(o => o.id === selectedObjectId)?.name || '';
+      const employeeName = employees.find(e => e.id === selectedEmployeeId);
+      const employeeFullName = employeeName ? `${employeeName.first_name || ''} ${employeeName.last_name || ''}`.trim() : '';
+
+      const parts = [];
+      if (objectName) parts.push(objectName);
+      if (customerName) parts.push(customerName);
+      if (employeeFullName) parts.push(employeeFullName);
+
+      const generatedTitle = parts.join(' • ');
+      form.setValue("title", generatedTitle);
+    }
+  }, [selectedCustomerId, selectedObjectId, selectedEmployeeId, customers, objects, employees, form, initialData]);
 
   // Objekte filtern basierend auf ausgewähltem Kunden
   const filteredObjects = selectedCustomerId
@@ -186,7 +206,8 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
         <Input
           id="title"
           {...form.register("title")}
-          placeholder="Z.B. Büroreinigung"
+          placeholder="Wird automatisch generiert"
+          disabled={!initialData ? true : false} // Deaktiviert, wenn neuer Auftrag erstellt wird
         />
         {form.formState.errors.title && (
           <p className="text-red-500 text-sm mt-1">{form.formState.errors.title.message}</p>
