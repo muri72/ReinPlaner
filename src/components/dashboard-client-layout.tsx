@@ -67,26 +67,34 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut }: 
         className={cn(
           "hidden md:flex flex-col fixed top-0 left-0 h-screen bg-sidebar text-sidebar-foreground border-r border-sidebar-border p-4 transition-all duration-300 ease-in-out z-40",
           isCollapsed ? "w-20" : "w-64",
-          "bg-gradient-to-br from-sidebar-background to-sidebar-accent glassmorphism-card" // Apply glassmorphism here
+          "bg-gradient-to-br from-sidebar-background to-sidebar-accent glassmorphism-card",
+          "relative" // Add relative positioning to the aside
         )}
       >
-        <div className="relative flex items-center justify-center mb-6"> {/* Changed to justify-center, added relative */}
-          {!isCollapsed && (
-            <h2 className="text-xl font-bold text-primary tracking-tight">ARIS</h2>
-          )}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setIsCollapsed(!isCollapsed)}
-            className={cn(isCollapsed ? "mx-auto" : "absolute right-0")} // Adjusted positioning
-          >
-            {isCollapsed ? (
-              <ChevronRight className="h-6 w-6" />
-            ) : (
-              <ChevronLeft className="h-6 w-6" />
-            )}
-          </Button>
+        {/* ARIS text always visible and centered */}
+        <div className="flex items-center justify-center mb-6">
+          <h2 className={cn(
+            "font-bold text-primary tracking-tight",
+            isCollapsed ? "text-lg" : "text-xl" // Adjust font size based on collapse state
+          )}>ARIS</h2>
         </div>
+        {/* Toggle button positioned to overlap */}
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => setIsCollapsed(!isCollapsed)}
+          className={cn(
+            "absolute top-1/2 -translate-y-1/2",
+            isCollapsed ? "right-[-16px]" : "right-[-16px]", // Adjust as needed for overlap
+            "z-50 bg-sidebar border border-sidebar-border rounded-full shadow-md" // Add styling for the button itself
+          )}
+        >
+          {isCollapsed ? (
+            <ChevronRight className="h-6 w-6" />
+          ) : (
+            <ChevronLeft className="h-6 w-6" />
+          )}
+        </Button>
         <SidebarNav
           isCollapsed={isCollapsed}
           currentUserRole={currentUserRole}
