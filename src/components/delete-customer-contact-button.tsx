@@ -17,6 +17,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"; // Import Tooltip components
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 interface DeleteCustomerContactButtonProps {
   contactId: string;
@@ -24,6 +25,8 @@ interface DeleteCustomerContactButtonProps {
 
 export function DeleteCustomerContactButton({ contactId }: DeleteCustomerContactButtonProps) {
   const [loading, setLoading] = useState(false);
+  const titleId = `delete-customer-contact-alert-title-${contactId}`;
+  const descriptionId = `delete-customer-contact-alert-description-${contactId}`;
 
   const handleDelete = async () => {
     setLoading(true);
@@ -55,11 +58,16 @@ export function DeleteCustomerContactButton({ contactId }: DeleteCustomerContact
                 <Trash2 className="h-4 w-4" />
               </Button>
             </AlertDialogTrigger>
-            <AlertDialogContent key={`delete-contact-${contactId}-open`} className="glassmorphism-card" aria-labelledby="delete-customer-contact-alert-title">
+            <AlertDialogContent 
+              key={`delete-contact-${contactId}-open`} 
+              className="glassmorphism-card" 
+              aria-labelledby={titleId}
+              aria-describedby={descriptionId}
+            >
               <AlertDialogHeader>
-                <AlertDialogTitle id="delete-customer-contact-alert-title">Sind Sie sicher?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Diese Aktion kann nicht rückgängig gemacht werden. Der Kundenkontakt wird dauerhaft gelöscht.
+                <AlertDialogTitle id={titleId}>Sind Sie sicher?</AlertDialogTitle>
+                <AlertDialogDescription id={descriptionId}>
+                  <VisuallyHidden>Diese Aktion kann nicht rückgängig gemacht werden. Der Kundenkontakt wird dauerhaft gelöscht.</VisuallyHidden>
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
