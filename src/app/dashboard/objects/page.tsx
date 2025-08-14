@@ -1,23 +1,24 @@
-import { createClient } from "@/lib/supabase/server";
-import { redirect } from "next/navigation";
-import { ObjectForm } from "@/components/object-form";
+"use client"; // This page needs to be a client component to use hooks like useIsMobile
+
+import { createClient } from "@/lib/supabase/client";
+import { redirect, useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { createObject } from "./actions";
+import { Button } from "@/components/ui/button";
+import { MapPin, FileText, Clock, Key, Lock, ShieldCheck, UserRound, PlusCircle, Building, FileStack } from "lucide-react";
 import { ObjectEditDialog } from "@/components/object-edit-dialog";
 import { DeleteObjectButton } from "@/components/delete-object-button";
-import { MapPin, FileText, Clock, Key, Lock, ShieldCheck, UserRound, PlusCircle, Building, FileStack } from "lucide-react"; // Neue Icons, FileStack hinzugefügt
 import { SearchInput } from "@/components/search-input";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { ObjectCreateDialog } from "@/components/object-create-dialog";
-import { PaginationControls } from "@/components/pagination-controls"; // Importiere die Paginierungskomponente
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"; // Import Tabs
-import { DocumentUploader } from "@/components/document-uploader"; // Import DocumentUploader
-import { DocumentList } from "@/components/document-list"; // Import DocumentList
-import { Suspense } from "react"; // Import Suspense for client components
-import { FilterSelect } from "@/components/filter-select"; // Import the new FilterSelect component
+import { PaginationControls } from "@/components/pagination-controls";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { DocumentUploader } from "@/components/document-uploader";
+import { DocumentList } from "@/components/document-list";
+import { Suspense, useEffect, useState } from "react";
+import { FilterSelect } from "@/components/filter-select";
+import { ObjectsTableView } from "@/components/objects-table-view"; // Import the new table view component
+import { useIsMobile } from "@/hooks/use-mobile"; // Import the hook
 
-// Definieren Sie die Schnittstelle für die Objekt-Daten, wie sie auf dieser Seite verwendet werden
 interface DisplayObject {
   id: string;
   user_id: string | null;
@@ -61,93 +62,124 @@ interface DisplayObject {
   sunday_hours: number | null;
 }
 
-export default async function ObjectsPage({
+export default function ObjectsPage({
   searchParams,
 }: {
   searchParams?: any;
 }) {
-  const supabase = await createClient();
-  const { data: { user: currentUser } } = await supabase.auth.getUser();
+  const supabase = createClient();
+  const router = useRouter();
+  const currentSearchParams = useSearchParams();
+  const isMobile = useIsMobile();
 
-  if (!currentUser) {
-    redirect("/login");
-  }
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [allObjects, setAllObjects] = useState<DisplayObject[]>([]);
+  const [customers, setCustomers] = useState<{ id: string; name: string }[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [totalCount, setTotalCount] = useState<number | null>(0);
 
   const query = typeof searchParams?.query === 'string' ? searchParams.query : '';
   const currentPage = Number(searchParams?.page) || 1;
-  const pageSize = Number(searchParams?.pageSize) || 9; // Standardmäßig 9 Objekte pro Seite
+  const pageSize = Number(searchParams?.pageSize) || 9;
+  const customerIdFilter = searchParams?.customerId || '';
+  const priorityFilter = searchParams?.priority || '';
+  const timeOfDayFilter = searchParams?.timeOfDay || '';
+  const accessMethodFilter = searchParams?.accessMethod || '';
+  const viewMode = searchParams?.viewMode === 'table' ? 'table' : 'grid';
 
-  // Ensure filter values are always strings
-  const customerIdFilter = Array.isArray(searchParams?.customerId) ? searchParams.customerId[0] : searchParams?.customerId || '';
-  const priorityFilter = Array.isArray(searchParams?.priority) ? searchParams.priority[0] : searchParams?.priority || '';
-  const timeOfDayFilter = Array.isArray(searchParams?.timeOfDay) ? searchParams.timeOfDay[0] : searchParams?.timeOfDay || '';
-  const accessMethodFilter = Array.isArray(searchParams?.accessMethod) ? searchParams.accessMethod[0] : searchParams?.accessMethod || '';
+  // Sorting parameters
+  const sortColumn = Array.isArray(searchParams?.sortColumn) ? searchParams.sortColumn[0] : searchParams?.sortColumn || 'name';
+  const sortDirection = Array.isArray(searchParams?.sortDirection) ? searchParams.sortDirection[0] : searchParams?.sortDirection || 'asc';
 
-  const from = (currentPage - 1) * pageSize;
-  const to = from + pageSize - 1;
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        redirect("/login");
+        return;
+      }
+      setCurrentUser(user);
 
-  let objects: DisplayObject[] | null;
-  let error: any;
-  let count: number | null;
+      const from = (currentPage - 1) * pageSize;
+      const to = from + pageSize - 1;
 
-  // Fetch customers for filter dropdown
-  const { data: customersData, error: customersError } = await supabase.from('customers').select('id, name').order('name', { ascending: true });
-  if (customersError) console.error("Fehler beim Laden der Kunden für Filter:", customersError.message);
-  const customers = customersData || [];
+      const { data: customersData, error: customersError } = await supabase.from('customers').select('id, name').order('name', { ascending: true });
+      if (customersError) console.error("Fehler beim Laden der Kunden für Filter:", customersError.message);
+      setCustomers(customersData || []);
 
-  if (query) {
-    // Verwende die RPC-Funktion für die Suche
-    const { data, error: rpcError } = await supabase.rpc('search_objects', {
-      search_query: query,
-    });
-    objects = data as DisplayObject[] | null;
-    error = rpcError;
-    count = objects?.length || 0; // Zähle die Ergebnisse der RPC-Funktion
-  } else {
-    // Direkte Abfrage, die sich auf RLS verlässt und Filter anwendet
-    let selectQuery = supabase
-      .from('objects')
-      .select(`
-        *,
-        customers ( name ),
-        customer_contacts ( first_name, last_name )
-      `, { count: 'exact' }) // count: 'exact' ist wichtig für die Paginierung
-      .order('name', { ascending: true })
-      .range(from, to); // Paginierung anwenden
+      let objectsData: DisplayObject[] = [];
+      let objectsError: any = null;
+      let objectsCount: number | null = 0;
 
-    if (customerIdFilter) {
-      selectQuery = selectQuery.eq('customer_id', customerIdFilter);
-    }
-    if (priorityFilter) {
-      selectQuery = selectQuery.eq('priority', priorityFilter);
-    }
-    if (timeOfDayFilter) {
-      selectQuery = selectQuery.eq('time_of_day', timeOfDayFilter);
-    }
-    if (accessMethodFilter) {
-      selectQuery = selectQuery.eq('access_method', accessMethodFilter);
-    }
+      if (query) {
+        const { data, error: rpcError } = await supabase.rpc('search_objects', { search_query: query });
+        objectsData = (data as DisplayObject[] | null) || [];
+        objectsError = rpcError;
+        objectsCount = objectsData.length;
+      } else {
+        let selectQuery = supabase
+          .from('objects')
+          .select(`
+            *,
+            customers ( name ),
+            customer_contacts ( first_name, last_name )
+          `, { count: 'exact' })
+          .order(sortColumn, { ascending: sortDirection === 'asc' });
 
-    const { data, error: selectError, count: selectCount } = await selectQuery;
+        if (customerIdFilter) {
+          selectQuery = selectQuery.eq('customer_id', customerIdFilter);
+        }
+        if (priorityFilter) {
+          selectQuery = selectQuery.eq('priority', priorityFilter);
+        }
+        if (timeOfDayFilter) {
+          selectQuery = selectQuery.eq('time_of_day', timeOfDayFilter);
+        }
+        if (accessMethodFilter) {
+          selectQuery = selectQuery.eq('access_method', accessMethodFilter);
+        }
 
-    objects = data?.map(obj => ({
-      ...obj,
-      customer_name: obj.customers?.name || null,
-      object_leader_first_name: obj.customer_contacts?.first_name || null,
-      object_leader_last_name: obj.customer_contacts?.last_name || null,
-    })) || null;
-    error = selectError;
-    count = selectCount;
+        const { data, error: selectError, count: selectCount } = await selectQuery
+          .range(from, to);
+
+        objectsData = data?.map(obj => ({
+          ...obj,
+          customer_name: obj.customers?.name || null,
+          object_leader_first_name: obj.customer_contacts?.first_name || null,
+          object_leader_last_name: obj.customer_contacts?.last_name || null,
+        })) || [];
+        objectsError = selectError;
+        objectsCount = selectCount;
+      }
+
+      if (objectsError) {
+        console.error("Fehler beim Laden der Objekte:", objectsError?.message || objectsError);
+      }
+      setAllObjects(objectsData);
+      setTotalCount(objectsCount);
+      setLoading(false);
+    };
+
+    fetchData();
+  }, [
+    supabase,
+    query,
+    currentPage,
+    pageSize,
+    customerIdFilter,
+    priorityFilter,
+    timeOfDayFilter,
+    accessMethodFilter,
+    sortColumn,
+    sortDirection,
+  ]);
+
+  if (loading || !currentUser) {
+    return <div className="p-4 md:p-8">Lade Objekte...</div>;
   }
 
-  if (error) {
-    console.error("Fehler beim Laden der Objekte:", error?.message || error);
-    return <div className="p-4 md:p-8 text-sm">Fehler beim Laden der Objekte.</div>;
-  }
-
-  const totalPages = count ? Math.ceil(count / pageSize) : 0;
-
-  const dayNames = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+  const totalPages = totalCount ? Math.ceil(totalCount / pageSize) : 0;
 
   const priorityOptions = [
     { value: 'low', label: 'Niedrig' },
@@ -167,6 +199,23 @@ export default async function ObjectsPage({
     { value: 'card', label: 'Karte' },
     { value: 'other', label: 'Andere' },
   ];
+
+  const getPriorityBadgeVariant = (priority: string) => {
+    switch (priority) {
+      case 'high': return 'destructive';
+      case 'medium': return 'default';
+      case 'low':
+      default: return 'secondary';
+    }
+  };
+
+  const activeTab = isMobile ? 'grid' : viewMode;
+
+  const handleViewModeChange = (value: string) => {
+    const params = new URLSearchParams(currentSearchParams);
+    params.set('viewMode', value);
+    router.replace(`?${params.toString()}`);
+  };
 
   return (
     <div className="p-4 md:p-8 space-y-8">
@@ -207,140 +256,164 @@ export default async function ObjectsPage({
         </div>
       </Suspense>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-        {objects && objects.length === 0 && !query && !customerIdFilter && !priorityFilter && !timeOfDayFilter && !accessMethodFilter ? (
-          <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30 shadow-neumorphic glassmorphism-card">
-            <Building className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
-            <p className="text-base md:text-lg font-semibold">Noch keine Objekte vorhanden</p>
-            <p className="text-sm">Fügen Sie ein neues Objekt hinzu, um es zu verwalten.</p>
-            <div className="mt-4">
-              {/* The button to open the dialog is now part of ObjectCreateDialog */}
-            </div>
-          </div>
-        ) : objects && objects.length === 0 && (query || customerIdFilter || priorityFilter || timeOfDayFilter || accessMethodFilter) ? (
-          <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30 shadow-neumorphic glassmorphism-card">
-            <Building className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
-            <p className="text-base md:text-lg font-semibold">Keine Objekte gefunden</p>
-            <p className="text-sm">Ihre Suche oder Filter ergaben keine Treffer.</p>
-          </div>
-        ) : (
-          objects?.map((object) => (
-            <Card key={object.id} className="shadow-neumorphic glassmorphism-card">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-base md:text-lg font-semibold">{object.name}</CardTitle>
-                <div className="flex items-center space-x-2">
-                  <ObjectEditDialog object={object} />
-                  <DeleteObjectButton objectId={object.id} />
+      <Tabs value={activeTab} onValueChange={handleViewModeChange} className="w-full">
+        <div className="flex justify-end mb-4">
+          <TabsList className="hidden md:grid grid-cols-2 w-fit">
+            <TabsTrigger value="grid">Kartenansicht</TabsTrigger>
+            <TabsTrigger value="table">Tabellenansicht</TabsTrigger>
+          </TabsList>
+        </div>
+        <TabsContent value="grid" className="mt-0">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+            {allObjects.length === 0 && !query && !customerIdFilter && !priorityFilter && !timeOfDayFilter && !accessMethodFilter ? (
+              <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30 shadow-neumorphic glassmorphism-card">
+                <Building className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
+                <p className="text-base md:text-lg font-semibold">Noch keine Objekte vorhanden</p>
+                <p className="text-sm">Fügen Sie ein neues Objekt hinzu, um es zu verwalten.</p>
+                <div className="mt-4">
+                  <ObjectCreateDialog />
                 </div>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <Tabs defaultValue="details" className="w-full">
-                  <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="details">Details</TabsTrigger>
-                    <TabsTrigger value="documents">Dokumente</TabsTrigger>
-                  </TabsList>
-                  <TabsContent value="details" className="pt-4 space-y-2 text-sm text-muted-foreground">
-                    {object.customer_name && (
-                      <p className="text-sm text-muted-foreground">
-                        Kunde: {object.customer_name}
-                      </p>
-                    )}
-                    {object.object_leader_first_name && object.object_leader_last_name && (
-                      <div className="flex items-center text-sm text-muted-foreground">
-                        <UserRound className="mr-2 h-4 w-4 flex-shrink-0" />
-                        <span>Objektleiter: {object.object_leader_first_name} {object.object_leader_last_name}</span>
-                      </div>
-                    )}
-                    {object.address && (
-                      <div className="flex items-center text-sm text-muted-foreground">
-                        <MapPin className="mr-2 h-4 w-4 flex-shrink-0" />
-                        <span>{object.address}</span>
-                      </div>
-                    )}
-                    {object.description && (
-                      <div className="flex items-center text-sm text-muted-foreground">
-                        <FileText className="mr-2 h-4 w-4 flex-shrink-0" />
-                        <span>{object.description}</span>
-                      </div>
-                    )}
-                    {object.notes && (
-                      <div className="flex items-center text-sm text-muted-foreground">
-                        <FileText className="mr-2 h-4 w-4 flex-shrink-0" />
-                        <span>Notizen: {object.notes}</span>
-                      </div>
-                    )}
-                    <div className="flex items-center text-sm text-muted-foreground">
-                      <Clock className="mr-2 h-4 w-4 flex-shrink-0" />
-                      <span>Priorität: <Badge variant="secondary">{object.priority}</Badge></span>
+              </div>
+            ) : allObjects.length === 0 && (query || customerIdFilter || priorityFilter || timeOfDayFilter || accessMethodFilter) ? (
+              <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30 shadow-neumorphic glassmorphism-card">
+                <Building className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
+                <p className="text-base md:text-lg font-semibold">Keine Objekte gefunden</p>
+                <p className="text-sm">Ihre Suche oder Filter ergaben keine Treffer.</p>
+              </div>
+            ) : (
+              allObjects.map((object) => (
+                <Card key={object.id} className="shadow-neumorphic glassmorphism-card">
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-base md:text-lg font-semibold">{object.name}</CardTitle>
+                    <div className="flex items-center space-x-2">
+                      <ObjectEditDialog object={object} />
+                      <DeleteObjectButton objectId={object.id} />
                     </div>
-                    <div className="flex items-center text-sm text-muted-foreground">
-                      <Clock className="mr-2 h-4 w-4 flex-shrink-0" />
-                      <span>Tageszeit: <Badge variant="secondary">{object.time_of_day}</Badge></span>
-                    </div>
-                    <div className="flex items-center text-sm text-muted-foreground">
-                      <Key className="mr-2 h-4 w-4 flex-shrink-0" />
-                      <span>Zugang: <Badge variant="secondary">{object.access_method}</Badge></span>
-                    </div>
-                    {object.pin && (
-                      <div className="flex items-center text-sm text-muted-foreground">
-                        <Lock className="mr-2 h-4 w-4 flex-shrink-0" />
-                        <span>PIN: {object.pin}</span>
-                      </div>
-                    )}
-                    {object.is_alarm_secured && (
-                      <>
-                        <div className="flex items-center text-sm text-muted-foreground">
-                          <ShieldCheck className="mr-2 h-4 w-4 flex-shrink-0" />
-                          <span>Alarmgesichert: Ja</span>
-                        </div>
-                        {object.alarm_password && (
-                          <div className="flex items-center text-sm text-muted-foreground">
-                            <Lock className="mr-2 h-4 w-4 flex-shrink-0" />
-                            <span>Alarmkennwort: {object.alarm_password}</span>
-                          </div>
-                        )}
-                        {object.security_code_word && (
-                          <div className="flex items-center text-sm text-muted-foreground">
-                            <Lock className="mr-2 h-4 w-4 flex-shrink-0" />
-                            <span>Codewort: {object.security_code_word}</span>
-                          </div>
-                        )}
-                      </>
-                    )}
-                    <div className="mt-4 text-sm font-semibold">Arbeitszeiten pro Wochentag:</div>
-                    {dayNames.map(day => {
-                      const startTimeKey = `${day}_start_time` as keyof DisplayObject;
-                      const endTimeKey = `${day}_end_time` as keyof DisplayObject;
-                      const hoursKey = `${day}_hours` as keyof DisplayObject;
-                      const startTime = object[startTimeKey] as string | null;
-                      const endTime = object[endTimeKey] as string | null;
-                      const hours = object[hoursKey] as number | null;
-
-                      if (startTime || hours) {
-                        return (
-                          <p key={day} className="text-xs text-muted-foreground ml-2">
-                            {day.charAt(0).toUpperCase() + day.slice(1)}:
-                            {startTime && endTime ? ` ${startTime} - ${endTime}` : ''}
-                            {hours ? ` (${Number(hours).toFixed(2)} Std. Netto)` : ''}
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    <Tabs defaultValue="details" className="w-full">
+                      <TabsList className="grid w-full grid-cols-2">
+                        <TabsTrigger value="details">Details</TabsTrigger>
+                        <TabsTrigger value="documents">Dokumente</TabsTrigger>
+                      </TabsList>
+                      <TabsContent value="details" className="pt-4 space-y-2 text-sm text-muted-foreground">
+                        {object.customer_name && (
+                          <p className="text-sm text-muted-foreground">
+                            Kunde: {object.customer_name}
                           </p>
-                        );
-                      }
-                      return null;
-                    })}
-                  </TabsContent>
-                  <TabsContent value="documents" className="pt-4 space-y-4">
-                    <h3 className="text-md font-semibold flex items-center">
-                      <FileStack className="mr-2 h-5 w-5" /> Dokumente
-                    </h3>
-                    <DocumentUploader associatedOrderId={object.id} /> {/* Korrigiert von associatedObjectId */}
-                    <DocumentList associatedOrderId={object.id} /> {/* Korrigiert von associatedObjectId */}
-                  </TabsContent>
-                </Tabs>
-              </CardContent>
-            </Card>
-          ))
-        )}
-      </div>
+                        )}
+                        {object.object_leader_first_name && object.object_leader_last_name && (
+                          <div className="flex items-center text-sm text-muted-foreground">
+                            <UserRound className="mr-2 h-4 w-4 flex-shrink-0" />
+                            <span>Objektleiter: {object.object_leader_first_name} {object.object_leader_last_name}</span>
+                          </div>
+                        )}
+                        {object.address && (
+                          <div className="flex items-center text-sm text-muted-foreground">
+                            <MapPin className="mr-2 h-4 w-4 flex-shrink-0" />
+                            <span>{object.address}</span>
+                          </div>
+                        )}
+                        {object.description && (
+                          <div className="flex items-center text-sm text-muted-foreground">
+                            <FileText className="mr-2 h-4 w-4 flex-shrink-0" />
+                            <span>{object.description}</span>
+                          </div>
+                        )}
+                        {object.notes && (
+                          <div className="flex items-center text-sm text-muted-foreground">
+                            <FileText className="mr-2 h-4 w-4 flex-shrink-0" />
+                            <span>Notizen: {object.notes}</span>
+                          </div>
+                        )}
+                        <div className="flex items-center text-sm text-muted-foreground">
+                          <Clock className="mr-2 h-4 w-4 flex-shrink-0" />
+                          <span>Priorität: <Badge variant="secondary">{object.priority}</Badge></span>
+                        </div>
+                        <div className="flex items-center text-sm text-muted-foreground">
+                          <Clock className="mr-2 h-4 w-4 flex-shrink-0" />
+                          <span>Tageszeit: <Badge variant="secondary">{object.time_of_day}</Badge></span>
+                        </div>
+                        <div className="flex items-center text-sm text-muted-foreground">
+                          <Key className="mr-2 h-4 w-4 flex-shrink-0" />
+                          <span>Zugang: <Badge variant="secondary">{object.access_method}</Badge></span>
+                        </div>
+                        {object.pin && (
+                          <div className="flex items-center text-sm text-muted-foreground">
+                            <Lock className="mr-2 h-4 w-4 flex-shrink-0" />
+                            <span>PIN: {object.pin}</span>
+                          </div>
+                        )}
+                        {object.is_alarm_secured && (
+                          <>
+                            <div className="flex items-center text-sm text-muted-foreground">
+                              <ShieldCheck className="mr-2 h-4 w-4 flex-shrink-0" />
+                              <span>Alarmgesichert: Ja</span>
+                            </div>
+                            {object.alarm_password && (
+                              <div className="flex items-center text-sm text-muted-foreground">
+                                <Lock className="mr-2 h-4 w-4 flex-shrink-0" />
+                                <span>Alarmkennwort: {object.alarm_password}</span>
+                              </div>
+                            )}
+                            {object.security_code_word && (
+                              <div className="flex items-center text-sm text-muted-foreground">
+                                <Lock className="mr-2 h-4 w-4 flex-shrink-0" />
+                                <span>Codewort: {object.security_code_word}</span>
+                              </div>
+                            )}
+                          </>
+                        )}
+                        <div className="mt-4 text-sm font-semibold">Arbeitszeiten pro Wochentag:</div>
+                        {['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map(day => {
+                          const startTimeKey = `${day}_start_time` as keyof DisplayObject;
+                          const endTimeKey = `${day}_end_time` as keyof DisplayObject;
+                          const hoursKey = `${day}_hours` as keyof DisplayObject;
+                          const startTime = object[startTimeKey] as string | null;
+                          const endTime = object[endTimeKey] as string | null;
+                          const hours = object[hoursKey] as number | null;
+
+                          if (startTime || hours) {
+                            return (
+                              <p key={day} className="text-xs text-muted-foreground ml-2">
+                                {day.charAt(0).toUpperCase() + day.slice(1)}:
+                                {startTime && endTime ? ` ${startTime} - ${endTime}` : ''}
+                                {hours ? ` (${Number(hours).toFixed(2)} Std. Netto)` : ''}
+                              </p>
+                            );
+                          }
+                          return null;
+                        })}
+                      </TabsContent>
+                      <TabsContent value="documents" className="pt-4 space-y-4">
+                        <h3 className="text-md font-semibold flex items-center">
+                          <FileStack className="mr-2 h-5 w-5" /> Dokumente
+                        </h3>
+                        <DocumentUploader associatedOrderId={object.id} />
+                        <DocumentList associatedOrderId={object.id} />
+                      </TabsContent>
+                    </Tabs>
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </div>
+        </TabsContent>
+        <TabsContent value="table" className="mt-0">
+          <ObjectsTableView
+            objects={allObjects}
+            totalPages={totalPages}
+            currentPage={currentPage}
+            query={query}
+            customerIdFilter={customerIdFilter}
+            priorityFilter={priorityFilter}
+            timeOfDayFilter={timeOfDayFilter}
+            accessMethodFilter={accessMethodFilter}
+            sortColumn={sortColumn}
+            sortDirection={sortDirection}
+          />
+        </TabsContent>
+      </Tabs>
       {!query && totalPages > 1 && (
         <PaginationControls currentPage={currentPage} totalPages={totalPages} />
       )}

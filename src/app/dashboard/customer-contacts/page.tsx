@@ -1,17 +1,21 @@
-import { createClient } from "@/lib/supabase/server";
-import { redirect } from "next/navigation";
-import { CustomerContactForm } from "@/components/customer-contact-form";
+"use client"; // This page needs to be a client component to use hooks like useIsMobile
+
+import { createClient } from "@/lib/supabase/client";
+import { redirect, useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { createCustomerContact } from "./actions";
+import { Button } from "@/components/ui/button";
+import { Mail, Phone, Briefcase, UserRound, PlusCircle, ContactRound } from "lucide-react";
 import { CustomerContactEditDialog } from "@/components/customer-contact-edit-dialog";
 import { DeleteCustomerContactButton } from "@/components/delete-customer-contact-button";
-import { Mail, Phone, Briefcase, UserRound, PlusCircle, ContactRound } from "lucide-react";
 import { SearchInput } from "@/components/search-input";
-import { Button } from "@/components/ui/button";
 import { CustomerContactCreateGeneralDialog } from "@/components/customer-contact-create-general-dialog";
-import { PaginationControls } from "@/components/pagination-controls"; // Importiere die Paginierungskomponente
+import { PaginationControls } from "@/components/pagination-controls";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Suspense, useEffect, useState } from "react";
+import { FilterSelect } from "@/components/filter-select";
+import { CustomerContactsTableView } from "@/components/customer-contacts-table-view"; // Import the new table view component
+import { useIsMobile } from "@/hooks/use-mobile"; // Import the hook
 
-// Definieren Sie die Schnittstelle für die Kundenkontakt-Daten
 interface DisplayCustomerContact {
   id: string;
   customer_id: string;
@@ -21,61 +25,152 @@ interface DisplayCustomerContact {
   phone: string | null;
   role: string | null;
   created_at: string | null;
-  customer_name: string | null; // Hinzugefügt für den Kundennamen
+  customer_name: string | null;
 }
 
-export default async function CustomerContactsPage({
+export default function CustomerContactsPage({
   searchParams,
-}: any) {
-  const supabase = await createClient();
-  const { data: { user: currentUser } } = await supabase.auth.getUser();
+}: {
+  searchParams?: any;
+}) {
+  const supabase = createClient();
+  const router = useRouter();
+  const currentSearchParams = useSearchParams();
+  const isMobile = useIsMobile();
 
-  if (!currentUser) {
-    redirect("/login");
-  }
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [allContacts, setAllContacts] = useState<DisplayCustomerContact[]>([]);
+  const [customers, setCustomers] = useState<{ id: string; name: string }[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [totalCount, setTotalCount] = useState<number | null>(0);
 
   const query = typeof searchParams?.query === 'string' ? searchParams.query : '';
   const currentPage = Number(searchParams?.page) || 1;
-  const pageSize = Number(searchParams?.pageSize) || 9; // Standardmäßig 9 Kontakte pro Seite
+  const pageSize = Number(searchParams?.pageSize) || 9;
+  const customerIdFilter = searchParams?.customerId || '';
+  const viewMode = searchParams?.viewMode === 'table' ? 'table' : 'grid';
 
-  const from = (currentPage - 1) * pageSize;
-  const to = from + pageSize - 1;
+  // Sorting parameters
+  const sortColumn = Array.isArray(searchParams?.sortColumn) ? searchParams.sortColumn[0] : searchParams?.sortColumn || 'last_name';
+  const sortDirection = Array.isArray(searchParams?.sortDirection) ? searchParams.sortDirection[0] : searchParams?.sortDirection || 'asc';
 
-  let customerContactsQuery = supabase
-    .from('customer_contacts')
-    .select(`
-      *,
-      customers ( name )
-    `, { count: 'exact' }) // count: 'exact' ist wichtig für die Paginierung
-    .order('last_name', { ascending: true })
-    .range(from, to); // Paginierung anwenden
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        redirect("/login");
+        return;
+      }
+      setCurrentUser(user);
 
-  if (query) {
-    customerContactsQuery = customerContactsQuery.or(
-      `first_name.ilike.%${query}%,last_name.ilike.%${query}%,email.ilike.%${query}%,phone.ilike.%${query}%,role.ilike.%${query}%,customers.name.ilike.%${query}%`
-    );
+      const from = (currentPage - 1) * pageSize;
+      const to = from + pageSize - 1;
+
+      const { data: customersData, error: customersError } = await supabase.from('customers').select('id, name').order('name', { ascending: true });
+      if (customersError) console.error("Fehler beim Laden der Kunden für Filter:", customersError.message);
+      setCustomers(customersData || []);
+
+      let contactsData: DisplayCustomerContact[] = [];
+      let contactsError: any = null;
+      let contactsCount: number | null = 0;
+
+      if (query) {
+        // For search, fetch all and filter in memory
+        const { data, error: fetchError } = await supabase
+          .from('customer_contacts')
+          .select(`
+            *,
+            customers ( name )
+          `);
+        
+        if (fetchError) {
+          contactsError = fetchError;
+        } else {
+          const filteredData = data.filter(c => 
+            c.first_name.toLowerCase().includes(query.toLowerCase()) ||
+            c.last_name.toLowerCase().includes(query.toLowerCase()) ||
+            c.email?.toLowerCase().includes(query.toLowerCase()) ||
+            c.phone?.toLowerCase().includes(query.toLowerCase()) ||
+            c.role?.toLowerCase().includes(query.toLowerCase()) ||
+            c.customers?.name?.toLowerCase().includes(query.toLowerCase())
+          );
+          contactsData = filteredData.map(c => ({
+            id: c.id,
+            customer_id: c.customer_id,
+            first_name: c.first_name,
+            last_name: c.last_name,
+            email: c.email,
+            phone: c.phone,
+            role: c.role,
+            created_at: c.created_at,
+            customer_name: c.customers?.name || null,
+          }));
+          contactsCount = contactsData.length;
+        }
+      } else {
+        let selectQuery = supabase
+          .from('customer_contacts')
+          .select(`
+            *,
+            customers ( name )
+          `, { count: 'exact' })
+          .order(sortColumn, { ascending: sortDirection === 'asc' });
+
+        if (customerIdFilter) {
+          selectQuery = selectQuery.eq('customer_id', customerIdFilter);
+        }
+
+        const { data, error: selectError, count: selectCount } = await selectQuery
+          .range(from, to);
+
+        contactsData = data?.map(contact => ({
+          id: contact.id,
+          customer_id: contact.customer_id,
+          first_name: contact.first_name,
+          last_name: contact.last_name,
+          email: contact.email,
+          phone: contact.phone,
+          role: contact.role,
+          created_at: contact.created_at,
+          customer_name: contact.customers?.name || null,
+        })) || [];
+        contactsError = selectError;
+        contactsCount = selectCount;
+      }
+
+      if (contactsError) {
+        console.error("Fehler beim Laden der Kundenkontakte:", contactsError?.message || contactsError);
+      }
+      setAllContacts(contactsData);
+      setTotalCount(contactsCount);
+      setLoading(false);
+    };
+
+    fetchData();
+  }, [
+    supabase,
+    query,
+    currentPage,
+    pageSize,
+    customerIdFilter,
+    sortColumn,
+    sortDirection,
+  ]);
+
+  if (loading || !currentUser) {
+    return <div className="p-4 md:p-8">Lade Kundenkontakte...</div>;
   }
 
-  const { data: contacts, error, count } = await customerContactsQuery;
+  const totalPages = totalCount ? Math.ceil(totalCount / pageSize) : 0;
 
-  if (error) {
-    console.error("Fehler beim Laden der Kundenkontakte:", error?.message || error);
-    return <div className="p-4 md:p-8 text-sm">Fehler beim Laden der Kundenkontakte.</div>;
-  }
+  const activeTab = isMobile ? 'grid' : viewMode;
 
-  const displayContacts: DisplayCustomerContact[] = contacts?.map(contact => ({
-    id: contact.id,
-    customer_id: contact.customer_id,
-    first_name: contact.first_name,
-    last_name: contact.last_name,
-    email: contact.email,
-    phone: contact.phone,
-    role: contact.role,
-    created_at: contact.created_at,
-    customer_name: contact.customers?.name || null,
-  })) || [];
-
-  const totalPages = count ? Math.ceil(count / pageSize) : 0;
+  const handleViewModeChange = (value: string) => {
+    const params = new URLSearchParams(currentSearchParams);
+    params.set('viewMode', value);
+    router.replace(`?${params.toString()}`);
+  };
 
   return (
     <div className="p-4 md:p-8 space-y-8">
@@ -86,62 +181,95 @@ export default async function CustomerContactsPage({
         <CustomerContactCreateGeneralDialog />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-        {displayContacts.length === 0 && !query ? (
-          <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30 shadow-neumorphic glassmorphism-card">
-            <ContactRound className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
-            <p className="text-base md:text-lg font-semibold">Noch keine Kundenkontakte vorhanden</p>
-            <p className="text-sm">Fügen Sie einen neuen Kontakt hinzu, um Ihre Kundenbeziehungen zu verwalten.</p>
-            <div className="mt-4">
-              <CustomerContactCreateGeneralDialog />
-            </div>
-          </div>
-        ) : displayContacts.length === 0 && query ? (
-          <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30 shadow-neumorphic glassmorphism-card">
-            <ContactRound className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
-            <p className="text-base md:text-lg font-semibold">Keine Kundenkontakte gefunden</p>
-            <p className="text-sm">Ihre Suche nach "{query}" ergab keine Treffer.</p>
-          </div>
-        ) : (
-          displayContacts.map((contact) => (
-            <Card key={contact.id} className="shadow-neumorphic glassmorphism-card">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-base md:text-lg font-semibold">{contact.first_name} {contact.last_name}</CardTitle>
-                <div className="flex items-center space-x-2">
-                  <CustomerContactEditDialog contact={contact} />
-                  <DeleteCustomerContactButton contactId={contact.id} />
+      {/* Filter Section */}
+      <Suspense fallback={<div>Lade Filter...</div>}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-8">
+          <FilterSelect
+            paramName="customerId"
+            label="Kunde"
+            options={customers.map(c => ({ value: c.id, label: c.name }))}
+            currentValue={customerIdFilter}
+          />
+        </div>
+      </Suspense>
+
+      <Tabs value={activeTab} onValueChange={handleViewModeChange} className="w-full">
+        <div className="flex justify-end mb-4">
+          <TabsList className="hidden md:grid grid-cols-2 w-fit">
+            <TabsTrigger value="grid">Kartenansicht</TabsTrigger>
+            <TabsTrigger value="table">Tabellenansicht</TabsTrigger>
+          </TabsList>
+        </div>
+        <TabsContent value="grid" className="mt-0">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+            {allContacts.length === 0 && !query && !customerIdFilter ? (
+              <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30 shadow-neumorphic glassmorphism-card">
+                <ContactRound className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
+                <p className="text-base md:text-lg font-semibold">Noch keine Kundenkontakte vorhanden</p>
+                <p className="text-sm">Fügen Sie einen neuen Kontakt hinzu, um Ihre Kundenbeziehungen zu verwalten.</p>
+                <div className="mt-4">
+                  <CustomerContactCreateGeneralDialog />
                 </div>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {contact.customer_name && (
-                  <p className="text-sm text-muted-foreground">
-                    Kunde: {contact.customer_name}
-                  </p>
-                )}
-                {contact.email && (
-                  <div className="flex items-center text-sm text-muted-foreground">
-                    <Mail className="mr-2 h-4 w-4 flex-shrink-0" />
-                    <span>{contact.email}</span>
-                  </div>
-                )}
-                {contact.phone && (
-                  <div className="flex items-center text-sm text-muted-foreground">
-                    <Phone className="mr-2 h-4 w-4 flex-shrink-0" />
-                    <span>{contact.phone}</span>
-                  </div>
-                )}
-                {contact.role && (
-                  <div className="flex items-center text-sm text-muted-foreground">
-                    <Briefcase className="mr-2 h-4 w-4 flex-shrink-0" />
-                    <span>Rolle: {contact.role}</span>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          ))
-        )}
-      </div>
-      {totalPages > 1 && (
+              </div>
+            ) : allContacts.length === 0 && (query || customerIdFilter) ? (
+              <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30 shadow-neumorphic glassmorphism-card">
+                <ContactRound className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
+                <p className="text-base md:text-lg font-semibold">Keine Kundenkontakte gefunden</p>
+                <p className="text-sm">Ihre Suche oder Filter ergaben keine Treffer.</p>
+              </div>
+            ) : (
+              allContacts.map((contact) => (
+                <Card key={contact.id} className="shadow-neumorphic glassmorphism-card">
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-base md:text-lg font-semibold">{contact.first_name} {contact.last_name}</CardTitle>
+                    <div className="flex items-center space-x-2">
+                      <CustomerContactEditDialog contact={contact} />
+                      <DeleteCustomerContactButton contactId={contact.id} />
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    {contact.customer_name && (
+                      <p className="text-sm text-muted-foreground">
+                        Kunde: {contact.customer_name}
+                      </p>
+                    )}
+                    {contact.email && (
+                      <div className="flex items-center text-sm text-muted-foreground">
+                        <Mail className="mr-2 h-4 w-4 flex-shrink-0" />
+                        <span>{contact.email}</span>
+                      </div>
+                    )}
+                    {contact.phone && (
+                      <div className="flex items-center text-sm text-muted-foreground">
+                        <Phone className="mr-2 h-4 w-4 flex-shrink-0" />
+                        <span>{contact.phone}</span>
+                      </div>
+                    )}
+                    {contact.role && (
+                      <div className="flex items-center text-sm text-muted-foreground">
+                        <Briefcase className="mr-2 h-4 w-4 flex-shrink-0" />
+                        <span>Rolle: {contact.role}</span>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </div>
+        </TabsContent>
+        <TabsContent value="table" className="mt-0">
+          <CustomerContactsTableView
+            contacts={allContacts}
+            totalPages={totalPages}
+            currentPage={currentPage}
+            query={query}
+            customerIdFilter={customerIdFilter}
+            sortColumn={sortColumn}
+            sortDirection={sortDirection}
+          />
+        </TabsContent>
+      </Tabs>
+      {!query && totalPages > 1 && (
         <PaginationControls currentPage={currentPage} totalPages={totalPages} />
       )}
     </div>

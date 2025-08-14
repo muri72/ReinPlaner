@@ -1,18 +1,21 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react"; // Import useCallback
 import { createClient } from "@/lib/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SearchInput } from "@/components/search-input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Clock, UserRound, Building, Briefcase, FileText } from "lucide-react";
+import { Clock, UserRound, Building, Briefcase, FileText, ArrowUp, ArrowDown } from "lucide-react"; // Import ArrowUp, ArrowDown
 import { DeleteTimeEntryButton } from "@/components/delete-time-entry-button";
 import { TimeEntryEditDialog } from "@/components/time-entry-edit-dialog";
 import { useSearchParams, usePathname, useRouter } from "next/navigation";
 import { useDebouncedCallback } from "use-debounce";
-import { formatDuration } from "@/lib/utils"; // Importiere formatDuration
-import { Skeleton } from "@/components/ui/skeleton"; // Import Skeleton
+import { formatDuration } from "@/lib/utils";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"; // Import table components
+import { Button } from "@/components/ui/button"; // Import Button for sortable headers
+import { cn } from "@/lib/utils"; // Import cn for conditional styling
 
 interface DisplayTimeEntry {
   id: string;
@@ -24,7 +27,7 @@ interface DisplayTimeEntry {
   start_time: string;
   end_time: string | null;
   duration_minutes: number | null;
-  break_minutes: number | null; // Neues Feld
+  break_minutes: number | null;
   type: string;
   notes: string | null;
   employee_first_name: string | null;
@@ -57,6 +60,10 @@ export function AdminTimeEntriesOverview({ currentUserId, isAdmin }: AdminTimeEn
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(searchParams.get("employeeId") || null);
   const currentQuery = searchParams.get("query") || "";
 
+  // Sorting parameters
+  const sortColumn = searchParams.get('sortColumn') || 'start_time';
+  const sortDirection = searchParams.get('sortDirection') || 'desc';
+
   // Fetch employees for the filter dropdown
   useEffect(() => {
     const fetchEmployees = async () => {
@@ -72,7 +79,7 @@ export function AdminTimeEntriesOverview({ currentUserId, isAdmin }: AdminTimeEn
     fetchEmployees();
   }, [supabase]);
 
-  // Fetch time entries based on filters
+  // Fetch time entries based on filters and sorting
   useEffect(() => {
     const fetchTimeEntries = async () => {
       setLoading(true);
@@ -96,7 +103,7 @@ export function AdminTimeEntriesOverview({ currentUserId, isAdmin }: AdminTimeEn
           objects ( name ),
           orders ( title )
         `)
-        .order('start_time', { ascending: false });
+        .order(sortColumn, { ascending: sortDirection === 'asc' }); // Apply sorting
 
       // Apply employee_id filter if selected
       if (selectedEmployeeId && selectedEmployeeId !== "all") {
@@ -146,7 +153,7 @@ export function AdminTimeEntriesOverview({ currentUserId, isAdmin }: AdminTimeEn
     };
 
     fetchTimeEntries();
-  }, [selectedEmployeeId, currentQuery, supabase]);
+  }, [selectedEmployeeId, currentQuery, supabase, sortColumn, sortDirection]);
 
   const handleSearch = useDebouncedCallback((term: string) => {
     const params = new URLSearchParams(searchParams);
@@ -167,6 +174,24 @@ export function AdminTimeEntriesOverview({ currentUserId, isAdmin }: AdminTimeEn
     }
     replace(`${pathname}?${params.toString()}`);
     setSelectedEmployeeId(employeeId === "all" ? null : employeeId);
+  };
+
+  const handleSort = useCallback((column: string) => {
+    const params = new URLSearchParams(searchParams);
+    let newDirection = 'asc';
+    if (sortColumn === column && sortDirection === 'asc') {
+      newDirection = 'desc';
+    }
+    params.set('sortColumn', column);
+    params.set('sortDirection', newDirection);
+    replace(`${pathname}?${params.toString()}`);
+  }, [sortColumn, sortDirection, pathname, replace, searchParams]);
+
+  const renderSortIcon = (column: string) => {
+    if (sortColumn === column) {
+      return sortDirection === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />;
+    }
+    return null;
   };
 
   const getTypeBadgeVariant = (type: string) => {
@@ -210,102 +235,125 @@ export function AdminTimeEntriesOverview({ currentUserId, isAdmin }: AdminTimeEn
       </div>
 
       {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Card key={i} className="shadow-neumorphic glassmorphism-card">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <Skeleton className="h-6 w-3/4" />
-                <div className="flex space-x-2">
-                  <Skeleton className="h-6 w-16" />
-                  <Skeleton className="h-6 w-6 rounded-full" />
-                  <Skeleton className="h-6 w-6 rounded-full" />
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-3/4" />
-                <Skeleton className="h-4 w-1/2" />
-              </CardContent>
-            </Card>
-          ))}
+        <div className="overflow-x-auto p-4 rounded-lg shadow-neumorphic glassmorphism-card">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="min-w-[150px]"><Skeleton className="h-6 w-full" /></TableHead>
+                <TableHead className="min-w-[120px]"><Skeleton className="h-6 w-full" /></TableHead>
+                <TableHead className="min-w-[120px]"><Skeleton className="h-6 w-full" /></TableHead>
+                <TableHead className="min-w-[120px]"><Skeleton className="h-6 w-full" /></TableHead>
+                <TableHead className="min-w-[100px]"><Skeleton className="h-6 w-full" /></TableHead>
+                <TableHead className="min-w-[100px]"><Skeleton className="h-6 w-full" /></TableHead>
+                <TableHead className="min-w-[100px]"><Skeleton className="h-6 w-full" /></TableHead>
+                <TableHead className="text-right min-w-[120px]"><Skeleton className="h-6 w-full" /></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {Array.from({ length: 5 }).map((_, i) => (
+                <TableRow key={i}>
+                  <TableCell><Skeleton className="h-6 w-full" /></TableCell>
+                  <TableCell><Skeleton className="h-6 w-full" /></TableCell>
+                  <TableCell><Skeleton className="h-6 w-full" /></TableCell>
+                  <TableCell><Skeleton className="h-6 w-full" /></TableCell>
+                  <TableCell><Skeleton className="h-6 w-full" /></TableCell>
+                  <TableCell><Skeleton className="h-6 w-full" /></TableCell>
+                  <TableCell><Skeleton className="h-6 w-full" /></TableCell>
+                  <TableCell><Skeleton className="h-6 w-full" /></TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {timeEntries.length === 0 ? (
-            <p className="col-span-full text-center text-muted-foreground text-sm"> {/* Changed to text-sm */}
-              {currentQuery || selectedEmployeeId ? "Keine Zeiteinträge für diese Filter gefunden." : "Noch keine Zeiteinträge vorhanden."}
-            </p>
-          ) : (
-            timeEntries.map((entry) => (
-              <Card key={entry.id} className="shadow-neumorphic glassmorphism-card">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-lg font-semibold"> {/* Changed to text-lg font-semibold */}
-                    Zeiteintrag
-                  </CardTitle>
-                  <div className="flex items-center space-x-2">
-                    <Badge variant={getTypeBadgeVariant(entry.type)}>{entry.type === 'automatic_scheduled_order' ? 'Automatisch' : entry.type}</Badge>
-                    <TimeEntryEditDialog timeEntry={entry} currentUserId={currentUserId} isAdmin={isAdmin} />
-                    <DeleteTimeEntryButton entryId={entry.id} />
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-2 text-sm text-muted-foreground"> {/* Changed to text-sm */}
-                  <div className="flex items-center">
-                    <Clock className="mr-2 h-4 w-4 flex-shrink-0" />
-                    <span>Start: {new Date(entry.start_time).toLocaleString()}</span>
-                  </div>
-                  {entry.end_time && (
-                    <div className="flex items-center">
-                      <Clock className="mr-2 h-4 w-4 flex-shrink-0" />
-                      <span>Ende: {new Date(entry.end_time).toLocaleString()}</span>
-                    </div>
-                  )}
-                  {entry.duration_minutes !== null && (
-                    <div className="flex items-center">
-                      <Clock className="mr-2 h-4 w-4 flex-shrink-0" />
-                      <span>Dauer (Brutto): {formatDuration(entry.duration_minutes)}</span>
-                    </div>
-                  )}
-                  {entry.break_minutes !== null && entry.break_minutes > 0 && (
-                    <div className="flex items-center">
-                      <Clock className="mr-2 h-4 w-4 flex-shrink-0" />
-                      <span>Pause: {formatDuration(entry.break_minutes)}</span>
-                    </div>
-                  )}
-                  {entry.employee_first_name && entry.employee_last_name && (
-                    <div className="flex items-center">
-                      <UserRound className="mr-2 h-4 w-4 flex-shrink-0" />
-                      <span>Mitarbeiter: {entry.employee_first_name} {entry.employee_last_name}</span>
-                    </div>
-                  )}
-                  {entry.customer_name && (
-                    <div className="flex items-center">
-                      <Building className="mr-2 h-4 w-4 flex-shrink-0" />
-                      <span>Kunde: {entry.customer_name}</span>
-                    </div>
-                  )}
-                  {entry.object_name && (
-                    <div className="flex items-center">
-                      <Building className="mr-2 h-4 w-4 flex-shrink-0" />
-                      <span>Objekt: {entry.object_name}</span>
-                    </div>
-                  )}
-                  {entry.order_title && (
-                    <div className="flex items-center">
-                      <Briefcase className="mr-2 h-4 w-4 flex-shrink-0" />
-                      <span>Auftrag: {entry.order_title}</span>
-                    </div>
-                  )}
-                  {entry.notes && (
-                    <div className="flex items-center">
-                      <FileText className="mr-2 h-4 w-4 flex-shrink-0" />
-                      <span>Notizen: {entry.notes}</span>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            ))
-          )}
+        <div className="overflow-x-auto p-4 rounded-lg shadow-neumorphic glassmorphism-card">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="min-w-[150px]">
+                  <Button variant="ghost" onClick={() => handleSort('start_time')} className="px-0 hover:bg-transparent">
+                    Startzeit {renderSortIcon('start_time')}
+                  </Button>
+                </TableHead>
+                <TableHead className="min-w-[120px]">
+                  <Button variant="ghost" onClick={() => handleSort('end_time')} className="px-0 hover:bg-transparent">
+                    Endzeit {renderSortIcon('end_time')}
+                  </Button>
+                </TableHead>
+                <TableHead className="min-w-[120px]">
+                  <Button variant="ghost" onClick={() => handleSort('duration_minutes')} className="px-0 hover:bg-transparent">
+                    Dauer (Brutto) {renderSortIcon('duration_minutes')}
+                  </Button>
+                </TableHead>
+                <TableHead className="min-w-[120px]">
+                  <Button variant="ghost" onClick={() => handleSort('break_minutes')} className="px-0 hover:bg-transparent">
+                    Pause {renderSortIcon('break_minutes')}
+                  </Button>
+                </TableHead>
+                <TableHead className="min-w-[120px]">
+                  <Button variant="ghost" onClick={() => handleSort('employees.last_name')} className="px-0 hover:bg-transparent">
+                    Mitarbeiter {renderSortIcon('employees.last_name')}
+                  </Button>
+                </TableHead>
+                <TableHead className="min-w-[120px]">
+                  <Button variant="ghost" onClick={() => handleSort('customers.name')} className="px-0 hover:bg-transparent">
+                    Kunde {renderSortIcon('customers.name')}
+                  </Button>
+                </TableHead>
+                <TableHead className="min-w-[120px]">
+                  <Button variant="ghost" onClick={() => handleSort('objects.name')} className="px-0 hover:bg-transparent">
+                    Objekt {renderSortIcon('objects.name')}
+                  </Button>
+                </TableHead>
+                <TableHead className="min-w-[120px]">
+                  <Button variant="ghost" onClick={() => handleSort('orders.title')} className="px-0 hover:bg-transparent">
+                    Auftrag {renderSortIcon('orders.title')}
+                  </Button>
+                </TableHead>
+                <TableHead className="min-w-[100px]">
+                  <Button variant="ghost" onClick={() => handleSort('type')} className="px-0 hover:bg-transparent">
+                    Typ {renderSortIcon('type')}
+                  </Button>
+                </TableHead>
+                <TableHead className="min-w-[200px]">Notizen</TableHead>
+                <TableHead className="text-right min-w-[120px]">Aktionen</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {timeEntries.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={11} className="h-24 text-center text-sm text-muted-foreground">
+                    {currentQuery || selectedEmployeeId ? "Keine Zeiteinträge für diese Filter gefunden." : "Noch keine Zeiteinträge vorhanden."}
+                  </TableCell>
+                </TableRow>
+              ) : (
+                timeEntries.map((entry) => (
+                  <TableRow key={entry.id}>
+                    <TableCell className="font-medium text-sm">{new Date(entry.start_time).toLocaleString()}</TableCell>
+                    <TableCell className="text-sm">{entry.end_time ? new Date(entry.end_time).toLocaleString() : 'N/A'}</TableCell>
+                    <TableCell className="text-sm">{formatDuration(entry.duration_minutes)}</TableCell>
+                    <TableCell className="text-sm">{formatDuration(entry.break_minutes)}</TableCell>
+                    <TableCell className="text-sm">
+                      {entry.employee_first_name && entry.employee_last_name
+                        ? `${entry.employee_first_name} ${entry.employee_last_name}`
+                        : 'N/A'}
+                    </TableCell>
+                    <TableCell className="text-sm">{entry.customer_name || 'N/A'}</TableCell>
+                    <TableCell className="text-sm">{entry.object_name || 'N/A'}</TableCell>
+                    <TableCell className="text-sm">{entry.order_title || 'N/A'}</TableCell>
+                    <TableCell><Badge variant={getTypeBadgeVariant(entry.type)}>{entry.type === 'automatic_scheduled_order' ? 'Automatisch' : entry.type}</Badge></TableCell>
+                    <TableCell className="text-sm">{entry.notes || 'N/A'}</TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end space-x-1">
+                        <TimeEntryEditDialog timeEntry={entry} currentUserId={currentUserId} isAdmin={isAdmin} />
+                        <DeleteTimeEntryButton entryId={entry.id} />
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
         </div>
       )}
     </div>
