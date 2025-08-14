@@ -6,66 +6,69 @@ export async function middleware(request: NextRequest) {
   const { data: { session } } = await supabase.auth.getSession()
   const { pathname } = request.nextUrl;
 
-  // --- 1. Behandlung von nicht authentifizierten Benutzern ---
+  // --- 1. Handle unauthenticated users ---
   if (!session) {
-    // Erlaube Zugriff auf öffentliche Pfade (Login, Auth Callback)
+    // Allow access to public paths (Login, Auth Callback)
     if (pathname === '/login' || pathname.startsWith('/auth/callback')) {
       return response;
     }
-    // Leite alle anderen Pfade zum Login um
+    // Redirect all other paths to login
     return NextResponse.redirect(new URL('/login', request.url));
   }
 
-  // --- 2. Behandlung von authentifizierten Benutzern ---
-  // Benutzerrolle abrufen
+  // --- 2. Handle authenticated users: Fetch user role ---
   const { data: profileData, error: profileError } = await supabase
     .from('profiles')
     .select('role')
     .eq('id', session.user.id)
     .single();
 
-  if (profileError) {
-    console.error("Fehler beim Abrufen des Benutzerprofils:", profileError?.message || JSON.stringify(profileError));
+  // If there's an error fetching the profile or no profile data,
+  // it means the user might not have a profile entry or there's a DB issue.
+  // In this case, it's safer to redirect to login.
+  if (profileError || !profileData) {
+    console.error("Middleware: Fehler beim Abrufen des Benutzerprofils oder Profil nicht gefunden:", profileError?.message || JSON.stringify(profileError));
+    // Clear session and redirect to login to force re-authentication or profile creation
+    await supabase.auth.signOut(); // Important: clear session
+    return NextResponse.redirect(new URL('/login', request.url));
   }
 
-  const userRole = profileData?.role || 'employee'; // Standard auf 'employee', falls Rolle nicht gefunden
+  const userRole = profileData.role as 'admin' | 'manager' | 'employee' | 'customer';
 
-  // Den korrekten Basis-Dashboard-Pfad für die Benutzerrolle bestimmen
+  // Determine the correct base dashboard path for the user role
   let baseDashboardPath: string;
   if (userRole === 'customer') {
     baseDashboardPath = '/portal/dashboard';
   } else if (userRole === 'employee') {
     baseDashboardPath = '/employee/dashboard';
-  } else { // admin oder manager
+  } else { // admin or manager
     baseDashboardPath = '/dashboard';
   }
 
-  // --- 3. Rollenbasierte Routen-Erzwingung ---
+  // --- 3. Role-based route enforcement ---
 
-  // Wenn der Benutzer auf '/login' oder '/' ist, leite ihn zu seinem korrekten Basis-Dashboard um
+  // If the user is on '/login' or '/', redirect them to their correct base dashboard
   if (pathname === '/login' || pathname === '/') {
     return NextResponse.redirect(new URL(baseDashboardPath, request.url));
   }
 
-  // Spezifische Regeln für jede Rolle, um sicherzustellen, dass sie in ihren erlaubten Bereichen bleiben
+  // Enforce strict path prefixes based on role
   if (userRole === 'customer') {
-    // Kunden MÜSSEN sich in /portal/* befinden
     if (!pathname.startsWith('/portal')) {
       return NextResponse.redirect(new URL('/portal/dashboard', request.url));
     }
   } else if (userRole === 'employee') {
-    // Mitarbeiter MÜSSEN sich in /employee/* befinden
     if (!pathname.startsWith('/employee')) {
       return NextResponse.redirect(new URL('/employee/dashboard', request.url));
     }
   } else if (userRole === 'admin' || userRole === 'manager') {
-    // Admins/Manager DÜRFEN NICHT in /portal/* oder /employee/* sein
+    // Admins/Managers should not be in /portal/* or /employee/*
     if (pathname.startsWith('/portal') || pathname.startsWith('/employee')) {
       return NextResponse.redirect(new URL('/dashboard', request.url));
     }
   }
 
-  // Wenn keine der oben genannten Umleitungsregeln zutrifft, erlaube die Anfrage.
+  // If none of the above redirection rules apply, allow the request.
   return response;
 }
 
