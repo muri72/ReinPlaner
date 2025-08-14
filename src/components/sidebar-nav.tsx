@@ -132,18 +132,18 @@ export function SidebarNav({ isCollapsed, currentUserRole, onSignOut, onLinkClic
   });
 
   return (
-    <div className="flex-grow space-y-1"> {/* space-y-2 auf space-y-1 reduziert */}
-      {filteredNavItems.map((item) => (
-        item.isCategory ? (
-          <div key={item.title} className="space-y-1"> {/* space-y-2 auf space-y-1 reduziert */}
-            {!isCollapsed && (
-              <h3 className="text-sm font-semibold uppercase text-muted-foreground px-4 pt-4 pb-2">
-                {item.title}
-              </h3>
-            )}
-            {item.children.map(child => (
-              <TooltipProvider key={child.href} delayDuration={300}>
-                <Tooltip>
+    <TooltipProvider delayDuration={300}>
+      <div className="flex-grow space-y-1">
+        {filteredNavItems.map((item) => (
+          item.isCategory ? (
+            <div key={item.title} className="space-y-1">
+              {!isCollapsed && (
+                <h3 className="text-sm font-semibold uppercase text-muted-foreground px-4 pt-4 pb-2">
+                  {item.title}
+                </h3>
+              )}
+              {item.children.map(child => (
+                <Tooltip key={child.href}>
                   <TooltipTrigger asChild>
                     <Button
                       variant={pathname === child.href ? "secondary" : "ghost"}
@@ -164,12 +164,10 @@ export function SidebarNav({ isCollapsed, currentUserRole, onSignOut, onLinkClic
                   </TooltipTrigger>
                   {isCollapsed && <TooltipContent side="right">{child.title}</TooltipContent>}
                 </Tooltip>
-              </TooltipProvider>
-            ))}
-          </div>
-        ) : (
-          <TooltipProvider key={item.href} delayDuration={300}>
-            <Tooltip>
+              ))}
+            </div>
+          ) : (
+            <Tooltip key={item.href}>
               <TooltipTrigger asChild>
                 <Button
                   variant={pathname === item.href ? "secondary" : "ghost"}
@@ -190,9 +188,9 @@ export function SidebarNav({ isCollapsed, currentUserRole, onSignOut, onLinkClic
               </TooltipTrigger>
               {isCollapsed && <TooltipContent side="right">{item.title}</TooltipContent>}
             </Tooltip>
-          </TooltipProvider>
-        )
-      ))}
-    </div>
+          )
+        ))}
+      </div>
+    </TooltipProvider>
   );
 }
