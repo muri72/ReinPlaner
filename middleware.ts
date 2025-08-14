@@ -6,15 +6,19 @@ export async function middleware(request: NextRequest) {
   const { data: { session } } = await supabase.auth.getSession()
   const { pathname } = request.nextUrl;
 
-  // 1. If no session, redirect protected routes to login
+  // Define public paths that don't require authentication or specific role checks
+  const publicPaths = ['/login', '/auth/callback'];
+
+  // If no session, redirect protected routes to login
   if (!session) {
+    // If trying to access any dashboard-related path without a session, redirect to login
     if (pathname.startsWith('/dashboard') || pathname.startsWith('/portal') || pathname.startsWith('/employee')) {
       return NextResponse.redirect(new URL('/login', request.url));
     }
-    return response; // Allow access to public routes like /login, /auth/callback
+    return response; // Allow access to other public paths
   }
 
-  // 2. If session exists, fetch user role
+  // If session exists, fetch user role
   const { data: profileData, error: profileError } = await supabase
     .from('profiles')
     .select('role')
@@ -22,6 +26,19 @@ export async function middleware(request: NextRequest) {
     .single();
 
   const userRole = profileData?.role || 'employee'; // Default to employee if role not found
+
+  // Determine the correct dashboard path based on role
+  let correctDashboardPath = '/dashboard';
+  if (userRole === 'customer') {
+    correctDashboardPath = '/portal/dashboard';
+  } else if (userRole === 'employee') {
+    correctDashboardPath = '/employee/dashboard';
+  }
+
+  // Redirect from login page or root to the correct dashboard if already logged in
+  if (pathname === '/login' || pathname === '/') {
+    return NextResponse.redirect(new URL(correctDashboardPath, request.url));
+  }
 
   // Define explicitly allowed shared /dashboard paths for employees
   const allowedEmployeeSharedDashboardPaths = [
@@ -36,45 +53,23 @@ export async function middleware(request: NextRequest) {
     '/dashboard/notifications',
   ];
 
-  // Strict Role-based Route Enforcement
-  // Rule 1: Customer can ONLY access /portal/* routes (and /login, /auth/callback, /)
+  // Strict Role-based Route Enforcement for authenticated users
+  // Rule 1: Customer can ONLY access /portal/* routes
   if (userRole === 'customer') {
-    if (!pathname.startsWith('/portal') && pathname !== '/login' && pathname !== '/auth/callback' && pathname !== '/') {
+    if (!pathname.startsWith('/portal')) {
       return NextResponse.redirect(new URL('/portal/dashboard', request.url));
     }
   }
   // Rule 2: Employee can ONLY access /employee/* routes OR specific shared /dashboard/* routes
   else if (userRole === 'employee') {
     const isAllowedEmployeePath = pathname.startsWith('/employee') || allowedEmployeeSharedDashboardPaths.some(path => pathname.startsWith(path));
-    if (!isAllowedEmployeePath && pathname !== '/login' && pathname !== '/auth/callback' && pathname !== '/') {
+    if (!isAllowedEmployeePath) {
       return NextResponse.redirect(new URL('/employee/dashboard', request.url));
     }
   }
   // Rule 3: Admin/Manager can NOT access /portal/* or /employee/* routes
   else if (userRole === 'admin' || userRole === 'manager') {
     if (pathname.startsWith('/portal') || pathname.startsWith('/employee')) {
-      return NextResponse.redirect(new URL('/dashboard', request.url));
-    }
-  }
-
-  // Redirect from login page to appropriate dashboard if already logged in
-  if (pathname === '/login') {
-    if (userRole === 'customer') {
-      return NextResponse.redirect(new URL('/portal/dashboard', request.url));
-    } else if (userRole === 'employee') {
-      return NextResponse.redirect(new URL('/employee/dashboard', request.url));
-    } else {
-      return NextResponse.redirect(new URL('/dashboard', request.url));
-    }
-  }
-
-  // Redirect from root to appropriate dashboard
-  if (pathname === '/') {
-    if (userRole === 'customer') {
-      return NextResponse.redirect(new URL('/portal/dashboard', request.url));
-    } else if (userRole === 'employee') {
-      return NextResponse.redirect(new URL('/employee/dashboard', request.url));
-    } else {
       return NextResponse.redirect(new URL('/dashboard', request.url));
     }
   }

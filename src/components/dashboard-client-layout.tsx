@@ -22,6 +22,15 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut }: 
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   // const [searchQuery, setSearchQuery = useState(""); // Removed search query state
 
+  const getHomeLink = () => {
+    if (currentUserRole === 'customer') {
+      return '/portal/dashboard';
+    } else if (currentUserRole === 'employee') {
+      return '/employee/dashboard';
+    }
+    return '/dashboard'; // Default for admin/manager
+  };
+
   return (
     <div className="min-h-screen flex flex-col md:flex-row">
       {/* Mobile Header and Navigation (fixed) */}
@@ -40,7 +49,7 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut }: 
             )}
           >
             <SheetHeader className="flex flex-col items-center justify-center mb-6"> {/* Centered header */}
-              <Link href="/dashboard" passHref onClick={() => setIsSheetOpen(false)}>
+              <Link href={getHomeLink()} passHref onClick={() => setIsSheetOpen(false)}>
                 <h2 className="text-xl font-bold text-primary tracking-tight cursor-pointer">ARIS</h2>
               </Link>
               {/* Removed SheetTitle, SheetDescription, and NotificationBell from here */}
@@ -58,7 +67,7 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut }: 
           </SheetContent>
         </Sheet>
         {/* ARIS text in the main mobile header, centered */}
-        <Link href="/dashboard" passHref>
+        <Link href={getHomeLink()} passHref>
           <h2 className="text-xl font-bold text-primary tracking-tight absolute left-1/2 -translate-x-1/2 cursor-pointer">ARIS</h2>
         </Link>
         <div className="flex items-center space-x-2">
@@ -77,7 +86,7 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut }: 
       >
         {/* ARIS text and toggle button, always centered */}
         <div className="flex flex-col items-center justify-center mb-6"> {/* Changed to flex-col and items-center */}
-          <Link href="/dashboard" passHref>
+          <Link href={getHomeLink()} passHref>
             <h2 className="text-xl font-bold text-primary tracking-tight cursor-pointer">ARIS</h2>
           </Link>
           <Button
