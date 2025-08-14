@@ -16,6 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DocumentUploader } from "@/components/document-uploader"; // Import DocumentUploader
 import { DocumentList } from "@/components/document-list"; // Import DocumentList
 import { Suspense } from "react"; // Import Suspense for client components
+import { FilterSelect } from "@/components/filter-select"; // Import the new FilterSelect component
 
 interface DisplayOrder {
   id: string;
@@ -64,7 +65,7 @@ const availableServices = [
 export default async function OrdersPage({
   searchParams,
 }: {
-  searchParams?: Record<string, string | string[] | undefined>;
+  searchParams?: any; // Changed to any to resolve Next.js internal type error
 }) {
   const supabase = await createClient();
   const { data: { user: currentUser } } = await supabase.auth.getUser();
@@ -76,11 +77,13 @@ export default async function OrdersPage({
   const query = typeof searchParams?.query === 'string' ? searchParams.query : '';
   const currentPage = Number(searchParams?.page) || 1;
   const pageSize = Number(searchParams?.pageSize) || 9; // Standardmäßig 9 Aufträge pro Seite
-  const statusFilter = searchParams?.status || '';
-  const orderTypeFilter = searchParams?.orderType || '';
-  const serviceTypeFilter = searchParams?.serviceType || '';
-  const customerIdFilter = searchParams?.customerId || '';
-  const employeeIdFilter = searchParams?.employeeId || '';
+  
+  // Ensure filter values are always strings
+  const statusFilter = Array.isArray(searchParams?.status) ? searchParams.status[0] : searchParams?.status || '';
+  const orderTypeFilter = Array.isArray(searchParams?.orderType) ? searchParams.orderType[0] : searchParams?.orderType || '';
+  const serviceTypeFilter = Array.isArray(searchParams?.serviceType) ? searchParams.serviceType[0] : searchParams?.serviceType || '';
+  const customerIdFilter = Array.isArray(searchParams?.customerId) ? searchParams.customerId[0] : searchParams?.customerId || '';
+  const employeeIdFilter = Array.isArray(searchParams?.employeeId) ? searchParams.employeeId[0] : searchParams?.employeeId || '';
 
   const from = (currentPage - 1) * pageSize;
   const to = from + pageSize - 1;
@@ -388,60 +391,6 @@ export default async function OrdersPage({
           <PaginationControls currentPage={currentPage} totalPages={totalPages} />
         )}
       </div>
-    </div>
-  );
-}
-
-// Client Component for Filters
-// This component is separated to allow it to use useRouter/useSearchParams
-// without making the entire page a client component.
-"use client";
-
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useCallback } from "react";
-
-interface FilterSelectProps {
-  paramName: string;
-  label: string;
-  options: { value: string; label: string }[];
-  currentValue: string;
-}
-
-function FilterSelect({ paramName, label, options, currentValue }: FilterSelectProps) {
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-
-  const handleFilterChange = useCallback(
-    (value: string) => {
-      const params = new URLSearchParams(searchParams);
-      if (value) {
-        params.set(paramName, value);
-      } else {
-        params.delete(paramName);
-      }
-      params.set('page', '1'); // Reset to first page on filter change
-      router.replace(`${pathname}?${params.toString()}`);
-    },
-    [paramName, pathname, router, searchParams]
-  );
-
-  return (
-    <div>
-      <Label htmlFor={paramName}>{label}</Label>
-      <Select onValueChange={handleFilterChange} value={currentValue}>
-        <SelectTrigger className="w-full">
-          <SelectValue placeholder={`Alle ${label.toLowerCase()}`} />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="">Alle</SelectItem>
-          {options.map(option => (
-            <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
     </div>
   );
 }
