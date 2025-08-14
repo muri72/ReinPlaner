@@ -2,14 +2,38 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { LucideIcon } from "lucide-react";
 import Link from "next/link";
+import {
+  Briefcase,
+  AlertTriangle,
+  UsersRound,
+  DollarSign,
+  MessageSquare,
+  Users,
+  Building,
+  TrendingUp,
+  ListOrdered,
+  LucideIcon // Import LucideIcon type for the map
+} from "lucide-react"; // Import all necessary icons
+
+// Map of icon names to their components
+const iconMap: { [key: string]: LucideIcon } = {
+  Briefcase,
+  AlertTriangle,
+  UsersRound,
+  DollarSign,
+  MessageSquare,
+  Users,
+  Building,
+  TrendingUp,
+  ListOrdered,
+};
 
 interface KpiCardProps {
   title: string;
   value: string | number;
   description?: string;
-  icon?: LucideIcon;
+  icon?: string; // Changed to string
   linkHref?: string;
   valueColorClass?: string; // Tailwind class for value color (e.g., "text-green-500")
   progress?: {
@@ -19,12 +43,14 @@ interface KpiCardProps {
   };
 }
 
-export function KpiCard({ title, value, description, icon: Icon, linkHref, valueColorClass, progress }: KpiCardProps) {
+export function KpiCard({ title, value, description, icon, linkHref, valueColorClass, progress }: KpiCardProps) {
+  const IconComponent = icon ? iconMap[icon] : null;
+
   const content = (
     <>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm md:text-base font-semibold">{title}</CardTitle>
-        {Icon && <Icon className="h-4 w-4 md:h-5 md:w-5 text-muted-foreground" />}
+        {IconComponent && <IconComponent className="h-4 w-4 md:h-5 md:w-5 text-muted-foreground" />}
       </CardHeader>
       <CardContent>
         <div className={cn("text-xl md:text-2xl font-bold", valueColorClass)}>

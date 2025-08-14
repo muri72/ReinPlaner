@@ -207,7 +207,7 @@ export default async function DashboardPage() {
           title="Geplante Einsätze heute"
           value={totalScheduledToday}
           description="Aufträge für heute geplant"
-          icon={Briefcase}
+          icon="Briefcase"
           linkHref="/dashboard/orders"
           progress={{
             current: completedScheduledToday,
@@ -219,7 +219,7 @@ export default async function DashboardPage() {
           title="Offene Anfragen"
           value={pendingCustomerRequests ?? 0}
           description="Kundenanfragen zur Bearbeitung"
-          icon={AlertTriangle}
+          icon="AlertTriangle"
           linkHref="/dashboard/orders?requestStatus=pending"
           valueColorClass="text-warning"
         />
@@ -227,7 +227,7 @@ export default async function DashboardPage() {
           title="Aktive Mitarbeiter"
           value={activeEmployeesCount ?? 0}
           description="Mitarbeiter aktuell im Einsatz"
-          icon={UsersRound}
+          icon="UsersRound"
           linkHref="/dashboard/time-tracking"
           valueColorClass="text-success"
         />
@@ -235,7 +235,7 @@ export default async function DashboardPage() {
           title="Umsatz letzte 7 Tage"
           value={`${(revenueLast7Days ?? 0).toFixed(2)} €`}
           description="Geschätzter Umsatz der letzten 7 Tage"
-          icon={TrendingUp}
+          icon="TrendingUp"
           linkHref="/dashboard/finances"
           valueColorClass="text-primary"
         />
@@ -243,7 +243,7 @@ export default async function DashboardPage() {
           title="Reklamationen heute"
           value={totalNewComplaintsToday}
           description="Neue Beschwerden eingegangen"
-          icon={MessageSquare}
+          icon="MessageSquare"
           linkHref="/dashboard/feedback"
           valueColorClass={totalNewComplaintsToday > 0 ? "text-destructive" : "text-success"}
         />
