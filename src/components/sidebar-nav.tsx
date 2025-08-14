@@ -56,7 +56,7 @@ const navItems: NavItem[] = [
     roles: ['employee'],
   },
   {
-    title: "Auftragsmanagement",
+    title: "Management", // Changed from "Auftragsmanagement"
     isCategory: true,
     roles: ['admin', 'manager', 'employee'], // Removed 'customer'
     children: [
