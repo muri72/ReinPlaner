@@ -38,11 +38,11 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut }: 
               "bg-sidebar/80 backdrop-blur-xl glassmorphism-card" // Apply glassmorphism here
             )}
           >
-            <SheetHeader className="flex flex-row items-center justify-center mb-6"> {/* Centered header */}
+            <SheetHeader className="flex flex-col items-center justify-center mb-6"> {/* Centered header */}
               <h2 className="text-xl font-bold text-primary tracking-tight">ARIS</h2>
               {/* Removed SheetTitle, SheetDescription, and NotificationBell from here */}
             </SheetHeader>
-            <nav className="flex-grow space-y-2">
+            <nav className="flex-grow space-y-2 pt-4 border-t border-sidebar-border"> {/* Added border-t and pt-4 */}
               <SidebarNav
                 isCollapsed={false}
                 currentUserRole={currentUserRole}
@@ -70,17 +70,14 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut }: 
           "bg-gradient-to-br from-sidebar-background to-sidebar-accent glassmorphism-card" // Apply glassmorphism here
         )}
       >
-        {/* ARIS text always visible, centered */}
-        <div className={cn("flex items-center", isCollapsed ? "justify-center" : "justify-start")} >
+        {/* ARIS text and toggle button, always centered */}
+        <div className="flex flex-col items-center justify-center mb-6"> {/* Changed to flex-col and items-center */}
           <h2 className="text-xl font-bold text-primary tracking-tight">ARIS</h2>
-        </div>
-
-        {/* Toggle button below ARIS, centered when collapsed */}
-        <div className={cn("flex", isCollapsed ? "justify-center" : "justify-end", "mt-4 mb-6")}> {/* Added margin-top and margin-bottom */}
           <Button
             variant="ghost"
             size="icon"
             onClick={() => setIsCollapsed(!isCollapsed)}
+            className="mt-4" // Added margin-top for spacing
           >
             {isCollapsed ? (
               <ChevronRight className="h-6 w-6" />
@@ -90,13 +87,15 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut }: 
           </Button>
         </div>
 
-        <SidebarNav
-          isCollapsed={isCollapsed}
-          currentUserRole={currentUserRole}
-          onSignOut={onSignOut}
-          // searchQuery={searchQuery} // Removed search query prop
-          // onSearchChange={setSearchQuery} // Removed search handler
-        />
+        <nav className="flex-grow space-y-2 pt-4 border-t border-sidebar-border"> {/* Added border-t and pt-4 */}
+          <SidebarNav
+            isCollapsed={isCollapsed}
+            currentUserRole={currentUserRole}
+            onSignOut={onSignOut}
+            // searchQuery={searchQuery} // Removed search query prop
+            // onSearchChange={setSearchQuery} // Removed search handler
+          />
+        </nav>
 
         {/* Notification Bell and User Menu at the bottom of the sidebar */}
         <div className={cn(
