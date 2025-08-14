@@ -19,6 +19,7 @@ interface DashboardClientLayoutProps {
 export function DashboardClientLayout({ children, currentUserRole, onSignOut }: DashboardClientLayoutProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState(""); // New state for search query
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row">
@@ -56,6 +57,8 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut }: 
                   currentUserRole={currentUserRole}
                   onSignOut={onSignOut}
                   onLinkClick={() => setIsSheetOpen(false)}
+                  searchQuery={searchQuery} // Pass search query
+                  onSearchChange={setSearchQuery} // Pass search handler
                 />
               </nav>
             </SheetContent>
@@ -93,7 +96,13 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut }: 
             )}
           </Button>
         </div>
-        <SidebarNav isCollapsed={isCollapsed} currentUserRole={currentUserRole} onSignOut={onSignOut} />
+        <SidebarNav
+          isCollapsed={isCollapsed}
+          currentUserRole={currentUserRole}
+          onSignOut={onSignOut}
+          searchQuery={searchQuery} // Pass search query
+          onSearchChange={setSearchQuery} // Pass search handler
+        />
 
         {/* Notification Bell and User Menu at the bottom of the sidebar */}
         <div className={cn(

@@ -7,8 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Home, Briefcase, Users, ContactRound, Building, UsersRound, Clock, CalendarOff,
-  CalendarCheck, TrendingUp, FileText, Star
-} from "lucide-react";
+  CalendarCheck, TrendingUp, FileText, Star, Search
+} from "lucide-react"; // Added Search icon
 import { cn } from "@/lib/utils";
 
 // Definieren der Rollen-Typen
@@ -94,24 +94,48 @@ interface SidebarNavProps {
   currentUserRole: UserRole;
   onSignOut: () => Promise<void>;
   onLinkClick?: () => void; // Neue Prop
+  searchQuery: string; // Added search query prop
+  onSearchChange: (query: string) => void; // Added search change handler
 }
 
-export function SidebarNav({ isCollapsed, currentUserRole, onSignOut, onLinkClick }: SidebarNavProps) {
+export function SidebarNav({ isCollapsed, currentUserRole, onSignOut, onLinkClick, searchQuery, onSearchChange }: SidebarNavProps) {
   const pathname = usePathname();
 
   const filteredNavItems = navItems.filter(item => {
     if (item.isCategory) {
-      // Filtern der Kinder basierend auf Rollen
-      item.children = item.children.filter(child => child.roles.includes(currentUserRole));
-      // Zeige Kategorie nur, wenn sie Kinder hat
+      // Filter children based on roles and search query
+      item.children = item.children.filter(child => 
+        child.roles.includes(currentUserRole) && 
+        child.title.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+      // Show category only if it has children
       return item.children.length > 0;
     }
-    // Zeige einzelnen Link nur, wenn Rolle übereinstimmt
-    return item.roles.includes(currentUserRole);
+    // Show single link only if role matches and title matches search query
+    return item.roles.includes(currentUserRole) && item.title.toLowerCase().includes(searchQuery.toLowerCase());
   });
 
   return (
     <div className="flex-grow space-y-2">
+      {/* Search Input */}
+      <div className="relative mb-4 px-2">
+        <input
+          type="text"
+          placeholder={isCollapsed ? "" : "Suchen..."}
+          value={searchQuery}
+          onChange={(e) => onSearchChange(e.target.value)}
+          className={cn(
+            "w-full rounded-md border bg-sidebar-background text-sidebar-foreground pl-8 pr-2 py-1.5 text-sm",
+            "focus:outline-none focus:ring-1 focus:ring-sidebar-ring",
+            isCollapsed ? "h-8 w-8 p-0 text-center" : "h-auto"
+          )}
+        />
+        <Search className={cn(
+          "absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground",
+          isCollapsed && "left-1/2 -translate-x-1/2"
+        )} />
+      </div>
+
       {filteredNavItems.map((item) => (
         item.isCategory ? (
           <div key={item.title} className="space-y-2">
@@ -130,7 +154,9 @@ export function SidebarNav({ isCollapsed, currentUserRole, onSignOut, onLinkClic
                         className={cn(
                           "w-full",
                           isCollapsed ? "justify-center" : "justify-start",
-                          "text-sm text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors duration-200"
+                          "text-sm text-sidebar-foreground transition-colors duration-200",
+                          // Active state: stronger highlight with primary accent
+                          pathname === child.href ? "bg-primary text-primary-foreground hover:bg-primary/90" : "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                         )}
                       >
                         <child.icon className={cn(isCollapsed ? "h-8 w-8" : "h-6 w-6", !isCollapsed && "mr-2")} />
@@ -153,7 +179,9 @@ export function SidebarNav({ isCollapsed, currentUserRole, onSignOut, onLinkClic
                     className={cn(
                       "w-full",
                       isCollapsed ? "justify-center" : "justify-start",
-                      "text-sm text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors duration-200"
+                      "text-sm text-sidebar-foreground transition-colors duration-200",
+                      // Active state: stronger highlight with primary accent
+                      pathname === item.href ? "bg-primary text-primary-foreground hover:bg-primary/90" : "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                     )}
                   >
                     <item.icon className={cn(isCollapsed ? "h-8 w-8" : "h-6 w-6", !isCollapsed && "mr-2")} />
