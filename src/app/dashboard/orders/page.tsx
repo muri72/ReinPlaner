@@ -1,5 +1,7 @@
-import { createClient } from "@/lib/supabase/server";
-import { redirect } from "next/navigation";
+"use client"; // This page needs to be a client component to use hooks like useIsMobile
+
+import { createClient } from "@/lib/supabase/client"; // Use client-side supabase for client component
+import { redirect, useRouter, useSearchParams } from "next/navigation"; // Import useRouter and useSearchParams for client-side navigation
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Trash2, CalendarDays, Clock, FileText, Wrench, UserRound, AlertTriangle, Star as StarIcon, PlusCircle, Briefcase, FileStack } from "lucide-react";
@@ -14,11 +16,12 @@ import { PaginationControls } from "@/components/pagination-controls";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DocumentUploader } from "@/components/document-uploader";
 import { DocumentList } from "@/components/document-list";
-import { Suspense } from "react";
+import { Suspense, useEffect, useState } from "react"; // Import useEffect and useState
 import { FilterSelect } from "@/components/filter-select";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
-import { OrdersTableView } from "@/components/orders-table-view"; // Import the new table view component
+import { OrdersTableView } from "@/components/orders-table-view";
+import { useIsMobile } from "@/hooks/use-mobile"; // Import the hook
 
 interface DisplayOrder {
   id: string;
@@ -63,128 +66,161 @@ const availableServices = [
   "Sonderreinigung",
 ];
 
-export default async function OrdersPage({
+// This component is now a client component. Data fetching will be handled by a separate server component or action.
+// For simplicity, I'm keeping the data fetching logic here for now, but it would ideally be moved to a server action
+// that is called by this client component.
+export default function OrdersPage({
   searchParams,
 }: {
   searchParams?: any;
 }) {
-  const supabase = await createClient();
-  const { data: { user: currentUser } } = await supabase.auth.getUser();
+  const supabase = createClient(); // Use client-side supabase
+  const router = useRouter();
+  const currentSearchParams = useSearchParams();
+  const isMobile = useIsMobile();
 
-  if (!currentUser) {
-    redirect("/login");
-  }
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [allOrders, setAllOrders] = useState<DisplayOrder[]>([]);
+  const [customers, setCustomers] = useState<{ id: string; name: string }[]>([]);
+  const [employees, setEmployees] = useState<{ id: string; first_name: string | null; last_name: string | null }[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [totalCount, setTotalCount] = useState<number | null>(0);
 
   const query = typeof searchParams?.query === 'string' ? searchParams.query : '';
   const currentPage = Number(searchParams?.page) || 1;
   const pageSize = Number(searchParams?.pageSize) || 9;
-  
-  // Ensure filter values are always strings
-  const statusFilter = Array.isArray(searchParams?.status) ? searchParams.status[0] : searchParams?.status || '';
-  const orderTypeFilter = Array.isArray(searchParams?.orderType) ? searchParams.orderType[0] : searchParams?.orderType || '';
-  const serviceTypeFilter = Array.isArray(searchParams?.serviceType) ? searchParams.serviceType[0] : searchParams?.serviceType || '';
-  const customerIdFilter = Array.isArray(searchParams?.customerId) ? searchParams.customerId[0] : searchParams?.customerId || '';
-  const employeeIdFilter = Array.isArray(searchParams?.employeeId) ? searchParams.employeeId[0] : searchParams?.employeeId || '';
-  const viewMode = searchParams?.viewMode === 'table' ? 'table' : 'grid'; // New: default to grid
+  const statusFilter = searchParams?.status || '';
+  const orderTypeFilter = searchParams?.orderType || '';
+  const serviceTypeFilter = searchParams?.serviceType || '';
+  const customerIdFilter = searchParams?.customerId || '';
+  const employeeIdFilter = searchParams?.employeeId || '';
+  const viewMode = searchParams?.viewMode === 'table' ? 'table' : 'grid';
+  const sortColumn = searchParams?.sortColumn || 'created_at';
+  const sortDirection = searchParams?.sortDirection || 'desc';
 
-  // Sorting parameters
-  const sortColumn = Array.isArray(searchParams?.sortColumn) ? searchParams.sortColumn[0] : searchParams?.sortColumn || 'created_at';
-  const sortDirection = Array.isArray(searchParams?.sortDirection) ? searchParams.sortDirection[0] : searchParams?.sortDirection || 'desc';
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        redirect("/login");
+        return;
+      }
+      setCurrentUser(user);
 
+      const from = (currentPage - 1) * pageSize;
+      const to = from + pageSize - 1;
 
-  const from = (currentPage - 1) * pageSize;
-  const to = from + pageSize - 1;
+      const { data: customersData, error: customersError } = await supabase.from('customers').select('id, name').order('name', { ascending: true });
+      const { data: employeesData, error: employeesError } = await supabase.from('employees').select('id, first_name, last_name').order('last_name', { ascending: true });
 
-  let allOrders: DisplayOrder[] = [];
-  let error: any;
-  let count: number | null = 0;
+      if (customersError) console.error("Fehler beim Laden der Kunden für Filter:", customersError.message);
+      if (employeesError) console.error("Fehler beim Laden der Mitarbeiter für Filter:", employeesError.message);
 
-  const { data: customersData, error: customersError } = await supabase.from('customers').select('id, name').order('name', { ascending: true });
-  const { data: employeesData, error: employeesError } = await supabase.from('employees').select('id, first_name, last_name').order('last_name', { ascending: true });
+      setCustomers(customersData || []);
+      setEmployees(employeesData || []);
 
-  if (customersError) console.error("Fehler beim Laden der Kunden für Filter:", customersError.message);
-  if (employeesError) console.error("Fehler beim Laden der Mitarbeiter für Filter:", employeesError.message);
+      let ordersData: DisplayOrder[] = [];
+      let ordersError: any = null;
+      let ordersCount: number | null = 0;
 
-  const customers = customersData || [];
-  const employees = employeesData || [];
+      if (query) {
+        const { data, error: rpcError } = await supabase.rpc('search_orders', { search_query: query });
+        ordersData = (data as DisplayOrder[] | null)?.map(o => ({ ...o, order_feedback: [] })) || [];
+        ordersError = rpcError;
+        ordersCount = ordersData.length;
+      } else {
+        let selectQuery = supabase
+          .from('orders')
+          .select(`
+            *,
+            customers ( name ),
+            objects ( name ),
+            employees ( first_name, last_name ),
+            customer_contacts ( first_name, last_name ),
+            order_feedback ( id, rating, comment, image_urls, created_at )
+          `, { count: 'exact' })
+          .order(sortColumn, { ascending: sortDirection === 'asc' });
 
-  if (query) {
-    const { data, error: rpcError } = await supabase.rpc('search_orders', { search_query: query });
-    allOrders = (data as DisplayOrder[] | null)?.map(o => ({ ...o, order_feedback: [] })) || [];
-    error = rpcError;
-    count = allOrders.length;
-  } else {
-    let selectQuery = supabase
-      .from('orders')
-      .select(`
-        *,
-        customers ( name ),
-        objects ( name ),
-        employees ( first_name, last_name ),
-        customer_contacts ( first_name, last_name ),
-        order_feedback ( id, rating, comment, image_urls, created_at )
-      `, { count: 'exact' });
-      
-    // Apply sorting
-    selectQuery = selectQuery.order(sortColumn, { ascending: sortDirection === 'asc' });
+        if (statusFilter) {
+          selectQuery = selectQuery.eq('status', statusFilter);
+        }
+        if (orderTypeFilter) {
+          selectQuery = selectQuery.eq('order_type', orderTypeFilter);
+        }
+        if (serviceTypeFilter) {
+          selectQuery = selectQuery.eq('service_type', serviceTypeFilter);
+        }
+        if (customerIdFilter) {
+          selectQuery = selectQuery.eq('customer_id', customerIdFilter);
+        }
+        if (employeeIdFilter) {
+          selectQuery = selectQuery.eq('employee_id', employeeIdFilter);
+        }
 
-    if (statusFilter) {
-      selectQuery = selectQuery.eq('status', statusFilter);
-    }
-    if (orderTypeFilter) {
-      selectQuery = selectQuery.eq('order_type', orderTypeFilter);
-    }
-    if (serviceTypeFilter) {
-      selectQuery = selectQuery.eq('service_type', serviceTypeFilter);
-    }
-    if (customerIdFilter) {
-      selectQuery = selectQuery.eq('customer_id', customerIdFilter);
-    }
-    if (employeeIdFilter) {
-      selectQuery = selectQuery.eq('employee_id', employeeIdFilter);
-    }
+        const { data, error: selectError, count: selectCount } = await selectQuery
+          .range(from, to);
 
-    const { data, error: selectError, count: selectCount } = await selectQuery
-      .range(from, to);
+        ordersData = data?.map(order => ({
+          id: order.id,
+          user_id: order.user_id,
+          title: order.title,
+          description: order.description,
+          status: order.status,
+          due_date: order.due_date,
+          created_at: order.created_at,
+          customer_id: order.customer_id,
+          object_id: order.object_id,
+          employee_id: order.employee_id,
+          customer_contact_id: order.customer_contact_id,
+          customer_name: order.customers?.name || null,
+          object_name: order.objects?.name || null,
+          employee_first_name: order.employees?.first_name || null,
+          employee_last_name: order.employees?.last_name || null,
+          customer_contact_first_name: order.customer_contacts?.first_name || null,
+          customer_contact_last_name: order.customer_contacts?.last_name || null,
+          order_type: order.order_type,
+          recurring_start_date: order.recurring_start_date,
+          recurring_end_date: order.recurring_end_date,
+          priority: order.priority,
+          estimated_hours: order.estimated_hours,
+          notes: order.notes,
+          request_status: order.request_status,
+          service_type: order.service_type,
+          order_feedback: order.order_feedback,
+        })) || [];
+        ordersError = selectError;
+        ordersCount = selectCount;
+      }
 
-    allOrders = data?.map(order => ({
-      id: order.id,
-      user_id: order.user_id,
-      title: order.title,
-      description: order.description,
-      status: order.status,
-      due_date: order.due_date,
-      created_at: order.created_at,
-      customer_id: order.customer_id,
-      object_id: order.object_id,
-      employee_id: order.employee_id,
-      customer_contact_id: order.customer_contact_id,
-      customer_name: order.customers?.name || null,
-      object_name: order.objects?.name || null,
-      employee_first_name: order.employees?.first_name || null,
-      employee_last_name: order.employees?.last_name || null,
-      customer_contact_first_name: order.customer_contacts?.first_name || null,
-      customer_contact_last_name: order.customer_contacts?.last_name || null,
-      order_type: order.order_type,
-      recurring_start_date: order.recurring_start_date,
-      recurring_end_date: order.recurring_end_date,
-      priority: order.priority,
-      estimated_hours: order.estimated_hours,
-      notes: order.notes,
-      request_status: order.request_status,
-      service_type: order.service_type,
-      order_feedback: order.order_feedback,
-    })) || [];
-    error = selectError;
-    count = selectCount;
+      if (ordersError) {
+        console.error("Fehler beim Laden der Aufträge:", ordersError?.message || ordersError);
+      }
+      setAllOrders(ordersData);
+      setTotalCount(ordersCount);
+      setLoading(false);
+    };
+
+    fetchData();
+  }, [
+    supabase,
+    query,
+    currentPage,
+    pageSize,
+    statusFilter,
+    orderTypeFilter,
+    serviceTypeFilter,
+    customerIdFilter,
+    employeeIdFilter,
+    sortColumn,
+    sortDirection,
+  ]);
+
+  if (loading || !currentUser) {
+    return <div className="p-4 md:p-8">Lade Aufträge...</div>; // Basic loading state
   }
 
-  if (error) {
-    console.error("Fehler beim Laden der Aufträge:", error?.message || error);
-    return <div className="p-4 md:p-8">Fehler beim Laden der Aufträge.</div>;
-  }
-
-  const totalPages = count ? Math.ceil(count / pageSize) : 0;
+  const totalPages = totalCount ? Math.ceil(totalCount / pageSize) : 0;
 
   const pendingRequests = allOrders.filter(order => order.request_status === 'pending');
   const otherOrders = allOrders.filter(order => order.request_status !== 'pending');
@@ -228,6 +264,16 @@ export default async function OrdersPage({
     { value: 'substitution', label: 'Vertretung' },
     { value: 'permanent', label: 'Permanent' },
   ];
+
+  // Determine the active tab based on mobile view or searchParams
+  const activeTab = isMobile ? 'grid' : viewMode;
+
+  // Function to update the viewMode in URL
+  const handleViewModeChange = (value: string) => {
+    const params = new URLSearchParams(currentSearchParams);
+    params.set('viewMode', value);
+    router.replace(`?${params.toString()}`);
+  };
 
   return (
     <div className="p-4 md:p-8 space-y-8">
@@ -347,7 +393,7 @@ export default async function OrdersPage({
             Hinweis: Bei aktiver Suche wird die Paginierung deaktiviert und alle passenden Ergebnisse angezeigt.
           </p>
         )}
-        <Tabs defaultValue={viewMode} className="w-full">
+        <Tabs value={activeTab} onValueChange={handleViewModeChange} className="w-full">
           <div className="flex justify-end mb-4">
             <TabsList className="hidden md:grid grid-cols-2 w-fit"> {/* Only visible on desktop */}
               <TabsTrigger value="grid">Kartenansicht</TabsTrigger>
