@@ -4,11 +4,11 @@ import React, { useState } from "react";
 import { Menu, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NotificationBell } from "@/components/notification-bell";
-import { Sheet, SheetContent, SheetHeader, SheetTrigger, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTrigger } from "@/components/ui/sheet"; // Removed SheetTitle, SheetDescription
 import { SidebarNav } from "@/components/sidebar-nav";
 import { UserMenu } from "@/components/user-menu";
 import { cn } from "@/lib/utils";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+// import { VisuallyHidden } from "@radix-ui/react-visually-hidden"; // Not directly used in this file anymore
 
 interface DashboardClientLayoutProps {
   children: React.ReactNode;
@@ -19,52 +19,43 @@ interface DashboardClientLayoutProps {
 export function DashboardClientLayout({ children, currentUserRole, onSignOut }: DashboardClientLayoutProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState(""); // New state for search query
+  // const [searchQuery, setSearchQuery] = useState(""); // Removed search query state
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row">
       {/* Mobile Header and Navigation (fixed) */}
       <header className="md:hidden fixed top-0 left-0 w-full bg-sidebar text-sidebar-foreground border-b border-sidebar-border p-4 flex items-center justify-between z-50 glassmorphism-card">
-        <div className="flex items-center">
-          <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="icon">
-                <Menu className="h-7 w-7" />
-              </Button>
-            </SheetTrigger>
-            <SheetContent
-              side="left"
-              className={cn(
-                "w-64 text-sidebar-foreground border-r border-sidebar-border p-4 flex flex-col",
-                "bg-sidebar/80 backdrop-blur-xl glassmorphism-card" // Apply glassmorphism here
-              )}
-            >
-              <SheetHeader>
-                <SheetTitle>
-                  ARIS Navigation
-                </SheetTitle>
-                <SheetDescription>
-                  Hauptnavigation der ARIS Management Plattform.
-                </SheetDescription>
-                <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-xl font-bold text-primary tracking-tight">ARIS</h2>
-                  <NotificationBell />
-                </div>
-              </SheetHeader>
-              <nav className="flex-grow space-y-2">
-                <SidebarNav
-                  isCollapsed={false}
-                  currentUserRole={currentUserRole}
-                  onSignOut={onSignOut}
-                  onLinkClick={() => setIsSheetOpen(false)}
-                  searchQuery={searchQuery} // Pass search query
-                  onSearchChange={setSearchQuery} // Pass search handler
-                />
-              </nav>
-            </SheetContent>
-          </Sheet>
-          <h2 className="text-xl font-bold text-primary tracking-tight ml-4">ARIS</h2>
-        </div>
+        <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+          <SheetTrigger asChild>
+            <Button variant="ghost" size="icon">
+              <Menu className="h-7 w-7" />
+            </Button>
+          </SheetTrigger>
+          <SheetContent
+            side="left"
+            className={cn(
+              "w-64 text-sidebar-foreground border-r border-sidebar-border p-4 flex flex-col",
+              "bg-sidebar/80 backdrop-blur-xl glassmorphism-card" // Apply glassmorphism here
+            )}
+          >
+            <SheetHeader className="flex flex-row items-center justify-center mb-6"> {/* Centered header */}
+              <h2 className="text-xl font-bold text-primary tracking-tight">ARIS</h2>
+              {/* Removed SheetTitle, SheetDescription, and NotificationBell from here */}
+            </SheetHeader>
+            <nav className="flex-grow space-y-2">
+              <SidebarNav
+                isCollapsed={false}
+                currentUserRole={currentUserRole}
+                onSignOut={onSignOut}
+                onLinkClick={() => setIsSheetOpen(false)}
+                // searchQuery={searchQuery} // Removed search query prop
+                // onSearchChange={setSearchQuery} // Removed search handler
+              />
+            </nav>
+          </SheetContent>
+        </Sheet>
+        {/* ARIS text in the main mobile header, centered */}
+        <h2 className="text-xl font-bold text-primary tracking-tight absolute left-1/2 -translate-x-1/2">ARIS</h2>
         <div className="flex items-center space-x-2">
           <NotificationBell />
           <UserMenu currentUserRole={currentUserRole} onSignOut={onSignOut} />
@@ -79,7 +70,7 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut }: 
           "bg-gradient-to-br from-sidebar-background to-sidebar-accent glassmorphism-card" // Apply glassmorphism here
         )}
       >
-        <div className="flex items-center justify-between mb-6">
+        <div className="relative flex items-center justify-center mb-6"> {/* Changed to justify-center, added relative */}
           {!isCollapsed && (
             <h2 className="text-xl font-bold text-primary tracking-tight">ARIS</h2>
           )}
@@ -87,7 +78,7 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut }: 
             variant="ghost"
             size="icon"
             onClick={() => setIsCollapsed(!isCollapsed)}
-            className={cn(isCollapsed ? "mx-auto" : "ml-auto")}
+            className={cn(isCollapsed ? "mx-auto" : "absolute right-0")} // Adjusted positioning
           >
             {isCollapsed ? (
               <ChevronRight className="h-6 w-6" />
@@ -100,8 +91,8 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut }: 
           isCollapsed={isCollapsed}
           currentUserRole={currentUserRole}
           onSignOut={onSignOut}
-          searchQuery={searchQuery} // Pass search query
-          onSearchChange={setSearchQuery} // Pass search handler
+          // searchQuery={searchQuery} // Removed search query prop
+          // onSearchChange={setSearchQuery} // Removed search handler
         />
 
         {/* Notification Bell and User Menu at the bottom of the sidebar */}
