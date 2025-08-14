@@ -12,6 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useState, useRef } from "react";
 import { Switch } from "@/components/ui/switch";
 import { handleActionResponse } from "@/lib/toast-utils"; // Importiere die neue Utility
+import { useRouter } from "next/navigation"; // Importiere useRouter
 
 const MAX_AVATAR_SIZE = 10 * 1024 * 1024; // 10 MB
 
@@ -36,6 +37,7 @@ export function ProfileUpdateForm({ initialData }: ProfileUpdateFormProps) {
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const router = useRouter(); // Initialisiere useRouter
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
@@ -81,6 +83,7 @@ export function ProfileUpdateForm({ initialData }: ProfileUpdateFormProps) {
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
+      router.refresh(); // Seite aktualisieren, um das neue Profilbild im Layout anzuzeigen
     }
   };
 
