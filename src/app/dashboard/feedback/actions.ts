@@ -73,6 +73,7 @@ export async function createOrderFeedback(data: {
       rating: rating,
       comment: comment,
       image_urls: imageUrls.length > 0 ? imageUrls : null,
+      is_resolved: false, // Default to unresolved
     });
 
   if (error) {
@@ -163,6 +164,33 @@ export async function replyToOrderFeedback(feedbackId: string, replyText: string
   return { success: true, message: "Antwort erfolgreich gesendet." };
 }
 
+export async function resolveOrderFeedback(feedbackId: string): Promise<{ success: boolean; message: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { success: false, message: "Benutzer nicht authentifiziert." };
+  }
+
+  const { error } = await supabase
+    .from('order_feedback')
+    .update({
+      is_resolved: true,
+      resolved_by: user.id,
+      resolved_at: new Date().toISOString(),
+    })
+    .eq('id', feedbackId);
+
+  if (error) {
+    console.error("Fehler beim Markieren des Feedbacks als gelöst:", error);
+    return { success: false, message: `Fehler: ${error.message}` };
+  }
+
+  revalidatePath("/dashboard/feedback");
+  revalidatePath("/dashboard"); // Revalidate dashboard to update KPI
+  return { success: true, message: "Feedback als gelöst markiert." };
+}
+
 export async function deleteOrderFeedback(feedbackId: string): Promise<{ success: boolean; message: string }> {
     const supabase = await createClient();
     const { error } = await supabase.from('order_feedback').delete().eq('id', feedbackId);
@@ -173,6 +201,7 @@ export async function deleteOrderFeedback(feedbackId: string): Promise<{ success
     }
 
     revalidatePath("/dashboard/feedback");
+    revalidatePath("/dashboard"); // Revalidate dashboard to update KPI
     return { success: true, message: "Feedback erfolgreich gelöscht." };
 }
 
@@ -222,6 +251,7 @@ export async function createGeneralFeedback(data: {
       subject,
       message,
       image_urls: imageUrls.length > 0 ? imageUrls : null,
+      is_resolved: false, // Default to unresolved
     });
 
   if (error) {
@@ -312,6 +342,33 @@ export async function replyToGeneralFeedback(feedbackId: string, replyText: stri
   return { success: true, message: "Antwort erfolgreich gesendet." };
 }
 
+export async function resolveGeneralFeedback(feedbackId: string): Promise<{ success: boolean; message: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { success: false, message: "Benutzer nicht authentifiziert." };
+  }
+
+  const { error } = await supabase
+    .from('general_feedback')
+    .update({
+      is_resolved: true,
+      resolved_by: user.id,
+      resolved_at: new Date().toISOString(),
+    })
+    .eq('id', feedbackId);
+
+  if (error) {
+    console.error("Fehler beim Markieren des Feedbacks als gelöst:", error);
+    return { success: false, message: `Fehler: ${error.message}` };
+  }
+
+  revalidatePath("/dashboard/feedback");
+  revalidatePath("/dashboard"); // Revalidate dashboard to update KPI
+  return { success: true, message: "Feedback als gelöst markiert." };
+}
+
 export async function deleteGeneralFeedback(feedbackId: string): Promise<{ success: boolean; message: string }> {
     const supabase = await createClient();
     const { error } = await supabase.from('general_feedback').delete().eq('id', feedbackId);
@@ -322,5 +379,6 @@ export async function deleteGeneralFeedback(feedbackId: string): Promise<{ succe
     }
 
     revalidatePath("/dashboard/feedback");
+    revalidatePath("/dashboard"); // Revalidate dashboard to update KPI
     return { success: true, message: "Feedback erfolgreich gelöscht." };
 }

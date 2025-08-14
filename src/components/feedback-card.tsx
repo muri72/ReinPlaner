@@ -3,12 +3,12 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Star, MessageSquare, Image as ImageIcon, Trash2, Pencil, CornerDownRight } from "lucide-react";
+import { Star, MessageSquare, Image as ImageIcon, Trash2, Pencil, CornerDownRight, CheckCircle2, AlertCircle } from "lucide-react";
 import { Carousel, CarouselContent, CarouselItem } from "@/components/ui/carousel";
 import NextImage from "next/image";
 import { toast } from "sonner";
 import { FeedbackReplyForm } from "./feedback-reply-form";
-import { deleteOrderFeedback, deleteGeneralFeedback } from "@/app/dashboard/feedback/actions";
+import { deleteOrderFeedback, deleteGeneralFeedback, resolveOrderFeedback, resolveGeneralFeedback } from "@/app/dashboard/feedback/actions";
 import {
   Dialog,
   DialogContent,
@@ -23,6 +23,7 @@ import { OrderFeedbackEditDialog } from "./order-feedback-edit-dialog";
 import { GeneralFeedbackEditDialog } from "./general-feedback-edit-dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+import { Badge } from "@/components/ui/badge"; // Hinzugefügt
 
 // Typdefinitionen, die beide Feedback-Arten abdecken
 type OrderFeedback = {
@@ -35,6 +36,7 @@ type OrderFeedback = {
   replied_by_name: string | null;
   rating: number; // Required for order feedback
   comment: string | null; // Can be null
+  is_resolved: boolean; // New field
   order: { // Required for order feedback
     title: string;
     customer_name: string | null;
@@ -54,6 +56,7 @@ type GeneralFeedback = {
   email: string | null;
   subject: string | null;
   message: string; // Required for general feedback
+  is_resolved: boolean; // New field
 };
 
 type Feedback = OrderFeedback | GeneralFeedback;
@@ -67,9 +70,9 @@ interface FeedbackCardProps {
 
 export function FeedbackCard({ feedback, feedbackType, currentUserId, currentUserRole }: FeedbackCardProps) {
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isResolving, setIsResolving] = useState(false);
   const isManagerOrAdmin = currentUserRole === 'admin' || currentUserRole === 'manager';
   const canEditOrDelete = isManagerOrAdmin || feedback.user_id === currentUserId;
-  // Removed titleId and descriptionId as they are no longer needed for aria attributes
 
   const handleDelete = async () => {
     setIsDeleting(true);
@@ -81,6 +84,18 @@ export function FeedbackCard({ feedback, feedbackType, currentUserId, currentUse
       toast.error(result.message);
     }
     setIsDeleting(false);
+  };
+
+  const handleResolve = async () => {
+    setIsResolving(true);
+    const action = feedbackType === 'order' ? resolveOrderFeedback : resolveGeneralFeedback;
+    const result = await action(feedback.id);
+    if (result.success) {
+      toast.success(result.message);
+    } else {
+      toast.error(result.message);
+    }
+    setIsResolving(false);
   };
 
   return (
@@ -97,6 +112,17 @@ export function FeedbackCard({ feedback, feedbackType, currentUserId, currentUse
         </p>
       </CardHeader>
       <CardContent className="flex-grow space-y-4">
+        {/* Status Badge */}
+        {feedback.is_resolved ? (
+          <Badge variant="success" className="flex items-center gap-1">
+            <CheckCircle2 className="h-3 w-3" /> Gelöst
+          </Badge>
+        ) : (
+          <Badge variant="warning" className="flex items-center gap-1">
+            <AlertCircle className="h-3 w-3" /> Offen
+          </Badge>
+        )}
+
         {/* Rating */}
         {feedbackType === 'order' && (
           <div className="flex items-center gap-1">
@@ -153,6 +179,17 @@ export function FeedbackCard({ feedback, feedbackType, currentUserId, currentUse
       <CardFooter className="flex flex-col items-start gap-2">
         {isManagerOrAdmin && !feedback.reply && (
           <FeedbackReplyForm feedbackId={feedback.id} feedbackType={feedbackType} />
+        )}
+        {isManagerOrAdmin && !feedback.is_resolved && (
+          <Button
+            onClick={handleResolve}
+            disabled={isResolving}
+            variant="outline"
+            className="w-full mt-2"
+          >
+            <CheckCircle2 className="mr-2 h-4 w-4" />
+            {isResolving ? "Wird gelöst..." : "Als gelöst markieren"}
+          </Button>
         )}
         {canEditOrDelete && (
           <div className="flex items-center gap-2 self-end mt-2">

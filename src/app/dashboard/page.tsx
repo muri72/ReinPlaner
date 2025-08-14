@@ -9,6 +9,8 @@ import Link from "next/link"; // Import Link for clickable cards
 import { FinancialTrendChart } from "@/components/financial-trend-chart"; // Import new chart
 import { EmployeeWorkloadChart } from "@/components/employee-workload-chart"; // Import new chart
 import { KpiCard } from "@/components/kpi-card"; // Import the new KpiCard
+import { TodaysOrdersOverview } from "@/components/todays-orders-overview"; // Import the new component
+import { FeedbackCard } from "@/components/feedback-card"; // Import FeedbackCard
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -133,6 +135,53 @@ export default async function DashboardPage() {
 
   const formattedDate = format(today, 'EEEE, dd. MMMM yyyy', { locale: de });
 
+  // Fetch unresolved feedback for the dashboard
+  const { data: unresolvedOrderFeedback, error: unresolvedOrderFeedbackError } = await supabase
+    .from('order_feedback')
+    .select(`
+      *,
+      orders (
+        title,
+        customers ( name ),
+        employees ( first_name, last_name )
+      ),
+      profiles ( first_name, last_name )
+    `)
+    .eq('is_resolved', false)
+    .order('created_at', { ascending: false })
+    .limit(3); // Limit to show only a few on dashboard
+
+  const { data: unresolvedGeneralFeedback, error: unresolvedGeneralFeedbackError } = await supabase
+    .from('general_feedback')
+    .select(`
+      *,
+      profiles ( first_name, last_name )
+    `)
+    .eq('is_resolved', false)
+    .order('created_at', { ascending: false })
+    .limit(3); // Limit to show only a few on dashboard
+
+  if (unresolvedOrderFeedbackError) console.error("Fehler beim Laden des ungelösten Auftrags-Feedbacks:", unresolvedOrderFeedbackError);
+  if (unresolvedGeneralFeedbackError) console.error("Fehler beim Laden des ungelösten allgemeinen Feedbacks:", unresolvedGeneralFeedbackError);
+
+  const mappedUnresolvedOrderFeedback = unresolvedOrderFeedback?.map(f => ({
+    ...f,
+    order: {
+      title: f.orders?.title || 'Unbekannter Auftrag',
+      customer_name: f.orders?.customers?.name || 'N/A',
+      employee_name: `${f.orders?.employees?.first_name || ''} ${f.orders?.employees?.last_name || ''}`.trim() || 'N/A',
+    },
+    replied_by_name: `${f.profiles?.first_name || ''} ${f.profiles?.last_name || ''}`.trim() || 'Admin',
+  })) || [];
+
+  const mappedUnresolvedGeneralFeedback = unresolvedGeneralFeedback?.map(f => ({
+    ...f,
+    replied_by_name: `${f.profiles?.first_name || ''} ${f.profiles?.last_name || ''}`.trim() || 'Admin',
+  })) || [];
+
+  const allUnresolvedFeedback = [...mappedUnresolvedOrderFeedback, ...mappedUnresolvedGeneralFeedback].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+
   return (
     <div className="p-8 space-y-8">
       <h1 className="text-2xl md:text-3xl font-bold">
@@ -190,6 +239,36 @@ export default async function DashboardPage() {
         />
       </div>
 
+      {/* Einsatzübersicht (Tagesliste) */}
+      <TodaysOrdersOverview />
+
+      {/* Qualität & Reklamationen (Kartenansicht) */}
+      <div className="space-y-4">
+        <h2 className="text-xl md:text-2xl font-bold flex items-center">
+          <MessageSquare className="mr-2 h-5 w-5 md:h-6 md:w-6 text-warning" />
+          Offene Reklamationen ({allUnresolvedFeedback.length})
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+          {allUnresolvedFeedback.length === 0 ? (
+            <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30 shadow-neumorphic glassmorphism-card">
+              <CheckCircle2 className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
+              <p className="text-base md:text-lg font-semibold">Keine offenen Reklamationen</p>
+              <p className="text-sm">Alle Feedbacks wurden bearbeitet. Gut gemacht!</p>
+            </div>
+          ) : (
+            allUnresolvedFeedback.map((feedback: any) => (
+              <FeedbackCard
+                key={feedback.id}
+                feedback={feedback}
+                feedbackType={feedback.rating ? 'order' : 'general'} // Determine type based on 'rating' field
+                currentUserId={user.id}
+                currentUserRole={currentUserRole}
+              />
+            ))
+          )}
+        </div>
+      </div>
+
       {/* Existing Dashboard Cards (Gesamtkunden, Objekte, Mitarbeiter) */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Link href="/dashboard/customers" className="block">
@@ -242,7 +321,7 @@ export default async function DashboardPage() {
         </Link>
       </div>
 
-      {/* New Section for Charts */}
+      {/* Charts Section */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2 mt-8">
         <OrderStatusChart data={chartData} />
         {(currentUserRole === 'admin' || currentUserRole === 'manager') && (
