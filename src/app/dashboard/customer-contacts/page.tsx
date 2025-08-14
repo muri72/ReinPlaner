@@ -15,6 +15,7 @@ import { Suspense, useEffect, useState } from "react";
 import { FilterSelect } from "@/components/filter-select";
 import { CustomerContactsTableView } from "@/components/customer-contacts-table-view"; // Import the new table view component
 import { useIsMobile } from "@/hooks/use-mobile"; // Import the hook
+import { RecordDetailsDialog } from "@/components/record-details-dialog"; // Import RecordDetailsDialog
 
 interface DisplayCustomerContact {
   id: string;
@@ -46,7 +47,7 @@ export default function CustomerContactsPage({
 
   const query = (currentSearchParams.get('query') || '') as string;
   const currentPage = Number(currentSearchParams.get('page')) || 1;
-  const pageSize = Number(currentSearchParams.get('pageSize')) || 9;
+  const pageSize = 10; // Set page size to 10
   const customerIdFilter = (currentSearchParams.get('customerId') || '') as string;
   const viewMode = (currentSearchParams.get('viewMode') || 'grid') as string;
 
@@ -224,6 +225,7 @@ export default function CustomerContactsPage({
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-base md:text-lg font-semibold">{contact.first_name} {contact.last_name}</CardTitle>
                     <div className="flex items-center space-x-2">
+                      <RecordDetailsDialog record={contact} title={`Details zu Kundenkontakt: ${contact.first_name} ${contact.last_name}`} />
                       <CustomerContactEditDialog contact={contact} />
                       <DeleteCustomerContactButton contactId={contact.id} />
                     </div>

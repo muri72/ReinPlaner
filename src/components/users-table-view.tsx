@@ -11,6 +11,7 @@ import { PaginationControls } from "@/components/pagination-controls";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useCallback } from "react";
 import { cn } from "@/lib/utils";
+import { RecordDetailsDialog } from "@/components/record-details-dialog"; // Import RecordDetailsDialog
 
 interface DisplayUser {
   id: string;
@@ -144,6 +145,7 @@ export function UsersTableView({
               </TableCell>
               <TableCell className="text-right">
                 <div className="flex justify-end space-x-1">
+                  <RecordDetailsDialog record={user} title={`Details zu Benutzer: ${user.first_name} ${user.last_name}`} />
                   {user.role === 'manager' && (
                     <ManagerCustomerAssignmentDialog
                       managerId={user.id}
@@ -158,6 +160,9 @@ export function UsersTableView({
           ))}
         </TableBody>
       </Table>
+      {!query && totalPages > 1 && (
+        <PaginationControls currentPage={currentPage} totalPages={totalPages} />
+      )}
     </div>
   );
 }

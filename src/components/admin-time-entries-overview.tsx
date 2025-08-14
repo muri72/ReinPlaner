@@ -16,6 +16,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"; // Import table components
 import { Button } from "@/components/ui/button"; // Import Button for sortable headers
 import { cn } from "@/lib/utils"; // Import cn for conditional styling
+import { PaginationControls } from "@/components/pagination-controls"; // Import PaginationControls
+import { RecordDetailsDialog } from "@/components/record-details-dialog"; // Import RecordDetailsDialog
 
 interface DisplayTimeEntry {
   id: string;
@@ -59,6 +61,9 @@ export function AdminTimeEntriesOverview({ currentUserId, isAdmin }: AdminTimeEn
   const [loading, setLoading] = useState(true);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(searchParams.get("employeeId") || null);
   const currentQuery = searchParams.get("query") || "";
+  const currentPage = Number(searchParams.get('page')) || 1;
+  const pageSize = 10; // Set page size to 10
+  const [totalCount, setTotalCount] = useState<number | null>(0);
 
   // Sorting parameters
   const sortColumn = searchParams.get('sortColumn') || 'start_time';
@@ -83,6 +88,9 @@ export function AdminTimeEntriesOverview({ currentUserId, isAdmin }: AdminTimeEn
   useEffect(() => {
     const fetchTimeEntries = async () => {
       setLoading(true);
+      const from = (currentPage - 1) * pageSize;
+      const to = from + pageSize - 1;
+
       let queryBuilder = supabase
         .from('time_entries')
         .select(`
@@ -102,7 +110,7 @@ export function AdminTimeEntriesOverview({ currentUserId, isAdmin }: AdminTimeEn
           customers ( name ),
           objects ( name ),
           orders ( title )
-        `)
+        `, { count: 'exact' }) // Request count
         .order(sortColumn, { ascending: sortDirection === 'asc' }); // Apply sorting
 
       // Apply employee_id filter if selected
@@ -117,7 +125,7 @@ export function AdminTimeEntriesOverview({ currentUserId, isAdmin }: AdminTimeEn
         );
       }
 
-      const { data, error } = await queryBuilder;
+      const { data, error, count } = await queryBuilder.range(from, to);
 
       if (data) {
         setTimeEntries(data.map(entry => {
@@ -145,6 +153,7 @@ export function AdminTimeEntriesOverview({ currentUserId, isAdmin }: AdminTimeEn
             order_title: order?.title || null,
           }
         }));
+        setTotalCount(count);
       }
       if (error) {
         console.error("Fehler beim Laden der Zeiteinträge:", error);
@@ -153,7 +162,7 @@ export function AdminTimeEntriesOverview({ currentUserId, isAdmin }: AdminTimeEn
     };
 
     fetchTimeEntries();
-  }, [selectedEmployeeId, currentQuery, supabase, sortColumn, sortDirection]);
+  }, [selectedEmployeeId, currentQuery, supabase, sortColumn, sortDirection, currentPage, pageSize]);
 
   const handleSearch = useDebouncedCallback((term: string) => {
     const params = new URLSearchParams(searchParams);
@@ -162,6 +171,7 @@ export function AdminTimeEntriesOverview({ currentUserId, isAdmin }: AdminTimeEn
     } else {
       params.delete("query");
     }
+    params.set('page', '1'); // Reset to first page on search
     replace(`${pathname}?${params.toString()}`);
   }, 300);
 
@@ -172,6 +182,7 @@ export function AdminTimeEntriesOverview({ currentUserId, isAdmin }: AdminTimeEn
     } else {
       params.delete("employeeId");
     }
+    params.set('page', '1'); // Reset to first page on filter change
     replace(`${pathname}?${params.toString()}`);
     setSelectedEmployeeId(employeeId === "all" ? null : employeeId);
   };
@@ -184,6 +195,7 @@ export function AdminTimeEntriesOverview({ currentUserId, isAdmin }: AdminTimeEn
     }
     params.set('sortColumn', column);
     params.set('sortDirection', newDirection);
+    params.set('page', '1'); // Reset to first page on sort change
     replace(`${pathname}?${params.toString()}`);
   }, [sortColumn, sortDirection, pathname, replace, searchParams]);
 
@@ -208,6 +220,8 @@ export function AdminTimeEntriesOverview({ currentUserId, isAdmin }: AdminTimeEn
         return 'outline';
     }
   };
+
+  const totalPages = totalCount ? Math.ceil(totalCount / pageSize) : 0;
 
   return (
     <div className="p-8 space-y-8">
@@ -243,15 +257,21 @@ export function AdminTimeEntriesOverview({ currentUserId, isAdmin }: AdminTimeEn
                 <TableHead className="min-w-[120px]"><Skeleton className="h-6 w-full" /></TableHead>
                 <TableHead className="min-w-[120px]"><Skeleton className="h-6 w-full" /></TableHead>
                 <TableHead className="min-w-[120px]"><Skeleton className="h-6 w-full" /></TableHead>
+                <TableHead className="min-w-[120px]"><Skeleton className="h-6 w-full" /></TableHead>
+                <TableHead className="min-w-[120px]"><Skeleton className="h-6 w-full" /></TableHead>
+                <TableHead className="min-w-[120px]"><Skeleton className="h-6 w-full" /></TableHead>
+                <TableHead className="min-w-[120px]"><Skeleton className="h-6 w-full" /></TableHead>
                 <TableHead className="min-w-[100px]"><Skeleton className="h-6 w-full" /></TableHead>
-                <TableHead className="min-w-[100px]"><Skeleton className="h-6 w-full" /></TableHead>
-                <TableHead className="min-w-[100px]"><Skeleton className="h-6 w-full" /></TableHead>
+                <TableHead className="min-w-[200px]"><Skeleton className="h-6 w-full" /></TableHead>
                 <TableHead className="text-right min-w-[120px]"><Skeleton className="h-6 w-full" /></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {Array.from({ length: 5 }).map((_, i) => (
                 <TableRow key={i}>
+                  <TableCell><Skeleton className="h-6 w-full" /></TableCell>
+                  <TableCell><Skeleton className="h-6 w-full" /></TableCell>
+                  <TableCell><Skeleton className="h-6 w-full" /></TableCell>
                   <TableCell><Skeleton className="h-6 w-full" /></TableCell>
                   <TableCell><Skeleton className="h-6 w-full" /></TableCell>
                   <TableCell><Skeleton className="h-6 w-full" /></TableCell>
@@ -345,6 +365,7 @@ export function AdminTimeEntriesOverview({ currentUserId, isAdmin }: AdminTimeEn
                     <TableCell className="text-sm">{entry.notes || 'N/A'}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end space-x-1">
+                        <RecordDetailsDialog record={entry} title={`Details zu Zeiteintrag`} />
                         <TimeEntryEditDialog timeEntry={entry} currentUserId={currentUserId} isAdmin={isAdmin} />
                         <DeleteTimeEntryButton entryId={entry.id} />
                       </div>
@@ -354,6 +375,9 @@ export function AdminTimeEntriesOverview({ currentUserId, isAdmin }: AdminTimeEn
               )}
             </TableBody>
           </Table>
+          {!currentQuery && totalPages > 1 && (
+            <PaginationControls currentPage={currentPage} totalPages={totalPages} />
+          )}
         </div>
       )}
     </div>

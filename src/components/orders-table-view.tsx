@@ -12,6 +12,7 @@ import { de } from "date-fns/locale";
 import { useRouter, useSearchParams, usePathname } from "next/navigation"; // Import usePathname
 import { useCallback } from "react";
 import { cn } from "@/lib/utils"; // Import cn for conditional styling
+import { RecordDetailsDialog } from "@/components/record-details-dialog"; // Import RecordDetailsDialog
 
 interface DisplayOrder {
   id: string;
@@ -246,6 +247,7 @@ export function OrdersTableView({
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end space-x-1">
+                    <RecordDetailsDialog record={order} title={`Details zu Auftrag: ${order.title}`} />
                     <OrderEditDialog order={order} />
                     <DeleteOrderButton orderId={order.id} />
                   </div>
@@ -255,6 +257,9 @@ export function OrdersTableView({
           })}
         </TableBody>
       </Table>
+      {!query && totalPages > 1 && (
+        <PaginationControls currentPage={currentPage} totalPages={totalPages} />
+      )}
     </div>
   );
 }

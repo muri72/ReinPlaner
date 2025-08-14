@@ -16,6 +16,7 @@ import { FilterSelect } from "@/components/filter-select";
 import { AbsenceRequestsTableView } from "@/components/absence-requests-table-view"; // Import the new table view component
 import { PaginationControls } from "@/components/pagination-controls";
 import { useIsMobile } from "@/hooks/use-mobile"; // Import the hook
+import { RecordDetailsDialog } from "@/components/record-details-dialog"; // Import RecordDetailsDialog
 
 interface DisplayAbsenceRequest {
   id: string;
@@ -49,7 +50,7 @@ export default function AbsenceRequestsPage({
 
   const query = (currentSearchParams.get('query') || '') as string;
   const currentPage = Number(currentSearchParams.get('page')) || 1;
-  const pageSize = Number(currentSearchParams.get('pageSize')) || 9;
+  const pageSize = 10; // Set page size to 10
   const employeeIdFilter = (currentSearchParams.get('employeeId') || '') as string;
   const typeFilter = (currentSearchParams.get('type') || '') as string;
   const statusFilter = (currentSearchParams.get('status') || '') as string;
@@ -303,6 +304,7 @@ export default function AbsenceRequestsPage({
                         {typeTranslations[request.type] || 'Abwesenheit'}
                       </CardTitle>
                       <div className="flex items-center space-x-2">
+                        <RecordDetailsDialog record={request} title={`Details zu Abwesenheitsantrag`} />
                         <AbsenceRequestEditDialog request={request} currentUserRole={currentUserRole} currentUserId={currentUser.id} />
                         <DeleteAbsenceRequestButton requestId={request.id} />
                       </div>

@@ -18,6 +18,7 @@ import { Suspense, useEffect, useState } from "react";
 import { FilterSelect } from "@/components/filter-select";
 import { EmployeesTableView } from "@/components/employees-table-view"; // Import the new table view component
 import { useIsMobile } from "@/hooks/use-mobile"; // Import the hook
+import { RecordDetailsDialog } from "@/components/record-details-dialog"; // Import RecordDetailsDialog
 
 interface DisplayEmployee {
   id: string;
@@ -59,7 +60,7 @@ export default function EmployeesPage({
 
   const query = currentSearchParams.get('query') || '';
   const currentPage = Number(currentSearchParams.get('page')) || 1;
-  const pageSize = Number(currentSearchParams.get('pageSize')) || 9;
+  const pageSize = 10; // Set page size to 10
   const statusFilter = currentSearchParams.get('status') || '';
   const contractTypeFilter = currentSearchParams.get('contractType') || '';
   const viewMode = currentSearchParams.get('viewMode') === 'table' ? 'table' : 'grid';
@@ -272,6 +273,7 @@ export default function EmployeesPage({
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-base md:text-lg font-semibold">{employee.first_name} {employee.last_name}</CardTitle>
                     <div className="flex items-center space-x-2">
+                      <RecordDetailsDialog record={employee} title={`Details zu Mitarbeiter: ${employee.first_name} ${employee.last_name}`} />
                       <EmployeeEditDialog employee={employee} />
                       <DeleteEmployeeButton employeeId={employee.id} />
                     </div>

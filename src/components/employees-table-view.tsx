@@ -12,6 +12,7 @@ import { useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
+import { RecordDetailsDialog } from "@/components/record-details-dialog"; // Import RecordDetailsDialog
 
 interface DisplayEmployee {
   id: string;
@@ -172,6 +173,7 @@ export function EmployeesTableView({
               <TableCell className="text-sm">{employee.job_title || 'N/A'}</TableCell>
               <TableCell className="text-right">
                 <div className="flex justify-end space-x-1">
+                  <RecordDetailsDialog record={employee} title={`Details zu Mitarbeiter: ${employee.first_name} ${employee.last_name}`} />
                   <EmployeeEditDialog employee={employee} />
                   <DeleteEmployeeButton employeeId={employee.id} />
                 </div>
@@ -180,6 +182,9 @@ export function EmployeesTableView({
           ))}
         </TableBody>
       </Table>
+      {!query && totalPages > 1 && (
+        <PaginationControls currentPage={currentPage} totalPages={totalPages} />
+      )}
     </div>
   );
 }

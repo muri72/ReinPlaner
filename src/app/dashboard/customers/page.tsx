@@ -18,6 +18,7 @@ import { Suspense, useEffect, useState } from "react"; // Import useEffect and u
 import { FilterSelect } from "@/components/filter-select";
 import { CustomersTableView } from "@/components/customers-table-view"; // Import the new table view component
 import { useIsMobile } from "@/hooks/use-mobile"; // Import the hook
+import { RecordDetailsDialog } from "@/components/record-details-dialog"; // Import RecordDetailsDialog
 
 interface DisplayCustomer {
   id: string;
@@ -35,7 +36,7 @@ export default function CustomersPage({
 }: {
   searchParams?: any;
 }) {
-  const supabase = createClient();
+  const supabase = createClient(); // Use client-side supabase
   const router = useRouter();
   const currentSearchParams = useSearchParams();
   const isMobile = useIsMobile();
@@ -47,7 +48,7 @@ export default function CustomersPage({
 
   const query = currentSearchParams.get('query') || '';
   const currentPage = Number(currentSearchParams.get('page')) || 1;
-  const pageSize = Number(currentSearchParams.get('pageSize')) || 9;
+  const pageSize = 10; // Set page size to 10
   const customerTypeFilter = currentSearchParams.get('customerType') || '';
   const viewMode = currentSearchParams.get('viewMode') === 'table' ? 'table' : 'grid';
 
@@ -211,6 +212,7 @@ export default function CustomersPage({
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-base md:text-lg font-semibold">{customer.name}</CardTitle>
                     <div className="flex items-center space-x-2">
+                      <RecordDetailsDialog record={customer} title={`Details zu Kunde: ${customer.name}`} />
                       <CustomerEditDialog customer={customer} />
                       <DeleteCustomerButton customerId={customer.id} />
                     </div>

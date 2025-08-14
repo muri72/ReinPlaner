@@ -12,6 +12,7 @@ import { useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
+import { RecordDetailsDialog } from "@/components/record-details-dialog"; // Import RecordDetailsDialog
 
 interface DisplayAbsenceRequest {
   id: string;
@@ -178,6 +179,7 @@ export function AbsenceRequestsTableView({
               )}
               <TableCell className="text-right">
                 <div className="flex justify-end space-x-1">
+                  <RecordDetailsDialog record={request} title={`Details zu Abwesenheitsantrag`} />
                   <AbsenceRequestEditDialog request={request} currentUserRole={currentUserRole} currentUserId={request.user_id} />
                   <DeleteAbsenceRequestButton requestId={request.id} />
                 </div>
@@ -186,6 +188,9 @@ export function AbsenceRequestsTableView({
           ))}
         </TableBody>
       </Table>
+      {!query && totalPages > 1 && (
+        <PaginationControls currentPage={currentPage} totalPages={totalPages} />
+      )}
     </div>
   );
 }

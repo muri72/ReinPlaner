@@ -22,6 +22,7 @@ import { format } from "date-fns";
 import { de } from "date-fns/locale";
 import { OrdersTableView } from "@/components/orders-table-view";
 import { useIsMobile } from "@/hooks/use-mobile"; // Import the hook
+import { RecordDetailsDialog } from "@/components/record-details-dialog"; // Import RecordDetailsDialog
 
 interface DisplayOrder {
   id: string;
@@ -89,7 +90,7 @@ export default function OrdersPage({
 
   const query = (currentSearchParams.get('query') || '') as string;
   const currentPage = Number(currentSearchParams.get('page')) || 1;
-  const pageSize = Number(currentSearchParams.get('pageSize')) || 9;
+  const pageSize = 10; // Set page size to 10
   const statusFilter = (currentSearchParams.get('status') || '') as string;
   const orderTypeFilter = (currentSearchParams.get('orderType') || '') as string;
   const serviceTypeFilter = (currentSearchParams.get('serviceType') || '') as string;
@@ -417,6 +418,7 @@ export default function OrdersPage({
                           )}
                         </td>
                         <td className="p-4 align-middle text-right">
+                          <RecordDetailsDialog record={order} title={`Details zu Auftrag: ${order.title}`} />
                           <OrderPlanningDialog order={order} />
                         </td>
                       </tr>
@@ -466,6 +468,7 @@ export default function OrdersPage({
                       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-base md:text-lg font-semibold">{order.title}</CardTitle>
                         <div className="flex items-center space-x-2">
+                          <RecordDetailsDialog record={order} title={`Details zu Auftrag: ${order.title}`} />
                           <OrderEditDialog order={order} />
                           <DeleteOrderButton orderId={order.id} />
                         </div>

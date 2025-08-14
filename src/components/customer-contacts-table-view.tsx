@@ -9,6 +9,7 @@ import { PaginationControls } from "@/components/pagination-controls";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useCallback } from "react";
 import { cn } from "@/lib/utils";
+import { RecordDetailsDialog } from "@/components/record-details-dialog"; // Import RecordDetailsDialog
 
 interface DisplayCustomerContact {
   id: string;
@@ -133,6 +134,7 @@ export function CustomerContactsTableView({
               <TableCell className="text-sm">{contact.role || 'N/A'}</TableCell>
               <TableCell className="text-right">
                 <div className="flex justify-end space-x-1">
+                  <RecordDetailsDialog record={contact} title={`Details zu Kundenkontakt: ${contact.first_name} ${contact.last_name}`} />
                   <CustomerContactEditDialog contact={contact} />
                   <DeleteCustomerContactButton contactId={contact.id} />
                 </div>
@@ -141,6 +143,9 @@ export function CustomerContactsTableView({
           ))}
         </TableBody>
       </Table>
+      {!query && totalPages > 1 && (
+        <PaginationControls currentPage={currentPage} totalPages={totalPages} />
+      )}
     </div>
   );
 }

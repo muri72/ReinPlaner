@@ -18,6 +18,7 @@ import { Suspense, useEffect, useState } from "react";
 import { FilterSelect } from "@/components/filter-select";
 import { ObjectsTableView } from "@/components/objects-table-view"; // Import the new table view component
 import { useIsMobile } from "@/hooks/use-mobile"; // Import the hook
+import { RecordDetailsDialog } from "@/components/record-details-dialog"; // Import RecordDetailsDialog
 
 interface DisplayObject {
   id: string;
@@ -81,7 +82,7 @@ export default function ObjectsPage({
 
   const query = (currentSearchParams.get('query') || '') as string;
   const currentPage = Number(currentSearchParams.get('page')) || 1;
-  const pageSize = Number(currentSearchParams.get('pageSize')) || 9;
+  const pageSize = 10; // Set page size to 10
   const customerIdFilter = (currentSearchParams.get('customerId') || '') as string;
   const priorityFilter = (currentSearchParams.get('priority') || '') as string;
   const timeOfDayFilter = (currentSearchParams.get('timeOfDay') || '') as string;
@@ -330,6 +331,7 @@ export default function ObjectsPage({
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-base md:text-lg font-semibold">{object.name}</CardTitle>
                     <div className="flex items-center space-x-2">
+                      <RecordDetailsDialog record={object} title={`Details zu Objekt: ${object.name}`} />
                       <ObjectEditDialog object={object} />
                       <DeleteObjectButton objectId={object.id} />
                     </div>

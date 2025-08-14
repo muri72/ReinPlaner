@@ -1,6 +1,7 @@
 "use client"; // This page needs to be a client component to use hooks like useIsMobile
 
-import { createClient } from "@/lib/supabase/client"; // Use client-side supabase
+import { createClient } from "@/lib/supabase/client"; // This is fine here, as it's a client component.
+
 import { redirect, useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,6 +18,7 @@ import { Suspense, useEffect, useState } from "react";
 import { FilterSelect } from "@/components/filter-select";
 import { UsersTableView } from "@/components/users-table-view"; // Import the new table view component
 import { useIsMobile } from "@/hooks/use-mobile"; // Import the hook
+import { RecordDetailsDialog } from "@/components/record-details-dialog"; // Import RecordDetailsDialog
 
 interface DisplayUser {
   id: string;
@@ -86,7 +88,7 @@ export default function UsersPage({
 
   const query = (currentSearchParams.get('query') || '') as string;
   const currentPage = Number(currentSearchParams.get('page')) || 1;
-  const pageSize = Number(currentSearchParams.get('pageSize')) || 9;
+  const pageSize = 10; // Set page size to 10
   const roleFilter = (currentSearchParams.get('role') || '') as string;
   const viewMode = (currentSearchParams.get('viewMode') || 'grid') as string;
 
@@ -324,6 +326,7 @@ export default function UsersPage({
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-base md:text-lg font-semibold">{user.first_name} {user.last_name}</CardTitle>
                     <div className="flex items-center space-x-2">
+                      <RecordDetailsDialog record={user} title={`Details zu Benutzer: ${user.first_name} ${user.last_name}`} />
                       {user.role === 'manager' && (
                         <ManagerCustomerAssignmentDialog
                           managerId={user.id}

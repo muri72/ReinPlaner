@@ -10,6 +10,7 @@ import { PaginationControls } from "@/components/pagination-controls";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useCallback } from "react";
 import { cn } from "@/lib/utils";
+import { RecordDetailsDialog } from "@/components/record-details-dialog"; // Import RecordDetailsDialog
 
 interface DisplayObject {
   id: string;
@@ -182,6 +183,7 @@ export function ObjectsTableView({
               <TableCell className="text-sm">{object.access_method}</TableCell>
               <TableCell className="text-right">
                 <div className="flex justify-end space-x-1">
+                  <RecordDetailsDialog record={object} title={`Details zu Objekt: ${object.name}`} />
                   <ObjectEditDialog object={object} />
                   <DeleteObjectButton objectId={object.id} />
                 </div>
@@ -190,6 +192,9 @@ export function ObjectsTableView({
           ))}
         </TableBody>
       </Table>
+      {!query && totalPages > 1 && (
+        <PaginationControls currentPage={currentPage} totalPages={totalPages} />
+      )}
     </div>
   );
 }
