@@ -2,10 +2,10 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { Menu, ChevronLeft, ChevronRight } from "lucide-react";
+import { Menu, ChevronLeft, ChevronRight, X } from "lucide-react"; // X-Icon importieren
 import { Button } from "@/components/ui/button";
 import { NotificationBell } from "@/components/notification-bell";
-import { Sheet, SheetContent, SheetHeader, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTrigger, SheetClose } from "@/components/ui/sheet"; // SheetClose importieren
 import { SidebarNav } from "@/components/sidebar-nav";
 import { UserMenu } from "@/components/user-menu";
 import { cn } from "@/lib/utils";
@@ -49,17 +49,27 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut, us
           <SheetContent
             side="left"
             className={cn(
-              "w-64 text-sidebar-foreground border-r border-sidebar-border flex flex-col", // Removed p-4 here, will add to inner div
+              "w-64 text-sidebar-foreground border-r border-sidebar-border flex flex-col",
               "bg-sidebar/80 backdrop-blur-xl glassmorphism-card",
-              "h-full" // Ensure SheetContent takes full height available
+              "h-full"
             )}
           >
-            <SheetHeader className="flex flex-col items-center justify-center p-4 mb-6"> {/* Added p-4 here */}
+            <SheetHeader className="flex flex-col items-center justify-center p-4 mb-6 relative"> {/* Relative für absolute Positionierung des Buttons */}
               <Link href={getHomeLink()} passHref onClick={() => setIsSheetOpen(false)}>
                 <h2 className="text-xl font-bold text-primary tracking-tight cursor-pointer">ARIS</h2>
               </Link>
+              <SheetClose asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute top-4 right-4 h-8 w-8" // Positionierung des Schließen-Buttons
+                >
+                  <X className="h-5 w-5" />
+                  <span className="sr-only">Menü schließen</span>
+                </Button>
+              </SheetClose>
             </SheetHeader>
-            <nav className="flex-grow overflow-y-auto p-4"> {/* Added p-4 and overflow-y-auto here, removed border-t and pt-4 */}
+            <nav className="flex-grow overflow-y-auto p-4">
               <SidebarNav
                 isCollapsed={false}
                 currentUserRole={currentUserRole}
@@ -71,7 +81,7 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut, us
             <div className={cn(
               "mt-auto flex flex-col items-center",
               isCollapsed ? "justify-center" : "justify-between",
-              "p-4 border-t border-sidebar-border space-y-4" // Added p-4 here
+              "p-4 border-t border-sidebar-border space-y-4"
             )}>
               <NotificationBell />
               {/* Pass userProfile to UserMenu */}

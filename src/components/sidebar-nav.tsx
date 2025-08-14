@@ -132,10 +132,10 @@ export function SidebarNav({ isCollapsed, currentUserRole, onSignOut, onLinkClic
   });
 
   return (
-    <div className="flex-grow space-y-2">
+    <div className="flex-grow space-y-1"> {/* space-y-2 auf space-y-1 reduziert */}
       {filteredNavItems.map((item) => (
         item.isCategory ? (
-          <div key={item.title} className="space-y-2">
+          <div key={item.title} className="space-y-1"> {/* space-y-2 auf space-y-1 reduziert */}
             {!isCollapsed && (
               <h3 className="text-sm font-semibold uppercase text-muted-foreground px-4 pt-4 pb-2">
                 {item.title}
