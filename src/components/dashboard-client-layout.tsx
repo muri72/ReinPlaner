@@ -100,7 +100,7 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut, us
       {/* Desktop Sidebar (fest) */}
       <aside
         className={cn(
-          "hidden md:flex flex-col fixed top-0 left-0 h-screen bg-sidebar text-sidebar-foreground border-r border-sidebar-border p-4 transition-all duration-150 ease-in-out z-40 overflow-hidden",
+          "hidden md:flex flex-col fixed top-0 left-0 h-screen bg-sidebar text-sidebar-foreground border-r border-sidebar-border p-4 transition-all duration-150 ease-in-out z-40", // Removed overflow-hidden
           isCollapsed ? "w-20" : "w-64",
           "bg-gradient-to-br from-sidebar-background to-sidebar-accent glassmorphism-card"
         )}
@@ -150,7 +150,6 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut, us
         "pt-20 md:pt-8",
         "transition-all duration-150 ease-in-out",
         isCollapsed ? "md:ml-20" : "md:ml-64"
-        // Removed isRootDashboardPage && "hide-visible-scrollbar"
       )}>
         {children}
       </main>
