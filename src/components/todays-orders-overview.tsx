@@ -158,7 +158,7 @@ export function TodaysOrdersOverview() {
         const filteredByRole = mappedOrders.filter(order => {
           if (currentUserRole === 'admin') return true;
           if (currentUserRole === 'employee') {
-            return order.employee_id === currentEmployeeId;
+            return order.employee_id === currentEmployeeId; // Korrigierte Filterung
           }
           if (currentUserRole === 'manager') {
             // Managers can see orders for customers they are assigned to
