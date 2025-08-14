@@ -2,10 +2,10 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { Menu, ChevronLeft, ChevronRight } from "lucide-react"; // X-Icon entfernt
+import { Menu, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NotificationBell } from "@/components/notification-bell";
-import { Sheet, SheetContent, SheetHeader, SheetTrigger } from "@/components/ui/sheet"; // SheetClose entfernt
+import { Sheet, SheetContent, SheetHeader, SheetTrigger, SheetClose } from "@/components/ui/sheet";
 import { SidebarNav } from "@/components/sidebar-nav";
 import { UserMenu } from "@/components/user-menu";
 import { cn } from "@/lib/utils";
@@ -51,14 +51,23 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut, us
             className={cn(
               "w-64 text-sidebar-foreground border-r border-sidebar-border flex flex-col",
               "bg-sidebar/80 backdrop-blur-xl glassmorphism-card",
-              "h-full relative" // Beibehalten, falls andere absolute Elemente hinzugefügt werden
+              "h-full"
             )}
           >
-            <SheetHeader className="p-4 mb-4 flex items-center justify-center"> {/* Abstand reduziert auf mb-4 */}
+            <SheetHeader className="flex items-center justify-between p-4 mb-6">
               <Link href={getHomeLink()} passHref onClick={() => setIsSheetOpen(false)}>
                 <h2 className="text-xl font-bold text-primary tracking-tight cursor-pointer">ARIS</h2>
               </Link>
-              {/* Schließen-Button wurde hier entfernt */}
+              <SheetClose asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                >
+                  <X className="h-5 w-5" />
+                  <span className="sr-only">Menü schließen</span>
+                </Button>
+              </SheetClose>
             </SheetHeader>
             <nav className="flex-grow overflow-y-auto p-4">
               <SidebarNav
