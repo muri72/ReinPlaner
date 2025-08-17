@@ -14,7 +14,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Switch } from "@/components/ui/switch";
 import { CustomerContactCreateDialog } from "@/components/customer-contact-create-dialog";
 import { handleActionResponse } from "@/lib/toast-utils"; // Importiere die neue Utility
-import { calculateEndTime } from "@/lib/utils"; // Import the new utility
+import { calculateEndTime, calculateStartTime } from "@/lib/utils"; // Import the new utility
 
 const preprocessNumber = (val: any) => (val === "" || isNaN(Number(val)) ? null : Number(val));
 const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
@@ -180,7 +180,7 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
     day: string,
     hours: number | null,
     currentTimeOfDay: string,
-    triggeringField: 'hours' | 'startTime' | 'timeOfDay' // New parameter to know what triggered the update
+    triggeringField: 'hours' | 'startTime' | 'endTime' | 'timeOfDay'
   ) => {
     const startTimeKey = `${day}_start_time` as keyof ObjectFormValues;
     const endTimeKey = `${day}_end_time` as keyof ObjectFormValues;
@@ -222,6 +222,18 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
           newEndTime = calculateEndTime(effectiveStartTime, hours);
         } else {
           // If manual start time is invalid/cleared, revert to base logic
+          effectiveStartTime = baseStartTimeForTimeOfDay;
+          newStartTime = effectiveStartTime;
+          newEndTime = calculateEndTime(effectiveStartTime, hours);
+        }
+      } else if (triggeringField === 'endTime') {
+        // If end time was manually changed, calculate new start time
+        if (typeof currentEndTimeValue === 'string' && timeRegex.test(currentEndTimeValue)) {
+          effectiveStartTime = calculateStartTime(currentEndTimeValue, hours); // Calculate start time backwards
+          newStartTime = effectiveStartTime;
+          newEndTime = currentEndTimeValue; // Keep the manually entered end time
+        } else {
+          // If manual end time is invalid/cleared, revert to base logic
           effectiveStartTime = baseStartTimeForTimeOfDay;
           newStartTime = effectiveStartTime;
           newEndTime = calculateEndTime(effectiveStartTime, hours);
@@ -427,7 +439,25 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
             </div>
             <div>
               <Label htmlFor={`${day}_end_time`} className="text-xs">Ende</Label>
-              <Input id={`${day}_end_time`} type="time" {...form.register(`${day}_end_time` as keyof ObjectFormValues)} />
+              <Input
+                id={`${day}_end_time`}
+                type="time"
+                {...form.register(`${day}_end_time` as keyof ObjectFormValues, {
+                  onChange: (e) => {
+                    const newEndTime = e.target.value;
+                    form.setValue(`${day}_end_time` as keyof ObjectFormValues, newEndTime);
+                    // When end time changes, re-calculate start time based on hours
+                    const hoursValue = form.getValues(`${day}_hours` as keyof ObjectFormValues);
+                    const hoursToPass = typeof hoursValue === 'number' ? hoursValue : null;
+                    if (hoursToPass !== null && hoursToPass > 0 && newEndTime && timeRegex.test(newEndTime)) {
+                      updateDailyTimes(day, hoursToPass, selectedTimeOfDay, 'endTime');
+                    } else if (hoursToPass === null || hoursToPass === 0) {
+                      // If no hours, clear start time if end time is cleared
+                      form.setValue(`${day}_start_time` as keyof ObjectFormValues, null, { shouldValidate: true });
+                    }
+                  }
+                })}
+              />
               {form.formState.errors[(`${day}_end_time`) as keyof ObjectFormValues] && <p className="text-red-500 text-xs mt-1">{form.formState.errors[(`${day}_end_time`) as keyof ObjectFormValues]?.message}</p>}
             </div>
           </div>

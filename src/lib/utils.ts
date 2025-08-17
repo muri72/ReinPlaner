@@ -42,3 +42,23 @@ export const calculateEndTime = (startTime: string, durationHours: number): stri
 
   return `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
 };
+
+// NEW: Helper to calculate start time based on end time and duration in hours
+export const calculateStartTime = (endTime: string, durationHours: number): string => {
+  const [endH, endM] = endTime.split(':').map(Number);
+  const totalMinutes = endH * 60 + endM - Math.round(durationHours * 60);
+
+  // Handle negative minutes (e.g., if start time is on previous day)
+  let startH = Math.floor(totalMinutes / 60);
+  let startM = totalMinutes % 60;
+
+  if (startM < 0) {
+    startM += 60;
+    startH -= 1;
+  }
+  if (startH < 0) {
+    startH += 24; // Wrap around to previous day
+  }
+
+  return `${String(startH).padStart(2, '0')}:${String(startM).padStart(2, '0')}`;
+};
