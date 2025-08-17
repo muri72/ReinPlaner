@@ -176,12 +176,17 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
   const selectedTimeOfDay = form.watch("timeOfDay");
 
   // Helper to update start/end times for a specific day
-  const updateDailyTimes = useCallback((day: string, hours: number | null, currentTimeOfDay: string) => {
+  const updateDailyTimes = useCallback((
+    day: string,
+    hours: number | null,
+    currentTimeOfDay: string,
+    currentStartTime: string | null | undefined // Pass current start time
+  ) => {
     const startTimeKey = `${day}_start_time` as keyof ObjectFormValues;
     const endTimeKey = `${day}_end_time` as keyof ObjectFormValues;
 
-    const currentStartTime = form.getValues(startTimeKey);
-    const currentEndTime = form.getValues(endTimeKey);
+    const currentStartTimeValue = form.getValues(startTimeKey);
+    const currentEndTimeValue = form.getValues(endTimeKey);
 
     let newStartTime: string | null = null;
     let newEndTime: string | null = null;
@@ -196,16 +201,25 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
         baseStartTime = "17:00";
       }
 
-      const calculatedEndTime = calculateEndTime(baseStartTime, hours);
-      newStartTime = baseStartTime;
+      // Use currentStartTime if provided and valid, otherwise use baseStartTime
+      const effectiveStartTime = currentStartTime && timeRegex.test(currentStartTime) ? currentStartTime : baseStartTime;
+      
+      const calculatedEndTime = calculateEndTime(effectiveStartTime, hours);
+      
+      // Only set start time if it's being derived from timeOfDay or if it's currently null
+      if (!currentStartTime || !timeRegex.test(currentStartTime)) {
+        newStartTime = effectiveStartTime;
+      } else {
+        newStartTime = currentStartTime; // Keep existing valid start time
+      }
       newEndTime = calculatedEndTime;
     }
 
     // Only update if values are actually different
-    if (currentStartTime !== newStartTime) {
+    if (currentStartTimeValue !== newStartTime) {
       form.setValue(startTimeKey, newStartTime, { shouldValidate: true });
     }
-    if (currentEndTime !== newEndTime) {
+    if (currentEndTimeValue !== newEndTime) {
       form.setValue(endTimeKey, newEndTime, { shouldValidate: true });
     }
   }, [form]); // Dependency on form, as form.setValue and form.getValues are used inside
@@ -214,11 +228,15 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
   useEffect(() => {
     dayNames.forEach(day => {
       const hoursValue = form.getValues(`${day}_hours` as keyof ObjectFormValues);
-      // Ensure hoursValue is either a number or null. If it's undefined, treat as null.
+      const currentStartTime = form.getValues(`${day}_start_time` as keyof ObjectFormValues) as string | null | undefined; // Explicit type assertion
       const hoursToPass = typeof hoursValue === 'number' ? hoursValue : null;
-      updateDailyTimes(day, hoursToPass, selectedTimeOfDay);
+      
+      // Only update if hours are present for that day, or if we are clearing times
+      if (hoursToPass !== null || (currentStartTime !== null || (form.getValues(`${day}_end_time` as keyof ObjectFormValues) as string | null | undefined) !== null)) { // Explicit type assertion
+        updateDailyTimes(day, hoursToPass, selectedTimeOfDay, currentStartTime);
+      }
     });
-  }, [selectedTimeOfDay, updateDailyTimes, dayNames]); // Removed 'form' from here, as updateDailyTimes is now stable
+  }, [selectedTimeOfDay, updateDailyTimes, dayNames, form]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -357,7 +375,8 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
                     const value = e.target.value;
                     const parsedHours = value === "" ? null : Number(value);
                     form.setValue(`${day}_hours` as keyof ObjectFormValues, parsedHours);
-                    updateDailyTimes(day, parsedHours, selectedTimeOfDay);
+                    // When hours change, re-calculate times for this specific day
+                    updateDailyTimes(day, parsedHours, selectedTimeOfDay, form.getValues(`${day}_start_time` as keyof ObjectFormValues) as string | null | undefined); // Explicit type assertion
                   }
                 })}
                 placeholder="z.B. 7.5"
@@ -366,7 +385,26 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
             </div>
             <div>
               <Label htmlFor={`${day}_start_time`} className="text-xs">Start</Label>
-              <Input id={`${day}_start_time`} type="time" {...form.register(`${day}_start_time` as keyof ObjectFormValues)} />
+              <Input
+                id={`${day}_start_time`}
+                type="time"
+                {...form.register(`${day}_start_time` as keyof ObjectFormValues, {
+                  onChange: (e) => {
+                    const newStartTime = e.target.value;
+                    form.setValue(`${day}_start_time` as keyof ObjectFormValues, newStartTime);
+                    // When start time changes, re-calculate end time based on hours
+                    const hoursValue = form.getValues(`${day}_hours` as keyof ObjectFormValues);
+                    const hoursToPass = typeof hoursValue === 'number' ? hoursValue : null;
+                    if (hoursToPass !== null && hoursToPass > 0 && newStartTime && timeRegex.test(newStartTime)) {
+                      const calculatedEndTime = calculateEndTime(newStartTime, hoursToPass);
+                      form.setValue(`${day}_end_time` as keyof ObjectFormValues, calculatedEndTime, { shouldValidate: true });
+                    } else if (hoursToPass === null || hoursToPass === 0) {
+                      // If no hours, clear end time if start time is cleared
+                      form.setValue(`${day}_end_time` as keyof ObjectFormValues, null, { shouldValidate: true });
+                    }
+                  }
+                })}
+              />
               {form.formState.errors[(`${day}_start_time`) as keyof ObjectFormValues] && <p className="text-red-500 text-xs mt-1">{form.formState.errors[(`${day}_start_time`) as keyof ObjectFormValues]?.message}</p>}
             </div>
             <div>
