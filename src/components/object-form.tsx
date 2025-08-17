@@ -185,8 +185,8 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
     const startTimeKey = `${day}_start_time` as keyof ObjectFormValues;
     const endTimeKey = `${day}_end_time` as keyof ObjectFormValues;
 
-    const currentStartTimeValue: string | null | undefined = form.getValues(startTimeKey);
-    const currentEndTimeValue: string | null | undefined = form.getValues(endTimeKey);
+    const currentStartTimeValue: string | null | undefined = form.getValues(startTimeKey) as string | null | undefined; // Explicit cast
+    const currentEndTimeValue: string | null | undefined = form.getValues(endTimeKey) as string | null | undefined; // Explicit cast
 
     let newStartTime: string | null = null;
     let newEndTime: string | null = null;
@@ -234,6 +234,7 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
     }
 
     // Only update if values are actually different to prevent unnecessary re-renders
+    // Also, ensure we don't overwrite a valid existing time with null if hours are not changing
     if (currentStartTimeValue !== newStartTime) {
       form.setValue(startTimeKey, newStartTime, { shouldValidate: true });
     }
@@ -414,8 +415,7 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
                     const hoursValue = form.getValues(`${day}_hours` as keyof ObjectFormValues);
                     const hoursToPass = typeof hoursValue === 'number' ? hoursValue : null;
                     if (hoursToPass !== null && hoursToPass > 0 && newStartTime && timeRegex.test(newStartTime)) {
-                      const calculatedEndTime = calculateEndTime(newStartTime, hoursToPass);
-                      form.setValue(`${day}_end_time` as keyof ObjectFormValues, calculatedEndTime, { shouldValidate: true });
+                      updateDailyTimes(day, hoursToPass, selectedTimeOfDay, 'startTime');
                     } else if (hoursToPass === null || hoursToPass === 0) {
                       // If no hours, clear end time if start time is cleared
                       form.setValue(`${day}_end_time` as keyof ObjectFormValues, null, { shouldValidate: true });
