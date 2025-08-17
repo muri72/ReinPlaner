@@ -31,3 +31,14 @@ export const formatDuration = (minutes: number | null) => {
   const remainingMinutes = Math.floor((totalSeconds % 3600) / 60);
   return `${hours}h ${remainingMinutes}m`;
 };
+
+// Helper to calculate end time based on start time and duration in hours
+export const calculateEndTime = (startTime: string, durationHours: number): string => {
+  const [startH, startM] = startTime.split(':').map(Number);
+  const totalMinutes = startH * 60 + startM + Math.round(durationHours * 60);
+
+  const endH = Math.floor(totalMinutes / 60) % 24; // Handle overflow past 24 hours
+  const endM = totalMinutes % 60;
+
+  return `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
+};

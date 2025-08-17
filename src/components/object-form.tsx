@@ -14,6 +14,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Switch } from "@/components/ui/switch";
 import { CustomerContactCreateDialog } from "@/components/customer-contact-create-dialog";
 import { handleActionResponse } from "@/lib/toast-utils"; // Importiere die neue Utility
+import { calculateEndTime } from "@/lib/utils"; // Import the new utility
 
 const preprocessNumber = (val: any) => (val === "" || isNaN(Number(val)) ? null : Number(val));
 const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
@@ -172,6 +173,41 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
   });
 
   const selectedCustomerId = form.watch("customerId");
+  const selectedTimeOfDay = form.watch("timeOfDay");
+
+  // Helper to update start/end times for a specific day
+  const updateDailyTimes = (day: string, hours: number | null, currentTimeOfDay: string) => {
+    const startTimeKey = `${day}_start_time` as keyof ObjectFormValues;
+    const endTimeKey = `${day}_end_time` as keyof ObjectFormValues;
+
+    if (hours !== null && hours > 0) {
+      let baseStartTime = "08:00"; // Default for "any" or if no specific time of day
+      if (currentTimeOfDay === "morning") {
+        baseStartTime = "08:00";
+      } else if (currentTimeOfDay === "noon") {
+        baseStartTime = "12:00";
+      } else if (currentTimeOfDay === "afternoon") {
+        baseStartTime = "17:00";
+      }
+
+      const calculatedEndTime = calculateEndTime(baseStartTime, hours);
+      form.setValue(startTimeKey, baseStartTime, { shouldValidate: true });
+      form.setValue(endTimeKey, calculatedEndTime, { shouldValidate: true });
+    } else {
+      form.setValue(startTimeKey, null, { shouldValidate: true });
+      form.setValue(endTimeKey, null, { shouldValidate: true });
+    }
+  };
+
+  // Effect to re-calculate times when timeOfDay changes
+  useEffect(() => {
+    dayNames.forEach(day => {
+      const hoursValue = form.getValues(`${day}_hours` as keyof ObjectFormValues);
+      // Ensure hoursValue is either a number or null. If it's undefined, treat as null.
+      const hoursToPass = typeof hoursValue === 'number' ? hoursValue : null;
+      updateDailyTimes(day, hoursToPass, selectedTimeOfDay);
+    });
+  }, [selectedTimeOfDay, form, dayNames]); // Added form and dayNames to dependencies for completeness
 
   useEffect(() => {
     const fetchData = async () => {
@@ -224,7 +260,7 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
       </div>
       <div>
         <Label htmlFor="address">Adresse</Label>
-        <Textarea id="address" {...form.register("address")} placeholder="Adresse" rows={3} />
+        <Textarea id="address" {...form.register("address")} placeholder="Z.B. Musterstraße 1, 12345 Musterstadt" rows={3} />
         {form.formState.errors.address && <p className="text-red-500 text-sm mt-1">{form.formState.errors.address.message}</p>}
       </div>
       <div>
@@ -257,38 +293,8 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
         <CustomerContactCreateDialog customerId={selectedCustomerId} onContactCreated={handleCustomerContactCreated} disabled={!selectedCustomerId} />
       </div>
 
-      {/* Arbeitszeiten pro Wochentag */}
-      <h3 className="text-lg font-semibold mt-6">Arbeitsplan pro Wochentag</h3>
-      {dayNames.map(day => (
-        <div key={day} className="p-3 border rounded-md space-y-2">
-          <Label className="font-medium">{germanDayNames[day]}</Label>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2"> {/* Adjusted to grid-cols-1 for mobile */}
-            <div>
-              <Label htmlFor={`${day}_start_time`} className="text-xs">Start</Label>
-              <Input id={`${day}_start_time`} type="time" {...form.register(`${day}_start_time` as keyof ObjectFormValues)} />
-              {form.formState.errors[(`${day}_start_time`) as keyof ObjectFormValues] && <p className="text-red-500 text-xs mt-1">{form.formState.errors[(`${day}_start_time`) as keyof ObjectFormValues]?.message}</p>}
-            </div>
-            <div>
-              <Label htmlFor={`${day}_end_time`} className="text-xs">Ende</Label>
-              <Input id={`${day}_end_time`} type="time" {...form.register(`${day}_end_time` as keyof ObjectFormValues)} />
-              {form.formState.errors[(`${day}_end_time`) as keyof ObjectFormValues] && <p className="text-red-500 text-xs mt-1">{form.formState.errors[(`${day}_end_time`) as keyof ObjectFormValues]?.message}</p>}
-            </div>
-            <div>
-              <Label htmlFor={`${day}_hours`} className="text-xs">Netto-Std.</Label>
-              <Input id={`${day}_hours`} type="number" step="0.01" {...form.register(`${day}_hours` as keyof ObjectFormValues)} placeholder="z.B. 7.5" />
-              {form.formState.errors[(`${day}_hours`) as keyof ObjectFormValues] && <p className="text-red-500 text-xs mt-1">{form.formState.errors[(`${day}_hours`) as keyof ObjectFormValues]?.message}</p>}
-            </div>
-          </div>
-        </div>
-      ))}
-
       {/* Auftragseinstellungen */}
-      <h3 className="text-lg font-semibold mt-6">Standard-Auftragseinstellungen</h3>
-      <div>
-        <Label htmlFor="notes">Notizen für Aufträge (optional)</Label>
-        <Textarea id="notes" {...form.register("notes")} placeholder="Notizen für Aufträge (optional)" rows={3} />
-        {form.formState.errors.notes && <p className="text-red-500 text-sm mt-1">{form.formState.errors.notes.message}</p>}
-      </div>
+      <h3 className="text-lg font-semibold mt-6">Auftragseinstellungen</h3>
       <div>
         <Label htmlFor="priority">Priorität</Label>
         <Select onValueChange={(v) => form.setValue("priority", v as any)} value={form.watch("priority")}>
@@ -314,6 +320,49 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
         </Select>
         {form.formState.errors.timeOfDay && <p className="text-red-500 text-sm mt-1">{form.formState.errors.timeOfDay.message}</p>}
       </div>
+      <div>
+        <Label htmlFor="notes">Notizen für Aufträge (optional)</Label>
+        <Textarea id="notes" {...form.register("notes")} placeholder="Notizen für Aufträge (optional)" rows={3} />
+        {form.formState.errors.notes && <p className="text-red-500 text-sm mt-1">{form.formState.errors.notes.message}</p>}
+      </div>
+
+      {/* Arbeitszeiten pro Wochentag */}
+      <h3 className="text-lg font-semibold mt-6">Arbeitsplan pro Wochentag</h3>
+      {dayNames.map(day => (
+        <div key={day} className="p-3 border rounded-md space-y-2">
+          <Label className="font-medium">{germanDayNames[day]}</Label>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2"> {/* Adjusted to grid-cols-1 for mobile */}
+            <div>
+              <Label htmlFor={`${day}_hours`} className="text-xs">Netto-Std.</Label>
+              <Input
+                id={`${day}_hours`}
+                type="number"
+                step="0.01"
+                {...form.register(`${day}_hours` as keyof ObjectFormValues, {
+                  onChange: (e) => {
+                    const value = e.target.value;
+                    const parsedHours = value === "" ? null : Number(value);
+                    form.setValue(`${day}_hours` as keyof ObjectFormValues, parsedHours);
+                    updateDailyTimes(day, parsedHours, selectedTimeOfDay);
+                  }
+                })}
+                placeholder="z.B. 7.5"
+              />
+              {form.formState.errors[(`${day}_hours`) as keyof ObjectFormValues] && <p className="text-red-500 text-xs mt-1">{form.formState.errors[(`${day}_hours`) as keyof ObjectFormValues]?.message}</p>}
+            </div>
+            <div>
+              <Label htmlFor={`${day}_start_time`} className="text-xs">Start</Label>
+              <Input id={`${day}_start_time`} type="time" {...form.register(`${day}_start_time` as keyof ObjectFormValues)} />
+              {form.formState.errors[(`${day}_start_time`) as keyof ObjectFormValues] && <p className="text-red-500 text-xs mt-1">{form.formState.errors[(`${day}_start_time`) as keyof ObjectFormValues]?.message}</p>}
+            </div>
+            <div>
+              <Label htmlFor={`${day}_end_time`} className="text-xs">Ende</Label>
+              <Input id={`${day}_end_time`} type="time" {...form.register(`${day}_end_time` as keyof ObjectFormValues)} />
+              {form.formState.errors[(`${day}_end_time`) as keyof ObjectFormValues] && <p className="text-red-500 text-xs mt-1">{form.formState.errors[(`${day}_end_time`) as keyof ObjectFormValues]?.message}</p>}
+            </div>
+          </div>
+        </div>
+      ))}
 
       {/* Zugangsinformationen */}
       <h3 className="text-lg font-semibold mt-6">Zugangsinformationen</h3>
