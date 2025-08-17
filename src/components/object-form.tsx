@@ -247,11 +247,11 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
   useEffect(() => {
     dayNames.forEach(day => {
       const hoursValue = form.getValues(`${day}_hours` as keyof ObjectFormValues);
-      const currentStartTime = form.getValues(`${day}_start_time` as keyof ObjectFormValues);
       const hoursToPass = typeof hoursValue === 'number' ? hoursValue : null;
       
-      // Only update if hours are present for that day, or if we are clearing times
-      if (hoursToPass !== null || currentStartTime !== null || form.getValues(`${day}_end_time` as keyof ObjectFormValues) !== null) {
+      // ONLY update times if hours are already present for that day AND greater than 0.
+      // This prevents clearing times for days that are currently empty or have 0 hours.
+      if (hoursToPass !== null && hoursToPass > 0) {
         updateDailyTimes(day, hoursToPass, selectedTimeOfDay, 'timeOfDay');
       }
     });
