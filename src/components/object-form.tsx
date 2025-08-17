@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react"; // Import useCallback
 import { createClient } from "@/lib/supabase/client";
 import { Switch } from "@/components/ui/switch";
 import { CustomerContactCreateDialog } from "@/components/customer-contact-create-dialog";
@@ -176,9 +176,15 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
   const selectedTimeOfDay = form.watch("timeOfDay");
 
   // Helper to update start/end times for a specific day
-  const updateDailyTimes = (day: string, hours: number | null, currentTimeOfDay: string) => {
+  const updateDailyTimes = useCallback((day: string, hours: number | null, currentTimeOfDay: string) => {
     const startTimeKey = `${day}_start_time` as keyof ObjectFormValues;
     const endTimeKey = `${day}_end_time` as keyof ObjectFormValues;
+
+    const currentStartTime = form.getValues(startTimeKey);
+    const currentEndTime = form.getValues(endTimeKey);
+
+    let newStartTime: string | null = null;
+    let newEndTime: string | null = null;
 
     if (hours !== null && hours > 0) {
       let baseStartTime = "08:00"; // Default for "any" or if no specific time of day
@@ -191,13 +197,18 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
       }
 
       const calculatedEndTime = calculateEndTime(baseStartTime, hours);
-      form.setValue(startTimeKey, baseStartTime, { shouldValidate: true });
-      form.setValue(endTimeKey, calculatedEndTime, { shouldValidate: true });
-    } else {
-      form.setValue(startTimeKey, null, { shouldValidate: true });
-      form.setValue(endTimeKey, null, { shouldValidate: true });
+      newStartTime = baseStartTime;
+      newEndTime = calculatedEndTime;
     }
-  };
+
+    // Only update if values are actually different
+    if (currentStartTime !== newStartTime) {
+      form.setValue(startTimeKey, newStartTime, { shouldValidate: true });
+    }
+    if (currentEndTime !== newEndTime) {
+      form.setValue(endTimeKey, newEndTime, { shouldValidate: true });
+    }
+  }, [form]); // Dependency on form, as form.setValue and form.getValues are used inside
 
   // Effect to re-calculate times when timeOfDay changes
   useEffect(() => {
@@ -207,7 +218,7 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
       const hoursToPass = typeof hoursValue === 'number' ? hoursValue : null;
       updateDailyTimes(day, hoursToPass, selectedTimeOfDay);
     });
-  }, [selectedTimeOfDay, form, dayNames]); // Added form and dayNames to dependencies for completeness
+  }, [selectedTimeOfDay, updateDailyTimes, dayNames]); // Removed 'form' from here, as updateDailyTimes is now stable
 
   useEffect(() => {
     const fetchData = async () => {
@@ -226,8 +237,11 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
     if (selectedCustomerId) {
       fetchCustomerContacts(selectedCustomerId);
     } else {
-      setCustomerContacts([]);
-      form.setValue("customerContactId", null);
+      // Only set if it's not already null
+      if (form.getValues("customerContactId") !== null) {
+        form.setValue("customerContactId", null);
+      }
+      setCustomerContacts([]); // This state update will cause a re-render, but it's necessary.
     }
   }, [selectedCustomerId, supabase, form]);
 
