@@ -177,22 +177,18 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
 
   // Centralized function to calculate and set times for a specific day
   // This function will be called by onChange handlers and useEffect
-  const updateDailyTimes = useCallback((
+  const getCalculatedTimesForDay = useCallback((
     day: string,
-    hours: number | null,
+    currentHours: number | null,
+    currentStartTime: string | null | undefined,
+    currentEndTime: string | null | undefined,
     currentTimeOfDay: string,
     triggeringField: 'hours' | 'startTime' | 'endTime' | 'timeOfDay'
-  ) => {
-    const startTimeKey = `${day}_start_time` as keyof ObjectFormValues;
-    const endTimeKey = `${day}_end_time` as keyof ObjectFormValues;
-
-    const currentStartTimeValue: string | null | undefined = form.getValues(startTimeKey) as string | null | undefined;
-    const currentEndTimeValue: string | null | undefined = form.getValues(endTimeKey) as string | null | undefined;
-
+  ): { newStartTime: string | null; newEndTime: string | null } => {
     let newStartTime: string | null = null;
     let newEndTime: string | null = null;
 
-    if (hours !== null && hours > 0) {
+    if (currentHours !== null && currentHours > 0) {
       let baseStartTimeForTimeOfDay = "08:00"; // Default for "any"
       if (currentTimeOfDay === "morning") {
         baseStartTimeForTimeOfDay = "08:00";
@@ -202,41 +198,37 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
         baseStartTimeForTimeOfDay = "17:00";
       }
 
-      let effectiveStartTime: string;
-
       if (triggeringField === 'hours' || triggeringField === 'timeOfDay') {
         // If hours or timeOfDay changed, prioritize existing valid start time, then end time, then base.
-        if (typeof currentStartTimeValue === 'string' && timeRegex.test(currentStartTimeValue)) {
-          newStartTime = currentStartTimeValue;
-          newEndTime = calculateEndTime(newStartTime, hours);
-        } else if (typeof currentEndTimeValue === 'string' && timeRegex.test(currentEndTimeValue)) {
-          // If only end time is valid, calculate start time backwards
-          newEndTime = currentEndTimeValue;
-          newStartTime = calculateStartTime(newEndTime, hours);
+        if (typeof currentStartTime === 'string' && timeRegex.test(currentStartTime)) {
+          newStartTime = currentStartTime;
+          newEndTime = calculateEndTime(newStartTime, currentHours);
+        } else if (typeof currentEndTime === 'string' && timeRegex.test(currentEndTime)) {
+          newEndTime = currentEndTime;
+          newStartTime = calculateStartTime(newEndTime, currentHours);
         } else {
-          // Neither start nor end time is valid, use base
           newStartTime = baseStartTimeForTimeOfDay;
-          newEndTime = calculateEndTime(newStartTime, hours);
+          newEndTime = calculateEndTime(newStartTime, currentHours);
         }
       } else if (triggeringField === 'startTime') {
-        // If start time was manually changed, calculate new end time
-        if (typeof currentStartTimeValue === 'string' && timeRegex.test(currentStartTimeValue)) {
-          newStartTime = currentStartTimeValue;
-          newEndTime = calculateEndTime(newStartTime, hours);
+        // If start time was manually changed, use it to calculate new end time
+        if (typeof currentStartTime === 'string' && timeRegex.test(currentStartTime)) {
+          newStartTime = currentStartTime;
+          newEndTime = calculateEndTime(newStartTime, currentHours);
         } else {
           // If manual start time is invalid/cleared, revert to base logic
           newStartTime = baseStartTimeForTimeOfDay;
-          newEndTime = calculateEndTime(newStartTime, hours);
+          newEndTime = calculateEndTime(newStartTime, currentHours);
         }
       } else if (triggeringField === 'endTime') {
         // If end time was manually changed, calculate new start time
-        if (typeof currentEndTimeValue === 'string' && timeRegex.test(currentEndTimeValue)) {
-          newEndTime = currentEndTimeValue;
-          newStartTime = calculateStartTime(newEndTime, hours);
+        if (typeof currentEndTime === 'string' && timeRegex.test(currentEndTime)) {
+          newEndTime = currentEndTime;
+          newStartTime = calculateStartTime(newEndTime, currentHours);
         } else {
           // If manual end time is invalid/cleared, revert to base logic
           newStartTime = baseStartTimeForTimeOfDay;
-          newEndTime = calculateEndTime(newStartTime, hours);
+          newEndTime = calculateEndTime(newStartTime, currentHours);
         }
       }
     } else {
@@ -244,29 +236,37 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
       newStartTime = null;
       newEndTime = null;
     }
-
-    // Only update if values are actually different to prevent unnecessary re-renders
-    // Also, ensure we don't overwrite a valid existing time with null if hours are not changing
-    if (currentStartTimeValue !== newStartTime) {
-      form.setValue(startTimeKey, newStartTime, { shouldValidate: true });
-    }
-    if (currentEndTimeValue !== newEndTime) {
-      form.setValue(endTimeKey, newEndTime, { shouldValidate: true });
-    }
-  }, [form]); // form is the only dependency for useCallback
+    return { newStartTime, newEndTime };
+  }, [selectedTimeOfDay]); // Only depends on selectedTimeOfDay for base time calculation
 
   // Effect to re-calculate times when timeOfDay changes
   useEffect(() => {
     dayNames.forEach(day => {
-      const hoursValue = form.getValues(`${day}_hours` as keyof ObjectFormValues) as number | null; // Explicit cast
-      
+      const hoursValue = form.getValues(`${day}_hours` as keyof ObjectFormValues) as number | null;
+      const currentStartTime = form.getValues(`${day}_start_time` as keyof ObjectFormValues) as string | null | undefined;
+      const currentEndTime = form.getValues(`${day}_end_time` as keyof ObjectFormValues) as string | null | undefined;
+
       // ONLY update times if hours are already present for that day AND greater than 0.
-      // This prevents clearing times for days that are currently empty or have 0 hours.
       if (hoursValue !== null && hoursValue > 0) {
-        updateDailyTimes(day, hoursValue, selectedTimeOfDay, 'timeOfDay');
+        const { newStartTime, newEndTime } = getCalculatedTimesForDay(
+          day,
+          hoursValue,
+          currentStartTime,
+          currentEndTime,
+          selectedTimeOfDay,
+          'timeOfDay'
+        );
+
+        // Only set if values are actually different to prevent unnecessary re-renders
+        if (form.getValues(`${day}_start_time` as keyof ObjectFormValues) !== newStartTime) {
+          form.setValue(`${day}_start_time` as keyof ObjectFormValues, newStartTime, { shouldValidate: true });
+        }
+        if (form.getValues(`${day}_end_time` as keyof ObjectFormValues) !== newEndTime) {
+          form.setValue(`${day}_end_time` as keyof ObjectFormValues, newEndTime, { shouldValidate: true });
+        }
       }
     });
-  }, [selectedTimeOfDay, updateDailyTimes, dayNames, form]);
+  }, [selectedTimeOfDay, getCalculatedTimesForDay, dayNames, form]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -285,17 +285,16 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
     if (selectedCustomerId) {
       fetchCustomerContacts(selectedCustomerId);
     } else {
-      // Only set if it's not already null
       if (form.getValues("customerContactId") !== null) {
         form.setValue("customerContactId", null);
       }
-      setCustomerContacts([]); // This state update will cause a re-render, but it's necessary.
+      setCustomerContacts([]);
     }
   }, [selectedCustomerId, supabase, form]);
 
   const handleFormSubmit: SubmitHandler<ObjectFormValues> = async (data) => {
     const result = await onSubmit(data);
-    handleActionResponse(result); // Nutze die neue Utility
+    handleActionResponse(result);
     if (result.success) {
       if (!initialData) form.reset();
       onSuccess?.();
@@ -393,7 +392,7 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
       {dayNames.map(day => (
         <div key={day} className="p-3 border rounded-md space-y-2">
           <Label className="font-medium">{germanDayNames[day]}</Label>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2"> {/* Adjusted to grid-cols-1 for mobile */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
             <div>
               <Label htmlFor={`${day}_hours`} className="text-xs">Netto-Std.</Label>
               <Input
@@ -405,7 +404,20 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
                     const value = e.target.value;
                     const parsedHours = value === "" ? null : Number(value);
                     form.setValue(`${day}_hours` as keyof ObjectFormValues, parsedHours);
-                    updateDailyTimes(day); // Trigger recalculation for this day
+                    
+                    const currentStartTime = form.getValues(`${day}_start_time` as keyof ObjectFormValues) as string | null | undefined;
+                    const currentEndTime = form.getValues(`${day}_end_time` as keyof ObjectFormValues) as string | null | undefined;
+
+                    const { newStartTime, newEndTime } = getCalculatedTimesForDay(
+                      day,
+                      parsedHours, // Use the newly parsed hours
+                      currentStartTime,
+                      currentEndTime,
+                      selectedTimeOfDay,
+                      'hours'
+                    );
+                    form.setValue(`${day}_start_time` as keyof ObjectFormValues, newStartTime, { shouldValidate: true });
+                    form.setValue(`${day}_end_time` as keyof ObjectFormValues, newEndTime, { shouldValidate: true });
                   }
                 })}
                 placeholder="z.B. 7.5"
@@ -419,11 +431,23 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
                 type="time"
                 {...form.register(`${day}_start_time` as keyof ObjectFormValues, {
                   onChange: (e) => {
-                    const newStartTime = e.target.value;
-                    form.setValue(`${day}_start_time` as keyof ObjectFormValues, newStartTime);
+                    const newStartTimeValue = e.target.value;
+                    form.setValue(`${day}_start_time` as keyof ObjectFormValues, newStartTimeValue);
+                    
                     const hoursValue = form.getValues(`${day}_hours` as keyof ObjectFormValues) as number | null;
-                    if (hoursValue !== null && hoursValue > 0) {
-                      updateDailyTimes(day);
+                    const currentEndTime = form.getValues(`${day}_end_time` as keyof ObjectFormValues) as string | null | undefined;
+
+                    if (hoursValue !== null && hoursValue > 0 && newStartTimeValue && timeRegex.test(newStartTimeValue)) {
+                      const { newStartTime, newEndTime } = getCalculatedTimesForDay(
+                        day,
+                        hoursValue,
+                        newStartTimeValue, // Use the new start time
+                        currentEndTime,
+                        selectedTimeOfDay,
+                        'startTime'
+                      );
+                      form.setValue(`${day}_start_time` as keyof ObjectFormValues, newStartTime, { shouldValidate: true });
+                      form.setValue(`${day}_end_time` as keyof ObjectFormValues, newEndTime, { shouldValidate: true });
                     } else if (hoursValue === null || hoursValue === 0) {
                       form.setValue(`${day}_end_time` as keyof ObjectFormValues, null, { shouldValidate: true });
                     }
@@ -439,11 +463,23 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
                 type="time"
                 {...form.register(`${day}_end_time` as keyof ObjectFormValues, {
                   onChange: (e) => {
-                    const newEndTime = e.target.value;
-                    form.setValue(`${day}_end_time` as keyof ObjectFormValues, newEndTime);
+                    const newEndTimeValue = e.target.value;
+                    form.setValue(`${day}_end_time` as keyof ObjectFormValues, newEndTimeValue);
+                    
                     const hoursValue = form.getValues(`${day}_hours` as keyof ObjectFormValues) as number | null;
-                    if (hoursValue !== null && hoursValue > 0) {
-                      updateDailyTimes(day);
+                    const currentStartTime = form.getValues(`${day}_start_time` as keyof ObjectFormValues) as string | null | undefined;
+
+                    if (hoursValue !== null && hoursValue > 0 && newEndTimeValue && timeRegex.test(newEndTimeValue)) {
+                      const { newStartTime, newEndTime } = getCalculatedTimesForDay(
+                        day,
+                        hoursValue,
+                        currentStartTime,
+                        newEndTimeValue, // Use the new end time
+                        selectedTimeOfDay,
+                        'endTime'
+                      );
+                      form.setValue(`${day}_start_time` as keyof ObjectFormValues, newStartTime, { shouldValidate: true });
+                      form.setValue(`${day}_end_time` as keyof ObjectFormValues, newEndTime, { shouldValidate: true });
                     } else if (hoursValue === null || hoursValue === 0) {
                       form.setValue(`${day}_start_time` as keyof ObjectFormValues, null, { shouldValidate: true });
                     }
