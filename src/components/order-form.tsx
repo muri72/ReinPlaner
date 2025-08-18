@@ -371,7 +371,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     return { newStartTime, newEndTime };
   }, [getBaseStartTimeForTimeOfDay, objects, selectedObjectId]);
 
-  useEffect(() => {
+  const distributeObjectHours = useCallback(() => {
     const currentObjectId = form.getValues("objectId") ?? null;
     const selectedObject = objects.find(obj => obj.id === currentObjectId);
     const numAssignedEmployees = assignedEmployeeFields.length;
@@ -390,29 +390,13 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
         const objectDailyHours = selectedObject?.[`${day}_hours` as keyof typeof selectedObject] as number | null;
         const objectStartTime = selectedObject?.[`${day}_start_time` as keyof typeof selectedObject] as string | null;
         const objectEndTime = selectedObject?.[`${day}_end_time` as keyof typeof selectedObject] as string | null;
-        const objectTimeOfDay = selectedObject?.time_of_day || 'any';
 
         let calculatedHours: number | null = null;
-        let calculatedStartTime: string | null = null;
-        let calculatedEndTime: string | null = null;
+        let calculatedStartTime: string | null = objectStartTime;
+        let calculatedEndTime: string | null = objectEndTime;
 
-        if (objectStartTime && objectEndTime) {
-          calculatedStartTime = objectStartTime;
-          calculatedEndTime = objectEndTime;
-          const totalDurationMinutes = (new Date(`2000/01/01 ${objectEndTime}`).getTime() - new Date(`2000/01/01 ${objectStartTime}`).getTime()) / (1000 * 60);
-          calculatedHours = parseFloat((totalDurationMinutes / 60 / numAssignedEmployees).toFixed(2));
-        } else if (objectDailyHours !== null) {
+        if (objectDailyHours !== null) {
           calculatedHours = parseFloat((objectDailyHours / numAssignedEmployees).toFixed(2));
-          const { newStartTime, newEndTime } = calculateEmployeeDayTimes(
-              day,
-              calculatedHours,
-              assignedEmp[startFieldName] as string | null,
-              assignedEmp[endFieldName] as string | null,
-              objectTimeOfDay,
-              'employeeSelection'
-          );
-          calculatedStartTime = newStartTime;
-          calculatedEndTime = newEndTime;
         }
         
         (newEmpData as any)[hoursFieldName] = calculatedHours;
@@ -422,10 +406,14 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
       return newEmpData;
     });
 
-    if (JSON.stringify(newAssignments) !== JSON.stringify(assignedEmployeeFields)) {
+    if (JSON.stringify(newAssignments) !== JSON.stringify(form.getValues("assignedEmployees"))) {
       form.setValue("assignedEmployees", newAssignments, { shouldValidate: true });
     }
-  }, [selectedObjectId, objects, assignedEmployeeFields.length, form, calculateEmployeeDayTimes]);
+  }, [form, objects, assignedEmployeeFields, selectedObjectId]);
+
+  useEffect(() => {
+    distributeObjectHours();
+  }, [selectedObjectId, assignedEmployeeFields.length, distributeObjectHours]);
 
   const handleAssignedHoursChange = useCallback((
     employeeIndex: number,
