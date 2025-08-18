@@ -179,18 +179,18 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     saturday_hours: number | null;
     sunday_hours: number | null;
     monday_start_time: string | null;
-    monday_end_time: string | null;
     tuesday_start_time: string | null;
-    tuesday_end_time: string | null;
     wednesday_start_time: string | null;
-    wednesday_end_time: string | null;
     thursday_start_time: string | null;
-    thursday_end_time: string | null;
     friday_start_time: string | null;
-    friday_end_time: string | null;
     saturday_start_time: string | null;
-    saturday_end_time: string | null;
     sunday_start_time: string | null;
+    monday_end_time: string | null;
+    tuesday_end_time: string | null;
+    wednesday_end_time: string | null;
+    thursday_end_time: string | null;
+    friday_end_time: string | null;
+    saturday_end_time: string | null;
     sunday_end_time: string | null;
     total_weekly_hours: number | null;
     time_of_day: string | null; // Added time_of_day
@@ -337,23 +337,20 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     }
   }, [selectedObjectId, objects, form, orderType, form.watch("dueDate")]);
 
-  // Centralized function to calculate and set times for a specific day for an assigned employee
-  const calculateAndSetEmployeeTimes = useCallback((
-    employeeIndex: number,
+  // Pure function to calculate times for a specific day for an assigned employee
+  const calculateEmployeeDayTimes = useCallback((
     day: typeof dayNames[number],
     currentHours: number | null,
     currentStartTime: string | null | undefined,
     currentEndTime: string | null | undefined,
     objectTimeOfDay: string | null,
     triggeringField: 'hours' | 'startTime' | 'endTime' | 'employeeSelection' | 'objectSelection'
-  ) => {
-    const currentAssignedEmployee = assignedEmployeeFields[employeeIndex];
+  ): { newStartTime: string | null; newEndTime: string | null } => {
     let newStartTime: string | null = currentStartTime || null;
     let newEndTime: string | null = currentEndTime || null;
 
     if (currentHours !== null && currentHours > 0) {
       if (triggeringField === 'hours') {
-        // If hours changed, prioritize existing valid start time, then end time, then base.
         if (newStartTime && timeRegex.test(newStartTime)) {
           newEndTime = calculateEndTime(newStartTime, currentHours);
         } else if (newEndTime && timeRegex.test(newEndTime)) {
@@ -363,26 +360,20 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
           newEndTime = calculateEndTime(newStartTime, currentHours);
         }
       } else if (triggeringField === 'startTime') {
-        // If start time was manually changed, use it to calculate new end time
         if (newStartTime && timeRegex.test(newStartTime)) {
           newEndTime = calculateEndTime(newStartTime, currentHours);
         } else {
-          // If manual start time is invalid/cleared, revert to base logic
           newStartTime = getBaseStartTimeForTimeOfDay(objectTimeOfDay);
           newEndTime = calculateEndTime(newStartTime, currentHours);
         }
       } else if (triggeringField === 'endTime') {
-        // If end time was manually changed, calculate new start time
         if (newEndTime && timeRegex.test(newEndTime)) {
           newStartTime = calculateStartTime(newEndTime, currentHours);
         } else {
-          // If manual end time is invalid/cleared, revert to base logic
           newStartTime = getBaseStartTimeForTimeOfDay(objectTimeOfDay);
           newEndTime = calculateEndTime(newStartTime, currentHours);
         }
       } else if (triggeringField === 'employeeSelection' || triggeringField === 'objectSelection') {
-        // For initial population or re-population due to employee/object change
-        // If object has specific times, use them. Otherwise, calculate based on hours.
         const selectedObject = objects.find(obj => obj.id === selectedObjectId);
         const objStartTime = selectedObject?.[`${day}_start_time` as keyof typeof selectedObject] as string | null;
         const objEndTime = selectedObject?.[`${day}_end_time` as keyof typeof selectedObject] as string | null;
@@ -396,25 +387,11 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
         }
       }
     } else {
-      // If hours are null or 0, clear times for this specific day
       newStartTime = null;
       newEndTime = null;
     }
-
-    // Only update if values are actually different to prevent unnecessary re-renders
-    if (currentAssignedEmployee[`assigned_${day}_start_time`] !== newStartTime) {
-      updateEmployeeField(employeeIndex, {
-        ...currentAssignedEmployee,
-        [`assigned_${day}_start_time`]: newStartTime,
-      });
-    }
-    if (currentAssignedEmployee[`assigned_${day}_end_time`] !== newEndTime) {
-      updateEmployeeField(employeeIndex, {
-        ...currentAssignedEmployee,
-        [`assigned_${day}_end_time`]: newEndTime,
-      });
-    }
-  }, [assignedEmployeeFields, updateEmployeeField, objects, selectedObjectId, getBaseStartTimeForTimeOfDay]);
+    return { newStartTime, newEndTime };
+  }, [getBaseStartTimeForTimeOfDay, objects, selectedObjectId]);
 
 
   // Effect to handle initial population and re-population of assigned employee hours/times
@@ -424,15 +401,11 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     const selectedObject = objects.find(obj => obj.id === currentObjectId);
     const numAssignedEmployees = (selectedAssignedEmployees || []).length;
 
-    // Create a map of current assigned employee data for easy lookup
-    const currentAssignedMap = new Map((selectedAssignedEmployees || []).map(field => [field.employeeId, field]));
+    const newAssignedEmployeesState: AssignedEmployee[] = [];
+    let hasChanges = false;
 
-    const newAssignedEmployees: AssignedEmployee[] = [];
-
-    // Populate newAssignedEmployees based on selectedIds
-    (selectedAssignedEmployees || []).forEach(selectedEmp => {
-      const existing = currentAssignedMap.get(selectedEmp.employeeId);
-      const updatedEmp: AssignedEmployee = existing ? { ...existing } : { employeeId: selectedEmp.employeeId };
+    (selectedAssignedEmployees || []).forEach((assignedEmp) => {
+      const updatedEmp: AssignedEmployee = { ...assignedEmp };
 
       dayNames.forEach(day => {
         const hoursFieldName = `assigned_${day}_hours` as keyof AssignedEmployee;
@@ -450,40 +423,48 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
 
         if (selectedObject) {
           if (objectStartTime && objectEndTime) {
-            // Scenario 1: Object has specific start and end times
             calculatedStartTime = objectStartTime;
             calculatedEndTime = objectEndTime;
             const totalDurationMinutes = (new Date(`2000/01/01 ${objectEndTime}`).getTime() - new Date(`2000/01/01 ${objectStartTime}`).getTime()) / (1000 * 60);
             calculatedHours = parseFloat((totalDurationMinutes / 60 / (numAssignedEmployees || 1)).toFixed(2));
           } else if (objectDailyHours !== null) {
-            // Scenario 2: Object has only daily hours
             calculatedHours = parseFloat((objectDailyHours / (numAssignedEmployees || 1)).toFixed(2));
-            calculatedStartTime = getBaseStartTimeForTimeOfDay(objectTimeOfDay);
-            calculatedEndTime = calculateEndTime(calculatedStartTime, calculatedHours);
+            const { newStartTime, newEndTime } = calculateEmployeeDayTimes(
+                day,
+                calculatedHours,
+                updatedEmp[startFieldName] as string | null, // Pass current values from updatedEmp
+                updatedEmp[endFieldName] as string | null,
+                objectTimeOfDay,
+                'objectSelection'
+            );
+            calculatedStartTime = newStartTime;
+            calculatedEndTime = newEndTime;
           }
         }
 
-        // Only update if the value is different from the current form value
+        // Check if values are actually different before updating
         if (updatedEmp[hoursFieldName] !== calculatedHours) {
           (updatedEmp as any)[hoursFieldName] = calculatedHours;
+          hasChanges = true;
         }
-        // Call the centralized function to set times, passing the calculated hours
-        calculateAndSetEmployeeTimes(
-          assignedEmployeeFields.findIndex(f => f.employeeId === selectedEmp.employeeId), // Find current index
-          day,
-          calculatedHours,
-          updatedEmp[startFieldName] as string | null, // Explicitly cast to string | null
-          updatedEmp[endFieldName] as string | null, // Explicitly cast to string | null
-          objectTimeOfDay,
-          'objectSelection' // Indicate this is from object/employee selection
-        );
+        if (updatedEmp[startFieldName] !== calculatedStartTime) {
+          (updatedEmp as any)[startFieldName] = calculatedStartTime;
+          hasChanges = true;
+        }
+        if (updatedEmp[endFieldName] !== calculatedEndTime) {
+          (updatedEmp as any)[endFieldName] = calculatedEndTime;
+          hasChanges = true;
+        }
       });
-      newAssignedEmployees.push(updatedEmp);
+      newAssignedEmployeesState.push(updatedEmp);
     });
 
-    // Update the form state with the completely new array.
-    form.setValue("assignedEmployees", newAssignedEmployees, { shouldValidate: true });
-  }, [selectedObjectId, (selectedAssignedEmployees || []).length, objects, form, getBaseStartTimeForTimeOfDay, assignedEmployeeFields, calculateAndSetEmployeeTimes]);
+    // Only update if there are actual changes to prevent infinite loops
+    // Use a deep comparison for the array of objects
+    if (hasChanges || JSON.stringify(newAssignedEmployeesState) !== JSON.stringify(assignedEmployeeFields)) {
+        form.setValue("assignedEmployees", newAssignedEmployeesState, { shouldValidate: true });
+    }
+  }, [selectedObjectId, selectedAssignedEmployees, objects, form, calculateEmployeeDayTimes, assignedEmployeeFields]);
 
 
   // Manual change handlers for hours/times within assigned employees
@@ -498,21 +479,22 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     const selectedObject = objects.find(obj => obj.id === currentObjectId);
     const objectTimeOfDay = selectedObject?.time_of_day || 'any';
 
-    updateEmployeeField(employeeIndex, {
-      ...currentAssignedEmployee,
-      [`assigned_${day}_hours`]: parsedHours,
-    });
-
-    calculateAndSetEmployeeTimes(
-      employeeIndex,
+    const { newStartTime, newEndTime } = calculateEmployeeDayTimes(
       day,
       parsedHours,
-      currentAssignedEmployee[`assigned_${day}_start_time`] as string | null, // Explicitly cast
-      currentAssignedEmployee[`assigned_${day}_end_time`] as string | null, // Explicitly cast
+      currentAssignedEmployee[`assigned_${day}_start_time`] as string | null,
+      currentAssignedEmployee[`assigned_${day}_end_time`] as string | null,
       objectTimeOfDay,
       'hours'
     );
-  }, [assignedEmployeeFields, updateEmployeeField, form, objects, calculateAndSetEmployeeTimes]);
+
+    updateEmployeeField(employeeIndex, {
+      ...currentAssignedEmployee,
+      [`assigned_${day}_hours`]: parsedHours,
+      [`assigned_${day}_start_time`]: newStartTime,
+      [`assigned_${day}_end_time`]: newEndTime,
+    });
+  }, [assignedEmployeeFields, updateEmployeeField, form, objects, calculateEmployeeDayTimes]);
 
 
   const handleAssignedTimeChange = useCallback((
@@ -536,24 +518,21 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
       newEndTime = value || null;
     }
 
-    // Update the field immediately
-    updateEmployeeField(employeeIndex, {
-      ...currentAssignedEmployee,
-      [`assigned_${day}_start_time`]: newStartTime,
-      [`assigned_${day}_end_time`]: newEndTime,
-    });
-
-    // Recalculate based on the new time and existing hours
-    calculateAndSetEmployeeTimes(
-      employeeIndex,
+    const { newStartTime: calculatedStartTime, newEndTime: calculatedEndTime } = calculateEmployeeDayTimes(
       day,
       currentHours,
       newStartTime,
       newEndTime,
       objectTimeOfDay,
-      timeType === 'start' ? 'startTime' : 'endTime' // Corrected triggeringField
+      timeType === 'start' ? 'startTime' : 'endTime'
     );
-  }, [assignedEmployeeFields, updateEmployeeField, form, objects, calculateAndSetEmployeeTimes]);
+
+    updateEmployeeField(employeeIndex, {
+      ...currentAssignedEmployee,
+      [`assigned_${day}_start_time`]: calculatedStartTime,
+      [`assigned_${day}_end_time`]: calculatedEndTime,
+    });
+  }, [assignedEmployeeFields, updateEmployeeField, form, objects, calculateEmployeeDayTimes]);
 
 
   const handleFormSubmit: SubmitHandler<OrderFormValues> = async (data) => {
@@ -638,28 +617,60 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     // Add newly selected employees or keep existing ones
     selectedIds.forEach(employeeId => {
       const existing = currentAssignedMap.get(employeeId);
-      if (existing) {
-        newAssignedEmployees.push(existing);
-      } else {
-        newAssignedEmployees.push({
-          employeeId: employeeId,
-          assigned_monday_hours: null, assigned_tuesday_hours: null, assigned_wednesday_hours: null,
-          assigned_thursday_hours: null, assigned_friday_hours: null, assigned_saturday_hours: null,
-          assigned_sunday_hours: null,
-          assigned_monday_start_time: null, assigned_monday_end_time: null,
-          assigned_tuesday_start_time: null, assigned_tuesday_end_time: null,
-          assigned_wednesday_start_time: null, assigned_wednesday_end_time: null,
-          assigned_thursday_start_time: null, assigned_thursday_end_time: null,
-          assigned_friday_start_time: null, assigned_friday_end_time: null,
-          assigned_saturday_start_time: null, assigned_saturday_end_time: null,
-          assigned_sunday_start_time: null, assigned_sunday_end_time: null,
-        });
-      }
+      const updatedEmp: AssignedEmployee = existing ? { ...existing } : { employeeId: employeeId };
+
+      dayNames.forEach(day => {
+        const hoursFieldName = `assigned_${day}_hours` as keyof AssignedEmployee;
+        const startFieldName = `assigned_${day}_start_time` as keyof AssignedEmployee;
+        const endFieldName = `assigned_${day}_end_time` as keyof AssignedEmployee;
+
+        const objectDailyHours = selectedObject?.[`${day}_hours` as keyof typeof selectedObject] as number | null;
+        const objectStartTime = selectedObject?.[`${day}_start_time` as keyof typeof selectedObject] as string | null;
+        const objectEndTime = selectedObject?.[`${day}_end_time` as keyof typeof selectedObject] as string | null;
+        const objectTimeOfDay = selectedObject?.time_of_day || 'any';
+
+        let calculatedHours: number | null = null;
+        let calculatedStartTime: string | null = null;
+        let calculatedEndTime: string | null = null;
+
+        if (selectedObject) {
+          if (objectStartTime && objectEndTime) {
+            // Scenario 1: Object has specific start and end times
+            calculatedStartTime = objectStartTime;
+            calculatedEndTime = objectEndTime;
+            const totalDurationMinutes = (new Date(`2000/01/01 ${objectEndTime}`).getTime() - new Date(`2000/01/01 ${objectStartTime}`).getTime()) / (1000 * 60);
+            calculatedHours = parseFloat((totalDurationMinutes / 60 / (selectedIds.length || 1)).toFixed(2));
+          } else if (objectDailyHours !== null) {
+            // Scenario 2: Object has only daily hours
+            calculatedHours = parseFloat((objectDailyHours / (selectedIds.length || 1)).toFixed(2));
+            const { newStartTime, newEndTime } = calculateEmployeeDayTimes(
+                day,
+                calculatedHours,
+                updatedEmp[startFieldName] as string | null, // Pass current values from updatedEmp
+                updatedEmp[endFieldName] as string | null,
+                objectTimeOfDay,
+                'employeeSelection'
+            );
+            calculatedStartTime = newStartTime;
+            calculatedEndTime = newEndTime;
+          }
+        }
+
+        // Only update if the value is different from the current form value
+        if (updatedEmp[hoursFieldName] !== calculatedHours) {
+          (updatedEmp as any)[hoursFieldName] = calculatedHours;
+        }
+        if (updatedEmp[startFieldName] !== calculatedStartTime) {
+          (updatedEmp as any)[startFieldName] = calculatedStartTime;
+        }
+        if (updatedEmp[endFieldName] !== calculatedEndTime) {
+          (updatedEmp as any)[endFieldName] = calculatedEndTime;
+        }
+      });
+      newAssignedEmployees.push(updatedEmp);
     });
 
     // Update the form state with the completely new array.
-    // The useEffect that watches selectedObjectId and selectedAssignedEmployees.length
-    // will then trigger the recalculation of hours and times for these new employees.
     form.setValue("assignedEmployees", newAssignedEmployees, { shouldValidate: true });
   };
 
