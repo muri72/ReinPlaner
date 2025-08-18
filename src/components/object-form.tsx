@@ -177,7 +177,7 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
 
   // Calculate total weekly hours dynamically for display
   const totalWeeklyHours = dayNames.reduce((sum, day) => {
-    const hours = form.watch(`${day}_hours` as keyof ObjectFormValues) as number | null;
+    const hours = form.watch(`${day}_hours` as keyof ObjectFormValues) as number | null | undefined;
     return sum + (hours || 0);
   }, 0);
 
@@ -397,7 +397,9 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
       <h3 className="text-lg font-semibold mt-6">Arbeitsplan pro Wochentag</h3>
       <div className="flex items-center justify-between p-2 border rounded-md bg-muted/20">
         <span className="font-medium text-sm">Gesamtstunden pro Woche:</span>
-        <span className="font-bold text-primary">{totalWeeklyHours.toFixed(2)} Std.</span>
+        <span className="font-bold text-primary">
+          {typeof totalWeeklyHours === 'number' && !isNaN(totalWeeklyHours) ? totalWeeklyHours.toFixed(2) : '0.00'} Std.
+        </span>
       </div>
       {dayNames.map(day => (
         <div key={day} className="p-3 border rounded-md space-y-2">
