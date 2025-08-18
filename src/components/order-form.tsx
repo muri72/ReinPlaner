@@ -19,10 +19,9 @@ import { CustomerContactCreateDialog } from "@/components/customer-contact-creat
 import { DatePicker } from "@/components/date-picker";
 import { handleActionResponse } from "@/lib/toast-utils";
 import { Checkbox } from "@/components/ui/checkbox";
-import { cn, calculateEndTime, calculateStartTime } from "@/lib/utils"; // Import cn for conditional styling
-import { MultiSelectEmployees } from "@/components/multi-select-employees"; // Import the new component
+import { cn, calculateEndTime, calculateStartTime } from "@/lib/utils";
+import { MultiSelectEmployees } from "@/components/multi-select-employees";
 
-// Definierte Liste der Dienstleistungen
 const availableServices = [
   "Unterhaltsreinigung",
   "Glasreinigung",
@@ -31,11 +30,9 @@ const availableServices = [
   "Sonderreinigung",
 ] as const;
 
-// Helper function for number preprocessing
 const preprocessNumber = (val: unknown) => (val === "" || isNaN(Number(val)) ? null : Number(val));
 const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
 
-// Definieren von dayNames als const-Array
 const dayNames = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const;
 const germanDayNames: { [key: string]: string } = {
   monday: 'Mo',
@@ -47,7 +44,6 @@ const germanDayNames: { [key: string]: string } = {
   sunday: 'So',
 };
 
-// Define the schema for a single assigned employee
 const assignedEmployeeSchema = z.object({
   employeeId: z.string().uuid("Ungültige Mitarbeiter-ID"),
   assigned_monday_hours: z.preprocess(preprocessNumber, z.nullable(z.number().min(0).max(24)).optional()),
@@ -57,7 +53,6 @@ const assignedEmployeeSchema = z.object({
   assigned_friday_hours: z.preprocess(preprocessNumber, z.nullable(z.number().min(0).max(24)).optional()),
   assigned_saturday_hours: z.preprocess(preprocessNumber, z.nullable(z.number().min(0).max(24)).optional()),
   assigned_sunday_hours: z.preprocess(preprocessNumber, z.nullable(z.number().min(0).max(24)).optional()),
-  // New time fields
   assigned_monday_start_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
   assigned_monday_end_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
   assigned_tuesday_start_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
@@ -73,7 +68,6 @@ const assignedEmployeeSchema = z.object({
   assigned_sunday_start_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
   assigned_sunday_end_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
 }).superRefine((data, ctx) => {
-  // Validate each day's time pair for assigned employees
   dayNames.forEach(day => {
     const startTimeKey = `assigned_${day}_start_time` as keyof typeof data;
     const endTimeKey = `assigned_${day}_end_time` as keyof typeof data;
@@ -99,11 +93,11 @@ const assignedEmployeeSchema = z.object({
       const [startH, startM] = start.split(':').map(Number);
       const [endH, endM] = end.split(':').map(Number);
 
-      const startTimeInMinutes = startH * 60 + startM;
+      let startTimeInMinutes = startH * 60 + startM;
       let endTimeInMinutes = endH * 60 + endM;
 
       if (endTimeInMinutes < startTimeInMinutes) {
-        endTimeInMinutes += 24 * 60; // Assume next day
+        endTimeInMinutes += 24 * 60;
       }
 
       if (endTimeInMinutes <= startTimeInMinutes) {
@@ -113,7 +107,6 @@ const assignedEmployeeSchema = z.object({
           path: [endTimeKey],
         });
       }
-      // Optional: Validate if hours match calculated duration
       if (hours !== null && hours !== undefined) {
         const calculatedDurationMinutes = endTimeInMinutes - startTimeInMinutes;
         const calculatedHours = calculatedDurationMinutes / 60;
@@ -129,7 +122,6 @@ const assignedEmployeeSchema = z.object({
   });
 });
 
-// Infer the TypeScript type from the schema
 export type AssignedEmployee = z.infer<typeof assignedEmployeeSchema>;
 
 export const orderSchema = z.object({
@@ -151,7 +143,7 @@ export const orderSchema = z.object({
   notes: z.string().max(500, "Notizen sind zu lang").optional().nullable(),
   serviceType: z.enum(availableServices).optional().nullable(),
   requestStatus: z.enum(["pending", "approved", "rejected"]).default("approved"),
-  assignedEmployees: z.array(assignedEmployeeSchema).optional(), // Use the new schema here
+  assignedEmployees: z.array(assignedEmployeeSchema).optional(),
 });
 
 export type OrderFormInput = z.input<typeof orderSchema>;
@@ -193,7 +185,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     saturday_end_time: string | null;
     sunday_end_time: string | null;
     total_weekly_hours: number | null;
-    time_of_day: string | null; // Added time_of_day
+    time_of_day: string | null;
   }[]>([]);
   const [allEmployees, setAllEmployees] = useState<{ id: string; first_name: string; last_name: string }[]>([]);
   const [customerContacts, setCustomerContacts] = useState<{ id: string; first_name: string; last_name: string; customer_id: string }[]>([]);
@@ -232,19 +224,16 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
   const orderType = form.watch("orderType");
   const selectedCustomerId = form.watch("customerId");
   const selectedObjectId = form.watch("objectId");
-  // Removed selectedAssignedEmployees watch here, as we use assignedEmployeeFields directly
 
-  // Helper to get base start time based on object's time_of_day
   const getBaseStartTimeForTimeOfDay = useCallback((timeOfDay: string | null): string => {
     switch (timeOfDay) {
       case 'morning': return '08:00';
       case 'noon': return '12:00';
       case 'afternoon': return '17:00';
-      default: return '08:00'; // Default to morning if 'any' or null
+      default: return '08:00';
     }
   }, []);
 
-  // Funktion zum Laden der Kundenkontakte
   const fetchCustomerContacts = async (customerId: string) => {
     const { data: contactsData, error: contactsError } = await supabase
       .from('customer_contacts')
@@ -255,14 +244,12 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     if (contactsError) console.error("Fehler beim Laden der Kundenkontakte:", contactsError);
   };
 
-  // Daten für Dropdowns laden
   useEffect(() => {
     const fetchDropdownData = async () => {
       const { data: customersData, error: customersError } = await supabase.from('customers').select('id, name');
       if (customersData) setCustomers(customersData);
       if (customersError) console.error("Fehler beim Laden der Kunden:", customersError);
 
-      // Fetch objects with all time fields including time_of_day
       const { data: objectsData, error: objectsError } = await supabase.from('objects').select('id, name, customer_id, monday_hours, tuesday_hours, wednesday_hours, thursday_hours, friday_hours, saturday_hours, sunday_hours, monday_start_time, monday_end_time, tuesday_start_time, tuesday_end_time, wednesday_start_time, wednesday_end_time, thursday_start_time, thursday_end_time, friday_start_time, friday_end_time, saturday_start_time, saturday_end_time, sunday_start_time, sunday_end_time, total_weekly_hours, time_of_day');
       if (objectsData) setObjects(objectsData);
       if (objectsError) console.error("Fehler beim Laden der Objekte:", objectsError);
@@ -274,7 +261,6 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     fetchDropdownData();
   }, [supabase]);
 
-  // Kundenkontakte laden, wenn sich der ausgewählte Kunde ändert
   useEffect(() => {
     if (selectedCustomerId) {
       fetchCustomerContacts(selectedCustomerId);
@@ -284,16 +270,13 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     }
   }, [selectedCustomerId, supabase, form]);
 
-  // Automatische Titelgenerierung
   useEffect(() => {
     if (!initialData) {
       const customerName = customers.find(c => c.id === selectedCustomerId)?.name || '';
       const objectName = objects.find(o => o.id === selectedObjectId)?.name || '';
-
       const parts = [];
       if (objectName) parts.push(objectName);
       if (customerName) parts.push(customerName);
-
       const generatedTitle = parts.join(' • ');
       if (form.getValues("title") !== generatedTitle) {
         form.setValue("title", generatedTitle);
@@ -301,16 +284,13 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     }
   }, [selectedCustomerId, selectedObjectId, customers, objects, form, initialData]);
 
-  // Objekte filtern basierend auf ausgewähltem Kunden
   const filteredObjects = selectedCustomerId
     ? objects.filter(obj => obj.customer_id === selectedCustomerId)
     : [];
 
-  // Effect to update totalEstimatedHours for the order
   useEffect(() => {
     const currentObjectId = form.getValues("objectId") ?? null;
     let newTotalEstimatedHours: number | null = null;
-
     const selectedObject = objects.find(obj => obj.id === currentObjectId);
     if (selectedObject) {
       if (['recurring', 'substitution', 'permanent'].includes(orderType)) {
@@ -331,18 +311,16 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
         newTotalEstimatedHours = parseFloat(dailyHours.toFixed(2));
       }
     }
-
     if (form.getValues("totalEstimatedHours") !== newTotalEstimatedHours) {
       form.setValue("totalEstimatedHours", newTotalEstimatedHours, { shouldValidate: false });
     }
   }, [selectedObjectId, objects, form, orderType, form.watch("dueDate")]);
 
-  // Pure function to calculate times for a specific day for an assigned employee
   const calculateEmployeeDayTimes = useCallback((
     day: typeof dayNames[number],
     currentHours: number | null,
-    currentStartTime: string | null, // Changed to string | null
-    currentEndTime: string | null,   // Changed to string | null
+    currentStartTime: string | null,
+    currentEndTime: string | null,
     objectTimeOfDay: string | null,
     triggeringField: 'hours' | 'startTime' | 'endTime' | 'employeeSelection' | 'objectSelection'
   ): { newStartTime: string | null; newEndTime: string | null } => {
@@ -393,24 +371,17 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     return { newStartTime, newEndTime };
   }, [getBaseStartTimeForTimeOfDay, objects, selectedObjectId]);
 
-
-  // Effect to handle initial population and re-population of assigned employee hours/times
-  // when selectedObjectId changes or when employees are added/removed.
   useEffect(() => {
     const currentObjectId = form.getValues("objectId") ?? null;
     const selectedObject = objects.find(obj => obj.id === currentObjectId);
     const numAssignedEmployees = assignedEmployeeFields.length;
 
-    // Only proceed if there's a selected object and assigned employees
     if (!selectedObject || numAssignedEmployees === 0) {
-      // If no object selected or no employees assigned, ensure all assigned hours/times are null
-      // This part is handled by handleEmployeeSelectionChange when employees are deselected
-      // or by the initial state if no object/employees are chosen.
       return;
     }
 
-    // Iterate over the current `fields` array from useFieldArray
-    assignedEmployeeFields.forEach((assignedEmp, index) => {
+    const newAssignments = assignedEmployeeFields.map((assignedEmp) => {
+      const newEmpData = { ...assignedEmp };
       dayNames.forEach(day => {
         const hoursFieldName = `assigned_${day}_hours` as keyof AssignedEmployee;
         const startFieldName = `assigned_${day}_start_time` as keyof AssignedEmployee;
@@ -429,45 +400,33 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
           calculatedStartTime = objectStartTime;
           calculatedEndTime = objectEndTime;
           const totalDurationMinutes = (new Date(`2000/01/01 ${objectEndTime}`).getTime() - new Date(`2000/01/01 ${objectStartTime}`).getTime()) / (1000 * 60);
-          calculatedHours = parseFloat((totalDurationMinutes / 60 / (numAssignedEmployees || 1)).toFixed(2));
+          calculatedHours = parseFloat((totalDurationMinutes / 60 / numAssignedEmployees).toFixed(2));
         } else if (objectDailyHours !== null) {
-          calculatedHours = parseFloat((objectDailyHours / (numAssignedEmployees || 1)).toFixed(2));
-          // When calculating times based on hours, use the *current* values from the form field
-          // to decide if start/end time should be preserved or recalculated from base.
-          const currentStartTimeForDay = form.getValues(`assignedEmployees.${index}.${startFieldName}` as FieldPath<OrderFormValues>) as string | null;
-          const currentEndTimeForDay = form.getValues(`assignedEmployees.${index}.${endFieldName}` as FieldPath<OrderFormValues>) as string | null;
-
+          calculatedHours = parseFloat((objectDailyHours / numAssignedEmployees).toFixed(2));
           const { newStartTime, newEndTime } = calculateEmployeeDayTimes(
               day,
               calculatedHours,
-              currentStartTimeForDay,
-              currentEndTimeForDay,
+              assignedEmp[startFieldName] as string | null,
+              assignedEmp[endFieldName] as string | null,
               objectTimeOfDay,
-              'objectSelection'
+              'employeeSelection'
           );
           calculatedStartTime = newStartTime;
           calculatedEndTime = newEndTime;
         }
-
-        // Only update if the calculated value is different from the current field value
-        // This is the key to preventing unnecessary re-renders and the infinite loop.
-        if (assignedEmp[hoursFieldName] !== calculatedHours ||
-            assignedEmp[startFieldName] !== calculatedStartTime ||
-            assignedEmp[endFieldName] !== calculatedEndTime) {
-
-          updateEmployeeField(index, {
-            ...assignedEmp, // Keep existing properties
-            [hoursFieldName]: calculatedHours,
-            [startFieldName]: calculatedStartTime,
-            [endFieldName]: calculatedEndTime,
-          });
-        }
+        
+        (newEmpData as any)[hoursFieldName] = calculatedHours;
+        (newEmpData as any)[startFieldName] = calculatedStartTime;
+        (newEmpData as any)[endFieldName] = calculatedEndTime;
       });
+      return newEmpData;
     });
-  }, [selectedObjectId, objects, assignedEmployeeFields, form, calculateEmployeeDayTimes, updateEmployeeField]);
 
+    if (JSON.stringify(newAssignments) !== JSON.stringify(assignedEmployeeFields)) {
+      form.setValue("assignedEmployees", newAssignments, { shouldValidate: true });
+    }
+  }, [selectedObjectId, objects, assignedEmployeeFields.length, form, calculateEmployeeDayTimes]);
 
-  // Manual change handlers for hours/times within assigned employees
   const handleAssignedHoursChange = useCallback((
     employeeIndex: number,
     day: typeof dayNames[number],
@@ -495,7 +454,6 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
       [`assigned_${day}_end_time`]: newEndTime,
     });
   }, [assignedEmployeeFields, updateEmployeeField, form, objects, calculateEmployeeDayTimes]);
-
 
   const handleAssignedTimeChange = useCallback((
     employeeIndex: number,
@@ -534,9 +492,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     });
   }, [assignedEmployeeFields, updateEmployeeField, form, objects, calculateEmployeeDayTimes]);
 
-
   const handleFormSubmit: SubmitHandler<OrderFormValues> = async (data) => {
-    // Manual validation for assigned daily hours sum
     if (data.objectId && data.assignedEmployees && data.assignedEmployees.length > 0) {
       const selectedObject = objects.find(obj => obj.id === data.objectId);
       if (selectedObject) {
@@ -567,13 +523,11 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     }
 
     const result = await onSubmit(data);
-
     handleActionResponse(result);
 
     if (result.success) {
       if (!initialData) {
         form.reset();
-        // Clear assigned employees array after successful creation
         form.setValue("assignedEmployees", []);
       }
       onSuccess?.();
@@ -606,77 +560,27 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
   };
 
   const handleEmployeeSelectionChange = (selectedIds: string[]) => {
-    const currentObjectId = form.getValues("objectId") ?? null;
-    const selectedObject = objects.find(obj => obj.id === currentObjectId);
-    const numAssignedEmployees = selectedIds.length;
-
-    const newAssignedEmployees: AssignedEmployee[] = [];
-
-    // Create a map of current assigned employee data for easy lookup
-    const currentAssignedMap = new Map((assignedEmployeeFields || []).map(field => [field.employeeId, field]));
-
-    // Add newly selected employees or keep existing ones
-    selectedIds.forEach(employeeId => {
-      const existing = currentAssignedMap.get(employeeId);
-      const updatedEmp: AssignedEmployee = existing ? { ...existing } : { employeeId: employeeId };
-
-      dayNames.forEach(day => {
-        const hoursFieldName = `assigned_${day}_hours` as keyof AssignedEmployee;
-        const startFieldName = `assigned_${day}_start_time` as keyof AssignedEmployee;
-        const endFieldName = `assigned_${day}_end_time` as keyof AssignedEmployee;
-
-        const objectDailyHours = selectedObject?.[`${day}_hours` as keyof typeof selectedObject] as number | null;
-        const objectStartTime = selectedObject?.[`${day}_start_time` as keyof typeof selectedObject] as string | null;
-        const objectEndTime = selectedObject?.[`${day}_end_time` as keyof typeof selectedObject] as string | null;
-        const objectTimeOfDay = selectedObject?.time_of_day || 'any';
-
-        let calculatedHours: number | null = null;
-        let calculatedStartTime: string | null = null;
-        let calculatedEndTime: string | null = null;
-
-        if (selectedObject) {
-          if (objectStartTime && objectEndTime) {
-            // Scenario 1: Object has specific start and end times
-            calculatedStartTime = objectStartTime;
-            calculatedEndTime = objectEndTime;
-            const totalDurationMinutes = (new Date(`2000/01/01 ${objectEndTime}`).getTime() - new Date(`2000/01/01 ${objectStartTime}`).getTime()) / (1000 * 60);
-            calculatedHours = parseFloat((totalDurationMinutes / 60 / (numAssignedEmployees || 1)).toFixed(2));
-          } else if (objectDailyHours !== null) {
-            // Scenario 2: Object has only daily hours
-            calculatedHours = parseFloat((objectDailyHours / (numAssignedEmployees || 1)).toFixed(2));
-            const { newStartTime, newEndTime } = calculateEmployeeDayTimes(
-                day,
-                calculatedHours,
-                updatedEmp[startFieldName] as string | null,
-                updatedEmp[endFieldName] as string | null,
-                objectTimeOfDay,
-                'employeeSelection'
-            );
-            calculatedStartTime = newStartTime;
-            calculatedEndTime = newEndTime;
-          }
-        }
-
-        // Only update if the value is different from the current value in `updatedEmp`
-        if (updatedEmp[hoursFieldName] !== calculatedHours) {
-          (updatedEmp as any)[hoursFieldName] = calculatedHours;
-        }
-        if (updatedEmp[startFieldName] !== calculatedStartTime) {
-          (updatedEmp as any)[startFieldName] = calculatedStartTime;
-        }
-        if (updatedEmp[endFieldName] !== calculatedEndTime) {
-          (updatedEmp as any)[endFieldName] = calculatedEndTime;
-        }
-      });
-      newAssignedEmployees.push(updatedEmp);
+    const newAssignedEmployees = selectedIds.map(employeeId => {
+      const existing = assignedEmployeeFields.find(f => f.employeeId === employeeId);
+      return existing || { 
+        employeeId,
+        assigned_monday_hours: null, assigned_tuesday_hours: null, assigned_wednesday_hours: null,
+        assigned_thursday_hours: null, assigned_friday_hours: null, assigned_saturday_hours: null,
+        assigned_sunday_hours: null,
+        assigned_monday_start_time: null, assigned_monday_end_time: null,
+        assigned_tuesday_start_time: null, assigned_tuesday_end_time: null,
+        assigned_wednesday_start_time: null, assigned_wednesday_end_time: null,
+        assigned_thursday_start_time: null, assigned_thursday_end_time: null,
+        assigned_friday_start_time: null, assigned_friday_end_time: null,
+        assigned_saturday_start_time: null, assigned_saturday_end_time: null,
+        assigned_sunday_start_time: null, assigned_sunday_end_time: null,
+      };
     });
-
-    // Update the form state with the completely new array.
     form.setValue("assignedEmployees", newAssignedEmployees, { shouldValidate: true });
   };
 
   const getSumAssignedHoursForDay = (day: string): number => {
-    return (assignedEmployeeFields || []).reduce((sum, emp) => { // Use assignedEmployeeFields here
+    return (assignedEmployeeFields || []).reduce((sum, emp) => {
       const assignedHours = emp[`assigned_${day}_hours` as keyof typeof emp] as number | null;
       return sum + (assignedHours || 0);
     }, 0);
@@ -689,28 +593,22 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
 
   const isDailyHoursValid = (day: string): boolean => {
     const objectHours = getObjectDailyHours(day);
-    if (objectHours === null) return true; // No object hours defined, so no validation needed
+    if (objectHours === null) return true;
     const sumAssigned = getSumAssignedHoursForDay(day);
     return Math.abs(sumAssigned - objectHours) < 0.01;
   };
 
-  // Removed isSingleEmployeeAssigned as it's no longer used for disabling/readOnly
-  // const isSingleEmployeeAssigned = assignedEmployeeFields.length === 1;
-
   return (
-    <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 w-full"> {/* Removed max-w-3xl mx-auto */}
-      {/* Grundlegende Objektinformationen */}
+    <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 w-full">
       <div>
         <Label htmlFor="title">Titel des Auftrags</Label>
         <Input
           id="title"
           {...form.register("title")}
           placeholder="Wird automatisch generiert"
-          disabled={!initialData ? true : false}
+          disabled={!initialData}
         />
-        {form.formState.errors.title && (
-          <p className="text-red-500 text-sm mt-1">{form.formState.errors.title.message}</p>
-        )}
+        {form.formState.errors.title && <p className="text-red-500 text-sm mt-1">{form.formState.errors.title.message}</p>}
       </div>
       <div>
         <Label htmlFor="description">Beschreibung</Label>
@@ -720,9 +618,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
           placeholder="Details zum Auftrag..."
           rows={4}
         />
-        {form.formState.errors.description && (
-          <p className="text-red-500 text-sm mt-1">{form.formState.errors.description.message}</p>
-        )}
+        {form.formState.errors.description && <p className="text-red-500 text-sm mt-1">{form.formState.errors.description.message}</p>}
       </div>
       <div>
         <Label htmlFor="serviceType">Reinigungsdienstleistung</Label>
@@ -736,9 +632,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
             ))}
           </SelectContent>
         </Select>
-        {form.formState.errors.serviceType && (
-          <p className="text-red-500 text-sm mt-1">{form.formState.errors.serviceType.message}</p>
-        )}
+        {form.formState.errors.serviceType && <p className="text-red-500 text-sm mt-1">{form.formState.errors.serviceType.message}</p>}
       </div>
       <div>
         <Label htmlFor="customerId">Kunde</Label>
@@ -756,9 +650,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
             ))}
           </SelectContent>
         </Select>
-        {form.formState.errors.customerId && (
-          <p className="text-red-500 text-sm mt-1">{form.formState.errors.customerId.message}</p>
-        )}
+        {form.formState.errors.customerId && <p className="text-red-500 text-sm mt-1">{form.formState.errors.customerId.message}</p>}
       </div>
       <div className="flex items-end gap-2">
         <div className="flex-grow">
@@ -774,9 +666,25 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
               ))}
             </SelectContent>
           </Select>
-          {form.formState.errors.customerContactId && (
-            <p className="text-red-500 text-sm mt-1">{form.formState.errors.customerContactId.message}</p>
-          )}
+          {form.formState.errors.customerContactId && <p className="text-red-500 text-sm mt-1">{form.formState.errors.customerContactId.message}</p>}
+        </div>
+        <CustomerContactCreateDialog customerId={selectedCustomerId} onContactCreated={handleCustomerContactCreated} disabled={!selectedCustomerId} />
+      </div>
+      <div className="flex items-end gap-2">
+        <div className="flex-grow">
+          <Label htmlFor="objectId">Objekt</Label>
+          <Select onValueChange={(value: string) => form.setValue("objectId", value)} value={form.watch("objectId") || "unassigned"} disabled={!form.watch("customerId")}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Objekt auswählen" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="unassigned">Kein Objekt zugewiesen</SelectItem>
+              {filteredObjects.map(obj => (
+                <SelectItem key={obj.id} value={obj.id}>{obj.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {form.formState.errors.objectId && <p className="text-red-500 text-sm mt-1">{form.formState.errors.objectId.message}</p>}
         </div>
         <Dialog open={isNewObjectDialogOpen} onOpenChange={setIsNewObjectDialogOpen}>
           <DialogTrigger asChild>
@@ -804,35 +712,11 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
           </DialogContent>
         </Dialog>
       </div>
-
-      {/* Mitarbeiterzuweisung */}
-      <div className="flex items-end gap-2">
-        <div className="flex-grow">
-          <Label htmlFor="objectId">Objekt</Label>
-          <Select onValueChange={(value: string) => form.setValue("objectId", value)} value={form.watch("objectId") || "unassigned"} disabled={!form.watch("customerId")}>
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Objekt auswählen" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="unassigned">Kein Objekt zugewiesen</SelectItem>
-              {filteredObjects.map(obj => (
-                <SelectItem key={obj.id} value={obj.id}>{obj.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {form.formState.errors.objectId && (
-            <p className="text-red-500 text-sm mt-1">{form.formState.errors.objectId.message}</p>
-          )}
-        </div>
-        <CustomerContactCreateDialog customerId={selectedCustomerId} onContactCreated={handleCustomerContactCreated} disabled={!selectedCustomerId} />
-      </div>
-
-      {/* Mitarbeiterzuweisung */}
       <div className="space-y-2">
         <Label>Zugewiesene Mitarbeiter (optional)</Label>
         <MultiSelectEmployees
           employees={allEmployees}
-          selectedEmployeeIds={assignedEmployeeFields.map(emp => emp.employeeId)} // Use assignedEmployeeFields directly
+          selectedEmployeeIds={assignedEmployeeFields.map(emp => emp.employeeId)}
           onSelectionChange={handleEmployeeSelectionChange}
           disabled={!selectedObjectId}
         />
@@ -842,8 +726,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
         {!selectedObjectId && (
             <p className="text-muted-foreground text-sm mt-1">Bitte wählen Sie zuerst ein Objekt aus, um Mitarbeiter zuzuweisen.</p>
         )}
-
-        {assignedEmployeeFields.length > 0 && ( // Use assignedEmployeeFields directly
+        {assignedEmployeeFields.length > 0 && (
           <div className="mt-4 space-y-4">
             {assignedEmployeeFields.map((assignedEmp, assignedIndex) => (
               <div key={assignedEmp.employeeId} className="border rounded-md p-3 space-y-2">
@@ -865,14 +748,13 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
                     <X className="h-4 w-4" />
                   </Button>
                 </div>
-                {/* Hours and Time inputs for each day */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-2"> {/* Responsive grid for days */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-2">
                   {dayNames.map(day => {
                     const hoursFieldName = `assignedEmployees.${assignedIndex}.assigned_${day}_hours` as const;
                     const startFieldName = `assignedEmployees.${assignedIndex}.assigned_${day}_start_time` as const;
                     const endFieldName = `assignedEmployees.${assignedIndex}.assigned_${day}_end_time` as const;
                     const objectDailyHours = getObjectDailyHours(day);
-                    const isDayValid = isDailyHoursValid(day); // Check overall validity for the day
+                    const isDayValid = isDailyHoursValid(day);
 
                     return (
                       <div key={day} className="border p-2 rounded-md space-y-1">
@@ -886,15 +768,14 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
                             placeholder="Std."
                             className={cn(
                               "w-full text-right",
-                              !isDayValid && "border-destructive focus-visible:ring-destructive" // Highlight if sum is invalid
+                              !isDayValid && "border-destructive focus-visible:ring-destructive"
                             )}
                             {...form.register(hoursFieldName as FieldPath<OrderFormValues>, { valueAsNumber: true,
                               onChange: (e) => handleAssignedHoursChange(assignedIndex, day, e.target.value)
                             })}
-                            disabled={!selectedObjectId} // Only disable if no object is selected
+                            disabled={!selectedObjectId}
                           />
                         </div>
-                        {/* Always show time inputs if an object is selected */}
                         {selectedObjectId && (
                           <>
                             <div>
@@ -906,7 +787,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
                                 {...form.register(startFieldName as FieldPath<OrderFormValues>, {
                                   onChange: (e) => handleAssignedTimeChange(assignedIndex, day, 'start', e.target.value)
                                 })}
-                                disabled={!selectedObjectId} // Only disable if no object is selected
+                                disabled={!selectedObjectId}
                               />
                             </div>
                             <div>
@@ -918,7 +799,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
                                 {...form.register(endFieldName as FieldPath<OrderFormValues>, {
                                   onChange: (e) => handleAssignedTimeChange(assignedIndex, day, 'end', e.target.value)
                                 })}
-                                disabled={!selectedObjectId} // Only disable if no object is selected
+                                disabled={!selectedObjectId}
                               />
                             </div>
                           </>
@@ -932,7 +813,6 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
           </div>
         )}
       </div>
-
       <div>
         <Label htmlFor="orderType">Auftragstyp</Label>
         <Select onValueChange={(value: OrderFormValues["orderType"]) => {
@@ -951,11 +831,8 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
             <SelectItem value="permanent">Permanent</SelectItem>
           </SelectContent>
         </Select>
-        {form.formState.errors.orderType && (
-          <p className="text-red-500 text-sm mt-1">{form.formState.errors.orderType.message}</p>
-        )}
+        {form.formState.errors.orderType && <p className="text-red-500 text-sm mt-1">{form.formState.errors.orderType.message}</p>}
       </div>
-
       {orderType === "one_time" && (
         <DatePicker
           label="Fälligkeitsdatum (optional)"
@@ -964,7 +841,6 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
           error={form.formState.errors.dueDate?.message}
         />
       )}
-
       {(orderType === "recurring" || orderType === "substitution" || orderType === "permanent") && (
         <>
           <DatePicker
@@ -983,7 +859,6 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
           )}
         </>
       )}
-
       <div>
         <Label htmlFor="priority">Priorität</Label>
         <Select onValueChange={(value: OrderFormValues["priority"]) => form.setValue("priority", value)} value={form.watch("priority")}>
@@ -996,9 +871,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
             <SelectItem value="high">Hoch</SelectItem>
           </SelectContent>
         </Select>
-        {form.formState.errors.priority && (
-          <p className="text-red-500 text-sm mt-1">{form.formState.errors.priority.message}</p>
-        )}
+        {form.formState.errors.priority && <p className="text-red-500 text-sm mt-1">{form.formState.errors.priority.message}</p>}
       </div>
       <div>
         <Label htmlFor="totalEstimatedHours">Geschätzte Stunden (optional)</Label>
@@ -1011,9 +884,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
           readOnly
           className="bg-muted cursor-not-allowed"
         />
-        {form.formState.errors.totalEstimatedHours && (
-          <p className="text-red-500 text-sm mt-1">{form.formState.errors.totalEstimatedHours.message}</p>
-        )}
+        {form.formState.errors.totalEstimatedHours && <p className="text-red-500 text-sm mt-1">{form.formState.errors.totalEstimatedHours.message}</p>}
       </div>
       <div>
         <Label htmlFor="notes">Notizen (optional)</Label>
@@ -1023,9 +894,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
           placeholder="Zusätzliche Notizen zum Auftrag..."
           rows={3}
         />
-        {form.formState.errors.notes && (
-          <p className="text-red-500 text-sm mt-1">{form.formState.errors.notes.message}</p>
-        )}
+        {form.formState.errors.notes && <p className="text-red-500 text-sm mt-1">{form.formState.errors.notes.message}</p>}
       </div>
       <div>
         <Label htmlFor="status">Status</Label>
@@ -1039,9 +908,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
             <SelectItem value="completed">Abgeschlossen</SelectItem>
           </SelectContent>
         </Select>
-        {form.formState.errors.status && (
-          <p className="text-red-500 text-sm mt-1">{form.formState.errors.status.message}</p>
-        )}
+        {form.formState.errors.status && <p className="text-red-500 text-sm mt-1">{form.formState.errors.status.message}</p>}
       </div>
       <div>
         <Label htmlFor="requestStatus">Anfragestatus</Label>
@@ -1055,9 +922,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
             <SelectItem value="rejected">Abgelehnt</SelectItem>
           </SelectContent>
         </Select>
-        {form.formState.errors.requestStatus && (
-          <p className="text-red-500 text-sm mt-1">{form.formState.errors.requestStatus.message}</p>
-        )}
+        {form.formState.errors.requestStatus && <p className="text-red-500 text-sm mt-1">{form.formState.errors.requestStatus.message}</p>}
       </div>
       <Button type="submit" disabled={form.formState.isSubmitting}>
         {form.formState.isSubmitting ? `${submitButtonText}...` : submitButtonText}
