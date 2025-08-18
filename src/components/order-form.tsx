@@ -181,16 +181,14 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     monday_start_time: string | null;
     tuesday_start_time: string | null;
     wednesday_start_time: string | null;
-    thursday_start_time: string | null;
-    friday_start_time: string | null;
-    saturday_start_time: string | null;
-    sunday_start_time: string | null;
-    monday_end_time: string | null;
-    tuesday_end_time: string | null;
     wednesday_end_time: string | null;
+    thursday_start_time: string | null;
     thursday_end_time: string | null;
+    friday_start_time: string | null;
     friday_end_time: string | null;
+    saturday_start_time: string | null;
     saturday_end_time: string | null;
+    sunday_start_time: string | null;
     sunday_end_time: string | null;
     total_weekly_hours: number | null;
     time_of_day: string | null; // Added time_of_day
@@ -395,16 +393,23 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
 
 
   // Effect to handle initial population and re-population of assigned employee hours/times
-  // when selectedObjectId changes or when employees are added/removed.
+  // when selectedObjectId changes.
   useEffect(() => {
     const currentObjectId = form.getValues("objectId") ?? null;
     const selectedObject = objects.find(obj => obj.id === currentObjectId);
     const numAssignedEmployees = (selectedAssignedEmployees || []).length;
 
+    if (!selectedObject || numAssignedEmployees === 0) {
+      // If no object selected or no employees assigned, ensure all assigned hours/times are null
+      // This part is handled by handleEmployeeSelectionChange when employees are deselected
+      // or by the initial state if no object/employees are chosen.
+      return;
+    }
+
     const newAssignedEmployeesState: AssignedEmployee[] = [];
     let hasChanges = false;
 
-    (selectedAssignedEmployees || []).forEach((assignedEmp) => {
+    (selectedAssignedEmployees || []).forEach((assignedEmp, index) => {
       const updatedEmp: AssignedEmployee = { ...assignedEmp };
 
       dayNames.forEach(day => {
@@ -421,25 +426,25 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
         let calculatedStartTime: string | null = null;
         let calculatedEndTime: string | null = null;
 
-        if (selectedObject) {
-          if (objectStartTime && objectEndTime) {
-            calculatedStartTime = objectStartTime;
-            calculatedEndTime = objectEndTime;
-            const totalDurationMinutes = (new Date(`2000/01/01 ${objectEndTime}`).getTime() - new Date(`2000/01/01 ${objectStartTime}`).getTime()) / (1000 * 60);
-            calculatedHours = parseFloat((totalDurationMinutes / 60 / (numAssignedEmployees || 1)).toFixed(2));
-          } else if (objectDailyHours !== null) {
-            calculatedHours = parseFloat((objectDailyHours / (numAssignedEmployees || 1)).toFixed(2));
-            const { newStartTime, newEndTime } = calculateEmployeeDayTimes(
-                day,
-                calculatedHours,
-                updatedEmp[startFieldName] as string | null, // Pass current values from updatedEmp
-                updatedEmp[endFieldName] as string | null,
-                objectTimeOfDay,
-                'objectSelection'
-            );
-            calculatedStartTime = newStartTime;
-            calculatedEndTime = newEndTime;
-          }
+        if (objectStartTime && objectEndTime) {
+          // Scenario 1: Object has specific start and end times
+          calculatedStartTime = objectStartTime;
+          calculatedEndTime = objectEndTime;
+          const totalDurationMinutes = (new Date(`2000/01/01 ${objectEndTime}`).getTime() - new Date(`2000/01/01 ${objectStartTime}`).getTime()) / (1000 * 60);
+          calculatedHours = parseFloat((totalDurationMinutes / 60 / (numAssignedEmployees || 1)).toFixed(2));
+        } else if (objectDailyHours !== null) {
+          // Scenario 2: Object has only daily hours
+          calculatedHours = parseFloat((objectDailyHours / (numAssignedEmployees || 1)).toFixed(2));
+          const { newStartTime, newEndTime } = calculateEmployeeDayTimes(
+              day,
+              calculatedHours,
+              updatedEmp[startFieldName] as string | null,
+              updatedEmp[endFieldName] as string | null,
+              objectTimeOfDay,
+              'objectSelection'
+          );
+          calculatedStartTime = newStartTime;
+          calculatedEndTime = newEndTime;
         }
 
         // Check if values are actually different before updating
@@ -464,7 +469,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     if (hasChanges || JSON.stringify(newAssignedEmployeesState) !== JSON.stringify(assignedEmployeeFields)) {
         form.setValue("assignedEmployees", newAssignedEmployeesState, { shouldValidate: true });
     }
-  }, [selectedObjectId, selectedAssignedEmployees, objects, form, calculateEmployeeDayTimes, assignedEmployeeFields]);
+  }, [selectedObjectId, objects, form, calculateEmployeeDayTimes, assignedEmployeeFields, selectedAssignedEmployees]);
 
 
   // Manual change handlers for hours/times within assigned employees
@@ -608,6 +613,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
   const handleEmployeeSelectionChange = (selectedIds: string[]) => {
     const currentObjectId = form.getValues("objectId") ?? null;
     const selectedObject = objects.find(obj => obj.id === currentObjectId);
+    const numAssignedEmployees = selectedIds.length;
 
     const newAssignedEmployees: AssignedEmployee[] = [];
 
@@ -639,14 +645,14 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
             calculatedStartTime = objectStartTime;
             calculatedEndTime = objectEndTime;
             const totalDurationMinutes = (new Date(`2000/01/01 ${objectEndTime}`).getTime() - new Date(`2000/01/01 ${objectStartTime}`).getTime()) / (1000 * 60);
-            calculatedHours = parseFloat((totalDurationMinutes / 60 / (selectedIds.length || 1)).toFixed(2));
+            calculatedHours = parseFloat((totalDurationMinutes / 60 / (numAssignedEmployees || 1)).toFixed(2));
           } else if (objectDailyHours !== null) {
             // Scenario 2: Object has only daily hours
-            calculatedHours = parseFloat((objectDailyHours / (selectedIds.length || 1)).toFixed(2));
+            calculatedHours = parseFloat((objectDailyHours / (numAssignedEmployees || 1)).toFixed(2));
             const { newStartTime, newEndTime } = calculateEmployeeDayTimes(
                 day,
                 calculatedHours,
-                updatedEmp[startFieldName] as string | null, // Pass current values from updatedEmp
+                updatedEmp[startFieldName] as string | null,
                 updatedEmp[endFieldName] as string | null,
                 objectTimeOfDay,
                 'employeeSelection'
