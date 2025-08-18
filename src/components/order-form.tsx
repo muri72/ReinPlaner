@@ -20,6 +20,7 @@ import { DatePicker } from "@/components/date-picker";
 import { handleActionResponse } from "@/lib/toast-utils";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils"; // Import cn for conditional styling
+import { MultiSelectEmployees } from "@/components/multi-select-employees"; // Import the new component
 
 // Definierte Liste der Dienstleistungen
 const availableServices = [
@@ -395,70 +396,64 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     }
   };
 
-  const handleEmployeeAssignmentChange = (employeeId: string, isChecked: boolean) => {
-    const currentAssignedEmployees = form.getValues("assignedEmployees") || [];
+  const handleEmployeeSelectionChange = (selectedIds: string[]) => {
     const currentObjectId = form.getValues("objectId") ?? null;
     const selectedObject = objects.find(obj => obj.id === currentObjectId);
 
-    let updatedAssignedEmployees: AssignedEmployee[];
+    const newAssignedEmployees: AssignedEmployee[] = [];
 
-    if (isChecked) {
-      // Add new employee
-      const newEmployeeAssignment: AssignedEmployee = {
-        employeeId: employeeId,
-        assigned_monday_hours: null, assigned_tuesday_hours: null, assigned_wednesday_hours: null,
-        assigned_thursday_hours: null, assigned_friday_hours: null, assigned_saturday_hours: null,
-        assigned_sunday_hours: null,
-        assigned_monday_start_time: null, assigned_monday_end_time: null,
-        assigned_tuesday_start_time: null, assigned_tuesday_end_time: null,
-        assigned_wednesday_start_time: null, assigned_wednesday_end_time: null,
-        assigned_thursday_start_time: null, assigned_thursday_end_time: null,
-        assigned_friday_start_time: null, assigned_friday_end_time: null,
-        assigned_saturday_start_time: null, assigned_saturday_end_time: null,
-        assigned_sunday_start_time: null, assigned_sunday_end_time: null,
-      };
-      updatedAssignedEmployees = [...currentAssignedEmployees, newEmployeeAssignment];
-    } else {
-      // Remove employee
-      updatedAssignedEmployees = currentAssignedEmployees.filter(emp => emp.employeeId !== employeeId);
-    }
+    // Add newly selected employees or keep existing ones
+    selectedIds.forEach(employeeId => {
+      const existing = (form.getValues("assignedEmployees") || []).find(emp => emp.employeeId === employeeId);
+      if (existing) {
+        newAssignedEmployees.push(existing);
+      } else {
+        newAssignedEmployees.push({
+          employeeId: employeeId,
+          assigned_monday_hours: null, assigned_tuesday_hours: null, assigned_wednesday_hours: null,
+          assigned_thursday_hours: null, assigned_friday_hours: null, assigned_saturday_hours: null,
+          assigned_sunday_hours: null,
+          assigned_monday_start_time: null, assigned_monday_end_time: null,
+          assigned_tuesday_start_time: null, assigned_tuesday_end_time: null,
+          assigned_wednesday_start_time: null, assigned_wednesday_end_time: null,
+          assigned_thursday_start_time: null, assigned_thursday_end_time: null,
+          assigned_friday_start_time: null, assigned_friday_end_time: null,
+          assigned_saturday_start_time: null, assigned_saturday_end_time: null,
+          assigned_sunday_start_time: null, assigned_sunday_end_time: null,
+        });
+      }
+    });
 
-    const numAssignedEmployees = updatedAssignedEmployees.length;
+    const numAssignedEmployees = newAssignedEmployees.length;
 
-    // Now, re-distribute hours and times for all employees in `updatedAssignedEmployees`
-    updatedAssignedEmployees.forEach((assignedEmp, index) => {
+    // Distribute hours and times based on the new selection
+    newAssignedEmployees.forEach((assignedEmp) => {
       dayNames.forEach(day => {
         const objectDailyHours = selectedObject?.[`${day}_hours` as keyof typeof selectedObject] as number | null;
         const objectStartTime = selectedObject?.[`${day}_start_time` as keyof typeof selectedObject] as string | null;
         const objectEndTime = selectedObject?.[`${day}_end_time` as keyof typeof selectedObject] as string | null;
 
-        let newHours: number | null = null;
-        let newStartTime: string | null = null;
-        let newEndTime: string | null = null;
-
         if (objectDailyHours !== null) {
           if (numAssignedEmployees === 1) {
-            // Case 1: Only 1 employee, assign object hours and times 1:1
-            newHours = objectDailyHours;
-            newStartTime = objectStartTime;
-            newEndTime = objectEndTime;
+            assignedEmp[`assigned_${day}_hours`] = objectDailyHours;
+            assignedEmp[`assigned_${day}_start_time`] = objectStartTime;
+            assignedEmp[`assigned_${day}_end_time`] = objectEndTime;
           } else {
-            // Case 2: Multiple employees, distribute hours and clear times
-            newHours = parseFloat((objectDailyHours / numAssignedEmployees).toFixed(2));
-            newStartTime = null; // Clear times for multiple assignments
-            newEndTime = null; // Clear times for multiple assignments
+            assignedEmp[`assigned_${day}_hours`] = parseFloat((objectDailyHours / numAssignedEmployees).toFixed(2));
+            assignedEmp[`assigned_${day}_start_time`] = null; // Clear times for multiple assignments
+            assignedEmp[`assigned_${day}_end_time`] = null; // Clear times for multiple assignments
           }
+        } else {
+          // If object has no hours for this day, clear assigned hours/times
+          assignedEmp[`assigned_${day}_hours`] = null;
+          assignedEmp[`assigned_${day}_start_time`] = null;
+          assignedEmp[`assigned_${day}_end_time`] = null;
         }
-        
-        // Update the specific properties of the assigned employee object
-        (assignedEmp as any)[`assigned_${day}_hours`] = newHours;
-        (assignedEmp as any)[`assigned_${day}_start_time`] = newStartTime;
-        (assignedEmp as any)[`assigned_${day}_end_time`] = newEndTime;
       });
     });
 
-    // Finally, update the form state with the completely new array.
-    form.setValue("assignedEmployees", updatedAssignedEmployees, { shouldValidate: true });
+    // Update the form state with the completely new array.
+    form.setValue("assignedEmployees", newAssignedEmployees, { shouldValidate: true });
   };
 
   const getSumAssignedHoursForDay = (day: string): number => {
@@ -615,123 +610,142 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
       {/* Mitarbeiterzuweisung */}
       <div className="space-y-2">
         <Label>Zugewiesene Mitarbeiter (optional)</Label>
-        <div className="border rounded-md p-3 space-y-2 max-h-96 overflow-y-auto">
-          {allEmployees.length === 0 ? (
-            <p className="text-muted-foreground text-sm">Keine Mitarbeiter zum Zuweisen gefunden.</p>
-          ) : (
-            allEmployees.map((employee) => {
-              const isAssigned = selectedAssignedEmployees?.some(
-                (assigned) => assigned.employeeId === employee.id
-              );
-              const assignedIndex = assignedEmployeeFields.findIndex(
-                (field) => field.employeeId === employee.id
-              );
-
-              return (
-                <div key={employee.id} className="flex flex-col gap-2 p-2 border-b last:border-b-0">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id={`employee-${employee.id}`}
-                        checked={isAssigned}
-                        onCheckedChange={(checked: boolean) =>
-                          handleEmployeeAssignmentChange(employee.id, checked)
-                        }
-                        disabled={!selectedObjectId}
-                      />
-                      <Label htmlFor={`employee-${employee.id}`} className="flex-grow">
-                        {employee.first_name} {employee.last_name}
-                      </Label>
-                    </div>
-                    {isAssigned && assignedIndex !== -1 && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => removeEmployee(assignedIndex)}
-                        className="text-destructive hover:text-destructive/80"
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-                  {isAssigned && assignedIndex !== -1 && (
-                    <div className="grid grid-cols-1 gap-2 mt-2">
-                      {/* Hours input for single or multiple employees */}
-                      <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2">
-                        {dayNames.map(day => {
-                          const hoursFieldName = `assignedEmployees.${assignedIndex}.assigned_${day}_hours` as const;
-                          const objectDailyHours = getObjectDailyHours(day);
-                          const isDayValid = isDailyHoursValid(day); // Check overall validity for the day
-
-                          return (
-                            <div key={day}>
-                              <Label htmlFor={hoursFieldName} className="text-xs font-medium">
-                                {germanDayNames[day]} {objectDailyHours !== null ? `(${objectDailyHours.toFixed(1)}h)` : ''}
-                              </Label>
-                              <Input
-                                id={hoursFieldName}
-                                type="number"
-                                step="0.5"
-                                placeholder="Std."
-                                className={cn(
-                                  "w-full text-right",
-                                  !isDayValid && "border-destructive focus-visible:ring-destructive" // Highlight if sum is invalid
-                                )}
-                                {...form.register(hoursFieldName as FieldPath<OrderFormValues>, { valueAsNumber: true })}
-                                disabled={!selectedObjectId || isSingleEmployeeAssigned} // Disable if no object or single employee
-                                readOnly={isSingleEmployeeAssigned} // Readonly if single employee
-                              />
-                            </div>
-                          );
-                        })}
-                      </div>
-                      {/* Time inputs for single employee */}
-                      {isSingleEmployeeAssigned && (
-                        <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2 mt-2">
-                          {dayNames.map(day => {
-                            const startFieldName = `assignedEmployees.${assignedIndex}.assigned_${day}_start_time` as const;
-                            const endFieldName = `assignedEmployees.${assignedIndex}.assigned_${day}_end_time` as const;
-                            const objectStartTime = objects.find(obj => obj.id === selectedObjectId)?.[`${day}_start_time` as keyof typeof objects[0]] as string | null;
-                            const objectEndTime = objects.find(obj => obj.id === selectedObjectId)?.[`${day}_end_time` as keyof typeof objects[0]] as string | null;
-
-                            return (
-                              <div key={`${day}-times`}>
-                                <Label htmlFor={startFieldName} className="text-xs">Start</Label>
-                                <Input
-                                  id={startFieldName}
-                                  type="time"
-                                  className="w-full"
-                                  disabled={true} // Always disabled for single employee, derived from object
-                                  readOnly={true}
-                                  value={objectStartTime || ''} // Display object's start time
-                                />
-                                <Label htmlFor={endFieldName} className="text-xs mt-1">Ende</Label>
-                                <Input
-                                  id={endFieldName}
-                                  type="time"
-                                  className="w-full"
-                                  disabled={true} // Always disabled for single employee, derived from object
-                                  readOnly={true}
-                                  value={objectEndTime || ''} // Display object's end time
-                                />
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              );
-            })
-          )}
-        </div>
+        <MultiSelectEmployees
+          employees={allEmployees}
+          selectedEmployeeIds={selectedAssignedEmployees?.map(emp => emp.employeeId) || []}
+          onSelectionChange={handleEmployeeSelectionChange}
+          disabled={!selectedObjectId}
+        />
         {form.formState.errors.assignedEmployees && (
           <p className="text-red-500 text-sm mt-1">{form.formState.errors.assignedEmployees.message}</p>
         )}
         {!selectedObjectId && (
             <p className="text-muted-foreground text-sm mt-1">Bitte wählen Sie zuerst ein Objekt aus, um Mitarbeiter zuzuweisen.</p>
+        )}
+
+        {selectedAssignedEmployees && selectedAssignedEmployees.length > 0 && (
+          <div className="mt-4 space-y-4">
+            {selectedAssignedEmployees.map((assignedEmp) => {
+              const employee = allEmployees.find(emp => emp.id === assignedEmp.employeeId);
+              if (!employee) return null;
+
+              const assignedIndex = assignedEmployeeFields.findIndex(
+                (field) => field.employeeId === assignedEmp.employeeId
+              );
+
+              return (
+                <div key={assignedEmp.employeeId} className="border rounded-md p-3 space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <h4 className="font-semibold text-sm">{employee.first_name} {employee.last_name}</h4>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => {
+                        const newSelectedIds = selectedAssignedEmployees.filter(emp => emp.employeeId !== employee.id).map(emp => emp.employeeId);
+                        handleEmployeeSelectionChange(newSelectedIds);
+                      }}
+                      className="text-destructive hover:text-destructive/80"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  {/* Hours input for single or multiple employees */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2">
+                    {dayNames.map(day => {
+                      const hoursFieldName = `assignedEmployees.${assignedIndex}.assigned_${day}_hours` as const;
+                      const objectDailyHours = getObjectDailyHours(day);
+                      const isDayValid = isDailyHoursValid(day); // Check overall validity for the day
+
+                      return (
+                        <div key={day}>
+                          <Label htmlFor={hoursFieldName} className="text-xs font-medium">
+                            {germanDayNames[day]} {objectDailyHours !== null ? `(${objectDailyHours.toFixed(1)}h)` : ''}
+                          </Label>
+                          <Input
+                            id={hoursFieldName}
+                            type="number"
+                            step="0.5"
+                            placeholder="Std."
+                            className={cn(
+                              "w-full text-right",
+                              !isDayValid && "border-destructive focus-visible:ring-destructive" // Highlight if sum is invalid
+                            )}
+                            {...form.register(hoursFieldName as FieldPath<OrderFormValues>, { valueAsNumber: true })}
+                            disabled={!selectedObjectId || isSingleEmployeeAssigned} // Disable if no object or single employee
+                            readOnly={isSingleEmployeeAssigned} // Readonly if single employee
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {/* Time inputs for single employee */}
+                  {isSingleEmployeeAssigned && (
+                    <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2 mt-2">
+                      {dayNames.map(day => {
+                        const startFieldName = `assignedEmployees.${assignedIndex}.assigned_${day}_start_time` as const;
+                        const endFieldName = `assignedEmployees.${assignedIndex}.assigned_${day}_end_time` as const;
+                        const objectStartTime = objects.find(obj => obj.id === selectedObjectId)?.[`${day}_start_time` as keyof typeof objects[0]] as string | null;
+                        const objectEndTime = objects.find(obj => obj.id === selectedObjectId)?.[`${day}_end_time` as keyof typeof objects[0]] as string | null;
+
+                        return (
+                          <div key={`${day}-times`}>
+                            <Label htmlFor={startFieldName} className="text-xs">Start</Label>
+                            <Input
+                              id={startFieldName}
+                              type="time"
+                              className="w-full"
+                              disabled={true} // Always disabled for single employee, derived from object
+                              readOnly={true}
+                              value={(assignedEmp as any)[startFieldName] || ''} // Display assigned employee's start time
+                            />
+                            <Label htmlFor={endFieldName} className="text-xs mt-1">Ende</Label>
+                            <Input
+                              id={endFieldName}
+                              type="time"
+                              className="w-full"
+                              disabled={true} // Always disabled for single employee, derived from object
+                              readOnly={true}
+                              value={(assignedEmp as any)[endFieldName] || ''} // Display assigned employee's end time
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                  {!isSingleEmployeeAssigned && (
+                    <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2 mt-2">
+                      {dayNames.map(day => {
+                        const startFieldName = `assignedEmployees.${assignedIndex}.assigned_${day}_start_time` as const;
+                        const endFieldName = `assignedEmployees.${assignedIndex}.assigned_${day}_end_time` as const;
+
+                        return (
+                          <div key={`${day}-times-editable`}>
+                            <Label htmlFor={startFieldName} className="text-xs">Start</Label>
+                            <Input
+                              id={startFieldName}
+                              type="time"
+                              className="w-full"
+                              {...form.register(startFieldName as FieldPath<OrderFormValues>)}
+                              disabled={!selectedObjectId}
+                            />
+                            <Label htmlFor={endFieldName} className="text-xs mt-1">Ende</Label>
+                            <Input
+                              id={endFieldName}
+                              type="time"
+                              className="w-full"
+                              {...form.register(endFieldName as FieldPath<OrderFormValues>)}
+                              disabled={!selectedObjectId}
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         )}
       </div>
 
