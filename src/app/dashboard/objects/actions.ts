@@ -124,7 +124,8 @@ export async function updateObject(objectId: string, data: ObjectFormValues) {
     return { success: false, message: "Fehler beim Überprüfen der Berechtigungen." };
   }
 
-  // Calculate total_weekly_hours
+  // Calculate total_weekly_hours (this calculation is for display purposes in the form,
+  // but the column itself should not be sent in the update payload if it's a computed column in DB)
   const totalWeeklyHours = (data.monday_hours || 0) + (data.tuesday_hours || 0) + (data.wednesday_hours || 0) +
                            (data.thursday_hours || 0) + (data.friday_hours || 0) + (data.saturday_hours || 0) +
                            (data.sunday_hours || 0);
@@ -144,7 +145,7 @@ export async function updateObject(objectId: string, data: ObjectFormValues) {
       friday_hours: data.friday_hours,
       saturday_hours: data.saturday_hours,
       sunday_hours: data.sunday_hours,
-      total_weekly_hours: totalWeeklyHours, // Neues Feld
+      // total_weekly_hours: totalWeeklyHours, // REMOVED: This column is likely computed in the DB
       monday_start_time: data.monday_start_time,
       monday_end_time: data.monday_end_time,
       tuesday_start_time: data.tuesday_start_time,
