@@ -8,7 +8,6 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { PlusCircle } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState, useEffect, useCallback } from "react"; // Import useCallback
 import { createClient } from "@/lib/supabase/client";
@@ -17,14 +16,7 @@ import { CustomerContactCreateDialog } from "@/components/customer-contact-creat
 import { handleActionResponse } from "@/lib/toast-utils"; // Importiere die neue Utility
 import { calculateEndTime, calculateStartTime } from "@/lib/utils"; // Import the new utility
 
-const preprocessNumber = (val: any) => {
-  if (typeof val === 'string') {
-    // Replace comma with dot for decimal separator
-    val = val.replace(',', '.');
-  }
-  const num = Number(val);
-  return isNaN(num) ? null : num;
-};
+const preprocessNumber = (val: any) => (val === "" || isNaN(Number(val)) ? null : Number(val));
 const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
 
 // Helper function for time validation
@@ -197,44 +189,22 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
 
   // Effect to calculate total weekly hours
   useEffect(() => {
-    const dailyHours = [
-      mondayHours,
-      tuesdayHours,
-      wednesdayHours,
-      thursdayHours,
-      fridayHours,
-      saturdayHours,
-      sundayHours,
-    ];
-
-    let sum = 0;
-    for (const hours of dailyHours) {
-      // Ensure hours is a number before adding, treating null as 0
-      sum += (typeof hours === 'number' && !isNaN(hours)) ? hours : 0;
-    }
-
-    // Set the sum, formatted to two decimal places for consistency
-    form.setValue("totalWeeklyHours", parseFloat(sum.toFixed(2)), { shouldValidate: false });
-  }, [
-    form, // Depend on form itself to get latest values
-    mondayHours, // Explicitly watch all relevant fields
-    tuesdayHours,
-    wednesdayHours,
-    thursdayHours,
-    fridayHours,
-    saturdayHours,
-    sundayHours,
-  ]);
+    const total = (mondayHours || 0) + (tuesdayHours || 0) + (wednesdayHours || 0) +
+                  (thursdayHours || 0) + (fridayHours || 0) + (saturdayHours || 0) +
+                  (sundayHours || 0);
+    form.setValue("totalWeeklyHours", parseFloat(total.toFixed(2)), { shouldValidate: false });
+  }, [mondayHours, tuesdayHours, wednesdayHours, thursdayHours, fridayHours, saturdayHours, sundayHours, form]);
 
 
   // Centralized function to calculate and set times for a specific day
   // This function will be called by onChange handlers and useEffect
   const getCalculatedTimesForDay = useCallback((
+    day: string,
     currentHours: number | null,
     currentStartTime: string | null | undefined,
     currentEndTime: string | null | undefined,
     currentTimeOfDay: string,
-    triggeringField: 'hours' | 'startTime' | 'endTime'
+    triggeringField: 'hours' | 'startTime' | 'endTime' | 'timeOfDay'
   ): { newStartTime: string | null; newEndTime: string | null } => {
     let newStartTime: string | null = null;
     let newEndTime: string | null = null;
@@ -249,8 +219,8 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
         baseStartTimeForTimeOfDay = "17:00";
       }
 
-      if (triggeringField === 'hours') {
-        // If hours changed, prioritize existing valid start time, then end time, then base.
+      if (triggeringField === 'hours' || triggeringField === 'timeOfDay') {
+        // If hours or timeOfDay changed, prioritize existing valid start time, then end time, then base.
         if (typeof currentStartTime === 'string' && timeRegex.test(currentStartTime)) {
           newStartTime = currentStartTime;
           newEndTime = calculateEndTime(newStartTime, currentHours);
@@ -288,9 +258,36 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
       newEndTime = null;
     }
     return { newStartTime, newEndTime };
-  }, []); // Removed selectedTimeOfDay from dependencies, as it's passed as an argument
+  }, [selectedTimeOfDay]); // Only depends on selectedTimeOfDay for base time calculation
 
-  // Removed the useEffect that reacted to selectedTimeOfDay and updated all days.
+  // Effect to re-calculate times when timeOfDay changes
+  useEffect(() => {
+    dayNames.forEach(day => {
+      const hoursValue = form.getValues(`${day}_hours` as keyof ObjectFormValues) as number | null;
+      const currentStartTime = form.getValues(`${day}_start_time` as keyof ObjectFormValues) as string | null | undefined;
+      const currentEndTime = form.getValues(`${day}_end_time` as keyof ObjectFormValues) as string | null | undefined;
+
+      // ONLY update times if hours are already present for that day AND greater than 0.
+      if (hoursValue !== null && hoursValue > 0) {
+        const { newStartTime, newEndTime } = getCalculatedTimesForDay(
+          day,
+          hoursValue,
+          currentStartTime,
+          currentEndTime,
+          selectedTimeOfDay,
+          'timeOfDay'
+        );
+
+        // Only set if values are actually different to prevent unnecessary re-renders
+        if (form.getValues(`${day}_start_time` as keyof ObjectFormValues) !== newStartTime) {
+          form.setValue(`${day}_start_time` as keyof ObjectFormValues, newStartTime, { shouldValidate: true });
+        }
+        if (form.getValues(`${day}_end_time` as keyof ObjectFormValues) !== newEndTime) {
+          form.setValue(`${day}_end_time` as keyof ObjectFormValues, newEndTime, { shouldValidate: true });
+        }
+      }
+    });
+  }, [selectedTimeOfDay, getCalculatedTimesForDay, dayNames, form]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -426,13 +423,14 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
                 {...form.register(`${day}_hours` as keyof ObjectFormValues, {
                   onChange: (e) => {
                     const value = e.target.value;
-                    const parsedHours = preprocessNumber(value); // Use the updated preprocessNumber
+                    const parsedHours = value === "" ? null : Number(value);
                     form.setValue(`${day}_hours` as keyof ObjectFormValues, parsedHours);
                     
                     const currentStartTime = form.getValues(`${day}_start_time` as keyof ObjectFormValues) as string | null | undefined;
                     const currentEndTime = form.getValues(`${day}_end_time` as keyof ObjectFormValues) as string | null | undefined;
 
                     const { newStartTime, newEndTime } = getCalculatedTimesForDay(
+                      day,
                       parsedHours, // Use the newly parsed hours
                       currentStartTime,
                       currentEndTime,
@@ -462,6 +460,7 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
 
                     if (hoursValue !== null && hoursValue > 0 && newStartTimeValue && timeRegex.test(newStartTimeValue)) {
                       const { newStartTime, newEndTime } = getCalculatedTimesForDay(
+                        day,
                         hoursValue,
                         newStartTimeValue, // Use the new start time
                         currentEndTime,
@@ -493,6 +492,7 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
 
                     if (hoursValue !== null && hoursValue > 0 && newEndTimeValue && timeRegex.test(newEndTimeValue)) {
                       const { newStartTime, newEndTime } = getCalculatedTimesForDay(
+                        day,
                         hoursValue,
                         currentStartTime,
                         newEndTimeValue, // Use the new end time
@@ -520,7 +520,7 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
           id="totalWeeklyHours"
           type="number"
           step="0.01"
-          value={typeof form.watch("totalWeeklyHours") === 'number' ? form.watch("totalWeeklyHours")?.toFixed(2) : ""}
+          value={form.watch("totalWeeklyHours")?.toFixed(2) || ""}
           readOnly
           className="bg-muted cursor-not-allowed"
         />
