@@ -1,6 +1,8 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createAdminClient } from "@/lib/supabase/server";
+import { revalidatePath } from "next/cache";
+import { sendNotification } from "@/lib/actions/notifications";
 import { startOfWeek, endOfWeek, eachDayOfInterval, formatISO, parseISO, getDay } from 'date-fns';
 
 export interface PlanningData {
@@ -79,13 +81,8 @@ export async function getPlanningDataForWeek(currentDate: Date): Promise<{ succe
       .gte('end_date', formatISO(start, { representation: 'date' }));
     if (absencesError) throw absencesError;
 
-    // 4. NEU: Ungeplante Aufträge abrufen
-    const { data: unassignedOrdersData, error: unassignedOrdersError } = await supabase
-      .from('orders')
-      .select('id, title, total_estimated_hours, service_type') // Corrected column name
-      .is('order_employee_assignments.employee_id', null) // Filter for unassigned
-      .in('order_type', ['one_time', 'substitution']) // Nur planbare Typen
-      .eq('request_status', 'approved');
+    // 4. NEU: Ungeplante Aufträge über RPC-Funktion abrufen
+    const { data: unassignedOrdersData, error: unassignedOrdersError } = await supabase.rpc('get_unassigned_orders');
     if (unassignedOrdersError) throw unassignedOrdersError;
 
     // 5. Daten verarbeiten
