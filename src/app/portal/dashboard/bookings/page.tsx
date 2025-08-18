@@ -21,8 +21,8 @@ interface DisplayOrder {
   customer_contact_id: string | null;
   customer_name: string | null;
   object_name: string | null;
-  employee_first_names: (string | null)[]; // Fixed: Array of string | null
-  employee_last_names: (string | null)[]; // Fixed: Array of string | null
+  employee_first_names: string[] | null; // New field
+  employee_last_names: string[] | null; // New field
   customer_contact_first_name: string | null;
   customer_contact_last_name: string | null;
   order_type: string;
@@ -37,7 +37,7 @@ interface DisplayOrder {
   order_employee_assignments: {
     employee_id: string;
     assigned_daily_hours: number | null;
-    employees: { first_name: string | null; last_name: string | null } | null; // Fixed: employees is an object, not an array
+    employees: { first_name: string | null; last_name: string | null }[]; // Fixed: Explicitly define nested employees
   }[];
 }
 
@@ -138,11 +138,11 @@ export default async function CustomerBookingsPage() {
     customer_contact_id: order.customer_contact_id,
     customer_name: order.customers?.[0]?.name || null, // Korrigiert
     object_name: order.objects?.[0]?.name || null, // Korrigiert
-    employee_first_names: order.order_employee_assignments.map(oea => oea.employees?.first_name || null), // Fixed
-    employee_last_names: order.order_employee_assignments.map(oea => oea.employees?.last_name || null), // Fixed
+    employee_first_names: order.order_employee_assignments.map((oea: { employees: { first_name: string | null; }[]; }) => Array.isArray(oea.employees) ? oea.employees[0]?.first_name || null : oea.employees?.first_name || null), // Fixed
+    employee_last_names: order.order_employee_assignments.map((oea: { employees: { last_name: string | null; }[]; }) => Array.isArray(oea.employees) ? oea.employees[0]?.last_name || null : oea.employees?.last_name || null), // Fixed
     customer_contact_first_name: order.customer_contacts?.[0]?.first_name || null, // Korrigiert
     customer_contact_last_name: order.customer_contacts?.[0]?.last_name || null, // Korrigiert
-    order_type: order.order_type,
+    order_type: order.order.order_type,
     recurring_start_date: order.recurring_start_date,
     recurring_end_date: order.recurring_end_date,
     priority: order.priority,
@@ -246,3 +246,6 @@ export default async function CustomerBookingsPage() {
           )}
         </CardContent>
       </Card>
+    </div>
+  );
+}

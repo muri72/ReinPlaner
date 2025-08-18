@@ -122,16 +122,9 @@ export async function updateOrder(orderId: string, data: OrderFormValues) {
     .single();
 
   // Fetch original assignments to detect changes
-  const { data: originalAssignments, error: originalAssignmentsError } = await supabase
+  const { data: originalAssignments } = await supabase
     .from('order_employee_assignments')
-    .select('employee_id, assigned_daily_hours') // Fixed: Select assigned_daily_hours
-    .eq('order_id', orderId);
-  
-  if (originalAssignmentsError) {
-    console.error("Fehler beim Abrufen der ursprünglichen Zuweisungen:", originalAssignmentsError);
-    return { success: false, message: "Fehler beim Aktualisieren des Auftrags: konnte ursprüngliche Zuweisungen nicht abrufen." };
-  }
-
+    .select('employee_id, assigned_daily_hours'); // Fixed: Include assigned_daily_hours
   const originalEmployeeIds = originalAssignments?.map(a => a.employee_id) || [];
 
   const { error } = await supabase

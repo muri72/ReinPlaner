@@ -39,8 +39,8 @@ interface DisplayOrder {
   customer_contact_id: string | null;
   customer_name: string | null;
   object_name: string | null;
-  employee_first_names: (string | null)[]; // Fixed: Array of string | null
-  employee_last_names: (string | null)[]; // Fixed: Array of string | null
+  employee_first_names: string[] | null; // New field
+  employee_last_names: string[] | null; // New field
   customer_contact_first_name: string | null;
   customer_contact_last_name: string | null;
   order_type: string;
@@ -61,7 +61,7 @@ interface DisplayOrder {
   order_employee_assignments: {
     employee_id: string;
     assigned_daily_hours: number | null;
-    employees: { first_name: string | null; last_name: string | null } | null; // Fixed: employees is an object, not an array
+    employees: { first_name: string | null; last_name: string | null }[]; // Fixed: Explicitly define nested employees
   }[];
 }
 
@@ -186,7 +186,7 @@ export default function OrdersPage({
         .order(sortColumn, { ascending: sortDirection === 'asc' });
 
       // Apply RLS-like filtering for non-admin roles if not already handled by RLS policies
-      // The RPC function handles it, but for direct table selects, we might need it.
+      // The RPC function handles this, but for direct table selects, we might need it.
       // However, the existing RLS policies for 'orders' table should cover this.
       // So, no explicit `eq('user_id', user.id)` or `in('customer_id', ...)` needed here
       // as the RPC handles it and direct selects are covered by RLS.
@@ -221,12 +221,12 @@ export default function OrdersPage({
         created_at: order.created_at,
         customer_id: order.customer_id,
         object_id: order.object_id,
-        employee_ids: order.order_employee_assignments.map((oea: any) => oea.employee_id),
+        employee_ids: order.order_employee_assignments.map((oea: { employee_id: string; }) => oea.employee_id), // Fixed: Explicitly type oea
         customer_contact_id: order.customer_contact_id,
         customer_name: order.customers?.name || null,
         object_name: order.objects?.name || null,
-        employee_first_names: order.order_employee_assignments.map((oea: any) => oea.employees?.first_name || null), // Fixed
-        employee_last_names: order.order_employee_assignments.map((oea: any) => oea.employees?.last_name || null), // Fixed
+        employee_first_names: order.order_employee_assignments.map((oea: { employees: { first_name: string | null; }[]; }) => Array.isArray(oea.employees) ? oea.employees[0]?.first_name || null : oea.employees?.first_name || null), // Fixed
+        employee_last_names: order.order_employee_assignments.map((oea: { employees: { last_name: string | null; }[]; }) => Array.isArray(oea.employees) ? oea.employees[0]?.last_name || null : oea.employees?.last_name || null), // Fixed
         customer_contact_first_name: order.customer_contacts?.first_name || null,
         customer_contact_last_name: order.customer_contacts?.last_name || null,
         order_type: order.order_type,
@@ -556,4 +556,3 @@ export default function OrdersPage({
           <PaginationControls currentPage={currentPage} totalPages={totalPages} />
         )}
       </div>
-    </div>
