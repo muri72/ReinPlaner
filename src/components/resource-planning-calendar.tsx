@@ -103,7 +103,8 @@ export function ResourcePlanningCalendar() {
 
       if (employeeId && dateString) {
         toast.info(`Weise Auftrag zu...`);
-        const result = await assignOrderToEmployee(orderId, employeeId, dateString);
+        // Pass null for assignedDailyHours, so the DB function can calculate it
+        const result = await assignOrderToEmployee(orderId, employeeId, dateString, null);
         if (result.success) {
           toast.success(result.message);
           // Re-fetch data after assignment
@@ -257,7 +258,7 @@ export function ResourcePlanningCalendar() {
               </div>
               {Object.entries(absenceTypeTranslations).map(([key, label]) => (
                 <div key={key} className="flex items-center gap-2">
-                  <div className={`w-3 h-3 rounded-sm ${absenceTypeColors[key]}`}></div>
+                  <div className="w-3 h-3 rounded-sm bg-primary text-primary-foreground"></div>
                   <span>{label}</span>
                 </div>
               ))}

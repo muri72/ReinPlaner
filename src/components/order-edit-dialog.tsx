@@ -31,7 +31,6 @@ interface OrderEditDialogProps {
     status: string;
     customer_id: string | null;
     object_id: string | null;
-    // employee_id wurde entfernt, da Zuweisungen jetzt über order_employee_assignments erfolgen
     customer_contact_id: string | null;
     order_type: string;
     recurring_start_date: string | null;
@@ -41,6 +40,11 @@ interface OrderEditDialogProps {
     notes: string | null;
     service_type: string | null;
     request_status: string;
+    // Neue Felder für Mitarbeiterzuweisungen
+    employee_ids: string[] | null;
+    employee_first_names: string[] | null;
+    employee_last_names: string[] | null;
+    assigned_daily_hours: (number | null)[] | null; // Hinzugefügt
   };
 }
 
@@ -63,6 +67,12 @@ export function OrderEditDialog({ order }: OrderEditDialogProps) {
     }
     return null;
   };
+
+  // Prepare assignedEmployees for the form
+  const initialAssignedEmployees = (order.employee_ids || []).map((empId, index) => ({
+    employeeId: empId,
+    assignedDailyHours: order.assigned_daily_hours?.[index] ?? null,
+  }));
 
   return (
     <TooltipProvider delayDuration={300}>
@@ -103,7 +113,6 @@ export function OrderEditDialog({ order }: OrderEditDialogProps) {
                   status: order.status as OrderFormValues["status"],
                   customerId: order.customer_id ?? undefined,
                   objectId: order.object_id ?? undefined,
-                  // employeeId: order.employee_id, // Entfernt
                   customerContactId: order.customer_contact_id ?? undefined,
                   orderType: order.order_type as OrderFormValues["orderType"],
                   recurringStartDate: order.recurring_start_date ? new Date(order.recurring_start_date) : undefined,
@@ -113,6 +122,7 @@ export function OrderEditDialog({ order }: OrderEditDialogProps) {
                   notes: order.notes,
                   serviceType: getServiceTypeForForm(order.service_type),
                   requestStatus: order.request_status as OrderFormValues["requestStatus"],
+                  assignedEmployees: initialAssignedEmployees, // Neues Feld übergeben
                 }}
                 onSubmit={handleUpdate}
                 submitButtonText="Änderungen speichern"

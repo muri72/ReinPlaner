@@ -88,6 +88,7 @@ export async function createTimeEntry(data: TimeEntryFormValues): Promise<{ succ
   }
 
   revalidatePath("/dashboard/time-tracking");
+  revalidatePath("/dashboard/planning"); // Revalidiere Planungsseite
   return { success: true, message: "Zeiteintrag erfolgreich hinzugefügt!", newEntryId: newEntry?.id };
 }
 
@@ -162,6 +163,7 @@ export async function updateTimeEntry(entryId: string, data: Partial<TimeEntryFo
   }
 
   revalidatePath("/dashboard/time-tracking");
+  revalidatePath("/dashboard/planning"); // Revalidiere Planungsseite
   return { success: true, message: "Zeiteintrag erfolgreich aktualisiert!" };
 }
 
@@ -187,6 +189,7 @@ export async function deleteTimeEntry(formData: FormData): Promise<{ success: bo
   }
 
   revalidatePath("/dashboard/time-tracking");
+  revalidatePath("/dashboard/planning"); // Revalidiere Planungsseite
   return { success: true, message: "Zeiteintrag erfolgreich gelöscht!" };
 }
 
@@ -218,5 +221,6 @@ export async function triggerAutomaticTimeEntryCreation(): Promise<{ success: bo
   }
 
   revalidatePath("/dashboard/time-tracking");
+  revalidatePath("/dashboard/planning"); // Revalidiere Planungsseite
   return { success: true, message: `Überprüfung abgeschlossen. ${createdCount} neue Zeiteinträge erstellt.`, createdCount: createdCount ?? 0 };
 }

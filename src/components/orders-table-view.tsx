@@ -27,6 +27,7 @@ interface DisplayOrder {
   employee_ids: string[] | null; // Updated to array of IDs
   employee_first_names: string[] | null; // Updated to array of first names
   employee_last_names: string[] | null; // Updated to array of last names
+  assigned_daily_hours: (number | null)[] | null; // Hinzugefügt
   customer_contact_id: string | null;
   customer_name: string | null;
   object_name: string | null;

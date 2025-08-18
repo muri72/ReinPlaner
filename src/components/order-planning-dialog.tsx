@@ -10,6 +10,7 @@ import { createClient } from "@/lib/supabase/client";
 import { processOrderRequest } from "@/app/dashboard/orders/actions";
 import { Badge } from "./ui/badge";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+import { Input } from "./ui/input"; // Import Input for assigned daily hours
 
 interface OrderPlanningDialogProps {
   order: {
@@ -19,6 +20,7 @@ interface OrderPlanningDialogProps {
     customer_name: string | null;
     object_name: string | null;
     service_type: string | null;
+    total_estimated_hours: number | null; // Hinzugefügt
   };
 }
 
@@ -32,6 +34,7 @@ export function OrderPlanningDialog({ order }: OrderPlanningDialogProps) {
   const [open, setOpen] = useState(false);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("");
+  const [assignedDailyHours, setAssignedDailyHours] = useState<number | null>(null); // Neues State für zugewiesene Stunden
   const [loading, setLoading] = useState(false);
   // Removed titleId and descriptionId as they are no longer needed for aria attributes
 
@@ -54,8 +57,18 @@ export function OrderPlanningDialog({ order }: OrderPlanningDialogProps) {
     }
   }, [open]);
 
+  // Set default assignedDailyHours when employee is selected or dialog opens
+  useEffect(() => {
+    if (selectedEmployeeId && order.total_estimated_hours !== null) {
+      setAssignedDailyHours(order.total_estimated_hours);
+    } else {
+      setAssignedDailyHours(null);
+    }
+  }, [selectedEmployeeId, order.total_estimated_hours]);
+
   const handleSubmit = async (formData: FormData) => {
     setLoading(true);
+    formData.append('assignedDailyHours', String(assignedDailyHours)); // Stunden an FormData anhängen
     const result = await processOrderRequest(formData);
     if (result.success) {
       toast.success(result.message);
@@ -114,6 +127,23 @@ export function OrderPlanningDialog({ order }: OrderPlanningDialogProps) {
                 </SelectContent>
               </Select>
             </div>
+            {selectedEmployeeId && (
+              <div>
+                <Label htmlFor="assignedDailyHours">Zugewiesene tägliche Stunden (optional)</Label>
+                <Input
+                  id="assignedDailyHours"
+                  name="assignedDailyHours"
+                  type="number"
+                  step="0.5"
+                  placeholder={order.total_estimated_hours ? `Vorgeschlagen: ${order.total_estimated_hours}` : "Stunden pro Tag"}
+                  value={assignedDailyHours !== null ? assignedDailyHours : ''}
+                  onChange={(e) => setAssignedDailyHours(e.target.value === '' ? null : Number(e.target.value))}
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Wenn leer, werden die Stunden automatisch basierend auf dem Objektplan aufgeteilt.
+                </p>
+              </div>
+            )}
           </form>
         </div>
         <DialogFooter>

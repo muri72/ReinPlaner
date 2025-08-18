@@ -71,7 +71,7 @@ export default async function EmployeeDashboardPage() {
         objects ( name, address, notes, time_of_day, access_method, pin, is_alarm_secured, alarm_password, security_code_word ),
         customers ( name ),
         customer_contacts ( first_name, last_name, phone ),
-        order_employee_assignments!inner ( employee_id )
+        order_employee_assignments!inner ( employee_id, assigned_daily_hours )
       `)
       .eq('order_employee_assignments.employee_id', employeeId) // Filter by assignment table
       .eq('request_status', 'approved')
@@ -89,6 +89,8 @@ export default async function EmployeeDashboardPage() {
         object: Array.isArray(order.objects) ? order.objects[0] : order.objects,
         customer: Array.isArray(order.customers) ? order.customers[0] : order.customers,
         customer_contact: Array.isArray(order.customer_contacts) ? order.customer_contacts[0] : order.customer_contacts,
+        // Extract assigned_daily_hours from the assignment
+        assigned_daily_hours: order.order_employee_assignments?.[0]?.assigned_daily_hours || null,
       }));
     }
   }

@@ -42,7 +42,7 @@ export async function getFinancialOverview(year: number, month: number) {
     // 2a. Feste monatliche Preise von Daueraufträgen
     const { data: fixedPriceOrders, error: fixedPriceError } = await supabase
       .from('orders')
-      .select('fixed_monthly_price')
+      .select('fixed_monthly_price, order_employee_assignments ( employee_id )') // Include assignments
       .eq('order_type', 'permanent')
       .not('fixed_monthly_price', 'is', null);
 
@@ -57,7 +57,7 @@ export async function getFinancialOverview(year: number, month: number) {
 
     const { data: hourlyTimeEntries, error: hourlyEntriesError } = await supabase
       .from('time_entries')
-      .select('duration_minutes, orders(service_type, order_type, fixed_monthly_price)')
+      .select('duration_minutes, orders(service_type, order_type, fixed_monthly_price, order_employee_assignments ( employee_id ))') // Include assignments
       .gte('start_time', startDate.toISOString())
       .lt('start_time', endDate.toISOString());
 

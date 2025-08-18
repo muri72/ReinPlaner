@@ -29,7 +29,7 @@ export async function getMultiMonthFinancialData(numberOfMonths: number = 6) {
       const startDate = startOfMonth(monthDate);
       const endDate = endOfMonth(monthDate);
 
-      // Calculate total costs for the month (based on net hours)
+      // Calculate total costs for the month (basierend auf Netto-Stunden)
       const { data: costTimeEntries, error: timeEntriesError } = await supabase
         .from('time_entries')
         .select('duration_minutes, break_minutes, employees(hourly_rate)')
@@ -53,7 +53,7 @@ export async function getMultiMonthFinancialData(numberOfMonths: number = 6) {
       // Fixed monthly prices from permanent orders (only count if the month is within their recurring period)
       const { data: fixedPriceOrders, error: fixedPriceError } = await supabase
         .from('orders')
-        .select('fixed_monthly_price, recurring_start_date, recurring_end_date')
+        .select('fixed_monthly_price, recurring_start_date, recurring_end_date, order_employee_assignments ( employee_id )') // Include assignments to filter
         .eq('order_type', 'permanent')
         .not('fixed_monthly_price', 'is', null)
         .lte('recurring_start_date', endDate.toISOString().split('T')[0]) // Order started before or in this month
@@ -67,7 +67,7 @@ export async function getMultiMonthFinancialData(numberOfMonths: number = 6) {
       // Revenue from hourly-based orders (time entries)
       const { data: hourlyTimeEntries, error: hourlyEntriesError } = await supabase
         .from('time_entries')
-        .select('duration_minutes, orders(service_type, order_type, fixed_monthly_price)')
+        .select('duration_minutes, orders(service_type, order_type, fixed_monthly_price, order_employee_assignments ( employee_id ))') // Include assignments
         .gte('start_time', startDate.toISOString())
         .lte('start_time', endDate.toISOString()); // Use lte for end of month
 
@@ -175,7 +175,7 @@ export async function getRevenueLast7Days() {
     // or a dedicated invoicing system. For now, we'll just sum up fixed prices if the order was active.
     const { data: fixedPriceOrders, error: fixedPriceError } = await supabase
       .from('orders')
-      .select('fixed_monthly_price, recurring_start_date, recurring_end_date')
+      .select('fixed_monthly_price, recurring_start_date, recurring_end_date, order_employee_assignments ( employee_id )') // Include assignments
       .eq('order_type', 'permanent')
       .not('fixed_monthly_price', 'is', null)
       .lte('recurring_start_date', today.toISOString().split('T')[0])
@@ -190,7 +190,7 @@ export async function getRevenueLast7Days() {
     // Revenue from hourly-based orders (time entries) within the last 7 days
     const { data: hourlyTimeEntries, error: hourlyEntriesError } = await supabase
       .from('time_entries')
-      .select('duration_minutes, orders(service_type, order_type, fixed_monthly_price)')
+      .select('duration_minutes, orders(service_type, order_type, fixed_monthly_price, order_employee_assignments ( employee_id ))') // Include assignments
       .gte('start_time', sevenDaysAgo.toISOString())
       .lte('start_time', today.toISOString());
 
@@ -218,7 +218,7 @@ export async function getMostBookedServices(limit: number = 5) {
   try {
     const { data, error } = await supabase
       .from('orders')
-      .select('service_type')
+      .select('service_type, order_employee_assignments ( employee_id )') // Include assignments
       .not('service_type', 'is', null);
 
     if (error) throw error;

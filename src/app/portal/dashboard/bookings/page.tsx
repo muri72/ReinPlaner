@@ -20,6 +20,7 @@ interface DisplayOrder {
   employee_ids: string[] | null; // Updated to array of IDs
   employee_first_names: string[] | null; // Updated to array of first names
   employee_last_names: string[] | null; // Updated to array of last names
+  assigned_daily_hours: (number | null)[] | null; // Hinzugefügt
   customer_contact_id: string | null;
   customer_name: string | null;
   object_name: string | null;
@@ -111,7 +112,7 @@ export default async function CustomerBookingsPage() {
       objects ( name ),
       customer_contacts ( first_name, last_name ),
       order_feedback ( id ),
-      order_employee_assignments ( employee_id, employees ( first_name, last_name ) )
+      order_employee_assignments ( employee_id, assigned_daily_hours, employees ( first_name, last_name ) )
     `)
     .eq('customer_id', customerId)
     .order('created_at', { ascending: false }); // Order by creation date, newest first
@@ -132,6 +133,7 @@ export default async function CustomerBookingsPage() {
     employee_ids: order.order_employee_assignments?.map((a: any) => a.employee_id) || null,
     employee_first_names: order.order_employee_assignments?.map((a: any) => a.employees?.first_name || '') || null,
     employee_last_names: order.order_employee_assignments?.map((a: any) => a.employees?.last_name || '') || null,
+    assigned_daily_hours: order.order_employee_assignments?.map((a: any) => a.assigned_daily_hours) || null, // Hinzugefügt
     customer_contact_id: order.customer_contact_id,
     customer_name: order.customers?.[0]?.name || null, // Korrigiert
     object_name: order.objects?.[0]?.name || null, // Korrigiert

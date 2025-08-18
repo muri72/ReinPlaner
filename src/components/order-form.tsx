@@ -1,6 +1,6 @@
 "use client";
 
-import { useForm, SubmitHandler } from "react-hook-form";
+import { useForm, SubmitHandler, useFieldArray } from "react-hook-form"; // useFieldArray hinzugefügt
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Input } from "@/components/ui/input";
@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea"; // Hinzugefügt: Import der Textarea-Komponente
 import { toast } from "sonner";
-import { PlusCircle } from "lucide-react";
+import { PlusCircle, X } from "lucide-react"; // X für Entfernen hinzugefügt
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
@@ -18,6 +18,7 @@ import { createObject } from "@/app/dashboard/objects/actions";
 import { CustomerContactCreateDialog } from "@/components/customer-contact-create-dialog";
 import { DatePicker } from "@/components/date-picker"; // Importiere die neue DatePicker Komponente
 import { handleActionResponse } from "@/lib/toast-utils"; // Importiere die neue Utility
+import { Checkbox } from "@/components/ui/checkbox"; // Checkbox für Multi-Select
 
 // Definierte Liste der Dienstleistungen
 const availableServices = [
@@ -28,14 +29,16 @@ const availableServices = [
   "Sonderreinigung",
 ] as const;
 
+// Helper function for number preprocessing
+const preprocessNumber = (val: any) => (val === "" || isNaN(Number(val)) ? null : Number(val));
+
 export const orderSchema = z.object({
   title: z.string().min(1, "Titel ist erforderlich").max(100, "Titel ist zu lang"),
   description: z.string().max(500, "Beschreibung ist zu lang").optional().nullable(),
   dueDate: z.date().optional().nullable(),
   status: z.enum(["pending", "in_progress", "completed"]).default("pending"),
   customerId: z.string().uuid("Ungültige Kunden-ID").min(1, "Kunde ist erforderlich"),
-  objectId: z.string().uuid("Ungültiges Objekt-ID").optional().nullable(), // Geändert zu optional und nullable
-  // employeeId wurde entfernt, da Zuweisungen über order_employee_assignments erfolgen
+  objectId: z.string().uuid("Ungültiges Objekt-ID").optional().nullable(),
   customerContactId: z.string().uuid("Ungültige Kundenkontakt-ID").optional().nullable(),
   orderType: z.enum(["one_time", "recurring", "substitution", "permanent"]).default("one_time"),
   recurringStartDate: z.date().optional().nullable(),
@@ -48,6 +51,11 @@ export const orderSchema = z.object({
   notes: z.string().max(500, "Notizen sind zu lang").optional().nullable(),
   serviceType: z.enum(availableServices).optional().nullable(),
   requestStatus: z.enum(["pending", "approved", "rejected"]).default("approved"), // Neues Feld
+  // Neues Feld für Mitarbeiterzuweisungen
+  assignedEmployees: z.array(z.object({
+    employeeId: z.string().uuid("Ungültige Mitarbeiter-ID"),
+    assignedDailyHours: z.preprocess(preprocessNumber, z.nullable(z.number().min(0, "Stunden müssen positiv sein").max(24, "Stunden sind zu hoch")).optional()),
+  })).optional(),
 });
 
 export type OrderFormInput = z.input<typeof orderSchema>;
@@ -64,7 +72,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
   const supabase = createClient();
   const [customers, setCustomers] = useState<{ id: string; name: string }[]>([]);
   const [objects, setObjects] = useState<{ id: string; name: string; customer_id: string }[]>([]);
-  // employees state is no longer needed here as employeeId is removed from orderSchema
+  const [allEmployees, setAllEmployees] = useState<{ id: string; first_name: string; last_name: string }[]>([]); // Alle Mitarbeiter
   const [customerContacts, setCustomerContacts] = useState<{ id: string; first_name: string; last_name: string; customer_id: string }[]>([]);
   const [isNewObjectDialogOpen, setIsNewObjectDialogOpen] = useState(false);
 
@@ -74,17 +82,17 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     dueDate: initialData?.dueDate ? new Date(initialData.dueDate) : null,
     status: initialData?.status ?? "pending",
     customerId: initialData?.customerId ?? "",
-    objectId: initialData?.objectId ?? null, // Geändert zu null
-    // employeeId wurde entfernt
+    objectId: initialData?.objectId ?? null,
     customerContactId: initialData?.customerContactId ?? null,
     orderType: initialData?.orderType ?? "one_time",
     recurringStartDate: initialData?.recurringStartDate ? new Date(initialData.recurringStartDate) : null,
     recurringEndDate: initialData?.recurringEndDate ? new Date(initialData.recurringEndDate) : null,
     priority: initialData?.priority ?? "low",
-    totalEstimatedHours: (initialData?.totalEstimatedHours as number | null | undefined) ?? null, // Corrected column name
+    totalEstimatedHours: (initialData?.totalEstimatedHours as number | null | undefined) ?? null,
     notes: initialData?.notes ?? null,
     serviceType: initialData?.serviceType ?? null,
-    requestStatus: initialData?.requestStatus ?? "approved", // Initialwert für neues Feld
+    requestStatus: initialData?.requestStatus ?? "approved",
+    assignedEmployees: (initialData?.assignedEmployees as { employeeId: string; assignedDailyHours?: number | null }[] | undefined) ?? [], // Initialwert für zugewiesene Mitarbeiter
   };
 
   const form = useForm<OrderFormValues>({
@@ -92,10 +100,15 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     defaultValues: resolvedDefaultValues,
   });
 
+  const { fields: assignedEmployeeFields, append: appendEmployee, remove: removeEmployee, update: updateEmployeeField } = useFieldArray({
+    control: form.control,
+    name: "assignedEmployees",
+  });
+
   const orderType = form.watch("orderType");
   const selectedCustomerId = form.watch("customerId");
   const selectedObjectId = form.watch("objectId");
-  // selectedEmployeeId is no longer watched here
+  const selectedAssignedEmployees = form.watch("assignedEmployees"); // Watch the assigned employees array
 
   // Funktion zum Laden der Kundenkontakte
   const fetchCustomerContacts = async (customerId: string) => {
@@ -119,7 +132,9 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
       if (objectsData) setObjects(objectsData);
       if (objectsError) console.error("Fehler beim Laden der Objekte:", objectsError);
 
-      // Employees are no longer fetched here as they are not directly assigned in this form
+      const { data: employeesData, error: employeesError } = await supabase.from('employees').select('id, first_name, last_name').order('last_name', { ascending: true });
+      if (employeesData) setAllEmployees(employeesData);
+      if (employeesError) console.error("Fehler beim Laden der Mitarbeiter:", employeesError);
     };
     fetchDropdownData();
   }, [supabase]);
@@ -139,7 +154,6 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     if (!initialData) { // Nur wenn ein neuer Auftrag erstellt wird
       const customerName = customers.find(c => c.id === selectedCustomerId)?.name || '';
       const objectName = objects.find(o => o.id === selectedObjectId)?.name || '';
-      // employeeFullName is no longer part of auto-generated title
 
       const parts = [];
       if (objectName) parts.push(objectName);
@@ -163,6 +177,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     if (result.success) {
       if (!initialData) {
         form.reset();
+        removeEmployee(); // Alle zugewiesenen Mitarbeiter entfernen
       }
       onSuccess?.();
     }
@@ -192,6 +207,17 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     if (selectedCustomerId) {
       await fetchCustomerContacts(selectedCustomerId); // Liste der Kontakte neu laden
       form.setValue("customerContactId", newContactId); // Neu erstellten Kontakt auswählen
+    }
+  };
+
+  const handleEmployeeAssignmentChange = (employeeId: string, isChecked: boolean) => {
+    if (isChecked) {
+      appendEmployee({ employeeId: employeeId, assignedDailyHours: null });
+    } else {
+      const index = assignedEmployeeFields.findIndex(field => field.employeeId === employeeId);
+      if (index > -1) {
+        removeEmployee(index);
+      }
     }
   };
 
@@ -322,7 +348,68 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
           </DialogContent>
         </Dialog>
       </div>
-      {/* Employee selection removed from here */}
+
+      {/* Mitarbeiterzuweisung */}
+      <div className="space-y-2">
+        <Label>Zugewiesene Mitarbeiter (optional)</Label>
+        <div className="border rounded-md p-3 space-y-2 max-h-60 overflow-y-auto">
+          {allEmployees.length === 0 ? (
+            <p className="text-muted-foreground text-sm">Keine Mitarbeiter zum Zuweisen gefunden.</p>
+          ) : (
+            allEmployees.map((employee) => {
+              const isAssigned = selectedAssignedEmployees?.some(
+                (assigned) => assigned.employeeId === employee.id
+              );
+              const assignedIndex = assignedEmployeeFields.findIndex(
+                (field) => field.employeeId === employee.id
+              );
+
+              return (
+                <div key={employee.id} className="flex items-center justify-between gap-2">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`employee-${employee.id}`}
+                      checked={isAssigned}
+                      onCheckedChange={(checked) =>
+                        handleEmployeeAssignmentChange(employee.id, !!checked)
+                      }
+                    />
+                    <Label htmlFor={`employee-${employee.id}`} className="flex-grow">
+                      {employee.first_name} {employee.last_name}
+                    </Label>
+                  </div>
+                  {isAssigned && assignedIndex !== -1 && (
+                    <div className="flex items-center gap-1">
+                      <Label htmlFor={`assignedEmployees.${assignedIndex}.assignedDailyHours`} className="sr-only">Tägliche Stunden für {employee.first_name}</Label>
+                      <Input
+                        id={`assignedEmployees.${assignedIndex}.assignedDailyHours`}
+                        type="number"
+                        step="0.5"
+                        placeholder="Std. / Tag"
+                        className="w-24 text-right"
+                        {...form.register(`assignedEmployees.${assignedIndex}.assignedDailyHours`, { valueAsNumber: true })}
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removeEmployee(assignedIndex)}
+                        className="text-destructive hover:text-destructive/80"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              );
+            })
+          )}
+        </div>
+        {form.formState.errors.assignedEmployees && (
+          <p className="text-red-500 text-sm mt-1">{form.formState.errors.assignedEmployees.message}</p>
+        )}
+      </div>
+
       <div>
         <Label htmlFor="orderType">Auftragstyp</Label>
         <Select onValueChange={(value) => {

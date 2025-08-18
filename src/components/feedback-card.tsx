@@ -40,7 +40,7 @@ type OrderFeedback = {
   order: { // Required for order feedback
     title: string;
     customer_name: string | null;
-    employee_name: string | null;
+    employee_name: string | null; // Updated to handle multiple employees
   };
 };
 
