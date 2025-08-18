@@ -56,6 +56,7 @@ export async function getPlanningDataForWeek(currentDate: Date): Promise<{ succe
     if (employeesError) throw employeesError;
 
     // 2. Alle relevanten Aufträge abrufen (alle Typen mit Mitarbeiter)
+    // CORRECTED QUERY: Fetch detailed assignment data, remove object hours
     const { data: orders, error: ordersError } = await supabase
       .from('orders')
       .select(`
