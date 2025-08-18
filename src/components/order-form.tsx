@@ -216,7 +216,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     mode: "onChange",
   });
 
-  const { fields: assignedEmployeeFields, append: appendEmployee, remove: removeEmployee, update: updateEmployeeField } = useFieldArray({
+  const { fields: assignedEmployeeFields, replace: replaceAssignedEmployees } = useFieldArray({
     control: form.control,
     name: "assignedEmployees",
   });
@@ -371,49 +371,62 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     return { newStartTime, newEndTime };
   }, [getBaseStartTimeForTimeOfDay, objects, selectedObjectId]);
 
-  const distributeObjectHours = useCallback(() => {
+  const recalculateAndSetAssignments = useCallback((employeeIds: string[]) => {
     const currentObjectId = form.getValues("objectId") ?? null;
     const selectedObject = objects.find(obj => obj.id === currentObjectId);
-    const numAssignedEmployees = assignedEmployeeFields.length;
+    const numAssignedEmployees = employeeIds.length;
 
-    if (!selectedObject || numAssignedEmployees === 0) {
-      return;
-    }
+    const newAssignments = employeeIds.map(employeeId => {
+      const newEmpData: AssignedEmployee = {
+        employeeId,
+        assigned_monday_hours: null, assigned_tuesday_hours: null, assigned_wednesday_hours: null,
+        assigned_thursday_hours: null, assigned_friday_hours: null, assigned_saturday_hours: null,
+        assigned_sunday_hours: null,
+        assigned_monday_start_time: null, assigned_monday_end_time: null,
+        assigned_tuesday_start_time: null, assigned_tuesday_end_time: null,
+        assigned_wednesday_start_time: null, assigned_wednesday_end_time: null,
+        assigned_thursday_start_time: null, assigned_thursday_end_time: null,
+        assigned_friday_start_time: null, assigned_friday_end_time: null,
+        assigned_saturday_start_time: null, assigned_saturday_end_time: null,
+        assigned_sunday_start_time: null, assigned_sunday_end_time: null,
+      };
 
-    const newAssignments = assignedEmployeeFields.map((assignedEmp) => {
-      const newEmpData = { ...assignedEmp };
-      dayNames.forEach(day => {
-        const hoursFieldName = `assigned_${day}_hours` as keyof AssignedEmployee;
-        const startFieldName = `assigned_${day}_start_time` as keyof AssignedEmployee;
-        const endFieldName = `assigned_${day}_end_time` as keyof AssignedEmployee;
+      if (selectedObject && numAssignedEmployees > 0) {
+        dayNames.forEach(day => {
+          const hoursFieldName = `assigned_${day}_hours` as keyof AssignedEmployee;
+          const startFieldName = `assigned_${day}_start_time` as keyof AssignedEmployee;
+          const endFieldName = `assigned_${day}_end_time` as keyof AssignedEmployee;
 
-        const objectDailyHours = selectedObject?.[`${day}_hours` as keyof typeof selectedObject] as number | null;
-        const objectStartTime = selectedObject?.[`${day}_start_time` as keyof typeof selectedObject] as string | null;
-        const objectEndTime = selectedObject?.[`${day}_end_time` as keyof typeof selectedObject] as string | null;
+          const objectDailyHours = selectedObject?.[`${day}_hours` as keyof typeof selectedObject] as number | null;
+          const objectStartTime = selectedObject?.[`${day}_start_time` as keyof typeof selectedObject] as string | null;
+          const objectEndTime = selectedObject?.[`${day}_end_time` as keyof typeof selectedObject] as string | null;
 
-        let calculatedHours: number | null = null;
-        let calculatedStartTime: string | null = objectStartTime;
-        let calculatedEndTime: string | null = objectEndTime;
-
-        if (objectDailyHours !== null) {
-          calculatedHours = parseFloat((objectDailyHours / numAssignedEmployees).toFixed(2));
-        }
-        
-        (newEmpData as any)[hoursFieldName] = calculatedHours;
-        (newEmpData as any)[startFieldName] = calculatedStartTime;
-        (newEmpData as any)[endFieldName] = calculatedEndTime;
-      });
+          let calculatedHours: number | null = null;
+          if (objectDailyHours !== null) {
+            calculatedHours = parseFloat((objectDailyHours / numAssignedEmployees).toFixed(2));
+          }
+          
+          (newEmpData as any)[hoursFieldName] = calculatedHours;
+          (newEmpData as any)[startFieldName] = objectStartTime;
+          (newEmpData as any)[endFieldName] = objectEndTime;
+        });
+      }
       return newEmpData;
     });
 
-    if (JSON.stringify(newAssignments) !== JSON.stringify(form.getValues("assignedEmployees"))) {
-      form.setValue("assignedEmployees", newAssignments, { shouldValidate: true });
-    }
-  }, [form, objects, assignedEmployeeFields, selectedObjectId]);
+    replaceAssignedEmployees(newAssignments);
+  }, [form, objects, replaceAssignedEmployees]);
 
   useEffect(() => {
-    distributeObjectHours();
-  }, [selectedObjectId, assignedEmployeeFields.length, distributeObjectHours]);
+    const currentEmployeeIds = form.getValues("assignedEmployees")?.map(e => e.employeeId) || [];
+    if (currentEmployeeIds.length > 0) {
+      recalculateAndSetAssignments(currentEmployeeIds);
+    }
+  }, [selectedObjectId, recalculateAndSetAssignments, form]);
+
+  const handleEmployeeSelectionChange = (selectedIds: string[]) => {
+    recalculateAndSetAssignments(selectedIds);
+  };
 
   const handleAssignedHoursChange = useCallback((
     employeeIndex: number,
@@ -435,13 +448,16 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
       'hours'
     );
 
-    updateEmployeeField(employeeIndex, {
+    const updatedField = {
       ...currentAssignedEmployee,
       [`assigned_${day}_hours`]: parsedHours,
       [`assigned_${day}_start_time`]: newStartTime,
       [`assigned_${day}_end_time`]: newEndTime,
-    });
-  }, [assignedEmployeeFields, updateEmployeeField, form, objects, calculateEmployeeDayTimes]);
+    };
+    const newFields = [...assignedEmployeeFields];
+    newFields[employeeIndex] = updatedField;
+    replaceAssignedEmployees(newFields);
+  }, [assignedEmployeeFields, replaceAssignedEmployees, form, objects, calculateEmployeeDayTimes]);
 
   const handleAssignedTimeChange = useCallback((
     employeeIndex: number,
@@ -473,12 +489,15 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
       timeType === 'start' ? 'startTime' : 'endTime'
     );
 
-    updateEmployeeField(employeeIndex, {
+    const updatedField = {
       ...currentAssignedEmployee,
       [`assigned_${day}_start_time`]: calculatedStartTime,
       [`assigned_${day}_end_time`]: calculatedEndTime,
-    });
-  }, [assignedEmployeeFields, updateEmployeeField, form, objects, calculateEmployeeDayTimes]);
+    };
+    const newFields = [...assignedEmployeeFields];
+    newFields[employeeIndex] = updatedField;
+    replaceAssignedEmployees(newFields);
+  }, [assignedEmployeeFields, replaceAssignedEmployees, form, objects, calculateEmployeeDayTimes]);
 
   const handleFormSubmit: SubmitHandler<OrderFormValues> = async (data) => {
     if (data.objectId && data.assignedEmployees && data.assignedEmployees.length > 0) {
@@ -545,26 +564,6 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
       await fetchCustomerContacts(selectedCustomerId);
       form.setValue("customerContactId", newContactId);
     }
-  };
-
-  const handleEmployeeSelectionChange = (selectedIds: string[]) => {
-    const newAssignedEmployees = selectedIds.map(employeeId => {
-      const existing = assignedEmployeeFields.find(f => f.employeeId === employeeId);
-      return existing || { 
-        employeeId,
-        assigned_monday_hours: null, assigned_tuesday_hours: null, assigned_wednesday_hours: null,
-        assigned_thursday_hours: null, assigned_friday_hours: null, assigned_saturday_hours: null,
-        assigned_sunday_hours: null,
-        assigned_monday_start_time: null, assigned_monday_end_time: null,
-        assigned_tuesday_start_time: null, assigned_tuesday_end_time: null,
-        assigned_wednesday_start_time: null, assigned_wednesday_end_time: null,
-        assigned_thursday_start_time: null, assigned_thursday_end_time: null,
-        assigned_friday_start_time: null, assigned_friday_end_time: null,
-        assigned_saturday_start_time: null, assigned_saturday_end_time: null,
-        assigned_sunday_start_time: null, assigned_sunday_end_time: null,
-      };
-    });
-    form.setValue("assignedEmployees", newAssignedEmployees, { shouldValidate: true });
   };
 
   const getSumAssignedHoursForDay = (day: string): number => {
