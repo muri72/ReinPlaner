@@ -3,7 +3,7 @@
 import * as React from "react";
 import { format, addDays, subDays, startOfWeek, endOfWeek, eachDayOfInterval } from "date-fns";
 import { de } from "date-fns/locale";
-import { getPlanningDataForWeek, PlanningPageData, UnassignedOrder } from "@/lib/actions/planning";
+import { getPlanningDataForWeek, PlanningPageData, UnassignedOrder } from "@/app/dashboard/planning/actions";
 import { assignOrderToEmployee } from "@/app/dashboard/planning/actions";
 import { Button } from "./ui/button";
 import { ChevronLeft, ChevronRight, GripVertical } from "lucide-react";
@@ -228,7 +228,16 @@ export function ResourcePlanningCalendar() {
                                     </TooltipTrigger>
                                     {dayData.assignments.length > 0 && (
                                       <TooltipContent>
-                                        <ul className="text-sm">{dayData.assignments.map((a, i) => (<li key={i}>{a.title} ({a.hours.toFixed(1)}h)</li>))}</ul>
+                                        <ul className="text-sm space-y-1">
+                                          {dayData.assignments.map((a, i) => (
+                                            <li key={i}>
+                                              <div className="font-semibold">{a.title}</div>
+                                              <div className="text-xs text-muted-foreground">
+                                                {a.startTime && a.endTime ? `${a.startTime} - ${a.endTime}` : ''} ({a.hours.toFixed(1)}h)
+                                              </div>
+                                            </li>
+                                          ))}
+                                        </ul>
                                       </TooltipContent>
                                     )}
                                   </Tooltip>

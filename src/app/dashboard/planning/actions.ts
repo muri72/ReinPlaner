@@ -16,8 +16,8 @@ export interface PlanningData {
         assignments: {
           title: string;
           hours: number;
-          startTime: string | null; // New
-          endTime: string | null;   // New
+          startTime: string | null;
+          endTime: string | null;
         }[];
       };
     };
