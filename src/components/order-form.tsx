@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect, useCallback } from "react";
 import { useForm, SubmitHandler, useFieldArray, FieldPath } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -10,7 +11,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { PlusCircle, X } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { ObjectForm, ObjectFormValues } from "@/components/object-form";
@@ -20,19 +20,7 @@ import { DatePicker } from "@/components/date-picker";
 import { handleActionResponse } from "@/lib/toast-utils";
 import { Checkbox } from "@/components/ui/checkbox";
 
-// Definierte Liste der Dienstleistungen
-const availableServices = [
-  "Unterhaltsreinigung",
-  "Glasreinigung",
-  "Grundreinigung",
-  "Graffitientfernung",
-  "Sonderreinigung",
-] as const;
-
-// Helper function for number preprocessing
 const preprocessNumber = (val: unknown) => (val === "" || isNaN(Number(val)) ? null : Number(val));
-
-// Definieren von dayNames als const-Array
 const dayNames = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const;
 const germanDayNames: { [key: string]: string } = {
   monday: 'Mo',
@@ -43,21 +31,74 @@ const germanDayNames: { [key: string]: string } = {
   saturday: 'Sa',
   sunday: 'So',
 };
+const availableServices = [
+  "Unterhaltsreinigung",
+  "Glasreinigung",
+  "Grundreinigung",
+  "Graffitientfernung",
+  "Sonderreinigung",
+] as const;
 
-// Helper function to calculate suggested daily hours per employee
-// Moved outside the component to be accessible by other callbacks
-const calculateSuggestedDailyHoursPerEmployee = (
-  objects: { id: string; total_weekly_hours: number | null }[],
-  objectId: string | null,
-  employeeCount: number
-): number | null => {
-  if (!objectId || employeeCount === 0) return null;
-  const selectedObject = objects.find(obj => obj.id === objectId);
-  if (!selectedObject || selectedObject.total_weekly_hours === null) return null;
+// Helper function to calculate the next state of assigned employees with distributed hours
+const calculateNextAssignedEmployees = (
+  currentAssignedEmployees: Array<any>, // Use any for simplicity in this helper, types are enforced by schema
+  selectedObject: { [key: string]: any } | undefined | null, // Object with daily hours
+  initialAssignedEmployeesCount: number // To check if it's initial load vs dynamic change
+): Array<any> => {
+  if (!selectedObject || currentAssignedEmployees.length === 0) {
+    // If no object or no assigned employees, return employees with null hours
+    return currentAssignedEmployees.map(emp => {
+      const newEmp = { ...emp };
+      dayNames.forEach(day => {
+        newEmp[`assigned_${day}_hours`] = null;
+      });
+      return newEmp;
+    });
+  }
 
-  const suggested = selectedObject.total_weekly_hours / employeeCount;
-  return parseFloat(suggested.toFixed(2));
+  const numAssignedEmployees = currentAssignedEmployees.length;
+  const newAssignments = currentAssignedEmployees.map(emp => ({ ...emp })); // Create a mutable copy
+
+  dayNames.forEach(day => {
+    const objectDailyHours = selectedObject[`${day}_hours`] as number | null;
+
+    if (objectDailyHours !== null && objectDailyHours !== undefined) {
+      const suggestedDailyHoursPerEmployeeValue = parseFloat((objectDailyHours / numAssignedEmployees).toFixed(2));
+
+      newAssignments.forEach((assignedEmp) => {
+        // Only update if it's the initial load or if the number of employees changed
+        // This prevents overwriting manual edits if the count hasn't changed
+        if (initialAssignedEmployeesCount === 0 || numAssignedEmployees !== initialAssignedEmployeesCount) {
+          assignedEmp[`assigned_${day}_hours`] = suggestedDailyHoursPerEmployeeValue;
+        }
+      });
+    } else {
+      // If object has no hours for this day, set assigned hours to null
+      newAssignments.forEach((assignedEmp) => {
+        assignedEmp[`assigned_${day}_hours`] = null;
+      });
+    }
+  });
+
+  return newAssignments;
 };
+
+// Helper for deep comparison of arrays of objects
+const areArraysDeepEqual = (arr1: any[], arr2: any[]): boolean => {
+  if (arr1.length !== arr2.length) return false;
+  for (let i = 0; i < arr1.length; i++) {
+    const obj1 = arr1[i];
+    const obj2 = arr2[i];
+    if (obj1.employeeId !== obj2.employeeId) return false; // Basic check for identity
+    for (const key of dayNames) {
+      if (obj1[`assigned_${key}_hours`] !== obj2[`assigned_${key}_hours`]) {
+        return false;
+      }
+    }
+  }
+  return true;
+};
+
 
 export const orderSchema = z.object({
   title: z.string().min(1, "Titel ist erforderlich").max(100, "Titel ist zu lang"),
@@ -216,64 +257,34 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     ? objects.filter(obj => obj.customer_id === selectedCustomerId)
     : [];
 
-  // Logic for distributing daily hours
-  const distributeDailyHours = useCallback((
-    currentObjectId: string | null,
-    currentAssignedEmployees: typeof selectedAssignedEmployees
-  ) => {
-    if (!currentObjectId || !currentAssignedEmployees || currentAssignedEmployees.length === 0) {
-      return;
-    }
-
-    const selectedObject = objects.find(obj => obj.id === currentObjectId);
-    if (!selectedObject) return;
-
-    const numAssignedEmployees = currentAssignedEmployees.length;
-
-    dayNames.forEach(day => {
-      const objectDailyHours = selectedObject[`${day}_hours` as keyof typeof selectedObject] as number | null;
-      if (objectDailyHours === null || objectDailyHours === undefined) return;
-
-      const suggestedDailyHoursPerEmployeeValue = parseFloat((objectDailyHours / numAssignedEmployees).toFixed(2));
-
-      currentAssignedEmployees.forEach((assignedEmp, index) => {
-        const currentAssignedHours = assignedEmp[`assigned_${day}_hours` as keyof typeof assignedEmp] as number | null;
-        
-        if (currentAssignedHours === null || currentAssignedHours === undefined || numAssignedEmployees !== (initialData?.assignedEmployees?.length || 0)) {
-             updateEmployeeField(index, {
-                ...assignedEmp,
-                [`assigned_${day}_hours`]: suggestedDailyHoursPerEmployeeValue,
-            });
-        }
-      });
-    });
-  }, [objects, updateEmployeeField, initialData]);
-
-
   // Effect to update assignedDailyHours for employees and totalEstimatedHours for the order
   useEffect(() => {
-    const currentAssignedCount = selectedAssignedEmployees?.length || 0;
     const currentObjectId = form.getValues("objectId") ?? null;
+    const currentAssignedEmployees = form.getValues("assignedEmployees") || [];
 
-    // Update assignedDailyHours for each employee
-    if (currentObjectId && currentAssignedCount > 0) {
-      distributeDailyHours(currentObjectId, selectedAssignedEmployees);
-    } else if (currentAssignedCount === 0) {
-        // If no employees assigned, clear all assigned daily hours fields
-        assignedEmployeeFields.forEach((field, index) => {
+    // Calculate the next state of assigned employees with distributed hours
+    const nextAssignedEmployees = calculateNextAssignedEmployees(
+        currentAssignedEmployees,
+        objects.find(obj => obj.id === currentObjectId),
+        initialData?.assignedEmployees?.length || 0 // Pass initial count for comparison
+    );
+
+    // Only update if the calculated next state is different from the current form state
+    if (!areArraysDeepEqual(nextAssignedEmployees, currentAssignedEmployees)) {
+        nextAssignedEmployees.forEach((newEmp, index) => {
             dayNames.forEach(day => {
                 const fieldName = `assignedEmployees.${index}.assigned_${day}_hours` as const;
-                if (field[`assigned_${day}_hours` as keyof typeof field] !== null) {
-                    updateEmployeeField(index, { ...field, [fieldName]: null });
+                const currentValue = form.getValues(fieldName);
+                if (currentValue !== newEmp[`assigned_${day}_hours`]) {
+                    form.setValue(fieldName, newEmp[`assigned_${day}_hours`], { shouldValidate: false });
                 }
             });
         });
     }
 
-    // Update totalEstimatedHours for the order (based on object's total weekly hours or daily hours for one-time)
+    // Logic for totalEstimatedHours
     const currentTotalEstimatedHours = form.getValues("totalEstimatedHours");
     let newTotalEstimatedHours: number | null = null;
-
     const selectedObject = objects.find(obj => obj.id === currentObjectId);
     if (selectedObject) {
       if (['recurring', 'substitution', 'permanent'].includes(orderType)) {
@@ -294,11 +305,11 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
         newTotalEstimatedHours = parseFloat(dailyHours.toFixed(2));
       }
     }
-
     if (currentTotalEstimatedHours !== newTotalEstimatedHours) {
-      form.setValue("totalEstimatedHours", newTotalEstimatedHours, { shouldValidate: false });
+        form.setValue("totalEstimatedHours", newTotalEstimatedHours, { shouldValidate: false });
     }
-  }, [selectedObjectId, selectedAssignedEmployees, objects, form, updateEmployeeField, orderType, form.watch("dueDate"), distributeDailyHours, assignedEmployeeFields]);
+
+  }, [selectedObjectId, selectedAssignedEmployees, objects, form, orderType, initialData]);
 
 
   const handleFormSubmit: SubmitHandler<OrderFormValues> = async (data) => {
@@ -372,17 +383,11 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
 
   const handleEmployeeAssignmentChange = (employeeId: string, isChecked: boolean) => {
     if (isChecked) {
-      const currentAssignedCount = (selectedAssignedEmployees?.length || 0) + 1;
-      const suggested = calculateSuggestedDailyHoursPerEmployee(objects, form.getValues("objectId") ?? null, currentAssignedCount);
       appendEmployee({
         employeeId: employeeId,
-        assigned_monday_hours: suggested,
-        assigned_tuesday_hours: suggested,
-        assigned_wednesday_hours: suggested,
-        assigned_thursday_hours: suggested,
-        assigned_friday_hours: suggested,
-        assigned_saturday_hours: suggested,
-        assigned_sunday_hours: suggested,
+        assigned_monday_hours: null, assigned_tuesday_hours: null, assigned_wednesday_hours: null,
+        assigned_thursday_hours: null, assigned_friday_hours: null, assigned_saturday_hours: null,
+        assigned_sunday_hours: null,
       });
     } else {
       const index = assignedEmployeeFields.findIndex(field => field.employeeId === employeeId);
@@ -601,7 +606,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
                               step="0.5"
                               placeholder="Std."
                               className="w-full text-right"
-                              {...form.register(fieldName as FieldPath<OrderFormValues>, { valueAsNumber: true })}
+                              {...form.register(fieldName, { valueAsNumber: true })}
                               disabled={objectDailyHours === null}
                             />
                             {/* Removed specific error message display for individual daily hour fields */}
