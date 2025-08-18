@@ -127,27 +127,35 @@ export async function getPlanningDataForWeek(currentDate: Date): Promise<{ succe
           const order = assignment.orders;
           if (!order) continue;
 
+          // Check if the order is active on the current day
+          let isOrderActiveToday = false;
+          if (order.order_type === 'one_time') {
+            if (order.due_date && formatISO(parseISO(order.due_date), { representation: 'date' }) === dateString) {
+              isOrderActiveToday = true;
+            }
+          } else if (['permanent', 'recurring', 'substitution'].includes(order.order_type)) {
+            const startDate = order.recurring_start_date ? parseISO(order.recurring_start_date) : null;
+            const endDate = order.recurring_end_date ? parseISO(order.recurring_end_date) : null;
+            if (startDate && startDate <= day && (!endDate || endDate >= day)) {
+              isOrderActiveToday = true;
+            }
+          }
+          
+          if (!isOrderActiveToday) continue;
+
+          // If active, get the hours for this specific day from the assignment, regardless of order type
           let dailyHours = 0;
           let assignedStartTime: string | null = null;
           let assignedEndTime: string | null = null;
 
-          if (order.order_type === 'one_time' && order.due_date === dateString) {
-            dailyHours = order.total_estimated_hours || 0;
-          } else if (['permanent', 'recurring', 'substitution'].includes(order.order_type)) {
-            // Check if the recurring order is active on this day
-            const startDate = order.recurring_start_date ? parseISO(order.recurring_start_date) : null;
-            const endDate = order.recurring_end_date ? parseISO(order.recurring_end_date) : null;
-            if (startDate && startDate <= day && (!endDate || endDate >= day)) {
-              switch (dayOfWeek) {
-                case 1: dailyHours = assignment.assigned_monday_hours || 0; assignedStartTime = assignment.assigned_monday_start_time; assignedEndTime = assignment.assigned_monday_end_time; break;
-                case 2: dailyHours = assignment.assigned_tuesday_hours || 0; assignedStartTime = assignment.assigned_tuesday_start_time; assignedEndTime = assignment.assigned_tuesday_end_time; break;
-                case 3: dailyHours = assignment.assigned_wednesday_hours || 0; assignedStartTime = assignment.assigned_wednesday_start_time; assignedEndTime = assignment.assigned_wednesday_end_time; break;
-                case 4: dailyHours = assignment.assigned_thursday_hours || 0; assignedStartTime = assignment.assigned_thursday_start_time; assignedEndTime = assignment.assigned_thursday_end_time; break;
-                case 5: dailyHours = assignment.assigned_friday_hours || 0; assignedStartTime = assignment.assigned_friday_start_time; assignedEndTime = assignment.assigned_friday_end_time; break;
-                case 6: dailyHours = assignment.assigned_saturday_hours || 0; assignedStartTime = assignment.assigned_saturday_start_time; assignedEndTime = assignment.assigned_saturday_end_time; break;
-                case 0: dailyHours = assignment.assigned_sunday_hours || 0; assignedStartTime = assignment.assigned_sunday_start_time; assignedEndTime = assignment.assigned_sunday_end_time; break;
-              }
-            }
+          switch (dayOfWeek) {
+            case 1: dailyHours = assignment.assigned_monday_hours || 0; assignedStartTime = assignment.assigned_monday_start_time; assignedEndTime = assignment.assigned_monday_end_time; break;
+            case 2: dailyHours = assignment.assigned_tuesday_hours || 0; assignedStartTime = assignment.assigned_tuesday_start_time; assignedEndTime = assignment.assigned_tuesday_end_time; break;
+            case 3: dailyHours = assignment.assigned_wednesday_hours || 0; assignedStartTime = assignment.assigned_wednesday_start_time; assignedEndTime = assignment.assigned_wednesday_end_time; break;
+            case 4: dailyHours = assignment.assigned_thursday_hours || 0; assignedStartTime = assignment.assigned_thursday_start_time; assignedEndTime = assignment.assigned_thursday_end_time; break;
+            case 5: dailyHours = assignment.assigned_friday_hours || 0; assignedStartTime = assignment.assigned_friday_start_time; assignedEndTime = assignment.assigned_friday_end_time; break;
+            case 6: dailyHours = assignment.assigned_saturday_hours || 0; assignedStartTime = assignment.assigned_saturday_start_time; assignedEndTime = assignment.assigned_saturday_end_time; break;
+            case 0: dailyHours = assignment.assigned_sunday_hours || 0; assignedStartTime = assignment.assigned_sunday_start_time; assignedEndTime = assignment.assigned_sunday_end_time; break;
           }
 
           if (dailyHours > 0) {
