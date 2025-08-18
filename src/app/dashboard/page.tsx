@@ -154,7 +154,7 @@ export default async function DashboardPage() {
       orders (
         title,
         customers ( name ),
-        employees ( first_name, last_name )
+        order_employee_assignments ( employees ( first_name, last_name ) )
       ),
       profiles ( first_name, last_name )
     `)
@@ -175,15 +175,21 @@ export default async function DashboardPage() {
   if (unresolvedOrderFeedbackError) console.error("Fehler beim Laden des ungelösten Auftrags-Feedbacks:", unresolvedOrderFeedbackError?.message || unresolvedOrderFeedbackError);
   if (unresolvedGeneralFeedbackError) console.error("Fehler beim Laden des ungelösten allgemeinen Feedbacks:", unresolvedGeneralFeedbackError?.message || unresolvedGeneralFeedbackError);
 
-  const mappedUnresolvedOrderFeedback = unresolvedOrderFeedback?.map(f => ({
-    ...f,
-    order: {
-      title: f.orders?.[0]?.title || 'Unbekannter Auftrag',
-      customer_name: f.orders?.[0]?.customers?.[0]?.name || 'N/A',
-      employee_name: `${f.orders?.[0]?.employees?.[0]?.first_name || ''} ${f.orders?.[0]?.employees?.[0]?.last_name || ''}`.trim() || 'N/A',
-    },
-    replied_by_name: `${f.profiles?.first_name || ''} ${f.profiles?.last_name || ''}`.trim() || 'Admin',
-  })) || [];
+  const mappedUnresolvedOrderFeedback = unresolvedOrderFeedback?.map(f => {
+    const employeeAssignment = f.orders?.order_employee_assignments?.[0];
+    const employee = employeeAssignment?.employees;
+    const employeeName = (employee?.first_name || employee?.last_name) ? `${employee.first_name || ''} ${employee.last_name || ''}`.trim() : 'N/A';
+
+    return {
+      ...f,
+      order: {
+        title: f.orders?.title || 'Unbekannter Auftrag',
+        customer_name: f.orders?.customers?.[0]?.name || 'N/A',
+        employee_name: employeeName,
+      },
+      replied_by_name: `${f.profiles?.first_name || ''} ${f.profiles?.last_name || ''}`.trim() || 'Admin',
+    };
+  }) || [];
 
   const mappedUnresolvedGeneralFeedback = unresolvedGeneralFeedback?.map(f => ({
     ...f,

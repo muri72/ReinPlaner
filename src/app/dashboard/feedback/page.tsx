@@ -78,7 +78,7 @@ export default function FeedbackPage() {
         orders (
           title,
           customers ( name ),
-          employees ( first_name, last_name )
+          order_employee_assignments ( employees ( first_name, last_name ) )
         ),
         profiles ( first_name, last_name )
       `)
@@ -96,15 +96,21 @@ export default function FeedbackPage() {
     if (orderFeedbackError) console.error("Fehler beim Laden des Auftrags-Feedbacks:", orderFeedbackError?.message || orderFeedbackError);
     if (generalFeedbackError) console.error("Fehler beim Laden des allgemeinen Feedbacks:", generalFeedbackError?.message || generalFeedbackError);
 
-    setMappedOrderFeedback(orderFeedbackData?.map(f => ({
-      ...f,
-      order: {
-        title: f.orders?.title || 'Unbekannter Auftrag',
-        customer_name: f.orders?.customers?.name || 'N/A',
-        employee_name: `${f.orders?.employees?.first_name || ''} ${f.orders?.employees?.last_name || ''}`.trim() || 'N/A',
-      },
-      replied_by_name: `${f.profiles?.first_name || ''} ${f.profiles?.last_name || ''}`.trim() || 'Admin',
-    })) || []);
+    setMappedOrderFeedback(orderFeedbackData?.map(f => {
+      const employeeAssignment = f.orders?.order_employee_assignments?.[0];
+      const employee = employeeAssignment?.employees;
+      const employeeName = (employee?.first_name || employee?.last_name) ? `${employee.first_name || ''} ${employee.last_name || ''}`.trim() : 'N/A';
+
+      return {
+        ...f,
+        order: {
+          title: f.orders?.title || 'Unbekannter Auftrag',
+          customer_name: f.orders?.customers?.[0]?.name || 'N/A',
+          employee_name: employeeName,
+        },
+        replied_by_name: `${f.profiles?.first_name || ''} ${f.profiles?.last_name || ''}`.trim() || 'Admin',
+      };
+    }) || []);
 
     setMappedGeneralFeedback(generalFeedbackData?.map(f => ({
       ...f,
