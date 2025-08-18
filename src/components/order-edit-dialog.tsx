@@ -81,7 +81,7 @@ export function OrderEditDialog({ order }: OrderEditDialogProps) {
         </DialogTrigger>
         <DialogContent 
           key={open ? "order-edit-open" : "order-edit-closed"} 
-          className="sm:max-w-[425px] max-h-[90vh] flex flex-col glassmorphism-card" // Added flex flex-col
+          className="sm:max-w-[425px] flex flex-col glassmorphism-card" // Removed max-h-[90vh]
         >
           <DialogHeader>
             <DialogTitle>Auftrag bearbeiten</DialogTitle>
