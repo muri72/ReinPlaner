@@ -1,6 +1,6 @@
 "use client";
 
-import { useForm, SubmitHandler, useFieldArray, FieldPath, Controller } from "react-hook-form";
+import { useForm, SubmitHandler, FieldPath, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Input } from "@/components/ui/input";
@@ -13,7 +13,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-// REMOVED: import { ObjectForm, ObjectFormValues } from "@/components/object-form"; // Circular import
 import { createObject } from "@/app/dashboard/objects/actions";
 import { CustomerContactCreateDialog } from "@/components/customer-contact-create-dialog";
 import { DatePicker } from "@/components/date-picker";
@@ -107,7 +106,6 @@ export const objectSchema = z.object({
   saturday_end_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
   sunday_start_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
   sunday_end_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
-  // REMOVED: totalWeeklyHours: z.preprocess(preprocessNumber, z.nullable(z.number().min(0).max(168)).optional()), // This is a generated column in DB
 }).superRefine((data, ctx) => {
   if (data.isAlarmSecured && !data.alarmPassword && !data.securityCodeWord) {
     ctx.addIssue({
@@ -177,27 +175,27 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
     isAlarmSecured: initialData?.isAlarmSecured ?? false,
     alarmPassword: initialData?.alarmPassword ?? null,
     securityCodeWord: initialData?.securityCodeWord ?? null,
-    monday_hours: initialData?.monday_hours,
-    tuesday_hours: initialData?.tuesday_hours,
-    wednesday_hours: initialData?.wednesday_hours,
-    thursday_hours: initialData?.thursday_hours,
-    friday_hours: initialData?.friday_hours,
-    saturday_hours: initialData?.saturday_hours,
-    sunday_hours: initialData?.sunday_hours,
-    monday_start_time: initialData?.monday_start_time,
-    monday_end_time: initialData?.monday_end_time,
-    tuesday_start_time: initialData?.tuesday_start_time,
-    tuesday_end_time: initialData?.tuesday_end_time,
-    wednesday_start_time: initialData?.wednesday_start_time,
-    wednesday_end_time: initialData?.wednesday_end_time,
-    thursday_start_time: initialData?.thursday_start_time,
-    thursday_end_time: initialData?.thursday_end_time,
-    friday_start_time: initialData?.friday_start_time,
-    friday_end_time: initialData?.friday_end_time,
-    saturday_start_time: initialData?.saturday_start_time,
-    saturday_end_time: initialData?.saturday_end_time,
-    sunday_start_time: initialData?.sunday_start_time,
-    sunday_end_time: initialData?.sunday_end_time,
+    monday_hours: initialData?.monday_hours as number | null | undefined,
+    tuesday_hours: initialData?.tuesday_hours as number | null | undefined,
+    wednesday_hours: initialData?.wednesday_hours as number | null | undefined,
+    thursday_hours: initialData?.thursday_hours as number | null | undefined,
+    friday_hours: initialData?.friday_hours as number | null | undefined,
+    saturday_hours: initialData?.saturday_hours as number | null | undefined,
+    sunday_hours: initialData?.sunday_hours as number | null | undefined,
+    monday_start_time: initialData?.monday_start_time ?? null,
+    monday_end_time: initialData?.monday_end_time ?? null,
+    tuesday_start_time: initialData?.tuesday_start_time ?? null,
+    tuesday_end_time: initialData?.tuesday_end_time ?? null,
+    wednesday_start_time: initialData?.wednesday_start_time ?? null,
+    wednesday_end_time: initialData?.wednesday_end_time ?? null,
+    thursday_start_time: initialData?.thursday_start_time ?? null,
+    thursday_end_time: initialData?.thursday_end_time ?? null,
+    friday_start_time: initialData?.friday_start_time ?? null,
+    friday_end_time: initialData?.friday_end_time ?? null,
+    saturday_start_time: initialData?.saturday_start_time ?? null,
+    saturday_end_time: initialData?.saturday_end_time ?? null,
+    sunday_start_time: initialData?.sunday_start_time ?? null,
+    sunday_end_time: initialData?.sunday_end_time ?? null,
   };
 
   const form = useForm<ObjectFormValues>({
@@ -207,12 +205,7 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
   });
 
   const selectedCustomerId = form.watch("customerId");
-  // REMOVED: const selectedObjectId = form.watch("objectId"); // This is not used in ObjectForm, but in OrderForm.
   
-  // Watch assignedEmployees for real-time validation
-  // This is not used in ObjectForm, but in OrderForm.
-  // const watchedAssignedEmployees = form.watch("assignedEmployees"); 
-
   const fetchCustomerContacts = async (customerId: string) => {
     const { data: contactsData, error: contactsError } = await supabase
       .from('customer_contacts')
@@ -229,16 +222,9 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
       if (customersData) setCustomers(customersData);
       if (customersError) console.error("Fehler beim Laden der Kunden:", customersError);
 
-      // Objects are not needed for dropdowns in ObjectForm itself, but for calculating total_weekly_hours
-      // and for the object creation dialog within OrderForm.
       const { data: objectsData, error: objectsError } = await supabase.from('objects').select('id, name, customer_id, monday_hours, tuesday_hours, wednesday_hours, thursday_hours, friday_hours, saturday_hours, sunday_hours, monday_start_time, monday_end_time, tuesday_start_time, tuesday_end_time, wednesday_start_time, wednesday_end_time, thursday_start_time, thursday_end_time, friday_start_time, friday_end_time, saturday_start_time, saturday_end_time, sunday_start_time, sunday_end_time, total_weekly_hours, time_of_day');
       if (objectsData) setObjects(objectsData);
       if (objectsError) console.error("Fehler beim Laden der Objekte:", objectsError);
-
-      // Employees are not needed for ObjectForm itself, but for OrderForm.
-      // const { data: employeesData, error: employeesError } = await supabase.from('employees').select('id, first_name, last_name').order('last_name', { ascending: true });
-      // if (employeesData) setAllEmployees(employeesData);
-      // if (employeesError) console.error("Fehler beim Laden der Mitarbeiter:", employeesError);
     };
     fetchDropdownData();
   }, [supabase]);
