@@ -35,7 +35,7 @@ export const orderSchema = z.object({
   status: z.enum(["pending", "in_progress", "completed"]).default("pending"),
   customerId: z.string().uuid("Ungültige Kunden-ID").min(1, "Kunde ist erforderlich"),
   objectId: z.string().uuid("Ungültiges Objekt-ID").optional().nullable(), // Geändert zu optional und nullable
-  employeeId: z.string().uuid("Ungültige Mitarbeiter-ID").optional().nullable(),
+  // employeeId wurde entfernt, da Zuweisungen über order_employee_assignments erfolgen
   customerContactId: z.string().uuid("Ungültige Kundenkontakt-ID").optional().nullable(),
   orderType: z.enum(["one_time", "recurring", "substitution", "permanent"]).default("one_time"),
   recurringStartDate: z.date().optional().nullable(),
@@ -64,7 +64,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
   const supabase = createClient();
   const [customers, setCustomers] = useState<{ id: string; name: string }[]>([]);
   const [objects, setObjects] = useState<{ id: string; name: string; customer_id: string }[]>([]);
-  const [employees, setEmployees] = useState<{ id: string; first_name: string; last_name: string }[]>([]);
+  // employees state is no longer needed here as employeeId is removed from orderSchema
   const [customerContacts, setCustomerContacts] = useState<{ id: string; first_name: string; last_name: string; customer_id: string }[]>([]);
   const [isNewObjectDialogOpen, setIsNewObjectDialogOpen] = useState(false);
 
@@ -75,7 +75,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     status: initialData?.status ?? "pending",
     customerId: initialData?.customerId ?? "",
     objectId: initialData?.objectId ?? null, // Geändert zu null
-    employeeId: initialData?.employeeId ?? null,
+    // employeeId wurde entfernt
     customerContactId: initialData?.customerContactId ?? null,
     orderType: initialData?.orderType ?? "one_time",
     recurringStartDate: initialData?.recurringStartDate ? new Date(initialData.recurringStartDate) : null,
@@ -95,7 +95,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
   const orderType = form.watch("orderType");
   const selectedCustomerId = form.watch("customerId");
   const selectedObjectId = form.watch("objectId");
-  const selectedEmployeeId = form.watch("employeeId");
+  // selectedEmployeeId is no longer watched here
 
   // Funktion zum Laden der Kundenkontakte
   const fetchCustomerContacts = async (customerId: string) => {
@@ -119,9 +119,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
       if (objectsData) setObjects(objectsData);
       if (objectsError) console.error("Fehler beim Laden der Objekte:", objectsError);
 
-      const { data: employeesData, error: employeesError } = await supabase.from('employees').select('id, first_name, last_name');
-      if (employeesData) setEmployees(employeesData);
-      if (employeesError) console.error("Fehler beim Laden der Mitarbeiter:", employeesError);
+      // Employees are no longer fetched here as they are not directly assigned in this form
     };
     fetchDropdownData();
   }, [supabase]);
@@ -141,18 +139,16 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     if (!initialData) { // Nur wenn ein neuer Auftrag erstellt wird
       const customerName = customers.find(c => c.id === selectedCustomerId)?.name || '';
       const objectName = objects.find(o => o.id === selectedObjectId)?.name || '';
-      const employeeName = employees.find(e => e.id === selectedEmployeeId);
-      const employeeFullName = employeeName ? `${employeeName.first_name || ''} ${employeeName.last_name || ''}`.trim() : '';
+      // employeeFullName is no longer part of auto-generated title
 
       const parts = [];
       if (objectName) parts.push(objectName);
       if (customerName) parts.push(customerName);
-      if (employeeFullName) parts.push(employeeFullName);
 
       const generatedTitle = parts.join(' • ');
       form.setValue("title", generatedTitle);
     }
-  }, [selectedCustomerId, selectedObjectId, selectedEmployeeId, customers, objects, employees, form, initialData]);
+  }, [selectedCustomerId, selectedObjectId, customers, objects, form, initialData]);
 
   // Objekte filtern basierend auf ausgewähltem Kunden
   const filteredObjects = selectedCustomerId
@@ -201,6 +197,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
 
   return (
     <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 w-full max-w-md" suppressHydrationWarning>
+      {/* Grundlegende Objektinformationen */}
       <div>
         <Label htmlFor="title">Titel des Auftrags</Label>
         <Input
@@ -279,6 +276,26 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
             <p className="text-red-500 text-sm mt-1">{form.formState.errors.customerContactId.message}</p>
           )}
         </div>
+        <CustomerContactCreateDialog customerId={selectedCustomerId} onContactCreated={handleCustomerContactCreated} disabled={!selectedCustomerId} />
+      </div>
+      <div className="flex items-end gap-2">
+        <div className="flex-grow">
+          <Label htmlFor="objectId">Objekt</Label>
+          <Select onValueChange={(value) => form.setValue("objectId", value)} value={form.watch("objectId") || "unassigned"} disabled={!form.watch("customerId")}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Objekt auswählen" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="unassigned">Kein Objekt zugewiesen</SelectItem>
+              {filteredObjects.map(obj => (
+                <SelectItem key={obj.id} value={obj.id}>{obj.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {form.formState.errors.objectId && (
+            <p className="text-red-500 text-sm mt-1">{form.formState.errors.objectId.message}</p>
+          )}
+        </div>
         <Dialog open={isNewObjectDialogOpen} onOpenChange={setIsNewObjectDialogOpen}>
           <DialogTrigger asChild>
             <Button
@@ -305,47 +322,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
           </DialogContent>
         </Dialog>
       </div>
-      <div className="flex items-end gap-2">
-        <div className="flex-grow">
-          <Label htmlFor="objectId">Objekt</Label>
-          <Select onValueChange={(value) => form.setValue("objectId", value)} value={form.watch("objectId") || "unassigned"} disabled={!form.watch("customerId")}>
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Objekt auswählen" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="unassigned">Kein Objekt zugewiesen</SelectItem>
-              {filteredObjects.map(obj => (
-                <SelectItem key={obj.id} value={obj.id}>{obj.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {form.formState.errors.objectId && (
-            <p className="text-red-500 text-sm mt-1">{form.formState.errors.objectId.message}</p>
-          )}
-        </div>
-        <CustomerContactCreateDialog
-          customerId={selectedCustomerId}
-          onContactCreated={handleCustomerContactCreated}
-          disabled={!selectedCustomerId}
-        />
-      </div>
-      <div>
-        <Label htmlFor="employeeId">Zugewiesener Mitarbeiter (optional)</Label>
-        <Select onValueChange={(value) => form.setValue("employeeId", value === "unassigned" ? null : value)} value={form.watch("employeeId") || "unassigned"}>
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Mitarbeiter auswählen" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="unassigned">Kein Mitarbeiter zugewiesen</SelectItem>
-            {employees.map(employee => (
-              <SelectItem key={employee.id} value={employee.id}>{employee.first_name} {employee.last_name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {form.formState.errors.employeeId && (
-          <p className="text-red-500 text-sm mt-1">{form.formState.errors.employeeId.message}</p>
-        )}
-      </div>
+      {/* Employee selection removed from here */}
       <div>
         <Label htmlFor="orderType">Auftragstyp</Label>
         <Select onValueChange={(value) => {

@@ -95,7 +95,7 @@ export function CustomerOrderRequestForm({ customerId, onSuccess }: CustomerOrde
       customerContactId: customerContacts.length > 0 ? customerContacts[0].id : null,
       status: 'pending', // Default status for customer requests
       requestStatus: 'pending', // Always pending for customer requests
-      employeeId: null, // No employee assigned yet
+      // employeeId: null, // No employee assigned yet // Entfernt
       priority: 'medium', // Default priority for customer requests
       estimatedHours: null, // No estimated hours from customer
     });

@@ -20,7 +20,7 @@ export async function createOrder(data: OrderFormValues) {
     status,
     customerId,
     objectId,
-    employeeId,
+    // employeeId, // Entfernt
     customerContactId,
     orderType,
     recurringStartDate,
@@ -42,7 +42,7 @@ export async function createOrder(data: OrderFormValues) {
       status: status || 'pending',
       customer_id: customerId,
       object_id: objectId,
-      employee_id: employeeId,
+      // employee_id: employeeId, // Entfernt
       customer_contact_id: customerContactId,
       order_type: orderType,
       recurring_start_date: recurringStartDate ? recurringStartDate.toISOString().split('T')[0] : null,
@@ -88,7 +88,7 @@ export async function updateOrder(orderId: string, data: OrderFormValues) {
   }
 
   // Originalen Auftrag abrufen, um Änderungen zu vergleichen
-  const { data: originalOrder } = await supabase.from('orders').select('employee_id, title').eq('id', orderId).single();
+  // const { data: originalOrder } = await supabase.from('orders').select('employee_id, title').eq('id', orderId).single(); // employee_id entfernt
 
   const { error } = await supabase
     .from('orders')
@@ -99,7 +99,7 @@ export async function updateOrder(orderId: string, data: OrderFormValues) {
       status: data.status,
       customer_id: data.customerId,
       object_id: data.objectId,
-      employee_id: data.employeeId,
+      // employee_id: data.employeeId, // Entfernt
       customer_contact_id: data.customerContactId,
       order_type: data.orderType,
       recurring_start_date: data.recurringStartDate ? data.recurringStartDate.toISOString().split('T')[0] : null,
@@ -118,19 +118,21 @@ export async function updateOrder(orderId: string, data: OrderFormValues) {
     return { success: false, message: error.message };
   }
 
-  // Benachrichtigung bei Mitarbeiterwechsel
-  if (originalOrder && originalOrder.employee_id !== data.employeeId && data.employeeId) {
-    const supabaseAdmin = createAdminClient();
-    const { data: employeeData } = await supabaseAdmin.from('employees').select('user_id').eq('id', data.employeeId).single();
-    if (employeeData?.user_id) {
-      await sendNotification({
-        userId: employeeData.user_id,
-        title: "Sie wurden einem Auftrag zugewiesen",
-        message: `Ihnen wurde dem Auftrag "${originalOrder.title}" zugewiesen.`,
-        link: "/dashboard/orders"
-      });
-    }
-  }
+  // Benachrichtigung bei Mitarbeiterwechsel (Logik entfernt, da Zuweisungen jetzt über order_employee_assignments erfolgen)
+  // if (originalOrder && originalOrder.employee_id !== data.employeeId && data.employeeId) {
+  //   const supabaseAdmin = createAdminClient();
+  //   const { data: employeeData } = await supabaseAdmin.from('employees').select('user_id').eq('id', data.employeeId).single();
+  //   const { data: orderData } = await supabaseAdmin.from('orders').select('title').eq('id', orderId).single();
+
+  //   if (employeeData?.user_id && orderData) {
+  //     await sendNotification({
+  //       userId: employeeData.user_id,
+  //       title: "Auftrag genehmigt & zugewiesen",
+  //       message: `Ihnen wurde dem Auftrag "${orderData.title}" zugewiesen.`,
+  //       link: "/dashboard/orders"
+  //     });
+  //   }
+  // }
 
   revalidatePath("/dashboard/orders");
   return { success: true, message: "Auftrag erfolgreich aktualisiert!" };
@@ -181,22 +183,47 @@ export async function processOrderRequest(formData: FormData): Promise<{ success
     return { success: false, message: "Bitte weisen Sie einen Mitarbeiter zu, um den Auftrag zu genehmigen." };
   }
 
-  const { error } = await supabase
+  // Update order request status
+  const { error: orderUpdateError } = await supabase
     .from('orders')
     .update({
       request_status: decision,
-      employee_id: decision === 'approved' ? employeeId : null,
-      status: decision === 'approved' ? 'pending' : 'pending',
+      status: decision === 'approved' ? 'pending' : 'pending', // Status bleibt pending, bis er bearbeitet wird
     })
     .eq('id', orderId);
 
-  if (error) {
-    console.error("Fehler bei der Bearbeitung der Auftragsanfrage:", error?.message || error);
-    return { success: false, message: error.message };
+  if (orderUpdateError) {
+    console.error("Fehler bei der Aktualisierung des Auftragsstatus:", orderUpdateError?.message || orderUpdateError);
+    return { success: false, message: orderUpdateError.message };
   }
 
-  // Benachrichtigung bei Genehmigung
+  // Handle employee assignment in order_employee_assignments table
   if (decision === 'approved' && employeeId) {
+    // First, remove any existing assignments for this order
+    const { error: deleteAssignmentError } = await supabase
+      .from('order_employee_assignments')
+      .delete()
+      .eq('order_id', orderId);
+
+    if (deleteAssignmentError) {
+      console.error("Fehler beim Löschen alter Zuweisungen:", deleteAssignmentError?.message || deleteAssignmentError);
+      return { success: false, message: `Fehler bei der Zuweisung: ${deleteAssignmentError.message}` };
+    }
+
+    // Then, insert the new assignment
+    const { error: insertAssignmentError } = await supabase
+      .from('order_employee_assignments')
+      .insert({
+        order_id: orderId,
+        employee_id: employeeId,
+      });
+
+    if (insertAssignmentError) {
+      console.error("Fehler beim Einfügen neuer Zuweisung:", insertAssignmentError?.message || insertAssignmentError);
+      return { success: false, message: `Fehler bei der Zuweisung: ${insertAssignmentError.message}` };
+    }
+
+    // Notify employee
     const supabaseAdmin = createAdminClient();
     const { data: employeeData } = await supabaseAdmin.from('employees').select('user_id').eq('id', employeeId).single();
     const { data: orderData } = await supabaseAdmin.from('orders').select('title').eq('id', orderId).single();
@@ -208,6 +235,17 @@ export async function processOrderRequest(formData: FormData): Promise<{ success
         message: `Die Anfrage für "${orderData.title}" wurde genehmigt und Ihnen zugewiesen.`,
         link: "/dashboard/orders"
       });
+    }
+  } else if (decision === 'rejected') {
+    // If rejected, remove any existing assignments for this order
+    const { error: deleteAssignmentError } = await supabase
+      .from('order_employee_assignments')
+      .delete()
+      .eq('order_id', orderId);
+
+    if (deleteAssignmentError) {
+      console.error("Fehler beim Löschen von Zuweisungen nach Ablehnung:", deleteAssignmentError?.message || deleteAssignmentError);
+      // Continue even if this fails, as the main status update is done
     }
   }
 
