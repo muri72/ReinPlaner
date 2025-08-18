@@ -79,10 +79,12 @@ export async function getPlanningDataForWeek(currentDate: Date): Promise<{ succe
       .eq('orders.request_status', 'approved')
       .or(
         // An order is active this week if:
-        // 1. Its one-time due_date is within the week
+        // 1. Its due_date is within the week (for any order type)
         `and(orders.due_date.gte.${start_date_iso},orders.due_date.lte.${end_date_iso}),` +
-        // OR 2. Its recurring date range overlaps with the week
-        `and(orders.recurring_start_date.lte.${end_date_iso},or(orders.recurring_end_date.is.null,orders.recurring_end_date.gte.${start_date_iso}))`
+        // OR 2. Its recurring date range overlaps with the week (end date is null)
+        `and(orders.recurring_start_date.lte.${end_date_iso},orders.recurring_end_date.is.null),` +
+        // OR 3. Its recurring date range overlaps with the week (end date is set)
+        `and(orders.recurring_start_date.lte.${end_date_iso},orders.recurring_end_date.gte.${start_date_iso})`
       );
     if (assignmentsError) throw assignmentsError;
 
@@ -132,11 +134,9 @@ export async function getPlanningDataForWeek(currentDate: Date): Promise<{ succe
 
           // Check if the order is active on the current day
           let isOrderActiveToday = false;
-          if (order.order_type === 'one_time') {
-            if (order.due_date && formatISO(parseISO(order.due_date), { representation: 'date' }) === dateString) {
-              isOrderActiveToday = true;
-            }
-          } else if (['permanent', 'recurring', 'substitution'].includes(order.order_type)) {
+          if (order.due_date && formatISO(parseISO(order.due_date), { representation: 'date' }) === dateString) {
+            isOrderActiveToday = true;
+          } else {
             const startDate = order.recurring_start_date ? parseISO(order.recurring_start_date) : null;
             const endDate = order.recurring_end_date ? parseISO(order.recurring_end_date) : null;
             if (startDate && startDate <= day && (!endDate || endDate >= day)) {
@@ -146,19 +146,25 @@ export async function getPlanningDataForWeek(currentDate: Date): Promise<{ succe
           
           if (!isOrderActiveToday) continue;
 
-          // If active, get the hours for this specific day from the assignment, regardless of order type
+          // If active, get the hours for this specific day from the assignment
           let dailyHours = 0;
           let assignedStartTime: string | null = null;
           let assignedEndTime: string | null = null;
 
-          switch (dayOfWeek) {
-            case 1: dailyHours = Number(assignment.assigned_monday_hours) || 0; assignedStartTime = assignment.assigned_monday_start_time; assignedEndTime = assignment.assigned_monday_end_time; break;
-            case 2: dailyHours = Number(assignment.assigned_tuesday_hours) || 0; assignedStartTime = assignment.assigned_tuesday_start_time; assignedEndTime = assignment.assigned_tuesday_end_time; break;
-            case 3: dailyHours = Number(assignment.assigned_wednesday_hours) || 0; assignedStartTime = assignment.assigned_wednesday_start_time; assignedEndTime = assignment.assigned_wednesday_end_time; break;
-            case 4: dailyHours = Number(assignment.assigned_thursday_hours) || 0; assignedStartTime = assignment.assigned_thursday_start_time; assignedEndTime = assignment.assigned_thursday_end_time; break;
-            case 5: dailyHours = Number(assignment.assigned_friday_hours) || 0; assignedStartTime = assignment.assigned_friday_start_time; assignedEndTime = assignment.assigned_friday_end_time; break;
-            case 6: dailyHours = Number(assignment.assigned_saturday_hours) || 0; assignedStartTime = assignment.assigned_saturday_start_time; assignedEndTime = assignment.assigned_saturday_end_time; break;
-            case 0: dailyHours = Number(assignment.assigned_sunday_hours) || 0; assignedStartTime = assignment.assigned_sunday_start_time; assignedEndTime = assignment.assigned_sunday_end_time; break;
+          // For one-time orders, the daily hours might be the total estimated hours if not specified per day
+          if (order.order_type === 'one_time') {
+            dailyHours = order.total_estimated_hours || 0;
+          } else {
+            // For recurring types, get hours from the daily columns
+            switch (dayOfWeek) {
+              case 1: dailyHours = Number(assignment.assigned_monday_hours) || 0; assignedStartTime = assignment.assigned_monday_start_time; assignedEndTime = assignment.assigned_monday_end_time; break;
+              case 2: dailyHours = Number(assignment.assigned_tuesday_hours) || 0; assignedStartTime = assignment.assigned_tuesday_start_time; assignedEndTime = assignment.assigned_tuesday_end_time; break;
+              case 3: dailyHours = Number(assignment.assigned_wednesday_hours) || 0; assignedStartTime = assignment.assigned_wednesday_start_time; assignedEndTime = assignment.assigned_wednesday_end_time; break;
+              case 4: dailyHours = Number(assignment.assigned_thursday_hours) || 0; assignedStartTime = assignment.assigned_thursday_start_time; assignedEndTime = assignment.assigned_thursday_end_time; break;
+              case 5: dailyHours = Number(assignment.assigned_friday_hours) || 0; assignedStartTime = assignment.assigned_friday_start_time; assignedEndTime = assignment.assigned_friday_end_time; break;
+              case 6: dailyHours = Number(assignment.assigned_saturday_hours) || 0; assignedStartTime = assignment.assigned_saturday_start_time; assignedEndTime = assignment.assigned_saturday_end_time; break;
+              case 0: dailyHours = Number(assignment.assigned_sunday_hours) || 0; assignedStartTime = assignment.assigned_sunday_start_time; assignedEndTime = assignment.assigned_sunday_end_time; break;
+            }
           }
 
           if (dailyHours > 0) {
