@@ -29,7 +29,7 @@ export async function createOrder(data: OrderFormValues) {
     notes,
     serviceType,
     requestStatus,
-    assignedEmployees, // Neues Feld
+    assignedEmployees,
   } = data;
 
   const { data: newOrder, error } = await supabase
@@ -52,7 +52,7 @@ export async function createOrder(data: OrderFormValues) {
       service_type: serviceType,
       request_status: requestStatus,
     })
-    .select('id') // Die ID des neu erstellten Auftrags abrufen
+    .select('id')
     .single();
 
   if (error) {
@@ -65,7 +65,13 @@ export async function createOrder(data: OrderFormValues) {
     const assignmentsToInsert = assignedEmployees.map(assignment => ({
       order_id: newOrder.id,
       employee_id: assignment.employeeId,
-      assigned_daily_hours: assignment.assignedDailyHours,
+      assigned_monday_hours: assignment.assigned_monday_hours,
+      assigned_tuesday_hours: assignment.assigned_tuesday_hours,
+      assigned_wednesday_hours: assignment.assigned_wednesday_hours,
+      assigned_thursday_hours: assignment.assigned_thursday_hours,
+      assigned_friday_hours: assignment.assigned_friday_hours,
+      assigned_saturday_hours: assignment.assigned_saturday_hours,
+      assigned_sunday_hours: assignment.assigned_sunday_hours,
     }));
 
     const { error: assignError } = await supabase
@@ -74,8 +80,6 @@ export async function createOrder(data: OrderFormValues) {
 
     if (assignError) {
       console.error("Fehler beim Speichern der Mitarbeiterzuweisungen:", assignError?.message || assignError);
-      // Hier entscheiden, ob der Fehler die gesamte Auftragserstellung fehlschlagen lassen soll
-      // Fürs Erste wird der Fehler nur geloggt.
     }
   }
 
@@ -96,7 +100,7 @@ export async function createOrder(data: OrderFormValues) {
   }
 
   revalidatePath("/dashboard/orders");
-  revalidatePath("/dashboard/planning"); // Revalidiere Planungsseite
+  revalidatePath("/dashboard/planning");
   return { success: true, message: "Auftrag erfolgreich hinzugefügt!" };
 }
 
@@ -124,7 +128,7 @@ export async function updateOrder(orderId: string, data: OrderFormValues) {
     notes,
     serviceType,
     requestStatus,
-    assignedEmployees, // Neues Feld
+    assignedEmployees,
   } = data;
 
   const { error } = await supabase
@@ -168,7 +172,13 @@ export async function updateOrder(orderId: string, data: OrderFormValues) {
     const assignmentsToInsert = assignedEmployees.map(assignment => ({
       order_id: orderId,
       employee_id: assignment.employeeId,
-      assigned_daily_hours: assignment.assignedDailyHours,
+      assigned_monday_hours: assignment.assigned_monday_hours,
+      assigned_tuesday_hours: assignment.assigned_tuesday_hours,
+      assigned_wednesday_hours: assignment.assigned_wednesday_hours,
+      assigned_thursday_hours: assignment.assigned_thursday_hours,
+      assigned_friday_hours: assignment.assigned_friday_hours,
+      assigned_saturday_hours: assignment.assigned_saturday_hours,
+      assigned_sunday_hours: assignment.assigned_sunday_hours,
     }));
 
     const { error: insertAssignError } = await supabase
@@ -182,7 +192,7 @@ export async function updateOrder(orderId: string, data: OrderFormValues) {
   }
 
   revalidatePath("/dashboard/orders");
-  revalidatePath("/dashboard/planning"); // Revalidiere Planungsseite
+  revalidatePath("/dashboard/planning");
   return { success: true, message: "Auftrag erfolgreich aktualisiert!" };
 }
 
@@ -200,7 +210,6 @@ export async function deleteOrder(formData: FormData): Promise<{ success: boolea
     .from('orders')
     .delete()
     .eq('id', orderId);
-    // RLS wird die Berechtigungsprüfung für Löschungen handhaben
 
   if (error) {
     console.error("Fehler beim Löschen des Auftrags:", error?.message || error);
@@ -208,7 +217,7 @@ export async function deleteOrder(formData: FormData): Promise<{ success: boolea
   }
 
   revalidatePath("/dashboard/orders");
-  revalidatePath("/dashboard/planning"); // Revalidiere Planungsseite
+  revalidatePath("/dashboard/planning");
   return { success: true, message: "Auftrag erfolgreich gelöscht!" };
 }
 
@@ -223,7 +232,15 @@ export async function processOrderRequest(formData: FormData): Promise<{ success
   const orderId = formData.get('orderId') as string;
   const employeeId = formData.get('employeeId') as string | null;
   const decision = formData.get('decision') as 'approved' | 'rejected';
-  const assignedDailyHours = formData.get('assignedDailyHours') ? Number(formData.get('assignedDailyHours')) : null; // Neues Feld
+  
+  // Retrieve assigned daily hours for each day from form data
+  const assigned_monday_hours = formData.get('assigned_monday_hours') ? Number(formData.get('assigned_monday_hours')) : null;
+  const assigned_tuesday_hours = formData.get('assigned_tuesday_hours') ? Number(formData.get('assigned_tuesday_hours')) : null;
+  const assigned_wednesday_hours = formData.get('assigned_wednesday_hours') ? Number(formData.get('assigned_wednesday_hours')) : null;
+  const assigned_thursday_hours = formData.get('assigned_thursday_hours') ? Number(formData.get('assigned_thursday_hours')) : null;
+  const assigned_friday_hours = formData.get('assigned_friday_hours') ? Number(formData.get('assigned_friday_hours')) : null;
+  const assigned_saturday_hours = formData.get('assigned_saturday_hours') ? Number(formData.get('assigned_saturday_hours')) : null;
+  const assigned_sunday_hours = formData.get('assigned_sunday_hours') ? Number(formData.get('assigned_sunday_hours')) : null;
 
   if (!orderId || !decision) {
     return { success: false, message: "Ungültige Anfrage." };
@@ -238,7 +255,7 @@ export async function processOrderRequest(formData: FormData): Promise<{ success
     .from('orders')
     .update({
       request_status: decision,
-      status: decision === 'approved' ? 'pending' : 'pending', // Status bleibt pending, bis er bearbeitet wird
+      status: decision === 'approved' ? 'pending' : 'pending',
     })
     .eq('id', orderId);
 
@@ -260,13 +277,19 @@ export async function processOrderRequest(formData: FormData): Promise<{ success
       return { success: false, message: `Fehler bei der Zuweisung: ${deleteAssignmentError.message}` };
     }
 
-    // Then, insert the new assignment
+    // Then, insert the new assignment with daily hours
     const { error: insertAssignmentError } = await supabase
       .from('order_employee_assignments')
       .insert({
         order_id: orderId,
         employee_id: employeeId,
-        assigned_daily_hours: assignedDailyHours, // Speichern der zugewiesenen Stunden
+        assigned_monday_hours,
+        assigned_tuesday_hours,
+        assigned_wednesday_hours,
+        assigned_thursday_hours,
+        assigned_friday_hours,
+        assigned_saturday_hours,
+        assigned_sunday_hours,
       });
 
     if (insertAssignmentError) {
@@ -286,6 +309,8 @@ export async function processOrderRequest(formData: FormData): Promise<{ success
         message: `Die Anfrage für "${orderData.title}" wurde genehmigt und Ihnen zugewiesen.`,
         link: "/dashboard/orders"
       });
+    } else {
+      console.warn(`Could not send notification for order assignment to employee ${employeeId}. User ID or order title missing.`);
     }
   } else if (decision === 'rejected') {
     // If rejected, remove any existing assignments for this order
@@ -296,11 +321,10 @@ export async function processOrderRequest(formData: FormData): Promise<{ success
 
     if (deleteAssignmentError) {
       console.error("Fehler beim Löschen von Zuweisungen nach Ablehnung:", deleteAssignmentError?.message || deleteAssignmentError);
-      // Continue even if this fails, as the main status update is done
     }
   }
 
   revalidatePath("/dashboard/orders");
-  revalidatePath("/dashboard/planning"); // Revalidiere Planungsseite
+  revalidatePath("/dashboard/planning");
   return { success: true, message: `Anfrage erfolgreich ${decision === 'approved' ? 'genehmigt' : 'abgelehnt'}!` };
 }

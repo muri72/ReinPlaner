@@ -9,7 +9,8 @@ import { GiveGeneralFeedbackDialog } from "@/components/give-general-feedback-di
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
-import { TodaysOrdersOverview } from "@/components/todays-orders-overview"; // Reuse for today's orders
+import { TodaysOrdersOverview } from "@/components/todays-orders-overview";
+import type { DisplayOrder } from '@/app/dashboard/orders/page'; // Import DisplayOrder
 
 export default async function EmployeeDashboardPage() {
   const supabase = await createClient();
@@ -25,19 +26,18 @@ export default async function EmployeeDashboardPage() {
     .eq('id', user.id)
     .single();
 
-  if (profileError) { // Added error logging for profile fetching
+  if (profileError) {
     console.error("Fehler beim Abrufen des Benutzerprofils:", profileError?.message || JSON.stringify(profileError));
   }
 
   if (profile?.role !== 'employee') {
-    redirect("/dashboard"); // Ensure only employees access this page
+    redirect("/dashboard");
   }
 
   const employeeName = profile?.first_name || user.email;
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  // Fetch employee's associated employee_id
   const { data: employeeData, error: employeeDataError } = await supabase
     .from('employees')
     .select('id')
@@ -50,7 +50,6 @@ export default async function EmployeeDashboardPage() {
 
   const employeeId = employeeData?.id || null;
 
-  // Fetch today's assigned orders for the employee
   let todaysAssignedOrders: any[] = [];
   if (employeeId) {
     const { data: orders, error: ordersError } = await supabase
@@ -71,9 +70,15 @@ export default async function EmployeeDashboardPage() {
         objects ( name, address, notes, time_of_day, access_method, pin, is_alarm_secured, alarm_password, security_code_word, total_weekly_hours ),
         customers ( name ),
         customer_contacts ( first_name, last_name, phone ),
-        order_employee_assignments!inner ( employee_id, assigned_daily_hours )
+        order_employee_assignments!inner ( 
+          employee_id, 
+          assigned_daily_hours,
+          assigned_monday_hours, assigned_tuesday_hours, assigned_wednesday_hours,
+          assigned_thursday_hours, assigned_friday_hours, assigned_saturday_hours,
+          assigned_sunday_hours
+        )
       `)
-      .eq('order_employee_assignments.employee_id', employeeId) // Filter by assignment table
+      .eq('order_employee_assignments.employee_id', employeeId)
       .eq('request_status', 'approved')
       .or(
         `due_date.eq.${format(today, 'yyyy-MM-dd')},and(recurring_start_date.lte.${format(today, 'yyyy-MM-dd')},or(recurring_end_date.gte.${format(today, 'yyyy-MM-dd')},recurring_end_date.is.null))`
@@ -89,8 +94,14 @@ export default async function EmployeeDashboardPage() {
         object: Array.isArray(order.objects) ? order.objects[0] : order.objects,
         customer: Array.isArray(order.customers) ? order.customers[0] : order.customers,
         customer_contact: Array.isArray(order.customer_contacts) ? order.customer_contacts[0] : order.customer_contacts,
-        // Extract assigned_daily_hours from the assignment
-        assigned_daily_hours: order.order_employee_assignments?.[0]?.assigned_daily_hours || null,
+        assigned_daily_hours: order.order_employee_assignments?.[0]?.assigned_daily_hours || null, // Keep for compatibility if needed elsewhere
+        assigned_monday_hours: order.order_employee_assignments?.[0]?.assigned_monday_hours || null,
+        assigned_tuesday_hours: order.order_employee_assignments?.[0]?.assigned_tuesday_hours || null,
+        assigned_wednesday_hours: order.order_employee_assignments?.[0]?.assigned_wednesday_hours || null,
+        assigned_thursday_hours: order.order_employee_assignments?.[0]?.assigned_thursday_hours || null,
+        assigned_friday_hours: order.order_employee_assignments?.[0]?.assigned_friday_hours || null,
+        assigned_saturday_hours: order.order_employee_assignments?.[0]?.assigned_saturday_hours || null,
+        assigned_sunday_hours: order.order_employee_assignments?.[0]?.assigned_sunday_hours || null,
       }));
     }
   }
@@ -130,7 +141,7 @@ export default async function EmployeeDashboardPage() {
             </div>
           ) : (
             <div className="space-y-4">
-              {todaysAssignedOrders.map(order => (
+              {todaysAssignedOrders.map((order: DisplayOrder) => (
                 <Card key={order.id} className="shadow-elevation-1">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-base font-semibold flex items-center justify-between">
@@ -176,18 +187,41 @@ export default async function EmployeeDashboardPage() {
                         <span>Details: {order.description}</span>
                       </div>
                     )}
-                    {order.object?.notes && (
-                      <div className="flex items-start">
-                        <FileText className="mr-2 h-4 w-4 flex-shrink-0" />
-                        <span>Objekt-Hinweise: {order.object.notes}</span>
-                      </div>
-                    )}
                     {order.notes && (
                       <div className="flex items-start">
                         <FileText className="mr-2 h-4 w-4 flex-shrink-0" />
                         <span>Auftrags-Notizen: {order.notes}</span>
                       </div>
                     )}
+                    {order.object?.notes && (
+                      <div className="flex items-start">
+                        <FileText className="mr-2 h-4 w-4 flex-shrink-0" />
+                        <span>Objekt-Hinweise: {order.object.notes}</span>
+                      </div>
+                    )}
+                    {/* Display assigned daily hours for the current day */}
+                    {(() => {
+                      const todayDayOfWeek = today.getDay(); // 0=So, 1=Mo, ..., 6=Sa
+                      const dayMap: { [key: number]: keyof DisplayOrder } = {
+                        0: 'assigned_sunday_hours',
+                        1: 'assigned_monday_hours',
+                        2: 'assigned_tuesday_hours',
+                        3: 'assigned_wednesday_hours',
+                        4: 'assigned_thursday_hours',
+                        5: 'assigned_friday_hours',
+                        6: 'assigned_saturday_hours',
+                      };
+                      const assignedHoursToday = order[dayMap[todayDayOfWeek]] as number | null;
+                      if (assignedHoursToday !== null && assignedHoursToday > 0) {
+                        return (
+                          <div className="flex items-center">
+                            <Clock className="mr-2 h-4 w-4" />
+                            <span>Zugewiesene Stunden heute: {assignedHoursToday.toFixed(1)} Std.</span>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
                     {/* Material- & Aufgabenliste (Platzhalter) */}
                     <div className="flex items-center text-muted-foreground">
                       <ListChecks className="mr-2 h-4 w-4" />

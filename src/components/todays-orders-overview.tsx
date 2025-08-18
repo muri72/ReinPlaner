@@ -22,10 +22,17 @@ interface DisplayOrder {
   due_date: string | null;
   customer_id: string | null;
   object_id: string | null;
-  employee_ids: string[] | null; // Updated to array of IDs
-  employee_first_names: string[] | null; // Updated to array of first names
-  employee_last_names: string[] | null; // Updated to array of last names
-  assigned_daily_hours: (number | null)[] | null; // Hinzugefügt
+  employee_ids: string[] | null;
+  employee_first_names: string[] | null;
+  employee_last_names: string[] | null;
+  assigned_daily_hours: (number | null)[] | null; // Keep for compatibility if needed elsewhere
+  assigned_monday_hours: number | null;
+  assigned_tuesday_hours: number | null;
+  assigned_wednesday_hours: number | null;
+  assigned_thursday_hours: number | null;
+  assigned_friday_hours: number | null;
+  assigned_saturday_hours: number | null;
+  assigned_sunday_hours: number | null;
   customer_contact_id: string | null;
   customer_name: string | null;
   object_name: string | null;
@@ -35,7 +42,7 @@ interface DisplayOrder {
   recurring_start_date: string | null;
   recurring_end_date: string | null;
   priority: string;
-  total_estimated_hours: number | null; // Corrected column name
+  total_estimated_hours: number | null;
   notes: string | null;
   request_status: string;
   service_type: string | null;
@@ -50,9 +57,9 @@ export function TodaysOrdersOverview() {
     const fetchTodaysOrders = async () => {
       setLoading(true);
       const today = new Date();
-      today.setHours(0, 0, 0, 0); // Start of today
+      today.setHours(0, 0, 0, 0);
       const tomorrow = new Date(today);
-      tomorrow.setDate(tomorrow.getDate() + 1); // Start of tomorrow
+      tomorrow.setDate(tomorrow.getDate() + 1);
 
       const { data: user } = await supabase.auth.getUser();
       const currentUserId = user?.user?.id;
@@ -63,7 +70,6 @@ export function TodaysOrdersOverview() {
         return;
       }
 
-      // Fetch user role
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('role')
@@ -80,7 +86,6 @@ export function TodaysOrdersOverview() {
       const currentUserRole = profileData?.role || 'employee';
       let currentEmployeeId: string | null = null;
 
-      // If the user is an employee, fetch their employee_id separately
       if (currentUserRole === 'employee') {
         const { data: employeeData, error: employeeDataError } = await supabase
           .from('employees')
@@ -88,7 +93,7 @@ export function TodaysOrdersOverview() {
           .eq('user_id', currentUserId)
           .single();
 
-        if (employeeDataError && employeeDataError.code !== 'PGRST116') { // PGRST116 means no rows found, which is fine if no employee profile
+        if (employeeDataError && employeeDataError.code !== 'PGRST116') {
           console.error("Fehler beim Laden der Mitarbeiter-ID:", employeeDataError?.message || employeeDataError);
           toast.error("Fehler beim Laden Ihrer Mitarbeiterdaten.");
           setLoading(false);
@@ -120,13 +125,19 @@ export function TodaysOrdersOverview() {
           customers ( name ),
           objects ( name ),
           customer_contacts ( first_name, last_name ),
-          order_employee_assignments ( employee_id, assigned_daily_hours, employees ( first_name, last_name ) )
+          order_employee_assignments ( 
+            employee_id, 
+            assigned_daily_hours,
+            assigned_monday_hours, assigned_tuesday_hours, assigned_wednesday_hours,
+            assigned_thursday_hours, assigned_friday_hours, assigned_saturday_hours,
+            assigned_sunday_hours,
+            employees ( first_name, last_name ) 
+          )
         `)
-        .eq('request_status', 'approved') // Only show approved orders
+        .eq('request_status', 'approved')
         .order('due_date', { ascending: true })
         .order('recurring_start_date', { ascending: true });
 
-      // Filter by date for one-time orders OR recurring/permanent/substitution orders
       query = query.or(
         `due_date.eq.${format(today, 'yyyy-MM-dd')},and(recurring_start_date.lte.${format(today, 'yyyy-MM-dd')},or(recurring_end_date.gte.${format(today, 'yyyy-MM-dd')},recurring_end_date.is.null))`
       );
@@ -142,6 +153,7 @@ export function TodaysOrdersOverview() {
           const customer = Array.isArray(order.customers) ? order.customers[0] : order.customers;
           const object = Array.isArray(order.objects) ? order.objects[0] : order.objects;
           const customerContact = Array.isArray(order.customer_contacts) ? order.customer_contacts[0] : order.customer_contacts;
+          const assignedEmployeeData = order.order_employee_assignments?.[0]; // Assuming one assignment for simplicity in mapping
 
           return {
             id: order.id,
@@ -154,7 +166,14 @@ export function TodaysOrdersOverview() {
             employee_ids: order.order_employee_assignments?.map((a: any) => a.employee_id) || null,
             employee_first_names: order.order_employee_assignments?.map((a: any) => a.employees?.first_name || '') || null,
             employee_last_names: order.order_employee_assignments?.map((a: any) => a.employees?.last_name || '') || null,
-            assigned_daily_hours: order.order_employee_assignments?.map((a: any) => a.assigned_daily_hours) || null, // Hinzugefügt
+            assigned_daily_hours: order.order_employee_assignments?.map((a: any) => a.assigned_daily_hours) || null,
+            assigned_monday_hours: assignedEmployeeData?.assigned_monday_hours || null,
+            assigned_tuesday_hours: assignedEmployeeData?.assigned_tuesday_hours || null,
+            assigned_wednesday_hours: assignedEmployeeData?.assigned_wednesday_hours || null,
+            assigned_thursday_hours: assignedEmployeeData?.assigned_thursday_hours || null,
+            assigned_friday_hours: assignedEmployeeData?.assigned_friday_hours || null,
+            assigned_saturday_hours: assignedEmployeeData?.assigned_saturday_hours || null,
+            assigned_sunday_hours: assignedEmployeeData?.assigned_sunday_hours || null,
             customer_contact_id: order.customer_contact_id,
             customer_name: customer?.name || null,
             object_name: object?.name || null,
@@ -164,30 +183,22 @@ export function TodaysOrdersOverview() {
             recurring_start_date: order.recurring_start_date,
             recurring_end_date: order.recurring_end_date,
             priority: order.priority,
-            total_estimated_hours: order.total_estimated_hours, // Corrected column name
+            total_estimated_hours: order.total_estimated_hours,
             notes: order.notes,
             request_status: order.request_status,
             service_type: order.service_type,
           };
         });
 
-        // Filter based on user role (RLS should handle most of this, but for client-side display consistency)
         const filteredByRole = mappedOrders.filter(order => {
           if (currentUserRole === 'admin') return true;
           if (currentUserRole === 'employee') {
-            // Check if any of the assigned employee IDs match the current employee's ID
             return order.employee_ids?.includes(currentEmployeeId || '') || false;
           }
           if (currentUserRole === 'manager') {
-            // Managers can see orders for customers they are assigned to
-            // This would require fetching manager_customer_assignments and filtering
-            // For now, let's assume RLS handles this for managers.
             return true;
           }
           if (currentUserRole === 'customer') {
-            // Customers can see orders for their customer_id or customer_contact_id
-            // This would require fetching customer_id/customer_contact_id for the user
-            // For now, let's assume RLS handles this for customers.
             return true;
           }
           return false;

@@ -10,7 +10,7 @@ import { createClient } from "@/lib/supabase/client";
 import { processOrderRequest } from "@/app/dashboard/orders/actions";
 import { Badge } from "./ui/badge";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
-import { Input } from "./ui/input"; // Import Input for assigned daily hours
+import { Input } from "./ui/input";
 
 interface OrderPlanningDialogProps {
   order: {
@@ -20,8 +20,8 @@ interface OrderPlanningDialogProps {
     customer_name: string | null;
     object_name: string | null;
     service_type: string | null;
-    total_estimated_hours: number | null; // Hinzugefügt
-    object_id: string | null; // Add this
+    total_estimated_hours: number | null;
+    object_id: string | null;
   };
 }
 
@@ -35,45 +35,87 @@ export function OrderPlanningDialog({ order }: OrderPlanningDialogProps) {
   const [open, setOpen] = useState(false);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("");
-  const [assignedDailyHours, setAssignedDailyHours] = useState<number | null>(null); // Neues State für zugewiesene Stunden
   const [loading, setLoading] = useState(false);
-  // Removed titleId and descriptionId as they are no longer needed for aria attributes
+
+  const [dailyHours, setDailyHours] = useState<{ [key: string]: number | null }>({
+    monday: null, tuesday: null, wednesday: null, thursday: null,
+    friday: null, saturday: null, sunday: null,
+  });
+
+  const dayNames = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+  const germanDayNames: { [key: string]: string } = {
+    monday: 'Mo',
+    tuesday: 'Di',
+    wednesday: 'Mi',
+    thursday: 'Do',
+    friday: 'Fr',
+    saturday: 'Sa',
+    sunday: 'So',
+  };
 
   useEffect(() => {
     if (open) {
-      const fetchEmployees = async () => {
+      const fetchEmployeesAndObjectHours = async () => {
+        setLoading(true);
         const supabase = createClient();
-        const { data, error } = await supabase
+        
+        // Fetch employees
+        const { data: employeesData, error: employeesError } = await supabase
           .from('employees')
           .select('id, first_name, last_name')
           .order('last_name', { ascending: true });
-        if (error) {
+        if (employeesError) {
           toast.error("Mitarbeiter konnten nicht geladen werden.");
-          console.error(error);
+          console.error(employeesError);
         } else {
-          setEmployees(data);
+          setEmployees(employeesData);
         }
-      };
-      fetchEmployees();
-    }
-  }, [open]);
 
-  // Set default assignedDailyHours when employee is selected or dialog opens
-  // This logic needs to be updated to fetch object's total_weekly_hours and divide by number of employees
-  // For simplicity in this dialog, if total_estimated_hours is available, use that as a suggestion.
-  // If multiple employees are assigned via this dialog, the logic would need to be more complex.
-  // For now, this dialog assigns ONE employee. So, assignedDailyHours can be total_estimated_hours.
-  useEffect(() => {
-    if (selectedEmployeeId && order.total_estimated_hours !== null) {
-      setAssignedDailyHours(order.total_estimated_hours); // Suggest total estimated hours for this single employee
-    } else {
-      setAssignedDailyHours(null);
+        // Fetch object's daily hours if object_id is available
+        if (order.object_id) {
+          const { data: objectData, error: objectError } = await supabase
+            .from('objects')
+            .select('monday_hours, tuesday_hours, wednesday_hours, thursday_hours, friday_hours, saturday_hours, sunday_hours')
+            .eq('id', order.object_id)
+            .single();
+
+          if (objectError) {
+            console.error("Fehler beim Laden der Objektstunden:", objectError);
+            toast.error("Fehler beim Laden der Objektstunden.");
+          } else if (objectData) {
+            const newDailyHours: { [key: string]: number | null } = {};
+            dayNames.forEach(day => {
+              newDailyHours[day] = objectData[`${day}_hours` as keyof typeof objectData] || null;
+            });
+            setDailyHours(newDailyHours);
+          }
+        } else {
+          // Clear daily hours if no object is linked
+          setDailyHours({
+            monday: null, tuesday: null, wednesday: null, thursday: null,
+            friday: null, saturday: null, sunday: null,
+          });
+        }
+        setLoading(false);
+      };
+      fetchEmployeesAndObjectHours();
     }
-  }, [selectedEmployeeId, order.total_estimated_hours]);
+  }, [open, order.object_id]);
+
+  const handleDailyHourChange = (day: string, value: string) => {
+    setDailyHours(prev => ({
+      ...prev,
+      [day]: value === '' ? null : Number(value),
+    }));
+  };
 
   const handleSubmit = async (formData: FormData) => {
     setLoading(true);
-    formData.append('assignedDailyHours', String(assignedDailyHours)); // Stunden an FormData anhängen
+    // Append all daily hours to form data
+    dayNames.forEach(day => {
+      formData.append(`assigned_${day}_hours`, String(dailyHours[day] || ''));
+    });
+
     const result = await processOrderRequest(formData);
     if (result.success) {
       toast.success(result.message);
@@ -132,22 +174,34 @@ export function OrderPlanningDialog({ order }: OrderPlanningDialogProps) {
                 </SelectContent>
               </Select>
             </div>
-            {selectedEmployeeId && (
-              <div>
-                <Label htmlFor="assignedDailyHours">Zugewiesene tägliche Stunden (optional)</Label>
-                <Input
-                  id="assignedDailyHours"
-                  name="assignedDailyHours"
-                  type="number"
-                  step="0.5"
-                  placeholder={order.total_estimated_hours ? `Vorgeschlagen: ${order.total_estimated_hours}` : "Stunden pro Tag"}
-                  value={assignedDailyHours !== null ? assignedDailyHours : ''}
-                  onChange={(e) => setAssignedDailyHours(e.target.value === '' ? null : Number(e.target.value))}
-                />
+            {selectedEmployeeId && order.object_id && (
+              <div className="space-y-2 mt-4">
+                <Label>Zugewiesene Stunden pro Wochentag</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  {dayNames.map(day => (
+                    <div key={day}>
+                      <Label htmlFor={`assigned_${day}_hours`} className="text-xs">{germanDayNames[day]} Std.</Label>
+                      <Input
+                        id={`assigned_${day}_hours`}
+                        name={`assigned_${day}_hours`}
+                        type="number"
+                        step="0.5"
+                        placeholder="Std."
+                        value={dailyHours[day] !== null ? dailyHours[day] : ''}
+                        onChange={(e) => handleDailyHourChange(day, e.target.value)}
+                      />
+                    </div>
+                  ))}
+                </div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Wenn leer, werden die Stunden automatisch basierend auf dem Objektplan aufgeteilt.
+                  Diese Stunden werden für den zugewiesenen Mitarbeiter übernommen.
                 </p>
               </div>
+            )}
+            {!order.object_id && selectedEmployeeId && (
+              <p className="text-sm text-muted-foreground mt-2">
+                Kein Objekt für diesen Auftrag hinterlegt. Tägliche Stunden können nicht automatisch vorgeschlagen werden.
+              </p>
             )}
           </form>
         </div>

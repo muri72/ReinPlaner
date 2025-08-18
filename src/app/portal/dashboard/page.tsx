@@ -4,13 +4,13 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { Briefcase, CalendarDays, DollarSign, MessageSquare, Star, FileText, CheckCircle2, AlertCircle } from "lucide-react";
-import { TodaysOrdersOverview } from "@/components/todays-orders-overview"; // Reuse for today's orders
+import { TodaysOrdersOverview } from "@/components/todays-orders-overview";
 import { GiveOrderFeedbackDialog } from "@/components/give-order-feedback-dialog";
 import { GiveGeneralFeedbackDialog } from "@/components/give-general-feedback-dialog";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
-import { CustomerOrderRequestDialog } from "@/components/customer-order-request-dialog"; // Import the new dialog
+import { CustomerOrderRequestDialog } from "@/components/customer-order-request-dialog";
 
 export default async function CustomerDashboardPage() {
   const supabase = await createClient();
@@ -26,22 +26,23 @@ export default async function CustomerDashboardPage() {
     .eq('id', user.id)
     .single();
 
-  if (profileError) { // Added error logging for profile fetching
+  if (profileError) {
     console.error("Fehler beim Abrufen des Benutzerprofils:", profileError?.message || JSON.stringify(profileError));
   }
 
   if (profile?.role !== 'customer') {
-    redirect("/dashboard"); // Ensure only customers access this page
+    redirect("/dashboard");
   }
 
   const customerName = profile?.first_name || user.email;
   const today = new Date();
   today.setHours(0, 0, 0, 0);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
 
-  // Fetch customer's associated customer_id
   const { data: customerData, error: customerError } = await supabase
     .from('customers')
-    .select('id, name, contact_email, contact_phone, customer_type, contractual_services') // Added contractual_services
+    .select('id, name, contact_email, contact_phone, customer_type, contractual_services')
     .eq('user_id', user.id)
     .single();
 
@@ -51,7 +52,6 @@ export default async function CustomerDashboardPage() {
 
   const customerId = customerData?.id || null;
 
-  // Fetch next upcoming order
   let nextOrder = null;
   let todayOrderStatus = "Kein Auftrag geplant.";
 
@@ -67,13 +67,19 @@ export default async function CustomerDashboardPage() {
         status,
         order_type,
         objects ( name ),
-        order_employee_assignments ( employee_id, employees ( first_name, last_name ) )
+        order_employee_assignments ( 
+          employee_id, 
+          assigned_monday_hours, assigned_tuesday_hours, assigned_wednesday_hours,
+          assigned_thursday_hours, assigned_friday_hours, assigned_saturday_hours,
+          assigned_sunday_hours,
+          employees ( first_name, last_name ) 
+        )
       `)
       .eq('customer_id', customerId)
       .eq('request_status', 'approved')
       .order('due_date', { ascending: true })
       .order('recurring_start_date', { ascending: true })
-      .limit(5); // Fetch a few to find the next one
+      .limit(5);
 
     if (upcomingOrdersError) {
       console.error("Fehler beim Laden der kommenden Aufträge:", upcomingOrdersError?.message || JSON.stringify(upcomingOrdersError));
@@ -81,7 +87,6 @@ export default async function CustomerDashboardPage() {
       const now = new Date();
       now.setHours(0, 0, 0, 0);
 
-      // Filter for orders that are active today or in the future
       const relevantOrders = upcomingOrders?.filter(order => {
         if (order.order_type === 'one_time' && order.due_date) {
           const dueDate = new Date(order.due_date);
@@ -99,7 +104,6 @@ export default async function CustomerDashboardPage() {
         return false;
       });
 
-      // Sort to find the very next one
       relevantOrders?.sort((a, b) => {
         const dateA = a.due_date ? new Date(a.due_date) : (a.recurring_start_date ? new Date(a.recurring_start_date) : new Date(0));
         const dateB = b.due_date ? new Date(b.due_date) : (b.recurring_start_date ? new Date(b.recurring_start_date) : new Date(0));
@@ -108,7 +112,6 @@ export default async function CustomerDashboardPage() {
 
       nextOrder = relevantOrders?.[0] || null;
 
-      // Check status for today's orders
       const todaysOrders = upcomingOrders?.filter(order => {
         if (order.order_type === 'one_time' && order.due_date) {
           const dueDate = new Date(order.due_date);
@@ -138,31 +141,6 @@ export default async function CustomerDashboardPage() {
       }
     }
   }
-
-  // Fetch all orders for booking overview
-  const { data: allCustomerOrders, error: allOrdersError } = await supabase
-    .from('orders')
-    .select(`
-      id,
-      title,
-      description,
-      status,
-      due_date,
-      order_type,
-      recurring_start_date,
-      recurring_end_date,
-      priority,
-      total_estimated_hours,
-      notes,
-      request_status,
-      service_type,
-      objects ( name ),
-      order_employee_assignments ( employee_id, employees ( first_name, last_name ) )
-    `)
-    .eq('customer_id', customerId)
-    .order('created_at', { ascending: false });
-
-  if (allOrdersError) console.error("Fehler beim Laden aller Kundenaufträge:", allOrdersError?.message || JSON.stringify(allOrdersError));
 
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
@@ -222,7 +200,7 @@ export default async function CustomerDashboardPage() {
           ) : (
             <div className="text-center text-muted-foreground py-4">
               <p>Keine zukünftigen Termine gefunden.</p>
-              <CustomerOrderRequestDialog customerId={customerId} /> {/* New booking request button */}
+              <CustomerOrderRequestDialog customerId={customerId} />
             </div>
           )}
         </CardContent>
@@ -238,7 +216,6 @@ export default async function CustomerDashboardPage() {
           <DollarSign className="mx-auto h-10 w-10 text-muted-foreground mb-4" />
           <p className="text-base font-semibold">Keine Rechnungen verfügbar</p>
           <p className="text-sm">Diese Funktion wird in Kürze verfügbar sein.</p>
-          {/* Hier könnten später Links zu Rechnungen oder Zahlungsoptionen stehen */}
         </CardContent>
       </Card>
 

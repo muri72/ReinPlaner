@@ -10,10 +10,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Clock, Play, StopCircle, PauseCircle, RotateCcw, PlusCircle } from "lucide-react";
 import { createTimeEntry, updateTimeEntry } from "@/app/dashboard/time-tracking/actions";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { calculateHours } from "@/lib/utils"; // Import calculateHours
+import { calculateHours } from "@/lib/utils";
 import { TimeEntryCreateDialog } from "@/components/time-entry-create-dialog";
-import { TimeEntryFormValues } from "@/components/time-entry-form"; // Hinzugefügter Import
-import { Skeleton } from "@/components/ui/skeleton"; // Hinzugefügter Import
+import { TimeEntryFormValues } from "@/components/time-entry-form";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface EmployeeTimeTrackerProps {
   userId: string;
@@ -35,19 +35,18 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
   const [employeeId, setEmployeeId] = useState<string | null>(null);
   const [activeEntry, setActiveEntry] = useState<ActiveTimeEntry | null>(null);
   const [loading, setLoading] = useState(true);
-  const [orders, setOrders] = useState<{ id: string; title: string; customer_id: string; object_id: string; order_type: string }[]>([]); // Added order_type
+  const [orders, setOrders] = useState<{ id: string; title: string; customer_id: string; object_id: string; order_type: string }[]>([]);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [currentTab, setCurrentTab] = useState<'clock_in_out' | 'stopwatch'>('clock_in_out');
 
-  // States for suggested times based on object schedule for permanent orders
   const [suggestedStartTime, setSuggestedStartTime] = useState<string | null>(null);
   const [suggestedEndTime, setSuggestedEndTime] = useState<string | null>(null);
-  const [suggestedDuration, setSuggestedDuration] = useState<number | null>(null); // in minutes
-  const [suggestedBreakMinutes, setSuggestedBreakMinutes] = useState<number | null>(null); // Neues Feld für Pausen
+  const [suggestedDuration, setSuggestedDuration] = useState<number | null>(null);
+  const [suggestedBreakMinutes, setSuggestedBreakMinutes] = useState<number | null>(null);
 
-  // Stopwatch specific states
-  const [stopwatchElapsedTime, setStopwatchElapsedTime] = useState(0);
+  const stopwatchElapsedTime = useRef(0); // Use ref for elapsed time
   const stopwatchIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const [displayTime, setDisplayTime] = useState('00:00:00'); // State for displayed time
 
   // Helper to format time for display
   const formatTime = (totalSeconds: number) => {
@@ -73,7 +72,6 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
   useEffect(() => {
     const fetchInitialData = async () => {
       setLoading(true);
-      // 1. Mitarbeiter-ID für den aktuellen Benutzer abrufen
       const { data: employeeData, error: employeeError } = await supabase
         .from('employees')
         .select('id')
@@ -91,7 +89,6 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
       setEmployeeId(empId);
 
       if (empId) {
-        // 2. Aktiven Zeiteintrag prüfen (egal welcher Typ)
         const { data: activeEntryData, error: activeEntryError } = await supabase
           .from('time_entries')
           .select(`
@@ -118,19 +115,19 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
 
           if (activeEntryData.type === 'stopwatch') {
             const startTime = new Date(activeEntryData.start_time).getTime();
-            const now = Date.now();
-            setStopwatchElapsedTime(Math.floor((now - startTime) / 1000));
+            stopwatchElapsedTime.current = Math.floor((Date.now() - startTime) / 1000);
+            setDisplayTime(formatTime(stopwatchElapsedTime.current));
             stopwatchIntervalRef.current = setInterval(() => {
-              setStopwatchElapsedTime(prev => prev + 1);
+              stopwatchElapsedTime.current += 1;
+              setDisplayTime(formatTime(stopwatchElapsedTime.current));
             }, 1000);
           }
         }
 
-        // 3. Aufträge zur Auswahl abrufen (inkl. order_type und object_id)
         const { data: ordersData, error: ordersError } = await supabase
           .from('orders')
-          .select('id, title, customer_id, object_id, order_type, order_employee_assignments!inner(employee_id)') // Join to filter by employee_id
-          .eq('order_employee_assignments.employee_id', empId) // Filter on the joined table
+          .select('id, title, customer_id, object_id, order_type, order_employee_assignments!inner(employee_id)')
+          .eq('order_employee_assignments.employee_id', empId)
           .order('title', { ascending: true });
 
         if (ordersData) setOrders(ordersData);
@@ -154,15 +151,14 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
       setSuggestedStartTime(null);
       setSuggestedEndTime(null);
       setSuggestedDuration(null);
-      setSuggestedBreakMinutes(null); // Pausenminuten zurücksetzen
+      setSuggestedBreakMinutes(null);
 
       if (selectedOrderId) {
         const selectedOrder = orders.find(o => o.id === selectedOrderId);
-        // Fetch schedule if an object is linked to the order and it's a permanent order
         if (selectedOrder && selectedOrder.object_id && selectedOrder.order_type === 'permanent') {
           const { data: objectData, error: objectError } = await supabase
             .from('objects')
-            .select('monday_start_time, monday_end_time, tuesday_start_time, tuesday_end_time, wednesday_start_time, wednesday_end_time, thursday_start_time, thursday_end_time, friday_start_time, friday_end_time, saturday_start_time, saturday_end_time, sunday_start_time, sunday_end_time, total_weekly_hours') // total_weekly_hours hinzugefügt
+            .select('monday_hours, tuesday_hours, wednesday_hours, thursday_hours, friday_hours, saturday_hours, sunday_hours, total_weekly_hours')
             .eq('id', selectedOrder.object_id)
             .single();
 
@@ -173,34 +169,26 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
 
           if (objectData) {
             const today = new Date();
-            const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+            const dayOfWeek = today.getDay();
 
-            let startTimeKey: keyof typeof objectData | null = null;
-            let endTimeKey: keyof typeof objectData | null = null;
-
+            let dailyHours: number | null = null;
             switch (dayOfWeek) {
-              case 0: startTimeKey = 'sunday_start_time'; endTimeKey = 'sunday_end_time'; break;
-              case 1: startTimeKey = 'monday_start_time'; endTimeKey = 'monday_end_time'; break;
-              case 2: startTimeKey = 'tuesday_start_time'; endTimeKey = 'tuesday_end_time'; break;
-              case 3: startTimeKey = 'wednesday_start_time'; endTimeKey = 'wednesday_end_time'; break;
-              case 4: startTimeKey = 'thursday_start_time'; endTimeKey = 'thursday_end_time'; break;
-              case 5: startTimeKey = 'friday_start_time'; endTimeKey = 'friday_end_time'; break;
-              case 6: startTimeKey = 'saturday_start_time'; endTimeKey = 'saturday_end_time'; break;
+              case 0: dailyHours = objectData.sunday_hours || null; break;
+              case 1: dailyHours = objectData.monday_hours || null; break;
+              case 2: dailyHours = objectData.tuesday_hours || null; break;
+              case 3: dailyHours = objectData.wednesday_hours || null; break;
+              case 4: dailyHours = objectData.thursday_hours || null; break;
+              case 5: dailyHours = objectData.friday_hours || null; break;
+              case 6: dailyHours = objectData.saturday_hours || null; break;
             }
 
-            const suggestedStart = startTimeKey ? objectData[startTimeKey] : null;
-            const suggestedEnd = endTimeKey ? objectData[endTimeKey] : null;
-
-            setSuggestedStartTime(suggestedStart);
-            setSuggestedEndTime(suggestedEnd);
-
-            if (suggestedStart && suggestedEnd) {
-              const duration = calculateHours(suggestedStart, suggestedEnd);
-              if (duration !== null) {
-                setSuggestedDuration(Math.round(duration * 60));
-                // Pausenminuten basierend auf der berechneten Dauer vorschlagen
-                setSuggestedBreakMinutes(calculateBreakMinutesFallback(Math.round(duration * 60)));
-              }
+            // If daily hours are defined for the object, use them as suggested duration
+            if (dailyHours !== null) {
+              setSuggestedDuration(Math.round(dailyHours * 60)); // Convert hours to minutes
+              setSuggestedBreakMinutes(calculateBreakMinutesFallback(Math.round(dailyHours * 60)));
+              // For simplicity, we're not deriving start/end times from object schedule here,
+              // as the TimeEntryForm handles that based on object_id and date.
+              // We're primarily suggesting the duration.
             }
           }
         }
@@ -222,13 +210,13 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
     const startDateTime = new Date(activeEntry.start_time);
     const diffMs = now.getTime() - startDateTime.getTime();
     const durationMinutes = diffMs / (1000 * 60);
-    const calculatedBreakMinutes = calculateBreakMinutesFallback(durationMinutes); // Pausen berechnen
+    const calculatedBreakMinutes = calculateBreakMinutesFallback(durationMinutes);
 
     const result = await updateTimeEntry(activeEntry.id, {
       endDate: now,
       endTime: endTime,
       durationMinutes: durationMinutes,
-      breakMinutes: calculatedBreakMinutes, // Pausenminuten speichern
+      breakMinutes: calculatedBreakMinutes,
       notes: `${activeEntry.notes || ''} Ausgestempelt um ${now.toLocaleTimeString()}`,
     });
 
@@ -260,11 +248,11 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
     const result = await createTimeEntry({
       employeeId: employeeId,
       startDate: now,
-      startTime: startTime, // Stopwatch always starts with current time
+      startTime: startTime,
       endDate: null,
       endTime: null,
       durationMinutes: null,
-      breakMinutes: null, // Pausenminuten sind zu Beginn der Stoppuhr unbekannt
+      breakMinutes: null,
       type: 'stopwatch',
       orderId: selectedOrderId,
       objectId: selectedOrder?.object_id || null,
@@ -281,9 +269,11 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
         type: 'stopwatch',
         notes: `Stoppuhr gestartet um ${now.toLocaleTimeString()}`,
       });
-      setStopwatchElapsedTime(0);
+      stopwatchElapsedTime.current = 0;
+      setDisplayTime('00:00:00');
       stopwatchIntervalRef.current = setInterval(() => {
-        setStopwatchElapsedTime(prev => prev + 1);
+        stopwatchElapsedTime.current += 1;
+        setDisplayTime(formatTime(stopwatchElapsedTime.current));
       }, 1000);
     } else {
       toast.error(result.message);
@@ -307,13 +297,13 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
     const startDateTime = new Date(activeEntry.start_time);
     const diffMs = now.getTime() - startDateTime.getTime();
     const durationMinutes = diffMs / (1000 * 60);
-    const calculatedBreakMinutes = calculateBreakMinutesFallback(durationMinutes); // Pausen berechnen
+    const calculatedBreakMinutes = calculateBreakMinutesFallback(durationMinutes);
 
     const result = await updateTimeEntry(activeEntry.id, {
       endDate: now,
       endTime: endTime,
       durationMinutes: durationMinutes,
-      breakMinutes: calculatedBreakMinutes, // Pausenminuten speichern
+      breakMinutes: calculatedBreakMinutes,
       notes: `${activeEntry.notes || ''} Stoppuhr gestoppt um ${now.toLocaleTimeString()}`,
     });
 
@@ -321,7 +311,8 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
       toast.success("Stoppuhr gestoppt!");
       setActiveEntry(null);
       setSelectedOrderId(null);
-      setStopwatchElapsedTime(0);
+      stopwatchElapsedTime.current = 0;
+      setDisplayTime('00:00:00');
     } else {
       toast.error(result.message);
     }
@@ -333,7 +324,8 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
       toast.error("Bitte stoppen Sie die Stoppuhr, bevor Sie sie zurücksetzen.");
       return;
     }
-    setStopwatchElapsedTime(0);
+    stopwatchElapsedTime.current = 0;
+    setDisplayTime('00:00:00');
     toast.info("Stoppuhr zurückgesetzt.");
   };
 
@@ -344,12 +336,12 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
           <CardTitle className="text-lg font-semibold">Ihre Zeiterfassung</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <Skeleton className="h-10 w-full" /> {/* Tabs skeleton */}
-          <Skeleton className="h-10 w-full" /> {/* Select skeleton */}
-          <Skeleton className="h-24 w-full" /> {/* Main area skeleton */}
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-24 w-full" />
           <div className="flex gap-2">
-            <Skeleton className="h-10 w-full" /> {/* Button skeleton */}
-            <Skeleton className="h-10 w-10" /> {/* Small button skeleton */}
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-10" />
           </div>
         </CardContent>
       </Card>
@@ -371,9 +363,8 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
     );
   }
 
-  // Check if suggested times are available for the selected order
   const selectedOrder = orders.find(o => o.id === selectedOrderId);
-  const isScheduledOrder = !!(selectedOrder && selectedOrder.order_type === 'permanent' && suggestedStartTime && suggestedEndTime && suggestedDuration !== null);
+  const isScheduledOrder = !!(selectedOrder && selectedOrder.order_type === 'permanent' && suggestedDuration !== null);
 
   const getInitialDataForDialog = (): Partial<TimeEntryFormValues> => {
     const now = new Date();
@@ -389,13 +380,13 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
       return {
         ...baseData,
         startDate: now,
-        startTime: suggestedStartTime,
+        startTime: suggestedStartTime || undefined, // Cast null to undefined
         endDate: now,
-        endTime: suggestedEndTime,
+        endTime: suggestedEndTime || undefined, // Cast null to undefined
         durationMinutes: suggestedDuration,
-        breakMinutes: suggestedBreakMinutes, // Pausenminuten übergeben
-        type: 'automatic_scheduled_order' as const, // Explizit als Literal-Typ deklarieren
-        notes: `Automatisch erfasster geplanter Auftrag: ${suggestedStartTime} - ${suggestedEndTime}`,
+        breakMinutes: suggestedBreakMinutes,
+        type: 'automatic_scheduled_order' as const,
+        notes: `Automatisch erfasster geplanter Auftrag: ${suggestedDuration !== null ? (suggestedDuration / 60).toFixed(2) : 'N/A'} Stunden`,
       };
     } else {
       return {
@@ -405,8 +396,8 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
         endDate: null,
         endTime: null,
         durationMinutes: null,
-        breakMinutes: null, // Keine Pausen für manuelle/Stoppuhr-Starts
-        type: 'clock_in_out' as const, // Explizit als Literal-Typ deklarieren
+        breakMinutes: null,
+        type: 'clock_in_out' as const,
       };
     }
   };
@@ -438,7 +429,7 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
             )}
             {activeEntry.type === 'stopwatch' && (
               <p className="text-2xl font-bold text-primary">
-                {formatTime(stopwatchElapsedTime)}
+                {displayTime}
               </p>
             )}
           </div>
@@ -472,10 +463,10 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
                   )}
                 </div>
 
-                {isScheduledOrder && suggestedStartTime && suggestedEndTime && (
+                {isScheduledOrder && suggestedDuration !== null && (
                   <div className="text-sm text-muted-foreground mt-2 p-2 border rounded-md bg-primary-foreground/10 dark:bg-primary-foreground/20">
-                    <p>Vorgeschlagene Zeiten für diesen Auftrag heute:</p>
-                    <p className="font-semibold">{suggestedStartTime} - {suggestedEndTime} ({suggestedDuration !== null ? (suggestedDuration / 60).toFixed(2) : 'N/A'} Stunden)</p>
+                    <p>Vorgeschlagene Dauer für diesen Auftrag heute:</p>
+                    <p className="font-semibold">{ (suggestedDuration / 60).toFixed(2)} Stunden</p>
                     {suggestedBreakMinutes !== null && suggestedBreakMinutes > 0 && (
                       <p className="text-xs mt-1">
                         Inkl. {suggestedBreakMinutes} Minuten Pause.
@@ -496,10 +487,6 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
                     triggerButtonClassName="w-full bg-success hover:bg-success/90"
                     dialogTitle={isScheduledOrder ? "Geplanten Zeiteintrag bestätigen" : "Neuen Zeiteintrag erstellen"}
                     onEntryCreated={() => {
-                      // Nach erfolgreicher Erstellung den aktiven Eintrag neu laden
-                      // Dies ist wichtig, falls der Benutzer einen manuellen "Clock-in" macht
-                      // und wir den aktiven Eintrag in der UI anzeigen müssen.
-                      // Für automatische Einträge wird activeEntry null bleiben.
                       supabase
                         .from('time_entries')
                         .select(`
@@ -519,7 +506,7 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
                           if (newActiveEntry) setActiveEntry(newActiveEntry as ActiveTimeEntry);
                           if (error && error.code !== 'PGRST116') console.error("Fehler beim Neuladen des aktiven Eintrags:", error);
                         });
-                      setSelectedOrderId(null); // Auswahl zurücksetzen
+                      setSelectedOrderId(null);
                     }}
                     currentUserId={userId}
                     isAdmin={false}
@@ -564,18 +551,20 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
                   )}
                 </div>
 
-                {isScheduledOrder && suggestedStartTime && suggestedEndTime && (
+                {isScheduledOrder && suggestedDuration !== null && (
                   <div className="text-sm text-muted-foreground mt-2 p-2 border rounded-md bg-primary-foreground/10 dark:bg-primary-foreground/20">
-                    <p>Vorgeschlagene Zeiten für diesen Auftrag heute:</p>
-                    <p className="font-semibold">{suggestedStartTime} - {suggestedEndTime} ({suggestedDuration !== null ? (suggestedDuration / 60).toFixed(2) : 'N/A'} Stunden)</p>
-                    <p className="text-xs mt-1">
-                      Die Stoppuhr verfolgt die tatsächliche Zeit, aber dies ist der erwartete Zeitrahmen.
-                    </p>
+                    <p>Vorgeschlagene Dauer für diesen Auftrag heute:</p>
+                    <p className="font-semibold">{ (suggestedDuration / 60).toFixed(2)} Stunden</p>
+                    {suggestedBreakMinutes !== null && suggestedBreakMinutes > 0 && (
+                      <p className="text-xs mt-1">
+                        Die Stoppuhr verfolgt die tatsächliche Zeit, aber dies ist der erwartete Zeitrahmen.
+                      </p>
+                    )}
                   </div>
                 )}
 
                 <div className="flex justify-center items-center text-3xl font-bold my-4">
-                  {formatTime(stopwatchElapsedTime)}
+                  {displayTime}
                 </div>
                 <div className="flex gap-2">
                   {!activeEntry ? (

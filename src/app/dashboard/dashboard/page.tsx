@@ -6,14 +6,14 @@ import { OrderStatusChart }
 from "@/components/order-status-chart";
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
-import Link from "next/link"; // Import Link for clickable cards
-import { FinancialTrendChart } from "@/components/financial-trend-chart"; // Import new chart
-import { EmployeeWorkloadChart } from "@/components/employee-workload-chart"; // Import new chart
-import { KpiCard } from "@/components/kpi-card"; // Import the new KpiCard
-import { TodaysOrdersOverview } from "@/components/todays-orders-overview"; // Import the new component
-import { FeedbackCard } from "@/components/feedback-card"; // Import FeedbackCard
-import { getRevenueLast7Days, getMostBookedServices } from "@/lib/actions/finances"; // Import new finance actions
-import { Badge } from "@/components/ui/badge"; // Hinzugefügt: Import der Badge-Komponente
+import Link from "next/link";
+import { FinancialTrendChart } from "@/components/financial-trend-chart";
+import { EmployeeWorkloadChart } from "@/components/employee-workload-chart";
+import { KpiCard } from "@/components/kpi-card";
+import { TodaysOrdersOverview } from "@/components/todays-orders-overview";
+import { FeedbackCard } from "@/components/feedback-card";
+import { getRevenueLast7Days, getMostBookedServices } from "@/lib/actions/finances";
+import { Badge } from "@/components/ui/badge";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -23,10 +23,9 @@ export default async function DashboardPage() {
     redirect("/login");
   }
 
-  // Profildaten abrufen
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
-    .select('first_name, last_name, avatar_url, role') // Also fetch role for conditional display
+    .select('first_name, last_name, avatar_url, role')
     .eq('id', user.id)
     .single();
 
@@ -36,7 +35,7 @@ export default async function DashboardPage() {
 
   const currentUserRole = profile?.role || 'employee';
   const today = new Date();
-  today.setHours(0, 0, 0, 0); // Set to start of today for comparison
+  today.setHours(0, 0, 0, 0);
   const tomorrow = new Date(today);
   tomorrow.setDate(tomorrow.getDate() + 1);
 
@@ -75,8 +74,8 @@ export default async function DashboardPage() {
     .from('time_entries')
     .select('employee_id', { count: 'exact', head: true })
     .is('end_time', null)
-    .gte('start_time', today.toISOString()) // Only count entries started today
-    .lte('start_time', tomorrow.toISOString()); // And not started tomorrow
+    .gte('start_time', today.toISOString())
+    .lte('start_time', tomorrow.toISOString());
 
   if (activeEmployeesError) console.error("Fehler beim Laden der aktiven Mitarbeiter:", activeEmployeesError?.message || activeEmployeesError);
 
@@ -91,7 +90,7 @@ export default async function DashboardPage() {
   const { data: newOrderFeedback, error: orderFeedbackError } = await supabase
     .from('order_feedback')
     .select('id')
-    .eq('is_resolved', false) // Use the new field
+    .eq('is_resolved', false)
     .gte('created_at', today.toISOString())
     .lt('created_at', tomorrow.toISOString());
 
@@ -162,7 +161,7 @@ export default async function DashboardPage() {
     `)
     .eq('is_resolved', false)
     .order('created_at', { ascending: false })
-    .limit(3); // Limit to show only a few on dashboard
+    .limit(3);
 
   const { data: unresolvedGeneralFeedback, error: unresolvedGeneralFeedbackError } = await supabase
     .from('general_feedback')
@@ -172,7 +171,7 @@ export default async function DashboardPage() {
     `)
     .eq('is_resolved', false)
     .order('created_at', { ascending: false })
-    .limit(3); // Limit to show only a few on dashboard
+    .limit(3);
 
   if (unresolvedOrderFeedbackError) console.error("Fehler beim Laden des ungelösten Auftrags-Feedbacks:", unresolvedOrderFeedbackError?.message || unresolvedOrderFeedbackError);
   if (unresolvedGeneralFeedbackError) console.error("Fehler beim Laden des ungelösten allgemeinen Feedbacks:", unresolvedGeneralFeedbackError?.message || unresolvedGeneralFeedbackError);
@@ -279,7 +278,7 @@ export default async function DashboardPage() {
               <FeedbackCard
                 key={feedback.id}
                 feedback={feedback}
-                feedbackType={feedback.rating ? 'order' : 'general'} // Determine type based on 'rating' field
+                feedbackType={feedback.rating ? 'order' : 'general'}
                 currentUserId={user.id}
                 currentUserRole={currentUserRole}
               />

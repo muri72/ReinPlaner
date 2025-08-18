@@ -8,10 +8,10 @@ import { OrderForm, OrderFormValues } from "@/components/order-form";
 import { updateOrder } from "@/app/dashboard/orders/actions";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"; // Import Tabs
-import { DocumentUploader } from "@/components/document-uploader"; // Import DocumentUploader
-import { DocumentList } from "@/components/document-list"; // Import DocumentList
-import { FileStack } from "lucide-react"; // Import FileStack icon
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { DocumentUploader } from "@/components/document-uploader";
+import { DocumentList } from "@/components/document-list";
+import { FileStack } from "lucide-react";
 
 // Definierte Liste der Dienstleistungen (muss mit order-form.tsx übereinstimmen)
 const availableServices = [
@@ -36,21 +36,26 @@ interface OrderEditDialogProps {
     recurring_start_date: string | null;
     recurring_end_date: string | null;
     priority: string;
-    total_estimated_hours: number | null; // Corrected column name
+    total_estimated_hours: number | null;
     notes: string | null;
     service_type: string | null;
     request_status: string;
-    // Neue Felder für Mitarbeiterzuweisungen
     employee_ids: string[] | null;
     employee_first_names: string[] | null;
     employee_last_names: string[] | null;
-    assigned_daily_hours: (number | null)[] | null; // Hinzugefügt
+    assigned_daily_hours: (number | null)[] | null; // Keep for compatibility if needed elsewhere
+    assigned_monday_hours: number | null;
+    assigned_tuesday_hours: number | null;
+    assigned_wednesday_hours: number | null;
+    assigned_thursday_hours: number | null;
+    assigned_friday_hours: number | null;
+    assigned_saturday_hours: number | null;
+    assigned_sunday_hours: number | null;
   };
 }
 
 export function OrderEditDialog({ order }: OrderEditDialogProps) {
   const [open, setOpen] = useState(false);
-  // Removed titleId and descriptionId as they are no longer needed for aria attributes
 
   const handleUpdate = async (data: OrderFormValues) => {
     const result = await updateOrder(order.id, data);
@@ -60,7 +65,6 @@ export function OrderEditDialog({ order }: OrderEditDialogProps) {
     return result;
   };
 
-  // Hilfsfunktion, um service_type sicher in den Enum-Typ umzuwandeln
   const getServiceTypeForForm = (serviceType: string | null): OrderFormValues["serviceType"] => {
     if (serviceType && availableServices.includes(serviceType as any)) {
       return serviceType as OrderFormValues["serviceType"];
@@ -68,16 +72,22 @@ export function OrderEditDialog({ order }: OrderEditDialogProps) {
     return null;
   };
 
-  // Prepare assignedEmployees for the form
+  // Prepare assignedEmployees for the form with new daily hour fields
   const initialAssignedEmployees = (order.employee_ids || []).map((empId, index) => ({
     employeeId: empId,
-    assignedDailyHours: order.assigned_daily_hours?.[index] ?? null,
+    assigned_monday_hours: order.assigned_monday_hours,
+    assigned_tuesday_hours: order.assigned_tuesday_hours,
+    assigned_wednesday_hours: order.assigned_wednesday_hours,
+    assigned_thursday_hours: order.assigned_thursday_hours,
+    assigned_friday_hours: order.assigned_friday_hours,
+    assigned_saturday_hours: order.assigned_saturday_hours,
+    assigned_sunday_hours: order.assigned_sunday_hours,
   }));
 
   return (
     <TooltipProvider delayDuration={300}>
       <Dialog open={open} onOpenChange={setOpen}>
-        <Tooltip> {/* Tooltip wraps DialogTrigger */}
+        <Tooltip>
           <TooltipTrigger asChild>
             <DialogTrigger asChild>
               <Button variant="ghost" size="icon" className="text-primary hover:text-primary/80">
@@ -118,11 +128,11 @@ export function OrderEditDialog({ order }: OrderEditDialogProps) {
                   recurringStartDate: order.recurring_start_date ? new Date(order.recurring_start_date) : undefined,
                   recurringEndDate: order.recurring_end_date ? new Date(order.recurring_end_date) : undefined,
                   priority: order.priority as OrderFormValues["priority"],
-                  totalEstimatedHours: order.total_estimated_hours, // Corrected column name
+                  totalEstimatedHours: order.total_estimated_hours,
                   notes: order.notes,
                   serviceType: getServiceTypeForForm(order.service_type),
                   requestStatus: order.request_status as OrderFormValues["requestStatus"],
-                  assignedEmployees: initialAssignedEmployees, // Neues Feld übergeben
+                  assignedEmployees: initialAssignedEmployees,
                 }}
                 onSubmit={handleUpdate}
                 submitButtonText="Änderungen speichern"
