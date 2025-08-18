@@ -34,7 +34,7 @@ interface DisplayOrder {
   recurring_start_date: string | null;
   recurring_end_date: string | null;
   priority: string;
-  estimated_hours: number | null;
+  total_estimated_hours: number | null; // Corrected column name
   notes: string | null;
   request_status: string;
   service_type: string | null;
@@ -112,7 +112,7 @@ export function TodaysOrdersOverview() {
           recurring_start_date,
           recurring_end_date,
           priority,
-          estimated_hours,
+          total_estimated_hours,
           notes,
           request_status,
           service_type,
@@ -162,7 +162,7 @@ export function TodaysOrdersOverview() {
             recurring_start_date: order.recurring_start_date,
             recurring_end_date: order.recurring_end_date,
             priority: order.priority,
-            estimated_hours: order.estimated_hours,
+            total_estimated_hours: order.total_estimated_hours, // Corrected column name
             notes: order.notes,
             request_status: order.request_status,
             service_type: order.service_type,

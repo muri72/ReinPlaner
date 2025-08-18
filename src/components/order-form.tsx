@@ -41,7 +41,7 @@ export const orderSchema = z.object({
   recurringStartDate: z.date().optional().nullable(),
   recurringEndDate: z.date().optional().nullable(),
   priority: z.enum(["low", "medium", "high"]).default("low"),
-  estimatedHours: z.preprocess(
+  totalEstimatedHours: z.preprocess( // Corrected column name
     (val) => (val === "" ? null : Number(val)),
     z.nullable(z.number().min(0, "Stunden müssen positiv sein").max(999, "Stunden sind zu hoch")).optional()
   ),
@@ -81,7 +81,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     recurringStartDate: initialData?.recurringStartDate ? new Date(initialData.recurringStartDate) : null,
     recurringEndDate: initialData?.recurringEndDate ? new Date(initialData.recurringEndDate) : null,
     priority: initialData?.priority ?? "low",
-    estimatedHours: (initialData?.estimatedHours as number | null | undefined) ?? null,
+    totalEstimatedHours: (initialData?.totalEstimatedHours as number | null | undefined) ?? null, // Corrected column name
     notes: initialData?.notes ?? null,
     serviceType: initialData?.serviceType ?? null,
     requestStatus: initialData?.requestStatus ?? "approved", // Initialwert für neues Feld
@@ -391,16 +391,16 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
         )}
       </div>
       <div>
-        <Label htmlFor="estimatedHours">Geschätzte Stunden (optional)</Label>
+        <Label htmlFor="totalEstimatedHours">Geschätzte Stunden (optional)</Label>
         <Input
-          id="estimatedHours"
+          id="totalEstimatedHours"
           type="number"
           step="0.5"
-          {...form.register("estimatedHours")}
+          {...form.register("totalEstimatedHours")}
           placeholder="Z.B. 2.5"
         />
-        {form.formState.errors.estimatedHours && (
-          <p className="text-red-500 text-sm mt-1">{form.formState.errors.estimatedHours.message}</p>
+        {form.formState.errors.totalEstimatedHours && (
+          <p className="text-red-500 text-sm mt-1">{form.formState.errors.totalEstimatedHours.message}</p>
         )}
       </div>
       <div>

@@ -36,7 +36,7 @@ interface DisplayOrder {
   recurring_start_date: string | null;
   recurring_end_date: string | null;
   priority: string;
-  estimated_hours: number | null;
+  total_estimated_hours: number | null; // Corrected column name
   notes: string | null;
   request_status: string;
   service_type: string | null;

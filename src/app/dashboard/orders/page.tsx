@@ -47,7 +47,7 @@ interface DisplayOrder {
   recurring_start_date: string | null;
   recurring_end_date: string | null;
   priority: string;
-  estimated_hours: number | null;
+  total_estimated_hours: number | null; // Corrected column name
   notes: string | null;
   request_status: string;
   service_type: string | null;
@@ -185,7 +185,7 @@ export default function OrdersPage({
           recurring_start_date,
           recurring_end_date,
           priority,
-          estimated_hours,
+          total_estimated_hours,
           notes,
           request_status,
           service_type,
@@ -245,7 +245,7 @@ export default function OrdersPage({
         recurring_start_date: order.recurring_start_date,
         recurring_end_date: order.recurring_end_date,
         priority: order.priority,
-        estimated_hours: order.estimated_hours,
+        total_estimated_hours: order.total_estimated_hours, // Corrected column name
         notes: order.notes,
         request_status: order.request_status,
         service_type: order.service_type,
@@ -517,7 +517,7 @@ export default function OrdersPage({
                               <Badge variant={getPriorityBadgeVariant(order.priority)}>Priorität: {order.priority}</Badge>
                               <Badge variant={getRequestStatusBadgeVariant(order.request_status)}>Anfrage: {order.request_status}</Badge>
                             </div>
-                            {order.estimated_hours && <div className="flex items-center text-xs text-muted-foreground mt-1"><Clock className="mr-1 h-3 w-3" /><span>Geschätzte Stunden: {order.estimated_hours}</span></div>}
+                            {order.total_estimated_hours && <div className="flex items-center text-xs text-muted-foreground mt-1"><Clock className="mr-1 h-3 w-3" /><span>Geschätzte Stunden: {order.total_estimated_hours}</span></div>}
                             {order.notes && <div className="flex items-center text-xs text-muted-foreground mt-1"><FileText className="mr-1 h-3 w-3" /><span>Notizen: {order.notes}</span></div>}
                             {order.order_type === "one_time" && order.due_date && <p className="text-xs text-muted-foreground ml-auto mt-1">Fällig: {new Date(order.due_date).toLocaleDateString()}</p>}
                             {(order.order_type === "recurring" || order.order_type === "substitution" || order.order_type === "permanent") && order.recurring_start_date && <div className="flex items-center text-xs text-muted-foreground mt-1"><CalendarDays className="mr-1 h-3 w-3" /><span>Start: {new Date(order.recurring_start_date).toLocaleDateString()}</span></div>}

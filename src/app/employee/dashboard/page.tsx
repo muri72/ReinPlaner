@@ -65,7 +65,7 @@ export default async function EmployeeDashboardPage() {
         recurring_start_date,
         recurring_end_date,
         priority,
-        estimated_hours,
+        total_estimated_hours,
         notes,
         service_type,
         objects ( name, address, notes, time_of_day, access_method, pin, is_alarm_secured, alarm_password, security_code_word ),

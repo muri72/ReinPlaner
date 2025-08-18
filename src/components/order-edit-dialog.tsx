@@ -37,7 +37,7 @@ interface OrderEditDialogProps {
     recurring_start_date: string | null;
     recurring_end_date: string | null;
     priority: string;
-    estimated_hours: number | null;
+    total_estimated_hours: number | null; // Corrected column name
     notes: string | null;
     service_type: string | null;
     request_status: string;
@@ -109,7 +109,7 @@ export function OrderEditDialog({ order }: OrderEditDialogProps) {
                   recurringStartDate: order.recurring_start_date ? new Date(order.recurring_start_date) : undefined,
                   recurringEndDate: order.recurring_end_date ? new Date(order.recurring_end_date) : undefined,
                   priority: order.priority as OrderFormValues["priority"],
-                  estimatedHours: order.estimated_hours,
+                  totalEstimatedHours: order.total_estimated_hours, // Corrected column name
                   notes: order.notes,
                   serviceType: getServiceTypeForForm(order.service_type),
                   requestStatus: order.request_status as OrderFormValues["requestStatus"],

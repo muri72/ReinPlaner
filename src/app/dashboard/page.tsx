@@ -49,7 +49,8 @@ export default async function DashboardPage() {
       due_date,
       recurring_start_date,
       recurring_end_date,
-      status
+      status,
+      total_estimated_hours
     `)
     .or(`due_date.eq.${format(today, 'yyyy-MM-dd')},and(recurring_start_date.lte.${format(today, 'yyyy-MM-dd')},or(recurring_end_date.gte.${format(today, 'yyyy-MM-dd')},recurring_end_date.is.null))`)
     .in('order_type', ['one_time', 'recurring', 'permanent', 'substitution']);
@@ -177,9 +178,9 @@ export default async function DashboardPage() {
   const mappedUnresolvedOrderFeedback = unresolvedOrderFeedback?.map(f => ({
     ...f,
     order: {
-      title: f.orders?.title || 'Unbekannter Auftrag',
-      customer_name: f.orders?.customers?.name || 'N/A',
-      employee_name: `${f.orders?.employees?.first_name || ''} ${f.orders?.employees?.last_name || ''}`.trim() || 'N/A',
+      title: f.orders?.[0]?.title || 'Unbekannter Auftrag',
+      customer_name: f.orders?.[0]?.customers?.[0]?.name || 'N/A',
+      employee_name: `${f.orders?.[0]?.employees?.[0]?.first_name || ''} ${f.orders?.[0]?.employees?.[0]?.last_name || ''}`.trim() || 'N/A',
     },
     replied_by_name: `${f.profiles?.first_name || ''} ${f.profiles?.last_name || ''}`.trim() || 'Admin',
   })) || [];

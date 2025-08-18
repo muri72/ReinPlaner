@@ -97,7 +97,7 @@ export function CustomerOrderRequestForm({ customerId, onSuccess }: CustomerOrde
       requestStatus: 'pending', // Always pending for customer requests
       // employeeId: null, // No employee assigned yet // Entfernt
       priority: 'medium', // Default priority for customer requests
-      estimatedHours: null, // No estimated hours from customer
+      totalEstimatedHours: null, // No estimated hours from customer // Corrected column name
     });
 
     handleActionResponse(result);

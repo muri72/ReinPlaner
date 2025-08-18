@@ -23,7 +23,7 @@ export interface PlanningData {
 export interface UnassignedOrder {
   id: string;
   title: string;
-  estimated_hours: number | null;
+  total_estimated_hours: number | null; // Corrected column name
   service_type: string | null;
 }
 
@@ -56,18 +56,18 @@ export async function getPlanningDataForWeek(currentDate: Date): Promise<{ succe
       .from('orders')
       .select(`
         title,
-        employee_id,
         order_type,
         due_date,
-        estimated_hours,
+        total_estimated_hours,
         recurring_start_date,
         recurring_end_date,
         objects (
           monday_hours, tuesday_hours, wednesday_hours, thursday_hours,
           friday_hours, saturday_hours, sunday_hours
-        )
+        ),
+        order_employee_assignments ( employee_id )
       `)
-      .not('employee_id', 'is', null);
+      .not('order_employee_assignments.employee_id', 'is', null); // Filter by assignment table
     if (ordersError) throw ordersError;
 
     // 3. Alle genehmigten Abwesenheiten im Zeitraum abrufen
@@ -82,8 +82,8 @@ export async function getPlanningDataForWeek(currentDate: Date): Promise<{ succe
     // 4. NEU: Ungeplante Aufträge abrufen
     const { data: unassignedOrdersData, error: unassignedOrdersError } = await supabase
       .from('orders')
-      .select('id, title, estimated_hours, service_type')
-      .is('employee_id', null)
+      .select('id, title, total_estimated_hours, service_type') // Corrected column name
+      .is('order_employee_assignments.employee_id', null) // Filter for unassigned
       .in('order_type', ['one_time', 'substitution']) // Nur planbare Typen
       .eq('request_status', 'approved');
     if (unassignedOrdersError) throw unassignedOrdersError;
@@ -120,7 +120,11 @@ export async function getPlanningDataForWeek(currentDate: Date): Promise<{ succe
           continue;
         }
 
-        const employeeOrders = orders.filter(o => o.employee_id === employee.id);
+        // Filter orders assigned to this specific employee
+        const employeeOrders = orders.filter(o => 
+          o.order_employee_assignments && 
+          o.order_employee_assignments.some((assignment: any) => assignment.employee_id === employee.id)
+        );
 
         for (const order of employeeOrders) {
           let dailyHours = 0;
@@ -146,7 +150,7 @@ export async function getPlanningDataForWeek(currentDate: Date): Promise<{ succe
             }
           } else if (order.order_type === 'one_time') {
             if (order.due_date && formatISO(parseISO(order.due_date), { representation: 'date' }) === dateString) {
-              dailyHours = order.estimated_hours || 0;
+              dailyHours = order.total_estimated_hours || 0; // Corrected column name
               assignmentTitle = `${order.title} (Einmalig)`;
             }
           }
