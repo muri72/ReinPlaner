@@ -27,7 +27,7 @@ export interface PlanningData {
 export interface UnassignedOrder {
   id: string;
   title: string;
-  total_estimated_hours: number | null; // Corrected column name
+  total_estimated_hours: number | null;
   service_type: string | null;
 }
 
@@ -66,30 +66,41 @@ export async function getPlanningDataForWeek(currentDate: Date): Promise<{ succe
       .gte('end_date', start_date_iso);
     if (absencesError) throw absencesError;
 
-    // 3. Fetch all relevant assignments for the week in one go
-    const { data: activeAssignments, error: assignmentsError } = await supabase
-      .from('order_employee_assignments')
-      .select(`
-        *,
-        orders!inner(
-            id, title, order_type, due_date, total_estimated_hours,
-            recurring_start_date, recurring_end_date
-        )
-      `)
-      .eq('orders.request_status', 'approved')
-      .or(
-        // Condition for one-time orders (due_date is within the week)
-        `and(orders.due_date.gte.${start_date_iso},orders.due_date.lte.${end_date_iso}),` +
-        // Condition for recurring/permanent orders (date range overlaps with the week)
-        `and(orders.recurring_start_date.lte.${end_date_iso},or(orders.recurring_end_date.is.null,orders.recurring_end_date.gte.${start_date_iso}))`
-      );
-    if (assignmentsError) throw assignmentsError;
+    // 3. Fetch assignments for one-time orders in the week
+    const selectString = `
+      *,
+      orders!inner(
+          id, title, order_type, due_date, total_estimated_hours,
+          recurring_start_date, recurring_end_date
+      )
+    `;
 
-    // 4. Fetch unassigned orders
+    const { data: oneTimeAssignments, error: oneTimeError } = await supabase
+      .from('order_employee_assignments')
+      .select(selectString)
+      .eq('orders.request_status', 'approved')
+      .eq('orders.order_type', 'one_time')
+      .gte('orders.due_date', start_date_iso)
+      .lte('orders.due_date', end_date_iso);
+    if (oneTimeError) throw oneTimeError;
+
+    // 4. Fetch assignments for recurring orders in the week
+    const { data: recurringAssignments, error: recurringError } = await supabase
+      .from('order_employee_assignments')
+      .select(selectString)
+      .eq('orders.request_status', 'approved')
+      .in('orders.order_type', ['recurring', 'permanent', 'substitution'])
+      .lte('orders.recurring_start_date', end_date_iso)
+      .or(`recurring_end_date.is.null,recurring_end_date.gte.${start_date_iso}`, { foreignTable: 'orders' });
+    if (recurringError) throw recurringError;
+
+    const activeAssignments = [...oneTimeAssignments, ...recurringAssignments];
+
+    // 5. Fetch unassigned orders
     const { data: unassignedOrdersData, error: unassignedOrdersError } = await supabase.rpc('get_unassigned_orders');
     if (unassignedOrdersError) throw unassignedOrdersError;
 
-    // 5. Process data
+    // 6. Process data
     const planningData: PlanningData = {};
 
     for (const employee of employees) {
@@ -148,11 +159,9 @@ export async function getPlanningDataForWeek(currentDate: Date): Promise<{ succe
           let assignedStartTime: string | null = null;
           let assignedEndTime: string | null = null;
 
-          // For one-time orders, the daily hours might be the total estimated hours if not specified per day
           if (order.order_type === 'one_time') {
             dailyHours = order.total_estimated_hours || 0;
           } else {
-            // For recurring types, get hours from the daily columns
             switch (dayOfWeek) {
               case 1: dailyHours = Number(assignment.assigned_monday_hours) || 0; assignedStartTime = assignment.assigned_monday_start_time; assignedEndTime = assignment.assigned_monday_end_time; break;
               case 2: dailyHours = Number(assignment.assigned_tuesday_hours) || 0; assignedStartTime = assignment.assigned_tuesday_start_time; assignedEndTime = assignment.assigned_tuesday_end_time; break;
