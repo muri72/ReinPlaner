@@ -16,11 +16,24 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { ObjectForm, ObjectFormValues } from "@/components/object-form";
 import { createObject } from "@/app/dashboard/objects/actions";
 import { CustomerContactCreateDialog } from "@/components/customer-contact-create-dialog";
-import { DatePicker } from "@/components/date-picker";
+import { DatePicker } => "@/components/date-picker";
 import { handleActionResponse } from "@/lib/toast-utils";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"; // Import Card components
 
+// Definierte Liste der Dienstleistungen
+const availableServices = [
+  "Unterhaltsreinigung",
+  "Glasreinigung",
+  "Grundreinigung",
+  "Graffitientfernung",
+  "Sonderreinigung",
+] as const;
+
+// Helper function for number preprocessing
 const preprocessNumber = (val: unknown) => (val === "" || isNaN(Number(val)) ? null : Number(val));
+
+// Definieren von dayNames als const-Array
 const dayNames = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const;
 const germanDayNames: { [key: string]: string } = {
   monday: 'Mo',
@@ -31,56 +44,20 @@ const germanDayNames: { [key: string]: string } = {
   saturday: 'Sa',
   sunday: 'So',
 };
-const availableServices = [
-  "Unterhaltsreinigung",
-  "Glasreinigung",
-  "Grundreinigung",
-  "Graffitientfernung",
-  "Sonderreinigung",
-] as const;
 
-// Helper function to calculate the next state of assigned employees with distributed hours
-const calculateNextAssignedEmployees = (
-  currentAssignedEmployees: Array<any>, // Use any for simplicity in this helper, types are enforced by schema
-  selectedObject: { [key: string]: any } | undefined | null, // Object with daily hours
-  initialAssignedEmployeesCount: number // To check if it's initial load vs dynamic change
-): Array<any> => {
-  if (!selectedObject || currentAssignedEmployees.length === 0) {
-    // If no object or no assigned employees, return employees with null hours
-    return currentAssignedEmployees.map(emp => {
-      const newEmp = { ...emp };
-      dayNames.forEach(day => {
-        newEmp[`assigned_${day}_hours`] = null;
-      });
-      return newEmp;
-    });
-  }
+// Helper function to calculate suggested daily hours per employee
+// Diese Funktion wurde aus der Komponente verschoben
+const calculateSuggestedDailyHoursPerEmployee = (
+  objects: { id: string; total_weekly_hours: number | null }[],
+  objectId: string | null,
+  employeeCount: number
+): number | null => {
+  if (!objectId || employeeCount === 0) return null;
+  const selectedObject = objects.find(obj => obj.id === objectId);
+  if (!selectedObject || selectedObject.total_weekly_hours === null) return null;
 
-  const numAssignedEmployees = currentAssignedEmployees.length;
-  const newAssignments = currentAssignedEmployees.map(emp => ({ ...emp })); // Create a mutable copy
-
-  dayNames.forEach(day => {
-    const objectDailyHours = selectedObject[`${day}_hours`] as number | null;
-
-    if (objectDailyHours !== null && objectDailyHours !== undefined) {
-      const suggestedDailyHoursPerEmployeeValue = parseFloat((objectDailyHours / numAssignedEmployees).toFixed(2));
-
-      newAssignments.forEach((assignedEmp) => {
-        // Only update if it's the initial load or if the number of employees changed
-        // This prevents overwriting manual edits if the count hasn't changed
-        if (initialAssignedEmployeesCount === 0 || numAssignedEmployees !== initialAssignedEmployeesCount) {
-          assignedEmp[`assigned_${day}_hours`] = suggestedDailyHoursPerEmployeeValue;
-        }
-      });
-    } else {
-      // If object has no hours for this day, set assigned hours to null
-      newAssignments.forEach((assignedEmp) => {
-        assignedEmp[`assigned_${day}_hours`] = null;
-      });
-    }
-  });
-
-  return newAssignments;
+  const suggested = selectedObject.total_weekly_hours / employeeCount;
+  return parseFloat(suggested.toFixed(2));
 };
 
 // Helper for deep comparison of arrays of objects
@@ -271,7 +248,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
 
     // Only update if the calculated next state is different from the current form state
     if (!areArraysDeepEqual(nextAssignedEmployees, currentAssignedEmployees)) {
-        nextAssignedEmployees.forEach((newEmp, index) => {
+        nextAssignedEmployees.forEach((newEmp: any, index: number) => { // Explizite Typisierung
             dayNames.forEach(day => {
                 const fieldName = `assignedEmployees.${index}.assigned_${day}_hours` as const;
                 const currentValue = form.getValues(fieldName);
@@ -305,10 +282,10 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
         newTotalEstimatedHours = parseFloat(dailyHours.toFixed(2));
       }
     }
-    if (currentTotalEstimatedHours !== newTotalEstimatedHours) {
-        form.setValue("totalEstimatedHours", newTotalEstimatedHours, { shouldValidate: false });
-    }
 
+    if (currentTotalEstimatedHours !== newTotalEstimatedHours) {
+      form.setValue("totalEstimatedHours", newTotalEstimatedHours, { shouldValidate: false });
+    }
   }, [selectedObjectId, selectedAssignedEmployees, objects, form, orderType, initialData]);
 
 
@@ -383,11 +360,17 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
 
   const handleEmployeeAssignmentChange = (employeeId: string, isChecked: boolean) => {
     if (isChecked) {
+      const currentAssignedCount = (selectedAssignedEmployees?.length || 0) + 1;
+      const suggested = calculateSuggestedDailyHoursPerEmployee(objects, form.getValues("objectId") ?? null, currentAssignedCount);
       appendEmployee({
         employeeId: employeeId,
-        assigned_monday_hours: null, assigned_tuesday_hours: null, assigned_wednesday_hours: null,
-        assigned_thursday_hours: null, assigned_friday_hours: null, assigned_saturday_hours: null,
-        assigned_sunday_hours: null,
+        assigned_monday_hours: suggested,
+        assigned_tuesday_hours: suggested,
+        assigned_wednesday_hours: suggested,
+        assigned_thursday_hours: suggested,
+        assigned_friday_hours: suggested,
+        assigned_saturday_hours: suggested,
+        assigned_sunday_hours: suggested,
       });
     } else {
       const index = assignedEmployeeFields.findIndex(field => field.employeeId === employeeId);
@@ -417,343 +400,390 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
   };
 
   return (
-    <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 w-full max-w-md">
-      {/* Grundlegende Objektinformationen */}
-      <div>
-        <Label htmlFor="title">Titel des Auftrags</Label>
-        <Input
-          id="title"
-          {...form.register("title")}
-          placeholder="Wird automatisch generiert"
-          disabled={!initialData ? true : false}
-        />
-        {form.formState.errors.title && (
-          <p className="text-red-500 text-sm mt-1">{form.formState.errors.title.message}</p>
-        )}
-      </div>
-      <div>
-        <Label htmlFor="description">Beschreibung</Label>
-        <Textarea
-          id="description"
-          {...form.register("description")}
-          placeholder="Details zum Auftrag..."
-          rows={4}
-        />
-        {form.formState.errors.description && (
-          <p className="text-red-500 text-sm mt-1">{form.formState.errors.description.message}</p>
-        )}
-      </div>
-      <div>
-        <Label htmlFor="serviceType">Reinigungsdienstleistung</Label>
-        <Select onValueChange={(value: string) => form.setValue("serviceType", value as OrderFormValues["serviceType"])} value={form.watch("serviceType") || ""}>
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Dienstleistung auswählen" />
-          </SelectTrigger>
-          <SelectContent>
-            {availableServices.map(service => (
-              <SelectItem key={service} value={service}>{service}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {form.formState.errors.serviceType && (
-          <p className="text-red-500 text-sm mt-1">{form.formState.errors.serviceType.message}</p>
-        )}
-      </div>
-      <div>
-        <Label htmlFor="customerId">Kunde</Label>
-        <Select onValueChange={(value: string) => {
-          form.setValue("customerId", value);
-          form.setValue("objectId", null);
-          form.setValue("customerContactId", null);
-        }} value={form.watch("customerId")}>
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Kunde auswählen" />
-          </SelectTrigger>
-          <SelectContent>
-            {customers.map(customer => (
-              <SelectItem key={customer.id} value={customer.id}>{customer.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {form.formState.errors.customerId && (
-          <p className="text-red-500 text-sm mt-1">{form.formState.errors.customerId.message}</p>
-        )}
-      </div>
-      <div className="flex items-end gap-2">
-        <div className="flex-grow">
-          <Label htmlFor="customerContactId">Auftraggebende Person (Kundenkontakt, optional)</Label>
-          <Select onValueChange={(value: string) => form.setValue("customerContactId", value === "unassigned" ? null : value)} value={form.watch("customerContactId") || "unassigned"} disabled={!selectedCustomerId}>
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Kundenkontakt auswählen" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="unassigned">Kein Kundenkontakt zugewiesen</SelectItem>
-              {customerContacts.map(contact => (
-                <SelectItem key={contact.id} value={contact.id}>{contact.first_name} {contact.last_name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {form.formState.errors.customerContactId && (
-            <p className="text-red-500 text-sm mt-1">{form.formState.errors.customerContactId.message}</p>
-          )}
-        </div>
-        <CustomerContactCreateDialog customerId={selectedCustomerId} onContactCreated={handleCustomerContactCreated} disabled={!selectedCustomerId} />
-      </div>
-      <div className="flex items-end gap-2">
-        <div className="flex-grow">
-          <Label htmlFor="objectId">Objekt</Label>
-          <Select onValueChange={(value: string) => form.setValue("objectId", value)} value={form.watch("objectId") || "unassigned"} disabled={!form.watch("customerId")}>
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Objekt auswählen" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="unassigned">Kein Objekt zugewiesen</SelectItem>
-              {filteredObjects.map(obj => (
-                <SelectItem key={obj.id} value={obj.id}>{obj.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {form.formState.errors.objectId && (
-            <p className="text-red-500 text-sm mt-1">{form.formState.errors.objectId.message}</p>
-          )}
-        </div>
-        <Dialog open={isNewObjectDialogOpen} onOpenChange={setIsNewObjectDialogOpen}>
-          <DialogTrigger asChild>
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              className="mb-1"
-              disabled={!form.watch("customerId")}
-              title={!form.watch("customerId") ? "Bitte zuerst einen Kunden auswählen" : "Neues Objekt für diesen Kunden erstellen"}
-            >
-              <PlusCircle className="h-4 w-4" />
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto" aria-labelledby="object-create-dialog-title">
-            <DialogHeader>
-              <DialogTitle id="object-create-dialog-title">Neues Objekt erstellen</DialogTitle>
-            </DialogHeader>
-            <ObjectForm
-              initialData={{ customerId: form.watch("customerId") }}
-              onSubmit={handleCreateObject}
-              submitButtonText="Objekt erstellen"
-              onSuccess={() => setIsNewObjectDialogOpen(false)}
+    <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-6 w-full max-w-md mx-auto">
+      {/* Abschnitt: Grundlegende Auftragsinformationen */}
+      <Card className="shadow-neumorphic glassmorphism-card">
+        <CardHeader>
+          <CardTitle>Auftragsdetails</CardTitle>
+          <CardDescription>Grundlegende Informationen zum Auftrag.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <Label htmlFor="title">Titel des Auftrags</Label>
+            <Input
+              id="title"
+              {...form.register("title")}
+              placeholder="Wird automatisch generiert (z.B. Büroreinigung Muster GmbH)"
+              disabled={!initialData ? true : false}
             />
-          </DialogContent>
-        </Dialog>
-      </div>
+            {form.formState.errors.title && (
+              <p className="text-red-500 text-sm mt-1">{form.formState.errors.title.message}</p>
+            )}
+          </div>
+          <div>
+            <Label htmlFor="description">Beschreibung</Label>
+            <Textarea
+              id="description"
+              {...form.register("description")}
+              placeholder="Detaillierte Beschreibung der auszuführenden Arbeiten..."
+              rows={4}
+            />
+            {form.formState.errors.description && (
+              <p className="text-red-500 text-sm mt-1">{form.formState.errors.description.message}</p>
+            )}
+          </div>
+          <div>
+            <Label htmlFor="serviceType">Reinigungsdienstleistung</Label>
+            <Select onValueChange={(value: string) => form.setValue("serviceType", value as OrderFormValues["serviceType"])} value={form.watch("serviceType") || ""}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Dienstleistung auswählen" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableServices.map(service => (
+                  <SelectItem key={service} value={service}>{service}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {form.formState.errors.serviceType && (
+              <p className="text-red-500 text-sm mt-1">{form.formState.errors.serviceType.message}</p>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
-      {/* Mitarbeiterzuweisung */}
-      <div className="space-y-2">
-        <Label>Zugewiesene Mitarbeiter (optional)</Label>
-        <div className="border rounded-md p-3 space-y-2 max-h-96 overflow-y-auto">
-          {allEmployees.length === 0 ? (
-            <p className="text-muted-foreground text-sm">Keine Mitarbeiter zum Zuweisen gefunden.</p>
-          ) : (
-            allEmployees.map((employee) => {
-              const isAssigned = selectedAssignedEmployees?.some(
-                (assigned) => assigned.employeeId === employee.id
-              );
-              const assignedIndex = assignedEmployeeFields.findIndex(
-                (field) => field.employeeId === employee.id
-              );
+      {/* Abschnitt: Kunde & Objekt */}
+      <Card className="shadow-neumorphic glassmorphism-card">
+        <CardHeader>
+          <CardTitle>Kunde & Objekt</CardTitle>
+          <CardDescription>Wählen Sie den Kunden und das zugehörige Objekt aus.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <Label htmlFor="customerId">Kunde</Label>
+            <Select onValueChange={(value: string) => {
+              form.setValue("customerId", value);
+              form.setValue("objectId", null);
+              form.setValue("customerContactId", null);
+            }} value={form.watch("customerId")}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Kunde auswählen" />
+              </SelectTrigger>
+              <SelectContent>
+                {customers.map(customer => (
+                  <SelectItem key={customer.id} value={customer.id}>{customer.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {form.formState.errors.customerId && (
+              <p className="text-red-500 text-sm mt-1">{form.formState.errors.customerId.message}</p>
+            )}
+          </div>
+          <div className="flex flex-col sm:flex-row items-end gap-2">
+            <div className="flex-grow w-full">
+              <Label htmlFor="customerContactId">Auftraggebende Person (Kundenkontakt, optional)</Label>
+              <Select onValueChange={(value: string) => form.setValue("customerContactId", value === "unassigned" ? null : value)} value={form.watch("customerContactId") || "unassigned"} disabled={!selectedCustomerId}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Kundenkontakt auswählen" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unassigned">Kein Kundenkontakt zugewiesen</SelectItem>
+                  {customerContacts.map(contact => (
+                    <SelectItem key={contact.id} value={contact.id}>{contact.first_name} {contact.last_name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {form.formState.errors.customerContactId && (
+                <p className="text-red-500 text-sm mt-1">{form.formState.errors.customerContactId.message}</p>
+              )}
+            </div>
+            <CustomerContactCreateDialog customerId={selectedCustomerId} onContactCreated={handleCustomerContactCreated} disabled={!selectedCustomerId} />
+          </div>
+          <div className="flex flex-col sm:flex-row items-end gap-2">
+            <div className="flex-grow w-full">
+              <Label htmlFor="objectId">Objekt</Label>
+              <Select onValueChange={(value: string) => form.setValue("objectId", value)} value={form.watch("objectId") || "unassigned"} disabled={!form.watch("customerId")}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Objekt auswählen" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unassigned">Kein Objekt zugewiesen</SelectItem>
+                  {filteredObjects.map(obj => (
+                    <SelectItem key={obj.id} value={obj.id}>{obj.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {form.formState.errors.objectId && (
+                <p className="text-red-500 text-sm mt-1">{form.formState.errors.objectId.message}</p>
+            )}
+            </div>
+            <Dialog open={isNewObjectDialogOpen} onOpenChange={setIsNewObjectDialogOpen}>
+              <DialogTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="mb-1"
+                  disabled={!form.watch("customerId")}
+                  title={!form.watch("customerId") ? "Bitte zuerst einen Kunden auswählen" : "Neues Objekt für diesen Kunden erstellen"}
+                >
+                  <PlusCircle className="h-4 w-4" />
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto" aria-labelledby="object-create-dialog-title">
+                <DialogHeader>
+                  <DialogTitle id="object-create-dialog-title">Neues Objekt erstellen</DialogTitle>
+                </DialogHeader>
+                <ObjectForm
+                  initialData={{ customerId: form.watch("customerId") }}
+                  onSubmit={handleCreateObject}
+                  submitButtonText="Objekt erstellen"
+                  onSuccess={() => setIsNewObjectDialogOpen(false)}
+                />
+              </DialogContent>
+            </Dialog>
+          </div>
+        </CardContent>
+      </Card>
 
-              return (
-                <div key={employee.id} className="flex flex-col gap-2 p-2 border-b last:border-b-0">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id={`employee-${employee.id}`}
-                        checked={isAssigned}
-                        onCheckedChange={(checked: boolean) =>
-                          handleEmployeeAssignmentChange(employee.id, checked)
-                        }
-                        disabled={!selectedObjectId}
-                      />
-                      <Label htmlFor={`employee-${employee.id}`} className="flex-grow">
-                        {employee.first_name} {employee.last_name}
-                      </Label>
+      {/* Abschnitt: Mitarbeiterzuweisung */}
+      <Card className="shadow-neumorphic glassmorphism-card">
+        <CardHeader>
+          <CardTitle>Mitarbeiterzuweisung</CardTitle>
+          <CardDescription>Weisen Sie Mitarbeiter diesem Auftrag zu und verteilen Sie die Stunden.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label>Zugewiesene Mitarbeiter (optional)</Label>
+            <div className="border rounded-md p-3 space-y-2 max-h-96 overflow-y-auto">
+              {allEmployees.length === 0 ? (
+                <p className="text-muted-foreground text-sm">Keine Mitarbeiter zum Zuweisen gefunden.</p>
+              ) : (
+                allEmployees.map((employee) => {
+                  const isAssigned = selectedAssignedEmployees?.some(
+                    (assigned) => assigned.employeeId === employee.id
+                  );
+                  const assignedIndex = assignedEmployeeFields.findIndex(
+                    (field) => field.employeeId === employee.id
+                  );
+
+                  return (
+                    <div key={employee.id} className="flex flex-col gap-2 p-2 border-b last:border-b-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`employee-${employee.id}`}
+                            checked={isAssigned}
+                            onCheckedChange={(checked: boolean) =>
+                              handleEmployeeAssignmentChange(employee.id, checked)
+                            }
+                            disabled={!selectedObjectId}
+                          />
+                          <Label htmlFor={`employee-${employee.id}`} className="flex-grow">
+                            {employee.first_name} {employee.last_name}
+                          </Label>
+                        </div>
+                        {isAssigned && assignedIndex !== -1 && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => removeEmployee(assignedIndex)}
+                            className="text-destructive hover:text-destructive/80"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                      {isAssigned && assignedIndex !== -1 && (
+                        <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2 mt-2">
+                          {dayNames.map(day => {
+                            const fieldName = `assignedEmployees.${assignedIndex}.assigned_${day}_hours` as const;
+                            const objectDailyHours = getObjectDailyHours(day);
+
+                            return (
+                              <div key={day}>
+                                <Label htmlFor={fieldName} className="text-xs font-medium">
+                                  {germanDayNames[day]} {objectDailyHours !== null ? `(${objectDailyHours.toFixed(1)}h)` : ''}
+                                </Label>
+                                <Input
+                                  id={fieldName}
+                                  type="number"
+                                  step="0.5"
+                                  placeholder="Std."
+                                  className="w-full text-right"
+                                  {...form.register(fieldName, { valueAsNumber: true })}
+                                  disabled={objectDailyHours === null}
+                                />
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
-                    {isAssigned && assignedIndex !== -1 && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => removeEmployee(assignedIndex)}
-                        className="text-destructive hover:text-destructive/80"
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-                  {isAssigned && assignedIndex !== -1 && (
-                    <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2 mt-2">
-                      {dayNames.map(day => {
-                        const fieldName = `assignedEmployees.${assignedIndex}.assigned_${day}_hours` as const;
-                        const objectDailyHours = getObjectDailyHours(day);
-                        // const sumAssignedHours = getSumAssignedHoursForDay(day); // Not used here
-                        // const isDayValid = isDailyHoursValid(day); // Not used here
+                  );
+                })
+              )}
+            </div>
+            {form.formState.errors.assignedEmployees && (
+              <p className="text-red-500 text-sm mt-1">{form.formState.errors.assignedEmployees.message}</p>
+            )}
+            {!selectedObjectId && (
+                <p className="text-muted-foreground text-sm mt-1">Bitte wählen Sie zuerst ein Objekt aus, um Mitarbeiter zuzuweisen.</p>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
-                        return (
-                          <div key={day}>
-                            <Label htmlFor={fieldName} className="text-xs font-medium">
-                              {germanDayNames[day]} {objectDailyHours !== null ? `(${objectDailyHours.toFixed(1)}h)` : ''}
-                            </Label>
-                            <Input
-                              id={fieldName}
-                              type="number"
-                              step="0.5"
-                              placeholder="Std."
-                              className="w-full text-right"
-                              {...form.register(fieldName, { valueAsNumber: true })}
-                              disabled={objectDailyHours === null}
-                            />
-                            {/* Removed specific error message display for individual daily hour fields */}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              );
-            })
-          )}
-        </div>
-        {form.formState.errors.assignedEmployees && (
-          <p className="text-red-500 text-sm mt-1">{form.formState.errors.assignedEmployees.message}</p>
-        )}
-        {!selectedObjectId && (
-            <p className="text-muted-foreground text-sm mt-1">Bitte wählen Sie zuerst ein Objekt aus, um Mitarbeiter zuzuweisen.</p>
-        )}
-      </div>
+      {/* Abschnitt: Zeitplan & Priorität */}
+      <Card className="shadow-neumorphic glassmorphism-card">
+        <CardHeader>
+          <CardTitle>Zeitplan & Priorität</CardTitle>
+          <CardDescription>Legen Sie den Auftragstyp, die Daten und die Priorität fest.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <Label htmlFor="orderType">Auftragstyp</Label>
+            <Select onValueChange={(value: OrderFormValues["orderType"]) => {
+              form.setValue("orderType", value);
+              form.setValue("dueDate", null);
+              form.setValue("recurringStartDate", null);
+              form.setValue("recurringEndDate", null);
+            }} value={form.watch("orderType")}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Auftragstyp auswählen" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="one_time">Einmalig</SelectItem>
+                <SelectItem value="recurring">Wiederkehrend</SelectItem>
+                <SelectItem value="substitution">Vertretung</SelectItem>
+                <SelectItem value="permanent">Permanent</SelectItem>
+              </SelectContent>
+            </Select>
+            {form.formState.errors.orderType && (
+              <p className="text-red-500 text-sm mt-1">{form.formState.errors.orderType.message}</p>
+            )}
+          </div>
 
-      <div>
-        <Label htmlFor="orderType">Auftragstyp</Label>
-        <Select onValueChange={(value: OrderFormValues["orderType"]) => {
-          form.setValue("orderType", value);
-          form.setValue("dueDate", null);
-          form.setValue("recurringStartDate", null);
-          form.setValue("recurringEndDate", null);
-        }} value={form.watch("orderType")}>
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Auftragstyp auswählen" />
-          </SelectTrigger>
-          <SelectContent>
-            {availableServices.map(service => (
-              <SelectItem key={service} value={service}>{service}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {form.formState.errors.orderType && (
-          <p className="text-red-500 text-sm mt-1">{form.formState.errors.orderType.message}</p>
-        )}
-      </div>
-
-      {orderType === "one_time" && (
-        <DatePicker
-          label="Fälligkeitsdatum (optional)"
-          value={form.watch("dueDate")}
-          onChange={(date: Date | null) => form.setValue("dueDate", date)}
-          error={form.formState.errors.dueDate?.message}
-        />
-      )}
-
-      {(orderType === "recurring" || orderType === "substitution" || orderType === "permanent") && (
-        <>
-          <DatePicker
-            label="Startdatum"
-            value={form.watch("recurringStartDate")}
-            onChange={(date: Date | null) => form.setValue("recurringStartDate", date)}
-            error={form.formState.errors.recurringStartDate?.message}
-          />
-          {orderType !== "permanent" && (
+          {orderType === "one_time" && (
             <DatePicker
-              label="Enddatum (optional)"
-              value={form.watch("recurringEndDate")}
-              onChange={(date: Date | null) => form.setValue("recurringEndDate", date)}
-              error={form.formState.errors.recurringEndDate?.message}
+              label="Fälligkeitsdatum (optional)"
+              placeholder="Datum auswählen"
+              value={form.watch("dueDate")}
+              onChange={(date: Date | null) => form.setValue("dueDate", date)}
+              error={form.formState.errors.dueDate?.message}
             />
           )}
-        </>
-      )}
 
-      <div>
-        <Label htmlFor="priority">Priorität</Label>
-        <Select onValueChange={(value: OrderFormValues["priority"]) => form.setValue("priority", value)} value={form.watch("priority")}>
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Priorität auswählen" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="low">Niedrig</SelectItem>
-            <SelectItem value="medium">Mittel</SelectItem>
-            <SelectItem value="high">Hoch</SelectItem>
-          </SelectContent>
-        </Select>
-        {form.formState.errors.priority && (
-          <p className="text-red-500 text-sm mt-1">{form.formState.errors.priority.message}</p>
-        )}
-      </div>
-      <div>
-        <Label htmlFor="totalEstimatedHours">Geschätzte Stunden (optional)</Label>
-        <Input
-          id="totalEstimatedHours"
-          type="number"
-          step="0.5"
-          {...form.register("totalEstimatedHours")}
-          placeholder="Z.B. 2.5"
-          readOnly
-          className="bg-muted cursor-not-allowed"
-        />
-        {form.formState.errors.totalEstimatedHours && (
-          <p className="text-red-500 text-sm mt-1">{form.formState.errors.totalEstimatedHours.message}</p>
-        )}
-      </div>
-      <div>
-        <Label htmlFor="notes">Notizen (optional)</Label>
-        <Textarea
-          id="notes"
-          {...form.register("notes")}
-          placeholder="Zusätzliche Notizen zum Auftrag..."
-          rows={3}
-        />
-        {form.formState.errors.notes && (
-          <p className="text-red-500 text-sm mt-1">{form.formState.errors.notes.message}</p>
-        )}
-      </div>
-      <div>
-        <Label htmlFor="status">Status</Label>
-        <Select onValueChange={(value: OrderFormValues["status"]) => form.setValue("status", value)} value={form.watch("status")}>
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Status auswählen" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="pending">Ausstehend</SelectItem>
-            <SelectItem value="in_progress">In Bearbeitung</SelectItem>
-            <SelectItem value="completed">Abgeschlossen</SelectItem>
-          </SelectContent>
-        </Select>
-        {form.formState.errors.status && (
-          <p className="text-red-500 text-sm mt-1">{form.formState.errors.status.message}</p>
-        )}
-      </div>
-      <div>
-        <Label htmlFor="requestStatus">Anfragestatus</Label>
-        <Select onValueChange={(value: OrderFormValues["requestStatus"]) => form.setValue("requestStatus", value)} value={form.watch("requestStatus")}>
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Anfragestatus auswählen" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="pending">Ausstehend</SelectItem>
-            <SelectItem value="approved">Genehmigt</SelectItem>
-            <SelectItem value="rejected">Abgelehnt</SelectItem>
-          </SelectContent>
-        </Select>
-        {form.formState.errors.requestStatus && (
-          <p className="text-red-500 text-sm mt-1">{form.formState.errors.requestStatus.message}</p>
-        )}
-      </div>
-      <Button type="submit" disabled={form.formState.isSubmitting}>
+          {(orderType === "recurring" || orderType === "substitution" || orderType === "permanent") && (
+            <>
+              <DatePicker
+                label="Startdatum"
+                placeholder="Startdatum auswählen"
+                value={form.watch("recurringStartDate")}
+                onChange={(date: Date | null) => form.setValue("recurringStartDate", date)}
+                error={form.formState.errors.recurringStartDate?.message}
+              />
+              {orderType !== "permanent" && (
+                <DatePicker
+                  label="Enddatum (optional)"
+                  placeholder="Enddatum auswählen"
+                  value={form.watch("recurringEndDate")}
+                  onChange={(date: Date | null) => form.setValue("recurringEndDate", date)}
+                  error={form.formState.errors.recurringEndDate?.message}
+                />
+              )}
+            </>
+          )}
+
+          <div>
+            <Label htmlFor="priority">Priorität</Label>
+            <Select onValueChange={(value: OrderFormValues["priority"]) => form.setValue("priority", value)} value={form.watch("priority")}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Priorität auswählen" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="low">Niedrig</SelectItem>
+                <SelectItem value="medium">Mittel</SelectItem>
+                <SelectItem value="high">Hoch</SelectItem>
+              </SelectContent>
+            </Select>
+            {form.formState.errors.priority && (
+              <p className="text-red-500 text-sm mt-1">{form.formState.errors.priority.message}</p>
+            )}
+          </div>
+          <div>
+            <Label htmlFor="totalEstimatedHours">Geschätzte Stunden (optional)</Label>
+            <Input
+              id="totalEstimatedHours"
+              type="number"
+              step="0.5"
+              {...form.register("totalEstimatedHours")}
+              placeholder="Wird automatisch basierend auf Objektstunden berechnet"
+              readOnly
+              className="bg-muted cursor-not-allowed"
+            />
+            {form.formState.errors.totalEstimatedHours && (
+              <p className="text-red-500 text-sm mt-1">{form.formState.errors.totalEstimatedHours.message}</p>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Abschnitt: Zusätzliche Informationen & Status */}
+      <Card className="shadow-neumorphic glassmorphism-card">
+        <CardHeader>
+          <CardTitle>Zusätzliche Informationen & Status</CardTitle>
+          <CardDescription>Fügen Sie Notizen hinzu und legen Sie den Status des Auftrags fest.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <Label htmlFor="notes">Notizen (optional)</Label>
+            <Textarea
+              id="notes"
+              {...form.register("notes")}
+              placeholder="Zusätzliche Notizen zum Auftrag..."
+              rows={3}
+            />
+            {form.formState.errors.notes && (
+              <p className="text-red-500 text-sm mt-1">{form.formState.errors.notes.message}</p>
+            )}
+          </div>
+          <div>
+            <Label htmlFor="status">Status</Label>
+            <Select onValueChange={(value: OrderFormValues["status"]) => form.setValue("status", value)} value={form.watch("status")}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Status auswählen" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="pending">Ausstehend</SelectItem>
+                <SelectItem value="in_progress">In Bearbeitung</SelectItem>
+                <SelectItem value="completed">Abgeschlossen</SelectItem>
+              </SelectContent>
+            </Select>
+            {form.formState.errors.status && (
+              <p className="text-red-500 text-sm mt-1">{form.formState.errors.status.message}</p>
+            )}
+          </div>
+          <div>
+            <Label htmlFor="requestStatus">Anfragestatus</Label>
+            <Select onValueChange={(value: OrderFormValues["requestStatus"]) => form.setValue("requestStatus", value)} value={form.watch("requestStatus")}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Anfragestatus auswählen" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="pending">Ausstehend</SelectItem>
+                <SelectItem value="approved">Genehmigt</SelectItem>
+                <SelectItem value="rejected">Abgelehnt</SelectItem>
+              </SelectContent>
+            </Select>
+            {form.formState.errors.requestStatus && (
+              <p className="text-red-500 text-sm mt-1">{form.formState.errors.requestStatus.message}</p>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Button type="submit" disabled={form.formState.isSubmitting} className="w-full">
         {form.formState.isSubmitting ? `${submitButtonText}...` : submitButtonText}
       </Button>
     </form>
