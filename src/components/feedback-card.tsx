@@ -222,7 +222,7 @@ export function FeedbackCard({ feedback, feedbackType, currentUserId, currentUse
                     </DialogTrigger>
                     <DialogContent 
                       key={`delete-feedback-${feedback.id}-open`} 
-                      className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto"
+                      className="sm:max-w-md max-h-[90vh] overflow-y-auto"
                     >
                       <DialogHeader>
                         <DialogTitle>Sind Sie sicher?</DialogTitle>

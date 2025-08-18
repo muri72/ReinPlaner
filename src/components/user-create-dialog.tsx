@@ -35,7 +35,7 @@ export function UserCreateDialog({ onUserCreated }: UserCreateDialogProps) {
       </DialogTrigger>
       <DialogContent 
         key={open ? "user-create-open" : "user-create-closed"} 
-        className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card"
+        className="sm:max-w-xl max-h-[90vh] overflow-y-auto glassmorphism-card"
       >
         <DialogHeader>
           <DialogTitle>Neuen Benutzer registrieren</DialogTitle>

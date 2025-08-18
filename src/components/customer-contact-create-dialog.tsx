@@ -48,6 +48,7 @@ export function CustomerContactCreateDialog({ customerId, onContactCreated, disa
         key={open ? "customer-contact-create-open" : "customer-contact-create-closed"} 
         aria-labelledby={titleId} 
         aria-describedby={descriptionId}
+        className="sm:max-w-xl max-h-[90vh] overflow-y-auto glassmorphism-card"
       >
         <DialogHeader>
           <DialogTitle id={titleId}>Neuen Kundenkontakt erstellen</DialogTitle>

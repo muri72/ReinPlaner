@@ -1,28 +1,29 @@
 "use client";
 
-import { useState } from "react";
+import { useState } from "react"; // Corrected import statement
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Pencil } from "lucide-react";
 import { CustomerForm, CustomerFormValues } from "@/components/customer-form";
 import { updateCustomer } from "@/app/dashboard/customers/actions";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"; // Import Tooltip components
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 interface CustomerEditDialogProps {
   customer: {
     id: string;
+    user_id: string;
     name: string;
     address: string | null;
     contact_email: string | null;
     contact_phone: string | null;
-    customer_type: string; // Neues Feld
+    created_at: string | null;
+    customer_type: string;
   };
 }
 
 export function CustomerEditDialog({ customer }: CustomerEditDialogProps) {
   const [open, setOpen] = useState(false);
-  // Removed titleId and descriptionId as they are no longer needed for aria attributes
 
   const handleUpdate = async (data: CustomerFormValues) => {
     const result = await updateCustomer(customer.id, data);
@@ -50,7 +51,7 @@ export function CustomerEditDialog({ customer }: CustomerEditDialogProps) {
       </TooltipProvider>
       <DialogContent 
         key={open ? "customer-edit-open" : "customer-edit-closed"} 
-        className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card" 
+        className="sm:max-w-xl max-h-[90vh] overflow-y-auto glassmorphism-card" 
       >
         <DialogHeader>
           <DialogTitle>Kunden bearbeiten</DialogTitle>

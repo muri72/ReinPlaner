@@ -31,7 +31,7 @@ export function EmployeeCreateDialog({ onEmployeeCreated }: EmployeeCreateDialog
           Neuen Mitarbeiter hinzufügen
         </Button>
       </DialogTrigger>
-      <DialogContent key={open ? "employee-create-open" : "employee-create-closed"} className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card" aria-labelledby="employee-create-dialog-title">
+      <DialogContent key={open ? "employee-create-open" : "employee-create-closed"} className="sm:max-w-xl max-h-[90vh] overflow-y-auto glassmorphism-card" aria-labelledby="employee-create-dialog-title">
         <DialogHeader>
           <DialogTitle>Neuen Mitarbeiter hinzufügen</DialogTitle>
         </DialogHeader>

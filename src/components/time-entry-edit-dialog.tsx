@@ -57,7 +57,7 @@ export function TimeEntryEditDialog({ timeEntry, currentUserId, isAdmin }: TimeE
       </TooltipProvider>
       <DialogContent 
         key={open ? "time-entry-edit-open" : "time-entry-edit-closed"} 
-        className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card"
+        className="sm:max-w-xl max-h-[90vh] overflow-y-auto glassmorphism-card"
       >
         <DialogHeader>
           <DialogTitle>Zeiteintrag bearbeiten</DialogTitle>

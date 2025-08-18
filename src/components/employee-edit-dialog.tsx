@@ -63,7 +63,7 @@ export function EmployeeEditDialog({ employee }: EmployeeEditDialogProps) {
       </TooltipProvider>
       <DialogContent 
         key={open ? "employee-edit-open" : "employee-edit-closed"} 
-        className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card"
+        className="sm:max-w-xl max-h-[90vh] overflow-y-auto glassmorphism-card"
       >
         <DialogHeader>
           <DialogTitle>Mitarbeiter bearbeiten</DialogTitle>

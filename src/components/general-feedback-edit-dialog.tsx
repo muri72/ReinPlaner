@@ -71,7 +71,7 @@ export function GeneralFeedbackEditDialog({ feedback }: GeneralFeedbackEditDialo
       </TooltipProvider>
       <DialogContent 
         key={open ? "general-feedback-edit-open" : "general-feedback-edit-closed"} 
-        className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card"
+        className="sm:max-w-xl max-h-[90vh] overflow-y-auto glassmorphism-card"
       >
         <DialogHeader>
           <DialogTitle>Feedback bearbeiten</DialogTitle>

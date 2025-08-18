@@ -642,7 +642,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
   const isSingleEmployeeAssigned = assignedEmployeeFields.length === 1;
 
   return (
-    <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 w-full max-w-3xl mx-auto">
+    <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 w-full"> {/* Removed max-w-3xl mx-auto */}
       {/* Grundlegende Objektinformationen */}
       <div>
         <Label htmlFor="title">Titel des Auftrags</Label>
@@ -735,7 +735,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
               <PlusCircle className="h-4 w-4" />
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto" aria-labelledby="object-create-dialog-title">
+          <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto" aria-labelledby="object-create-dialog-title">
             <DialogHeader>
               <DialogTitle id="object-create-dialog-title">Neues Objekt erstellen</DialogTitle>
             </DialogHeader>
@@ -810,7 +810,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
                   </Button>
                 </div>
                 {/* Hours and Time inputs for each day */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4"> {/* Responsive grid for days */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-2"> {/* Responsive grid for days */}
                   {dayNames.map(day => {
                     const hoursFieldName = `assignedEmployees.${assignedIndex}.assigned_${day}_hours` as const;
                     const startFieldName = `assignedEmployees.${assignedIndex}.assigned_${day}_start_time` as const;

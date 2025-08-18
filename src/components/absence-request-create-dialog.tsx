@@ -37,7 +37,7 @@ export function AbsenceRequestCreateDialog({ onAbsenceRequestCreated, currentUse
       </DialogTrigger>
       <DialogContent 
         key={open ? "absence-request-create-open" : "absence-request-create-closed"} 
-        className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card"
+        className="sm:max-w-xl max-h-[90vh] overflow-y-auto glassmorphism-card"
       >
         <DialogHeader>
           <DialogTitle>Neuen Abwesenheitsantrag einreichen</DialogTitle>

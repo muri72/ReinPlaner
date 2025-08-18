@@ -61,7 +61,7 @@ export function DeleteCustomerButton({ customerId, onDeleteSuccess }: DeleteCust
             </DialogTrigger>
             <DialogContent 
               key={`delete-customer-${customerId}-open`} 
-              className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card"
+              className="sm:max-w-md max-h-[90vh] overflow-y-auto glassmorphism-card"
             >
               <DialogHeader>
                 <DialogTitle>Sind Sie sicher?</DialogTitle>

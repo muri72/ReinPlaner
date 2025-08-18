@@ -62,7 +62,7 @@ export function DeleteCustomerContactButton({ contactId, onDeleteSuccess }: Dele
             </AlertDialogTrigger>
             <AlertDialogContent 
               key={`delete-contact-${contactId}-open`} 
-              className="glassmorphism-card" 
+              className="sm:max-w-md glassmorphism-card" 
             >
               <AlertDialogHeader>
                 <AlertDialogTitle>Sind Sie sicher?</AlertDialogTitle>

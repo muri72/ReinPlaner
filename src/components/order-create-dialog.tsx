@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/button"; // Korrigierter Import
 import { PlusCircle } from "lucide-react";
 import { OrderForm, OrderFormValues } from "@/components/order-form";
 import { createOrder } from "@/app/dashboard/orders/actions";
@@ -35,7 +35,7 @@ export function OrderCreateDialog({ onOrderCreated }: OrderCreateDialogProps) {
       </DialogTrigger>
       <DialogContent 
         key={open ? "order-create-open" : "order-create-closed"} 
-        className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card"
+        className="sm:max-w-full max-h-[90vh] overflow-y-auto glassmorphism-card"
       >
         <DialogHeader>
           <DialogTitle>Neuen Auftrag hinzufügen</DialogTitle>

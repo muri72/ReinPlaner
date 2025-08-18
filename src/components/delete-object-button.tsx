@@ -61,7 +61,7 @@ export function DeleteObjectButton({ objectId, onDeleteSuccess }: DeleteObjectBu
             </DialogTrigger>
             <DialogContent 
               key={`delete-object-${objectId}-open`} 
-              className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card"
+              className="sm:max-w-md max-h-[90vh] overflow-y-auto glassmorphism-card"
             >
               <DialogHeader>
                 <DialogTitle>Sind Sie sicher?</DialogTitle>

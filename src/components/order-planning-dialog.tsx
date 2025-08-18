@@ -171,7 +171,7 @@ export function OrderPlanningDialog({ order }: OrderPlanningDialogProps) {
       </DialogTrigger>
       <DialogContent 
         key={open ? "order-planning-open" : "order-planning-closed"} 
-        className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card"
+        className="sm:max-w-xl max-h-[90vh] overflow-y-auto glassmorphism-card"
       >
         <DialogHeader>
           <DialogTitle>Anfrage planen: {order.title}</DialogTitle>
