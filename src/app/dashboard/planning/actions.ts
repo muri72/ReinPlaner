@@ -78,8 +78,11 @@ export async function getPlanningDataForWeek(currentDate: Date): Promise<{ succe
       `)
       .eq('orders.request_status', 'approved')
       .or(
-        `and(orders.order_type.eq.one_time,orders.due_date.gte.${start_date_iso},orders.due_date.lte.${end_date_iso}),` +
-        `and(orders.order_type.in.("recurring","permanent","substitution"),orders.recurring_start_date.lte.${end_date_iso},or(orders.recurring_end_date.is.null,orders.recurring_end_date.gte.${start_date_iso}))`
+        // An order is active this week if:
+        // 1. Its one-time due_date is within the week
+        `and(orders.due_date.gte.${start_date_iso},orders.due_date.lte.${end_date_iso}),` +
+        // OR 2. Its recurring date range overlaps with the week
+        `and(orders.recurring_start_date.lte.${end_date_iso},or(orders.recurring_end_date.is.null,orders.recurring_end_date.gte.${start_date_iso}))`
       );
     if (assignmentsError) throw assignmentsError;
 
