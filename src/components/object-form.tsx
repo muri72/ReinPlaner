@@ -17,7 +17,14 @@ import { CustomerContactCreateDialog } from "@/components/customer-contact-creat
 import { handleActionResponse } from "@/lib/toast-utils"; // Importiere die neue Utility
 import { calculateEndTime, calculateStartTime } from "@/lib/utils"; // Import the new utility
 
-const preprocessNumber = (val: any) => (val === "" || isNaN(Number(val)) ? null : Number(val));
+const preprocessNumber = (val: any) => {
+  if (typeof val === 'string') {
+    // Replace comma with dot for decimal separator
+    val = val.replace(',', '.');
+  }
+  const num = Number(val);
+  return isNaN(num) ? null : num;
+};
 const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
 
 // Helper function for time validation
@@ -202,13 +209,12 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
 
     let sum = 0;
     for (const hours of dailyHours) {
-      if (typeof hours === 'number' && !isNaN(hours)) {
-        sum += hours;
-      }
+      // Ensure hours is a number before adding, treating null as 0
+      sum += (typeof hours === 'number' && !isNaN(hours)) ? hours : 0;
     }
 
-    // Set the raw sum, let the display handle toFixed
-    form.setValue("totalWeeklyHours", sum, { shouldValidate: false });
+    // Set the sum, formatted to two decimal places for consistency
+    form.setValue("totalWeeklyHours", parseFloat(sum.toFixed(2)), { shouldValidate: false });
   }, [
     form, // Depend on form itself to get latest values
     mondayHours, // Explicitly watch all relevant fields
@@ -420,7 +426,7 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
                 {...form.register(`${day}_hours` as keyof ObjectFormValues, {
                   onChange: (e) => {
                     const value = e.target.value;
-                    const parsedHours = value === "" ? null : Number(value);
+                    const parsedHours = preprocessNumber(value); // Use the updated preprocessNumber
                     form.setValue(`${day}_hours` as keyof ObjectFormValues, parsedHours);
                     
                     const currentStartTime = form.getValues(`${day}_start_time` as keyof ObjectFormValues) as string | null | undefined;
