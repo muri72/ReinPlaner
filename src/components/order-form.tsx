@@ -257,7 +257,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     }
   }, [selectedObjectId, objects, form, orderType, form.watch("dueDate")]);
 
-  // EXACT LOGIC: Employee assignment distribution
+  // IMPROVED: Smarter distribution logic
   const distributeObjectHours = useCallback((employeeIds: string[]) => {
     const currentObjectId = form.getValues("objectId") ?? null;
     const selectedObject = objects.find(obj => obj.id === currentObjectId);
@@ -275,6 +275,11 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
       // Find existing assignment for this employee
       const existingAssignment = currentAssignments.find(emp => emp.employeeId === employeeId);
       
+      if (existingAssignment) {
+        return existingAssignment; // Keep existing data for existing employees
+      }
+
+      // This is a new employee, create a new assignment with 0 hours but default start times
       const newEmpData: AssignedEmployee = {
         employeeId,
         assigned_monday_hours: null, assigned_tuesday_hours: null, assigned_wednesday_hours: null,
@@ -290,67 +295,13 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
       };
 
       dayNames.forEach(day => {
-        const hoursFieldName = `assigned_${day}_hours` as keyof AssignedEmployee;
         const startFieldName = `assigned_${day}_start_time` as keyof AssignedEmployee;
-        const endFieldName = `assigned_${day}_end_time` as keyof AssignedEmployee;
-
-        const objectDailyHours = selectedObject?.[`${day}_hours` as keyof typeof selectedObject] as number | null;
         const objectStartTime = selectedObject?.[`${day}_start_time` as keyof typeof selectedObject] as string | null;
-
-        if (objectDailyHours != null && objectDailyHours > 0) {
-          // CASE 1: Only 1 employee → gets full object hours (1:1)
-          if (numAssignedEmployees === 1) {
-            (newEmpData as any)[hoursFieldName] = objectDailyHours;
-            (newEmpData as any)[startFieldName] = objectStartTime;
-            if (objectStartTime && objectDailyHours) {
-              (newEmpData as any)[endFieldName] = calculateEndTime(objectStartTime, objectDailyHours);
-            }
-          } else {
-            // CASE 2: Multiple employees → preserve existing or start with 0
-            if (existingAssignment) {
-              // Preserve existing employee's hours and times
-              (newEmpData as any)[hoursFieldName] = (existingAssignment as any)[hoursFieldName] || null;
-              (newEmpData as any)[startFieldName] = (existingAssignment as any)[startFieldName] || objectStartTime;
-              (newEmpData as any)[endFieldName] = (existingAssignment as any)[endFieldName] || null;
-              
-              // Recalculate end time if we have start time and hours
-              const preservedHours = (newEmpData as any)[hoursFieldName] as number | null;
-              const preservedStartTime = (newEmpData as any)[startFieldName] as string | null;
-              if (preservedHours && preservedStartTime) {
-                (newEmpData as any)[endFieldName] = calculateEndTime(preservedStartTime, preservedHours);
-              }
-            } else {
-              // New employee starts with 0 hours but gets object start time
-              (newEmpData as any)[hoursFieldName] = null; // Start with 0 hours
-              (newEmpData as any)[startFieldName] = objectStartTime; // But set default start time
-              (newEmpData as any)[endFieldName] = null;
-            }
-          }
-        }
+        (newEmpData as any)[startFieldName] = objectStartTime;
       });
+
       return newEmpData;
     });
-
-    // Special case: If going from 1 employee to multiple, redistribute the single employee's hours equally
-    if (currentAssignments.length === 1 && numAssignedEmployees > 1) {
-      const singleEmployee = currentAssignments[0];
-      
-      dayNames.forEach(day => {
-        const existingHours = (singleEmployee as any)[`assigned_${day}_hours`] as number | null;
-        if (existingHours && existingHours > 0) {
-          // Redistribute existing hours equally among all employees
-          const hoursPerEmployee = parseFloat((existingHours / numAssignedEmployees).toFixed(2));
-          newAssignments.forEach(assignment => {
-            (assignment as any)[`assigned_${day}_hours`] = hoursPerEmployee;
-            // Recalculate end times based on preserved start times
-            const startTime = (assignment as any)[`assigned_${day}_start_time`] as string | null;
-            if (startTime && hoursPerEmployee) {
-              (assignment as any)[`assigned_${day}_end_time`] = calculateEndTime(startTime, hoursPerEmployee);
-            }
-          });
-        }
-      });
-    }
 
     replaceAssignedEmployees(newAssignments);
   }, [objects, replaceAssignedEmployees, form]);
@@ -366,29 +317,9 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
   ) => {
     const parsedHours = value === "" ? null : Number(value);
     
-    // Validate that total hours don't exceed object hours
-    if (parsedHours != null) {
-      const selectedObject = objects.find(obj => obj.id === selectedObjectId);
-      const objectDailyHours = selectedObject?.[`${day}_hours` as keyof typeof selectedObject] as number | null;
-      
-      if (objectDailyHours != null) {
-        // Calculate other employees' hours using current form values
-        const currentAssignments = form.getValues("assignedEmployees") || [];
-        const otherAssignedHours = currentAssignments.reduce((sum, emp, idx) => {
-          if (idx === employeeIndex) return sum; // Skip current employee
-          const empHours = (emp as any)[`assigned_${day}_hours`] as number | null;
-          return sum + (empHours || 0);
-        }, 0);
-
-        if (otherAssignedHours + parsedHours > objectDailyHours) {
-          toast.error(`Die Gesamtstunden für ${germanDayNames[day]} dürfen ${objectDailyHours} Stunden nicht überschreiten`);
-          return;
-        }
-      }
-    }
-    
-    // Update the specific employee's hours
-    const currentEmployee = { ...assignedEmployeeFields[employeeIndex] };
+    // Get the current state of the employee to update
+    const currentAssignments = form.getValues("assignedEmployees") || [];
+    const currentEmployee = { ...currentAssignments[employeeIndex] };
     (currentEmployee as any)[`assigned_${day}_hours`] = parsedHours;
     
     // Recalculate end time based on start time
@@ -400,7 +331,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     }
     
     updateAssignedEmployee(employeeIndex, currentEmployee);
-  }, [assignedEmployeeFields, updateAssignedEmployee, objects, selectedObjectId, form]);
+  }, [updateAssignedEmployee, form]);
 
   const handleAssignedTimeChange = useCallback((
     employeeIndex: number,
@@ -408,7 +339,8 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     timeType: 'start',
     value: string
   ) => {
-    const currentEmployee = { ...assignedEmployeeFields[employeeIndex] };
+    const currentAssignments = form.getValues("assignedEmployees") || [];
+    const currentEmployee = { ...currentAssignments[employeeIndex] };
     const hours = (currentEmployee as any)[`assigned_${day}_hours`] as number | null;
 
     // Update start time
@@ -422,7 +354,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     }
     
     updateAssignedEmployee(employeeIndex, currentEmployee);
-  }, [assignedEmployeeFields, updateAssignedEmployee]);
+  }, [updateAssignedEmployee, form]);
 
   const handleFormSubmit: SubmitHandler<OrderFormValues> = async (data) => {
     // Validate that assigned hours match object hours for each day
@@ -498,13 +430,14 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     }
   };
 
-  // FIXED: Use real-time form values with watch()
+  // FIXED: Use watch() to get real-time form values
   const getSumAssignedHoursForDay = (day: string): number => {
-    if (!watchedAssignedEmployees) return 0;
-    const sum = watchedAssignedEmployees.reduce((total, emp) => {
+    const currentAssignments = form.watch("assignedEmployees") || [];
+    const sum = currentAssignments.reduce((total, emp) => {
       const assignedHours = (emp as any)[`assigned_${day}_hours`] as number | null;
       return total + (assignedHours || 0);
     }, 0);
+    // Ensure we always return a valid number
     return typeof sum === 'number' && !isNaN(sum) ? sum : 0;
   };
 
