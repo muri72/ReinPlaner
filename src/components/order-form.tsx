@@ -395,15 +395,25 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
       return;
     }
 
+    let copiedDaysCount = 0;
     dayNames.forEach(targetDay => {
       if (targetDay !== sourceDay) {
-        form.setValue(`assignedEmployees.${employeeIndex}.assigned_${targetDay}_hours`, sourceHours, { shouldValidate: true });
-        form.setValue(`assignedEmployees.${employeeIndex}.assigned_${targetDay}_start_time`, sourceStartTime, { shouldValidate: true });
-        form.setValue(`assignedEmployees.${employeeIndex}.assigned_${targetDay}_end_time`, sourceEndTime, { shouldValidate: true });
+        // NEW CHECK: Only copy if the target day has hours defined in the object.
+        const objectHoursForTargetDay = getObjectDailyHours(targetDay);
+        if (objectHoursForTargetDay && objectHoursForTargetDay > 0) {
+          form.setValue(`assignedEmployees.${employeeIndex}.assigned_${targetDay}_hours`, sourceHours, { shouldValidate: true });
+          form.setValue(`assignedEmployees.${employeeIndex}.assigned_${targetDay}_start_time`, sourceStartTime, { shouldValidate: true });
+          form.setValue(`assignedEmployees.${employeeIndex}.assigned_${targetDay}_end_time`, sourceEndTime, { shouldValidate: true });
+          copiedDaysCount++;
+        }
       }
     });
 
-    toast.success(`Zeiten von ${germanDayNames[sourceDay]} wurden für die Woche übernommen.`);
+    if (copiedDaysCount > 0) {
+        toast.success(`Zeiten von ${germanDayNames[sourceDay]} wurden für ${copiedDaysCount} weitere Tage übernommen.`);
+    } else {
+        toast.info("Keine weiteren relevanten Tage zum Kopieren gefunden.");
+    }
   };
 
   const handleFormSubmit: SubmitHandler<OrderFormValues> = async (data) => {
