@@ -23,7 +23,7 @@ export interface PlanningData {
 export interface UnassignedOrder {
   id: string;
   title: string;
-  total_estimated_hours: number | null; // Fixed: Changed from estimated_hours
+  estimated_hours: number | null;
   service_type: string | null;
 }
 
@@ -51,26 +51,23 @@ export async function getPlanningDataForWeek(currentDate: Date): Promise<{ succe
       .select('id, first_name, last_name');
     if (employeesError) throw employeesError;
 
-    // 2. Alle relevanten Aufträge abrufen (alle Typen mit Objekt-ID)
+    // 2. Alle relevanten Aufträge abrufen (alle Typen mit Mitarbeiter)
     const { data: orders, error: ordersError } = await supabase
       .from('orders')
       .select(`
-        id,
         title,
+        employee_id,
         order_type,
         due_date,
-        total_estimated_hours,
+        estimated_hours,
         recurring_start_date,
         recurring_end_date,
-        object_id,
         objects (
           monday_hours, tuesday_hours, wednesday_hours, thursday_hours,
           friday_hours, saturday_hours, sunday_hours
-        ),
-        order_employee_assignments ( employee_id, assigned_daily_hours )
+        )
       `)
-      .not('object_id', 'is', null) // Only orders linked to an object for scheduling
-      .eq('request_status', 'approved'); // Only approved orders
+      .not('employee_id', 'is', null);
     if (ordersError) throw ordersError;
 
     // 3. Alle genehmigten Abwesenheiten im Zeitraum abrufen
@@ -82,12 +79,12 @@ export async function getPlanningDataForWeek(currentDate: Date): Promise<{ succe
       .gte('end_date', formatISO(start, { representation: 'date' }));
     if (absencesError) throw absencesError;
 
-    // 4. NEU: Ungeplante Aufträge abrufen (ohne Mitarbeiterzuweisung)
+    // 4. NEU: Ungeplante Aufträge abrufen
     const { data: unassignedOrdersData, error: unassignedOrdersError } = await supabase
       .from('orders')
-      .select('id, title, total_estimated_hours, service_type')
-      .is('object_id', null) // Only orders not linked to an object for now (simplification for planning)
-      .is('employee_id', null) // Ensure no direct employee_id on order
+      .select('id, title, estimated_hours, service_type')
+      .is('employee_id', null)
+      .in('order_type', ['one_time', 'substitution']) // Nur planbare Typen
       .eq('request_status', 'approved');
     if (unassignedOrdersError) throw unassignedOrdersError;
 
@@ -123,58 +120,34 @@ export async function getPlanningDataForWeek(currentDate: Date): Promise<{ succe
           continue;
         }
 
-        // Filter orders that this employee is assigned to
-        const employeeAssignedOrders = orders.filter(o =>
-          o.order_employee_assignments.some(assignment => assignment.employee_id === employee.id)
-        );
+        const employeeOrders = orders.filter(o => o.employee_id === employee.id);
 
-        for (const order of employeeAssignedOrders) {
+        for (const order of employeeOrders) {
           let dailyHours = 0;
           let assignmentTitle = order.title;
 
-          const objectSchedule = Array.isArray(order.objects) ? order.objects[0] : order.objects;
-          const employeeAssignment = order.order_employee_assignments.find(a => a.employee_id === employee.id);
-
           if (['permanent', 'recurring', 'substitution'].includes(order.order_type)) {
             if (order.recurring_start_date && parseISO(order.recurring_start_date) <= day && (!order.recurring_end_date || parseISO(order.recurring_end_date) >= day)) {
-              if (objectSchedule) {
-                let totalObjectDailyHours = 0;
-                switch (dayOfWeek) {
-                  case 1: totalObjectDailyHours = objectSchedule.monday_hours || 0; break;
-                  case 2: totalObjectDailyHours = objectSchedule.tuesday_hours || 0; break;
-                  case 3: totalObjectDailyHours = objectSchedule.wednesday_hours || 0; break;
-                  case 4: totalObjectDailyHours = objectSchedule.thursday_hours || 0; break;
-                  case 5: totalObjectDailyHours = objectSchedule.friday_hours || 0; break;
-                  case 6: totalObjectDailyHours = objectSchedule.saturday_hours || 0; break;
-                  case 0: totalObjectDailyHours = objectSchedule.sunday_hours || 0; break;
-                }
-
-                if (employeeAssignment?.assigned_daily_hours !== null) {
-                  dailyHours = employeeAssignment?.assigned_daily_hours || 0;
-                  assignmentTitle = `${order.title} (Individuell)`;
-                } else {
-                  // Calculate equally distributed hours if no individual hours are set
-                  const assignedEmployeesCountForOrder = order.order_employee_assignments.length;
-                  if (assignedEmployeesCountForOrder > 0) {
-                    dailyHours = totalObjectDailyHours / assignedEmployeesCountForOrder;
-                    assignmentTitle = `${order.title} (Verteilt)`;
+              if (order.objects) {
+                const schedule = Array.isArray(order.objects) ? order.objects[0] : order.objects;
+                if (schedule) {
+                  switch (dayOfWeek) {
+                    case 1: dailyHours = schedule.monday_hours || 0; break;
+                    case 2: dailyHours = schedule.tuesday_hours || 0; break;
+                    case 3: dailyHours = schedule.wednesday_hours || 0; break;
+                    case 4: dailyHours = schedule.thursday_hours || 0; break;
+                    case 5: dailyHours = schedule.friday_hours || 0; break;
+                    case 6: dailyHours = schedule.saturday_hours || 0; break;
+                    case 0: dailyHours = schedule.sunday_hours || 0; break;
                   }
+                  assignmentTitle = `${order.title} (Plan)`;
                 }
               }
             }
           } else if (order.order_type === 'one_time') {
             if (order.due_date && formatISO(parseISO(order.due_date), { representation: 'date' }) === dateString) {
-              // For one-time orders, if assigned_daily_hours is set, use it. Otherwise, use total_estimated_hours divided by assigned employees.
-              if (employeeAssignment?.assigned_daily_hours !== null) {
-                dailyHours = employeeAssignment?.assigned_daily_hours || 0;
-                assignmentTitle = `${order.title} (Individuell)`;
-              } else {
-                const assignedEmployeesCountForOrder = order.order_employee_assignments.length;
-                if (assignedEmployeesCountForOrder > 0) {
-                  dailyHours = (order.total_estimated_hours || 0) / assignedEmployeesCountForOrder;
-                  assignmentTitle = `${order.title} (Verteilt)`;
-                }
-              }
+              dailyHours = order.estimated_hours || 0;
+              assignmentTitle = `${order.title} (Einmalig)`;
             }
           }
 
@@ -182,7 +155,7 @@ export async function getPlanningDataForWeek(currentDate: Date): Promise<{ succe
             planningData[employee.id].schedule[dateString].totalHours += dailyHours;
             planningData[employee.id].schedule[dateString].assignments.push({
               title: assignmentTitle,
-              hours: parseFloat(dailyHours.toFixed(1)), // Round for display
+              hours: dailyHours,
             });
           }
         }

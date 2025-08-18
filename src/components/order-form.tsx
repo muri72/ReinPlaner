@@ -6,19 +6,18 @@ import * as z from "zod";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+import { Textarea } from "@/components/ui/textarea"; // Hinzugefügt: Import der Textarea-Komponente
 import { toast } from "sonner";
-import { PlusCircle, Trash2 } from "lucide-react"; // Added Trash2
+import { PlusCircle } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { ObjectForm, ObjectFormValues } from "@/components/object-form";
 import { createObject } from "@/app/dashboard/objects/actions";
 import { CustomerContactCreateDialog } from "@/components/customer-contact-create-dialog";
-import { DatePicker } from "@/components/date-picker";
-import { handleActionResponse } from "@/lib/toast-utils";
-import { Checkbox } from "@/components/ui/checkbox"; // Import Checkbox
+import { DatePicker } from "@/components/date-picker"; // Importiere die neue DatePicker Komponente
+import { handleActionResponse } from "@/lib/toast-utils"; // Importiere die neue Utility
 
 // Definierte Liste der Dienstleistungen
 const availableServices = [
@@ -29,53 +28,26 @@ const availableServices = [
   "Sonderreinigung",
 ] as const;
 
-const employeeAssignmentSchema = z.object({
-  employeeId: z.string().uuid("Ungültige Mitarbeiter-ID"),
-  assignedDailyHours: z.preprocess(
-    (val) => (val === "" ? null : Number(val)),
-    z.nullable(z.number().min(0.1, "Stunden müssen positiv sein").max(24, "Stunden sind zu hoch")).optional()
-  ),
-});
-
 export const orderSchema = z.object({
   title: z.string().min(1, "Titel ist erforderlich").max(100, "Titel ist zu lang"),
   description: z.string().max(500, "Beschreibung ist zu lang").optional().nullable(),
   dueDate: z.date().optional().nullable(),
   status: z.enum(["pending", "in_progress", "completed"]).default("pending"),
   customerId: z.string().uuid("Ungültige Kunden-ID").min(1, "Kunde ist erforderlich"),
-  objectId: z.string().uuid("Ungültiges Objekt-ID").optional().nullable(),
+  objectId: z.string().uuid("Ungültiges Objekt-ID").optional().nullable(), // Geändert zu optional und nullable
+  employeeId: z.string().uuid("Ungültige Mitarbeiter-ID").optional().nullable(),
   customerContactId: z.string().uuid("Ungültige Kundenkontakt-ID").optional().nullable(),
   orderType: z.enum(["one_time", "recurring", "substitution", "permanent"]).default("one_time"),
   recurringStartDate: z.date().optional().nullable(),
   recurringEndDate: z.date().optional().nullable(),
   priority: z.enum(["low", "medium", "high"]).default("low"),
-  totalEstimatedHours: z.preprocess( // Renamed from estimatedHours
+  estimatedHours: z.preprocess(
     (val) => (val === "" ? null : Number(val)),
-    z.nullable(z.number().min(0, "Stunden müssen positiv sein").max(9999, "Stunden sind zu hoch")).optional()
+    z.nullable(z.number().min(0, "Stunden müssen positiv sein").max(999, "Stunden sind zu hoch")).optional()
   ),
   notes: z.string().max(500, "Notizen sind zu lang").optional().nullable(),
   serviceType: z.enum(availableServices).optional().nullable(),
-  requestStatus: z.enum(["pending", "approved", "rejected"]).default("approved"),
-  
-  // New fields for multi-employee assignment
-  assignedEmployeeIds: z.array(z.string().uuid()).optional(),
-  employeeAssignments: z.array(employeeAssignmentSchema).optional(),
-  distributeEqually: z.boolean().default(true), // New field for equal distribution toggle
-}).superRefine((data, ctx) => {
-  if (data.assignedEmployeeIds && data.assignedEmployeeIds.length > 0 && !data.distributeEqually) {
-    // If not distributing equally, ensure all assigned employees have individual hours defined
-    for (const empId of data.assignedEmployeeIds) {
-      const assignment = data.employeeAssignments?.find(ea => ea.employeeId === empId);
-      if (!assignment || (assignment.assignedDailyHours ?? 0) <= 0) { // Fixed: Use nullish coalescing for comparison
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: `Individuelle Stunden für zugewiesenen Mitarbeiter sind erforderlich.`,
-          path: [`employeeAssignments`], // Point to the array for a general error
-        });
-        break;
-      }
-    }
-  }
+  requestStatus: z.enum(["pending", "approved", "rejected"]).default("approved"), // Neues Feld
 });
 
 export type OrderFormInput = z.input<typeof orderSchema>;
@@ -102,19 +74,17 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     dueDate: initialData?.dueDate ? new Date(initialData.dueDate) : null,
     status: initialData?.status ?? "pending",
     customerId: initialData?.customerId ?? "",
-    objectId: initialData?.objectId ?? null,
+    objectId: initialData?.objectId ?? null, // Geändert zu null
+    employeeId: initialData?.employeeId ?? null,
     customerContactId: initialData?.customerContactId ?? null,
     orderType: initialData?.orderType ?? "one_time",
     recurringStartDate: initialData?.recurringStartDate ? new Date(initialData.recurringStartDate) : null,
     recurringEndDate: initialData?.recurringEndDate ? new Date(initialData.recurringEndDate) : null,
     priority: initialData?.priority ?? "low",
-    totalEstimatedHours: (initialData?.totalEstimatedHours as number | null | undefined) ?? null, // Use new column
+    estimatedHours: (initialData?.estimatedHours as number | null | undefined) ?? null,
     notes: initialData?.notes ?? null,
     serviceType: initialData?.serviceType ?? null,
-    requestStatus: initialData?.requestStatus ?? "approved",
-    assignedEmployeeIds: initialData?.assignedEmployeeIds ?? [], // Initialize new field
-    employeeAssignments: (initialData?.employeeAssignments as OrderFormValues['employeeAssignments']) ?? [], // Fixed: Explicitly cast to correct type
-    distributeEqually: initialData?.distributeEqually ?? true, // Initialize new field
+    requestStatus: initialData?.requestStatus ?? "approved", // Initialwert für neues Feld
   };
 
   const form = useForm<OrderFormValues>({
@@ -125,10 +95,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
   const orderType = form.watch("orderType");
   const selectedCustomerId = form.watch("customerId");
   const selectedObjectId = form.watch("objectId");
-  const assignedEmployeeIds = form.watch("assignedEmployeeIds");
-  const employeeAssignments = form.watch("employeeAssignments");
-  const distributeEqually = form.watch("distributeEqually");
-  const totalEstimatedHours = form.watch("totalEstimatedHours");
+  const selectedEmployeeId = form.watch("employeeId");
 
   // Funktion zum Laden der Kundenkontakte
   const fetchCustomerContacts = async (customerId: string) => {
@@ -174,21 +141,18 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     if (!initialData) { // Nur wenn ein neuer Auftrag erstellt wird
       const customerName = customers.find(c => c.id === selectedCustomerId)?.name || '';
       const objectName = objects.find(o => o.id === selectedObjectId)?.name || '';
-      
-      const assignedEmployeeNames = assignedEmployeeIds?.map(empId => {
-        const employee = employees.find(e => e.id === empId);
-        return employee ? `${employee.first_name || ''} ${employee.last_name || ''}`.trim() : '';
-      }).filter(Boolean).join(', ');
+      const employeeName = employees.find(e => e.id === selectedEmployeeId);
+      const employeeFullName = employeeName ? `${employeeName.first_name || ''} ${employeeName.last_name || ''}`.trim() : '';
 
       const parts = [];
       if (objectName) parts.push(objectName);
       if (customerName) parts.push(customerName);
-      if (assignedEmployeeNames) parts.push(assignedEmployeeNames);
+      if (employeeFullName) parts.push(employeeFullName);
 
       const generatedTitle = parts.join(' • ');
       form.setValue("title", generatedTitle);
     }
-  }, [selectedCustomerId, selectedObjectId, assignedEmployeeIds, customers, objects, employees, form, initialData]);
+  }, [selectedCustomerId, selectedObjectId, selectedEmployeeId, customers, objects, employees, form, initialData]);
 
   // Objekte filtern basierend auf ausgewähltem Kunden
   const filteredObjects = selectedCustomerId
@@ -235,34 +199,8 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     }
   };
 
-  const handleEmployeeSelection = (employeeId: string, isChecked: boolean) => {
-    const currentAssignedIds = form.getValues("assignedEmployeeIds") || [];
-    const currentAssignments = form.getValues("employeeAssignments") || [];
-
-    if (isChecked) {
-      form.setValue("assignedEmployeeIds", [...currentAssignedIds, employeeId]);
-      // Add a placeholder for individual hours if not distributing equally
-      if (!distributeEqually) {
-        form.setValue("employeeAssignments", [...currentAssignments, { employeeId, assignedDailyHours: null }]);
-      }
-    } else {
-      form.setValue("assignedEmployeeIds", currentAssignedIds.filter(id => id !== employeeId));
-      form.setValue("employeeAssignments", currentAssignments.filter(ea => ea.employeeId !== employeeId));
-    }
-  };
-
-  const handleIndividualHoursChange = (employeeId: string, value: string) => {
-    const parsedHours = value === "" ? null : Number(value);
-    const currentAssignments = form.getValues("employeeAssignments") || [];
-    const updatedAssignments = currentAssignments.map(ea =>
-      ea.employeeId === employeeId ? { ...ea, assignedDailyHours: parsedHours } : ea
-    );
-    form.setValue("employeeAssignments", updatedAssignments, { shouldValidate: true });
-  };
-
   return (
-    <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 w-full max-w-md">
-      {/* Grundlegende Objektinformationen */}
+    <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 w-full max-w-md" suppressHydrationWarning>
       <div>
         <Label htmlFor="title">Titel des Auftrags</Label>
         <Input
@@ -326,7 +264,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
       <div className="flex items-end gap-2">
         <div className="flex-grow">
           <Label htmlFor="customerContactId">Auftraggebende Person (Kundenkontakt, optional)</Label>
-          <Select onValueChange={(v) => form.setValue("customerContactId", v === "unassigned" ? null : v)} value={form.watch("customerContactId") || "unassigned"} disabled={!selectedCustomerId}>
+          <Select onValueChange={(value) => form.setValue("customerContactId", value === "unassigned" ? null : value)} value={form.watch("customerContactId") || "unassigned"} disabled={!selectedCustomerId}>
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Kundenkontakt auswählen" />
             </SelectTrigger>
@@ -391,85 +329,23 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
           disabled={!selectedCustomerId}
         />
       </div>
-
-      {/* Multi-Employee Assignment */}
-      <h3 className="text-lg font-semibold mt-6">Zugewiesene Mitarbeiter</h3>
-      <div className="space-y-2">
-        <Label>Mitarbeiter auswählen</Label>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-40 overflow-y-auto border rounded-md p-2">
-          {employees.length === 0 ? (
-            <p className="col-span-full text-muted-foreground text-sm">Keine Mitarbeiter verfügbar.</p>
-          ) : (
-            employees.map(employee => (
-              <div key={employee.id} className="flex items-center space-x-2">
-                <Checkbox
-                  id={`employee-${employee.id}`}
-                  checked={assignedEmployeeIds?.includes(employee.id)}
-                  onCheckedChange={(checked) => handleEmployeeSelection(employee.id, checked as boolean)}
-                />
-                <Label htmlFor={`employee-${employee.id}`}>{employee.first_name} {employee.last_name}</Label>
-              </div>
-            ))
-          )}
-        </div>
-        {form.formState.errors.assignedEmployeeIds && (
-          <p className="text-red-500 text-sm mt-1">{form.formState.errors.assignedEmployeeIds.message}</p>
-        )}
-      </div>
-
-      {assignedEmployeeIds && assignedEmployeeIds.length > 0 && (
-        <div className="space-y-2 border-t pt-4 mt-4">
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="distributeEqually"
-              checked={distributeEqually}
-              onCheckedChange={(checked) => form.setValue("distributeEqually", checked as boolean)}
-            />
-            <Label htmlFor="distributeEqually">Stunden gleichmäßig aufteilen</Label>
-          </div>
-
-          {!distributeEqually && (
-            <div className="space-y-2 mt-4">
-              <Label>Individuelle Stunden pro Mitarbeiter (Netto-Stunden pro Tag)</Label>
-              {assignedEmployeeIds.map(empId => {
-                const employee = employees.find(e => e.id === empId);
-                const currentAssignedHours = employeeAssignments?.find(ea => ea.employeeId === empId)?.assignedDailyHours;
-                return (
-                  <div key={empId} className="flex items-center gap-2">
-                    <Label className="w-32 flex-shrink-0">{employee?.first_name} {employee?.last_name}:</Label>
-                    <Input
-                      type="number"
-                      step="0.1"
-                      value={currentAssignedHours !== null ? currentAssignedHours : ''}
-                      onChange={(e) => handleIndividualHoursChange(empId, e.target.value)}
-                      placeholder="Stunden"
-                      className="flex-grow"
-                    />
-                  </div>
-                );
-              })}
-              {form.formState.errors.employeeAssignments && (
-                <p className="text-red-500 text-sm mt-1">{form.formState.errors.employeeAssignments.message}</p>
-              )}
-            </div>
-          )}
-        </div>
-      )}
-
       <div>
-        <Label htmlFor="totalEstimatedHours">Geschätzte Gesamtstunden (optional)</Label>
-        <Input
-          id="totalEstimatedHours"
-          type="number"
-          step="0.5"
-          {...form.register("totalEstimatedHours")}
-          placeholder="Z.B. 2.5"
-        />
-        {form.formState.errors.totalEstimatedHours && (
-          <p className="text-red-500 text-sm mt-1">{form.formState.errors.totalEstimatedHours.message}</p>
+        <Label htmlFor="employeeId">Zugewiesener Mitarbeiter (optional)</Label>
+        <Select onValueChange={(value) => form.setValue("employeeId", value === "unassigned" ? null : value)} value={form.watch("employeeId") || "unassigned"}>
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="Mitarbeiter auswählen" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="unassigned">Kein Mitarbeiter zugewiesen</SelectItem>
+            {employees.map(employee => (
+              <SelectItem key={employee.id} value={employee.id}>{employee.first_name} {employee.last_name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {form.formState.errors.employeeId && (
+          <p className="text-red-500 text-sm mt-1">{form.formState.errors.employeeId.message}</p>
         )}
       </div>
-
       <div>
         <Label htmlFor="orderType">Auftragstyp</Label>
         <Select onValueChange={(value) => {
@@ -537,7 +413,19 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
           <p className="text-red-500 text-sm mt-1">{form.formState.errors.priority.message}</p>
         )}
       </div>
-      
+      <div>
+        <Label htmlFor="estimatedHours">Geschätzte Stunden (optional)</Label>
+        <Input
+          id="estimatedHours"
+          type="number"
+          step="0.5"
+          {...form.register("estimatedHours")}
+          placeholder="Z.B. 2.5"
+        />
+        {form.formState.errors.estimatedHours && (
+          <p className="text-red-500 text-sm mt-1">{form.formState.errors.estimatedHours.message}</p>
+        )}
+      </div>
       <div>
         <Label htmlFor="notes">Notizen (optional)</Label>
         <Textarea
@@ -586,3 +474,5 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
         {form.formState.isSubmitting ? `${submitButtonText}...` : submitButtonText}
       </Button>
     </form>
+  );
+}

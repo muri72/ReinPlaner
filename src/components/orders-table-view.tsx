@@ -24,19 +24,19 @@ interface DisplayOrder {
   created_at: string | null;
   customer_id: string | null;
   object_id: string | null;
-  employee_ids: string[] | null; // Changed from employee_id
+  employee_id: string | null;
   customer_contact_id: string | null;
   customer_name: string | null;
   object_name: string | null;
-  employee_first_names: string[] | null; // New field
-  employee_last_names: string[] | null; // New field
+  employee_first_name: string | null;
+  employee_last_name: string | null;
   customer_contact_first_name: string | null;
   customer_contact_last_name: string | null;
   order_type: string;
   recurring_start_date: string | null;
   recurring_end_date: string | null;
   priority: string;
-  total_estimated_hours: number | null; // Changed from estimated_hours
+  estimated_hours: number | null;
   notes: string | null;
   request_status: string;
   service_type: string | null;
@@ -46,10 +46,6 @@ interface DisplayOrder {
     comment: string | null;
     image_urls: string[] | null;
     created_at: string;
-  }[];
-  order_employee_assignments: {
-    employee_id: string;
-    assigned_daily_hours: number | null;
   }[];
 }
 
@@ -219,8 +215,8 @@ export function OrdersTableView({
                 <TableCell className="text-sm">{order.customer_name || 'N/A'}</TableCell>
                 <TableCell className="text-sm">{order.object_name || 'N/A'}</TableCell>
                 <TableCell className="text-sm">
-                  {order.employee_first_names && order.employee_first_names.length > 0
-                    ? order.employee_first_names.map((f, i) => `${f || ''} ${order.employee_last_names?.[i] || ''}`).join(', ')
+                  {order.employee_first_name && order.employee_last_name
+                    ? `${order.employee_first_name} ${order.employee_last_name}`
                     : 'N/A'}
                 </TableCell>
                 <TableCell className="text-sm">{order.service_type || 'N/A'}</TableCell>

@@ -49,8 +49,7 @@ export default async function DashboardPage() {
       due_date,
       recurring_start_date,
       recurring_end_date,
-      status,
-      order_employee_assignments!inner(employee_id)
+      status
     `)
     .or(`due_date.eq.${format(today, 'yyyy-MM-dd')},and(recurring_start_date.lte.${format(today, 'yyyy-MM-dd')},or(recurring_end_date.gte.${format(today, 'yyyy-MM-dd')},recurring_end_date.is.null))`)
     .in('order_type', ['one_time', 'recurring', 'permanent', 'substitution']);
@@ -154,7 +153,7 @@ export default async function DashboardPage() {
       orders (
         title,
         customers ( name ),
-        order_employee_assignments ( employees ( first_name, last_name ) )
+        employees ( first_name, last_name )
       ),
       profiles ( first_name, last_name )
     `)
@@ -180,7 +179,7 @@ export default async function DashboardPage() {
     order: {
       title: f.orders?.title || 'Unbekannter Auftrag',
       customer_name: f.orders?.customers?.name || 'N/A',
-      employee_name: f.orders?.order_employee_assignments?.[0]?.employees?.[0] ? `${f.orders.order_employee_assignments[0].employees[0].first_name || ''} ${f.orders.order_employee_assignments[0].employees[0].last_name || ''}`.trim() : 'N/A',
+      employee_name: `${f.orders?.employees?.first_name || ''} ${f.orders?.employees?.last_name || ''}`.trim() || 'N/A',
     },
     replied_by_name: `${f.profiles?.first_name || ''} ${f.profiles?.last_name || ''}`.trim() || 'Admin',
   })) || [];
@@ -339,7 +338,7 @@ export default async function DashboardPage() {
             </CardContent>
           </Card>
         </Link>
-        <Link href="/dashboard/orders?requestStatus=pending" className="block">
+        <Link href="/dashboard/orders?status=pending" className="block">
           <Card className="shadow-neumorphic glassmorphism-card hover:scale-[1.02] transition-transform duration-200 ease-in-out cursor-pointer">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm md:text-base font-semibold">Ausstehende Aufträge</CardTitle>

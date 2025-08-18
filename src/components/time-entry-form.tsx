@@ -135,12 +135,7 @@ export function TimeEntryForm({ initialData, onSubmit, submitButtonText, onSucce
       if (objectsData) setObjects(objectsData);
       if (objectsError) console.error("Fehler beim Laden der Objekte:", objectsError);
 
-      // Fetch orders that the selected employee is assigned to
-      let ordersQuery = supabase.from('orders').select('id, title, customer_id, object_id, order_employee_assignments!inner(employee_id)').order('title', { ascending: true });
-      if (form.watch("employeeId")) {
-        ordersQuery = ordersQuery.filter('order_employee_assignments.employee_id', 'eq', form.watch("employeeId"));
-      }
-      const { data: ordersData, error: ordersError } = await ordersQuery;
+      const { data: ordersData, error: ordersError } = await supabase.from('orders').select('id, title, customer_id, object_id').order('title', { ascending: true });
       if (ordersData) setOrders(ordersData);
       if (ordersError) console.error("Fehler beim Laden der Aufträge:", ordersError);
     };

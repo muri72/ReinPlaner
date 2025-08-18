@@ -65,16 +65,15 @@ export default async function EmployeeDashboardPage() {
         recurring_start_date,
         recurring_end_date,
         priority,
-        total_estimated_hours,
+        estimated_hours,
         notes,
         service_type,
         objects ( name, address, notes, time_of_day, access_method, pin, is_alarm_secured, alarm_password, security_code_word ),
         customers ( name ),
-        customer_contacts ( first_name, last_name, phone ),
-        order_employee_assignments!inner(employee_id)
+        customer_contacts ( first_name, last_name, phone )
       `)
+      .eq('employee_id', employeeId)
       .eq('request_status', 'approved')
-      .filter('order_employee_assignments.employee_id', 'eq', employeeId) // Filter by employee_id in the join table
       .or(
         `due_date.eq.${format(today, 'yyyy-MM-dd')},and(recurring_start_date.lte.${format(today, 'yyyy-MM-dd')},or(recurring_end_date.gte.${format(today, 'yyyy-MM-dd')},recurring_end_date.is.null))`
       )

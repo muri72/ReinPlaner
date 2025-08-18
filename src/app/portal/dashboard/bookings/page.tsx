@@ -17,28 +17,23 @@ interface DisplayOrder {
   due_date: string | null;
   customer_id: string | null;
   object_id: string | null;
-  employee_ids: string[] | null; // Changed from employee_id
+  employee_id: string | null;
   customer_contact_id: string | null;
   customer_name: string | null;
   object_name: string | null;
-  employee_first_names: string[] | null; // New field
-  employee_last_names: string[] | null; // New field
+  employee_first_name: string | null;
+  employee_last_name: string | null;
   customer_contact_first_name: string | null;
   customer_contact_last_name: string | null;
   order_type: string;
   recurring_start_date: string | null;
   recurring_end_date: string | null;
   priority: string;
-  total_estimated_hours: number | null; // Changed from estimated_hours
+  estimated_hours: number | null;
   notes: string | null;
   request_status: string;
   service_type: string | null;
   order_feedback: { id: string }[]; // To check if feedback exists
-  order_employee_assignments: {
-    employee_id: string;
-    assigned_daily_hours: number | null;
-    employees: { first_name: string | null; last_name: string | null }[]; // Fixed: Explicitly define nested employees
-  }[];
 }
 
 export default async function CustomerBookingsPage() {
@@ -103,18 +98,19 @@ export default async function CustomerBookingsPage() {
       due_date,
       customer_id,
       object_id,
+      employee_id,
       customer_contact_id,
       order_type,
       recurring_start_date,
       recurring_end_date,
       priority,
-      total_estimated_hours,
+      estimated_hours,
       notes,
       request_status,
       service_type,
       customers ( name ),
       objects ( name ),
-      order_employee_assignments ( employee_id, assigned_daily_hours, employees ( first_name, last_name ) ),
+      employees ( first_name, last_name ),
       customer_contacts ( first_name, last_name ),
       order_feedback ( id )
     `)
@@ -134,24 +130,23 @@ export default async function CustomerBookingsPage() {
     due_date: order.due_date,
     customer_id: order.customer_id,
     object_id: order.object_id,
-    employee_ids: order.order_employee_assignments.map(oea => oea.employee_id),
+    employee_id: order.employee_id,
     customer_contact_id: order.customer_contact_id,
     customer_name: order.customers?.[0]?.name || null, // Korrigiert
     object_name: order.objects?.[0]?.name || null, // Korrigiert
-    employee_first_names: order.order_employee_assignments.map((oea: { employees: { first_name: string | null; }[]; }) => Array.isArray(oea.employees) ? oea.employees[0]?.first_name || null : oea.employees?.first_name || null), // Fixed
-    employee_last_names: order.order_employee_assignments.map((oea: { employees: { last_name: string | null; }[]; }) => Array.isArray(oea.employees) ? oea.employees[0]?.last_name || null : oea.employees?.last_name || null), // Fixed
+    employee_first_name: order.employees?.[0]?.first_name || null, // Korrigiert
+    employee_last_name: order.employees?.[0]?.last_name || null, // Korrigiert
     customer_contact_first_name: order.customer_contacts?.[0]?.first_name || null, // Korrigiert
     customer_contact_last_name: order.customer_contacts?.[0]?.last_name || null, // Korrigiert
-    order_type: order.order.order_type,
+    order_type: order.order_type,
     recurring_start_date: order.recurring_start_date,
     recurring_end_date: order.recurring_end_date,
     priority: order.priority,
-    total_estimated_hours: order.total_estimated_hours,
+    estimated_hours: order.estimated_hours,
     notes: order.notes,
     request_status: order.request_status,
     service_type: order.service_type,
     order_feedback: order.order_feedback || [],
-    order_employee_assignments: order.order_employee_assignments,
   }));
 
   const getStatusBadgeVariant = (status: string) => {

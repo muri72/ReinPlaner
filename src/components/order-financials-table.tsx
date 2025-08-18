@@ -16,8 +16,8 @@ interface OrderFinancial {
   order_title: string;
   customer_name: string;
   object_name: string | null;
-  employee_first_name: string | null; // Changed to singular
-  employee_last_name: string | null; // Changed to singular
+  employee_first_name: string | null;
+  employee_last_name: string | null;
   total_revenue: number;
   total_cost: number;
   profit: number;

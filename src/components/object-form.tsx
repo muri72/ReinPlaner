@@ -175,12 +175,6 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
   const selectedCustomerId = form.watch("customerId");
   const selectedTimeOfDay = form.watch("timeOfDay");
 
-  // Calculate total weekly hours dynamically for display
-  const totalWeeklyHours = dayNames.reduce((sum, day) => {
-    const hours = form.watch(`${day}_hours` as keyof ObjectFormValues) as number | null;
-    return sum + (hours || 0);
-  }, 0);
-
   // Centralized function to calculate and set times for a specific day
   // This function will be called by onChange handlers and useEffect
   const getCalculatedTimesForDay = useCallback((
@@ -395,12 +389,6 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
 
       {/* Arbeitszeiten pro Wochentag */}
       <h3 className="text-lg font-semibold mt-6">Arbeitsplan pro Wochentag</h3>
-      <div className="flex items-center justify-between p-2 border rounded-md bg-muted/20">
-        <span className="font-medium text-sm">Gesamtstunden pro Woche:</span>
-        <span className="font-bold text-primary">
-          {typeof totalWeeklyHours === 'number' && !isNaN(totalWeeklyHours) ? totalWeeklyHours.toFixed(2) : '0.00'} Std.
-        </span>
-      </div>
       {dayNames.map(day => (
         <div key={day} className="p-3 border rounded-md space-y-2">
           <Label className="font-medium">{germanDayNames[day]}</Label>

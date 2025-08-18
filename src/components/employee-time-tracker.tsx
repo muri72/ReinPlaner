@@ -129,9 +129,8 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
         // 3. Aufträge zur Auswahl abrufen (inkl. order_type und object_id)
         const { data: ordersData, error: ordersError } = await supabase
           .from('orders')
-          .select('id, title, customer_id, object_id, order_type, order_employee_assignments!inner(employee_id)') // Join with assignments
-          .eq('request_status', 'approved') // Only approved orders
-          .filter('order_employee_assignments.employee_id', 'eq', empId) // Filter by employee_id in the join table
+          .select('id, title, customer_id, object_id, order_type') // Select order_type and object_id
+          .eq('employee_id', empId)
           .order('title', { ascending: true });
 
         if (ordersData) setOrders(ordersData);
@@ -495,10 +494,10 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
                     triggerButtonClassName="w-full bg-success hover:bg-success/90"
                     dialogTitle={isScheduledOrder ? "Geplanten Zeiteintrag bestätigen" : "Neuen Zeiteintrag erstellen"}
                     onEntryCreated={() => {
-                      // After successful creation, reload the active entry
-                      // This is important if the user makes a manual "Clock-in"
-                      // and we need to display the active entry in the UI.
-                      // For automatic entries, activeEntry will remain null.
+                      // Nach erfolgreicher Erstellung den aktiven Eintrag neu laden
+                      // Dies ist wichtig, falls der Benutzer einen manuellen "Clock-in" macht
+                      // und wir den aktiven Eintrag in der UI anzeigen müssen.
+                      // Für automatische Einträge wird activeEntry null bleiben.
                       supabase
                         .from('time_entries')
                         .select(`
@@ -518,7 +517,7 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
                           if (newActiveEntry) setActiveEntry(newActiveEntry as ActiveTimeEntry);
                           if (error && error.code !== 'PGRST116') console.error("Fehler beim Neuladen des aktiven Eintrags:", error);
                         });
-                      setSelectedOrderId(null); // Reset selection
+                      setSelectedOrderId(null); // Auswahl zurücksetzen
                     }}
                     currentUserId={userId}
                     isAdmin={false}

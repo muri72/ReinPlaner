@@ -54,7 +54,7 @@ function DraggableOrder({ order }: { order: UnassignedOrder }) {
             <p className="font-semibold text-sm">{order.title}</p>
             <div className="flex items-center justify-between text-xs text-muted-foreground">
               <span>{order.service_type || 'Allgemein'}</span>
-              <span>{order.total_estimated_hours ? `${order.total_estimated_hours}h` : ''}</span> {/* Fixed: Use total_estimated_hours */}
+              <span>{order.estimated_hours ? `${order.estimated_hours}h` : ''}</span>
             </div>
           </div>
         </div>

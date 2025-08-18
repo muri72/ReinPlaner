@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react"; // Import useCallback
+import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -22,27 +22,22 @@ interface DisplayOrder {
   due_date: string | null;
   customer_id: string | null;
   object_id: string | null;
-  employee_ids: string[] | null; // Changed from employee_id
+  employee_id: string | null;
   customer_contact_id: string | null;
   customer_name: string | null;
   object_name: string | null;
-  employee_first_names: string[] | null; // New field
-  employee_last_names: string[] | null; // New field
+  employee_first_name: string | null;
+  employee_last_name: string | null;
   customer_contact_first_name: string | null;
   customer_contact_last_name: string | null;
   order_type: string;
   recurring_start_date: string | null;
   recurring_end_date: string | null;
   priority: string;
-  total_estimated_hours: number | null; // Changed from estimated_hours
+  estimated_hours: number | null;
   notes: string | null;
   request_status: string;
   service_type: string | null;
-  order_employee_assignments: {
-    employee_id: string;
-    assigned_daily_hours: number | null;
-    employees: { first_name: string | null; last_name: string | null }[]; // Fixed: Explicitly define nested employees
-  }[];
 }
 
 export function TodaysOrdersOverview() {
@@ -102,7 +97,7 @@ export function TodaysOrdersOverview() {
       }
 
 
-      let queryBuilder = supabase
+      let query = supabase
         .from('orders')
         .select(`
           id,
@@ -112,18 +107,19 @@ export function TodaysOrdersOverview() {
           due_date,
           customer_id,
           object_id,
+          employee_id,
           customer_contact_id,
           order_type,
           recurring_start_date,
           recurring_end_date,
           priority,
-          total_estimated_hours,
+          estimated_hours,
           notes,
           request_status,
           service_type,
           customers ( name ),
           objects ( name ),
-          order_employee_assignments ( employee_id, assigned_daily_hours, employees ( first_name, last_name ) ),
+          employees ( first_name, last_name ),
           customer_contacts ( first_name, last_name )
         `)
         .eq('request_status', 'approved') // Only show approved orders
@@ -131,11 +127,11 @@ export function TodaysOrdersOverview() {
         .order('recurring_start_date', { ascending: true });
 
       // Filter by date for one-time orders OR recurring/permanent/substitution orders
-      queryBuilder = queryBuilder.or(
+      query = query.or(
         `due_date.eq.${format(today, 'yyyy-MM-dd')},and(recurring_start_date.lte.${format(today, 'yyyy-MM-dd')},or(recurring_end_date.gte.${format(today, 'yyyy-MM-dd')},recurring_end_date.is.null))`
       );
 
-      const { data, error } = await queryBuilder;
+      const { data, error } = await query;
 
       if (error) {
         console.error("Fehler beim Laden der heutigen Aufträge:", error?.message || error);
@@ -143,13 +139,10 @@ export function TodaysOrdersOverview() {
         setOrders([]);
       } else {
         const mappedOrders = data.map(order => {
+          const employee = Array.isArray(order.employees) ? order.employees[0] : order.employees;
           const customer = Array.isArray(order.customers) ? order.customers[0] : order.customers;
           const object = Array.isArray(order.objects) ? order.objects[0] : order.objects;
           const customerContact = Array.isArray(order.customer_contacts) ? order.customer_contacts[0] : order.customer_contacts;
-
-          const employee_ids = order.order_employee_assignments.map(oea => oea.employee_id);
-          const employee_first_names = order.order_employee_assignments.map((oea: { employees: { first_name: string | null; }[]; }) => Array.isArray(oea.employees) ? oea.employees[0]?.first_name || null : oea.employees?.first_name || null); // Fixed
-          const employee_last_names = order.order_employee_assignments.map((oea: { employees: { last_name: string | null; }[]; }) => Array.isArray(oea.employees) ? oea.employees[0]?.last_name || null : oea.employees?.last_name || null); // Fixed
 
           return {
             id: order.id,
@@ -159,23 +152,22 @@ export function TodaysOrdersOverview() {
             due_date: order.due_date,
             customer_id: order.customer_id,
             object_id: order.object_id,
-            employee_ids: employee_ids,
+            employee_id: order.employee_id,
             customer_contact_id: order.customer_contact_id,
             customer_name: customer?.name || null,
             object_name: object?.name || null,
-            employee_first_names: employee_first_names,
-            employee_last_names: employee_last_names,
+            employee_first_name: employee?.first_name || null,
+            employee_last_name: employee?.last_name || null,
             customer_contact_first_name: customerContact?.first_name || null,
             customer_contact_last_name: customerContact?.last_name || null,
             order_type: order.order_type,
             recurring_start_date: order.recurring_start_date,
             recurring_end_date: order.recurring_end_date,
             priority: order.priority,
-            total_estimated_hours: order.total_estimated_hours,
+            estimated_hours: order.estimated_hours,
             notes: order.notes,
             request_status: order.request_status,
             service_type: order.service_type,
-            order_employee_assignments: order.order_employee_assignments,
           };
         });
 
@@ -183,7 +175,7 @@ export function TodaysOrdersOverview() {
         const filteredByRole = mappedOrders.filter(order => {
           if (currentUserRole === 'admin') return true;
           if (currentUserRole === 'employee') {
-            return order.employee_ids?.includes(currentEmployeeId || '') || false;
+            return order.employee_id === currentEmployeeId; // Korrigierte Filterung
           }
           if (currentUserRole === 'manager') {
             // Managers can see orders for customers they are assigned to
@@ -269,8 +261,8 @@ export function TodaysOrdersOverview() {
                       <p className="text-xs text-muted-foreground">{order.object_name}</p>
                     </TableCell>
                     <TableCell className="text-sm">
-                      {order.employee_first_names && order.employee_first_names.length > 0
-                        ? order.employee_first_names.map((f, i) => `${f || ''} ${order.employee_last_names?.[i] || ''}`).join(', ')
+                      {order.employee_first_name && order.employee_last_name
+                        ? `${order.employee_first_name} ${order.employee_last_name}`
                         : 'N/A'}
                     </TableCell>
                     <TableCell>

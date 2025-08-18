@@ -50,7 +50,7 @@ export async function getMultiMonthFinancialData(numberOfMonths: number = 6) {
       // Calculate total revenue for the month
       let totalRevenue = 0;
 
-      // Fixed monthly prices from permanent orders
+      // Fixed monthly prices from permanent orders (only count if the month is within their recurring period)
       const { data: fixedPriceOrders, error: fixedPriceError } = await supabase
         .from('orders')
         .select('fixed_monthly_price, recurring_start_date, recurring_end_date')
@@ -60,6 +60,8 @@ export async function getMultiMonthFinancialData(numberOfMonths: number = 6) {
         .or(`recurring_end_date.gte.${startDate.toISOString().split('T')[0]},recurring_end_date.is.null`); // Order ends after or in this month, or never ends
 
       if (fixedPriceError) throw fixedPriceError;
+      // For simplicity, if a permanent order was active at any point in the last 7 days,
+      // we'll include its full monthly price. A more accurate calculation would prorate.
       totalRevenue += fixedPriceOrders.reduce((acc, order) => acc + Number(order.fixed_monthly_price || 0), 0);
 
       // Revenue from hourly-based orders (time entries)
@@ -73,6 +75,7 @@ export async function getMultiMonthFinancialData(numberOfMonths: number = 6) {
 
       hourlyTimeEntries.forEach(entry => {
         const order = Array.isArray(entry.orders) ? entry.orders[0] : entry.orders;
+        // Only add revenue if it's not a fixed-price permanent order already counted
         if (order && (order.order_type !== 'permanent' || !order.fixed_monthly_price)) {
           const rate = serviceRates.get(order.service_type || '') || 24.00; // Fallback
           const hoursWorked = (entry.duration_minutes || 0) / 60; // Revenue is based on gross hours
@@ -179,6 +182,8 @@ export async function getRevenueLast7Days() {
       .or(`recurring_end_date.gte.${sevenDaysAgo.toISOString().split('T')[0]},recurring_end_date.is.null`);
 
     if (fixedPriceError) throw fixedPriceError;
+    // For simplicity, if a permanent order was active at any point in the last 7 days,
+    // we'll include its full monthly price. A more accurate calculation would prorate.
     totalRevenue += fixedPriceOrders.reduce((acc, order) => acc + Number(order.fixed_monthly_price || 0), 0);
 
 
