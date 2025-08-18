@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { PlusCircle } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState, useEffect, useCallback } from "react"; // Import useCallback
 import { createClient } from "@/lib/supabase/client";
@@ -189,9 +190,21 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
 
   // Effect to calculate total weekly hours
   useEffect(() => {
-    const total = (mondayHours || 0) + (tuesdayHours || 0) + (wednesdayHours || 0) +
-                  (thursdayHours || 0) + (fridayHours || 0) + (saturdayHours || 0) +
-                  (sundayHours || 0);
+    const total = Number( // Explizite Umwandlung zu Number
+      (mondayHours || 0) +
+      (tuesdayHours || 0) +
+      (wednesdayHours || 0) +
+      (thursdayHours || 0) +
+      (fridayHours || 0) +
+      (saturdayHours || 0) +
+      (sundayHours || 0)
+    );
+    // Defensive Prüfung, obwohl 'total' hier immer eine Zahl sein sollte
+    if (typeof total !== 'number' || isNaN(total)) {
+      console.error("Calculated total is not a valid number:", total);
+      form.setValue("totalWeeklyHours", null, { shouldValidate: false });
+      return;
+    }
     form.setValue("totalWeeklyHours", parseFloat(total.toFixed(2)), { shouldValidate: false });
   }, [mondayHours, tuesdayHours, wednesdayHours, thursdayHours, fridayHours, saturdayHours, sundayHours, form]);
 
