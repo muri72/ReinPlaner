@@ -47,56 +47,47 @@ export async function getPlanningDataForWeek(currentDate: Date): Promise<{ succe
   const start = startOfWeek(currentDate, { weekStartsOn: 1 });
   const end = endOfWeek(currentDate, { weekStartsOn: 1 });
   const weekDays = eachDayOfInterval({ start, end });
+  const start_date_iso = formatISO(start, { representation: 'date' });
+  const end_date_iso = formatISO(end, { representation: 'date' });
 
   try {
-    // 1. Alle Mitarbeiter abrufen
+    // 1. Fetch all employees
     const { data: employees, error: employeesError } = await supabase
       .from('employees')
       .select('id, first_name, last_name');
     if (employeesError) throw employeesError;
 
-    // 2. Alle relevanten Aufträge abrufen (alle Typen mit Mitarbeiter)
-    const { data: orders, error: ordersError } = await supabase
-      .from('orders')
-      .select(`
-        id,
-        title,
-        order_type,
-        due_date,
-        total_estimated_hours,
-        recurring_start_date,
-        recurring_end_date,
-        order_employee_assignments ( 
-          employee_id, 
-          assigned_monday_hours, assigned_tuesday_hours, assigned_wednesday_hours,
-          assigned_thursday_hours, assigned_friday_hours, assigned_saturday_hours,
-          assigned_sunday_hours,
-          assigned_monday_start_time, assigned_monday_end_time,
-          assigned_tuesday_start_time, assigned_tuesday_end_time,
-          assigned_wednesday_start_time, assigned_wednesday_end_time,
-          assigned_thursday_start_time, assigned_thursday_end_time,
-          assigned_friday_start_time, assigned_friday_end_time,
-          assigned_saturday_start_time, assigned_saturday_end_time,
-          assigned_sunday_start_time, assigned_sunday_end_time
-        )
-      `)
-      .not('order_employee_assignments', 'is', null);
-    if (ordersError) throw ordersError;
-
-    // 3. Alle genehmigten Abwesenheiten im Zeitraum abrufen
+    // 2. Fetch all approved absences for the week
     const { data: absences, error: absencesError } = await supabase
       .from('absence_requests')
       .select('employee_id, start_date, end_date, type')
       .eq('status', 'approved')
-      .lte('start_date', formatISO(end, { representation: 'date' }))
-      .gte('end_date', formatISO(start, { representation: 'date' }));
+      .lte('start_date', end_date_iso)
+      .gte('end_date', start_date_iso);
     if (absencesError) throw absencesError;
 
-    // 4. Ungeplante Aufträge über RPC-Funktion abrufen
+    // 3. Fetch all relevant assignments for the week in one go
+    const { data: activeAssignments, error: assignmentsError } = await supabase
+      .from('order_employee_assignments')
+      .select(`
+        *,
+        orders!inner(
+            id, title, order_type, due_date, total_estimated_hours,
+            recurring_start_date, recurring_end_date
+        )
+      `)
+      .eq('orders.request_status', 'approved')
+      .or(
+        `and(orders.order_type.eq.one_time,orders.due_date.gte.${start_date_iso},orders.due_date.lte.${end_date_iso}),` +
+        `and(orders.order_type.in.("recurring","permanent","substitution"),orders.recurring_start_date.lte.${end_date_iso},or(orders.recurring_end_date.is.null,orders.recurring_end_date.gte.${start_date_iso}))`
+      );
+    if (assignmentsError) throw assignmentsError;
+
+    // 4. Fetch unassigned orders
     const { data: unassignedOrdersData, error: unassignedOrdersError } = await supabase.rpc('get_unassigned_orders');
     if (unassignedOrdersError) throw unassignedOrdersError;
 
-    // 5. Daten verarbeiten
+    // 5. Process data
     const planningData: PlanningData = {};
 
     for (const employee of employees) {
@@ -104,6 +95,8 @@ export async function getPlanningDataForWeek(currentDate: Date): Promise<{ succe
         name: `${employee.first_name} ${employee.last_name}`,
         schedule: {},
       };
+
+      const employeeAssignments = activeAssignments.filter(a => a.employee_id === employee.id);
 
       for (const day of weekDays) {
         const dateString = formatISO(day, { representation: 'date' });
@@ -129,60 +122,37 @@ export async function getPlanningDataForWeek(currentDate: Date): Promise<{ succe
           continue; // Skip order processing if absent
         }
 
-        // Find all orders assigned to this employee
-        const employeeOrders = orders.filter(o => 
-          o.order_employee_assignments?.some((assignment: any) => assignment.employee_id === employee.id)
-        );
+        // Process assignments for the current day
+        for (const assignment of employeeAssignments) {
+          const order = assignment.orders;
+          if (!order) continue;
 
-        for (const order of employeeOrders) {
-          // Check if the order is active on the current day
-          let isOrderActiveToday = false;
-          if (order.order_type === 'one_time') {
-            if (order.due_date && formatISO(parseISO(order.due_date), { representation: 'date' }) === dateString) {
-              isOrderActiveToday = true;
-            }
+          let dailyHours = 0;
+          let assignedStartTime: string | null = null;
+          let assignedEndTime: string | null = null;
+
+          if (order.order_type === 'one_time' && order.due_date === dateString) {
+            dailyHours = order.total_estimated_hours || 0;
           } else if (['permanent', 'recurring', 'substitution'].includes(order.order_type)) {
-            if (order.recurring_start_date && parseISO(order.recurring_start_date) <= day && (!order.recurring_end_date || parseISO(order.recurring_end_date) >= day)) {
-              isOrderActiveToday = true;
+            switch (dayOfWeek) {
+              case 1: dailyHours = assignment.assigned_monday_hours || 0; assignedStartTime = assignment.assigned_monday_start_time; assignedEndTime = assignment.assigned_monday_end_time; break;
+              case 2: dailyHours = assignment.assigned_tuesday_hours || 0; assignedStartTime = assignment.assigned_tuesday_start_time; assignedEndTime = assignment.assigned_tuesday_end_time; break;
+              case 3: dailyHours = assignment.assigned_wednesday_hours || 0; assignedStartTime = assignment.assigned_wednesday_start_time; assignedEndTime = assignment.assigned_wednesday_end_time; break;
+              case 4: dailyHours = assignment.assigned_thursday_hours || 0; assignedStartTime = assignment.assigned_thursday_start_time; assignedEndTime = assignment.assigned_thursday_end_time; break;
+              case 5: dailyHours = assignment.assigned_friday_hours || 0; assignedStartTime = assignment.assigned_friday_start_time; assignedEndTime = assignment.assigned_friday_end_time; break;
+              case 6: dailyHours = assignment.assigned_saturday_hours || 0; assignedStartTime = assignment.assigned_saturday_start_time; assignedEndTime = assignment.assigned_saturday_end_time; break;
+              case 0: dailyHours = assignment.assigned_sunday_hours || 0; assignedStartTime = assignment.assigned_sunday_start_time; assignedEndTime = assignment.assigned_sunday_end_time; break;
             }
           }
-          
-          if (!isOrderActiveToday) continue;
 
-          // Find the specific assignment for this employee and order
-          const employeeAssignment = order.order_employee_assignments.find((assignment: any) => assignment.employee_id === employee.id);
-          
-          if (employeeAssignment) {
-            let dailyHours = 0;
-            let assignedStartTime: string | null = null;
-            let assignedEndTime: string | null = null;
-
-            // For recurring/permanent orders, get hours from the specific day column in the assignment
-            if (['permanent', 'recurring', 'substitution'].includes(order.order_type)) {
-                switch (dayOfWeek) {
-                    case 1: dailyHours = employeeAssignment.assigned_monday_hours || 0; assignedStartTime = employeeAssignment.assigned_monday_start_time; assignedEndTime = employeeAssignment.assigned_monday_end_time; break;
-                    case 2: dailyHours = employeeAssignment.assigned_tuesday_hours || 0; assignedStartTime = employeeAssignment.assigned_tuesday_start_time; assignedEndTime = employeeAssignment.assigned_tuesday_end_time; break;
-                    case 3: dailyHours = employeeAssignment.assigned_wednesday_hours || 0; assignedStartTime = employeeAssignment.assigned_wednesday_start_time; assignedEndTime = employeeAssignment.assigned_wednesday_end_time; break;
-                    case 4: dailyHours = employeeAssignment.assigned_thursday_hours || 0; assignedStartTime = employeeAssignment.assigned_thursday_start_time; assignedEndTime = employeeAssignment.assigned_thursday_end_time; break;
-                    case 5: dailyHours = employeeAssignment.assigned_friday_hours || 0; assignedStartTime = employeeAssignment.assigned_friday_start_time; assignedEndTime = employeeAssignment.assigned_friday_end_time; break;
-                    case 6: dailyHours = employeeAssignment.assigned_saturday_hours || 0; assignedStartTime = employeeAssignment.assigned_saturday_start_time; assignedEndTime = employeeAssignment.assigned_saturday_end_time; break;
-                    case 0: dailyHours = employeeAssignment.assigned_sunday_hours || 0; assignedStartTime = employeeAssignment.assigned_sunday_start_time; assignedEndTime = employeeAssignment.assigned_sunday_end_time; break;
-                }
-            } 
-            // For one-time orders, use the total_estimated_hours as it's not day-specific in the assignment
-            else if (order.order_type === 'one_time') {
-              dailyHours = order.total_estimated_hours || 0;
-            }
-
-            if (dailyHours > 0) {
-              planningData[employee.id].schedule[dateString].totalHours += dailyHours;
-              planningData[employee.id].schedule[dateString].assignments.push({
-                title: order.title,
-                hours: dailyHours,
-                startTime: assignedStartTime,
-                endTime: assignedEndTime,
-              });
-            }
+          if (dailyHours > 0) {
+            planningData[employee.id].schedule[dateString].totalHours += dailyHours;
+            planningData[employee.id].schedule[dateString].assignments.push({
+              title: order.title,
+              hours: dailyHours,
+              startTime: assignedStartTime,
+              endTime: assignedEndTime,
+            });
           }
         }
       }
