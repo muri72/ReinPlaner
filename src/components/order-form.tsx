@@ -258,28 +258,27 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
   }, [selectedObjectId, objects, form, orderType, form.watch("dueDate")]);
 
   // IMPROVED: Smarter distribution logic
-  const distributeObjectHours = useCallback((employeeIds: string[]) => {
+  const handleEmployeeSelectionChange = useCallback((selectedIds: string[]) => {
     const currentObjectId = form.getValues("objectId") ?? null;
     const selectedObject = objects.find(obj => obj.id === currentObjectId);
-    const numAssignedEmployees = employeeIds.length;
+    const numAssignedEmployees = selectedIds.length;
 
-    if (!selectedObject || numAssignedEmployees === 0) {
+    if (!selectedObject) {
       replaceAssignedEmployees([]);
       return;
     }
 
-    // Get current assignments to preserve existing data
     const currentAssignments = form.getValues("assignedEmployees") || [];
 
-    const newAssignments = employeeIds.map(employeeId => {
-      // Find existing assignment for this employee
+    const newAssignments = selectedIds.map(employeeId => {
       const existingAssignment = currentAssignments.find(emp => emp.employeeId === employeeId);
       
+      // If employee already has an assignment, keep it.
       if (existingAssignment) {
-        return existingAssignment; // Keep existing data for existing employees
+        return existingAssignment;
       }
 
-      // This is a new employee, create a new assignment with 0 hours but default start times
+      // Otherwise, create a new blank assignment with default start times.
       const newEmpData: AssignedEmployee = {
         employeeId,
         assigned_monday_hours: null, assigned_tuesday_hours: null, assigned_wednesday_hours: null,
@@ -295,20 +294,32 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
       };
 
       dayNames.forEach(day => {
-        const startFieldName = `assigned_${day}_start_time` as keyof AssignedEmployee;
         const objectStartTime = selectedObject?.[`${day}_start_time` as keyof typeof selectedObject] as string | null;
-        (newEmpData as any)[startFieldName] = objectStartTime;
+        (newEmpData as any)[`assigned_${day}_start_time`] = objectStartTime;
       });
 
       return newEmpData;
     });
 
-    replaceAssignedEmployees(newAssignments);
-  }, [objects, replaceAssignedEmployees, form]);
+    // If there's now only one employee, give them all the hours.
+    if (numAssignedEmployees === 1 && newAssignments.length === 1) {
+      const singleAssignment = newAssignments[0];
+      dayNames.forEach(day => {
+        const objectDailyHours = selectedObject?.[`${day}_hours` as keyof typeof selectedObject] as number | null;
+        const objectStartTime = selectedObject?.[`${day}_start_time` as keyof typeof selectedObject] as string | null;
+        
+        (singleAssignment as any)[`assigned_${day}_hours`] = objectDailyHours;
+        (singleAssignment as any)[`assigned_${day}_start_time`] = objectStartTime;
+        
+        if (objectStartTime && objectDailyHours) {
+          (singleAssignment as any)[`assigned_${day}_end_time`] = calculateEndTime(objectStartTime, objectDailyHours);
+        }
+      });
+    }
 
-  const handleEmployeeSelectionChange = (selectedIds: string[]) => {
-    distributeObjectHours(selectedIds);
-  };
+    replaceAssignedEmployees(newAssignments);
+    form.trigger("assignedEmployees"); // Trigger validation after changing the array
+  }, [objects, form, replaceAssignedEmployees]);
 
   const handleAssignedHoursChange = useCallback((
     employeeIndex: number,
@@ -317,7 +328,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
   ) => {
     const parsedHours = value === "" ? null : Number(value);
     
-    // Get the current state of the employee to update
+    // Update the specific employee's hours
     const currentAssignments = form.getValues("assignedEmployees") || [];
     const currentEmployee = { ...currentAssignments[employeeIndex] };
     (currentEmployee as any)[`assigned_${day}_hours`] = parsedHours;
@@ -331,6 +342,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     }
     
     updateAssignedEmployee(employeeIndex, currentEmployee);
+    form.trigger(`assignedEmployees`); // Trigger validation for the whole array
   }, [updateAssignedEmployee, form]);
 
   const handleAssignedTimeChange = useCallback((
@@ -354,6 +366,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     }
     
     updateAssignedEmployee(employeeIndex, currentEmployee);
+    form.trigger(`assignedEmployees`); // Trigger validation for the whole array
   }, [updateAssignedEmployee, form]);
 
   const handleFormSubmit: SubmitHandler<OrderFormValues> = async (data) => {
@@ -743,7 +756,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
                 </div>
                 
                 {/* Validation Summary for this Employee */}
-                {dayNames.some(day => !isDailyHoursValid(day) && getObjectDailyHours(day) && getSumAssignedHoursForDay(day) > 0) && (
+                {dayNames.some(day => !isDailyHoursValid(day) && getObjectDailyHours(day)) && (
                   <div className="text-sm text-destructive bg-destructive/10 p-2 rounded-md">
                     ⚠️ Die Summe der zugewiesenen Stunden muss für jeden Tag den Objektstunden entsprechen.
                   </div>
