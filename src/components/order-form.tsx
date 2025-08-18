@@ -230,33 +230,55 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     ? objects.filter(obj => obj.customer_id === selectedCustomerId)
     : [];
 
+  // Effect to calculate total estimated hours based on assignments or object data
   useEffect(() => {
-    const currentObjectId = form.getValues("objectId") ?? null;
+    const assignedEmployees = form.watch("assignedEmployees");
+    const orderType = form.watch("orderType");
+    const dueDate = form.watch("dueDate");
+    const selectedObject = objects.find(obj => obj.id === selectedObjectId);
+
     let newTotalEstimatedHours: number | null = null;
-    const selectedObject = objects.find(obj => obj.id === currentObjectId);
-    if (selectedObject) {
+
+    if (assignedEmployees && assignedEmployees.length > 0) {
+      // If employees are assigned, sum their hours
+      if (['recurring', 'substitution', 'permanent'].includes(orderType)) {
+        // Sum all hours for the week
+        newTotalEstimatedHours = assignedEmployees.reduce((total, emp) => {
+          const weeklySum = dayNames.reduce((dayTotal, day) => {
+            const hours = emp[`assigned_${day}_hours` as keyof typeof emp] as number | null;
+            return dayTotal + (hours || 0);
+          }, 0);
+          return total + weeklySum;
+        }, 0);
+      } else if (orderType === 'one_time' && dueDate) {
+        // Sum hours for the specific due date
+        const dayOfWeek = dueDate.getDay(); // 0=Sun, 1=Mon...
+        const dayKey = dayNames[dayOfWeek === 0 ? 6 : dayOfWeek - 1]; // Adjust for dayNames array
+        newTotalEstimatedHours = assignedEmployees.reduce((total, emp) => {
+          const hours = emp[`assigned_${dayKey}_hours` as keyof typeof emp] as number | null;
+          return total + (hours || 0);
+        }, 0);
+      }
+    } else if (selectedObject) {
+      // Fallback to object hours if no employees are assigned
       if (['recurring', 'substitution', 'permanent'].includes(orderType)) {
         newTotalEstimatedHours = selectedObject.total_weekly_hours || null;
-      } else if (orderType === 'one_time' && form.getValues("dueDate")) {
-        const dueDate = form.getValues("dueDate");
-        const dayOfWeek = dueDate!.getDay();
-        let dailyHours = 0;
-        switch (dayOfWeek) {
-          case 0: dailyHours = selectedObject.sunday_hours || 0; break;
-          case 1: dailyHours = selectedObject.monday_hours || 0; break;
-          case 2: dailyHours = selectedObject.tuesday_hours || 0; break;
-          case 3: dailyHours = selectedObject.wednesday_hours || 0; break;
-          case 4: dailyHours = selectedObject.thursday_hours || 0; break;
-          case 5: dailyHours = selectedObject.friday_hours || 0; break;
-          case 6: dailyHours = selectedObject.saturday_hours || 0; break;
-        }
-        newTotalEstimatedHours = parseFloat(dailyHours.toFixed(2));
+      } else if (orderType === 'one_time' && dueDate) {
+        const dayOfWeek = dueDate.getDay();
+        const dayKey = dayNames[dayOfWeek === 0 ? 6 : dayOfWeek - 1];
+        newTotalEstimatedHours = selectedObject[`${dayKey}_hours` as keyof typeof selectedObject] as number | null;
       }
     }
-    if (form.getValues("totalEstimatedHours") !== newTotalEstimatedHours) {
-      form.setValue("totalEstimatedHours", newTotalEstimatedHours, { shouldValidate: false });
+
+    const currentTotal = form.getValues("totalEstimatedHours");
+    const safeNewTotal = (typeof newTotalEstimatedHours === 'number' && isFinite(newTotalEstimatedHours)) ? parseFloat(newTotalEstimatedHours.toFixed(2)) : null;
+    
+    if (currentTotal !== safeNewTotal) {
+      form.setValue("totalEstimatedHours", safeNewTotal, { shouldValidate: false });
     }
-  }, [selectedObjectId, objects, form, orderType, form.watch("dueDate")]);
+
+  }, [watchedAssignedEmployees, orderType, form.watch("dueDate"), selectedObjectId, objects, form]);
+
 
   // EXACT LOGIC: Employee assignment distribution
   const handleEmployeeSelectionChange = useCallback((selectedIds: string[]) => {
