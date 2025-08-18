@@ -16,7 +16,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { ObjectForm, ObjectFormValues } from "@/components/object-form";
 import { createObject } from "@/app/dashboard/objects/actions";
 import { CustomerContactCreateDialog } from "@/components/customer-contact-create-dialog";
-import { DatePicker } => "@/components/date-picker";
+import { DatePicker } from "@/components/date-picker";
 import { handleActionResponse } from "@/lib/toast-utils";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"; // Import Card components
@@ -46,7 +46,6 @@ const germanDayNames: { [key: string]: string } = {
 };
 
 // Helper function to calculate suggested daily hours per employee
-// Diese Funktion wurde aus der Komponente verschoben
 const calculateSuggestedDailyHoursPerEmployee = (
   objects: { id: string; total_weekly_hours: number | null }[],
   objectId: string | null,
@@ -74,6 +73,51 @@ const areArraysDeepEqual = (arr1: any[], arr2: any[]): boolean => {
     }
   }
   return true;
+};
+
+// Helper function to calculate the next state of assigned employees with distributed hours
+// Diese Funktion wurde aus der Komponente verschoben
+const calculateNextAssignedEmployees = (
+  currentAssignedEmployees: Array<any>, // Use any for simplicity in this helper, types are enforced by schema
+  selectedObject: { [key: string]: any } | undefined | null, // Object with daily hours
+  initialAssignedEmployeesCount: number // To check if it's initial load vs dynamic change
+): Array<any> => {
+  if (!selectedObject || currentAssignedEmployees.length === 0) {
+    // If no object or no assigned employees, return employees with null hours
+    return currentAssignedEmployees.map(emp => {
+      const newEmp = { ...emp };
+      dayNames.forEach(day => {
+        newEmp[`assigned_${day}_hours`] = null;
+      });
+      return newEmp;
+    });
+  }
+
+  const numAssignedEmployees = currentAssignedEmployees.length;
+  const newAssignments = currentAssignedEmployees.map(emp => ({ ...emp })); // Create a mutable copy
+
+  dayNames.forEach(day => {
+    const objectDailyHours = selectedObject[`${day}_hours`] as number | null;
+
+    if (objectDailyHours !== null && objectDailyHours !== undefined) {
+      const suggestedDailyHoursPerEmployeeValue = parseFloat((objectDailyHours / numAssignedEmployees).toFixed(2));
+
+      newAssignments.forEach((assignedEmp) => {
+        // Only update if it's the initial load or if the number of employees changed
+        // This prevents overwriting manual edits if the count hasn't changed
+        if (initialAssignedEmployeesCount === 0 || numAssignedEmployees !== initialAssignedEmployeesCount) {
+          assignedEmp[`assigned_${day}_hours`] = suggestedDailyHoursPerEmployeeValue;
+        }
+      });
+    } else {
+      // If object has no hours for this day, set assigned hours to null
+      newAssignments.forEach((assignedEmp) => {
+        assignedEmp[`assigned_${day}_hours`] = null;
+      });
+    }
+  });
+
+  return newAssignments;
 };
 
 
@@ -611,7 +655,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
                                   step="0.5"
                                   placeholder="Std."
                                   className="w-full text-right"
-                                  {...form.register(fieldName, { valueAsNumber: true })}
+                                  {...form.register(fieldName as FieldPath<OrderFormValues>, { valueAsNumber: true })}
                                   disabled={objectDailyHours === null}
                                 />
                               </div>
