@@ -6,10 +6,10 @@ import * as z from "zod";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useEffect, useState } from "react";
-import { Textarea } from "@/components/ui/textarea";
 import { DatePicker } from "@/components/date-picker"; // Importiere die neue DatePicker Komponente
 import { handleActionResponse } from "@/lib/toast-utils"; // Importiere die neue Utility
 
@@ -103,7 +103,7 @@ export function EmployeeForm({ initialData, onSubmit, submitButtonText, onSucces
   const contractType = form.watch("contractType");
 
   return (
-    <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 w-full max-w-md" suppressHydrationWarning>
+    <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 w-full max-w-md mx-auto" suppressHydrationWarning>
       <div>
         <Label htmlFor="firstName">Vorname</Label>
         <Input

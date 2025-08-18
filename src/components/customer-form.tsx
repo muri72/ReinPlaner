@@ -5,18 +5,21 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/button"; // Korrigierter Import
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"; // Import Select components
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useState, useEffect } from "react";
+import { createClient } from "@/lib/supabase/client";
 import { handleActionResponse } from "@/lib/toast-utils"; // Importiere die neue Utility
 
+// Define the schema for customer form values
 export const customerSchema = z.object({
-  name: z.string().min(1, "Name ist erforderlich").max(100, "Name ist zu lang"),
+  name: z.string().min(1, "Kundenname ist erforderlich").max(100, "Kundenname ist zu lang"),
   address: z.string().max(255, "Adresse ist zu lang").optional().nullable(),
   contactEmail: z.string().email("Ungültiges E-Mail-Format").max(100, "E-Mail ist zu lang").optional().nullable(),
   contactPhone: z.string().max(50, "Telefonnummer ist zu lang").optional().nullable(),
-  customerType: z.enum(["customer", "partner"]).default("customer"), // Neues Feld
+  customerType: z.enum(["customer", "partner"]).default("customer"),
 });
 
 export type CustomerFormInput = z.input<typeof customerSchema>;
@@ -30,12 +33,14 @@ interface CustomerFormProps {
 }
 
 export function CustomerForm({ initialData, onSubmit, submitButtonText, onSuccess }: CustomerFormProps) {
+  const supabase = createClient();
+
   const resolvedDefaultValues: CustomerFormValues = {
     name: initialData?.name ?? "",
     address: initialData?.address ?? null,
     contactEmail: initialData?.contactEmail ?? null,
     contactPhone: initialData?.contactPhone ?? null,
-    customerType: initialData?.customerType ?? "customer", // Initialwert für neues Feld
+    customerType: initialData?.customerType ?? "customer",
   };
 
   const form = useForm<CustomerFormValues>({
@@ -57,7 +62,7 @@ export function CustomerForm({ initialData, onSubmit, submitButtonText, onSucces
   };
 
   return (
-    <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 w-full max-w-md">
+    <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 w-full max-w-md mx-auto">
       <div>
         <Label htmlFor="name">Kundenname</Label>
         <Input

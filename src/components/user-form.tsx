@@ -248,7 +248,7 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
   const isRoleFieldDisabled = isEditMode || !!selectedCustomerContactId; // Deaktiviert, wenn im Bearbeitungsmodus oder wenn Kundenkontakt ausgewählt (muss 'Kunde' sein)
 
   return (
-    <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 w-full max-w-md">
+    <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 w-full max-w-md mx-auto">
       {!isEditMode && ( // Diese Felder nur im Erstellungsmodus anzeigen
         <div className="border-b pb-4 mb-4">
           <h3 className="text-md font-semibold mb-2">Bestehendem Profil zuweisen:</h3>
