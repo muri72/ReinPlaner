@@ -23,7 +23,7 @@ export interface PlanningData {
 export interface UnassignedOrder {
   id: string;
   title: string;
-  total_estimated_hours: number | null; // Changed from estimated_hours
+  total_estimated_hours: number | null; // Fixed: Changed from estimated_hours
   service_type: string | null;
 }
 

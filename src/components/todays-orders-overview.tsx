@@ -26,8 +26,8 @@ interface DisplayOrder {
   customer_contact_id: string | null;
   customer_name: string | null;
   object_name: string | null;
-  employee_first_names: string[] | null; // New field
-  employee_last_names: string[] | null; // New field
+  employee_first_names: (string | null)[]; // Fixed: Array of string | null
+  employee_last_names: (string | null)[]; // Fixed: Array of string | null
   customer_contact_first_name: string | null;
   customer_contact_last_name: string | null;
   order_type: string;
@@ -41,6 +41,7 @@ interface DisplayOrder {
   order_employee_assignments: {
     employee_id: string;
     assigned_daily_hours: number | null;
+    employees: { first_name: string | null; last_name: string | null } | null; // Fixed: employees is an object, not an array
   }[];
 }
 
@@ -146,9 +147,9 @@ export function TodaysOrdersOverview() {
           const object = Array.isArray(order.objects) ? order.objects[0] : order.objects;
           const customerContact = Array.isArray(order.customer_contacts) ? order.customer_contacts[0] : order.customer_contacts;
 
-          const employee_ids = order.order_employee_assignments.map(oea => oea.employee_id);
-          const employee_first_names = order.order_employee_assignments.map(oea => Array.isArray(oea.employees) ? oea.employees[0]?.first_name || null : oea.employees?.first_name || null);
-          const employee_last_names = order.order_employee_assignments.map(oea => Array.isArray(oea.employees) ? oea.employees[0]?.last_name || null : oea.employees?.last_name || null);
+          const employee_ids = order.order_employee_assignments.map((oea: any) => oea.employee_id);
+          const employee_first_names = order.order_employee_assignments.map((oea: any) => oea.employees?.first_name || null); // Fixed
+          const employee_last_names = order.order_employee_assignments.map((oea: any) => oea.employees?.last_name || null); // Fixed
 
           return {
             id: order.id,

@@ -66,7 +66,7 @@ export const orderSchema = z.object({
     // If not distributing equally, ensure all assigned employees have individual hours defined
     for (const empId of data.assignedEmployeeIds) {
       const assignment = data.employeeAssignments?.find(ea => ea.employeeId === empId);
-      if (!assignment || assignment.assignedDailyHours === null || assignment.assignedDailyHours <= 0) {
+      if (!assignment || assignment.assignedDailyHours == null || assignment.assignedDailyHours <= 0) { // Fixed: Use == null to check for null or undefined
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           message: `Individuelle Stunden für zugewiesenen Mitarbeiter sind erforderlich.`,
@@ -82,7 +82,9 @@ export type OrderFormInput = z.input<typeof orderSchema>;
 export type OrderFormValues = z.infer<typeof orderSchema>;
 
 interface OrderFormProps {
-  initialData?: Partial<OrderFormInput>;
+  initialData?: Partial<OrderFormInput> & {
+    employeeAssignments?: { employeeId: string; assignedDailyHours: number | null }[]; // Explicitly type this
+  };
   onSubmit: (data: OrderFormValues) => Promise<{ success: boolean; message: string }>;
   submitButtonText: string;
   onSuccess?: () => void;
@@ -113,7 +115,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     serviceType: initialData?.serviceType ?? null,
     requestStatus: initialData?.requestStatus ?? "approved",
     assignedEmployeeIds: initialData?.assignedEmployeeIds ?? [], // Initialize new field
-    employeeAssignments: initialData?.employeeAssignments ?? [], // Initialize new field
+    employeeAssignments: initialData?.employeeAssignments ?? [], // Fixed: Type is now correct
     distributeEqually: initialData?.distributeEqually ?? true, // Initialize new field
   };
 
@@ -339,7 +341,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
           </Select>
           {form.formState.errors.customerContactId && (
             <p className="text-red-500 text-sm mt-1">{form.formState.errors.customerContactId.message}</p>
-          )}
+        )}
         </div>
         <Dialog open={isNewObjectDialogOpen} onOpenChange={setIsNewObjectDialogOpen}>
           <DialogTrigger asChild>
@@ -586,5 +588,3 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
         {form.formState.isSubmitting ? `${submitButtonText}...` : submitButtonText}
       </Button>
     </form>
-  );
-}

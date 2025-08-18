@@ -122,10 +122,16 @@ export async function updateOrder(orderId: string, data: OrderFormValues) {
     .single();
 
   // Fetch original assignments to detect changes
-  const { data: originalAssignments } = await supabase
+  const { data: originalAssignments, error: originalAssignmentsError } = await supabase
     .from('order_employee_assignments')
-    .select('employee_id')
+    .select('employee_id, assigned_daily_hours') // Fixed: Select assigned_daily_hours
     .eq('order_id', orderId);
+  
+  if (originalAssignmentsError) {
+    console.error("Fehler beim Abrufen der ursprünglichen Zuweisungen:", originalAssignmentsError);
+    return { success: false, message: "Fehler beim Aktualisieren des Auftrags: konnte ursprüngliche Zuweisungen nicht abrufen." };
+  }
+
   const originalEmployeeIds = originalAssignments?.map(a => a.employee_id) || [];
 
   const { error } = await supabase
@@ -185,7 +191,7 @@ export async function updateOrder(orderId: string, data: OrderFormValues) {
     } else {
       // Existing assignment, check if assigned_daily_hours changed
       const originalIndividualAssignment = originalAssignments?.find(a => a.employee_id === newEmpId);
-      if (originalIndividualAssignment?.assigned_daily_hours !== assignedDailyHours) {
+      if (originalIndividualAssignment?.assigned_daily_hours !== assignedDailyHours) { // Fixed: Property now exists
         assignmentsToUpdate.push({
           order_id: orderId,
           employee_id: newEmpId,
