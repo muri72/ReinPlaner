@@ -386,22 +386,24 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
   }, [assignedEmployeeFields, updateAssignedEmployee]);
 
   const handleFormSubmit: SubmitHandler<OrderFormValues> = async (data) => {
-    // Validate that assigned hours match object hours for each day
+    // Validate that assigned hours match object hours for each day using CURRENT form data
     if (data.objectId && data.assignedEmployees && data.assignedEmployees.length > 0) {
       const selectedObject = objects.find(obj => obj.id === data.objectId);
       if (selectedObject) {
         let validationError = false;
         dayNames.forEach(day => {
           const objectDailyHours = selectedObject[`${day}_hours` as keyof typeof selectedObject] as number | null;
-          if (objectDailyHours === null || objectDailyHours === undefined) return;
+          if (objectDailyHours === null || objectDailyHours === undefined || objectDailyHours === 0) return;
 
+          // Calculate sum using the actual form data being submitted
           let sumAssignedHoursForDay = 0;
           data.assignedEmployees?.forEach(assignedEmp => {
             const assignedHours = (assignedEmp as any)[`assigned_${day}_hours`] as number | null;
             sumAssignedHoursForDay += (assignedHours || 0);
           });
 
-          if (Math.abs(sumAssignedHoursForDay - objectDailyHours) > 0.01) {
+          // Use a more lenient tolerance for floating point comparison
+          if (Math.abs(sumAssignedHoursForDay - objectDailyHours) > 0.1) {
             form.setError(`assignedEmployees`, {
               type: "manual",
               message: `Die Summe der zugewiesenen Stunden für ${germanDayNames[day]} (${sumAssignedHoursForDay.toFixed(2)} Std.) muss den Objektstunden (${objectDailyHours.toFixed(2)} Std.) entsprechen.`,
@@ -453,8 +455,10 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     }
   };
 
+  // FIXED: Use current form values for real-time calculation
   const getSumAssignedHoursForDay = (day: string): number => {
-    const sum = (assignedEmployeeFields || []).reduce((total, emp) => {
+    const currentAssignments = form.getValues("assignedEmployees") || [];
+    const sum = currentAssignments.reduce((total, emp) => {
       const assignedHours = (emp as any)[`assigned_${day}_hours`] as number | null;
       return total + (assignedHours || 0);
     }, 0);
@@ -469,9 +473,9 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
 
   const isDailyHoursValid = (day: string): boolean => {
     const objectHours = getObjectDailyHours(day);
-    if (objectHours === null) return true;
+    if (objectHours === null || objectHours === 0) return true;
     const sumAssigned = getSumAssignedHoursForDay(day);
-    return Math.abs(sumAssigned - objectHours) < 0.01;
+    return Math.abs(sumAssigned - objectHours) <= 0.1; // More lenient tolerance
   };
 
   return (
@@ -786,7 +790,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
                         <span>{germanDayNames[day]}:</span>
                         <span className={cn(
                           "font-medium",
-                          Math.abs(totalAssigned - objectDayHours) > 0.01 ? 'text-destructive' : 'text-success'
+                          Math.abs(totalAssigned - objectDayHours) > 0.1 ? 'text-destructive' : 'text-success'
                         )}>
                           {totalAssigned.toFixed(1)}h / {objectDayHours.toFixed(1)}h
                         </span>
