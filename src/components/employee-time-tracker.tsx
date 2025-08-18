@@ -129,8 +129,8 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
         // 3. Aufträge zur Auswahl abrufen (inkl. order_type und object_id)
         const { data: ordersData, error: ordersError } = await supabase
           .from('orders')
-          .select('id, title, customer_id, object_id, order_type') // Select order_type and object_id
-          .eq('employee_id', empId)
+          .select('id, title, customer_id, object_id, order_type, order_employee_assignments!inner(employee_id)') // Join to filter by employee_id
+          .eq('order_employee_assignments.employee_id', empId) // Filter on the joined table
           .order('title', { ascending: true });
 
         if (ordersData) setOrders(ordersData);
@@ -196,9 +196,11 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
 
             if (suggestedStart && suggestedEnd) {
               const duration = calculateHours(suggestedStart, suggestedEnd);
-              setSuggestedDuration(duration !== null ? Math.round(duration * 60) : null);
-              // Pausenminuten basierend auf der berechneten Dauer vorschlagen
-              setSuggestedBreakMinutes(duration !== null ? calculateBreakMinutesFallback(Math.round(duration * 60)) : null);
+              if (duration !== null) {
+                setSuggestedDuration(Math.round(duration * 60));
+                // Pausenminuten basierend auf der berechneten Dauer vorschlagen
+                setSuggestedBreakMinutes(calculateBreakMinutesFallback(Math.round(duration * 60)));
+              }
             }
           }
         }
