@@ -53,6 +53,7 @@ interface DisplayObject {
   friday_hours: number | null;
   saturday_hours: number | null;
   sunday_hours: number | null;
+  total_weekly_hours: number | null; // Neues Feld
 }
 
 interface ObjectsTableViewProps {
@@ -167,6 +168,11 @@ export function ObjectsTableView({
                 Zugang {renderSortIcon('access_method')}
               </Button>
             </TableHead>
+            <TableHead className="min-w-[120px]">
+              <Button variant="ghost" onClick={() => handleSort('total_weekly_hours')} className="px-0 hover:bg-transparent">
+                Wöchentliche Std. {renderSortIcon('total_weekly_hours')}
+              </Button>
+            </TableHead>
             <TableHead className="text-right min-w-[120px]">Aktionen</TableHead>
           </TableRow>
         </TableHeader>
@@ -181,6 +187,7 @@ export function ObjectsTableView({
               </TableCell>
               <TableCell className="text-sm">{object.time_of_day}</TableCell>
               <TableCell className="text-sm">{object.access_method}</TableCell>
+              <TableCell className="text-sm">{object.total_weekly_hours !== null ? `${object.total_weekly_hours.toFixed(2)}` : 'N/A'}</TableCell>
               <TableCell className="text-right">
                 <div className="flex justify-end space-x-1">
                   <RecordDetailsDialog record={object} title={`Details zu Objekt: ${object.name}`} />

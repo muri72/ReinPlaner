@@ -49,6 +49,11 @@ export async function createObject(data: ObjectFormValues) {
     securityCodeWord,
   } = data;
 
+  // Calculate total_weekly_hours
+  const totalWeeklyHours = (monday_hours || 0) + (tuesday_hours || 0) + (wednesday_hours || 0) +
+                           (thursday_hours || 0) + (friday_hours || 0) + (saturday_hours || 0) +
+                           (sunday_hours || 0);
+
   const { error } = await supabase
     .from('objects')
     .insert({
@@ -65,6 +70,7 @@ export async function createObject(data: ObjectFormValues) {
       friday_hours,
       saturday_hours,
       sunday_hours,
+      total_weekly_hours: totalWeeklyHours, // Neues Feld
       monday_start_time,
       monday_end_time,
       tuesday_start_time,
@@ -118,6 +124,11 @@ export async function updateObject(objectId: string, data: ObjectFormValues) {
     return { success: false, message: "Fehler beim Überprüfen der Berechtigungen." };
   }
 
+  // Calculate total_weekly_hours
+  const totalWeeklyHours = (data.monday_hours || 0) + (data.tuesday_hours || 0) + (data.wednesday_hours || 0) +
+                           (data.thursday_hours || 0) + (data.friday_hours || 0) + (data.saturday_hours || 0) +
+                           (data.sunday_hours || 0);
+
   let query = supabase
     .from('objects')
     .update({
@@ -133,6 +144,7 @@ export async function updateObject(objectId: string, data: ObjectFormValues) {
       friday_hours: data.friday_hours,
       saturday_hours: data.saturday_hours,
       sunday_hours: data.sunday_hours,
+      total_weekly_hours: totalWeeklyHours, // Neues Feld
       monday_start_time: data.monday_start_time,
       monday_end_time: data.monday_end_time,
       tuesday_start_time: data.tuesday_start_time,

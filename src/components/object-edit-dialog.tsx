@@ -46,6 +46,7 @@ interface ObjectEditDialogProps {
     friday_hours: number | null;
     saturday_hours: number | null;
     sunday_hours: number | null;
+    total_weekly_hours: number | null; // Neues Feld
   };
 }
 
@@ -124,6 +125,7 @@ export function ObjectEditDialog({ object }: ObjectEditDialogProps) {
               friday_hours: object.friday_hours,
               saturday_hours: object.saturday_hours,
               sunday_hours: object.sunday_hours,
+              totalWeeklyHours: object.total_weekly_hours, // Neues Feld
             }}
             onSubmit={handleUpdate}
             submitButtonText="Änderungen speichern"

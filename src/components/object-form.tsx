@@ -70,6 +70,8 @@ export const objectSchema = z.object({
   saturday_hours: z.preprocess(preprocessNumber, z.number().min(0).max(24).optional().nullable()),
   sunday_hours: z.preprocess(preprocessNumber, z.number().min(0).max(24).optional().nullable()),
 
+  totalWeeklyHours: z.preprocess(preprocessNumber, z.number().min(0).optional().nullable()), // Neues Feld
+
   monday_start_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
   monday_end_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
   tuesday_start_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
@@ -143,6 +145,7 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
     friday_hours: (initialData?.friday_hours as number) ?? null,
     saturday_hours: (initialData?.saturday_hours as number) ?? null,
     sunday_hours: (initialData?.sunday_hours as number) ?? null,
+    totalWeeklyHours: (initialData?.totalWeeklyHours as number) ?? null, // Initialwert für neues Feld
     monday_start_time: initialData?.monday_start_time ?? null,
     monday_end_time: initialData?.monday_end_time ?? null,
     tuesday_start_time: initialData?.tuesday_start_time ?? null,
@@ -174,6 +177,24 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
 
   const selectedCustomerId = form.watch("customerId");
   const selectedTimeOfDay = form.watch("timeOfDay");
+
+  // Watch all daily hours fields
+  const mondayHours = form.watch("monday_hours");
+  const tuesdayHours = form.watch("tuesday_hours");
+  const wednesdayHours = form.watch("wednesday_hours");
+  const thursdayHours = form.watch("thursday_hours");
+  const fridayHours = form.watch("friday_hours");
+  const saturdayHours = form.watch("saturday_hours");
+  const sundayHours = form.watch("sunday_hours");
+
+  // Effect to calculate total weekly hours
+  useEffect(() => {
+    const total = (mondayHours || 0) + (tuesdayHours || 0) + (wednesdayHours || 0) +
+                  (thursdayHours || 0) + (fridayHours || 0) + (saturdayHours || 0) +
+                  (sundayHours || 0);
+    form.setValue("totalWeeklyHours", parseFloat(total.toFixed(2)), { shouldValidate: false });
+  }, [mondayHours, tuesdayHours, wednesdayHours, thursdayHours, fridayHours, saturdayHours, sundayHours, form]);
+
 
   // Centralized function to calculate and set times for a specific day
   // This function will be called by onChange handlers and useEffect
@@ -491,6 +512,19 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
           </div>
         </div>
       ))}
+
+      {/* Total Weekly Hours (Read-only) */}
+      <div>
+        <Label htmlFor="totalWeeklyHours">Gesamtstunden pro Woche</Label>
+        <Input
+          id="totalWeeklyHours"
+          type="number"
+          step="0.01"
+          value={form.watch("totalWeeklyHours")?.toFixed(2) || ""}
+          readOnly
+          className="bg-muted cursor-not-allowed"
+        />
+      </div>
 
       {/* Zugangsinformationen */}
       <h3 className="text-lg font-semibold mt-6">Zugangsinformationen</h3>

@@ -62,6 +62,7 @@ interface DisplayObject {
   friday_hours: number | null;
   saturday_hours: number | null;
   sunday_hours: number | null;
+  total_weekly_hours: number | null; // Neues Feld
 }
 
 export default function ObjectsPage({
@@ -432,6 +433,11 @@ export default function ObjectsPage({
                           }
                           return null;
                         })}
+                        {object.total_weekly_hours !== null && (
+                          <div className="mt-2 text-sm font-semibold">
+                            Gesamtstunden pro Woche: {object.total_weekly_hours.toFixed(2)}
+                          </div>
+                        )}
                       </TabsContent>
                       <TabsContent value="documents" className="pt-4 space-y-4">
                         <h3 className="text-md font-semibold flex items-center">
