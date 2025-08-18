@@ -13,6 +13,7 @@ import { OrderPlanningDialog } from "@/components/order-planning-dialog";
 import { Briefcase, CalendarDays, Clock, UserRound, Building, Wrench } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { AssignedEmployee } from "@/components/order-form";
 
 interface DisplayOrder {
   id: string;
@@ -25,29 +26,7 @@ interface DisplayOrder {
   employee_ids: string[] | null;
   employee_first_names: string[] | null;
   employee_last_names: string[] | null;
-  assigned_daily_hours: (number | null)[] | null; // Keep for compatibility if needed elsewhere
-  assigned_monday_hours: number | null;
-  assigned_tuesday_hours: number | null;
-  assigned_wednesday_hours: number | null;
-  assigned_thursday_hours: number | null;
-  assigned_friday_hours: number | null;
-  assigned_saturday_hours: number | null;
-  assigned_sunday_hours: number | null;
-  // New time fields
-  assigned_monday_start_time: string | null;
-  assigned_monday_end_time: string | null;
-  assigned_tuesday_start_time: string | null;
-  assigned_tuesday_end_time: string | null;
-  assigned_wednesday_start_time: string | null;
-  assigned_wednesday_end_time: string | null;
-  assigned_thursday_start_time: string | null;
-  assigned_thursday_end_time: string | null;
-  assigned_friday_start_time: string | null;
-  assigned_friday_end_time: string | null;
-  assigned_saturday_start_time: string | null;
-  assigned_saturday_end_time: string | null;
-  assigned_sunday_start_time: string | null;
-  assigned_sunday_end_time: string | null;
+  assignedEmployees: AssignedEmployee[];
   customer_contact_id: string | null;
   customer_name: string | null;
   object_name: string | null;
@@ -142,7 +121,6 @@ export function TodaysOrdersOverview() {
           customer_contacts ( first_name, last_name ),
           order_employee_assignments ( 
             employee_id, 
-            assigned_daily_hours,
             assigned_monday_hours, assigned_tuesday_hours, assigned_wednesday_hours,
             assigned_thursday_hours, assigned_friday_hours, assigned_saturday_hours,
             assigned_sunday_hours,
@@ -175,7 +153,31 @@ export function TodaysOrdersOverview() {
           const customer = Array.isArray(order.customers) ? order.customers[0] : order.customers;
           const object = Array.isArray(order.objects) ? order.objects[0] : order.objects;
           const customerContact = Array.isArray(order.customer_contacts) ? order.customer_contacts[0] : order.customer_contacts;
-          const assignedEmployeeData = order.order_employee_assignments?.[0]; // Assuming one assignment for simplicity in mapping
+          
+          const mappedAssignments: AssignedEmployee[] = order.order_employee_assignments?.map((a: any) => ({
+            employeeId: a.employee_id,
+            assigned_monday_hours: a.assigned_monday_hours,
+            assigned_tuesday_hours: a.assigned_tuesday_hours,
+            assigned_wednesday_hours: a.assigned_wednesday_hours,
+            assigned_thursday_hours: a.assigned_thursday_hours,
+            assigned_friday_hours: a.assigned_friday_hours,
+            assigned_saturday_hours: a.assigned_saturday_hours,
+            assigned_sunday_hours: a.assigned_sunday_hours,
+            assigned_monday_start_time: a.assigned_monday_start_time,
+            assigned_monday_end_time: a.assigned_monday_end_time,
+            assigned_tuesday_start_time: a.assigned_tuesday_start_time,
+            assigned_tuesday_end_time: a.assigned_tuesday_end_time,
+            assigned_wednesday_start_time: a.assigned_wednesday_start_time,
+            assigned_wednesday_end_time: a.assigned_wednesday_end_time,
+            assigned_thursday_start_time: a.assigned_thursday_start_time,
+            assigned_thursday_end_time: a.assigned_thursday_end_time,
+            assigned_friday_start_time: a.assigned_friday_start_time,
+            assigned_friday_end_time: a.assigned_friday_end_time,
+            assigned_saturday_start_time: a.assigned_saturday_start_time,
+            assigned_saturday_end_time: a.assigned_saturday_end_time,
+            assigned_sunday_start_time: a.assigned_sunday_start_time,
+            assigned_sunday_end_time: a.assigned_sunday_end_time,
+          })) || [];
 
           return {
             id: order.id,
@@ -188,29 +190,7 @@ export function TodaysOrdersOverview() {
             employee_ids: order.order_employee_assignments?.map((a: any) => a.employee_id) || null,
             employee_first_names: order.order_employee_assignments?.map((a: any) => a.employees?.first_name || '') || null,
             employee_last_names: order.order_employee_assignments?.map((a: any) => a.employees?.last_name || '') || null,
-            assigned_daily_hours: order.order_employee_assignments?.map((a: any) => a.assigned_daily_hours) || null,
-            assigned_monday_hours: assignedEmployeeData?.assigned_monday_hours || null,
-            assigned_tuesday_hours: assignedEmployeeData?.assigned_tuesday_hours || null,
-            assigned_wednesday_hours: assignedEmployeeData?.assigned_wednesday_hours || null,
-            assigned_thursday_hours: assignedEmployeeData?.assigned_thursday_hours || null,
-            assigned_friday_hours: assignedEmployeeData?.assigned_friday_hours || null,
-            assigned_saturday_hours: assignedEmployeeData?.assigned_saturday_hours || null,
-            assigned_sunday_hours: assignedEmployeeData?.assigned_sunday_hours || null,
-            // New time fields
-            assigned_monday_start_time: assignedEmployeeData?.assigned_monday_start_time || null,
-            assigned_monday_end_time: assignedEmployeeData?.assigned_monday_end_time || null,
-            assigned_tuesday_start_time: assignedEmployeeData?.assigned_tuesday_start_time || null,
-            assigned_tuesday_end_time: assignedEmployeeData?.assigned_tuesday_end_time || null,
-            assigned_wednesday_start_time: assignedEmployeeData?.assigned_wednesday_start_time || null,
-            assigned_wednesday_end_time: assignedEmployeeData?.assigned_wednesday_end_time || null,
-            assigned_thursday_start_time: assignedEmployeeData?.assigned_thursday_start_time || null,
-            assigned_thursday_end_time: assignedEmployeeData?.assigned_thursday_end_time || null,
-            assigned_friday_start_time: assignedEmployeeData?.assigned_friday_start_time || null,
-            assigned_friday_end_time: assignedEmployeeData?.assigned_friday_end_time || null,
-            assigned_saturday_start_time: assignedEmployeeData?.assigned_saturday_start_time || null,
-            assigned_saturday_end_time: assignedEmployeeData?.assigned_saturday_end_time || null,
-            assigned_sunday_start_time: assignedEmployeeData?.assigned_sunday_start_time || null,
-            assigned_sunday_end_time: assignedEmployeeData?.assigned_sunday_end_time || null,
+            assignedEmployees: mappedAssignments,
             customer_contact_id: order.customer_contact_id,
             customer_name: customer?.name || null,
             object_name: object?.name || null,
@@ -278,7 +258,7 @@ export function TodaysOrdersOverview() {
 
   const getAssignedTimeForToday = (order: DisplayOrder) => {
     const todayDayOfWeek = new Date().getDay(); // 0=So, 1=Mo, ..., 6=Sa
-    const dayMap: { [key: number]: { start: keyof DisplayOrder, end: keyof DisplayOrder } } = {
+    const dayMap: { [key: number]: { start: keyof AssignedEmployee, end: keyof AssignedEmployee } } = {
       0: { start: 'assigned_sunday_start_time', end: 'assigned_sunday_end_time' },
       1: { start: 'assigned_monday_start_time', end: 'assigned_monday_end_time' },
       2: { start: 'assigned_tuesday_start_time', end: 'assigned_tuesday_end_time' },
@@ -290,8 +270,11 @@ export function TodaysOrdersOverview() {
     const startKey = dayMap[todayDayOfWeek]?.start;
     const endKey = dayMap[todayDayOfWeek]?.end;
 
-    const startTime = startKey ? (order[startKey] as string | null) : null;
-    const endTime = endKey ? (order[endKey] as string | null) : null;
+    const assignedEmployee = order.assignedEmployees?.[0];
+    if (!assignedEmployee) return 'N/A';
+
+    const startTime = startKey ? (assignedEmployee[startKey] as string | null) : null;
+    const endTime = endKey ? (assignedEmployee[endKey] as string | null) : null;
 
     if (startTime && endTime) {
       return `${startTime} - ${endTime}`;

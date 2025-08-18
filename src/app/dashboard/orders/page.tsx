@@ -24,6 +24,18 @@ import { OrdersTableView } from "@/components/orders-table-view";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { RecordDetailsDialog } from "@/components/record-details-dialog";
 import { LoadingOverlay } from "@/components/loading-overlay";
+import { AssignedEmployee } from "@/components/order-form";
+
+const dayNames = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const;
+const germanDayNames: { [key: string]: string } = {
+  monday: 'Mo',
+  tuesday: 'Di',
+  wednesday: 'Mi',
+  thursday: 'Do',
+  friday: 'Fr',
+  saturday: 'Sa',
+  sunday: 'So',
+};
 
 export interface DisplayOrder {
   id: string;
@@ -35,10 +47,38 @@ export interface DisplayOrder {
   created_at: string | null;
   customer_id: string | null;
   object_id: string | null;
+  customer_contact_id: string | null;
+  order_type: string;
+  recurring_start_date: string | null;
+  recurring_end_date: string | null;
+  priority: string;
+  total_estimated_hours: number | null;
+  notes: string | null;
+  request_status: string;
+  service_type: string | null;
+  // Derived for display
+  customer_name: string | null;
+  object_name: string | null;
+  customer_contact_first_name: string | null;
+  customer_contact_last_name: string | null;
   employee_ids: string[] | null;
   employee_first_names: string[] | null;
   employee_last_names: string[] | null;
-  assigned_daily_hours: (number | null)[] | null; // This is now an array of numbers, but we need to map the specific daily hours
+  // Full assignment data
+  assignedEmployees: AssignedEmployee[];
+  order_feedback: {
+    id: string;
+    rating: number;
+    comment: string | null;
+    image_urls: string[] | null;
+    created_at: string;
+  }[];
+  // Nested objects for easier access in components
+  object: { name: string | null; address: string | null; notes: string | null; } | null;
+  customer: { name: string | null; } | null;
+  customer_contact: { first_name: string | null; last_name: string | null; phone: string | null; } | null;
+  // Add fields for employee dashboard compatibility
+  assigned_daily_hours: (number | null)[] | null;
   assigned_monday_hours: number | null;
   assigned_tuesday_hours: number | null;
   assigned_wednesday_hours: number | null;
@@ -46,7 +86,6 @@ export interface DisplayOrder {
   assigned_friday_hours: number | null;
   assigned_saturday_hours: number | null;
   assigned_sunday_hours: number | null;
-  // New time fields
   assigned_monday_start_time: string | null;
   assigned_monday_end_time: string | null;
   assigned_tuesday_start_time: string | null;
@@ -61,30 +100,6 @@ export interface DisplayOrder {
   assigned_saturday_end_time: string | null;
   assigned_sunday_start_time: string | null;
   assigned_sunday_end_time: string | null;
-  customer_contact_id: string | null;
-  customer_name: string | null;
-  object_name: string | null;
-  customer_contact_first_name: string | null;
-  customer_contact_last_name: string | null;
-  order_type: string;
-  recurring_start_date: string | null;
-  recurring_end_date: string | null;
-  priority: string;
-  total_estimated_hours: number | null;
-  notes: string | null;
-  request_status: string;
-  service_type: string | null;
-  order_feedback: {
-    id: string;
-    rating: number;
-    comment: string | null;
-    image_urls: string[] | null;
-    created_at: string;
-  }[];
-  // Add nested objects for easier access in components
-  object: { name: string | null; address: string | null; notes: string | null; } | null;
-  customer: { name: string | null; } | null;
-  customer_contact: { first_name: string | null; last_name: string | null; phone: string | null; } | null;
 }
 
 const availableServices = [
@@ -251,10 +266,34 @@ export default function OrdersPage({
         .range(from, to);
 
       ordersData = data?.map(order => {
-        const assignedEmployeeData = order.order_employee_assignments?.[0];
         const customerData = Array.isArray(order.customers) ? order.customers[0] : order.customers;
         const objectData = Array.isArray(order.objects) ? order.objects[0] : order.objects;
         const customerContactData = Array.isArray(order.customer_contacts) ? order.customer_contacts[0] : order.customer_contacts;
+
+        const mappedAssignments = order.order_employee_assignments?.map((a: any) => ({
+            employeeId: a.employee_id,
+            assigned_monday_hours: a.assigned_monday_hours,
+            assigned_tuesday_hours: a.assigned_tuesday_hours,
+            assigned_wednesday_hours: a.assigned_wednesday_hours,
+            assigned_thursday_hours: a.assigned_thursday_hours,
+            assigned_friday_hours: a.assigned_friday_hours,
+            assigned_saturday_hours: a.assigned_saturday_hours,
+            assigned_sunday_hours: a.assigned_sunday_hours,
+            assigned_monday_start_time: a.assigned_monday_start_time,
+            assigned_monday_end_time: a.assigned_monday_end_time,
+            assigned_tuesday_start_time: a.assigned_tuesday_start_time,
+            assigned_tuesday_end_time: a.assigned_tuesday_end_time,
+            assigned_wednesday_start_time: a.assigned_wednesday_start_time,
+            assigned_wednesday_end_time: a.assigned_wednesday_end_time,
+            assigned_thursday_start_time: a.assigned_thursday_start_time,
+            assigned_thursday_end_time: a.assigned_thursday_end_time,
+            assigned_friday_start_time: a.assigned_friday_start_time,
+            assigned_friday_end_time: a.assigned_friday_end_time,
+            assigned_saturday_start_time: a.assigned_saturday_start_time,
+            assigned_saturday_end_time: a.assigned_saturday_end_time,
+            assigned_sunday_start_time: a.assigned_sunday_start_time,
+            assigned_sunday_end_time: a.assigned_sunday_end_time,
+        })) || [];
 
         return {
           id: order.id,
@@ -266,37 +305,7 @@ export default function OrdersPage({
           created_at: order.created_at,
           customer_id: order.customer_id,
           object_id: order.object_id,
-          employee_ids: order.order_employee_assignments?.map((a: any) => a.employee_id) || null,
-          employee_first_names: order.order_employee_assignments?.map((a: any) => a.employees?.first_name || '') || null,
-          employee_last_names: order.order_employee_assignments?.map((a: any) => a.employees?.last_name || '') || null,
-          assigned_daily_hours: order.order_employee_assignments?.map((a: any) => a.assigned_daily_hours) || null,
-          assigned_monday_hours: assignedEmployeeData?.assigned_monday_hours || null,
-          assigned_tuesday_hours: assignedEmployeeData?.assigned_tuesday_hours || null,
-          assigned_wednesday_hours: assignedEmployeeData?.assigned_wednesday_hours || null,
-          assigned_thursday_hours: assignedEmployeeData?.assigned_thursday_hours || null,
-          assigned_friday_hours: assignedEmployeeData?.assigned_friday_hours || null,
-          assigned_saturday_hours: assignedEmployeeData?.assigned_saturday_hours || null,
-          assigned_sunday_hours: assignedEmployeeData?.assigned_sunday_hours || null,
-          // New time fields
-          assigned_monday_start_time: assignedEmployeeData?.assigned_monday_start_time || null,
-          assigned_monday_end_time: assignedEmployeeData?.assigned_monday_end_time || null,
-          assigned_tuesday_start_time: assignedEmployeeData?.assigned_tuesday_start_time || null,
-          assigned_tuesday_end_time: assignedEmployeeData?.assigned_tuesday_end_time || null,
-          assigned_wednesday_start_time: assignedEmployeeData?.assigned_wednesday_start_time || null,
-          assigned_wednesday_end_time: assignedEmployeeData?.assigned_wednesday_end_time || null,
-          assigned_thursday_start_time: assignedEmployeeData?.assigned_thursday_start_time || null,
-          assigned_thursday_end_time: assignedEmployeeData?.assigned_thursday_end_time || null,
-          assigned_friday_start_time: assignedEmployeeData?.assigned_friday_start_time || null,
-          assigned_friday_end_time: assignedEmployeeData?.assigned_friday_end_time || null,
-          assigned_saturday_start_time: assignedEmployeeData?.assigned_saturday_start_time || null,
-          assigned_saturday_end_time: assignedEmployeeData?.assigned_saturday_end_time || null,
-          assigned_sunday_start_time: assignedEmployeeData?.assigned_sunday_start_time || null,
-          assigned_sunday_end_time: assignedEmployeeData?.assigned_sunday_end_time || null,
           customer_contact_id: order.customer_contact_id,
-          customer_name: customerData?.name || null,
-          object_name: objectData?.name || null,
-          customer_contact_first_name: customerContactData?.first_name || null,
-          customer_contact_last_name: customerContactData?.last_name || null,
           order_type: order.order_type,
           recurring_start_date: order.recurring_start_date,
           recurring_end_date: order.recurring_end_date,
@@ -306,10 +315,18 @@ export default function OrdersPage({
           request_status: order.request_status,
           service_type: order.service_type,
           order_feedback: order.order_feedback,
-          object: objectData, // Assign the nested object
-          customer: customerData, // Assign the nested customer
-          customer_contact: customerContactData, // Assign the nested customer_contact
-        };
+          customer_name: customerData?.name || null,
+          object_name: objectData?.name || null,
+          customer_contact_first_name: customerContactData?.first_name || null,
+          customer_contact_last_name: customerContactData?.last_name || null,
+          employee_ids: order.order_employee_assignments?.map((a: any) => a.employee_id) || null,
+          employee_first_names: order.order_employee_assignments?.map((a: any) => a.employees?.first_name || '') || null,
+          employee_last_names: order.order_employee_assignments?.map((a: any) => a.employees?.last_name || '') || null,
+          assignedEmployees: mappedAssignments,
+          object: objectData,
+          customer: customerData,
+          customer_contact: customerContactData,
+        } as DisplayOrder;
       }) || [];
       ordersError = selectError;
       ordersCount = selectCount;
@@ -582,31 +599,29 @@ export default function OrdersPage({
                             {(order.order_type === "recurring" || order.order_type === "substitution") && order.recurring_end_date && <div className="flex items-center text-xs text-muted-foreground"><CalendarDays className="mr-1 h-3 w-3" /><span>Ende: {new Date(order.recurring_end_date).toLocaleDateString()}</span></div>}
                             
                             {/* Display assigned times for each day */}
-                            {Array.from({ length: 7 }).map((_, dayIndex) => {
-                              const dayMap: { [key: number]: { start: keyof DisplayOrder, end: keyof DisplayOrder } } = {
-                                0: { start: 'assigned_sunday_start_time', end: 'assigned_sunday_end_time' },
-                                1: { start: 'assigned_monday_start_time', end: 'assigned_monday_end_time' },
-                                2: { start: 'assigned_tuesday_start_time', end: 'assigned_tuesday_end_time' },
-                                3: { start: 'assigned_wednesday_start_time', end: 'assigned_wednesday_end_time' },
-                                4: { start: 'assigned_thursday_start_time', end: 'assigned_thursday_end_time' },
-                                5: { start: 'assigned_friday_start_time', end: 'assigned_friday_end_time' },
-                                6: { start: 'assigned_saturday_start_time', end: 'assigned_saturday_end_time' },
-                              };
-                              const startKey = dayMap[dayIndex]?.start;
-                              const endKey = dayMap[dayIndex]?.end;
+                            {dayNames.map(day => {
+                                const assignmentsForDay = order.assignedEmployees
+                                    ?.map(emp => {
+                                        const startTime = (emp as any)[`assigned_${day}_start_time`];
+                                        const endTime = (emp as any)[`assigned_${day}_end_time`];
+                                        if (startTime && endTime) {
+                                            const employee = employees.find(e => e.id === emp.employeeId);
+                                            const empName = employee ? `${employee.first_name?.charAt(0)}.` : '??';
+                                            return `${empName}: ${startTime}-${endTime}`;
+                                        }
+                                        return null;
+                                    })
+                                    .filter(Boolean);
 
-                              const startTime = startKey ? (order[startKey] as string | null) : null;
-                              const endTime = endKey ? (order[endKey] as string | null) : null;
-
-                              if (startTime && endTime) {
-                                return (
-                                  <div key={dayIndex} className="flex items-center text-xs text-muted-foreground">
-                                    <Clock className="mr-1 h-3 w-3" />
-                                    <span>{`${new Date(0,0,0,0,0,0,0).toLocaleString('de-DE', { weekday: 'short' })}: ${startTime} - ${endTime}`}</span>
-                                  </div>
-                                );
-                              }
-                              return null;
+                                if (assignmentsForDay && assignmentsForDay.length > 0) {
+                                    return (
+                                        <div key={day} className="flex items-start text-xs text-muted-foreground">
+                                            <Clock className="mr-1 h-3 w-3 mt-0.5 flex-shrink-0" />
+                                            <span>{germanDayNames[day]}: {assignmentsForDay.join('; ')}</span>
+                                        </div>
+                                    );
+                                }
+                                return null;
                             })}
 
                             {feedback && (

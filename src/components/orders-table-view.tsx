@@ -13,6 +13,7 @@ import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { RecordDetailsDialog } from "@/components/record-details-dialog";
+import { AssignedEmployee } from "@/components/order-form";
 
 interface DisplayOrder {
   id: string;
@@ -27,29 +28,7 @@ interface DisplayOrder {
   employee_ids: string[] | null;
   employee_first_names: string[] | null;
   employee_last_names: string[] | null;
-  assigned_daily_hours: (number | null)[] | null; // Keep for compatibility if needed elsewhere
-  assigned_monday_hours: number | null;
-  assigned_tuesday_hours: number | null;
-  assigned_wednesday_hours: number | null;
-  assigned_thursday_hours: number | null;
-  assigned_friday_hours: number | null;
-  assigned_saturday_hours: number | null;
-  assigned_sunday_hours: number | null;
-  // New time fields
-  assigned_monday_start_time: string | null;
-  assigned_monday_end_time: string | null;
-  assigned_tuesday_start_time: string | null;
-  assigned_tuesday_end_time: string | null;
-  assigned_wednesday_start_time: string | null;
-  assigned_wednesday_end_time: string | null;
-  assigned_thursday_start_time: string | null;
-  assigned_thursday_end_time: string | null;
-  assigned_friday_start_time: string | null;
-  assigned_friday_end_time: string | null;
-  assigned_saturday_start_time: string | null;
-  assigned_saturday_end_time: string | null;
-  assigned_sunday_start_time: string | null;
-  assigned_sunday_end_time: string | null;
+  assignedEmployees: AssignedEmployee[];
   customer_contact_id: string | null;
   customer_name: string | null;
   object_name: string | null;
@@ -155,28 +134,6 @@ export function OrdersTableView({
     return null;
   };
 
-  const getAssignedTimeForDay = (order: DisplayOrder, dayIndex: number) => {
-    const dayMap: { [key: number]: { start: keyof DisplayOrder, end: keyof DisplayOrder } } = {
-      0: { start: 'assigned_sunday_start_time', end: 'assigned_sunday_end_time' },
-      1: { start: 'assigned_monday_start_time', end: 'assigned_monday_end_time' },
-      2: { start: 'assigned_tuesday_start_time', end: 'assigned_tuesday_end_time' },
-      3: { start: 'assigned_wednesday_start_time', end: 'assigned_wednesday_end_time' },
-      4: { start: 'assigned_thursday_start_time', end: 'assigned_thursday_end_time' },
-      5: { start: 'assigned_friday_start_time', end: 'assigned_friday_end_time' },
-      6: { start: 'assigned_saturday_start_time', end: 'assigned_saturday_end_time' },
-    };
-    const startKey = dayMap[dayIndex]?.start;
-    const endKey = dayMap[dayIndex]?.end;
-
-    const startTime = startKey ? (order[startKey] as string | null) : null;
-    const endTime = endKey ? (order[endKey] as string | null) : null;
-
-    if (startTime && endTime) {
-      return `${startTime} - ${endTime}`;
-    }
-    return 'N/A';
-  };
-
   if (orders.length === 0 && !query && !statusFilter && !orderTypeFilter && !serviceTypeFilter && !customerIdFilter && !employeeIdFilter) {
     return (
       <div className="text-center text-muted-foreground py-8">
@@ -247,7 +204,7 @@ export function OrdersTableView({
                 Zeitraum {renderSortIcon('due_date')}
               </Button>
             </TableHead>
-            <TableHead className="min-w-[120px]">Zugewiesene Zeiten</TableHead> {/* New column */}
+            <TableHead className="min-w-[120px]">Wöchentliche Std.</TableHead>
             <TableHead className="min-w-[80px]">Feedback</TableHead>
             <TableHead className="text-right min-w-[120px]">Aktionen</TableHead>
           </TableRow>
@@ -285,16 +242,7 @@ export function OrdersTableView({
                     </div>
                   )}
                 </TableCell>
-                <TableCell className="text-sm">
-                  {/* Display assigned times for each day */}
-                  {Array.from({ length: 7 }).map((_, dayIndex) => {
-                    const assignedTime = getAssignedTimeForDay(order, dayIndex);
-                    if (assignedTime !== 'N/A') {
-                      return <div key={dayIndex}>{assignedTime}</div>;
-                    }
-                    return null;
-                  })}
-                </TableCell>
+                <TableCell className="text-sm">{order.total_estimated_hours?.toFixed(2) || 'N/A'}</TableCell>
                 <TableCell>
                   {feedback && (
                     <div className="flex items-center text-warning">

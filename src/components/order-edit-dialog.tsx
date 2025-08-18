@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Pencil } from "lucide-react";
-import { OrderForm, OrderFormValues } from "@/components/order-form";
+import { OrderForm, OrderFormValues, AssignedEmployee } from "@/components/order-form";
 import { updateOrder } from "@/app/dashboard/orders/actions";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
@@ -40,32 +40,7 @@ interface OrderEditDialogProps {
     notes: string | null;
     service_type: string | null;
     request_status: string;
-    employee_ids: string[] | null;
-    employee_first_names: string[] | null;
-    employee_last_names: string[] | null;
-    assigned_daily_hours: (number | null)[] | null; // Keep for compatibility if needed elsewhere
-    assigned_monday_hours: number | null;
-    assigned_tuesday_hours: number | null;
-    assigned_wednesday_hours: number | null;
-    assigned_thursday_hours: number | null;
-    assigned_friday_hours: number | null;
-    assigned_saturday_hours: number | null;
-    assigned_sunday_hours: number | null;
-    // New time fields
-    assigned_monday_start_time: string | null;
-    assigned_monday_end_time: string | null;
-    assigned_tuesday_start_time: string | null;
-    assigned_tuesday_end_time: string | null;
-    assigned_wednesday_start_time: string | null;
-    assigned_wednesday_end_time: string | null;
-    assigned_thursday_start_time: string | null;
-    assigned_thursday_end_time: string | null;
-    assigned_friday_start_time: string | null;
-    assigned_friday_end_time: string | null;
-    assigned_saturday_start_time: string | null;
-    assigned_saturday_end_time: string | null;
-    assigned_sunday_start_time: string | null;
-    assigned_sunday_end_time: string | null;
+    assignedEmployees: AssignedEmployee[]; // Use the correct, structured type
   };
 }
 
@@ -86,33 +61,6 @@ export function OrderEditDialog({ order }: OrderEditDialogProps) {
     }
     return null;
   };
-
-  // Prepare assignedEmployees for the form with new daily hour and time fields
-  const initialAssignedEmployees = (order.employee_ids || []).map((empId, index) => ({
-    employeeId: empId,
-    assigned_monday_hours: order.assigned_monday_hours,
-    assigned_tuesday_hours: order.assigned_tuesday_hours,
-    assigned_wednesday_hours: order.assigned_wednesday_hours,
-    assigned_thursday_hours: order.assigned_thursday_hours,
-    assigned_friday_hours: order.assigned_friday_hours,
-    assigned_saturday_hours: order.assigned_saturday_hours,
-    assigned_sunday_hours: order.assigned_sunday_hours,
-    // New time fields
-    assigned_monday_start_time: order.assigned_monday_start_time,
-    assigned_monday_end_time: order.assigned_monday_end_time,
-    assigned_tuesday_start_time: order.assigned_tuesday_start_time,
-    assigned_tuesday_end_time: order.assigned_tuesday_end_time,
-    assigned_wednesday_start_time: order.assigned_wednesday_start_time,
-    assigned_wednesday_end_time: order.assigned_wednesday_end_time,
-    assigned_thursday_start_time: order.assigned_thursday_start_time,
-    assigned_thursday_end_time: order.assigned_thursday_end_time,
-    assigned_friday_start_time: order.assigned_friday_start_time,
-    assigned_friday_end_time: order.assigned_friday_end_time,
-    assigned_saturday_start_time: order.assigned_saturday_start_time,
-    assigned_saturday_end_time: order.assigned_saturday_end_time,
-    assigned_sunday_start_time: order.assigned_sunday_start_time,
-    assigned_sunday_end_time: order.assigned_sunday_end_time,
-  }));
 
   return (
     <TooltipProvider delayDuration={300}>
@@ -162,7 +110,7 @@ export function OrderEditDialog({ order }: OrderEditDialogProps) {
                   notes: order.notes,
                   serviceType: getServiceTypeForForm(order.service_type),
                   requestStatus: order.request_status as OrderFormValues["requestStatus"],
-                  assignedEmployees: initialAssignedEmployees,
+                  assignedEmployees: order.assignedEmployees, // Pass the structured array directly
                 }}
                 onSubmit={handleUpdate}
                 submitButtonText="Änderungen speichern"
