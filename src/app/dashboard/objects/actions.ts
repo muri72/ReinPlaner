@@ -145,7 +145,7 @@ export async function updateObject(objectId: string, data: ObjectFormValues) {
       friday_hours: data.friday_hours,
       saturday_hours: data.saturday_hours,
       sunday_hours: data.sunday_hours,
-      // total_weekly_hours: totalWeeklyHours, // REMOVED: This column is likely computed in the DB
+      total_weekly_hours: totalWeeklyHours, // REMOVED: This column is likely computed in the DB
       monday_start_time: data.monday_start_time,
       monday_end_time: data.monday_end_time,
       tuesday_start_time: data.tuesday_start_time,

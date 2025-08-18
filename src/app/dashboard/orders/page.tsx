@@ -34,7 +34,7 @@ interface DisplayOrder {
   due_date: string | null;
   created_at: string | null;
   customer_id: string | null;
-  object_id: string | null;
+  object_id: string | null; // Ensure object_id is here
   employee_ids: string[] | null; // Updated to array of IDs
   employee_first_names: string[] | null; // Updated to array of first names
   employee_last_names: string[] | null; // Updated to array of last names
@@ -199,7 +199,7 @@ export default function OrdersPage({
         .order(sortColumn, { ascending: sortDirection === 'asc' });
 
       // Apply RLS-like filtering for non-admin roles if not already handled by RLS policies
-      // The RPC function handles this, but for direct table selects, we might need it.
+      // The RPC function handles it, but for direct table selects, we might need it.
       // However, the existing RLS policies for 'orders' table should cover this.
       // So, no explicit `eq('user_id', user.id)` or `in('customer_id', ...)` needed here
       // as the RPC handles it and direct selects are covered by RLS.

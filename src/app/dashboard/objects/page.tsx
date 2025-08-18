@@ -190,9 +190,9 @@ export default function ObjectsPage({
 
       objectsData = data?.map(obj => ({
         ...obj,
-        customer_name: obj.customers?.name || null,
-        object_leader_first_name: obj.customer_contacts?.first_name || null,
-        object_leader_last_name: obj.customer_contacts?.last_name || null,
+        customer_name: obj.customers?.[0]?.name || null,
+        object_leader_first_name: obj.customer_contacts?.[0]?.first_name || null,
+        object_leader_last_name: obj.customer_contacts?.[0]?.last_name || null,
       })) || [];
       objectsError = selectError;
       objectsCount = selectCount;

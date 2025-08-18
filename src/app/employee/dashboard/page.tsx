@@ -68,7 +68,7 @@ export default async function EmployeeDashboardPage() {
         total_estimated_hours,
         notes,
         service_type,
-        objects ( name, address, notes, time_of_day, access_method, pin, is_alarm_secured, alarm_password, security_code_word ),
+        objects ( name, address, notes, time_of_day, access_method, pin, is_alarm_secured, alarm_password, security_code_word, total_weekly_hours ),
         customers ( name ),
         customer_contacts ( first_name, last_name, phone ),
         order_employee_assignments!inner ( employee_id, assigned_daily_hours )

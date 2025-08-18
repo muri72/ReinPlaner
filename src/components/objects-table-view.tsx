@@ -134,7 +134,7 @@ export function ObjectsTableView({
   }
 
   return (
-    <div className="overflow-x-auto p-4 rounded-lg shadow-neumorphic glassmorphism-card">
+    <div className="overflow-x-auto p-4 rounded-lg shadow-neumorphic glassmorphism-card"> {/* Added styling here */}
       <Table>
         <TableHeader>
           <TableRow>

@@ -21,6 +21,7 @@ interface OrderPlanningDialogProps {
     object_name: string | null;
     service_type: string | null;
     total_estimated_hours: number | null; // Hinzugefügt
+    object_id: string | null; // Add this
   };
 }
 
@@ -58,9 +59,13 @@ export function OrderPlanningDialog({ order }: OrderPlanningDialogProps) {
   }, [open]);
 
   // Set default assignedDailyHours when employee is selected or dialog opens
+  // This logic needs to be updated to fetch object's total_weekly_hours and divide by number of employees
+  // For simplicity in this dialog, if total_estimated_hours is available, use that as a suggestion.
+  // If multiple employees are assigned via this dialog, the logic would need to be more complex.
+  // For now, this dialog assigns ONE employee. So, assignedDailyHours can be total_estimated_hours.
   useEffect(() => {
     if (selectedEmployeeId && order.total_estimated_hours !== null) {
-      setAssignedDailyHours(order.total_estimated_hours);
+      setAssignedDailyHours(order.total_estimated_hours); // Suggest total estimated hours for this single employee
     } else {
       setAssignedDailyHours(null);
     }

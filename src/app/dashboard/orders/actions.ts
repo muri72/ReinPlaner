@@ -223,6 +223,7 @@ export async function processOrderRequest(formData: FormData): Promise<{ success
   const orderId = formData.get('orderId') as string;
   const employeeId = formData.get('employeeId') as string | null;
   const decision = formData.get('decision') as 'approved' | 'rejected';
+  const assignedDailyHours = formData.get('assignedDailyHours') ? Number(formData.get('assignedDailyHours')) : null; // Neues Feld
 
   if (!orderId || !decision) {
     return { success: false, message: "Ungültige Anfrage." };
@@ -265,7 +266,7 @@ export async function processOrderRequest(formData: FormData): Promise<{ success
       .insert({
         order_id: orderId,
         employee_id: employeeId,
-        assigned_daily_hours: null, // Standardmäßig null, damit die DB-Funktion die Stunden aufteilt
+        assigned_daily_hours: assignedDailyHours, // Speichern der zugewiesenen Stunden
       });
 
     if (insertAssignmentError) {

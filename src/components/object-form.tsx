@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react"; // useCallback hinzugefügt
 import { createClient } from "@/lib/supabase/client";
 import { Switch } from "@/components/ui/switch";
 import { CustomerContactCreateDialog } from "@/components/customer-contact-create-dialog";
@@ -355,7 +355,9 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
       {/* Kunde und Kontakt */}
       <div>
         <Label htmlFor="customerId">Kunde</Label>
-        <Select onValueChange={(value) => form.setValue("customerId", value)} value={form.watch("customerId")}>
+        <Select onValueChange={(value) => {
+          form.setValue("customerId", value);
+        }} value={form.watch("customerId")}>
           <SelectTrigger><SelectValue placeholder="Kunde auswählen" /></SelectTrigger>
           <SelectContent>{customers.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
         </Select>

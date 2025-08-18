@@ -1,24 +1,24 @@
 "use client";
 
-import { useForm, SubmitHandler, useFieldArray } from "react-hook-form"; // useFieldArray hinzugefügt
+import { useForm, SubmitHandler, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea"; // Hinzugefügt: Import der Textarea-Komponente
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { PlusCircle, X } from "lucide-react"; // X für Entfernen hinzugefügt
+import { PlusCircle, X } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useState, useEffect, useCallback } from "react"; // useCallback hinzugefügt
+import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { ObjectForm, ObjectFormValues } from "@/components/object-form";
 import { createObject } from "@/app/dashboard/objects/actions";
 import { CustomerContactCreateDialog } from "@/components/customer-contact-create-dialog";
-import { DatePicker } from "@/components/date-picker"; // Importiere die neue DatePicker Komponente
-import { handleActionResponse } from "@/lib/toast-utils"; // Importiere die neue Utility
-import { Checkbox } from "@/components/ui/checkbox"; // Checkbox für Multi-Select
+import { DatePicker } from "@/components/date-picker";
+import { handleActionResponse } from "@/lib/toast-utils";
+import { Checkbox } from "@/components/ui/checkbox";
 
 // Definierte Liste der Dienstleistungen
 const availableServices = [
@@ -30,7 +30,7 @@ const availableServices = [
 ] as const;
 
 // Helper function for number preprocessing
-const preprocessNumber = (val: any) => (val === "" || isNaN(Number(val)) ? null : Number(val));
+const preprocessNumber = (val: unknown) => (val === "" || isNaN(Number(val)) ? null : Number(val));
 
 export const orderSchema = z.object({
   title: z.string().min(1, "Titel ist erforderlich").max(100, "Titel ist zu lang"),
@@ -82,6 +82,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     friday_hours: number | null;
     saturday_hours: number | null;
     sunday_hours: number | null;
+    total_weekly_hours: number | null; // Ensure this is fetched
   }[]>([]); // Objekt-Stunden hinzugefügt
   const [allEmployees, setAllEmployees] = useState<{ id: string; first_name: string; last_name: string }[]>([]); // Alle Mitarbeiter
   const [customerContacts, setCustomerContacts] = useState<{ id: string; first_name: string; last_name: string; customer_id: string }[]>([]);
@@ -140,7 +141,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
       if (customersError) console.error("Fehler beim Laden der Kunden:", customersError);
 
       // Alle Objekt-Details laden, einschließlich der Stunden pro Wochentag
-      const { data: objectsData, error: objectsError } = await supabase.from('objects').select('id, name, customer_id, monday_hours, tuesday_hours, wednesday_hours, thursday_hours, friday_hours, saturday_hours, sunday_hours');
+      const { data: objectsData, error: objectsError } = await supabase.from('objects').select('id, name, customer_id, monday_hours, tuesday_hours, wednesday_hours, thursday_hours, friday_hours, saturday_hours, sunday_hours, total_weekly_hours');
       if (objectsData) setObjects(objectsData);
       if (objectsError) console.error("Fehler beim Laden der Objekte:", objectsError);
 
@@ -164,8 +165,8 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
   // Automatische Titelgenerierung
   useEffect(() => {
     if (!initialData) { // Nur wenn ein neuer Auftrag erstellt wird
-      const customerName = customers.find(c => c.id === selectedCustomerId)?.name || '';
-      const objectName = objects.find(o => o.id === selectedObjectId)?.name || '';
+      const customerName = customers.find((c: { id: string; name: string }) => c.id === selectedCustomerId)?.name || '';
+      const objectName = objects.find((o: { id: string; name: string }) => o.id === selectedObjectId)?.name || '';
 
       const parts = [];
       if (objectName) parts.push(objectName);
@@ -178,74 +179,69 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
 
   // Objekte filtern basierend auf ausgewähltem Kunden
   const filteredObjects = selectedCustomerId
-    ? objects.filter(obj => obj.customer_id === selectedCustomerId)
+    ? objects.filter((obj: { customer_id: string }) => obj.customer_id === selectedCustomerId)
     : [];
 
-  // Funktion zur Berechnung der vorgeschlagenen täglichen Stunden pro Mitarbeiter
-  const calculateSuggestedDailyHours = useCallback((employeeCount: number, objectId: string | null): number | null => {
+  // Calculate suggested daily hours per employee based on object's total weekly hours
+  const calculateSuggestedDailyHoursPerEmployee = useCallback((objectId: string | null, employeeCount: number): number | null => {
     if (!objectId || employeeCount === 0) return null;
-    const selectedObject = objects.find(obj => obj.id === objectId);
-    if (!selectedObject) return null;
+    const selectedObject = objects.find((obj: { id: string }) => obj.id === objectId);
+    if (!selectedObject || selectedObject.total_weekly_hours === null) return null;
 
-    // Für die Schätzung nehmen wir den Durchschnitt der Stunden pro Wochentag
-    // oder eine Summe, wenn es sich um eine einmalige Schätzung handelt.
-    // Hier nehmen wir einfach die Gesamtstunden pro Woche und teilen sie durch 5 (Arbeitstage)
-    // und dann durch die Anzahl der Mitarbeiter. Dies ist eine Vereinfachung.
-    // Eine genauere Berechnung würde die spezifischen Tagesstunden des Objekts berücksichtigen.
-    const dailyHoursSum = (selectedObject.monday_hours || 0) +
-                          (selectedObject.tuesday_hours || 0) +
-                          (selectedObject.wednesday_hours || 0) +
-                          (selectedObject.thursday_hours || 0) +
-                          (selectedObject.friday_hours || 0) +
-                          (selectedObject.saturday_hours || 0) +
-                          (selectedObject.sunday_hours || 0);
-    
-    // Annahme: 5 Arbeitstage für die Verteilung, wenn keine spezifischen Tagesstunden
-    const averageDailyHours = dailyHoursSum > 0 ? dailyHoursSum / 5 : 0; // Oder 7, je nach Logik
-    
-    const suggested = averageDailyHours / employeeCount;
+    // Divide total weekly hours by the number of assigned employees
+    const suggested = selectedObject.total_weekly_hours / employeeCount;
     return parseFloat(suggested.toFixed(2));
   }, [objects]);
 
-  // Effekt zur Aktualisierung der vorgeschlagenen Stunden, wenn sich Objekt oder zugewiesene Mitarbeiter ändern
+  // Effect to update assignedDailyHours for employees and totalEstimatedHours for the order
   useEffect(() => {
     const currentAssignedCount = selectedAssignedEmployees?.length || 0;
-    const currentObjectId = form.getValues("objectId") ?? null; // Ensure it's string | null
+    const currentObjectId = form.getValues("objectId") ?? null;
 
+    // Update assignedDailyHours for each employee
     if (currentObjectId && currentAssignedCount > 0) {
-      const suggested = calculateSuggestedDailyHours(currentAssignedCount, currentObjectId);
-      // Aktualisiere nur die Felder, die noch keine manuellen Stunden haben
-      selectedAssignedEmployees?.forEach((assignedEmp, index) => {
-        if (assignedEmp.assignedDailyHours === null || assignedEmp.assignedDailyHours === undefined) {
-          updateEmployeeField(index, { ...assignedEmp, assignedDailyHours: suggested });
-        }
+      const suggestedDailyHours = calculateSuggestedDailyHoursPerEmployee(currentObjectId, currentAssignedCount);
+      selectedAssignedEmployees?.forEach((assignedEmp: { employeeId: string; assignedDailyHours?: number | null }, index: number) => {
+        // Only update if the field is not already manually set or if it's a new assignment
+        // For simplicity, we'll always update it here. If a user manually changes it,
+        // adding/removing another employee will re-calculate and overwrite.
+        updateEmployeeField(index, { ...assignedEmp, assignedDailyHours: suggestedDailyHours });
       });
     } else {
-      // Wenn kein Objekt oder keine Mitarbeiter zugewiesen, alle Stunden zurücksetzen
-      selectedAssignedEmployees?.forEach((assignedEmp, index) => {
+      // If no object or no employees assigned, reset all assigned daily hours
+      selectedAssignedEmployees?.forEach((assignedEmp: { employeeId: string; assignedDailyHours?: number | null }, index: number) => {
         if (assignedEmp.assignedDailyHours !== null) {
           updateEmployeeField(index, { ...assignedEmp, assignedDailyHours: null });
         }
       });
     }
-  }, [selectedObjectId, selectedAssignedEmployees, calculateSuggestedDailyHours, form, updateEmployeeField]);
 
-
-  // Effekt zur Berechnung der totalEstimatedHours des Auftrags
-  useEffect(() => {
-    let totalHoursForOrder = 0;
-    if (selectedAssignedEmployees && selectedAssignedEmployees.length > 0) {
-      // Summiere die zugewiesenen täglichen Stunden für alle Mitarbeiter
-      // Dies ist eine Vereinfachung, da es die Dauer des Auftrags nicht berücksichtigt.
-      // Für wiederkehrende Aufträge müsste dies komplexer sein (z.B. Summe der Wochenstunden).
-      // Für einmalige Aufträge könnte es die Summe der geschätzten Stunden sein.
-      // Hier nehmen wir an, dass totalEstimatedHours die Summe der *täglichen* Stunden aller Mitarbeiter ist.
-      selectedAssignedEmployees.forEach(emp => {
-        totalHoursForOrder += emp.assignedDailyHours || 0;
-      });
+    // Update totalEstimatedHours for the order (based on object's total weekly hours or daily hours for one-time)
+    const selectedObject = objects.find((obj: { id: string }) => obj.id === currentObjectId);
+    if (selectedObject) {
+      if (['recurring', 'substitution', 'permanent'].includes(orderType)) {
+        form.setValue("totalEstimatedHours", selectedObject.total_weekly_hours || null, { shouldValidate: false });
+      } else if (orderType === 'one_time' && form.getValues("dueDate")) {
+        const dueDate = form.getValues("dueDate");
+        const dayOfWeek = dueDate!.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+        let dailyHours = 0;
+        switch (dayOfWeek) {
+          case 0: dailyHours = selectedObject.sunday_hours || 0; break;
+          case 1: dailyHours = selectedObject.monday_hours || 0; break;
+          case 2: dailyHours = selectedObject.tuesday_hours || 0; break;
+          case 3: dailyHours = selectedObject.wednesday_hours || 0; break;
+          case 4: dailyHours = selectedObject.thursday_hours || 0; break;
+          case 5: dailyHours = selectedObject.friday_hours || 0; break;
+          case 6: dailyHours = selectedObject.saturday_hours || 0; break;
+        }
+        form.setValue("totalEstimatedHours", parseFloat(dailyHours.toFixed(2)), { shouldValidate: false });
+      } else {
+        form.setValue("totalEstimatedHours", null, { shouldValidate: false });
+      }
+    } else {
+      form.setValue("totalEstimatedHours", null, { shouldValidate: false });
     }
-    form.setValue("totalEstimatedHours", parseFloat(totalHoursForOrder.toFixed(2)), { shouldValidate: false });
-  }, [selectedAssignedEmployees, form]);
+  }, [selectedObjectId, selectedAssignedEmployees, calculateSuggestedDailyHoursPerEmployee, objects, form, updateEmployeeField, orderType, form.watch("dueDate")]);
 
 
   const handleFormSubmit: SubmitHandler<OrderFormValues> = async (data) => {
@@ -267,11 +263,11 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     const result = await createObject(data);
     handleActionResponse(result); // Nutze die neue Utility
     if (result.success) {
-      // Fetch all object details including daily hours after creation
-      const { data: newObjectsData, error: newObjectsError } = await supabase.from('objects').select('id, name, customer_id, monday_hours, tuesday_hours, wednesday_hours, thursday_hours, friday_hours, saturday_hours, sunday_hours');
+      // Fetch all object details including daily hours and total weekly hours after creation
+      const { data: newObjectsData, error: newObjectsError } = await supabase.from('objects').select('id, name, customer_id, monday_hours, tuesday_hours, wednesday_hours, thursday_hours, friday_hours, saturday_hours, sunday_hours, total_weekly_hours');
       if (newObjectsData) {
         setObjects(newObjectsData);
-        const newObject = newObjectsData.find(obj => obj.name === data.name && obj.customer_id === data.customerId);
+        const newObject = newObjectsData.find((obj: { name: string; customer_id: string }) => obj.name === data.name && obj.customer_id === data.customerId);
         if (newObject) {
           form.setValue("objectId", newObject.id);
         }
@@ -292,12 +288,12 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
 
   const handleEmployeeAssignmentChange = (employeeId: string, isChecked: boolean) => {
     if (isChecked) {
-      // Wenn ein Mitarbeiter zugewiesen wird, versuchen Sie, die vorgeschlagenen Stunden zu berechnen
-      const currentAssignedCount = (selectedAssignedEmployees?.length || 0) + 1; // Inklusive des neuen Mitarbeiters
-      const suggested = calculateSuggestedDailyHours(currentAssignedCount, form.getValues("objectId") ?? null); // Pass current count + 1 if adding
+      // When an employee is assigned, calculate suggested hours based on current state
+      const currentAssignedCount = (selectedAssignedEmployees?.length || 0) + 1; // Include the new employee
+      const suggested = calculateSuggestedDailyHoursPerEmployee(form.getValues("objectId") ?? null, currentAssignedCount);
       appendEmployee({ employeeId: employeeId, assignedDailyHours: suggested });
     } else {
-      const index = assignedEmployeeFields.findIndex(field => field.employeeId === employeeId);
+      const index = assignedEmployeeFields.findIndex((field: { employeeId: string }) => field.employeeId === employeeId);
       if (index > -1) {
         removeEmployee(index);
       }
@@ -333,7 +329,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
       </div>
       <div>
         <Label htmlFor="serviceType">Reinigungsdienstleistung</Label>
-        <Select onValueChange={(value) => form.setValue("serviceType", value as OrderFormValues["serviceType"])} value={form.watch("serviceType") || ""}>
+        <Select onValueChange={(value: OrderFormValues["serviceType"]) => form.setValue("serviceType", value)} value={form.watch("serviceType") || ""}>
           <SelectTrigger className="w-full">
             <SelectValue placeholder="Dienstleistung auswählen" />
           </SelectTrigger>
@@ -349,7 +345,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
       </div>
       <div>
         <Label htmlFor="customerId">Kunde</Label>
-        <Select onValueChange={(value) => {
+        <Select onValueChange={(value: string) => {
           form.setValue("customerId", value);
           form.setValue("objectId", null);
           form.setValue("customerContactId", null);
@@ -370,7 +366,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
       <div className="flex items-end gap-2">
         <div className="flex-grow">
           <Label htmlFor="customerContactId">Auftraggebende Person (Kundenkontakt, optional)</Label>
-          <Select onValueChange={(value) => form.setValue("customerContactId", value === "unassigned" ? null : value)} value={form.watch("customerContactId") || "unassigned"} disabled={!selectedCustomerId}>
+          <Select onValueChange={(value: string) => form.setValue("customerContactId", value === "unassigned" ? null : value)} value={form.watch("customerContactId") || "unassigned"} disabled={!selectedCustomerId}>
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Kundenkontakt auswählen" />
             </SelectTrigger>
@@ -390,7 +386,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
       <div className="flex items-end gap-2">
         <div className="flex-grow">
           <Label htmlFor="objectId">Objekt</Label>
-          <Select onValueChange={(value) => form.setValue("objectId", value)} value={form.watch("objectId") || "unassigned"} disabled={!form.watch("customerId")}>
+          <Select onValueChange={(value: string) => form.setValue("objectId", value)} value={form.watch("objectId") || "unassigned"} disabled={!form.watch("customerId")}>
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Objekt auswählen" />
             </SelectTrigger>
@@ -439,17 +435,17 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
           {allEmployees.length === 0 ? (
             <p className="text-muted-foreground text-sm">Keine Mitarbeiter zum Zuweisen gefunden.</p>
           ) : (
-            allEmployees.map((employee) => {
+            allEmployees.map((employee: { id: string; first_name: string; last_name: string }) => {
               const isAssigned = selectedAssignedEmployees?.some(
-                (assigned) => assigned.employeeId === employee.id
+                (assigned: { employeeId: string }) => assigned.employeeId === employee.id
               );
               const assignedIndex = assignedEmployeeFields.findIndex(
-                (field) => field.employeeId === employee.id
+                (field: { employeeId: string }) => field.employeeId === employee.id
               );
 
               // Calculate suggested daily hours for this specific employee's placeholder
               const currentAssignedCountForPlaceholder = (selectedAssignedEmployees?.length || 0);
-              const suggestedForPlaceholder = calculateSuggestedDailyHours(currentAssignedCountForPlaceholder, form.getValues("objectId") ?? null);
+              const suggestedForPlaceholder = calculateSuggestedDailyHoursPerEmployee(form.getValues("objectId") ?? null, currentAssignedCountForPlaceholder);
 
               return (
                 <div key={employee.id} className="flex items-center justify-between gap-2">
@@ -457,8 +453,8 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
                     <Checkbox
                       id={`employee-${employee.id}`}
                       checked={isAssigned}
-                      onCheckedChange={(checked) =>
-                        handleEmployeeAssignmentChange(employee.id, !!checked)
+                      onCheckedChange={(checked: boolean) =>
+                        handleEmployeeAssignmentChange(employee.id, checked)
                       }
                     />
                     <Label htmlFor={`employee-${employee.id}`} className="flex-grow">
@@ -499,8 +495,8 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
 
       <div>
         <Label htmlFor="orderType">Auftragstyp</Label>
-        <Select onValueChange={(value) => {
-          form.setValue("orderType", value as OrderFormValues["orderType"]);
+        <Select onValueChange={(value: OrderFormValues["orderType"]) => {
+          form.setValue("orderType", value);
           form.setValue("dueDate", null);
           form.setValue("recurringStartDate", null);
           form.setValue("recurringEndDate", null);
@@ -509,10 +505,9 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
             <SelectValue placeholder="Auftragstyp auswählen" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="one_time">Einmalig</SelectItem>
-            <SelectItem value="recurring">Wiederkehrend</SelectItem>
-            <SelectItem value="substitution">Vertretung</SelectItem>
-            <SelectItem value="permanent">Permanent</SelectItem>
+            {availableServices.map(service => (
+              <SelectItem key={service} value={service}>{service}</SelectItem>
+            ))}
           </SelectContent>
         </Select>
         {form.formState.errors.orderType && (
@@ -524,7 +519,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
         <DatePicker
           label="Fälligkeitsdatum (optional)"
           value={form.watch("dueDate")}
-          onChange={(date) => form.setValue("dueDate", date)}
+          onChange={(date: Date | null) => form.setValue("dueDate", date)}
           error={form.formState.errors.dueDate?.message}
         />
       )}
@@ -534,14 +529,14 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
           <DatePicker
             label="Startdatum"
             value={form.watch("recurringStartDate")}
-            onChange={(date) => form.setValue("recurringStartDate", date)}
+            onChange={(date: Date | null) => form.setValue("recurringStartDate", date)}
             error={form.formState.errors.recurringStartDate?.message}
           />
           {orderType !== "permanent" && (
             <DatePicker
               label="Enddatum (optional)"
               value={form.watch("recurringEndDate")}
-              onChange={(date) => form.setValue("recurringEndDate", date)}
+              onChange={(date: Date | null) => form.setValue("recurringEndDate", date)}
               error={form.formState.errors.recurringEndDate?.message}
             />
           )}
@@ -550,7 +545,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
 
       <div>
         <Label htmlFor="priority">Priorität</Label>
-        <Select onValueChange={(value) => form.setValue("priority", value as OrderFormValues["priority"])} value={form.watch("priority")}>
+        <Select onValueChange={(value: OrderFormValues["priority"]) => form.setValue("priority", value)} value={form.watch("priority")}>
           <SelectTrigger className="w-full">
             <SelectValue placeholder="Priorität auswählen" />
           </SelectTrigger>
@@ -593,7 +588,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
       </div>
       <div>
         <Label htmlFor="status">Status</Label>
-        <Select onValueChange={(value) => form.setValue("status", value as "pending" | "in_progress" | "completed")} value={form.watch("status")}>
+        <Select onValueChange={(value: OrderFormValues["status"]) => form.setValue("status", value)} value={form.watch("status")}>
           <SelectTrigger className="w-full">
             <SelectValue placeholder="Status auswählen" />
           </SelectTrigger>
@@ -609,7 +604,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
       </div>
       <div>
         <Label htmlFor="requestStatus">Anfragestatus</Label>
-        <Select onValueChange={(value) => form.setValue("requestStatus", value as "pending" | "approved" | "rejected")} value={form.watch("requestStatus")}>
+        <Select onValueChange={(value: OrderFormValues["requestStatus"]) => form.setValue("requestStatus", value)} value={form.watch("requestStatus")}>
           <SelectTrigger className="w-full">
             <SelectValue placeholder="Anfragestatus auswählen" />
           </SelectTrigger>
