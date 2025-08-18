@@ -49,11 +49,6 @@ export async function createObject(data: ObjectFormValues) {
     securityCodeWord,
   } = data;
 
-  // Calculate total_weekly_hours
-  const totalWeeklyHours = (monday_hours || 0) + (tuesday_hours || 0) + (wednesday_hours || 0) +
-                           (thursday_hours || 0) + (friday_hours || 0) + (saturday_hours || 0) +
-                           (sunday_hours || 0);
-
   const { error } = await supabase
     .from('objects')
     .insert({
@@ -70,7 +65,7 @@ export async function createObject(data: ObjectFormValues) {
       friday_hours,
       saturday_hours,
       sunday_hours,
-      total_weekly_hours: totalWeeklyHours, // Neues Feld
+      // total_weekly_hours wird von der Datenbank berechnet und hier nicht eingefügt.
       monday_start_time,
       monday_end_time,
       tuesday_start_time,
@@ -140,7 +135,6 @@ export async function updateObject(objectId: string, data: ObjectFormValues) {
       saturday_hours: data.saturday_hours,
       sunday_hours: data.sunday_hours,
       // total_weekly_hours wird von der Datenbank berechnet und kann hier nicht aktualisiert werden.
-      // Daher wird es aus dem Update-Objekt entfernt.
       monday_start_time: data.monday_start_time,
       monday_end_time: data.monday_end_time,
       tuesday_start_time: data.tuesday_start_time,
