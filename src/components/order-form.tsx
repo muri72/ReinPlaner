@@ -1,6 +1,6 @@
 "use client";
 
-import { useForm, SubmitHandler, useFieldArray, FieldPath } from "react-hook-form";
+import { useForm, SubmitHandler, useFieldArray, FieldPath, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Input } from "@/components/ui/input";
@@ -257,7 +257,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     }
   }, [selectedObjectId, objects, form, orderType, form.watch("dueDate")]);
 
-  // IMPROVED: Smarter distribution logic
+  // EXACT LOGIC: Employee assignment distribution
   const handleEmployeeSelectionChange = useCallback((selectedIds: string[]) => {
     const currentObjectId = form.getValues("objectId") ?? null;
     const selectedObject = objects.find(obj => obj.id === currentObjectId);
@@ -278,7 +278,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
         return existingAssignment;
       }
 
-      // Otherwise, create a new blank assignment with default start times.
+      // Otherwise, create a new blank assignment with 0 hours but default start times.
       const newEmpData: AssignedEmployee = {
         employeeId,
         assigned_monday_hours: null, assigned_tuesday_hours: null, assigned_wednesday_hours: null,
@@ -318,7 +318,6 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     }
 
     replaceAssignedEmployees(newAssignments);
-    form.trigger("assignedEmployees"); // Trigger validation after changing the array
   }, [objects, form, replaceAssignedEmployees]);
 
   const handleAssignedHoursChange = useCallback((
@@ -327,23 +326,17 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     value: string
   ) => {
     const parsedHours = value === "" ? null : Number(value);
-    
-    // Update the specific employee's hours
-    const currentAssignments = form.getValues("assignedEmployees") || [];
-    const currentEmployee = { ...currentAssignments[employeeIndex] };
-    (currentEmployee as any)[`assigned_${day}_hours`] = parsedHours;
-    
+    const fieldName = `assignedEmployees.${employeeIndex}.assigned_${day}_hours` as const;
+    form.setValue(fieldName, parsedHours, { shouldValidate: true });
+
     // Recalculate end time based on start time
-    const startTime = (currentEmployee as any)[`assigned_${day}_start_time`] as string | null;
+    const startTime = form.getValues(`assignedEmployees.${employeeIndex}.assigned_${day}_start_time`);
+    let newEndTime: string | null = null;
     if (parsedHours != null && parsedHours > 0 && startTime && timeRegex.test(startTime)) {
-      (currentEmployee as any)[`assigned_${day}_end_time`] = calculateEndTime(startTime, parsedHours);
-    } else {
-      (currentEmployee as any)[`assigned_${day}_end_time`] = null;
+      newEndTime = calculateEndTime(startTime, parsedHours);
     }
-    
-    updateAssignedEmployee(employeeIndex, currentEmployee);
-    form.trigger(`assignedEmployees`); // Trigger validation for the whole array
-  }, [updateAssignedEmployee, form]);
+    form.setValue(`assignedEmployees.${employeeIndex}.assigned_${day}_end_time`, newEndTime, { shouldValidate: true });
+  }, [form]);
 
   const handleAssignedTimeChange = useCallback((
     employeeIndex: number,
@@ -351,23 +344,18 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     timeType: 'start',
     value: string
   ) => {
-    const currentAssignments = form.getValues("assignedEmployees") || [];
-    const currentEmployee = { ...currentAssignments[employeeIndex] };
-    const hours = (currentEmployee as any)[`assigned_${day}_hours`] as number | null;
+    const startTimeFieldName = `assignedEmployees.${employeeIndex}.assigned_${day}_start_time` as const;
+    const endTimeFieldName = `assignedEmployees.${employeeIndex}.assigned_${day}_end_time` as const;
+    const hours = form.getValues(`assignedEmployees.${employeeIndex}.assigned_${day}_hours`);
 
-    // Update start time
-    (currentEmployee as any)[`assigned_${day}_start_time`] = value || null;
+    form.setValue(startTimeFieldName, value || null, { shouldValidate: true });
     
-    // Recalculate end time if hours are set
+    let newEndTime: string | null = null;
     if (hours != null && hours > 0 && value && timeRegex.test(value)) {
-      (currentEmployee as any)[`assigned_${day}_end_time`] = calculateEndTime(value, hours);
-    } else {
-      (currentEmployee as any)[`assigned_${day}_end_time`] = null;
+      newEndTime = calculateEndTime(value, hours);
     }
-    
-    updateAssignedEmployee(employeeIndex, currentEmployee);
-    form.trigger(`assignedEmployees`); // Trigger validation for the whole array
-  }, [updateAssignedEmployee, form]);
+    form.setValue(endTimeFieldName, newEndTime, { shouldValidate: true });
+  }, [form]);
 
   const handleFormSubmit: SubmitHandler<OrderFormValues> = async (data) => {
     // Validate that assigned hours match object hours for each day
@@ -710,44 +698,62 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
                         </h5>
                         
                         {/* 1. Arbeitsstunden (oben) */}
-                        <div>
-                          <Label htmlFor={hoursFieldName} className="text-xs">Arbeitsstunden</Label>
-                          <Input
-                            id={hoursFieldName}
-                            type="number"
-                            step="0.5"
-                            min="0"
-                            max={objectDailyHours}
-                            placeholder="Std."
-                            className={cn(
-                              "w-full text-sm",
-                              !isDayValid && "border-destructive focus-visible:ring-destructive"
-                            )}
-                            {...form.register(hoursFieldName, {
-                                onChange: (e) => handleAssignedHoursChange(assignedIndex, day, e.target.value)
-                            })}
-                          />
-                        </div>
+                        <Controller
+                          name={hoursFieldName}
+                          control={form.control}
+                          render={({ field }) => (
+                            <div>
+                              <Label htmlFor={field.name} className="text-xs">Arbeitsstunden</Label>
+                              <Input
+                                {...field}
+                                id={field.name}
+                                type="number"
+                                step="0.5"
+                                min="0"
+                                max={objectDailyHours ?? undefined}
+                                placeholder="Std."
+                                className={cn(
+                                  "w-full text-sm",
+                                  !isDayValid && "border-destructive focus-visible:ring-destructive"
+                                )}
+                                value={field.value ?? ''}
+                                onChange={(e) => {
+                                  field.onChange(e.target.value === '' ? null : Number(e.target.value));
+                                  handleAssignedHoursChange(assignedIndex, day, e.target.value);
+                                }}
+                              />
+                            </div>
+                          )}
+                        />
                         
                         {/* 2. Startzeit (mitte) */}
-                        <div>
-                          <Label htmlFor={startFieldName} className="text-xs">Startzeit</Label>
-                          <Input
-                            id={startFieldName}
-                            type="time"
-                            className="w-full text-sm"
-                            {...form.register(startFieldName, {
-                                onChange: (e) => handleAssignedTimeChange(assignedIndex, day, 'start', e.target.value)
-                            })}
-                          />
-                        </div>
+                        <Controller
+                          name={startFieldName}
+                          control={form.control}
+                          render={({ field }) => (
+                            <div>
+                              <Label htmlFor={field.name} className="text-xs">Startzeit</Label>
+                              <Input
+                                {...field}
+                                id={field.name}
+                                type="time"
+                                className="w-full text-sm"
+                                value={field.value ?? ''}
+                                onChange={(e) => {
+                                  field.onChange(e.target.value);
+                                  handleAssignedTimeChange(assignedIndex, day, 'start', e.target.value);
+                                }}
+                              />
+                            </div>
+                          )}
+                        />
                         
                         {/* 3. Endzeit (unten, berechnet) */}
                         <div>
                           <Label className="text-xs">Endzeit (berechnet)</Label>
                           <div className="flex items-center h-8 px-2 border rounded-md bg-muted text-xs">
                             <Clock className="h-3 w-3 mr-1" />
-                            {(assignedEmp as any)[`assigned_${day}_end_time`] || '--:--'}
+                            {(watchedAssignedEmployees?.[assignedIndex] as any)?.[`assigned_${day}_end_time`] || '--:--'}
                           </div>
                         </div>
                       </div>
