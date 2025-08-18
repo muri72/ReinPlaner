@@ -173,7 +173,10 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
       if (customerName) parts.push(customerName);
 
       const generatedTitle = parts.join(' • ');
-      form.setValue("title", generatedTitle);
+      // Only set if the value is actually different
+      if (form.getValues("title") !== generatedTitle) {
+        form.setValue("title", generatedTitle);
+      }
     }
   }, [selectedCustomerId, selectedObjectId, customers, objects, form, initialData]);
 
@@ -202,28 +205,31 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     if (currentObjectId && currentAssignedCount > 0) {
       const suggestedDailyHours = calculateSuggestedDailyHoursPerEmployee(currentObjectId, currentAssignedCount);
       selectedAssignedEmployees?.forEach((assignedEmp: { employeeId: string; assignedDailyHours?: number | null }, index: number) => {
-        // Only update if the field is not already manually set or if it's a new assignment
-        // For simplicity, we'll always update it here. If a user manually changes it,
-        // adding/removing another employee will re-calculate and overwrite.
-        updateEmployeeField(index, { ...assignedEmp, assignedDailyHours: suggestedDailyHours });
+        // Only update if the value is actually different
+        if (assignedEmp.assignedDailyHours !== suggestedDailyHours) {
+          updateEmployeeField(index, { ...assignedEmp, assignedDailyHours: suggestedDailyHours });
+        }
       });
     } else {
       // If no object or no employees assigned, reset all assigned daily hours
       selectedAssignedEmployees?.forEach((assignedEmp: { employeeId: string; assignedDailyHours?: number | null }, index: number) => {
-        if (assignedEmp.assignedDailyHours !== null) {
+        if (assignedEmp.assignedDailyHours !== null) { // Only reset if it's not already null
           updateEmployeeField(index, { ...assignedEmp, assignedDailyHours: null });
         }
       });
     }
 
     // Update totalEstimatedHours for the order (based on object's total weekly hours or daily hours for one-time)
+    const currentTotalEstimatedHours = form.getValues("totalEstimatedHours");
+    let newTotalEstimatedHours: number | null = null;
+
     const selectedObject = objects.find((obj: { id: string }) => obj.id === currentObjectId);
     if (selectedObject) {
       if (['recurring', 'substitution', 'permanent'].includes(orderType)) {
-        form.setValue("totalEstimatedHours", selectedObject.total_weekly_hours || null, { shouldValidate: false });
+        newTotalEstimatedHours = selectedObject.total_weekly_hours || null;
       } else if (orderType === 'one_time' && form.getValues("dueDate")) {
         const dueDate = form.getValues("dueDate");
-        const dayOfWeek = dueDate!.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+        const dayOfWeek = dueDate!.getDay();
         let dailyHours = 0;
         switch (dayOfWeek) {
           case 0: dailyHours = selectedObject.sunday_hours || 0; break;
@@ -234,12 +240,13 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
           case 5: dailyHours = selectedObject.friday_hours || 0; break;
           case 6: dailyHours = selectedObject.saturday_hours || 0; break;
         }
-        form.setValue("totalEstimatedHours", parseFloat(dailyHours.toFixed(2)), { shouldValidate: false });
-      } else {
-        form.setValue("totalEstimatedHours", null, { shouldValidate: false });
+        newTotalEstimatedHours = parseFloat(dailyHours.toFixed(2));
       }
-    } else {
-      form.setValue("totalEstimatedHours", null, { shouldValidate: false });
+    }
+
+    // Only set if the value is actually different
+    if (currentTotalEstimatedHours !== newTotalEstimatedHours) {
+      form.setValue("totalEstimatedHours", newTotalEstimatedHours, { shouldValidate: false });
     }
   }, [selectedObjectId, selectedAssignedEmployees, calculateSuggestedDailyHoursPerEmployee, objects, form, updateEmployeeField, orderType, form.watch("dueDate")]);
 
