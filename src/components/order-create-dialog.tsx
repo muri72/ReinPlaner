@@ -35,7 +35,7 @@ export function OrderCreateDialog({ onOrderCreated }: OrderCreateDialogProps) {
       </DialogTrigger>
       <DialogContent 
         key={open ? "order-create-open" : "order-create-closed"} 
-        className="sm:max-w-full max-h-[90vh] overflow-y-auto glassmorphism-card"
+        className="sm:max-w-5xl max-h-[90vh] overflow-y-auto glassmorphism-card"
       >
         <DialogHeader>
           <DialogTitle>Neuen Auftrag hinzufügen</DialogTitle>
