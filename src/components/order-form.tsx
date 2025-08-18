@@ -751,8 +751,8 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
                               "w-full text-right",
                               !isDayValid && "border-destructive focus-visible:ring-destructive"
                             )}
-                            {...form.register(hoursFieldName as FieldPath<OrderFormValues>, { valueAsNumber: true,
-                              onChange: (e) => handleAssignedHoursChange(assignedIndex, day, e.target.value)
+                            {...form.register(hoursFieldName, {
+                                onChange: (e) => handleAssignedHoursChange(assignedIndex, day, e.target.value)
                             })}
                             disabled={!selectedObjectId}
                           />
@@ -765,8 +765,8 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
                                 id={startFieldName}
                                 type="time"
                                 className="w-full"
-                                {...form.register(startFieldName as FieldPath<OrderFormValues>, {
-                                  onChange: (e) => handleAssignedTimeChange(assignedIndex, day, 'start', e.target.value)
+                                {...form.register(startFieldName, {
+                                    onChange: (e) => handleAssignedTimeChange(assignedIndex, day, 'start', e.target.value)
                                 })}
                                 disabled={!selectedObjectId}
                               />
@@ -777,8 +777,8 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
                                 id={endFieldName}
                                 type="time"
                                 className="w-full"
-                                {...form.register(endFieldName as FieldPath<OrderFormValues>, {
-                                  onChange: (e) => handleAssignedTimeChange(assignedIndex, day, 'end', e.target.value)
+                                {...form.register(endFieldName, {
+                                    onChange: (e) => handleAssignedTimeChange(assignedIndex, day, 'end', e.target.value)
                                 })}
                                 disabled={!selectedObjectId}
                               />
