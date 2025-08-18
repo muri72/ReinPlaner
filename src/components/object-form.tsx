@@ -335,16 +335,25 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
   const isAlarmSecured = form.watch("isAlarmSecured");
 
   return (
-    <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 w-full max-w-md">
+    <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 w-full"> {/* Removed max-w-md */}
       {/* Grundlegende Objektinformationen */}
       <div>
         <Label htmlFor="name">Name des Objekts</Label>
-        <Input id="name" {...form.register("name")} placeholder="Name des Objekts" />
+        <Input
+          id="name"
+          {...form.register("name")}
+          placeholder="Name des Objekts"
+        />
         {form.formState.errors.name && <p className="text-red-500 text-sm mt-1">{form.formState.errors.name.message}</p>}
       </div>
       <div>
         <Label htmlFor="address">Adresse</Label>
-        <Textarea id="address" {...form.register("address")} placeholder="Z.B. Musterstraße 1, 12345 Musterstadt" rows={3} />
+        <Textarea
+          id="address"
+          {...form.register("address")}
+          placeholder="Z.B. Musterstraße 1, 12345 Musterstadt"
+          rows={3}
+        />
         {form.formState.errors.address && <p className="text-red-500 text-sm mt-1">{form.formState.errors.address.message}</p>}
       </div>
       <div>
@@ -414,10 +423,10 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
 
       {/* Arbeitszeiten pro Wochentag */}
       <h3 className="text-lg font-semibold mt-6">Arbeitsplan pro Wochentag</h3>
-      {dayNames.map(day => (
-        <div key={day} className="p-3 border rounded-md space-y-2">
-          <Label className="font-medium">{germanDayNames[day]}</Label>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"> {/* Responsive grid for days */}
+        {dayNames.map(day => (
+          <div key={day} className="p-3 border rounded-md space-y-2">
+            <Label className="font-medium">{germanDayNames[day]}</Label>
             <div>
               <Label htmlFor={`${day}_hours`} className="text-xs">Netto-Std.</Label>
               <Input
@@ -514,8 +523,8 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
               {form.formState.errors[(`${day}_end_time`) as keyof ObjectFormValues] && <p className="text-red-500 text-xs mt-1">{form.formState.errors[(`${day}_end_time`) as keyof ObjectFormValues]?.message}</p>}
             </div>
           </div>
-        </div>
-      ))}
+        ))}
+      </div>
 
       {/* Total Weekly Hours (Read-only) */}
       <div>
@@ -534,7 +543,7 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
       <h3 className="text-lg font-semibold mt-6">Zugangsinformationen</h3>
       <div>
         <Label htmlFor="accessMethod">Zugangsmethode</Label>
-        <Select onValueChange={(v) => form.setValue("accessMethod", v as any)} value={accessMethod}>
+        <Select onValueChange={(v) => form.setValue("accessMethod", v as any)} value={form.watch("accessMethod")}>
           <SelectTrigger><SelectValue placeholder="Zugangsmethode" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="key">Schlüssel</SelectItem>

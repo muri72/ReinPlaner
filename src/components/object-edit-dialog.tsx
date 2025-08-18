@@ -80,7 +80,7 @@ export function ObjectEditDialog({ object }: ObjectEditDialogProps) {
       </TooltipProvider>
       <DialogContent 
         key={open ? "object-edit-open" : "object-edit-closed"} 
-        className="sm:max-w-3xl max-h-[90vh] flex flex-col glassmorphism-card" // Added flex flex-col
+        className="sm:max-w-5xl max-h-[90vh] flex flex-col glassmorphism-card" // Changed sm:max-w-3xl to sm:max-w-5xl
       >
         <DialogHeader>
           <DialogTitle>Objekt bearbeiten</DialogTitle>
