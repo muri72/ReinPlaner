@@ -95,9 +95,11 @@ export function CustomerOrderRequestForm({ customerId, onSuccess }: CustomerOrde
       customerContactId: customerContacts.length > 0 ? customerContacts[0].id : null,
       status: 'pending', // Default status for customer requests
       requestStatus: 'pending', // Always pending for customer requests
-      employeeId: null, // No employee assigned yet
+      assignedEmployeeIds: [], // No employees assigned by customer
+      employeeAssignments: [], // No employee assignments by customer
+      distributeEqually: true, // Default to true
       priority: 'medium', // Default priority for customer requests
-      estimatedHours: null, // No estimated hours from customer
+      totalEstimatedHours: null, // No estimated hours from customer
     });
 
     handleActionResponse(result);

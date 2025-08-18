@@ -31,16 +31,21 @@ interface OrderEditDialogProps {
     status: string;
     customer_id: string | null;
     object_id: string | null;
-    employee_id: string | null;
+    employee_ids: string[] | null; // Changed from employee_id
     customer_contact_id: string | null;
     order_type: string;
     recurring_start_date: string | null;
     recurring_end_date: string | null;
     priority: string;
-    estimated_hours: number | null;
+    total_estimated_hours: number | null; // Changed from estimated_hours
     notes: string | null;
     service_type: string | null;
     request_status: string;
+    // Add assigned_daily_hours for each employee if available
+    order_employee_assignments: {
+      employee_id: string;
+      assigned_daily_hours: number | null;
+    }[];
   };
 }
 
@@ -63,6 +68,18 @@ export function OrderEditDialog({ order }: OrderEditDialogProps) {
     }
     return null;
   };
+
+  // Prepare employeeAssignments for the form
+  const initialEmployeeAssignments = order.employee_ids?.map(empId => {
+    const assignment = order.order_employee_assignments?.find(oea => oea.employee_id === empId);
+    return {
+      employeeId: empId,
+      assignedDailyHours: assignment?.assigned_daily_hours || null,
+    };
+  }) || [];
+
+  // Determine if distribution was equal (if all assigned_daily_hours are null or same)
+  const isDistributeEqually = initialEmployeeAssignments.every(a => a.assignedDailyHours === null);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -104,13 +121,15 @@ export function OrderEditDialog({ order }: OrderEditDialogProps) {
                 status: order.status as OrderFormValues["status"],
                 customerId: order.customer_id ?? undefined,
                 objectId: order.object_id ?? undefined,
-                employeeId: order.employee_id,
+                assignedEmployeeIds: order.employee_ids || [], // Pass assigned employee IDs
+                employeeAssignments: initialEmployeeAssignments, // Pass individual assignments
+                distributeEqually: isDistributeEqually, // Pass the determined distribution type
                 customerContactId: order.customer_contact_id ?? undefined,
                 orderType: order.order_type as OrderFormValues["orderType"],
                 recurringStartDate: order.recurring_start_date ? new Date(order.recurring_start_date) : undefined,
                 recurringEndDate: order.recurring_end_date ? new Date(order.recurring_end_date) : undefined,
                 priority: order.priority as OrderFormValues["priority"],
-                estimatedHours: order.estimated_hours,
+                totalEstimatedHours: order.total_estimated_hours, // Use new column
                 notes: order.notes,
                 serviceType: getServiceTypeForForm(order.service_type),
                 requestStatus: order.request_status as OrderFormValues["requestStatus"],

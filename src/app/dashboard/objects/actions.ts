@@ -95,6 +95,7 @@ export async function createObject(data: ObjectFormValues) {
   }
 
   revalidatePath("/dashboard/objects");
+  revalidatePath("/dashboard/planning"); // Revalidate planning page
   return { success: true, message: "Objekt erfolgreich hinzugefügt!" };
 }
 
@@ -176,6 +177,7 @@ export async function updateObject(objectId: string, data: ObjectFormValues) {
   }
 
   revalidatePath("/dashboard/objects");
+  revalidatePath("/dashboard/planning"); // Revalidate planning page
   return { success: true, message: "Objekt erfolgreich aktualisiert!" };
 }
 
@@ -219,5 +221,6 @@ export async function deleteObject(formData: FormData): Promise<{ success: boole
   }
 
   revalidatePath("/dashboard/objects");
+  revalidatePath("/dashboard/planning"); // Revalidate planning page
   return { success: true, message: "Objekt erfolgreich gelöscht!" };
 }

@@ -66,7 +66,8 @@ export default async function CustomerDashboardPage() {
         recurring_end_date,
         status,
         order_type,
-        objects ( name )
+        objects ( name ),
+        order_employee_assignments!inner(employee_id)
       `)
       .eq('customer_id', customerId)
       .eq('request_status', 'approved')
@@ -151,7 +152,7 @@ export default async function CustomerDashboardPage() {
       recurring_start_date,
       recurring_end_date,
       priority,
-      estimated_hours,
+      total_estimated_hours,
       notes,
       request_status,
       service_type,

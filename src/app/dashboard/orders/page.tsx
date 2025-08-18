@@ -35,19 +35,19 @@ interface DisplayOrder {
   created_at: string | null;
   customer_id: string | null;
   object_id: string | null;
-  employee_id: string | null;
+  employee_ids: string[] | null; // Changed from employee_id
   customer_contact_id: string | null;
   customer_name: string | null;
   object_name: string | null;
-  employee_first_name: string | null;
-  employee_last_name: string | null;
+  employee_first_names: string[] | null; // New field
+  employee_last_names: string[] | null; // New field
   customer_contact_first_name: string | null;
   customer_contact_last_name: string | null;
   order_type: string;
   recurring_start_date: string | null;
   recurring_end_date: string | null;
   priority: string;
-  estimated_hours: number | null;
+  total_estimated_hours: number | null; // Changed from estimated_hours
   notes: string | null;
   request_status: string;
   service_type: string | null;
@@ -57,6 +57,10 @@ interface DisplayOrder {
     comment: string | null;
     image_urls: string[] | null;
     created_at: string;
+  }[];
+  order_employee_assignments: {
+    employee_id: string;
+    assigned_daily_hours: number | null;
   }[];
 }
 
@@ -164,7 +168,7 @@ export default function OrdersPage({
         filter_user_id: filterUserId,
         filter_customer_id: filterCustomerId
       });
-      ordersData = (data as DisplayOrder[] | null)?.map(o => ({ ...o, order_feedback: [] })) || [];
+      ordersData = (data as DisplayOrder[] | null)?.map(o => ({ ...o, order_feedback: [], order_employee_assignments: [] })) || [];
       ordersError = rpcError;
       ordersCount = ordersData.length;
     } else {
@@ -174,7 +178,7 @@ export default function OrdersPage({
           *,
           customers ( name ),
           objects ( name ),
-          employees ( first_name, last_name ),
+          order_employee_assignments ( employee_id, assigned_daily_hours, employees ( first_name, last_name ) ),
           customer_contacts ( first_name, last_name ),
           order_feedback ( id, rating, comment, image_urls, created_at )
         `, { count: 'exact' })
@@ -199,7 +203,8 @@ export default function OrdersPage({
         selectQuery = selectQuery.eq('customer_id', customerIdFilter);
       }
       if (employeeIdFilter) {
-        selectQuery = selectQuery.eq('employee_id', employeeIdFilter);
+        // Filter by employee_id in the join table
+        selectQuery = selectQuery.filter('order_employee_assignments.employee_id', 'eq', employeeIdFilter);
       }
 
       const { data, error: selectError, count: selectCount } = await selectQuery
@@ -215,23 +220,24 @@ export default function OrdersPage({
         created_at: order.created_at,
         customer_id: order.customer_id,
         object_id: order.object_id,
-        employee_id: order.employee_id,
+        employee_ids: order.order_employee_assignments.map(oea => oea.employee_id),
         customer_contact_id: order.customer_contact_id,
         customer_name: order.customers?.name || null,
         object_name: order.objects?.name || null,
-        employee_first_name: order.employees?.first_name || null,
-        employee_last_name: order.employees?.last_name || null,
+        employee_first_names: order.order_employee_assignments.map(oea => Array.isArray(oea.employees) ? oea.employees[0]?.first_name || null : oea.employees?.first_name || null),
+        employee_last_names: order.order_employee_assignments.map(oea => Array.isArray(oea.employees) ? oea.employees[0]?.last_name || null : oea.employees?.last_name || null),
         customer_contact_first_name: order.customer_contacts?.first_name || null,
         customer_contact_last_name: order.customer_contacts?.last_name || null,
         order_type: order.order_type,
         recurring_start_date: order.recurring_start_date,
         recurring_end_date: order.recurring_end_date,
         priority: order.priority,
-        estimated_hours: order.estimated_hours,
+        total_estimated_hours: order.total_estimated_hours,
         notes: order.notes,
         request_status: order.request_status,
         service_type: order.service_type,
         order_feedback: order.order_feedback,
+        order_employee_assignments: order.order_employee_assignments,
       })) || [];
       ordersError = selectError;
       ordersCount = selectCount;
@@ -488,7 +494,9 @@ export default function OrdersPage({
                             {order.customer_contact_first_name && order.customer_contact_last_name && (
                               <div className="flex items-center text-xs text-muted-foreground"><UserRound className="mr-1 h-3 w-3" /><span>Auftraggeber: {order.customer_contact_first_name} {order.customer_contact_last_name}</span></div>
                             )}
-                            {order.employee_first_name && order.employee_last_name && <p className="text-xs text-muted-foreground">Mitarbeiter: {order.employee_first_name} {order.employee_last_name}</p>}
+                            {order.employee_first_names && order.employee_first_names.length > 0 && (
+                              <p className="text-xs text-muted-foreground">Mitarbeiter: {order.employee_first_names.map((f, i) => `${f || ''} ${order.employee_last_names?.[i] || ''}`).join(', ')}</p>
+                            )}
                             {order.service_type && <div className="flex items-center text-xs text-muted-foreground mt-1"><Wrench className="mr-1 h-3 w-3" /><span>Dienstleistung: {order.service_type}</span></div>}
                             <div className="flex items-center mt-2 space-x-2">
                               <Badge variant={getStatusBadgeVariant(order.status)}>{order.status}</Badge>
@@ -496,7 +504,7 @@ export default function OrdersPage({
                               <Badge variant={getPriorityBadgeVariant(order.priority)}>Priorität: {order.priority}</Badge>
                               <Badge variant={getRequestStatusBadgeVariant(order.request_status)}>Anfrage: {order.request_status}</Badge>
                             </div>
-                            {order.estimated_hours && <div className="flex items-center text-xs text-muted-foreground mt-1"><Clock className="mr-1 h-3 w-3" /><span>Geschätzte Stunden: {order.estimated_hours}</span></div>}
+                            {order.total_estimated_hours && <div className="flex items-center text-xs text-muted-foreground mt-1"><Clock className="mr-1 h-3 w-3" /><span>Geschätzte Stunden: {order.total_estimated_hours}</span></div>}
                             {order.notes && <div className="flex items-center text-xs text-muted-foreground mt-1"><FileText className="mr-1 h-3 w-3" /><span>Notizen: {order.notes}</span></div>}
                             {order.order_type === "one_time" && order.due_date && <p className="text-xs text-muted-foreground ml-auto mt-1">Fällig: {new Date(order.due_date).toLocaleDateString()}</p>}
                             {(order.order_type === "recurring" || order.order_type === "substitution" || order.order_type === "permanent") && order.recurring_start_date && <div className="flex items-center text-xs text-muted-foreground mt-1"><CalendarDays className="mr-1 h-3 w-3" /><span>Start: {new Date(order.recurring_start_date).toLocaleDateString()}</span></div>}
