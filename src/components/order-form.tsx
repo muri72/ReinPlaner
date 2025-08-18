@@ -1,24 +1,25 @@
 "use client";
 
-import { useForm, SubmitHandler, useFieldArray } from "react-hook-form"; // useFieldArray hinzugefügt
+import { useForm, SubmitHandler, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea"; // Hinzugefügt: Import der Textarea-Komponente
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { PlusCircle, X } from "lucide-react"; // X für Entfernen hinzugefügt
+import { PlusCircle, X, ChevronDown, ChevronUp } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useState, useEffect, useCallback } from "react"; // useCallback hinzugefügt
+import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { ObjectForm, ObjectFormValues } from "@/components/object-form";
 import { createObject } from "@/app/dashboard/objects/actions";
 import { CustomerContactCreateDialog } from "@/components/customer-contact-create-dialog";
-import { DatePicker } from "@/components/date-picker"; // Importiere die neue DatePicker Komponente
-import { handleActionResponse } from "@/lib/toast-utils"; // Importiere die neue Utility
-import { Checkbox } from "@/components/ui/checkbox"; // Checkbox für Multi-Select
+import { DatePicker } from "@/components/date-picker";
+import { handleActionResponse } from "@/lib/toast-utils";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 // Definierte Liste der Dienstleistungen
 const availableServices = [
@@ -32,6 +33,29 @@ const availableServices = [
 // Helper function for number preprocessing
 const preprocessNumber = (val: any) => (val === "" || isNaN(Number(val)) ? null : Number(val));
 
+const dayNames = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+const germanDayNames: { [key: string]: string } = {
+  monday: 'Montag',
+  tuesday: 'Dienstag',
+  wednesday: 'Mittwoch',
+  thursday: 'Donnerstag',
+  friday: 'Freitag',
+  saturday: 'Samstag',
+  sunday: 'Sonntag',
+};
+
+// Schema für zugewiesene Mitarbeiter mit Stunden pro Wochentag
+const assignedEmployeeSchema = z.object({
+  employeeId: z.string().uuid("Ungültige Mitarbeiter-ID"),
+  assigned_monday_hours: z.preprocess(preprocessNumber, z.nullable(z.number().min(0).max(24)).optional()),
+  assigned_tuesday_hours: z.preprocess(preprocessNumber, z.nullable(z.number().min(0).max(24)).optional()),
+  assigned_wednesday_hours: z.preprocess(preprocessNumber, z.nullable(z.number().min(0).max(24)).optional()),
+  assigned_thursday_hours: z.preprocess(preprocessNumber, z.nullable(z.number().min(0).max(24)).optional()),
+  assigned_friday_hours: z.preprocess(preprocessNumber, z.nullable(z.number().min(0).max(24)).optional()),
+  assigned_saturday_hours: z.preprocess(preprocessNumber, z.nullable(z.number().min(0).max(24)).optional()),
+  assigned_sunday_hours: z.preprocess(preprocessNumber, z.nullable(z.number().min(0).max(24)).optional()),
+});
+
 export const orderSchema = z.object({
   title: z.string().min(1, "Titel ist erforderlich").max(100, "Titel ist zu lang"),
   description: z.string().max(500, "Beschreibung ist zu lang").optional().nullable(),
@@ -44,18 +68,14 @@ export const orderSchema = z.object({
   recurringStartDate: z.date().optional().nullable(),
   recurringEndDate: z.date().optional().nullable(),
   priority: z.enum(["low", "medium", "high"]).default("low"),
-  totalEstimatedHours: z.preprocess( // Corrected column name
+  totalEstimatedHours: z.preprocess(
     (val) => (val === "" ? null : Number(val)),
-    z.nullable(z.number().min(0, "Stunden müssen positiv sein").max(999, "Stunden sind zu hoch")).optional()
+    z.nullable(z.number().min(0, "Stunden müssen positiv sein").max(9999, "Stunden sind zu hoch")).optional()
   ),
   notes: z.string().max(500, "Notizen sind zu lang").optional().nullable(),
   serviceType: z.enum(availableServices).optional().nullable(),
-  requestStatus: z.enum(["pending", "approved", "rejected"]).default("approved"), // Neues Feld
-  // Neues Feld für Mitarbeiterzuweisungen
-  assignedEmployees: z.array(z.object({
-    employeeId: z.string().uuid("Ungültige Mitarbeiter-ID"),
-    assignedDailyHours: z.preprocess(preprocessNumber, z.nullable(z.number().min(0, "Stunden müssen positiv sein").max(24, "Stunden sind zu hoch")).optional()),
-  })).optional(),
+  requestStatus: z.enum(["pending", "approved", "rejected"]).default("approved"),
+  assignedEmployees: z.array(assignedEmployeeSchema).optional(),
 });
 
 export type OrderFormInput = z.input<typeof orderSchema>;
@@ -71,7 +91,7 @@ interface OrderFormProps {
 export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }: OrderFormProps) {
   const supabase = createClient();
   const [customers, setCustomers] = useState<{ id: string; name: string }[]>([]);
-  const [objects, setObjects] = useState<{ 
+  const [objects, setObjects] = useState<Array<{ 
     id: string; 
     name: string; 
     customer_id: string;
@@ -82,8 +102,8 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     friday_hours: number | null;
     saturday_hours: number | null;
     sunday_hours: number | null;
-  }[]>([]); // Objekt-Stunden hinzugefügt
-  const [allEmployees, setAllEmployees] = useState<{ id: string; first_name: string; last_name: string }[]>([]); // Alle Mitarbeiter
+  }>>([]);
+  const [allEmployees, setAllEmployees] = useState<{ id: string; first_name: string; last_name: string }[]>([]);
   const [customerContacts, setCustomerContacts] = useState<{ id: string; first_name: string; last_name: string; customer_id: string }[]>([]);
   const [isNewObjectDialogOpen, setIsNewObjectDialogOpen] = useState(false);
 
@@ -103,12 +123,13 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     notes: initialData?.notes ?? null,
     serviceType: initialData?.serviceType ?? null,
     requestStatus: initialData?.requestStatus ?? "approved",
-    assignedEmployees: (initialData?.assignedEmployees as { employeeId: string; assignedDailyHours?: number | null }[] | undefined) ?? [], // Initialwert für zugewiesene Mitarbeiter
+    assignedEmployees: initialData?.assignedEmployees ?? [],
   };
 
   const form = useForm<OrderFormValues>({
-    resolver: zodResolver(orderSchema as z.ZodSchema<OrderFormValues>),
+    resolver: zodResolver(orderSchema),
     defaultValues: resolvedDefaultValues,
+    mode: "onChange", // Wichtig für dynamische Validierung
   });
 
   const { fields: assignedEmployeeFields, append: appendEmployee, remove: removeEmployee, update: updateEmployeeField } = useFieldArray({
@@ -119,7 +140,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
   const orderType = form.watch("orderType");
   const selectedCustomerId = form.watch("customerId");
   const selectedObjectId = form.watch("objectId");
-  const selectedAssignedEmployees = form.watch("assignedEmployees"); // Watch the assigned employees array
+  const selectedAssignedEmployees = form.watch("assignedEmployees");
 
   // Funktion zum Laden der Kundenkontakte
   const fetchCustomerContacts = async (customerId: string) => {
@@ -182,50 +203,47 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     : [];
 
   // Funktion zur Berechnung der vorgeschlagenen täglichen Stunden pro Mitarbeiter
-  const calculateSuggestedDailyHours = useCallback((employeeCount: number, objectId: string | null): number | null => {
+  const calculateSuggestedDailyHours = useCallback((
+    employeeCount: number,
+    objectId: string | null,
+    dayOfWeek: 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday'
+  ): number | null => {
     if (!objectId || employeeCount === 0) return null;
     const selectedObject = objects.find(obj => obj.id === objectId);
     if (!selectedObject) return null;
 
-    // Für die Schätzung nehmen wir den Durchschnitt der Stunden pro Wochentag
-    // oder eine Summe, wenn es sich um eine einmalige Schätzung handelt.
-    // Hier nehmen wir einfach die Gesamtstunden pro Woche und teilen sie durch 5 (Arbeitstage)
-    // und dann durch die Anzahl der Mitarbeiter. Dies ist eine Vereinfachung.
-    // Eine genauere Berechnung würde die spezifischen Tagesstunden des Objekts berücksichtigen.
-    const dailyHoursSum = (selectedObject.monday_hours || 0) +
-                          (selectedObject.tuesday_hours || 0) +
-                          (selectedObject.wednesday_hours || 0) +
-                          (selectedObject.thursday_hours || 0) +
-                          (selectedObject.friday_hours || 0) +
-                          (selectedObject.saturday_hours || 0) +
-                          (selectedObject.sunday_hours || 0);
-    
-    // Annahme: 5 Arbeitstage für die Verteilung, wenn keine spezifischen Tagesstunden
-    const averageDailyHours = dailyHoursSum > 0 ? dailyHoursSum / 5 : 0; // Oder 7, je nach Logik
-    
-    const suggested = averageDailyHours / employeeCount;
+    const objectDailyHours = selectedObject[`${dayOfWeek}_hours`] || 0;
+    if (objectDailyHours === 0) return null;
+
+    const suggested = objectDailyHours / employeeCount;
     return parseFloat(suggested.toFixed(2));
   }, [objects]);
 
   // Effekt zur Aktualisierung der vorgeschlagenen Stunden, wenn sich Objekt oder zugewiesene Mitarbeiter ändern
   useEffect(() => {
     const currentAssignedCount = selectedAssignedEmployees?.length || 0;
-    const currentObjectId = form.getValues("objectId") ?? null; // Ensure it's string | null
+    const currentObjectId = form.getValues("objectId");
 
     if (currentObjectId && currentAssignedCount > 0) {
-      const suggested = calculateSuggestedDailyHours(currentAssignedCount, currentObjectId);
-      // Aktualisiere nur die Felder, die noch keine manuellen Stunden haben
       selectedAssignedEmployees?.forEach((assignedEmp, index) => {
-        if (assignedEmp.assignedDailyHours === null || assignedEmp.assignedDailyHours === undefined) {
-          updateEmployeeField(index, { ...assignedEmp, assignedDailyHours: suggested });
-        }
+        dayNames.forEach(day => {
+          const fieldName = `assigned_${day}_hours` as keyof typeof assignedEmp;
+          // Nur aktualisieren, wenn das Feld noch nicht manuell gesetzt wurde (null oder undefined)
+          if (assignedEmp[fieldName] === null || assignedEmp[fieldName] === undefined) {
+            const suggested = calculateSuggestedDailyHours(currentAssignedCount, currentObjectId, day as 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday');
+            updateEmployeeField(index, { ...assignedEmp, [fieldName]: suggested });
+          }
+        });
       });
     } else {
       // Wenn kein Objekt oder keine Mitarbeiter zugewiesen, alle Stunden zurücksetzen
       selectedAssignedEmployees?.forEach((assignedEmp, index) => {
-        if (assignedEmp.assignedDailyHours !== null) {
-          updateEmployeeField(index, { ...assignedEmp, assignedDailyHours: null });
-        }
+        dayNames.forEach(day => {
+          const fieldName = `assigned_${day}_hours` as keyof typeof assignedEmp;
+          if (assignedEmp[fieldName] !== null) {
+            updateEmployeeField(index, { ...assignedEmp, [fieldName]: null });
+          }
+        });
       });
     }
   }, [selectedObjectId, selectedAssignedEmployees, calculateSuggestedDailyHours, form, updateEmployeeField]);
@@ -234,29 +252,52 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
   // Effekt zur Berechnung der totalEstimatedHours des Auftrags
   useEffect(() => {
     let totalHoursForOrder = 0;
-    if (selectedAssignedEmployees && selectedAssignedEmployees.length > 0) {
-      // Summiere die zugewiesenen täglichen Stunden für alle Mitarbeiter
-      // Dies ist eine Vereinfachung, da es die Dauer des Auftrags nicht berücksichtigt.
-      // Für wiederkehrende Aufträge müsste dies komplexer sein (z.B. Summe der Wochenstunden).
-      // Für einmalige Aufträge könnte es die Summe der geschätzten Stunden sein.
-      // Hier nehmen wir an, dass totalEstimatedHours die Summe der *täglichen* Stunden aller Mitarbeiter ist.
-      selectedAssignedEmployees.forEach(emp => {
-        totalHoursForOrder += emp.assignedDailyHours || 0;
+    selectedAssignedEmployees?.forEach(assignedEmp => {
+      dayNames.forEach(day => {
+        totalHoursForOrder += (assignedEmp[`assigned_${day}_hours` as keyof typeof assignedEmp] as number || 0);
       });
-    }
+    });
     form.setValue("totalEstimatedHours", parseFloat(totalHoursForOrder.toFixed(2)), { shouldValidate: false });
   }, [selectedAssignedEmployees, form]);
 
 
   const handleFormSubmit: SubmitHandler<OrderFormValues> = async (data) => {
+    // Manuelle Validierung der zugewiesenen Stunden gegen die Objektstunden
+    if (data.objectId && data.assignedEmployees && data.assignedEmployees.length > 0) {
+      const selectedObject = objects.find(obj => obj.id === data.objectId);
+      if (selectedObject) {
+        let validationError = false;
+        dayNames.forEach(day => {
+          const objectDailyHours = selectedObject[`${day}_hours`] || 0;
+          let totalAssignedHoursForDay = 0;
+
+          data.assignedEmployees?.forEach(assignedEmp => {
+            totalAssignedHoursForDay += (assignedEmp[`assigned_${day}_hours` as keyof typeof assignedEmp] as number || 0);
+          });
+
+          if (totalAssignedHoursForDay > objectDailyHours) {
+            form.setError(`assignedEmployees` as any, {
+              type: "manual",
+              message: `Die zugewiesenen Stunden für ${germanDayNames[day]} (${totalAssignedHoursForDay}h) überschreiten die Objektstunden (${objectDailyHours}h).`,
+            });
+            validationError = true;
+          }
+        });
+        if (validationError) {
+          toast.error("Bitte korrigieren Sie die Stunden der zugewiesenen Mitarbeiter.");
+          return;
+        }
+      }
+    }
+
     const result = await onSubmit(data);
 
-    handleActionResponse(result); // Nutze die neue Utility
+    handleActionResponse(result);
 
     if (result.success) {
       if (!initialData) {
         form.reset();
-        removeEmployee(); // Alle zugewiesenen Mitarbeiter entfernen
+        removeEmployee();
       }
       onSuccess?.();
     }
@@ -265,9 +306,8 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
   // Handler für die Objekterstellung im Dialog
   const handleCreateObject = async (data: ObjectFormValues) => {
     const result = await createObject(data);
-    handleActionResponse(result); // Nutze die neue Utility
+    handleActionResponse(result);
     if (result.success) {
-      // Fetch all object details including daily hours after creation
       const { data: newObjectsData, error: newObjectsError } = await supabase.from('objects').select('id, name, customer_id, monday_hours, tuesday_hours, wednesday_hours, thursday_hours, friday_hours, saturday_hours, sunday_hours');
       if (newObjectsData) {
         setObjects(newObjectsData);
@@ -285,17 +325,24 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
   // Handler für die Kundenkontakterstellung im Dialog
   const handleCustomerContactCreated = async (newContactId: string) => {
     if (selectedCustomerId) {
-      await fetchCustomerContacts(selectedCustomerId); // Liste der Kontakte neu laden
-      form.setValue("customerContactId", newContactId); // Neu erstellten Kontakt auswählen
+      await fetchCustomerContacts(selectedCustomerId);
+      form.setValue("customerContactId", newContactId);
     }
   };
 
   const handleEmployeeAssignmentChange = (employeeId: string, isChecked: boolean) => {
     if (isChecked) {
-      // Wenn ein Mitarbeiter zugewiesen wird, versuchen Sie, die vorgeschlagenen Stunden zu berechnen
-      const currentAssignedCount = (selectedAssignedEmployees?.length || 0) + 1; // Inklusive des neuen Mitarbeiters
-      const suggested = calculateSuggestedDailyHours(currentAssignedCount, form.getValues("objectId") ?? null); // Pass current count + 1 if adding
-      appendEmployee({ employeeId: employeeId, assignedDailyHours: suggested });
+      // Initialisiere alle Tagesstunden auf null, sie werden dann im useEffect berechnet
+      appendEmployee({
+        employeeId: employeeId,
+        assigned_monday_hours: null,
+        assigned_tuesday_hours: null,
+        assigned_wednesday_hours: null,
+        assigned_thursday_hours: null,
+        assigned_friday_hours: null,
+        assigned_saturday_hours: null,
+        assigned_sunday_hours: null,
+      });
     } else {
       const index = assignedEmployeeFields.findIndex(field => field.employeeId === employeeId);
       if (index > -1) {
@@ -304,8 +351,10 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     }
   };
 
+  const selectedObjectDetails = objects.find(obj => obj.id === selectedObjectId);
+
   return (
-    <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 w-full max-w-md" suppressHydrationWarning>
+    <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 w-full max-w-md">
       {/* Grundlegende Objektinformationen */}
       <div>
         <Label htmlFor="title">Titel des Auftrags</Label>
@@ -313,7 +362,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
           id="title"
           {...form.register("title")}
           placeholder="Wird automatisch generiert"
-          disabled={!initialData ? true : false} // Deaktiviert, wenn neuer Auftrag erstellt wird
+          disabled={!initialData ? true : false}
         />
         {form.formState.errors.title && (
           <p className="text-red-500 text-sm mt-1">{form.formState.errors.title.message}</p>
@@ -435,7 +484,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
       {/* Mitarbeiterzuweisung */}
       <div className="space-y-2">
         <Label>Zugewiesene Mitarbeiter (optional)</Label>
-        <div className="border rounded-md p-3 space-y-2 max-h-60 overflow-y-auto">
+        <div className="border rounded-md p-3 space-y-2 max-h-96 overflow-y-auto">
           {allEmployees.length === 0 ? (
             <p className="text-muted-foreground text-sm">Keine Mitarbeiter zum Zuweisen gefunden.</p>
           ) : (
@@ -447,35 +496,22 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
                 (field) => field.employeeId === employee.id
               );
 
-              // Calculate suggested daily hours for this specific employee's placeholder
-              const currentAssignedCountForPlaceholder = (selectedAssignedEmployees?.length || 0);
-              const suggestedForPlaceholder = calculateSuggestedDailyHours(currentAssignedCountForPlaceholder, form.getValues("objectId") ?? null);
-
               return (
-                <div key={employee.id} className="flex items-center justify-between gap-2">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id={`employee-${employee.id}`}
-                      checked={isAssigned}
-                      onCheckedChange={(checked) =>
-                        handleEmployeeAssignmentChange(employee.id, !!checked)
-                      }
-                    />
-                    <Label htmlFor={`employee-${employee.id}`} className="flex-grow">
-                      {employee.first_name} {employee.last_name}
-                    </Label>
-                  </div>
-                  {isAssigned && assignedIndex !== -1 && (
-                    <div className="flex items-center gap-1">
-                      <Label htmlFor={`assignedEmployees.${assignedIndex}.assignedDailyHours`} className="sr-only">Tägliche Stunden für {employee.first_name}</Label>
-                      <Input
-                        id={`assignedEmployees.${assignedIndex}.assignedDailyHours`}
-                        type="number"
-                        step="0.5"
-                        placeholder={suggestedForPlaceholder !== null ? `Vorschlag: ${suggestedForPlaceholder}` : "Std. / Tag"}
-                        className="w-24 text-right"
-                        {...form.register(`assignedEmployees.${assignedIndex}.assignedDailyHours`, { valueAsNumber: true })}
+                <div key={employee.id} className="border-b last:border-b-0 pb-2 mb-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`employee-${employee.id}`}
+                        checked={isAssigned}
+                        onCheckedChange={(checked) =>
+                          handleEmployeeAssignmentChange(employee.id, !!checked)
+                        }
                       />
+                      <Label htmlFor={`employee-${employee.id}`} className="flex-grow font-medium">
+                        {employee.first_name} {employee.last_name}
+                      </Label>
+                    </div>
+                    {isAssigned && assignedIndex !== -1 && (
                       <Button
                         type="button"
                         variant="ghost"
@@ -485,7 +521,51 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
                       >
                         <X className="h-4 w-4" />
                       </Button>
-                    </div>
+                    )}
+                  </div>
+                  {isAssigned && assignedIndex !== -1 && (
+                    <Collapsible className="mt-2">
+                      <CollapsibleTrigger asChild>
+                        <Button variant="ghost" className="w-full justify-between text-sm text-muted-foreground">
+                          Stunden pro Wochentag {form.watch(`assignedEmployees.${assignedIndex}.assigned_monday_hours`) !== null ? `(${form.watch(`assignedEmployees.${assignedIndex}.assigned_monday_hours`)}h ...)` : ''}
+                          <ChevronDown className="h-4 w-4 collapsible-icon" />
+                        </Button>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent className="space-y-2 p-2 border-t mt-2">
+                        {selectedObjectId && selectedObjectDetails && (
+                          <div className="text-xs text-muted-foreground italic mb-2">
+                            Objektstunden als Referenz:
+                            {dayNames.map(day => (
+                              <span key={day} className="ml-2">
+                                {germanDayNames[day].substring(0, 2)}: {selectedObjectDetails[`${day}_hours` as keyof typeof selectedObjectDetails] || 0}h
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        <div className="grid grid-cols-2 gap-2">
+                          {dayNames.map(day => (
+                            <div key={day}>
+                              <Label htmlFor={`assignedEmployees.${assignedIndex}.assigned_${day}_hours`} className="text-xs">
+                                {germanDayNames[day]} (Std.)
+                              </Label>
+                              <Input
+                                id={`assignedEmployees.${assignedIndex}.assigned_${day}_hours`}
+                                type="number"
+                                step="0.5"
+                                placeholder="0.0"
+                                className="w-full"
+                                {...form.register(`assignedEmployees.${assignedIndex}.assigned_${day}_hours` as any, { valueAsNumber: true })}
+                              />
+                              {form.formState.errors.assignedEmployees?.[assignedIndex]?.[`assigned_${day}_hours` as keyof typeof assignedEmployeeSchema.shape] && (
+                                <p className="text-red-500 text-xs mt-1">
+                                  {form.formState.errors.assignedEmployees[assignedIndex]?.[`assigned_${day}_hours` as keyof typeof assignedEmployeeSchema.shape]?.message}
+                                </p>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </CollapsibleContent>
+                    </Collapsible>
                   )}
                 </div>
               );
@@ -571,9 +651,9 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
           type="number"
           step="0.5"
           {...form.register("totalEstimatedHours")}
-          placeholder="Z.B. 2.5"
-          readOnly // Macht das Feld schreibgeschützt
-          className="bg-muted cursor-not-allowed" // Visuelle Indikation für schreibgeschützt
+          placeholder="Wird automatisch berechnet"
+          readOnly
+          className="bg-muted cursor-not-allowed"
         />
         {form.formState.errors.totalEstimatedHours && (
           <p className="text-red-500 text-sm mt-1">{form.formState.errors.totalEstimatedHours.message}</p>

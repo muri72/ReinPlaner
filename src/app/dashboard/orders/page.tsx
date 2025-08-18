@@ -1,7 +1,7 @@
-"use client"; // This page needs to be a client component to use hooks like useIsMobile
+"use client";
 
-import { createClient } from "@/lib/supabase/client"; // Use client-side supabase for client component
-import { redirect, useRouter, useSearchParams } from "next/navigation"; // Import useRouter and useSearchParams for client-side navigation
+import { createClient } from "@/lib/supabase/client";
+import { redirect, useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Trash2, CalendarDays, Clock, FileText, Wrench, UserRound, AlertTriangle, Star as StarIcon, PlusCircle, Briefcase, FileStack } from "lucide-react";
@@ -16,14 +16,14 @@ import { PaginationControls } from "@/components/pagination-controls";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DocumentUploader } from "@/components/document-uploader";
 import { DocumentList } from "@/components/document-list";
-import { Suspense, useEffect, useState, useCallback } from "react"; // Import useEffect, useState, useCallback
+import { Suspense, useEffect, useState, useCallback } from "react";
 import { FilterSelect } from "@/components/filter-select";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 import { OrdersTableView } from "@/components/orders-table-view";
-import { useIsMobile } from "@/hooks/use-mobile"; // Import the hook
-import { RecordDetailsDialog } from "@/components/record-details-dialog"; // Import RecordDetailsDialog
-import { LoadingOverlay } from "@/components/loading-overlay"; // Import the new LoadingOverlay
+import { useIsMobile } from "@/hooks/use-mobile";
+import { RecordDetailsDialog } from "@/components/record-details-dialog";
+import { LoadingOverlay } from "@/components/loading-overlay";
 
 interface DisplayOrder {
   id: string;
@@ -35,10 +35,17 @@ interface DisplayOrder {
   created_at: string | null;
   customer_id: string | null;
   object_id: string | null;
-  employee_ids: string[] | null; // Updated to array of IDs
-  employee_first_names: string[] | null; // Updated to array of first names
-  employee_last_names: string[] | null; // Updated to array of last names
-  assigned_daily_hours: (number | null)[] | null; // Hinzugefügt
+  employee_ids: string[] | null;
+  employee_first_names: string[] | null;
+  employee_last_names: string[] | null;
+  assigned_daily_hours: (number | null)[] | null;
+  assigned_monday_hours: (number | null)[] | null;
+  assigned_tuesday_hours: (number | null)[] | null;
+  assigned_wednesday_hours: (number | null)[] | null;
+  assigned_thursday_hours: (number | null)[] | null;
+  assigned_friday_hours: (number | null)[] | null;
+  assigned_saturday_hours: (number | null)[] | null;
+  assigned_sunday_hours: (number | null)[] | null;
   customer_contact_id: string | null;
   customer_name: string | null;
   object_name: string | null;
@@ -48,7 +55,7 @@ interface DisplayOrder {
   recurring_start_date: string | null;
   recurring_end_date: string | null;
   priority: string;
-  total_estimated_hours: number | null; // Corrected column name
+  total_estimated_hours: number | null;
   notes: string | null;
   request_status: string;
   service_type: string | null;
@@ -69,15 +76,12 @@ const availableServices = [
   "Sonderreinigung",
 ] as const;
 
-// This component is now a client component. Data fetching will be handled by a separate server component or action.
-// For simplicity, I'm keeping the data fetching logic here for now, but it would ideally be moved to a server action
-// that is called by this client component.
 export default function OrdersPage({
   searchParams,
 }: {
   searchParams?: any;
 }) {
-  const supabase = createClient(); // Use client-side supabase
+  const supabase = createClient();
   const router = useRouter();
   const currentSearchParams = useSearchParams();
   const isMobile = useIsMobile();
@@ -92,7 +96,7 @@ export default function OrdersPage({
 
   const query = (currentSearchParams.get('query') || '') as string;
   const currentPage = Number(currentSearchParams.get('page')) || 1;
-  const pageSize = 10; // Set page size to 10
+  const pageSize = 10;
   const statusFilter = (currentSearchParams.get('status') || '') as string;
   const orderTypeFilter = (currentSearchParams.get('orderType') || '') as string;
   const serviceTypeFilter = (currentSearchParams.get('serviceType') || '') as string;
@@ -111,7 +115,6 @@ export default function OrdersPage({
     }
     setCurrentUser(user);
 
-    // Fetch user role
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('role')
@@ -140,7 +143,6 @@ export default function OrdersPage({
     let ordersError: any = null;
     let ordersCount: number | null = 0;
 
-    // Determine filter_user_id and filter_customer_id based on role
     let filterUserId: string | null = null;
     let filterCustomerId: string | null = null;
 
@@ -159,7 +161,6 @@ export default function OrdersPage({
     }
 
     if (query) {
-      // Explicitly pass all parameters to avoid ambiguity
       const { data, error: rpcError } = await supabase.rpc('search_orders', {
         search_query: query,
         filter_user_id: filterUserId,
@@ -194,15 +195,20 @@ export default function OrdersPage({
           objects ( name ),
           customer_contacts ( first_name, last_name ),
           order_feedback ( id, rating, comment, image_urls, created_at ),
-          order_employee_assignments ( employee_id, assigned_daily_hours, employees ( first_name, last_name ) )
+          order_employee_assignments ( 
+            employee_id, 
+            assigned_daily_hours, 
+            assigned_monday_hours,
+            assigned_tuesday_hours,
+            assigned_wednesday_hours,
+            assigned_thursday_hours,
+            assigned_friday_hours,
+            assigned_saturday_hours,
+            assigned_sunday_hours,
+            employees ( first_name, last_name ) 
+          )
         `, { count: 'exact' })
         .order(sortColumn, { ascending: sortDirection === 'asc' });
-
-      // Apply RLS-like filtering for non-admin roles if not already handled by RLS policies
-      // The RPC function handles this, but for direct table selects, we might need it.
-      // However, the existing RLS policies for 'orders' table should cover this.
-      // So, no explicit `eq('user_id', user.id)` or `in('customer_id', ...)` needed here
-      // as the RPC handles it and direct selects are covered by RLS.
 
       if (statusFilter) {
         selectQuery = selectQuery.eq('status', statusFilter);
@@ -217,7 +223,6 @@ export default function OrdersPage({
         selectQuery = selectQuery.eq('customer_id', customerIdFilter);
       }
       if (employeeIdFilter) {
-        // Filter by employee_id from the join table
         selectQuery = selectQuery.eq('order_employee_assignments.employee_id', employeeIdFilter);
       }
 
@@ -237,7 +242,14 @@ export default function OrdersPage({
         employee_ids: order.order_employee_assignments?.map((a: any) => a.employee_id) || null,
         employee_first_names: order.order_employee_assignments?.map((a: any) => a.employees?.first_name || '') || null,
         employee_last_names: order.order_employee_assignments?.map((a: any) => a.employees?.last_name || '') || null,
-        assigned_daily_hours: order.order_employee_assignments?.map((a: any) => a.assigned_daily_hours) || null, // Hinzugefügt
+        assigned_daily_hours: order.order_employee_assignments?.map((a: any) => a.assigned_daily_hours) || null,
+        assigned_monday_hours: order.order_employee_assignments?.map((a: any) => a.assigned_monday_hours) || null,
+        assigned_tuesday_hours: order.order_employee_assignments?.map((a: any) => a.assigned_tuesday_hours) || null,
+        assigned_wednesday_hours: order.order_employee_assignments?.map((a: any) => a.assigned_wednesday_hours) || null,
+        assigned_thursday_hours: order.order_employee_assignments?.map((a: any) => a.assigned_thursday_hours) || null,
+        assigned_friday_hours: order.order_employee_assignments?.map((a: any) => a.assigned_friday_hours) || null,
+        assigned_saturday_hours: order.order_employee_assignments?.map((a: any) => a.assigned_saturday_hours) || null,
+        assigned_sunday_hours: order.order_employee_assignments?.map((a: any) => a.assigned_sunday_hours) || null,
         customer_contact_id: order.customer_contact_id,
         customer_name: order.customers?.[0]?.name || null,
         object_name: order.objects?.[0]?.name || null,
@@ -247,7 +259,7 @@ export default function OrdersPage({
         recurring_start_date: order.recurring_start_date,
         recurring_end_date: order.recurring_end_date,
         priority: order.priority,
-        total_estimated_hours: order.total_estimated_hours, // Corrected column name
+        total_estimated_hours: order.total_estimated_hours,
         notes: order.notes,
         request_status: order.request_status,
         service_type: order.service_type,
@@ -275,7 +287,7 @@ export default function OrdersPage({
     employeeIdFilter,
     sortColumn,
     sortDirection,
-    currentSearchParams // Add currentSearchParams to dependency array
+    currentSearchParams
   ]);
 
   useEffect(() => {
@@ -283,7 +295,7 @@ export default function OrdersPage({
   }, [fetchData]);
 
   if (!currentUser) {
-    return null; // Render nothing or a global loading if user is not yet determined
+    return null;
   }
 
   const totalPages = totalCount ? Math.ceil(totalCount / pageSize) : 0;
@@ -331,10 +343,8 @@ export default function OrdersPage({
     { value: 'permanent', label: 'Permanent' },
   ];
 
-  // Determine the active tab based on mobile view or searchParams
   const activeTab = isMobile ? 'grid' : viewMode;
 
-  // Function to update the viewMode in URL
   const handleViewModeChange = (value: string) => {
     const params = new URLSearchParams(currentSearchParams);
     params.set('viewMode', value);
@@ -463,12 +473,12 @@ export default function OrdersPage({
         )}
         <Tabs value={activeTab} onValueChange={handleViewModeChange} className="w-full">
           <div className="flex justify-end mb-4">
-            <TabsList className="hidden md:grid grid-cols-2 w-fit"> {/* Only visible on desktop */}
+            <TabsList className="hidden md:grid grid-cols-2 w-fit">
               <TabsTrigger value="grid">Kartenansicht</TabsTrigger>
               <TabsTrigger value="table">Tabellenansicht</TabsTrigger>
             </TabsList>
           </div>
-          <TabsContent value="grid" className="mt-0"> {/* mt-0 to remove default top margin */}
+          <TabsContent value="grid" className="mt-0">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
               {otherOrders.length === 0 && !query && !statusFilter && !orderTypeFilter && !serviceTypeFilter && !customerIdFilter && !employeeIdFilter ? (
                 <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30 shadow-neumorphic glassmorphism-card">
@@ -547,7 +557,7 @@ export default function OrdersPage({
               )}
             </div>
           </TabsContent>
-          <TabsContent value="table" className="mt-0"> {/* mt-0 to remove default top margin */}
+          <TabsContent value="table" className="mt-0">
             <OrdersTableView
               orders={otherOrders}
               totalPages={totalPages}

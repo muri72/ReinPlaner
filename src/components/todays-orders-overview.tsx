@@ -26,6 +26,13 @@ interface DisplayOrder {
   employee_first_names: string[] | null; // Updated to array of first names
   employee_last_names: string[] | null; // Updated to array of last names
   assigned_daily_hours: (number | null)[] | null; // Hinzugefügt
+  assigned_monday_hours: (number | null)[] | null; // Neu
+  assigned_tuesday_hours: (number | null)[] | null; // Neu
+  assigned_wednesday_hours: (number | null)[] | null; // Neu
+  assigned_thursday_hours: (number | null)[] | null; // Neu
+  assigned_friday_hours: (number | null)[] | null; // Neu
+  assigned_saturday_hours: (number | null)[] | null; // Neu
+  assigned_sunday_hours: (number | null)[] | null; // Neu
   customer_contact_id: string | null;
   customer_name: string | null;
   object_name: string | null;
@@ -120,7 +127,18 @@ export function TodaysOrdersOverview() {
           customers ( name ),
           objects ( name ),
           customer_contacts ( first_name, last_name ),
-          order_employee_assignments ( employee_id, assigned_daily_hours, employees ( first_name, last_name ) )
+          order_employee_assignments ( 
+            employee_id, 
+            assigned_daily_hours, 
+            assigned_monday_hours,
+            assigned_tuesday_hours,
+            assigned_wednesday_hours,
+            assigned_thursday_hours,
+            assigned_friday_hours,
+            assigned_saturday_hours,
+            assigned_sunday_hours,
+            employees ( first_name, last_name ) 
+          )
         `)
         .eq('request_status', 'approved') // Only show approved orders
         .order('due_date', { ascending: true })
@@ -155,6 +173,13 @@ export function TodaysOrdersOverview() {
             employee_first_names: order.order_employee_assignments?.map((a: any) => a.employees?.first_name || '') || null,
             employee_last_names: order.order_employee_assignments?.map((a: any) => a.employees?.last_name || '') || null,
             assigned_daily_hours: order.order_employee_assignments?.map((a: any) => a.assigned_daily_hours) || null, // Hinzugefügt
+            assigned_monday_hours: order.order_employee_assignments?.map((a: any) => a.assigned_monday_hours) || null, // Neu
+            assigned_tuesday_hours: order.order_employee_assignments?.map((a: any) => a.assigned_tuesday_hours) || null, // Neu
+            assigned_wednesday_hours: order.order_employee_assignments?.map((a: any) => a.assigned_wednesday_hours) || null, // Neu
+            assigned_thursday_hours: order.order_employee_assignments?.map((a: any) => a.assigned_thursday_hours) || null, // Neu
+            assigned_friday_hours: order.order_employee_assignments?.map((a: any) => a.assigned_friday_hours) || null, // Neu
+            assigned_saturday_hours: order.order_employee_assignments?.map((a: any) => a.assigned_saturday_hours) || null, // Neu
+            assigned_sunday_hours: order.order_employee_assignments?.map((a: any) => a.assigned_sunday_hours) || null, // Neu
             customer_contact_id: order.customer_contact_id,
             customer_name: customer?.name || null,
             object_name: object?.name || null,

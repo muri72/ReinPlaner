@@ -9,10 +9,10 @@ import { DeleteOrderButton } from "@/components/delete-order-button";
 import { PaginationControls } from "@/components/pagination-controls";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
-import { useRouter, useSearchParams, usePathname } from "next/navigation"; // Import usePathname
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useCallback } from "react";
-import { cn } from "@/lib/utils"; // Import cn for conditional styling
-import { RecordDetailsDialog } from "@/components/record-details-dialog"; // Import RecordDetailsDialog
+import { cn } from "@/lib/utils";
+import { RecordDetailsDialog } from "@/components/record-details-dialog";
 
 interface DisplayOrder {
   id: string;
@@ -24,10 +24,17 @@ interface DisplayOrder {
   created_at: string | null;
   customer_id: string | null;
   object_id: string | null;
-  employee_ids: string[] | null; // Updated to array of IDs
-  employee_first_names: string[] | null; // Updated to array of first names
-  employee_last_names: string[] | null; // Updated to array of last names
-  assigned_daily_hours: (number | null)[] | null; // Hinzugefügt
+  employee_ids: string[] | null;
+  employee_first_names: string[] | null;
+  employee_last_names: string[] | null;
+  assigned_daily_hours: (number | null)[] | null;
+  assigned_monday_hours: (number | null)[] | null;
+  assigned_tuesday_hours: (number | null)[] | null;
+  assigned_wednesday_hours: (number | null)[] | null;
+  assigned_thursday_hours: (number | null)[] | null;
+  assigned_friday_hours: (number | null)[] | null;
+  assigned_saturday_hours: (number | null)[] | null;
+  assigned_sunday_hours: (number | null)[] | null;
   customer_contact_id: string | null;
   customer_name: string | null;
   object_name: string | null;
@@ -37,7 +44,7 @@ interface DisplayOrder {
   recurring_start_date: string | null;
   recurring_end_date: string | null;
   priority: string;
-  total_estimated_hours: number | null; // Corrected column name
+  total_estimated_hours: number | null;
   notes: string | null;
   request_status: string;
   service_type: string | null;
@@ -122,7 +129,7 @@ export function OrdersTableView({
     }
     params.set('sortColumn', column);
     params.set('sortDirection', newDirection);
-    params.set('page', '1'); // Reset to first page on sort change
+    params.set('page', '1');
     router.replace(`${pathname}?${params.toString()}`);
   }, [sortColumn, sortDirection, pathname, router, searchParams]);
 
@@ -154,7 +161,7 @@ export function OrdersTableView({
   }
 
   return (
-    <div className="overflow-x-auto p-4 rounded-lg shadow-neumorphic glassmorphism-card"> {/* Added styling here */}
+    <div className="overflow-x-auto p-4 rounded-lg shadow-neumorphic glassmorphism-card">
       <Table>
         <TableHeader>
           <TableRow>
