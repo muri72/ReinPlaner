@@ -9,12 +9,12 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useState, useEffect, useCallback } from "react"; // Import useCallback
+import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Switch } from "@/components/ui/switch";
 import { CustomerContactCreateDialog } from "@/components/customer-contact-create-dialog";
-import { handleActionResponse } from "@/lib/toast-utils"; // Importiere die neue Utility
-import { calculateEndTime, calculateStartTime } from "@/lib/utils"; // Import the new utility
+import { handleActionResponse } from "@/lib/toast-utils";
+import { calculateEndTime, calculateStartTime } from "@/lib/utils";
 
 const preprocessNumber = (val: any) => (val === "" || isNaN(Number(val)) ? null : Number(val));
 const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
@@ -192,7 +192,9 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
     const total = (mondayHours || 0) + (tuesdayHours || 0) + (wednesdayHours || 0) +
                   (thursdayHours || 0) + (fridayHours || 0) + (saturdayHours || 0) +
                   (sundayHours || 0);
-    form.setValue("totalWeeklyHours", parseFloat(total.toFixed(2)), { shouldValidate: false });
+    // Ensure total is a finite number before calling toFixed
+    const safeTotal = typeof total === 'number' && isFinite(total) ? total : 0;
+    form.setValue("totalWeeklyHours", Number(safeTotal.toFixed(2)), { shouldValidate: false });
   }, [mondayHours, tuesdayHours, wednesdayHours, thursdayHours, fridayHours, saturdayHours, sundayHours, form]);
 
 
