@@ -9,6 +9,7 @@ import { Briefcase, CalendarDays, Building, Wrench, FileText, Clock } from "luci
 import { CustomerOrderRequestDialog } from "@/components/customer-order-request-dialog";
 import { OrderFeedbackDialog } from "@/components/order-feedback-dialog"; // For giving feedback on completed orders
 import { Button } from "@/components/ui/button"; // Import Button
+import { AssignedEmployee } from "@/components/order-form";
 
 interface DisplayOrder {
   id: string;
@@ -21,29 +22,7 @@ interface DisplayOrder {
   employee_ids: string[] | null; // Updated to array of IDs
   employee_first_names: string[] | null; // Updated to array of first names
   employee_last_names: string[] | null; // Updated to array of last names
-  assigned_daily_hours: (number | null)[] | null; // Hinzugefügt
-  assigned_monday_hours: number | null;
-  assigned_tuesday_hours: number | null;
-  assigned_wednesday_hours: number | null;
-  assigned_thursday_hours: number | null;
-  assigned_friday_hours: number | null;
-  assigned_saturday_hours: number | null;
-  assigned_sunday_hours: number | null;
-  // New time fields
-  assigned_monday_start_time: string | null;
-  assigned_monday_end_time: string | null;
-  assigned_tuesday_start_time: string | null;
-  assigned_tuesday_end_time: string | null;
-  assigned_wednesday_start_time: string | null;
-  assigned_wednesday_end_time: string | null;
-  assigned_thursday_start_time: string | null;
-  assigned_thursday_end_time: string | null;
-  assigned_friday_start_time: string | null;
-  assigned_friday_end_time: string | null;
-  assigned_saturday_start_time: string | null;
-  assigned_saturday_end_time: string | null;
-  assigned_sunday_start_time: string | null;
-  assigned_sunday_end_time: string | null;
+  assignedEmployees: AssignedEmployee[];
   customer_contact_id: string | null;
   customer_name: string | null;
   object_name: string | null;
@@ -187,55 +166,60 @@ export default async function CustomerBookingsPage() {
     if (error) {
       console.error("Fehler beim Laden der Kundenaufträge:", error?.message || JSON.stringify(error));
     } else {
-      allCustomerOrders = data.map((order: RawOrderResponse) => ({ // Explicitly type order here
-        id: order.id,
-        title: order.title,
-        description: order.description,
-        status: order.status,
-        due_date: order.due_date,
-        customer_id: order.customer_id,
-        object_id: order.object_id,
-        employee_ids: order.order_employee_assignments?.map((a: any) => a.employee_id) || null,
-        employee_first_names: order.order_employee_assignments?.map((a: any) => a.employees?.[0]?.first_name || '') || null,
-        employee_last_names: order.order_employee_assignments?.map((a: any) => a.employees?.[0]?.last_name || '') || null,
-        assigned_daily_hours: order.order_employee_assignments?.map((a: any) => a.assigned_daily_hours) || null,
-        assigned_monday_hours: order.order_employee_assignments?.[0]?.assigned_monday_hours || null,
-        assigned_tuesday_hours: order.order_employee_assignments?.[0]?.assigned_tuesday_hours || null,
-        assigned_wednesday_hours: order.order_employee_assignments?.[0]?.assigned_wednesday_hours || null,
-        assigned_thursday_hours: order.order_employee_assignments?.[0]?.assigned_thursday_hours || null,
-        assigned_friday_hours: order.order_employee_assignments?.[0]?.assigned_friday_hours || null,
-        assigned_saturday_hours: order.order_employee_assignments?.[0]?.assigned_saturday_hours || null,
-        assigned_sunday_hours: order.order_employee_assignments?.[0]?.assigned_sunday_hours || null,
-        // New time fields
-        assigned_monday_start_time: order.order_employee_assignments?.[0]?.assigned_monday_start_time || null,
-        assigned_monday_end_time: order.order_employee_assignments?.[0]?.assigned_monday_end_time || null,
-        assigned_tuesday_start_time: order.order_employee_assignments?.[0]?.assigned_tuesday_start_time || null,
-        assigned_tuesday_end_time: order.order_employee_assignments?.[0]?.assigned_tuesday_end_time || null,
-        assigned_wednesday_start_time: order.order_employee_assignments?.[0]?.assigned_wednesday_start_time || null,
-        assigned_wednesday_end_time: order.order_employee_assignments?.[0]?.assigned_wednesday_end_time || null,
-        assigned_thursday_start_time: order.order_employee_assignments?.[0]?.assigned_thursday_start_time || null,
-        assigned_thursday_end_time: order.order_employee_assignments?.[0]?.assigned_thursday_end_time || null,
-        assigned_friday_start_time: order.order_employee_assignments?.[0]?.assigned_friday_start_time || null,
-        assigned_friday_end_time: order.order_employee_assignments?.[0]?.assigned_friday_end_time || null,
-        assigned_saturday_start_time: order.order_employee_assignments?.[0]?.assigned_saturday_start_time || null,
-        assigned_saturday_end_time: order.order_employee_assignments?.[0]?.assigned_saturday_end_time || null,
-        assigned_sunday_start_time: order.order_employee_assignments?.[0]?.assigned_sunday_start_time || null,
-        assigned_sunday_end_time: order.order_employee_assignments?.[0]?.assigned_sunday_end_time || null,
-        customer_contact_id: order.customer_contact_id,
-        customer_name: order.customers?.[0]?.name || null,
-        object_name: order.objects?.[0]?.name || null,
-        customer_contact_first_name: order.customer_contacts?.[0]?.first_name || null,
-        customer_contact_last_name: order.customer_contacts?.[0]?.last_name || null,
-        order_type: order.order_type,
-        recurring_start_date: order.recurring_start_date,
-        recurring_end_date: order.recurring_end_date,
-        priority: order.priority,
-        total_estimated_hours: order.total_estimated_hours,
-        notes: order.notes,
-        request_status: order.request_status,
-        service_type: order.service_type,
-        order_feedback: order.order_feedback || [], // Ensure it's an array
-      }));
+      allCustomerOrders = data.map((order: RawOrderResponse) => {
+        const mappedAssignments: AssignedEmployee[] = order.order_employee_assignments?.map((a: any) => ({
+            employeeId: a.employee_id,
+            assigned_monday_hours: a.assigned_monday_hours,
+            assigned_tuesday_hours: a.assigned_tuesday_hours,
+            assigned_wednesday_hours: a.assigned_wednesday_hours,
+            assigned_thursday_hours: a.assigned_thursday_hours,
+            assigned_friday_hours: a.assigned_friday_hours,
+            assigned_saturday_hours: a.assigned_saturday_hours,
+            assigned_sunday_hours: a.assigned_sunday_hours,
+            assigned_monday_start_time: a.assigned_monday_start_time,
+            assigned_monday_end_time: a.assigned_monday_end_time,
+            assigned_tuesday_start_time: a.assigned_tuesday_start_time,
+            assigned_tuesday_end_time: a.assigned_tuesday_end_time,
+            assigned_wednesday_start_time: a.assigned_wednesday_start_time,
+            assigned_wednesday_end_time: a.assigned_wednesday_end_time,
+            assigned_thursday_start_time: a.assigned_thursday_start_time,
+            assigned_thursday_end_time: a.assigned_thursday_end_time,
+            assigned_friday_start_time: a.assigned_friday_start_time,
+            assigned_friday_end_time: a.assigned_friday_end_time,
+            assigned_saturday_start_time: a.assigned_saturday_start_time,
+            assigned_saturday_end_time: a.assigned_saturday_end_time,
+            assigned_sunday_start_time: a.assigned_sunday_start_time,
+            assigned_sunday_end_time: a.assigned_sunday_end_time,
+        })) || [];
+
+        return {
+          id: order.id,
+          title: order.title,
+          description: order.description,
+          status: order.status,
+          due_date: order.due_date,
+          customer_id: order.customer_id,
+          object_id: order.object_id,
+          employee_ids: order.order_employee_assignments?.map((a: any) => a.employee_id) || null,
+          employee_first_names: order.order_employee_assignments?.map((a: any) => a.employees?.[0]?.first_name || '') || null,
+          employee_last_names: order.order_employee_assignments?.map((a: any) => a.employees?.[0]?.last_name || '') || null,
+          assignedEmployees: mappedAssignments,
+          customer_contact_id: order.customer_contact_id,
+          customer_name: order.customers?.[0]?.name || null,
+          object_name: order.objects?.[0]?.name || null,
+          customer_contact_first_name: order.customer_contacts?.[0]?.first_name || null,
+          customer_contact_last_name: order.customer_contacts?.[0]?.last_name || null,
+          order_type: order.order_type,
+          recurring_start_date: order.recurring_start_date,
+          recurring_end_date: order.recurring_end_date,
+          priority: order.priority,
+          total_estimated_hours: order.total_estimated_hours,
+          notes: order.notes,
+          request_status: order.request_status,
+          service_type: order.service_type,
+          order_feedback: order.order_feedback || [], // Ensure it's an array
+        };
+      });
     }
   }
 
@@ -258,7 +242,7 @@ export default async function CustomerBookingsPage() {
   };
 
   const getAssignedTimeForDay = (order: DisplayOrder, dayIndex: number) => {
-    const dayMap: { [key: number]: { start: keyof DisplayOrder, end: keyof DisplayOrder } } = {
+    const dayMap: { [key: number]: { start: keyof AssignedEmployee, end: keyof AssignedEmployee } } = {
       0: { start: 'assigned_sunday_start_time', end: 'assigned_sunday_end_time' },
       1: { start: 'assigned_monday_start_time', end: 'assigned_monday_end_time' },
       2: { start: 'assigned_tuesday_start_time', end: 'assigned_tuesday_end_time' },
@@ -270,8 +254,8 @@ export default async function CustomerBookingsPage() {
     const startKey = dayMap[dayIndex]?.start;
     const endKey = dayMap[dayIndex]?.end;
 
-    const startTime = startKey ? (order[startKey] as string | null) : null;
-    const endTime = endKey ? (order[endKey] as string | null) : null;
+    const startTime = startKey ? (order.assignedEmployees?.[0]?.[startKey] as string | null) : null;
+    const endTime = endKey ? (order.assignedEmployees?.[0]?.[endKey] as string | null) : null;
 
     if (startTime && endTime) {
       return `${startTime} - ${endTime}`;

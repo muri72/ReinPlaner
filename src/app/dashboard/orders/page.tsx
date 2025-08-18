@@ -294,6 +294,8 @@ export default function OrdersPage({
             assigned_sunday_start_time: a.assigned_sunday_start_time,
             assigned_sunday_end_time: a.assigned_sunday_end_time,
         })) || [];
+        
+        const firstAssignment = order.order_employee_assignments?.[0];
 
         return {
           id: order.id,
@@ -326,7 +328,29 @@ export default function OrdersPage({
           object: objectData,
           customer: customerData,
           customer_contact: customerContactData,
-        } as DisplayOrder;
+          assigned_daily_hours: order.order_employee_assignments?.map((a: any) => a.assigned_daily_hours) || null,
+          assigned_monday_hours: firstAssignment?.assigned_monday_hours || null,
+          assigned_tuesday_hours: firstAssignment?.assigned_tuesday_hours || null,
+          assigned_wednesday_hours: firstAssignment?.assigned_wednesday_hours || null,
+          assigned_thursday_hours: firstAssignment?.assigned_thursday_hours || null,
+          assigned_friday_hours: firstAssignment?.assigned_friday_hours || null,
+          assigned_saturday_hours: firstAssignment?.assigned_saturday_hours || null,
+          assigned_sunday_hours: firstAssignment?.assigned_sunday_hours || null,
+          assigned_monday_start_time: firstAssignment?.assigned_monday_start_time || null,
+          assigned_monday_end_time: firstAssignment?.assigned_monday_end_time || null,
+          assigned_tuesday_start_time: firstAssignment?.assigned_tuesday_start_time || null,
+          assigned_tuesday_end_time: firstAssignment?.assigned_tuesday_end_time || null,
+          assigned_wednesday_start_time: firstAssignment?.assigned_wednesday_start_time || null,
+          assigned_wednesday_end_time: firstAssignment?.assigned_wednesday_end_time || null,
+          assigned_thursday_start_time: firstAssignment?.assigned_thursday_start_time || null,
+          assigned_thursday_end_time: firstAssignment?.assigned_thursday_end_time || null,
+          assigned_friday_start_time: firstAssignment?.assigned_friday_start_time || null,
+          assigned_friday_end_time: firstAssignment?.assigned_friday_end_time || null,
+          assigned_saturday_start_time: firstAssignment?.assigned_saturday_start_time || null,
+          assigned_saturday_end_time: firstAssignment?.assigned_saturday_end_time || null,
+          assigned_sunday_start_time: firstAssignment?.assigned_sunday_start_time || null,
+          assigned_sunday_end_time: firstAssignment?.assigned_sunday_end_time || null,
+        };
       }) || [];
       ordersError = selectError;
       ordersCount = selectCount;
