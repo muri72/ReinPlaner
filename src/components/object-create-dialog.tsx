@@ -35,7 +35,7 @@ export function ObjectCreateDialog({ onObjectCreated }: ObjectCreateDialogProps)
       </DialogTrigger>
       <DialogContent 
         key={open ? "object-create-open" : "object-create-closed"} 
-        className="sm:max-w-xl max-h-[90vh] flex flex-col glassmorphism-card" // Added flex flex-col
+        className="sm:max-w-3xl max-h-[90vh] flex flex-col glassmorphism-card" // Added flex flex-col
       >
         <DialogHeader>
           <DialogTitle>Neues Objekt hinzufügen</DialogTitle>

@@ -55,7 +55,7 @@ export function TimeEntryCreateDialog({
       </DialogTrigger>
       <DialogContent 
         key={open ? "time-entry-create-open" : "time-entry-create-closed"} 
-        className="sm:max-w-xl max-h-[90vh] overflow-y-auto glassmorphism-card"
+        className="sm:max-w-3xl max-h-[90vh] overflow-y-auto glassmorphism-card"
       >
         <DialogHeader>
           <DialogTitle>{dialogTitle}</DialogTitle>

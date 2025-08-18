@@ -171,7 +171,7 @@ export function OrderPlanningDialog({ order }: OrderPlanningDialogProps) {
       </DialogTrigger>
       <DialogContent 
         key={open ? "order-planning-open" : "order-planning-closed"} 
-        className="sm:max-w-xl max-h-[90vh] overflow-y-auto glassmorphism-card"
+        className="sm:max-w-3xl max-h-[90vh] overflow-y-auto glassmorphism-card"
       >
         <DialogHeader>
           <DialogTitle>Anfrage planen: {order.title}</DialogTitle>
@@ -215,12 +215,11 @@ export function OrderPlanningDialog({ order }: OrderPlanningDialogProps) {
             {selectedEmployeeId && order.object_id && (
               <div className="space-y-2 mt-4">
                 <Label>Zugewiesene Stunden & Zeiten pro Wochentag</Label>
-                <div className="grid grid-cols-1 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-2">
                   {dayNames.map(day => (
                     <div key={day} className="p-2 border rounded-md">
                       <h4 className="font-medium text-sm mb-2">{germanDayNames[day]}</h4>
-                      <div className="grid grid-cols-3 gap-2">
-                        <div>
+                      <div>
                           <Label htmlFor={`assigned_${day}_hours`} className="text-xs">Std.</Label>
                           <Input
                             id={`assigned_${day}_hours`}
@@ -252,7 +251,6 @@ export function OrderPlanningDialog({ order }: OrderPlanningDialogProps) {
                             onChange={(e) => handleDailyEndTimeChange(day, e.target.value)}
                           />
                         </div>
-                      </div>
                     </div>
                   ))}
                 </div>

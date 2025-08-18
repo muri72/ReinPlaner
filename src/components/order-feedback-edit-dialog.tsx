@@ -72,7 +72,7 @@ export function OrderFeedbackEditDialog({ feedback }: OrderFeedbackEditDialogPro
       </TooltipProvider>
       <DialogContent 
         key={open ? "order-feedback-edit-open" : "order-feedback-edit-closed"} 
-        className="sm:max-w-xl max-h-[90vh] overflow-y-auto glassmorphism-card"
+        className="sm:max-w-3xl max-h-[90vh] overflow-y-auto glassmorphism-card"
       >
         <DialogHeader>
           <DialogTitle>Feedback bearbeiten</DialogTitle>

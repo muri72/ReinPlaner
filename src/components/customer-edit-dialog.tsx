@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react"; // Corrected import statement
+import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Pencil } from "lucide-react";
@@ -51,7 +51,7 @@ export function CustomerEditDialog({ customer }: CustomerEditDialogProps) {
       </TooltipProvider>
       <DialogContent 
         key={open ? "customer-edit-open" : "customer-edit-closed"} 
-        className="sm:max-w-xl max-h-[90vh] overflow-y-auto glassmorphism-card" 
+        className="sm:max-w-3xl max-h-[90vh] overflow-y-auto glassmorphism-card" 
       >
         <DialogHeader>
           <DialogTitle>Kunden bearbeiten</DialogTitle>

@@ -35,7 +35,7 @@ export function CustomerCreateDialog({ onCustomerCreated }: CustomerCreateDialog
       </DialogTrigger>
       <DialogContent 
         key={open ? "customer-create-open" : "customer-create-closed"} 
-        className="sm:max-w-xl max-h-[90vh] overflow-y-auto glassmorphism-card"
+        className="sm:max-w-3xl max-h-[90vh] overflow-y-auto glassmorphism-card"
       >
         <DialogHeader>
           <DialogTitle>Neuen Kunden hinzufügen</DialogTitle>

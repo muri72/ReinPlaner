@@ -50,7 +50,7 @@ export function CustomerContactEditDialog({ contact }: CustomerContactEditDialog
       </TooltipProvider>
       <DialogContent 
         key={open ? "customer-contact-edit-open" : "customer-contact-edit-closed"} 
-        className="sm:max-w-xl max-h-[90vh] overflow-y-auto glassmorphism-card"
+        className="sm:max-w-3xl max-h-[90vh] overflow-y-auto glassmorphism-card"
       >
         <DialogHeader>
           <DialogTitle>Kundenkontakt bearbeiten</DialogTitle>

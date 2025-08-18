@@ -25,7 +25,7 @@ export function GiveGeneralFeedbackDialog({ onFeedbackSubmitted, onSuccess }: Gi
       </DialogTrigger>
       <DialogContent 
         key={open ? "give-general-feedback-open" : "give-general-feedback-closed"} 
-        className="sm:max-w-xl max-h-[90vh] overflow-y-auto glassmorphism-card"
+        className="sm:max-w-3xl max-h-[90vh] overflow-y-auto glassmorphism-card"
       >
         <DialogHeader>
           <DialogTitle>Allgemeines Feedback einreichen</DialogTitle>

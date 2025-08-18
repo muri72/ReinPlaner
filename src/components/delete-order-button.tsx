@@ -61,6 +61,7 @@ export function DeleteOrderButton({ orderId, onDeleteSuccess }: DeleteOrderButto
             </DialogTrigger>
             <DialogContent 
               key={`delete-order-${orderId}-open`} 
+              className="sm:max-w-md max-h-[90vh] overflow-y-auto glassmorphism-card" 
             >
               <DialogHeader>
                 <DialogTitle>Sind Sie sicher?</DialogTitle>

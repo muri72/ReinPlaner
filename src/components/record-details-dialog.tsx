@@ -142,7 +142,7 @@ export function RecordDetailsDialog({ record, title, triggerButtonTitle = "Detai
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
-      <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto glassmorphism-card">
+      <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto glassmorphism-card">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>

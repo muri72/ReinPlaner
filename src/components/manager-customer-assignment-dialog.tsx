@@ -35,7 +35,7 @@ export function ManagerCustomerAssignmentDialog({ managerId, managerName }: Mana
       </TooltipProvider>
       <DialogContent 
         key={open ? "manager-assignment-open" : "manager-assignment-closed"} 
-        className="sm:max-w-xl max-h-[90vh] overflow-y-auto glassmorphism-card"
+        className="sm:max-w-3xl max-h-[90vh] overflow-y-auto glassmorphism-card"
       >
         <DialogHeader>
           <DialogTitle>Kunden für {managerName} zuweisen</DialogTitle>

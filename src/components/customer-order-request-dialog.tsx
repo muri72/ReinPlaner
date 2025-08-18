@@ -24,7 +24,7 @@ export function CustomerOrderRequestDialog({ customerId, onOrderRequested }: Cus
       </DialogTrigger>
       <DialogContent 
         key={open ? "customer-order-request-open" : "customer-order-request-closed"} 
-        className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto glassmorphism-card"
+        className="sm:max-w-3xl max-h-[90vh] overflow-y-auto glassmorphism-card"
       >
         <DialogHeader>
           <DialogTitle>Neue Buchung anfragen</DialogTitle>

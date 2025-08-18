@@ -49,7 +49,7 @@ export function UserEditDialog({ user }: UserEditDialogProps) {
       </TooltipProvider>
       <DialogContent 
         key={open ? "user-edit-open" : "user-edit-closed"} 
-        className="sm:max-w-xl max-h-[90vh] overflow-y-auto glassmorphism-card"
+        className="sm:max-w-3xl max-h-[90vh] overflow-y-auto glassmorphism-card"
       >
         <DialogHeader>
           <DialogTitle>Benutzer bearbeiten</DialogTitle>
