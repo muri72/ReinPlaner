@@ -232,7 +232,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
   const orderType = form.watch("orderType");
   const selectedCustomerId = form.watch("customerId");
   const selectedObjectId = form.watch("objectId");
-  const selectedAssignedEmployees = form.watch("assignedEmployees"); // This can be undefined
+  // Removed selectedAssignedEmployees watch here, as we use assignedEmployeeFields directly
 
   // Helper to get base start time based on object's time_of_day
   const getBaseStartTimeForTimeOfDay = useCallback((timeOfDay: string | null): string => {
@@ -399,17 +399,18 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
   useEffect(() => {
     const currentObjectId = form.getValues("objectId") ?? null;
     const selectedObject = objects.find(obj => obj.id === currentObjectId);
-    const numAssignedEmployees = (selectedAssignedEmployees || []).length;
+    const numAssignedEmployees = assignedEmployeeFields.length;
 
-    // Create a map of current assigned employee data for easy lookup
-    const currentAssignedMap = new Map((assignedEmployeeFields || []).map(field => [field.employeeId, field]));
+    // Only proceed if there's a selected object and assigned employees
+    if (!selectedObject || numAssignedEmployees === 0) {
+      // If no object selected or no employees assigned, ensure all assigned hours/times are null
+      // This part is handled by handleEmployeeSelectionChange when employees are deselected
+      // or by the initial state if no object/employees are chosen.
+      return;
+    }
 
-    const newAssignedEmployeesState: AssignedEmployee[] = [];
-    let hasChanges = false;
-
-    (selectedAssignedEmployees || []).forEach((assignedEmp) => {
-      const updatedEmp: AssignedEmployee = { ...assignedEmp };
-
+    // Iterate over the current `fields` array from useFieldArray
+    assignedEmployeeFields.forEach((assignedEmp, index) => {
       dayNames.forEach(day => {
         const hoursFieldName = `assigned_${day}_hours` as keyof AssignedEmployee;
         const startFieldName = `assigned_${day}_start_time` as keyof AssignedEmployee;
@@ -424,50 +425,46 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
         let calculatedStartTime: string | null = null;
         let calculatedEndTime: string | null = null;
 
-        if (selectedObject) {
-          if (objectStartTime && objectEndTime) {
-            calculatedStartTime = objectStartTime;
-            calculatedEndTime = objectEndTime;
-            const totalDurationMinutes = (new Date(`2000/01/01 ${objectEndTime}`).getTime() - new Date(`2000/01/01 ${objectStartTime}`).getTime()) / (1000 * 60);
-            calculatedHours = parseFloat((totalDurationMinutes / 60 / (numAssignedEmployees || 1)).toFixed(2));
-          } else if (objectDailyHours !== null) {
-            calculatedHours = parseFloat((objectDailyHours / (numAssignedEmployees || 1)).toFixed(2));
-            const { newStartTime, newEndTime } = calculateEmployeeDayTimes(
-                day,
-                calculatedHours,
-                updatedEmp[startFieldName] as string | null,
-                updatedEmp[endFieldName] as string | null,
-                objectTimeOfDay,
-                'objectSelection'
-            );
-            calculatedStartTime = newStartTime;
-            calculatedEndTime = newEndTime;
-          }
+        if (objectStartTime && objectEndTime) {
+          calculatedStartTime = objectStartTime;
+          calculatedEndTime = objectEndTime;
+          const totalDurationMinutes = (new Date(`2000/01/01 ${objectEndTime}`).getTime() - new Date(`2000/01/01 ${objectStartTime}`).getTime()) / (1000 * 60);
+          calculatedHours = parseFloat((totalDurationMinutes / 60 / (numAssignedEmployees || 1)).toFixed(2));
+        } else if (objectDailyHours !== null) {
+          calculatedHours = parseFloat((objectDailyHours / (numAssignedEmployees || 1)).toFixed(2));
+          // When calculating times based on hours, use the *current* values from the form field
+          // to decide if start/end time should be preserved or recalculated from base.
+          const currentStartTimeForDay = form.getValues(`assignedEmployees.${index}.${startFieldName}` as FieldPath<OrderFormValues>) as string | null;
+          const currentEndTimeForDay = form.getValues(`assignedEmployees.${index}.${endFieldName}` as FieldPath<OrderFormValues>) as string | null;
+
+          const { newStartTime, newEndTime } = calculateEmployeeDayTimes(
+              day,
+              calculatedHours,
+              currentStartTimeForDay,
+              currentEndTimeForDay,
+              objectTimeOfDay,
+              'objectSelection'
+          );
+          calculatedStartTime = newStartTime;
+          calculatedEndTime = newEndTime;
         }
 
-        // Check if values are actually different before updating
-        if (updatedEmp[hoursFieldName] !== calculatedHours) {
-          (updatedEmp as any)[hoursFieldName] = calculatedHours;
-          hasChanges = true;
-        }
-        if (updatedEmp[startFieldName] !== calculatedStartTime) {
-          (updatedEmp as any)[startFieldName] = calculatedStartTime;
-          hasChanges = true;
-        }
-        if (updatedEmp[endFieldName] !== calculatedEndTime) {
-          (updatedEmp as any)[endFieldName] = calculatedEndTime;
-          hasChanges = true;
+        // Only update if the calculated value is different from the current field value
+        // This is the key to preventing unnecessary re-renders and the infinite loop.
+        if (assignedEmp[hoursFieldName] !== calculatedHours ||
+            assignedEmp[startFieldName] !== calculatedStartTime ||
+            assignedEmp[endFieldName] !== calculatedEndTime) {
+
+          updateEmployeeField(index, {
+            ...assignedEmp, // Keep existing properties
+            [hoursFieldName]: calculatedHours,
+            [startFieldName]: calculatedStartTime,
+            [endFieldName]: calculatedEndTime,
+          });
         }
       });
-      newAssignedEmployeesState.push(updatedEmp);
     });
-
-    // Only update if there are actual changes to prevent infinite loops
-    // Use a deep comparison for the array of objects
-    if (hasChanges || JSON.stringify(newAssignedEmployeesState) !== JSON.stringify(assignedEmployeeFields)) {
-        form.setValue("assignedEmployees", newAssignedEmployeesState, { shouldValidate: true });
-    }
-  }, [selectedObjectId, selectedAssignedEmployees, objects, form, calculateEmployeeDayTimes, assignedEmployeeFields]);
+  }, [selectedObjectId, objects, assignedEmployeeFields, form, calculateEmployeeDayTimes, updateEmployeeField]);
 
 
   // Manual change handlers for hours/times within assigned employees
