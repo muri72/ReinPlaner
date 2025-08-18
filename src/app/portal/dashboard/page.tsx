@@ -4,13 +4,13 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { Briefcase, CalendarDays, DollarSign, MessageSquare, Star, FileText, CheckCircle2, AlertCircle } from "lucide-react";
-import { TodaysOrdersOverview } from "@/components/todays-orders-overview";
+import { TodaysOrdersOverview } from "@/components/todays-orders-overview"; // Reuse for today's orders
 import { GiveOrderFeedbackDialog } from "@/components/give-order-feedback-dialog";
 import { GiveGeneralFeedbackDialog } from "@/components/give-general-feedback-dialog";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
-import { CustomerOrderRequestDialog } from "@/components/customer-order-request-dialog";
+import { CustomerOrderRequestDialog } from "@/components/customer-order-request-dialog"; // Import the new dialog
 
 export default async function CustomerDashboardPage() {
   const supabase = await createClient();
@@ -26,12 +26,12 @@ export default async function CustomerDashboardPage() {
     .eq('id', user.id)
     .single();
 
-  if (profileError) {
-    console.error("Fehler beim Abrufen des Benutzerprofils:", profileError?.message || profileError);
+  if (profileError) { // Added error logging for profile fetching
+    console.error("Fehler beim Abrufen des Benutzerprofils:", profileError?.message || JSON.stringify(profileError));
   }
 
   if (profile?.role !== 'customer') {
-    redirect("/dashboard");
+    redirect("/dashboard"); // Ensure only customers access this page
   }
 
   const customerName = profile?.first_name || user.email;
@@ -41,12 +41,12 @@ export default async function CustomerDashboardPage() {
   // Fetch customer's associated customer_id
   const { data: customerData, error: customerError } = await supabase
     .from('customers')
-    .select('id, name, contact_email, contact_phone, customer_type, contractual_services')
+    .select('id, name, contact_email, contact_phone, customer_type, contractual_services') // Added contractual_services
     .eq('user_id', user.id)
     .single();
 
   if (customerError && customerError.code !== 'PGRST116') {
-    console.error("Fehler beim Laden der Kundendaten:", customerError?.message || customerError);
+    console.error("Fehler beim Laden der Kundendaten:", customerError?.message || JSON.stringify(customerError));
   }
 
   const customerId = customerData?.id || null;
@@ -73,10 +73,10 @@ export default async function CustomerDashboardPage() {
       .eq('request_status', 'approved')
       .order('due_date', { ascending: true })
       .order('recurring_start_date', { ascending: true })
-      .limit(5);
+      .limit(5); // Fetch a few to find the next one
 
     if (upcomingOrdersError) {
-      console.error("Fehler beim Laden der kommenden Aufträge:", upcomingOrdersError?.message || upcomingOrdersError);
+      console.error("Fehler beim Laden der kommenden Aufträge:", upcomingOrdersError?.message || JSON.stringify(upcomingOrdersError));
     } else {
       const now = new Date();
       now.setHours(0, 0, 0, 0);
@@ -222,7 +222,7 @@ export default async function CustomerDashboardPage() {
           ) : (
             <div className="text-center text-muted-foreground py-4">
               <p>Keine zukünftigen Termine gefunden.</p>
-              <CustomerOrderRequestDialog customerId={customerId} />
+              <CustomerOrderRequestDialog customerId={customerId} /> {/* New booking request button */}
             </div>
           )}
         </CardContent>

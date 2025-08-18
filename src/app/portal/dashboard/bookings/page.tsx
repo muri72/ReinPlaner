@@ -7,7 +7,7 @@ import { de } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";
 import { Briefcase, CalendarDays, Building, Wrench, FileText, Clock } from "lucide-react";
 import { CustomerOrderRequestDialog } from "@/components/customer-order-request-dialog";
-import { OrderFeedbackDialog } from "@/components/order-feedback-dialog";
+import { OrderFeedbackDialog } from "@/components/order-feedback-dialog"; // For giving feedback on completed orders
 
 interface DisplayOrder {
   id: string;
@@ -17,17 +17,10 @@ interface DisplayOrder {
   due_date: string | null;
   customer_id: string | null;
   object_id: string | null;
-  employee_ids: string[] | null;
-  employee_first_names: string[] | null;
-  employee_last_names: string[] | null;
-  assigned_daily_hours: (number | null)[] | null;
-  assigned_monday_hours: (number | null)[] | null;
-  assigned_tuesday_hours: (number | null)[] | null;
-  assigned_wednesday_hours: (number | null)[] | null;
-  assigned_thursday_hours: (number | null)[] | null;
-  assigned_friday_hours: (number | null)[] | null;
-  assigned_saturday_hours: (number | null)[] | null;
-  assigned_sunday_hours: (number | null)[] | null;
+  employee_ids: string[] | null; // Updated to array of IDs
+  employee_first_names: string[] | null; // Updated to array of first names
+  employee_last_names: string[] | null; // Updated to array of last names
+  assigned_daily_hours: (number | null)[] | null; // Hinzugefügt
   customer_contact_id: string | null;
   customer_name: string | null;
   object_name: string | null;
@@ -37,11 +30,11 @@ interface DisplayOrder {
   recurring_start_date: string | null;
   recurring_end_date: string | null;
   priority: string;
-  total_estimated_hours: number | null;
+  total_estimated_hours: number | null; // Corrected column name
   notes: string | null;
   request_status: string;
   service_type: string | null;
-  order_feedback: { id: string }[];
+  order_feedback: { id: string }[]; // To check if feedback exists
 }
 
 export default async function CustomerBookingsPage() {
@@ -58,12 +51,12 @@ export default async function CustomerBookingsPage() {
     .eq('id', user.id)
     .single();
 
-  if (profileError) {
+  if (profileError) { // Added error logging for profile fetching
     console.error("Fehler beim Abrufen des Benutzerprofils:", profileError?.message || profileError);
   }
 
   if (profile?.role !== 'customer') {
-    redirect("/dashboard");
+    redirect("/dashboard"); // Ensure only customers access this page
   }
 
   // Fetch customer's associated customer_id
@@ -119,21 +112,10 @@ export default async function CustomerBookingsPage() {
       objects ( name ),
       customer_contacts ( first_name, last_name ),
       order_feedback ( id ),
-      order_employee_assignments ( 
-        employee_id, 
-        assigned_daily_hours, 
-        assigned_monday_hours,
-        assigned_tuesday_hours,
-        assigned_wednesday_hours,
-        assigned_thursday_hours,
-        assigned_friday_hours,
-        assigned_saturday_hours,
-        assigned_sunday_hours,
-        employees ( first_name, last_name ) 
-      )
+      order_employee_assignments ( employee_id, assigned_daily_hours, employees ( first_name, last_name ) )
     `)
     .eq('customer_id', customerId)
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false }); // Order by creation date, newest first
 
   if (ordersError) {
     console.error("Fehler beim Laden der Buchungen:", ordersError?.message || ordersError);
@@ -151,24 +133,17 @@ export default async function CustomerBookingsPage() {
     employee_ids: order.order_employee_assignments?.map((a: any) => a.employee_id) || null,
     employee_first_names: order.order_employee_assignments?.map((a: any) => a.employees?.first_name || '') || null,
     employee_last_names: order.order_employee_assignments?.map((a: any) => a.employees?.last_name || '') || null,
-    assigned_daily_hours: order.order_employee_assignments?.map((a: any) => a.assigned_daily_hours) || null,
-    assigned_monday_hours: order.order_employee_assignments?.map((a: any) => a.assigned_monday_hours) || null,
-    assigned_tuesday_hours: order.order_employee_assignments?.map((a: any) => a.assigned_tuesday_hours) || null,
-    assigned_wednesday_hours: order.order_employee_assignments?.map((a: any) => a.assigned_wednesday_hours) || null,
-    assigned_thursday_hours: order.order_employee_assignments?.map((a: any) => a.assigned_thursday_hours) || null,
-    assigned_friday_hours: order.order_employee_assignments?.map((a: any) => a.assigned_friday_hours) || null,
-    assigned_saturday_hours: order.order_employee_assignments?.map((a: any) => a.assigned_saturday_hours) || null,
-    assigned_sunday_hours: order.order_employee_assignments?.map((a: any) => a.assigned_sunday_hours) || null,
+    assigned_daily_hours: order.order_employee_assignments?.map((a: any) => a.assigned_daily_hours) || null, // Hinzugefügt
     customer_contact_id: order.customer_contact_id,
-    customer_name: order.customers?.[0]?.name || null,
-    object_name: order.objects?.[0]?.name || null,
-    customer_contact_first_name: order.customer_contacts?.[0]?.first_name || null,
-    customer_contact_last_name: order.customer_contacts?.[0]?.last_name || null,
+    customer_name: order.customers?.[0]?.name || null, // Korrigiert
+    object_name: order.objects?.[0]?.name || null, // Korrigiert
+    customer_contact_first_name: order.customer_contacts?.[0]?.first_name || null, // Korrigiert
+    customer_contact_last_name: order.customer_contacts?.[0]?.last_name || null, // Korrigiert
     order_type: order.order_type,
     recurring_start_date: order.recurring_start_date,
     recurring_end_date: order.recurring_end_date,
     priority: order.priority,
-    total_estimated_hours: order.total_estimated_hours,
+    total_estimated_hours: order.total_estimated_hours, // Corrected column name
     notes: order.notes,
     request_status: order.request_status,
     service_type: order.service_type,

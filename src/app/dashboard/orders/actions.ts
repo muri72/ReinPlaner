@@ -65,13 +65,7 @@ export async function createOrder(data: OrderFormValues) {
     const assignmentsToInsert = assignedEmployees.map(assignment => ({
       order_id: newOrder.id,
       employee_id: assignment.employeeId,
-      assigned_monday_hours: assignment.assigned_monday_hours,
-      assigned_tuesday_hours: assignment.assigned_tuesday_hours,
-      assigned_wednesday_hours: assignment.assigned_wednesday_hours,
-      assigned_thursday_hours: assignment.assigned_thursday_hours,
-      assigned_friday_hours: assignment.assigned_friday_hours,
-      assigned_saturday_hours: assignment.assigned_saturday_hours,
-      assigned_sunday_hours: assignment.assigned_sunday_hours,
+      assigned_daily_hours: assignment.assignedDailyHours,
     }));
 
     const { error: assignError } = await supabase
@@ -174,13 +168,7 @@ export async function updateOrder(orderId: string, data: OrderFormValues) {
     const assignmentsToInsert = assignedEmployees.map(assignment => ({
       order_id: orderId,
       employee_id: assignment.employeeId,
-      assigned_monday_hours: assignment.assigned_monday_hours,
-      assigned_tuesday_hours: assignment.assigned_tuesday_hours,
-      assigned_wednesday_hours: assignment.assigned_wednesday_hours,
-      assigned_thursday_hours: assignment.assigned_thursday_hours,
-      assigned_friday_hours: assignment.assigned_friday_hours,
-      assigned_saturday_hours: assignment.assigned_saturday_hours,
-      assigned_sunday_hours: assignment.assigned_sunday_hours,
+      assigned_daily_hours: assignment.assignedDailyHours,
     }));
 
     const { error: insertAssignError } = await supabase
@@ -235,7 +223,6 @@ export async function processOrderRequest(formData: FormData): Promise<{ success
   const orderId = formData.get('orderId') as string;
   const employeeId = formData.get('employeeId') as string | null;
   const decision = formData.get('decision') as 'approved' | 'rejected';
-  const assignedDailyHours = formData.get('assignedDailyHours') ? Number(formData.get('assignedDailyHours')) : null; // Stunden aus FormData
 
   if (!orderId || !decision) {
     return { success: false, message: "Ungültige Anfrage." };
@@ -278,9 +265,7 @@ export async function processOrderRequest(formData: FormData): Promise<{ success
       .insert({
         order_id: orderId,
         employee_id: employeeId,
-        assigned_daily_hours: assignedDailyHours, // Speichern der zugewiesenen Stunden
-        // Die spezifischen Tagesstunden werden hier nicht gesetzt, da dies eine einfache Zuweisung ist.
-        // Die Logik in create_missing_scheduled_time_entries muss dies berücksichtigen.
+        assigned_daily_hours: null, // Standardmäßig null, damit die DB-Funktion die Stunden aufteilt
       });
 
     if (insertAssignmentError) {
@@ -300,8 +285,6 @@ export async function processOrderRequest(formData: FormData): Promise<{ success
         message: `Die Anfrage für "${orderData.title}" wurde genehmigt und Ihnen zugewiesen.`,
         link: "/dashboard/orders"
       });
-    } else {
-      console.warn(`Could not send notification for order assignment to employee ${employeeId}. User ID or order title missing.`);
     }
   } else if (decision === 'rejected') {
     // If rejected, remove any existing assignments for this order

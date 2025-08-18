@@ -71,17 +71,7 @@ export default async function EmployeeDashboardPage() {
         objects ( name, address, notes, time_of_day, access_method, pin, is_alarm_secured, alarm_password, security_code_word ),
         customers ( name ),
         customer_contacts ( first_name, last_name, phone ),
-        order_employee_assignments!inner ( 
-          employee_id, 
-          assigned_daily_hours,
-          assigned_monday_hours,
-          assigned_tuesday_hours,
-          assigned_wednesday_hours,
-          assigned_thursday_hours,
-          assigned_friday_hours,
-          assigned_saturday_hours,
-          assigned_sunday_hours
-        )
+        order_employee_assignments!inner ( employee_id, assigned_daily_hours )
       `)
       .eq('order_employee_assignments.employee_id', employeeId) // Filter by assignment table
       .eq('request_status', 'approved')
@@ -101,13 +91,6 @@ export default async function EmployeeDashboardPage() {
         customer_contact: Array.isArray(order.customer_contacts) ? order.customer_contacts[0] : order.customer_contacts,
         // Extract assigned_daily_hours from the assignment
         assigned_daily_hours: order.order_employee_assignments?.[0]?.assigned_daily_hours || null,
-        assigned_monday_hours: order.order_employee_assignments?.[0]?.assigned_monday_hours || null,
-        assigned_tuesday_hours: order.order_employee_assignments?.[0]?.assigned_tuesday_hours || null,
-        assigned_wednesday_hours: order.order_employee_assignments?.[0]?.assigned_wednesday_hours || null,
-        assigned_thursday_hours: order.order_employee_assignments?.[0]?.assigned_thursday_hours || null,
-        assigned_friday_hours: order.order_employee_assignments?.[0]?.assigned_friday_hours || null,
-        assigned_saturday_hours: order.order_employee_assignments?.[0]?.assigned_saturday_hours || null,
-        assigned_sunday_hours: order.order_employee_assignments?.[0]?.assigned_sunday_hours || null,
       }));
     }
   }

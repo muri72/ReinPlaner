@@ -5,9 +5,6 @@ import { revalidatePath } from "next/cache";
 import { sendNotification } from "@/lib/actions/notifications";
 import { startOfWeek, endOfWeek, eachDayOfInterval, formatISO, parseISO, getDay } from 'date-fns';
 
-// Define dayNames here as it's used in this file
-const dayNames = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
-
 export interface PlanningData {
   [employeeId: string]: {
     name: string;
@@ -71,17 +68,7 @@ export async function getPlanningDataForWeek(currentDate: Date): Promise<{ succe
           monday_hours, tuesday_hours, wednesday_hours, thursday_hours,
           friday_hours, saturday_hours, sunday_hours
         ),
-        order_employee_assignments ( 
-          employee_id, 
-          assigned_daily_hours,
-          assigned_monday_hours,
-          assigned_tuesday_hours,
-          assigned_wednesday_hours,
-          assigned_thursday_hours,
-          assigned_friday_hours,
-          assigned_saturday_hours,
-          assigned_sunday_hours
-        )
+        order_employee_assignments ( employee_id, assigned_daily_hours )
       `);
     if (ordersError) throw ordersError;
 
@@ -142,28 +129,24 @@ export async function getPlanningDataForWeek(currentDate: Date): Promise<{ succe
 
           // Find the specific assignment for this employee and order to get assigned_daily_hours
           const employeeAssignment = order.order_employee_assignments.find((assignment: any) => assignment.employee_id === employee.id);
-          
-          // Priorisiere die spezifischen Tagesstunden, dann assigned_daily_hours, dann Objektstunden
-          const assignedDayHoursKey = `assigned_${dayNames[dayOfWeek === 0 ? 6 : dayOfWeek - 1]}_hours` as keyof typeof employeeAssignment; // dayOfWeek 0=So, 1=Mo... -> dayNames 0=Mo, 1=Di...
-          const objectDayHoursKey = `${dayNames[dayOfWeek === 0 ? 6 : dayOfWeek - 1]}_hours` as 'monday_hours' | 'tuesday_hours' | 'wednesday_hours' | 'thursday_hours' | 'friday_hours' | 'saturday_hours' | 'sunday_hours';
+          const assignedDailyHours = employeeAssignment?.assigned_daily_hours;
 
           if (['permanent', 'recurring', 'substitution'].includes(order.order_type)) {
             if (order.recurring_start_date && parseISO(order.recurring_start_date) <= day && (!order.recurring_end_date || parseISO(order.recurring_end_date) >= day)) {
-              if (employeeAssignment && employeeAssignment[assignedDayHoursKey] !== null && employeeAssignment[assignedDayHoursKey] !== undefined) {
-                dailyHours = employeeAssignment[assignedDayHoursKey] as number;
-              } else if (employeeAssignment && employeeAssignment.assigned_daily_hours !== null && employeeAssignment.assigned_daily_hours !== undefined) {
-                dailyHours = employeeAssignment.assigned_daily_hours;
+              if (assignedDailyHours !== null && assignedDailyHours !== undefined) {
+                dailyHours = assignedDailyHours; // Use explicitly assigned daily hours
               } else if (order.objects) {
                 const schedule = Array.isArray(order.objects) ? order.objects[0] : order.objects;
-                // Fix for Error 6: Explicitly type schedule to allow indexing
-                const objectSchedule: { [key: string]: number | null } = schedule as { [key: string]: number | null };
-                if (objectSchedule) {
+                if (schedule) {
                   // Fallback to object's daily hours if no specific assignment
-                  dailyHours = objectSchedule[objectDayHoursKey] || 0;
-                  // If multiple employees are assigned to this order, divide the object's hours
-                  const assignedEmployeesCount = order.order_employee_assignments.filter((a: any) => a.order_id === order.id).length;
-                  if (assignedEmployeesCount > 0) {
-                    dailyHours = dailyHours / assignedEmployeesCount;
+                  switch (dayOfWeek) {
+                    case 1: dailyHours = schedule.monday_hours || 0; break;
+                    case 2: dailyHours = schedule.tuesday_hours || 0; break;
+                    case 3: dailyHours = schedule.wednesday_hours || 0; break;
+                    case 4: dailyHours = schedule.thursday_hours || 0; break;
+                    case 5: dailyHours = schedule.friday_hours || 0; break;
+                    case 6: dailyHours = schedule.saturday_hours || 0; break;
+                    case 0: dailyHours = schedule.sunday_hours || 0; break;
                   }
                 }
               }
@@ -171,11 +154,7 @@ export async function getPlanningDataForWeek(currentDate: Date): Promise<{ succe
             }
           } else if (order.order_type === 'one_time') {
             if (order.due_date && formatISO(parseISO(order.due_date), { representation: 'date' }) === dateString) {
-              dailyHours = (employeeAssignment && employeeAssignment[assignedDayHoursKey] !== null && employeeAssignment[assignedDayHoursKey] !== undefined)
-                ? (employeeAssignment[assignedDayHoursKey] as number)
-                : (employeeAssignment && employeeAssignment.assigned_daily_hours !== null && employeeAssignment.assigned_daily_hours !== undefined)
-                  ? employeeAssignment.assigned_daily_hours
-                  : (order.total_estimated_hours || 0);
+              dailyHours = assignedDailyHours !== null && assignedDailyHours !== undefined ? assignedDailyHours : (order.total_estimated_hours || 0); // Use assigned or total estimated
               assignmentTitle = `${order.title} (Einmalig)`;
             }
           }
