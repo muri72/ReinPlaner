@@ -5,7 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button"; // Corrected import syntax
+import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { PlusCircle, X } from "lucide-react";
@@ -32,7 +32,8 @@ const availableServices = [
 // Helper function for number preprocessing
 const preprocessNumber = (val: unknown) => (val === "" || isNaN(Number(val)) ? null : Number(val));
 
-const dayNames = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+// Definieren von dayNames als const-Array
+const dayNames = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const;
 const germanDayNames: { [key: string]: string } = {
   monday: 'Mo',
   tuesday: 'Di',
@@ -411,7 +412,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
   };
 
   return (
-    <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 w-full max-w-md" suppressHydrationWarning>
+    <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 w-full max-w-md">
       {/* Grundlegende Objektinformationen */}
       <div>
         <Label htmlFor="title">Titel des Auftrags</Label>
@@ -491,6 +492,26 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
             <p className="text-red-500 text-sm mt-1">{form.formState.errors.customerContactId.message}</p>
           )}
         </div>
+        <CustomerContactCreateDialog customerId={selectedCustomerId} onContactCreated={handleCustomerContactCreated} disabled={!selectedCustomerId} />
+      </div>
+      <div className="flex items-end gap-2">
+        <div className="flex-grow">
+          <Label htmlFor="objectId">Objekt</Label>
+          <Select onValueChange={(value: string) => form.setValue("objectId", value)} value={form.watch("objectId") || "unassigned"} disabled={!form.watch("customerId")}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Objekt auswählen" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="unassigned">Kein Objekt zugewiesen</SelectItem>
+              {filteredObjects.map(obj => (
+                <SelectItem key={obj.id} value={obj.id}>{obj.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {form.formState.errors.objectId && (
+            <p className="text-red-500 text-sm mt-1">{form.formState.errors.objectId.message}</p>
+          )}
+        </div>
         <Dialog open={isNewObjectDialogOpen} onOpenChange={setIsNewObjectDialogOpen}>
           <DialogTrigger asChild>
             <Button
@@ -554,7 +575,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
                         type="button"
                         variant="ghost"
                         size="icon"
-                        onClick={() => handleEmployeeAssignmentChange(employee.id, false)}
+                        onClick={() => removeEmployee(assignedIndex)}
                         className="text-destructive hover:text-destructive/80"
                       >
                         <X className="h-4 w-4" />
