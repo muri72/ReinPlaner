@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { PlusCircle, X, Clock } from "lucide-react";
+import { PlusCircle, X, Clock, Copy } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
@@ -21,6 +21,7 @@ import { handleActionResponse } from "@/lib/toast-utils";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn, calculateEndTime, calculateStartTime } from "@/lib/utils";
 import { MultiSelectEmployees } from "@/components/multi-select-employees";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 const availableServices = [
   "Unterhaltsreinigung",
@@ -384,6 +385,27 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     form.setValue(startTimeFieldName, newStartTime, { shouldValidate: true });
   }, [form]);
 
+  const handleCopyDay = (employeeIndex: number, sourceDay: typeof dayNames[number]) => {
+    const sourceHours = form.getValues(`assignedEmployees.${employeeIndex}.assigned_${sourceDay}_hours`);
+    const sourceStartTime = form.getValues(`assignedEmployees.${employeeIndex}.assigned_${sourceDay}_start_time`);
+    const sourceEndTime = form.getValues(`assignedEmployees.${employeeIndex}.assigned_${sourceDay}_end_time`);
+
+    if (sourceHours === null || sourceHours === 0) {
+      toast.info("Keine Stunden zum Kopieren vorhanden.");
+      return;
+    }
+
+    dayNames.forEach(targetDay => {
+      if (targetDay !== sourceDay) {
+        form.setValue(`assignedEmployees.${employeeIndex}.assigned_${targetDay}_hours`, sourceHours, { shouldValidate: true });
+        form.setValue(`assignedEmployees.${employeeIndex}.assigned_${targetDay}_start_time`, sourceStartTime, { shouldValidate: true });
+        form.setValue(`assignedEmployees.${employeeIndex}.assigned_${targetDay}_end_time`, sourceEndTime, { shouldValidate: true });
+      }
+    });
+
+    toast.success(`Zeiten von ${germanDayNames[sourceDay]} wurden für die Woche übernommen.`);
+  };
+
   const handleFormSubmit: SubmitHandler<OrderFormValues> = async (data) => {
     // Validate that assigned hours match object hours for each day
     if (data.objectId && data.assignedEmployees && data.assignedEmployees.length > 0) {
@@ -720,9 +742,25 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
                       )}>
                         <h5 className="font-medium text-sm flex items-center justify-between">
                           {germanDayNames[day]}
-                          <span className="text-xs text-muted-foreground">
-                            {sumAssignedForDay.toFixed(1)}/{objectDailyHours.toFixed(1)}h
-                          </span>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-5 w-5 text-muted-foreground hover:text-primary"
+                                  onClick={() => handleCopyDay(assignedIndex, day)}
+                                  disabled={!watchedAssignedEmployees?.[assignedIndex]?.[`assigned_${day}_hours`]}
+                                >
+                                  <Copy className="h-3 w-3" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Zeiten für alle anderen Tage übernehmen</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
                         </h5>
                         
                         {/* 1. Arbeitsstunden (oben) */}
