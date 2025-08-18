@@ -488,60 +488,97 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
   };
 
   const handleEmployeeAssignmentChange = (employeeId: string, isChecked: boolean) => {
+    const currentAssignedEmployees = form.getValues("assignedEmployees") || [];
+    const currentObjectId = form.getValues("objectId") ?? null;
+    const selectedObject = objects.find(obj => obj.id === currentObjectId);
+
     if (isChecked) {
-      const currentAssignedCount = (selectedAssignedEmployees?.length || 0) + 1;
-      const selectedObject = objects.find(obj => obj.id === selectedObjectId);
-      
       const newEmployeeAssignment: AssignedEmployee = {
         employeeId: employeeId,
-        assigned_monday_hours: null,
-        assigned_tuesday_hours: null,
-        assigned_wednesday_hours: null,
-        assigned_thursday_hours: null,
-        assigned_friday_hours: null,
-        assigned_saturday_hours: null,
+        assigned_monday_hours: null, assigned_tuesday_hours: null, assigned_wednesday_hours: null,
+        assigned_thursday_hours: null, assigned_friday_hours: null, assigned_saturday_hours: null,
         assigned_sunday_hours: null,
-        assigned_monday_start_time: null,
-        assigned_monday_end_time: null,
-        assigned_tuesday_start_time: null,
-        assigned_tuesday_end_time: null,
-        assigned_wednesday_start_time: null,
-        assigned_wednesday_end_time: null,
-        assigned_thursday_start_time: null,
-        assigned_thursday_end_time: null,
-        assigned_friday_start_time: null,
-        assigned_friday_end_time: null,
-        assigned_saturday_start_time: null,
-        assigned_saturday_end_time: null,
-        assigned_sunday_start_time: null,
-        assigned_sunday_end_time: null,
+        assigned_monday_start_time: null, assigned_monday_end_time: null,
+        assigned_tuesday_start_time: null, assigned_tuesday_end_time: null,
+        assigned_wednesday_start_time: null, assigned_wednesday_end_time: null,
+        assigned_thursday_start_time: null, assigned_thursday_end_time: null,
+        assigned_friday_start_time: null, assigned_friday_end_time: null,
+        assigned_saturday_start_time: null, assigned_saturday_end_time: null,
+        assigned_sunday_start_time: null, assigned_sunday_end_time: null,
       };
 
+      const updatedAssignedEmployees = [...currentAssignedEmployees, newEmployeeAssignment];
+      const numAssignedEmployees = updatedAssignedEmployees.length;
+
       if (selectedObject) {
-        if (currentAssignedCount === 1) {
-          // If this is the first employee, assign object hours and times 1:1
-          dayNames.forEach(day => {
-            newEmployeeAssignment[`assigned_${day}_hours`] = selectedObject[`${day}_hours` as keyof typeof selectedObject] as number | null;
-            newEmployeeAssignment[`assigned_${day}_start_time`] = selectedObject[`${day}_start_time` as keyof typeof selectedObject] as string | null;
-            newEmployeeAssignment[`assigned_${day}_end_time`] = selectedObject[`${day}_end_time` as keyof typeof selectedObject] as string | null;
-          });
-        } else {
-          // If adding to multiple, distribute existing object hours and clear times
-          dayNames.forEach(day => {
-            const objectDailyHours = selectedObject[`${day}_hours` as keyof typeof selectedObject] as number | null;
-            if (objectDailyHours !== null) {
-              newEmployeeAssignment[`assigned_${day}_hours`] = parseFloat((objectDailyHours / currentAssignedCount).toFixed(2));
+        dayNames.forEach(day => {
+          const objectDailyHours = selectedObject[`${day}_hours` as keyof typeof selectedObject] as number | null;
+          const objectStartTime = selectedObject[`${day}_start_time` as keyof typeof selectedObject] as string | null;
+          const objectEndTime = selectedObject[`${day}_end_time` as keyof typeof selectedObject] as string | null;
+
+          if (objectDailyHours !== null) {
+            if (numAssignedEmployees === 1) {
+              newEmployeeAssignment[`assigned_${day}_hours`] = objectDailyHours;
+              newEmployeeAssignment[`assigned_${day}_start_time`] = objectStartTime;
+              newEmployeeAssignment[`assigned_${day}_end_time`] = objectEndTime;
+            } else {
+              newEmployeeAssignment[`assigned_${day}_hours`] = parseFloat((objectDailyHours / numAssignedEmployees).toFixed(2));
+              newEmployeeAssignment[`assigned_${day}_start_time`] = null; // Clear times for multiple assignments
+              newEmployeeAssignment[`assigned_${day}_end_time`] = null; // Clear times for multiple assignments
             }
-            newEmployeeAssignment[`assigned_${day}_start_time`] = null; // Clear times for multiple assignments
-            newEmployeeAssignment[`assigned_${day}_end_time`] = null; // Clear times for multiple assignments
-          });
-        }
+          }
+        });
       }
       appendEmployee(newEmployeeAssignment);
+
+      // Re-distribute hours for all existing employees if adding a new one (and >1 total)
+      if (numAssignedEmployees > 1 && selectedObject) {
+        const redistributedHours = (day: string) => {
+          const objectDailyHours = selectedObject[`${day}_hours` as keyof typeof selectedObject] as number | null;
+          return objectDailyHours !== null ? parseFloat((objectDailyHours / numAssignedEmployees).toFixed(2)) : null;
+        };
+
+        currentAssignedEmployees.forEach((emp, idx) => {
+          const currentField = assignedEmployeeFields.find(f => f.employeeId === emp.employeeId);
+          if (currentField) {
+            const updatedEmp: AssignedEmployee = { ...currentField };
+            dayNames.forEach(day => {
+              updatedEmp[`assigned_${day}_hours`] = redistributedHours(day);
+              updatedEmp[`assigned_${day}_start_time`] = null;
+              updatedEmp[`assigned_${day}_end_time`] = null;
+            });
+            updateEmployeeField(assignedEmployeeFields.findIndex(f => f.employeeId === emp.employeeId), updatedEmp);
+          }
+        });
+      }
+
     } else {
-      const index = assignedEmployeeFields.findIndex(field => field.employeeId === employeeId);
-      if (index > -1) {
-        removeEmployee(index);
+      const indexToRemove = assignedEmployeeFields.findIndex(field => field.employeeId === employeeId);
+      if (indexToRemove > -1) {
+        removeEmployee(indexToRemove);
+        const remainingEmployees = currentAssignedEmployees.filter(emp => emp.employeeId !== employeeId);
+        const numRemainingEmployees = remainingEmployees.length;
+
+        // Re-distribute hours for remaining employees
+        if (numRemainingEmployees > 0 && selectedObject) {
+          const redistributedHours = (day: string) => {
+            const objectDailyHours = selectedObject[`${day}_hours` as keyof typeof selectedObject] as number | null;
+            return objectDailyHours !== null ? parseFloat((objectDailyHours / numRemainingEmployees).toFixed(2)) : null;
+          };
+
+          remainingEmployees.forEach((emp, idx) => {
+            const currentField = assignedEmployeeFields.find(f => f.employeeId === emp.employeeId);
+            if (currentField) {
+              const updatedEmp: AssignedEmployee = { ...currentField };
+              dayNames.forEach(day => {
+                updatedEmp[`assigned_${day}_hours`] = redistributedHours(day);
+                updatedEmp[`assigned_${day}_start_time`] = null;
+                updatedEmp[`assigned_${day}_end_time`] = null;
+              });
+              updateEmployeeField(assignedEmployeeFields.findIndex(f => f.employeeId === emp.employeeId), updatedEmp);
+            }
+          });
+        }
       }
     }
   };
@@ -939,7 +976,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
           <SelectContent>
             <SelectItem value="pending">Ausstehend</SelectItem>
             <SelectItem value="approved">Genehmigt</SelectItem>
-            <SelectItem value="rejected">Abgelehnten</SelectItem>
+            <SelectItem value="rejected">Abgelehnt</SelectItem>
           </SelectContent>
         </Select>
         {form.formState.errors.requestStatus && (
