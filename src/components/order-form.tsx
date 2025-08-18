@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { PlusCircle, X } from "lucide-react";
+import { PlusCircle, X, Clock } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
@@ -163,7 +163,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     mode: "onChange",
   });
 
-  const { fields: assignedEmployeeFields, replace: replaceAssignedEmployees } = useFieldArray({
+  const { fields: assignedEmployeeFields, replace: replaceAssignedEmployees, update: updateAssignedEmployee } = useFieldArray({
     control: form.control,
     name: "assignedEmployees",
   });
@@ -254,7 +254,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     }
   }, [selectedObjectId, objects, form, orderType, form.watch("dueDate")]);
 
-  // NEW: Function to distribute object hours among selected employees
+  // Function to distribute object hours among selected employees while preserving existing start times
   const distributeObjectHours = useCallback((employeeIds: string[]) => {
     const currentObjectId = form.getValues("objectId") ?? null;
     const selectedObject = objects.find(obj => obj.id === currentObjectId);
@@ -265,7 +265,13 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
       return;
     }
 
+    // Get current assignments to preserve existing start times
+    const currentAssignments = form.getValues("assignedEmployees") || [];
+
     const newAssignments = employeeIds.map(employeeId => {
+      // Find existing assignment for this employee to preserve start times
+      const existingAssignment = currentAssignments.find(emp => emp.employeeId === employeeId);
+      
       const newEmpData: AssignedEmployee = {
         employeeId,
         assigned_monday_hours: null, assigned_tuesday_hours: null, assigned_wednesday_hours: null,
@@ -289,16 +295,20 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
         const objectStartTime = selectedObject?.[`${day}_start_time` as keyof typeof selectedObject] as string | null;
 
         if (objectDailyHours != null && objectDailyHours > 0) {
-          // If only one employee, give them all hours
-          // If multiple employees, distribute equally
+          // Calculate hours distribution
           const calculatedHours = numAssignedEmployees === 1 ? objectDailyHours : parseFloat((objectDailyHours / numAssignedEmployees).toFixed(2));
           
           (newEmpData as any)[hoursFieldName] = calculatedHours;
-          (newEmpData as any)[startFieldName] = objectStartTime;
+          
+          // Preserve existing start time if available, otherwise use object start time
+          const preservedStartTime = existingAssignment ? (existingAssignment as any)[startFieldName] : null;
+          const finalStartTime = preservedStartTime || objectStartTime;
+          
+          (newEmpData as any)[startFieldName] = finalStartTime;
           
           // Calculate end time based on start time and hours
-          if (objectStartTime && calculatedHours) {
-            (newEmpData as any)[endFieldName] = calculateEndTime(objectStartTime, calculatedHours);
+          if (finalStartTime && calculatedHours) {
+            (newEmpData as any)[endFieldName] = calculateEndTime(finalStartTime, calculatedHours);
           }
         }
       });
@@ -318,8 +328,6 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     value: string
   ) => {
     const parsedHours = value === "" ? null : Number(value);
-    const currentFields = [...assignedEmployeeFields];
-    const currentEmployee = currentFields[employeeIndex];
     
     // Validate that total hours don't exceed object hours
     if (parsedHours != null) {
@@ -327,7 +335,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
       const objectDailyHours = selectedObject?.[`${day}_hours` as keyof typeof selectedObject] as number | null;
       
       if (objectDailyHours != null) {
-        const otherAssignedHours = currentFields.reduce((sum, emp, idx) => {
+        const otherAssignedHours = assignedEmployeeFields.reduce((sum, emp, idx) => {
           if (idx === employeeIndex) return sum; // Skip current employee
           const empHours = (emp as any)[`assigned_${day}_hours`] as number | null;
           return sum + (empHours || 0);
@@ -340,10 +348,11 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
       }
     }
     
-    // Update hours
+    // Update the specific employee's hours
+    const currentEmployee = { ...assignedEmployeeFields[employeeIndex] };
     (currentEmployee as any)[`assigned_${day}_hours`] = parsedHours;
     
-    // Recalculate end time based on start time (source of truth)
+    // Recalculate end time based on start time
     const startTime = (currentEmployee as any)[`assigned_${day}_start_time`] as string | null;
     if (parsedHours != null && parsedHours > 0 && startTime && timeRegex.test(startTime)) {
       (currentEmployee as any)[`assigned_${day}_end_time`] = calculateEndTime(startTime, parsedHours);
@@ -351,35 +360,30 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
       (currentEmployee as any)[`assigned_${day}_end_time`] = null;
     }
     
-    replaceAssignedEmployees(currentFields);
-  }, [assignedEmployeeFields, replaceAssignedEmployees, objects, selectedObjectId]);
+    updateAssignedEmployee(employeeIndex, currentEmployee);
+  }, [assignedEmployeeFields, updateAssignedEmployee, objects, selectedObjectId]);
 
   const handleAssignedTimeChange = useCallback((
     employeeIndex: number,
     day: typeof dayNames[number],
-    timeType: 'start' | 'end',
+    timeType: 'start',
     value: string
   ) => {
-    const currentFields = [...assignedEmployeeFields];
-    const currentEmployee = currentFields[employeeIndex];
+    const currentEmployee = { ...assignedEmployeeFields[employeeIndex] };
     const hours = (currentEmployee as any)[`assigned_${day}_hours`] as number | null;
 
-    if (timeType === 'start') {
-      (currentEmployee as any)[`assigned_${day}_start_time`] = value || null;
-      // Recalculate end time if hours are set
-      if (hours != null && hours > 0 && value && timeRegex.test(value)) {
-        (currentEmployee as any)[`assigned_${day}_end_time`] = calculateEndTime(value, hours);
-      }
+    // Update start time
+    (currentEmployee as any)[`assigned_${day}_start_time`] = value || null;
+    
+    // Recalculate end time if hours are set
+    if (hours != null && hours > 0 && value && timeRegex.test(value)) {
+      (currentEmployee as any)[`assigned_${day}_end_time`] = calculateEndTime(value, hours);
     } else {
-      (currentEmployee as any)[`assigned_${day}_end_time`] = value || null;
-      // Recalculate start time if hours are set
-      if (hours != null && hours > 0 && value && timeRegex.test(value)) {
-        (currentEmployee as any)[`assigned_${day}_start_time`] = calculateStartTime(value, hours);
-      }
+      (currentEmployee as any)[`assigned_${day}_end_time`] = null;
     }
     
-    replaceAssignedEmployees(currentFields);
-  }, [assignedEmployeeFields, replaceAssignedEmployees]);
+    updateAssignedEmployee(employeeIndex, currentEmployee);
+  }, [assignedEmployeeFields, updateAssignedEmployee]);
 
   const handleFormSubmit: SubmitHandler<OrderFormValues> = async (data) => {
     // Validate that assigned hours match object hours for each day
@@ -480,6 +484,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
         />
         {form.formState.errors.title && <p className="text-red-500 text-sm mt-1">{form.formState.errors.title.message}</p>}
       </div>
+      
       <div>
         <Label htmlFor="description">Beschreibung</Label>
         <Textarea
@@ -490,6 +495,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
         />
         {form.formState.errors.description && <p className="text-red-500 text-sm mt-1">{form.formState.errors.description.message}</p>}
       </div>
+      
       <div>
         <Label htmlFor="serviceType">Reinigungsdienstleistung</Label>
         <Select onValueChange={(value: string) => form.setValue("serviceType", value as OrderFormValues["serviceType"])} value={form.watch("serviceType") || ""}>
@@ -504,6 +510,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
         </Select>
         {form.formState.errors.serviceType && <p className="text-red-500 text-sm mt-1">{form.formState.errors.serviceType.message}</p>}
       </div>
+      
       <div>
         <Label htmlFor="customerId">Kunde</Label>
         <Select onValueChange={(value: string) => {
@@ -524,6 +531,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
         </Select>
         {form.formState.errors.customerId && <p className="text-red-500 text-sm mt-1">{form.formState.errors.customerId.message}</p>}
       </div>
+      
       <div className="flex items-end gap-2">
         <div className="flex-grow">
           <Label htmlFor="customerContactId">Auftraggebende Person (Kundenkontakt, optional)</Label>
@@ -542,6 +550,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
         </div>
         <CustomerContactCreateDialog customerId={selectedCustomerId} onContactCreated={handleCustomerContactCreated} disabled={!selectedCustomerId} />
       </div>
+      
       <div className="flex items-end gap-2">
         <div className="flex-grow">
           <Label htmlFor="objectId">Objekt</Label>
@@ -588,9 +597,59 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
           </DialogContent>
         </Dialog>
       </div>
+
+      {/* MOVED: Order Type before Employee Assignment */}
+      <div>
+        <Label htmlFor="orderType">Auftragstyp</Label>
+        <Select onValueChange={(value: OrderFormValues["orderType"]) => {
+          form.setValue("orderType", value);
+          form.setValue("dueDate", null);
+          form.setValue("recurringStartDate", null);
+          form.setValue("recurringEndDate", null);
+        }} value={form.watch("orderType")}>
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="Auftragstyp auswählen" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="one_time">Einmalig</SelectItem>
+            <SelectItem value="recurring">Wiederkehrend</SelectItem>
+            <SelectItem value="substitution">Vertretung</SelectItem>
+            <SelectItem value="permanent">Permanent</SelectItem>
+          </SelectContent>
+        </Select>
+        {form.formState.errors.orderType && <p className="text-red-500 text-sm mt-1">{form.formState.errors.orderType.message}</p>}
+      </div>
+
+      {orderType === "one_time" && (
+        <DatePicker
+          label="Fälligkeitsdatum (optional)"
+          value={form.watch("dueDate")}
+          onChange={(date: Date | null) => form.setValue("dueDate", date)}
+          error={form.formState.errors.dueDate?.message}
+        />
+      )}
+      
+      {(orderType === "recurring" || orderType === "substitution" || orderType === "permanent") && (
+        <>
+          <DatePicker
+            label="Startdatum"
+            value={form.watch("recurringStartDate")}
+            onChange={(date: Date | null) => form.setValue("recurringStartDate", date)}
+            error={form.formState.errors.recurringStartDate?.message}
+          />
+          {orderType !== "permanent" && (
+            <DatePicker
+              label="Enddatum (optional)"
+              value={form.watch("recurringEndDate")}
+              onChange={(date: Date | null) => form.setValue("recurringEndDate", date)}
+              error={form.formState.errors.recurringEndDate?.message}
+            />
+          )}
+        </>
+      )}
       
       {/* ENHANCED: Employee Assignment Section with Object Hours Distribution */}
-      <div className="space-y-2">
+      <div className="space-y-4">
         <Label>Zugewiesene Mitarbeiter (optional)</Label>
         <MultiSelectEmployees
           employees={allEmployees}
@@ -630,7 +689,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
                   </Button>
                 </div>
                 
-                {/* Daily Hours and Times Grid */}
+                {/* Daily Hours and Times Grid - RESTRUCTURED */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                   {dayNames.map(day => {
                     const hoursFieldName = `assignedEmployees.${assignedIndex}.assigned_${day}_hours` as const;
@@ -655,20 +714,9 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
                           </span>
                         </h5>
                         
+                        {/* 1. Arbeitsstunden (oben) */}
                         <div>
-                          <Label htmlFor={startFieldName} className="text-xs">Startzeit</Label>
-                          <Input
-                            id={startFieldName}
-                            type="time"
-                            className="w-full text-sm"
-                            {...form.register(startFieldName, {
-                                onChange: (e) => handleAssignedTimeChange(assignedIndex, day, 'start', e.target.value)
-                            })}
-                          />
-                        </div>
-                        
-                        <div>
-                          <Label htmlFor={hoursFieldName} className="text-xs">Stunden</Label>
+                          <Label htmlFor={hoursFieldName} className="text-xs">Arbeitsstunden</Label>
                           <Input
                             id={hoursFieldName}
                             type="number"
@@ -686,9 +734,24 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
                           />
                         </div>
                         
+                        {/* 2. Startzeit (mitte) */}
                         <div>
-                          <Label htmlFor={endFieldName} className="text-xs">Endzeit (berechnet)</Label>
+                          <Label htmlFor={startFieldName} className="text-xs">Startzeit</Label>
+                          <Input
+                            id={startFieldName}
+                            type="time"
+                            className="w-full text-sm"
+                            {...form.register(startFieldName, {
+                                onChange: (e) => handleAssignedTimeChange(assignedIndex, day, 'start', e.target.value)
+                            })}
+                          />
+                        </div>
+                        
+                        {/* 3. Endzeit (unten, berechnet) */}
+                        <div>
+                          <Label className="text-xs">Endzeit (berechnet)</Label>
                           <div className="flex items-center h-8 px-2 border rounded-md bg-muted text-xs">
+                            <Clock className="h-3 w-3 mr-1" />
                             {(assignedEmp as any)[`assigned_${day}_end_time`] || '--:--'}
                           </div>
                         </div>
@@ -737,52 +800,6 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
       </div>
       
       <div>
-        <Label htmlFor="orderType">Auftragstyp</Label>
-        <Select onValueChange={(value: OrderFormValues["orderType"]) => {
-          form.setValue("orderType", value);
-          form.setValue("dueDate", null);
-          form.setValue("recurringStartDate", null);
-          form.setValue("recurringEndDate", null);
-        }} value={form.watch("orderType")}>
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Auftragstyp auswählen" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="one_time">Einmalig</SelectItem>
-            <SelectItem value="recurring">Wiederkehrend</SelectItem>
-            <SelectItem value="substitution">Vertretung</SelectItem>
-            <SelectItem value="permanent">Permanent</SelectItem>
-          </SelectContent>
-        </Select>
-        {form.formState.errors.orderType && <p className="text-red-500 text-sm mt-1">{form.formState.errors.orderType.message}</p>}
-      </div>
-      {orderType === "one_time" && (
-        <DatePicker
-          label="Fälligkeitsdatum (optional)"
-          value={form.watch("dueDate")}
-          onChange={(date: Date | null) => form.setValue("dueDate", date)}
-          error={form.formState.errors.dueDate?.message}
-        />
-      )}
-      {(orderType === "recurring" || orderType === "substitution" || orderType === "permanent") && (
-        <>
-          <DatePicker
-            label="Startdatum"
-            value={form.watch("recurringStartDate")}
-            onChange={(date: Date | null) => form.setValue("recurringStartDate", date)}
-            error={form.formState.errors.recurringStartDate?.message}
-          />
-          {orderType !== "permanent" && (
-            <DatePicker
-              label="Enddatum (optional)"
-              value={form.watch("recurringEndDate")}
-              onChange={(date: Date | null) => form.setValue("recurringEndDate", date)}
-              error={form.formState.errors.recurringEndDate?.message}
-            />
-          )}
-        </>
-      )}
-      <div>
         <Label htmlFor="priority">Priorität</Label>
         <Select onValueChange={(value: OrderFormValues["priority"]) => form.setValue("priority", value)} value={form.watch("priority")}>
           <SelectTrigger className="w-full">
@@ -796,6 +813,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
         </Select>
         {form.formState.errors.priority && <p className="text-red-500 text-sm mt-1">{form.formState.errors.priority.message}</p>}
       </div>
+      
       <div>
         <Label htmlFor="totalEstimatedHours">Geschätzte Stunden (automatisch berechnet)</Label>
         <Input
@@ -809,6 +827,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
         />
         {form.formState.errors.totalEstimatedHours && <p className="text-red-500 text-sm mt-1">{form.formState.errors.totalEstimatedHours.message}</p>}
       </div>
+      
       <div>
         <Label htmlFor="notes">Notizen (optional)</Label>
         <Textarea
@@ -819,6 +838,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
         />
         {form.formState.errors.notes && <p className="text-red-500 text-sm mt-1">{form.formState.errors.notes.message}</p>}
       </div>
+      
       <div>
         <Label htmlFor="status">Status</Label>
         <Select onValueChange={(value: OrderFormValues["status"]) => form.setValue("status", value)} value={form.watch("status")}>
@@ -833,6 +853,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
         </Select>
         {form.formState.errors.status && <p className="text-red-500 text-sm mt-1">{form.formState.errors.status.message}</p>}
       </div>
+      
       <div>
         <Label htmlFor="requestStatus">Anfragestatus</Label>
         <Select onValueChange={(value: OrderFormValues["requestStatus"]) => form.setValue("requestStatus", value)} value={form.watch("requestStatus")}>
@@ -847,6 +868,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
         </Select>
         {form.formState.errors.requestStatus && <p className="text-red-500 text-sm mt-1">{form.formState.errors.requestStatus.message}</p>}
       </div>
+      
       <Button type="submit" disabled={form.formState.isSubmitting}>
         {form.formState.isSubmitting ? `${submitButtonText}...` : submitButtonText}
       </Button>
