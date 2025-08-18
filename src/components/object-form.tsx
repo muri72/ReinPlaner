@@ -190,23 +190,35 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
 
   // Effect to calculate total weekly hours
   useEffect(() => {
-    const total = Number( // Explizite Umwandlung zu Number
-      (mondayHours || 0) +
-      (tuesdayHours || 0) +
-      (wednesdayHours || 0) +
-      (thursdayHours || 0) +
-      (fridayHours || 0) +
-      (saturdayHours || 0) +
-      (sundayHours || 0)
-    );
-    // Defensive Prüfung, obwohl 'total' hier immer eine Zahl sein sollte
-    if (typeof total !== 'number' || isNaN(total)) {
-      console.error("Calculated total is not a valid number:", total);
-      form.setValue("totalWeeklyHours", null, { shouldValidate: false });
-      return;
+    const dailyHours = [
+      mondayHours,
+      tuesdayHours,
+      wednesdayHours,
+      thursdayHours,
+      fridayHours,
+      saturdayHours,
+      sundayHours,
+    ];
+
+    let sum = 0;
+    for (const hours of dailyHours) {
+      if (typeof hours === 'number' && !isNaN(hours)) {
+        sum += hours;
+      }
     }
-    form.setValue("totalWeeklyHours", parseFloat(total.toFixed(2)), { shouldValidate: false });
-  }, [mondayHours, tuesdayHours, wednesdayHours, thursdayHours, fridayHours, saturdayHours, sundayHours, form]);
+
+    // Set the raw sum, let the display handle toFixed
+    form.setValue("totalWeeklyHours", sum, { shouldValidate: false });
+  }, [
+    form, // Depend on form itself to get latest values
+    mondayHours, // Explicitly watch all relevant fields
+    tuesdayHours,
+    wednesdayHours,
+    thursdayHours,
+    fridayHours,
+    saturdayHours,
+    sundayHours,
+  ]);
 
 
   // Centralized function to calculate and set times for a specific day
@@ -502,7 +514,7 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
           id="totalWeeklyHours"
           type="number"
           step="0.01"
-          value={form.watch("totalWeeklyHours")?.toFixed(2) || ""}
+          value={typeof form.watch("totalWeeklyHours") === 'number' ? form.watch("totalWeeklyHours")?.toFixed(2) : ""}
           readOnly
           className="bg-muted cursor-not-allowed"
         />
