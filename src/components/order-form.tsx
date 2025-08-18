@@ -258,7 +258,6 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     }
   }, [selectedObjectId, objects, form, orderType, form.watch("dueDate")]);
 
-  // EXACT LOGIC: Employee assignment distribution
   const handleEmployeeSelectionChange = useCallback((selectedIds: string[]) => {
     const currentObjectId = form.getValues("objectId") ?? null;
     const selectedObject = objects.find(obj => obj.id === currentObjectId);
@@ -269,17 +268,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
       return;
     }
 
-    const currentAssignments = form.getValues("assignedEmployees") || [];
-
     const newAssignments = selectedIds.map(employeeId => {
-      const existingAssignment = currentAssignments.find(emp => emp.employeeId === employeeId);
-      
-      // If employee already has an assignment, keep it.
-      if (existingAssignment) {
-        return existingAssignment;
-      }
-
-      // Otherwise, create a new blank assignment with 0 hours but default start times.
       const newEmpData: AssignedEmployee = {
         employeeId,
         assigned_monday_hours: null, assigned_tuesday_hours: null, assigned_wednesday_hours: null,
@@ -295,28 +284,23 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
       };
 
       dayNames.forEach(day => {
+        const objectDailyHours = selectedObject?.[`${day}_hours` as keyof typeof selectedObject] as number | null;
         const objectStartTime = selectedObject?.[`${day}_start_time` as keyof typeof selectedObject] as string | null;
-        (newEmpData as any)[`assigned_${day}_start_time`] = objectStartTime;
+        
+        if (objectDailyHours && numAssignedEmployees > 0) {
+            const hoursPerEmployee = objectDailyHours / numAssignedEmployees;
+            (newEmpData as any)[`assigned_${day}_hours`] = parseFloat(hoursPerEmployee.toFixed(2));
+            (newEmpData as any)[`assigned_${day}_start_time`] = objectStartTime;
+            if (objectStartTime) {
+                (newEmpData as any)[`assigned_${day}_end_time`] = calculateEndTime(objectStartTime, hoursPerEmployee);
+            }
+        } else {
+            (newEmpData as any)[`assigned_${day}_start_time`] = objectStartTime;
+        }
       });
 
       return newEmpData;
     });
-
-    // If there's now only one employee, give them all the hours.
-    if (numAssignedEmployees === 1 && newAssignments.length === 1) {
-      const singleAssignment = newAssignments[0];
-      dayNames.forEach(day => {
-        const objectDailyHours = selectedObject?.[`${day}_hours` as keyof typeof selectedObject] as number | null;
-        const objectStartTime = selectedObject?.[`${day}_start_time` as keyof typeof selectedObject] as string | null;
-        
-        (singleAssignment as any)[`assigned_${day}_hours`] = objectDailyHours;
-        (singleAssignment as any)[`assigned_${day}_start_time`] = objectStartTime;
-        
-        if (objectStartTime && objectDailyHours) {
-          (singleAssignment as any)[`assigned_${day}_end_time`] = calculateEndTime(objectStartTime, objectDailyHours);
-        }
-      });
-    }
 
     replaceAssignedEmployees(newAssignments);
   }, [objects, form, replaceAssignedEmployees]);
@@ -332,13 +316,12 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
 
     let startTime = form.getValues(`assignedEmployees.${employeeIndex}.assigned_${day}_start_time`);
     
-    // **NEW LOGIC**: If start time is empty but we now have hours, populate it.
     if (parsedHours != null && parsedHours > 0 && !startTime) {
       const selectedObject = objects.find(obj => obj.id === selectedObjectId);
       const objectStartTime = selectedObject?.[`${day}_start_time` as keyof typeof selectedObject] as string | null;
       if (objectStartTime) {
         startTime = objectStartTime;
-        form.setValue(`assignedEmployees.${employeeIndex}.assigned_${day}_start_time`, startTime, { shouldValidate: false }); // Set it without re-triggering validation yet
+        form.setValue(`assignedEmployees.${employeeIndex}.assigned_${day}_start_time`, startTime, { shouldValidate: false });
       }
     }
 
