@@ -51,6 +51,21 @@ interface OrderEditDialogProps {
     assigned_friday_hours: number | null;
     assigned_saturday_hours: number | null;
     assigned_sunday_hours: number | null;
+    // New time fields
+    assigned_monday_start_time: string | null;
+    assigned_monday_end_time: string | null;
+    assigned_tuesday_start_time: string | null;
+    assigned_tuesday_end_time: string | null;
+    assigned_wednesday_start_time: string | null;
+    assigned_wednesday_end_time: string | null;
+    assigned_thursday_start_time: string | null;
+    assigned_thursday_end_time: string | null;
+    assigned_friday_start_time: string | null;
+    assigned_friday_end_time: string | null;
+    assigned_saturday_start_time: string | null;
+    assigned_saturday_end_time: string | null;
+    assigned_sunday_start_time: string | null;
+    assigned_sunday_end_time: string | null;
   };
 }
 
@@ -72,7 +87,7 @@ export function OrderEditDialog({ order }: OrderEditDialogProps) {
     return null;
   };
 
-  // Prepare assignedEmployees for the form with new daily hour fields
+  // Prepare assignedEmployees for the form with new daily hour and time fields
   const initialAssignedEmployees = (order.employee_ids || []).map((empId, index) => ({
     employeeId: empId,
     assigned_monday_hours: order.assigned_monday_hours,
@@ -82,6 +97,21 @@ export function OrderEditDialog({ order }: OrderEditDialogProps) {
     assigned_friday_hours: order.assigned_friday_hours,
     assigned_saturday_hours: order.assigned_saturday_hours,
     assigned_sunday_hours: order.assigned_sunday_hours,
+    // New time fields
+    assigned_monday_start_time: order.assigned_monday_start_time,
+    assigned_monday_end_time: order.assigned_monday_end_time,
+    assigned_tuesday_start_time: order.assigned_tuesday_start_time,
+    assigned_tuesday_end_time: order.assigned_tuesday_end_time,
+    assigned_wednesday_start_time: order.assigned_wednesday_start_time,
+    assigned_wednesday_end_time: order.assigned_wednesday_end_time,
+    assigned_thursday_start_time: order.assigned_thursday_start_time,
+    assigned_thursday_end_time: order.assigned_thursday_end_time,
+    assigned_friday_start_time: order.assigned_friday_start_time,
+    assigned_friday_end_time: order.assigned_friday_end_time,
+    assigned_saturday_start_time: order.assigned_saturday_start_time,
+    assigned_saturday_end_time: order.assigned_saturday_end_time,
+    assigned_sunday_start_time: order.assigned_sunday_start_time,
+    assigned_sunday_end_time: order.assigned_sunday_end_time,
   }));
 
   return (

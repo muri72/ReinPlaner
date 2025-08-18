@@ -46,6 +46,21 @@ export interface DisplayOrder {
   assigned_friday_hours: number | null;
   assigned_saturday_hours: number | null;
   assigned_sunday_hours: number | null;
+  // New time fields
+  assigned_monday_start_time: string | null;
+  assigned_monday_end_time: string | null;
+  assigned_tuesday_start_time: string | null;
+  assigned_tuesday_end_time: string | null;
+  assigned_wednesday_start_time: string | null;
+  assigned_wednesday_end_time: string | null;
+  assigned_thursday_start_time: string | null;
+  assigned_thursday_end_time: string | null;
+  assigned_friday_start_time: string | null;
+  assigned_friday_end_time: string | null;
+  assigned_saturday_start_time: string | null;
+  assigned_saturday_end_time: string | null;
+  assigned_sunday_start_time: string | null;
+  assigned_sunday_end_time: string | null;
   customer_contact_id: string | null;
   customer_name: string | null;
   object_name: string | null;
@@ -204,6 +219,13 @@ export default function OrdersPage({
             assigned_monday_hours, assigned_tuesday_hours, assigned_wednesday_hours,
             assigned_thursday_hours, assigned_friday_hours, assigned_saturday_hours,
             assigned_sunday_hours,
+            assigned_monday_start_time, assigned_monday_end_time,
+            assigned_tuesday_start_time, assigned_tuesday_end_time,
+            assigned_wednesday_start_time, assigned_wednesday_end_time,
+            assigned_thursday_start_time, assigned_thursday_end_time,
+            assigned_friday_start_time, assigned_friday_end_time,
+            assigned_saturday_start_time, assigned_saturday_end_time,
+            assigned_sunday_start_time, assigned_sunday_end_time,
             employees ( first_name, last_name ) 
           )
         `, { count: 'exact' })
@@ -255,6 +277,21 @@ export default function OrdersPage({
           assigned_friday_hours: assignedEmployeeData?.assigned_friday_hours || null,
           assigned_saturday_hours: assignedEmployeeData?.assigned_saturday_hours || null,
           assigned_sunday_hours: assignedEmployeeData?.assigned_sunday_hours || null,
+          // New time fields
+          assigned_monday_start_time: assignedEmployeeData?.assigned_monday_start_time || null,
+          assigned_monday_end_time: assignedEmployeeData?.assigned_monday_end_time || null,
+          assigned_tuesday_start_time: assignedEmployeeData?.assigned_tuesday_start_time || null,
+          assigned_tuesday_end_time: assignedEmployeeData?.assigned_tuesday_end_time || null,
+          assigned_wednesday_start_time: assignedEmployeeData?.assigned_wednesday_start_time || null,
+          assigned_wednesday_end_time: assignedEmployeeData?.assigned_wednesday_end_time || null,
+          assigned_thursday_start_time: assignedEmployeeData?.assigned_thursday_start_time || null,
+          assigned_thursday_end_time: assignedEmployeeData?.assigned_thursday_end_time || null,
+          assigned_friday_start_time: assignedEmployeeData?.assigned_friday_start_time || null,
+          assigned_friday_end_time: assignedEmployeeData?.assigned_friday_end_time || null,
+          assigned_saturday_start_time: assignedEmployeeData?.assigned_saturday_start_time || null,
+          assigned_saturday_end_time: assignedEmployeeData?.assigned_saturday_end_time || null,
+          assigned_sunday_start_time: assignedEmployeeData?.assigned_sunday_start_time || null,
+          assigned_sunday_end_time: assignedEmployeeData?.assigned_sunday_end_time || null,
           customer_contact_id: order.customer_contact_id,
           customer_name: customerData?.name || null,
           object_name: objectData?.name || null,
@@ -544,6 +581,34 @@ export default function OrdersPage({
                             {(order.order_type === "recurring" || order.order_type === "substitution") && order.recurring_start_date && <div className="flex items-center text-xs text-muted-foreground mt-1"><CalendarDays className="mr-1 h-3 w-3" /><span>Start: {new Date(order.recurring_start_date).toLocaleDateString()}</span></div>}
                             {(order.order_type === "recurring" || order.order_type === "substitution") && order.recurring_end_date && <div className="flex items-center text-xs text-muted-foreground"><CalendarDays className="mr-1 h-3 w-3" /><span>Ende: {new Date(order.recurring_end_date).toLocaleDateString()}</span></div>}
                             
+                            {/* Display assigned times for each day */}
+                            {Array.from({ length: 7 }).map((_, dayIndex) => {
+                              const dayMap: { [key: number]: { start: keyof DisplayOrder, end: keyof DisplayOrder } } = {
+                                0: { start: 'assigned_sunday_start_time', end: 'assigned_sunday_end_time' },
+                                1: { start: 'assigned_monday_start_time', end: 'assigned_monday_end_time' },
+                                2: { start: 'assigned_tuesday_start_time', end: 'assigned_tuesday_end_time' },
+                                3: { start: 'assigned_wednesday_start_time', end: 'assigned_wednesday_end_time' },
+                                4: { start: 'assigned_thursday_start_time', end: 'assigned_thursday_end_time' },
+                                5: { start: 'assigned_friday_start_time', end: 'assigned_friday_end_time' },
+                                6: { start: 'assigned_saturday_start_time', end: 'assigned_saturday_end_time' },
+                              };
+                              const startKey = dayMap[dayIndex]?.start;
+                              const endKey = dayMap[dayIndex]?.end;
+
+                              const startTime = startKey ? (order[startKey] as string | null) : null;
+                              const endTime = endKey ? (order[endKey] as string | null) : null;
+
+                              if (startTime && endTime) {
+                                return (
+                                  <div key={dayIndex} className="flex items-center text-xs text-muted-foreground">
+                                    <Clock className="mr-1 h-3 w-3" />
+                                    <span>{`${new Date(0,0,0,0,0,0,0).toLocaleString('de-DE', { weekday: 'short' })}: ${startTime} - ${endTime}`}</span>
+                                  </div>
+                                );
+                              }
+                              return null;
+                            })}
+
                             {feedback && (
                               <div className="flex items-center text-xs text-warning mt-2">
                                 <StarIcon className="mr-1 h-3 w-3 fill-current" />

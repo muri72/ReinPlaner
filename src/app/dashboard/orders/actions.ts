@@ -72,6 +72,21 @@ export async function createOrder(data: OrderFormValues) {
       assigned_friday_hours: assignment.assigned_friday_hours,
       assigned_saturday_hours: assignment.assigned_saturday_hours,
       assigned_sunday_hours: assignment.assigned_sunday_hours,
+      // New time fields
+      assigned_monday_start_time: assignment.assigned_monday_start_time,
+      assigned_monday_end_time: assignment.assigned_monday_end_time,
+      assigned_tuesday_start_time: assignment.assigned_tuesday_start_time,
+      assigned_tuesday_end_time: assignment.assigned_tuesday_end_time,
+      assigned_wednesday_start_time: assignment.assigned_wednesday_start_time,
+      assigned_wednesday_end_time: assignment.assigned_wednesday_end_time,
+      assigned_thursday_start_time: assignment.assigned_thursday_start_time,
+      assigned_thursday_end_time: assignment.assigned_thursday_end_time,
+      assigned_friday_start_time: assignment.assigned_friday_start_time,
+      assigned_friday_end_time: assignment.assigned_friday_end_time,
+      assigned_saturday_start_time: assignment.assigned_saturday_start_time,
+      assigned_saturday_end_time: assignment.assigned_saturday_end_time,
+      assigned_sunday_start_time: assignment.assigned_sunday_start_time,
+      assigned_sunday_end_time: assignment.assigned_sunday_end_time,
     }));
 
     const { error: assignError } = await supabase
@@ -179,6 +194,21 @@ export async function updateOrder(orderId: string, data: OrderFormValues) {
       assigned_friday_hours: assignment.assigned_friday_hours,
       assigned_saturday_hours: assignment.assigned_saturday_hours,
       assigned_sunday_hours: assignment.assigned_sunday_hours,
+      // New time fields
+      assigned_monday_start_time: assignment.assigned_monday_start_time,
+      assigned_monday_end_time: assignment.assigned_monday_end_time,
+      assigned_tuesday_start_time: assignment.assigned_tuesday_start_time,
+      assigned_tuesday_end_time: assignment.assigned_tuesday_end_time,
+      assigned_wednesday_start_time: assignment.assigned_wednesday_start_time,
+      assigned_wednesday_end_time: assignment.assigned_wednesday_end_time,
+      assigned_thursday_start_time: assignment.assigned_thursday_start_time,
+      assigned_thursday_end_time: assignment.assigned_thursday_end_time,
+      assigned_friday_start_time: assignment.assigned_friday_start_time,
+      assigned_friday_end_time: assignment.assigned_friday_end_time,
+      assigned_saturday_start_time: assignment.assigned_saturday_start_time,
+      assigned_saturday_end_time: assignment.assigned_saturday_end_time,
+      assigned_sunday_start_time: assignment.assigned_sunday_start_time,
+      assigned_sunday_end_time: assignment.assigned_sunday_end_time,
     }));
 
     const { error: insertAssignError } = await supabase
@@ -242,6 +272,23 @@ export async function processOrderRequest(formData: FormData): Promise<{ success
   const assigned_saturday_hours = formData.get('assigned_saturday_hours') ? Number(formData.get('assigned_saturday_hours')) : null;
   const assigned_sunday_hours = formData.get('assigned_sunday_hours') ? Number(formData.get('assigned_sunday_hours')) : null;
 
+  // Retrieve assigned daily start/end times from form data
+  const assigned_monday_start_time = formData.get('assigned_monday_start_time') as string || null;
+  const assigned_monday_end_time = formData.get('assigned_monday_end_time') as string || null;
+  const assigned_tuesday_start_time = formData.get('assigned_tuesday_start_time') as string || null;
+  const assigned_tuesday_end_time = formData.get('assigned_tuesday_end_time') as string || null;
+  const assigned_wednesday_start_time = formData.get('assigned_wednesday_start_time') as string || null;
+  const assigned_wednesday_end_time = formData.get('assigned_wednesday_end_time') as string || null;
+  const assigned_thursday_start_time = formData.get('assigned_thursday_start_time') as string || null;
+  const assigned_thursday_end_time = formData.get('assigned_thursday_end_time') as string || null;
+  const assigned_friday_start_time = formData.get('assigned_friday_start_time') as string || null;
+  const assigned_friday_end_time = formData.get('assigned_friday_end_time') as string || null;
+  const assigned_saturday_start_time = formData.get('assigned_saturday_start_time') as string || null;
+  const assigned_saturday_end_time = formData.get('assigned_saturday_end_time') as string || null;
+  const assigned_sunday_start_time = formData.get('assigned_sunday_start_time') as string || null;
+  const assigned_sunday_end_time = formData.get('assigned_sunday_end_time') as string || null;
+
+
   if (!orderId || !decision) {
     return { success: false, message: "Ungültige Anfrage." };
   }
@@ -277,7 +324,7 @@ export async function processOrderRequest(formData: FormData): Promise<{ success
       return { success: false, message: `Fehler bei der Zuweisung: ${deleteAssignmentError.message}` };
     }
 
-    // Then, insert the new assignment with daily hours
+    // Then, insert the new assignment with daily hours and times
     const { error: insertAssignmentError } = await supabase
       .from('order_employee_assignments')
       .insert({
@@ -290,6 +337,20 @@ export async function processOrderRequest(formData: FormData): Promise<{ success
         assigned_friday_hours,
         assigned_saturday_hours,
         assigned_sunday_hours,
+        assigned_monday_start_time,
+        assigned_monday_end_time,
+        assigned_tuesday_start_time,
+        assigned_tuesday_end_time,
+        assigned_wednesday_start_time,
+        assigned_wednesday_end_time,
+        assigned_thursday_start_time,
+        assigned_thursday_end_time,
+        assigned_friday_start_time,
+        assigned_friday_end_time,
+        assigned_saturday_start_time,
+        assigned_saturday_end_time,
+        assigned_sunday_start_time,
+        assigned_sunday_end_time,
       });
 
     if (insertAssignmentError) {

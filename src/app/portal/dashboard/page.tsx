@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
-import { Briefcase, CalendarDays, DollarSign, MessageSquare, Star, FileText, CheckCircle2, AlertCircle } from "lucide-react";
+import { Briefcase, CalendarDays, DollarSign, MessageSquare, Star, FileText, CheckCircle2, AlertCircle, Clock } from "lucide-react";
 import { TodaysOrdersOverview } from "@/components/todays-orders-overview";
 import { GiveOrderFeedbackDialog } from "@/components/give-order-feedback-dialog";
 import { GiveGeneralFeedbackDialog } from "@/components/give-general-feedback-dialog";
@@ -11,6 +11,53 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { CustomerOrderRequestDialog } from "@/components/customer-order-request-dialog";
+
+// Define an interface for the raw data returned by Supabase select query for employee dashboard
+interface RawEmployeeOrderResponse {
+  id: string;
+  title: string;
+  description: string | null;
+  status: string;
+  due_date: string | null;
+  order_type: string;
+  recurring_start_date: string | null;
+  recurring_end_date: string | null;
+  priority: string;
+  total_estimated_hours: number | null;
+  notes: string | null;
+  service_type: string | null;
+  request_status: string;
+  objects: { name: string | null; address: string | null; notes: string | null; time_of_day: string | null; access_method: string | null; pin: string | null; is_alarm_secured: boolean | null; alarm_password: string | null; security_code_word: string | null; total_weekly_hours: number | null; }[] | null;
+  customers: { name: string | null; }[] | null;
+  customer_contacts: { first_name: string | null; last_name: string | null; phone: string | null; }[] | null;
+  order_employee_assignments: { 
+    employee_id: string; 
+    assigned_daily_hours: number | null;
+    assigned_monday_hours: number | null;
+    assigned_tuesday_hours: number | null;
+    assigned_wednesday_hours: number | null;
+    assigned_thursday_hours: number | null;
+    assigned_friday_hours: number | null;
+    assigned_saturday_hours: number | null;
+    assigned_sunday_hours: number | null;
+    // New time fields
+    assigned_monday_start_time: string | null;
+    assigned_monday_end_time: string | null;
+    assigned_tuesday_start_time: string | null;
+    assigned_tuesday_end_time: string | null;
+    assigned_wednesday_start_time: string | null;
+    assigned_wednesday_end_time: string | null;
+    assigned_thursday_start_time: string | null;
+    assigned_thursday_end_time: string | null;
+    assigned_friday_start_time: string | null;
+    assigned_friday_end_time: string | null;
+    assigned_saturday_start_time: string | null;
+    assigned_saturday_end_time: string | null;
+    assigned_sunday_start_time: string | null;
+    assigned_sunday_end_time: string | null;
+    employees: { first_name: string | null; last_name: string | null }[] | null; // Correctly typed as array
+  }[] | null;
+}
 
 export default async function CustomerDashboardPage() {
   const supabase = await createClient();
@@ -72,6 +119,13 @@ export default async function CustomerDashboardPage() {
           assigned_monday_hours, assigned_tuesday_hours, assigned_wednesday_hours,
           assigned_thursday_hours, assigned_friday_hours, assigned_saturday_hours,
           assigned_sunday_hours,
+          assigned_monday_start_time, assigned_monday_end_time,
+          assigned_tuesday_start_time, assigned_tuesday_end_time,
+          assigned_wednesday_start_time, assigned_wednesday_end_time,
+          assigned_thursday_start_time, assigned_thursday_end_time,
+          assigned_friday_start_time, assigned_friday_end_time,
+          assigned_saturday_start_time, assigned_saturday_end_time,
+          assigned_sunday_start_time, assigned_sunday_end_time,
           employees ( first_name, last_name ) 
         )
       `)
@@ -160,6 +214,33 @@ export default async function CustomerDashboardPage() {
     }
   };
 
+  const getAssignedTimeForToday = (order: typeof nextOrder) => {
+    if (!order || !order.order_employee_assignments || order.order_employee_assignments.length === 0) return 'N/A';
+
+    const todayDayOfWeek = today.getDay(); // 0=So, 1=Mo, ..., 6=Sa
+    const assignedData = order.order_employee_assignments[0]; // Assuming one assignment for simplicity
+
+    const dayMap: { [key: number]: { start: string, end: string } } = {
+      0: { start: 'assigned_sunday_start_time', end: 'assigned_sunday_end_time' },
+      1: { start: 'assigned_monday_start_time', end: 'assigned_monday_end_time' },
+      2: { start: 'assigned_tuesday_start_time', end: 'assigned_tuesday_end_time' },
+      3: { start: 'assigned_wednesday_start_time', end: 'assigned_wednesday_end_time' },
+      4: { start: 'assigned_thursday_start_time', end: 'assigned_thursday_end_time' },
+      5: { start: 'assigned_friday_start_time', end: 'assigned_friday_end_time' },
+      6: { start: 'assigned_saturday_start_time', end: 'assigned_saturday_end_time' },
+    };
+    const startKey = dayMap[todayDayOfWeek]?.start;
+    const endKey = dayMap[todayDayOfWeek]?.end;
+
+    const startTime = startKey ? (assignedData as any)[startKey] : null;
+    const endTime = endKey ? (assignedData as any)[endKey] : null;
+
+    if (startTime && endTime) {
+      return `${startTime} - ${endTime}`;
+    }
+    return 'N/A';
+  };
+
   return (
     <div className="p-4 md:p-8 space-y-8">
       <h1 className="text-2xl md:text-3xl font-bold">Willkommen, {customerName}!</h1>
@@ -188,6 +269,10 @@ export default async function CustomerDashboardPage() {
                     {nextOrder.recurring_end_date && ` - ${format(new Date(nextOrder.recurring_end_date), 'dd.MM.yyyy', { locale: de })}`}
                   </span>
                 )}
+              </div>
+              <div className="flex items-center text-sm text-muted-foreground">
+                <Clock className="mr-2 h-4 w-4" />
+                <span>Zugewiesene Zeit: {getAssignedTimeForToday(nextOrder)}</span>
               </div>
               <div className="flex items-center text-sm text-muted-foreground">
                 <Briefcase className="mr-2 h-4 w-4" />

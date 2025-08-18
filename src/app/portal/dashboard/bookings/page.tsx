@@ -22,6 +22,28 @@ interface DisplayOrder {
   employee_first_names: string[] | null; // Updated to array of first names
   employee_last_names: string[] | null; // Updated to array of last names
   assigned_daily_hours: (number | null)[] | null; // Hinzugefügt
+  assigned_monday_hours: number | null;
+  assigned_tuesday_hours: number | null;
+  assigned_wednesday_hours: number | null;
+  assigned_thursday_hours: number | null;
+  assigned_friday_hours: number | null;
+  assigned_saturday_hours: number | null;
+  assigned_sunday_hours: number | null;
+  // New time fields
+  assigned_monday_start_time: string | null;
+  assigned_monday_end_time: string | null;
+  assigned_tuesday_start_time: string | null;
+  assigned_tuesday_end_time: string | null;
+  assigned_wednesday_start_time: string | null;
+  assigned_wednesday_end_time: string | null;
+  assigned_thursday_start_time: string | null;
+  assigned_thursday_end_time: string | null;
+  assigned_friday_start_time: string | null;
+  assigned_friday_end_time: string | null;
+  assigned_saturday_start_time: string | null;
+  assigned_saturday_end_time: string | null;
+  assigned_sunday_start_time: string | null;
+  assigned_sunday_end_time: string | null;
   customer_contact_id: string | null;
   customer_name: string | null;
   object_name: string | null;
@@ -60,7 +82,32 @@ interface RawOrderResponse {
   objects: { name: string }[] | null;
   customer_contacts: { first_name: string | null; last_name: string | null }[] | null;
   order_feedback: { id: string }[] | null;
-  order_employee_assignments: { employee_id: string; assigned_daily_hours: number | null; employees: { first_name: string | null; last_name: string | null }[] | null }[] | null;
+  order_employee_assignments: { 
+    employee_id: string; 
+    assigned_daily_hours: number | null; 
+    assigned_monday_hours: number | null;
+    assigned_tuesday_hours: number | null;
+    assigned_wednesday_hours: number | null;
+    assigned_thursday_hours: number | null;
+    assigned_friday_hours: number | null;
+    assigned_saturday_hours: number | null;
+    assigned_sunday_hours: number | null;
+    assigned_monday_start_time: string | null;
+    assigned_monday_end_time: string | null;
+    assigned_tuesday_start_time: string | null;
+    assigned_tuesday_end_time: string | null;
+    assigned_wednesday_start_time: string | null;
+    assigned_wednesday_end_time: string | null;
+    assigned_thursday_start_time: string | null;
+    assigned_thursday_end_time: string | null;
+    assigned_friday_start_time: string | null;
+    assigned_friday_end_time: string | null;
+    assigned_saturday_start_time: string | null;
+    assigned_saturday_end_time: string | null;
+    assigned_sunday_start_time: string | null;
+    assigned_sunday_end_time: string | null;
+    employees: { first_name: string | null; last_name: string | null }[] | null 
+  }[] | null;
 }
 
 export default async function CustomerBookingsPage() {
@@ -118,7 +165,21 @@ export default async function CustomerBookingsPage() {
         customers ( name ),
         customer_contacts ( first_name, last_name ),
         order_feedback ( id ),
-        order_employee_assignments ( employee_id, assigned_daily_hours, employees ( first_name, last_name ) )
+        order_employee_assignments ( 
+          employee_id, 
+          assigned_daily_hours,
+          assigned_monday_hours, assigned_tuesday_hours, assigned_wednesday_hours,
+          assigned_thursday_hours, assigned_friday_hours, assigned_saturday_hours,
+          assigned_sunday_hours,
+          assigned_monday_start_time, assigned_monday_end_time,
+          assigned_tuesday_start_time, assigned_tuesday_end_time,
+          assigned_wednesday_start_time, assigned_wednesday_end_time,
+          assigned_thursday_start_time, assigned_thursday_end_time,
+          assigned_friday_start_time, assigned_friday_end_time,
+          assigned_saturday_start_time, assigned_saturday_end_time,
+          assigned_sunday_start_time, assigned_sunday_end_time,
+          employees ( first_name, last_name ) 
+        )
       `)
       .eq('customer_id', customerId)
       .order('created_at', { ascending: false });
@@ -138,6 +199,28 @@ export default async function CustomerBookingsPage() {
         employee_first_names: order.order_employee_assignments?.map((a: any) => a.employees?.[0]?.first_name || '') || null,
         employee_last_names: order.order_employee_assignments?.map((a: any) => a.employees?.[0]?.last_name || '') || null,
         assigned_daily_hours: order.order_employee_assignments?.map((a: any) => a.assigned_daily_hours) || null,
+        assigned_monday_hours: order.order_employee_assignments?.[0]?.assigned_monday_hours || null,
+        assigned_tuesday_hours: order.order_employee_assignments?.[0]?.assigned_tuesday_hours || null,
+        assigned_wednesday_hours: order.order_employee_assignments?.[0]?.assigned_wednesday_hours || null,
+        assigned_thursday_hours: order.order_employee_assignments?.[0]?.assigned_thursday_hours || null,
+        assigned_friday_hours: order.order_employee_assignments?.[0]?.assigned_friday_hours || null,
+        assigned_saturday_hours: order.order_employee_assignments?.[0]?.assigned_saturday_hours || null,
+        assigned_sunday_hours: order.order_employee_assignments?.[0]?.assigned_sunday_hours || null,
+        // New time fields
+        assigned_monday_start_time: order.order_employee_assignments?.[0]?.assigned_monday_start_time || null,
+        assigned_monday_end_time: order.order_employee_assignments?.[0]?.assigned_monday_end_time || null,
+        assigned_tuesday_start_time: order.order_employee_assignments?.[0]?.assigned_tuesday_start_time || null,
+        assigned_tuesday_end_time: order.order_employee_assignments?.[0]?.assigned_tuesday_end_time || null,
+        assigned_wednesday_start_time: order.order_employee_assignments?.[0]?.assigned_wednesday_start_time || null,
+        assigned_wednesday_end_time: order.order_employee_assignments?.[0]?.assigned_wednesday_end_time || null,
+        assigned_thursday_start_time: order.order_employee_assignments?.[0]?.assigned_thursday_start_time || null,
+        assigned_thursday_end_time: order.order_employee_assignments?.[0]?.assigned_thursday_end_time || null,
+        assigned_friday_start_time: order.order_employee_assignments?.[0]?.assigned_friday_start_time || null,
+        assigned_friday_end_time: order.order_employee_assignments?.[0]?.assigned_friday_end_time || null,
+        assigned_saturday_start_time: order.order_employee_assignments?.[0]?.assigned_saturday_start_time || null,
+        assigned_saturday_end_time: order.order_employee_assignments?.[0]?.assigned_saturday_end_time || null,
+        assigned_sunday_start_time: order.order_employee_assignments?.[0]?.assigned_sunday_start_time || null,
+        assigned_sunday_end_time: order.order_employee_assignments?.[0]?.assigned_sunday_end_time || null,
         customer_contact_id: order.customer_contact_id,
         customer_name: order.customers?.[0]?.name || null,
         object_name: order.objects?.[0]?.name || null,
@@ -172,6 +255,28 @@ export default async function CustomerBookingsPage() {
       case 'rejected': return 'destructive';
       default: return 'outline';
     }
+  };
+
+  const getAssignedTimeForDay = (order: DisplayOrder, dayIndex: number) => {
+    const dayMap: { [key: number]: { start: keyof DisplayOrder, end: keyof DisplayOrder } } = {
+      0: { start: 'assigned_sunday_start_time', end: 'assigned_sunday_end_time' },
+      1: { start: 'assigned_monday_start_time', end: 'assigned_monday_end_time' },
+      2: { start: 'assigned_tuesday_start_time', end: 'assigned_tuesday_end_time' },
+      3: { start: 'assigned_wednesday_start_time', end: 'assigned_wednesday_end_time' },
+      4: { start: 'assigned_thursday_start_time', end: 'assigned_thursday_end_time' },
+      5: { start: 'assigned_friday_start_time', end: 'assigned_friday_end_time' },
+      6: { start: 'assigned_saturday_start_time', end: 'assigned_saturday_end_time' },
+    };
+    const startKey = dayMap[dayIndex]?.start;
+    const endKey = dayMap[dayIndex]?.end;
+
+    const startTime = startKey ? (order[startKey] as string | null) : null;
+    const endTime = endKey ? (order[endKey] as string | null) : null;
+
+    if (startTime && endTime) {
+      return `${startTime} - ${endTime}`;
+    }
+    return 'N/A';
   };
 
   return (
@@ -214,6 +319,7 @@ export default async function CustomerBookingsPage() {
                     <TableHead className="min-w-[100px]">Typ</TableHead>
                     <TableHead className="min-w-[100px]">Status</TableHead>
                     <TableHead className="min-w-[120px]">Zeitraum</TableHead>
+                    <TableHead className="min-w-[120px]">Zugewiesene Zeiten</TableHead> {/* New column */}
                     <TableHead className="min-w-[120px]">Anfrage Status</TableHead>
                     <TableHead className="text-right min-w-[120px]">Aktionen</TableHead>
                   </TableRow>
@@ -240,6 +346,16 @@ export default async function CustomerBookingsPage() {
                             {order.recurring_end_date && ` - ${format(new Date(order.recurring_end_date), 'dd.MM.yyyy', { locale: de })}`}
                           </div>
                         )}
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {/* Display assigned times for each day */}
+                        {Array.from({ length: 7 }).map((_, dayIndex) => {
+                          const assignedTime = getAssignedTimeForDay(order, dayIndex);
+                          if (assignedTime !== 'N/A') {
+                            return <div key={dayIndex}>{assignedTime}</div>;
+                          }
+                          return null;
+                        })}
                       </TableCell>
                       <TableCell><Badge variant={getRequestStatusBadgeVariant(order.request_status)}>{order.request_status}</Badge></TableCell>
                       <TableCell className="text-right">

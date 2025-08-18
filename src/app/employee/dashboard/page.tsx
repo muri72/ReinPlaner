@@ -40,6 +40,21 @@ interface RawEmployeeOrderResponse {
     assigned_friday_hours: number | null;
     assigned_saturday_hours: number | null;
     assigned_sunday_hours: number | null;
+    // New time fields
+    assigned_monday_start_time: string | null;
+    assigned_monday_end_time: string | null;
+    assigned_tuesday_start_time: string | null;
+    assigned_tuesday_end_time: string | null;
+    assigned_wednesday_start_time: string | null;
+    assigned_wednesday_end_time: string | null;
+    assigned_thursday_start_time: string | null;
+    assigned_thursday_end_time: string | null;
+    assigned_friday_start_time: string | null;
+    assigned_friday_end_time: string | null;
+    assigned_saturday_start_time: string | null;
+    assigned_saturday_end_time: string | null;
+    assigned_sunday_start_time: string | null;
+    assigned_sunday_end_time: string | null;
     employees: { first_name: string | null; last_name: string | null }[] | null; // Correctly typed as array
   }[] | null;
 }
@@ -109,6 +124,13 @@ export default async function EmployeeDashboardPage() {
           assigned_monday_hours, assigned_tuesday_hours, assigned_wednesday_hours,
           assigned_thursday_hours, assigned_friday_hours, assigned_saturday_hours,
           assigned_sunday_hours,
+          assigned_monday_start_time, assigned_monday_end_time,
+          assigned_tuesday_start_time, assigned_tuesday_end_time,
+          assigned_wednesday_start_time, assigned_wednesday_end_time,
+          assigned_thursday_start_time, assigned_thursday_end_time,
+          assigned_friday_start_time, assigned_friday_end_time,
+          assigned_saturday_start_time, assigned_saturday_end_time,
+          assigned_sunday_start_time, assigned_sunday_end_time,
           employees ( first_name, last_name ) 
         )
       `)
@@ -150,6 +172,21 @@ export default async function EmployeeDashboardPage() {
           assigned_friday_hours: assignedEmployeeData?.assigned_friday_hours || null,
           assigned_saturday_hours: assignedEmployeeData?.assigned_saturday_hours || null,
           assigned_sunday_hours: assignedEmployeeData?.assigned_sunday_hours || null,
+          // New time fields
+          assigned_monday_start_time: assignedEmployeeData?.assigned_monday_start_time || null,
+          assigned_monday_end_time: assignedEmployeeData?.assigned_monday_end_time || null,
+          assigned_tuesday_start_time: assignedEmployeeData?.assigned_tuesday_start_time || null,
+          assigned_tuesday_end_time: assignedEmployeeData?.assigned_tuesday_end_time || null,
+          assigned_wednesday_start_time: assignedEmployeeData?.assigned_wednesday_start_time || null,
+          assigned_wednesday_end_time: assignedEmployeeData?.assigned_wednesday_end_time || null,
+          assigned_thursday_start_time: assignedEmployeeData?.assigned_thursday_start_time || null,
+          assigned_thursday_end_time: assignedEmployeeData?.assigned_thursday_end_time || null,
+          assigned_friday_start_time: assignedEmployeeData?.assigned_friday_start_time || null,
+          assigned_friday_end_time: assignedEmployeeData?.assigned_friday_end_time || null,
+          assigned_saturday_start_time: assignedEmployeeData?.assigned_saturday_start_time || null,
+          assigned_saturday_end_time: assignedEmployeeData?.assigned_saturday_end_time || null,
+          assigned_sunday_start_time: assignedEmployeeData?.assigned_sunday_start_time || null,
+          assigned_sunday_end_time: assignedEmployeeData?.assigned_sunday_end_time || null,
           customer_contact_id: null, // Not selected in query, set to null
           customer_name: customerData?.name || null,
           object_name: objectData?.name || null,
@@ -179,6 +216,29 @@ export default async function EmployeeDashboardPage() {
       case 'pending':
       default: return 'outline';
     }
+  };
+
+  const getAssignedTimeForToday = (order: DisplayOrder) => {
+    const todayDayOfWeek = today.getDay(); // 0=So, 1=Mo, ..., 6=Sa
+    const dayMap: { [key: number]: { start: keyof DisplayOrder, end: keyof DisplayOrder } } = {
+      0: { start: 'assigned_sunday_start_time', end: 'assigned_sunday_end_time' },
+      1: { start: 'assigned_monday_start_time', end: 'assigned_monday_end_time' },
+      2: { start: 'assigned_tuesday_start_time', end: 'assigned_tuesday_end_time' },
+      3: { start: 'assigned_wednesday_start_time', end: 'assigned_wednesday_end_time' },
+      4: { start: 'assigned_thursday_start_time', end: 'assigned_thursday_end_time' },
+      5: { start: 'assigned_friday_start_time', end: 'assigned_friday_end_time' },
+      6: { start: 'assigned_saturday_start_time', end: 'assigned_saturday_end_time' },
+    };
+    const startKey = dayMap[todayDayOfWeek]?.start;
+    const endKey = dayMap[todayDayOfWeek]?.end;
+
+    const startTime = startKey ? (order[startKey] as string | null) : null;
+    const endTime = endKey ? (order[endKey] as string | null) : null;
+
+    if (startTime && endTime) {
+      return `${startTime} - ${endTime}`;
+    }
+    return 'N/A';
   };
 
   return (
@@ -283,6 +343,34 @@ export default async function EmployeeDashboardPage() {
                           <div className="flex items-center">
                             <Clock className="mr-2 h-4 w-4" />
                             <span>Zugewiesene Stunden heute: {assignedHoursToday.toFixed(1)} Std.</span>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
+                    {/* Display assigned start/end times for the current day */}
+                    {(() => {
+                      const todayDayOfWeek = today.getDay(); // 0=So, 1=Mo, ..., 6=Sa
+                      const dayMap: { [key: number]: { start: keyof DisplayOrder, end: keyof DisplayOrder } } = {
+                        0: { start: 'assigned_sunday_start_time', end: 'assigned_sunday_end_time' },
+                        1: { start: 'assigned_monday_start_time', end: 'assigned_monday_end_time' },
+                        2: { start: 'assigned_tuesday_start_time', end: 'assigned_tuesday_end_time' },
+                        3: { start: 'assigned_wednesday_start_time', end: 'assigned_wednesday_end_time' },
+                        4: { start: 'assigned_thursday_start_time', end: 'assigned_thursday_end_time' },
+                        5: { start: 'assigned_friday_start_time', end: 'assigned_friday_end_time' },
+                        6: { start: 'assigned_saturday_start_time', end: 'assigned_saturday_end_time' },
+                      };
+                      const startKey = dayMap[todayDayOfWeek]?.start;
+                      const endKey = dayMap[todayDayOfWeek]?.end;
+
+                      const startTime = startKey ? (order[startKey] as string | null) : null;
+                      const endTime = endKey ? (order[endKey] as string | null) : null;
+
+                      if (startTime && endTime) {
+                        return (
+                          <div className="flex items-center">
+                            <Clock className="mr-2 h-4 w-4" />
+                            <span>Zugewiesene Zeit heute: {startTime} - {endTime}</span>
                           </div>
                         );
                       }

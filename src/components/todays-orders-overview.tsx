@@ -33,6 +33,21 @@ interface DisplayOrder {
   assigned_friday_hours: number | null;
   assigned_saturday_hours: number | null;
   assigned_sunday_hours: number | null;
+  // New time fields
+  assigned_monday_start_time: string | null;
+  assigned_monday_end_time: string | null;
+  assigned_tuesday_start_time: string | null;
+  assigned_tuesday_end_time: string | null;
+  assigned_wednesday_start_time: string | null;
+  assigned_wednesday_end_time: string | null;
+  assigned_thursday_start_time: string | null;
+  assigned_thursday_end_time: string | null;
+  assigned_friday_start_time: string | null;
+  assigned_friday_end_time: string | null;
+  assigned_saturday_start_time: string | null;
+  assigned_saturday_end_time: string | null;
+  assigned_sunday_start_time: string | null;
+  assigned_sunday_end_time: string | null;
   customer_contact_id: string | null;
   customer_name: string | null;
   object_name: string | null;
@@ -131,6 +146,13 @@ export function TodaysOrdersOverview() {
             assigned_monday_hours, assigned_tuesday_hours, assigned_wednesday_hours,
             assigned_thursday_hours, assigned_friday_hours, assigned_saturday_hours,
             assigned_sunday_hours,
+            assigned_monday_start_time, assigned_monday_end_time,
+            assigned_tuesday_start_time, assigned_tuesday_end_time,
+            assigned_wednesday_start_time, assigned_wednesday_end_time,
+            assigned_thursday_start_time, assigned_thursday_end_time,
+            assigned_friday_start_time, assigned_friday_end_time,
+            assigned_saturday_start_time, assigned_saturday_end_time,
+            assigned_sunday_start_time, assigned_sunday_end_time,
             employees ( first_name, last_name ) 
           )
         `)
@@ -174,6 +196,21 @@ export function TodaysOrdersOverview() {
             assigned_friday_hours: assignedEmployeeData?.assigned_friday_hours || null,
             assigned_saturday_hours: assignedEmployeeData?.assigned_saturday_hours || null,
             assigned_sunday_hours: assignedEmployeeData?.assigned_sunday_hours || null,
+            // New time fields
+            assigned_monday_start_time: assignedEmployeeData?.assigned_monday_start_time || null,
+            assigned_monday_end_time: assignedEmployeeData?.assigned_monday_end_time || null,
+            assigned_tuesday_start_time: assignedEmployeeData?.assigned_tuesday_start_time || null,
+            assigned_tuesday_end_time: assignedEmployeeData?.assigned_tuesday_end_time || null,
+            assigned_wednesday_start_time: assignedEmployeeData?.assigned_wednesday_start_time || null,
+            assigned_wednesday_end_time: assignedEmployeeData?.assigned_wednesday_end_time || null,
+            assigned_thursday_start_time: assignedEmployeeData?.assigned_thursday_start_time || null,
+            assigned_thursday_end_time: assignedEmployeeData?.assigned_thursday_end_time || null,
+            assigned_friday_start_time: assignedEmployeeData?.assigned_friday_start_time || null,
+            assigned_friday_end_time: assignedEmployeeData?.assigned_friday_end_time || null,
+            assigned_saturday_start_time: assignedEmployeeData?.assigned_saturday_start_time || null,
+            assigned_saturday_end_time: assignedEmployeeData?.assigned_saturday_end_time || null,
+            assigned_sunday_start_time: assignedEmployeeData?.assigned_sunday_start_time || null,
+            assigned_sunday_end_time: assignedEmployeeData?.assigned_sunday_end_time || null,
             customer_contact_id: order.customer_contact_id,
             customer_name: customer?.name || null,
             object_name: object?.name || null,
@@ -230,6 +267,38 @@ export function TodaysOrdersOverview() {
     }
   };
 
+  const getRequestStatusBadgeVariant = (requestStatus: string) => {
+    switch (requestStatus) {
+      case 'approved': return 'default';
+      case 'pending': return 'warning';
+      case 'rejected': return 'destructive';
+      default: return 'outline';
+    }
+  };
+
+  const getAssignedTimeForToday = (order: DisplayOrder) => {
+    const todayDayOfWeek = new Date().getDay(); // 0=So, 1=Mo, ..., 6=Sa
+    const dayMap: { [key: number]: { start: keyof DisplayOrder, end: keyof DisplayOrder } } = {
+      0: { start: 'assigned_sunday_start_time', end: 'assigned_sunday_end_time' },
+      1: { start: 'assigned_monday_start_time', end: 'assigned_monday_end_time' },
+      2: { start: 'assigned_tuesday_start_time', end: 'assigned_tuesday_end_time' },
+      3: { start: 'assigned_wednesday_start_time', end: 'assigned_wednesday_end_time' },
+      4: { start: 'assigned_thursday_start_time', end: 'assigned_thursday_end_time' },
+      5: { start: 'assigned_friday_start_time', end: 'assigned_friday_end_time' },
+      6: { start: 'assigned_saturday_start_time', end: 'assigned_saturday_end_time' },
+    };
+    const startKey = dayMap[todayDayOfWeek]?.start;
+    const endKey = dayMap[todayDayOfWeek]?.end;
+
+    const startTime = startKey ? (order[startKey] as string | null) : null;
+    const endTime = endKey ? (order[endKey] as string | null) : null;
+
+    if (startTime && endTime) {
+      return `${startTime} - ${endTime}`;
+    }
+    return 'N/A';
+  };
+
   return (
     <Card className="shadow-neumorphic glassmorphism-card">
       <CardHeader>
@@ -261,6 +330,7 @@ export function TodaysOrdersOverview() {
                   <TableHead className="min-w-[100px]">Priorität</TableHead>
                   <TableHead className="min-w-[100px]">Typ</TableHead>
                   <TableHead className="min-w-[120px]">Zeitraum</TableHead>
+                  <TableHead className="min-w-[120px]">Zugewiesene Zeit</TableHead> {/* New column */}
                   <TableHead className="text-right min-w-[120px]">Aktionen</TableHead>
                 </TableRow>
               </TableHeader>
@@ -295,13 +365,16 @@ export function TodaysOrdersOverview() {
                             {format(new Date(order.due_date), 'dd.MM.yyyy', { locale: de })}
                           </div>
                         )}
-                        {(order.order_type === "recurring" || order.order_type === "substitution" || order.order_type === "permanent") && order.recurring_start_date && (
+                        {(order.order_type === "recurring" || order.order_type === "permanent" || order.order_type === "substitution") && order.recurring_start_date && (
                           <div className="flex items-center">
                             <CalendarDays className="mr-1 h-3 w-3" />
                             {format(new Date(order.recurring_start_date), 'dd.MM.yyyy', { locale: de })}
                             {order.recurring_end_date && ` - ${format(new Date(order.recurring_end_date), 'dd.MM.yyyy', { locale: de })}`}
                           </div>
                         )}
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {getAssignedTimeForToday(order)}
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end space-x-1">

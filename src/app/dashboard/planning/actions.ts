@@ -16,6 +16,8 @@ export interface PlanningData {
         assignments: {
           title: string;
           hours: number;
+          startTime: string | null; // New
+          endTime: string | null;   // New
         }[];
       };
     };
@@ -66,14 +68,25 @@ export async function getPlanningDataForWeek(currentDate: Date): Promise<{ succe
         recurring_end_date,
         objects (
           monday_hours, tuesday_hours, wednesday_hours, thursday_hours,
-          friday_hours, saturday_hours, sunday_hours
+          friday_hours, saturday_hours, sunday_hours,
+          monday_start_time, monday_end_time, tuesday_start_time, tuesday_end_time,
+          wednesday_start_time, wednesday_end_time, thursday_start_time, thursday_end_time,
+          friday_start_time, friday_end_time, saturday_start_time, saturday_end_time,
+          sunday_start_time, sunday_end_time
         ),
         order_employee_assignments ( 
           employee_id, 
           assigned_daily_hours,
           assigned_monday_hours, assigned_tuesday_hours, assigned_wednesday_hours,
           assigned_thursday_hours, assigned_friday_hours, assigned_saturday_hours,
-          assigned_sunday_hours
+          assigned_sunday_hours,
+          assigned_monday_start_time, assigned_monday_end_time,
+          assigned_tuesday_start_time, assigned_tuesday_end_time,
+          assigned_wednesday_start_time, assigned_wednesday_end_time,
+          assigned_thursday_start_time, assigned_thursday_end_time,
+          assigned_friday_start_time, assigned_friday_end_time,
+          assigned_saturday_start_time, assigned_saturday_end_time,
+          assigned_sunday_start_time, assigned_sunday_end_time
         )
       `);
     if (ordersError) throw ordersError;
@@ -132,36 +145,71 @@ export async function getPlanningDataForWeek(currentDate: Date): Promise<{ succe
         for (const order of employeeOrders) {
           let dailyHours = 0;
           let assignmentTitle = order.title;
+          let assignedStartTime: string | null = null;
+          let assignedEndTime: string | null = null;
 
           // Find the specific assignment for this employee and order
           const employeeAssignment = order.order_employee_assignments.find((assignment: any) => assignment.employee_id === employee.id);
           
-          // Determine the correct daily hours based on the new fields
+          // Determine the correct daily hours and times based on the new fields
           let assignedHoursForDay: number | null = null;
+          let assignedStartTimeForDay: string | null = null;
+          let assignedEndTimeForDay: string | null = null;
+
           switch (dayOfWeek) {
-            case 1: assignedHoursForDay = employeeAssignment?.assigned_monday_hours || null; break;
-            case 2: assignedHoursForDay = employeeAssignment?.assigned_tuesday_hours || null; break;
-            case 3: assignedHoursForDay = employeeAssignment?.assigned_wednesday_hours || null; break;
-            case 4: assignedHoursForDay = employeeAssignment?.assigned_thursday_hours || null; break;
-            case 5: assignedHoursForDay = employeeAssignment?.assigned_friday_hours || null; break;
-            case 6: assignedHoursForDay = employeeAssignment?.assigned_saturday_hours || null; break;
-            case 0: assignedHoursForDay = employeeAssignment?.assigned_sunday_hours || null; break;
+            case 1: 
+              assignedHoursForDay = employeeAssignment?.assigned_monday_hours || null; 
+              assignedStartTimeForDay = employeeAssignment?.assigned_monday_start_time || null;
+              assignedEndTimeForDay = employeeAssignment?.assigned_monday_end_time || null;
+              break;
+            case 2: 
+              assignedHoursForDay = employeeAssignment?.assigned_tuesday_hours || null; 
+              assignedStartTimeForDay = employeeAssignment?.assigned_tuesday_start_time || null;
+              assignedEndTimeForDay = employeeAssignment?.assigned_tuesday_end_time || null;
+              break;
+            case 3: 
+              assignedHoursForDay = employeeAssignment?.assigned_wednesday_hours || null; 
+              assignedStartTimeForDay = employeeAssignment?.assigned_wednesday_start_time || null;
+              assignedEndTimeForDay = employeeAssignment?.assigned_wednesday_end_time || null;
+              break;
+            case 4: 
+              assignedHoursForDay = employeeAssignment?.assigned_thursday_hours || null; 
+              assignedStartTimeForDay = employeeAssignment?.assigned_thursday_start_time || null;
+              assignedEndTimeForDay = employeeAssignment?.assigned_thursday_end_time || null;
+              break;
+            case 5: 
+              assignedHoursForDay = employeeAssignment?.assigned_friday_hours || null; 
+              assignedStartTimeForDay = employeeAssignment?.assigned_friday_start_time || null;
+              assignedEndTimeForDay = employeeAssignment?.assigned_friday_end_time || null;
+              break;
+            case 6: 
+              assignedHoursForDay = employeeAssignment?.assigned_saturday_hours || null; 
+              assignedStartTimeForDay = employeeAssignment?.assigned_saturday_start_time || null;
+              assignedEndTimeForDay = employeeAssignment?.assigned_saturday_end_time || null;
+              break;
+            case 0: 
+              assignedHoursForDay = employeeAssignment?.assigned_sunday_hours || null; 
+              assignedStartTimeForDay = employeeAssignment?.assigned_sunday_start_time || null;
+              assignedEndTimeForDay = employeeAssignment?.assigned_sunday_end_time || null;
+              break;
           }
 
           if (assignedHoursForDay !== null && assignedHoursForDay !== undefined) {
             dailyHours = assignedHoursForDay; // Use explicitly assigned daily hours
+            assignedStartTime = assignedStartTimeForDay;
+            assignedEndTime = assignedEndTimeForDay;
           } else if (order.objects) {
             const schedule = Array.isArray(order.objects) ? order.objects[0] : order.objects;
             if (schedule) {
-              // Fallback to object's daily hours if no specific assignment
+              // Fallback to object's daily hours and times if no specific assignment
               switch (dayOfWeek) {
-                case 1: dailyHours = schedule.monday_hours || 0; break;
-                case 2: dailyHours = schedule.tuesday_hours || 0; break;
-                case 3: dailyHours = schedule.wednesday_hours || 0; break;
-                case 4: dailyHours = schedule.thursday_hours || 0; break;
-                case 5: dailyHours = schedule.friday_hours || 0; break;
-                case 6: dailyHours = schedule.saturday_hours || 0; break;
-                case 0: dailyHours = schedule.sunday_hours || 0; break;
+                case 1: dailyHours = schedule.monday_hours || 0; assignedStartTime = schedule.monday_start_time || null; assignedEndTime = schedule.monday_end_time || null; break;
+                case 2: dailyHours = schedule.tuesday_hours || 0; assignedStartTime = schedule.tuesday_start_time || null; assignedEndTime = schedule.tuesday_end_time || null; break;
+                case 3: dailyHours = schedule.wednesday_hours || 0; assignedStartTime = schedule.wednesday_start_time || null; assignedEndTime = schedule.wednesday_end_time || null; break;
+                case 4: dailyHours = schedule.thursday_hours || 0; assignedStartTime = schedule.thursday_start_time || null; assignedEndTime = schedule.thursday_end_time || null; break;
+                case 5: dailyHours = schedule.friday_hours || 0; assignedStartTime = schedule.friday_start_time || null; assignedEndTime = schedule.friday_end_time || null; break;
+                case 6: dailyHours = schedule.saturday_hours || 0; assignedStartTime = schedule.saturday_start_time || null; assignedEndTime = schedule.saturday_end_time || null; break;
+                case 0: dailyHours = schedule.sunday_hours || 0; assignedStartTime = schedule.sunday_start_time || null; assignedEndTime = schedule.sunday_end_time || null; break;
               }
             }
           }
@@ -171,6 +219,8 @@ export async function getPlanningDataForWeek(currentDate: Date): Promise<{ succe
             planningData[employee.id].schedule[dateString].assignments.push({
               title: assignmentTitle,
               hours: dailyHours,
+              startTime: assignedStartTime,
+              endTime: assignedEndTime,
             });
           }
         }
@@ -211,14 +261,18 @@ export async function assignOrderToEmployee(orderId: string, employeeId: string,
   }
 
   try {
-    // Fetch the object's daily hours to use as default if assignedDailyHours is null
+    // Fetch the object's daily hours and times to use as default if assignedDailyHours is null
     const { data: orderDetails, error: orderDetailsError } = await supabase
       .from('orders')
       .select(`
         object_id,
         objects (
           monday_hours, tuesday_hours, wednesday_hours, thursday_hours,
-          friday_hours, saturday_hours, sunday_hours
+          friday_hours, saturday_hours, sunday_hours,
+          monday_start_time, monday_end_time, tuesday_start_time, tuesday_end_time,
+          wednesday_start_time, wednesday_end_time, thursday_start_time, thursday_end_time,
+          friday_start_time, friday_end_time, saturday_start_time, saturday_end_time,
+          sunday_start_time, sunday_end_time
         )
       `)
       .eq('id', orderId)
@@ -230,33 +284,39 @@ export async function assignOrderToEmployee(orderId: string, employeeId: string,
     const dayOfWeek = new Date(dateString).getDay(); // 0=So, 1=Mo, ...
 
     let defaultDailyHoursFromObject: number | null = null;
+    let defaultStartTimeFromObject: string | null = null;
+    let defaultEndTimeFromObject: string | null = null;
+
     if (objectSchedule) {
       switch (dayOfWeek) {
-        case 1: defaultDailyHoursFromObject = objectSchedule.monday_hours || null; break;
-        case 2: defaultDailyHoursFromObject = objectSchedule.tuesday_hours || null; break;
-        case 3: defaultDailyHoursFromObject = objectSchedule.wednesday_hours || null; break;
-        case 4: defaultDailyHoursFromObject = objectSchedule.thursday_hours || null; break;
-        case 5: defaultDailyHoursFromObject = objectSchedule.friday_hours || null; break;
-        case 6: defaultDailyHoursFromObject = objectSchedule.saturday_hours || null; break;
-        case 0: defaultDailyHoursFromObject = objectSchedule.sunday_hours || null; break;
+        case 1: defaultDailyHoursFromObject = objectSchedule.monday_hours || null; defaultStartTimeFromObject = objectSchedule.monday_start_time || null; defaultEndTimeFromObject = objectSchedule.monday_end_time || null; break;
+        case 2: defaultDailyHoursFromObject = objectSchedule.tuesday_hours || null; defaultStartTimeFromObject = objectSchedule.tuesday_start_time || null; defaultEndTimeFromObject = objectSchedule.tuesday_end_time || null; break;
+        case 3: defaultDailyHoursFromObject = objectSchedule.wednesday_hours || null; defaultStartTimeFromObject = objectSchedule.wednesday_start_time || null; defaultEndTimeFromObject = objectSchedule.wednesday_end_time || null; break;
+        case 4: defaultDailyHoursFromObject = objectSchedule.thursday_hours || null; defaultStartTimeFromObject = objectSchedule.thursday_start_time || null; defaultEndTimeFromObject = objectSchedule.thursday_end_time || null; break;
+        case 5: defaultDailyHoursFromObject = objectSchedule.friday_hours || null; defaultStartTimeFromObject = objectSchedule.friday_start_time || null; defaultEndTimeFromObject = objectSchedule.friday_end_time || null; break;
+        case 6: defaultDailyHoursFromObject = objectSchedule.saturday_hours || null; defaultStartTimeFromObject = objectSchedule.saturday_start_time || null; defaultEndTimeFromObject = objectSchedule.saturday_end_time || null; break;
+        case 0: defaultDailyHoursFromObject = objectSchedule.sunday_hours || null; defaultStartTimeFromObject = objectSchedule.sunday_start_time || null; defaultEndTimeFromObject = objectSchedule.sunday_end_time || null; break;
       }
     }
 
     // Use assignedDailyHours if provided, otherwise fallback to object's daily hours
     const finalAssignedDailyHours = assignedDailyHours !== null ? assignedDailyHours : defaultDailyHoursFromObject;
+    const finalAssignedStartTime = defaultStartTimeFromObject; // For drag-and-drop, we assume object's times
+    const finalAssignedEndTime = defaultEndTimeFromObject;     // For drag-and-drop, we assume object's times
 
-    // Prepare the daily hours object for upsert
-    const dailyHoursToUpsert: { [key: string]: number | null } = {};
+    // Prepare the daily hours and times object for upsert
+    const dailyDataToUpsert: { [key: string]: number | string | null } = {};
     const dayNames = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
     dayNames.forEach((day, index) => {
-      // For drag-and-drop, we only have a single `assignedDailyHours` which applies to the dropped day.
-      // For other days, we should either keep existing values or set to null.
-      // For simplicity, when dragging, we'll set the dropped day's hours and clear others.
-      // A more complex solution would involve fetching existing assignment and merging.
       if (index === dayOfWeek) { // If it's the day the order was dropped on
-        dailyHoursToUpsert[`assigned_${day}_hours`] = finalAssignedDailyHours;
+        dailyDataToUpsert[`assigned_${day}_hours`] = finalAssignedDailyHours;
+        dailyDataToUpsert[`assigned_${day}_start_time`] = finalAssignedStartTime;
+        dailyDataToUpsert[`assigned_${day}_end_time`] = finalAssignedEndTime;
       } else {
-        dailyHoursToUpsert[`assigned_${day}_hours`] = null; // Clear other days for this assignment
+        // Clear other days for this assignment when dragging a new one
+        dailyDataToUpsert[`assigned_${day}_hours`] = null;
+        dailyDataToUpsert[`assigned_${day}_start_time`] = null;
+        dailyDataToUpsert[`assigned_${day}_end_time`] = null;
       }
     });
 
@@ -276,7 +336,7 @@ export async function assignOrderToEmployee(orderId: string, employeeId: string,
       // Update existing assignment
       const { error: updateError } = await supabase
         .from('order_employee_assignments')
-        .update({ ...dailyHoursToUpsert })
+        .update({ ...dailyDataToUpsert })
         .eq('id', existingAssignment.id);
       if (updateError) throw updateError;
     } else {
@@ -286,7 +346,7 @@ export async function assignOrderToEmployee(orderId: string, employeeId: string,
         .insert({
           order_id: orderId,
           employee_id: employeeId,
-          ...dailyHoursToUpsert,
+          ...dailyDataToUpsert,
         });
       if (insertError) throw insertError;
     }
@@ -327,7 +387,7 @@ export async function assignOrderToEmployee(orderId: string, employeeId: string,
         userId: employeeUser.user_id,
         title: "Neuer Auftrag zugewiesen",
         message: `Ihnen wurde der Auftrag "${orderTitle.title}" zugewiesen.`,
-        link: "/employee/dashboard"
+        link: "/dashboard/orders"
       });
     } else {
       console.warn(`Could not send notification for order assignment to employee ${employeeId}. User ID or order title missing.`);

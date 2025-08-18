@@ -55,6 +55,76 @@ const assignedEmployeeSchema = z.object({
   assigned_friday_hours: z.preprocess(preprocessNumber, z.nullable(z.number().min(0).max(24)).optional()),
   assigned_saturday_hours: z.preprocess(preprocessNumber, z.nullable(z.number().min(0).max(24)).optional()),
   assigned_sunday_hours: z.preprocess(preprocessNumber, z.nullable(z.number().min(0).max(24)).optional()),
+  // New time fields
+  assigned_monday_start_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
+  assigned_monday_end_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
+  assigned_tuesday_start_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
+  assigned_tuesday_end_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
+  assigned_wednesday_start_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
+  assigned_wednesday_end_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
+  assigned_thursday_start_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
+  assigned_thursday_end_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
+  assigned_friday_start_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
+  assigned_friday_end_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
+  assigned_saturday_start_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
+  assigned_saturday_end_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
+  assigned_sunday_start_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
+  assigned_sunday_end_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
+}).superRefine((data, ctx) => {
+  // Validate each day's time pair for assigned employees
+  dayNames.forEach(day => {
+    const startTimeKey = `assigned_${day}_start_time` as keyof typeof data;
+    const endTimeKey = `assigned_${day}_end_time` as keyof typeof data;
+    const hoursKey = `assigned_${day}_hours` as keyof typeof data;
+
+    const start = data[startTimeKey] as string | null | undefined;
+    const end = data[endTimeKey] as string | null | undefined;
+    const hours = data[hoursKey] as number | null | undefined;
+
+    if (start && !end) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Endzeit ist erforderlich, wenn Startzeit angegeben ist.",
+        path: [endTimeKey],
+      });
+    } else if (!start && end) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Startzeit ist erforderlich, wenn Endzeit angegeben ist.",
+        path: [startTimeKey],
+      });
+    } else if (start && end) {
+      const [startH, startM] = start.split(':').map(Number);
+      const [endH, endM] = end.split(':').map(Number);
+
+      const startTimeInMinutes = startH * 60 + startM;
+      let endTimeInMinutes = endH * 60 + endM;
+
+      if (endTimeInMinutes < startTimeInMinutes) {
+        endTimeInMinutes += 24 * 60; // Assume next day
+      }
+
+      if (endTimeInMinutes <= startTimeInMinutes) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Endzeit muss nach der Startzeit liegen.",
+          path: [endTimeKey],
+        });
+      }
+      // Optional: Validate if hours match calculated duration
+      if (hours !== null && hours !== undefined) {
+        const calculatedDurationMinutes = endTimeInMinutes - startTimeInMinutes;
+        const calculatedHours = calculatedDurationMinutes / 60;
+        if (Math.abs(calculatedHours - hours) > 0.01) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `Stunden (${hours.toFixed(1)}) stimmen nicht mit der Dauer (${calculatedHours.toFixed(1)}) überein.`,
+            path: [hoursKey],
+          });
+        }
+      }
+    }
+  });
 });
 
 // Infer the TypeScript type from the schema
@@ -106,6 +176,20 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     friday_hours: number | null;
     saturday_hours: number | null;
     sunday_hours: number | null;
+    monday_start_time: string | null;
+    monday_end_time: string | null;
+    tuesday_start_time: string | null;
+    tuesday_end_time: string | null;
+    wednesday_start_time: string | null;
+    wednesday_end_time: string | null;
+    thursday_start_time: string | null;
+    thursday_end_time: string | null;
+    friday_start_time: string | null;
+    friday_end_time: string | null;
+    saturday_start_time: string | null;
+    saturday_end_time: string | null;
+    sunday_start_time: string | null;
+    sunday_end_time: string | null;
     total_weekly_hours: number | null;
   }[]>([]);
   const [allEmployees, setAllEmployees] = useState<{ id: string; first_name: string; last_name: string }[]>([]);
@@ -165,7 +249,8 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
       if (customersData) setCustomers(customersData);
       if (customersError) console.error("Fehler beim Laden der Kunden:", customersError);
 
-      const { data: objectsData, error: objectsError } = await supabase.from('objects').select('id, name, customer_id, monday_hours, tuesday_hours, wednesday_hours, thursday_hours, friday_hours, saturday_hours, sunday_hours, total_weekly_hours');
+      // Fetch objects with all time fields
+      const { data: objectsData, error: objectsError } = await supabase.from('objects').select('id, name, customer_id, monday_hours, tuesday_hours, wednesday_hours, thursday_hours, friday_hours, saturday_hours, sunday_hours, monday_start_time, monday_end_time, tuesday_start_time, tuesday_end_time, wednesday_start_time, wednesday_end_time, thursday_start_time, thursday_end_time, friday_start_time, friday_end_time, saturday_start_time, saturday_end_time, sunday_start_time, sunday_end_time, total_weekly_hours');
       if (objectsData) setObjects(objectsData);
       if (objectsError) console.error("Fehler beim Laden der Objekte:", objectsError);
 
@@ -208,11 +293,11 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     ? objects.filter(obj => obj.customer_id === selectedCustomerId)
     : [];
 
-  // Logic for distributing daily hours
-  const distributeDailyHours = useCallback((
+  // Logic for distributing daily hours and times
+  const distributeDailyHoursAndTimes = useCallback((
     currentObjectId: string | null,
-    currentAssignedEmployees: AssignedEmployee[], // Use the correct type here
-    isInitialLoad: boolean = false // Flag to prevent overwriting existing values on initial load
+    currentAssignedEmployees: AssignedEmployee[],
+    isInitialLoad: boolean = false
   ) => {
     if (!currentObjectId || !currentAssignedEmployees || currentAssignedEmployees.length === 0) {
       return;
@@ -225,30 +310,44 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
 
     dayNames.forEach(day => {
       const objectDailyHours = selectedObject[`${day}_hours` as keyof typeof selectedObject] as number | null;
-      if (objectDailyHours === null || objectDailyHours === undefined) return;
+      const objectStartTime = selectedObject[`${day}_start_time` as keyof typeof selectedObject] as string | null;
+      const objectEndTime = selectedObject[`${day}_end_time` as keyof typeof selectedObject] as string | null;
 
       if (numAssignedEmployees === 1) {
-        // Case 1: Only 1 employee, assign object hours 1:1
+        // Case 1: Only 1 employee, assign object hours and times 1:1
         const assignedEmp = currentAssignedEmployees[0];
-        if (assignedEmp[`assigned_${day}_hours`] !== objectDailyHours) {
+        const shouldUpdateHours = assignedEmp[`assigned_${day}_hours`] !== objectDailyHours;
+        const shouldUpdateStartTime = assignedEmp[`assigned_${day}_start_time`] !== objectStartTime;
+        const shouldUpdateEndTime = assignedEmp[`assigned_${day}_end_time`] !== objectEndTime;
+
+        if (shouldUpdateHours || shouldUpdateStartTime || shouldUpdateEndTime) {
           updateEmployeeField(0, {
             ...assignedEmp,
             [`assigned_${day}_hours`]: objectDailyHours,
+            [`assigned_${day}_start_time`]: objectStartTime,
+            [`assigned_${day}_end_time`]: objectEndTime,
           });
         }
       } else {
-        // Case 2: Multiple employees, distribute or keep existing
-        const suggestedDailyHoursPerEmployeeValue = parseFloat((objectDailyHours / numAssignedEmployees).toFixed(2));
+        // Case 2: Multiple employees, distribute hours and clear times (times cannot be easily distributed)
+        const suggestedDailyHoursPerEmployeeValue = objectDailyHours !== null ? parseFloat((objectDailyHours / numAssignedEmployees).toFixed(2)) : null;
 
         currentAssignedEmployees.forEach((assignedEmp, index) => {
           const currentAssignedHours = assignedEmp[`assigned_${day}_hours` as keyof typeof assignedEmp] as number | null;
+          const currentAssignedStartTime = assignedEmp[`assigned_${day}_start_time` as keyof typeof assignedEmp] as string | null;
+          const currentAssignedEndTime = assignedEmp[`assigned_${day}_end_time` as keyof typeof assignedEmp] as string | null;
           
           // Only update if it's an initial load (or new assignment) AND the field is not already set
           // or if the number of assigned employees has changed, suggesting a re-distribution
-          if (isInitialLoad || currentAssignedHours === null || currentAssignedHours === undefined || numAssignedEmployees !== (initialData?.assignedEmployees?.length || 0)) {
+          const shouldUpdateHours = isInitialLoad || currentAssignedHours === null || currentAssignedHours === undefined || numAssignedEmployees !== (initialData?.assignedEmployees?.length || 0);
+          const shouldUpdateTimes = isInitialLoad || currentAssignedStartTime !== null || currentAssignedEndTime !== null;
+
+          if (shouldUpdateHours || shouldUpdateTimes) {
                updateEmployeeField(index, {
                   ...assignedEmp,
-                  [`assigned_${day}_hours`]: suggestedDailyHoursPerEmployeeValue,
+                  [`assigned_${day}_hours`]: shouldUpdateHours ? suggestedDailyHoursPerEmployeeValue : currentAssignedHours,
+                  [`assigned_${day}_start_time`]: shouldUpdateTimes ? null : currentAssignedStartTime, // Clear times for multiple assignments
+                  [`assigned_${day}_end_time`]: shouldUpdateTimes ? null : currentAssignedEndTime, // Clear times for multiple assignments
               });
           }
         });
@@ -257,21 +356,31 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
   }, [objects, updateEmployeeField, initialData, dayNames]);
 
 
-  // Effect to update assignedDailyHours for employees and totalEstimatedHours for the order
+  // Effect to update assignedDailyHours and times for employees and totalEstimatedHours for the order
   useEffect(() => {
     const currentAssignedCount = selectedAssignedEmployees?.length || 0;
     const currentObjectId = form.getValues("objectId") ?? null;
 
-    // Update assignedDailyHours for each employee
+    // Update assignedDailyHours and times for each employee
     if (currentObjectId && currentAssignedCount > 0) {
-      distributeDailyHours(currentObjectId, selectedAssignedEmployees || [], !initialData); // Pass true for isInitialLoad if not in edit mode
+      distributeDailyHoursAndTimes(currentObjectId, selectedAssignedEmployees || [], !initialData); // Pass true for isInitialLoad if not in edit mode
     } else if (currentAssignedCount === 0) {
-        // If no employees assigned, clear all assigned daily hours fields
+        // If no employees assigned, clear all assigned daily hours and times fields
         assignedEmployeeFields.forEach((field, index) => {
             dayNames.forEach(day => {
-                const fieldName = `assignedEmployees.${index}.assigned_${day}_hours` as const;
-                if (field[`assigned_${day}_hours` as keyof typeof field] !== null) {
-                    updateEmployeeField(index, { ...field, [fieldName]: null });
+                const hoursFieldName = `assignedEmployees.${index}.assigned_${day}_hours` as const;
+                const startFieldName = `assignedEmployees.${index}.assigned_${day}_start_time` as const;
+                const endFieldName = `assignedEmployees.${index}.assigned_${day}_end_time` as const;
+
+                if (field[`assigned_${day}_hours` as keyof typeof field] !== null ||
+                    field[`assigned_${day}_start_time` as keyof typeof field] !== null ||
+                    field[`assigned_${day}_end_time` as keyof typeof field] !== null) {
+                    updateEmployeeField(index, { 
+                      ...field, 
+                      [hoursFieldName]: null,
+                      [startFieldName]: null,
+                      [endFieldName]: null,
+                    });
                 }
             });
         });
@@ -305,7 +414,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     if (currentTotalEstimatedHours !== newTotalEstimatedHours) {
       form.setValue("totalEstimatedHours", newTotalEstimatedHours, { shouldValidate: false });
     }
-  }, [selectedObjectId, selectedAssignedEmployees, objects, form, updateEmployeeField, orderType, form.watch("dueDate"), distributeDailyHours, assignedEmployeeFields, initialData]);
+  }, [selectedObjectId, selectedAssignedEmployees, objects, form, updateEmployeeField, orderType, form.watch("dueDate"), distributeDailyHoursAndTimes, assignedEmployeeFields, initialData]);
 
 
   const handleFormSubmit: SubmitHandler<OrderFormValues> = async (data) => {
@@ -356,7 +465,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     const result = await createObject(data);
     handleActionResponse(result);
     if (result.success) {
-      const { data: newObjectsData, error: newObjectsError } = await supabase.from('objects').select('id, name, customer_id, monday_hours, tuesday_hours, wednesday_hours, thursday_hours, friday_hours, saturday_hours, sunday_hours, total_weekly_hours');
+      const { data: newObjectsData, error: newObjectsError } = await supabase.from('objects').select('id, name, customer_id, monday_hours, tuesday_hours, wednesday_hours, thursday_hours, friday_hours, saturday_hours, sunday_hours, total_weekly_hours, monday_start_time, monday_end_time, tuesday_start_time, tuesday_end_time, wednesday_start_time, wednesday_end_time, thursday_start_time, thursday_end_time, friday_start_time, friday_end_time, saturday_start_time, saturday_end_time, sunday_start_time, sunday_end_time');
       if (newObjectsData) {
         setObjects(newObjectsData);
         const newObject = newObjectsData.find(obj => obj.name === data.name && obj.customer_id === data.customerId);
@@ -382,7 +491,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
       const currentAssignedCount = (selectedAssignedEmployees?.length || 0) + 1;
       const selectedObject = objects.find(obj => obj.id === selectedObjectId);
       
-      const newEmployeeAssignment: AssignedEmployee = { // Use the correct type here
+      const newEmployeeAssignment: AssignedEmployee = {
         employeeId: employeeId,
         assigned_monday_hours: null,
         assigned_tuesday_hours: null,
@@ -391,21 +500,39 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
         assigned_friday_hours: null,
         assigned_saturday_hours: null,
         assigned_sunday_hours: null,
+        assigned_monday_start_time: null,
+        assigned_monday_end_time: null,
+        assigned_tuesday_start_time: null,
+        assigned_tuesday_end_time: null,
+        assigned_wednesday_start_time: null,
+        assigned_wednesday_end_time: null,
+        assigned_thursday_start_time: null,
+        assigned_thursday_end_time: null,
+        assigned_friday_start_time: null,
+        assigned_friday_end_time: null,
+        assigned_saturday_start_time: null,
+        assigned_saturday_end_time: null,
+        assigned_sunday_start_time: null,
+        assigned_sunday_end_time: null,
       };
 
       if (selectedObject) {
         if (currentAssignedCount === 1) {
-          // If this is the first employee, assign object hours 1:1
+          // If this is the first employee, assign object hours and times 1:1
           dayNames.forEach(day => {
             newEmployeeAssignment[`assigned_${day}_hours`] = selectedObject[`${day}_hours` as keyof typeof selectedObject] as number | null;
+            newEmployeeAssignment[`assigned_${day}_start_time`] = selectedObject[`${day}_start_time` as keyof typeof selectedObject] as string | null;
+            newEmployeeAssignment[`assigned_${day}_end_time`] = selectedObject[`${day}_end_time` as keyof typeof selectedObject] as string | null;
           });
         } else {
-          // If adding to multiple, distribute existing object hours
+          // If adding to multiple, distribute existing object hours and clear times
           dayNames.forEach(day => {
             const objectDailyHours = selectedObject[`${day}_hours` as keyof typeof selectedObject] as number | null;
             if (objectDailyHours !== null) {
               newEmployeeAssignment[`assigned_${day}_hours`] = parseFloat((objectDailyHours / currentAssignedCount).toFixed(2));
             }
+            newEmployeeAssignment[`assigned_${day}_start_time`] = null; // Clear times for multiple assignments
+            newEmployeeAssignment[`assigned_${day}_end_time`] = null; // Clear times for multiple assignments
           });
         }
       }
@@ -548,6 +675,28 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
       </div>
 
       {/* Mitarbeiterzuweisung */}
+      <div className="flex items-end gap-2">
+        <div className="flex-grow">
+          <Label htmlFor="objectId">Objekt</Label>
+          <Select onValueChange={(value: string) => form.setValue("objectId", value)} value={form.watch("objectId") || "unassigned"} disabled={!form.watch("customerId")}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Objekt auswählen" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="unassigned">Kein Objekt zugewiesen</SelectItem>
+              {filteredObjects.map(obj => (
+                <SelectItem key={obj.id} value={obj.id}>{obj.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {form.formState.errors.objectId && (
+            <p className="text-red-500 text-sm mt-1">{form.formState.errors.objectId.message}</p>
+          )}
+        </div>
+        <CustomerContactCreateDialog customerId={selectedCustomerId} onContactCreated={handleCustomerContactCreated} disabled={!selectedCustomerId} />
+      </div>
+
+      {/* Mitarbeiterzuweisung */}
       <div className="space-y-2">
         <Label>Zugewiesene Mitarbeiter (optional)</Label>
         <div className="border rounded-md p-3 space-y-2 max-h-96 overflow-y-auto">
@@ -591,33 +740,72 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
                     )}
                   </div>
                   {isAssigned && assignedIndex !== -1 && (
-                    <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2 mt-2">
-                      {dayNames.map(day => {
-                        const fieldName = `assignedEmployees.${assignedIndex}.assigned_${day}_hours` as const;
-                        const objectDailyHours = getObjectDailyHours(day);
-                        const isDayValid = isDailyHoursValid(day); // Check overall validity for the day
+                    <div className="grid grid-cols-1 gap-2 mt-2">
+                      {/* Hours input for single or multiple employees */}
+                      <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2">
+                        {dayNames.map(day => {
+                          const hoursFieldName = `assignedEmployees.${assignedIndex}.assigned_${day}_hours` as const;
+                          const objectDailyHours = getObjectDailyHours(day);
+                          const isDayValid = isDailyHoursValid(day); // Check overall validity for the day
 
-                        return (
-                          <div key={day}>
-                            <Label htmlFor={fieldName} className="text-xs font-medium">
-                              {germanDayNames[day]} {objectDailyHours !== null ? `(${objectDailyHours.toFixed(1)}h)` : ''}
-                            </Label>
-                            <Input
-                              id={fieldName}
-                              type="number"
-                              step="0.5"
-                              placeholder="Std."
-                              className={cn(
-                                "w-full text-right",
-                                !isDayValid && "border-destructive focus-visible:ring-destructive" // Highlight if sum is invalid
-                              )}
-                              {...form.register(fieldName as FieldPath<OrderFormValues>, { valueAsNumber: true })}
-                              disabled={!selectedObjectId || isSingleEmployeeAssigned} // Disable if no object or single employee
-                              readOnly={isSingleEmployeeAssigned} // Readonly if single employee
-                            />
-                          </div>
-                        );
-                      })}
+                          return (
+                            <div key={day}>
+                              <Label htmlFor={hoursFieldName} className="text-xs font-medium">
+                                {germanDayNames[day]} {objectDailyHours !== null ? `(${objectDailyHours.toFixed(1)}h)` : ''}
+                              </Label>
+                              <Input
+                                id={hoursFieldName}
+                                type="number"
+                                step="0.5"
+                                placeholder="Std."
+                                className={cn(
+                                  "w-full text-right",
+                                  !isDayValid && "border-destructive focus-visible:ring-destructive" // Highlight if sum is invalid
+                                )}
+                                {...form.register(hoursFieldName as FieldPath<OrderFormValues>, { valueAsNumber: true })}
+                                disabled={!selectedObjectId || isSingleEmployeeAssigned} // Disable if no object or single employee
+                                readOnly={isSingleEmployeeAssigned} // Readonly if single employee
+                              />
+                            </div>
+                          );
+                        })}
+                      </div>
+                      {/* Time inputs for single employee */}
+                      {isSingleEmployeeAssigned && (
+                        <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2 mt-2">
+                          {dayNames.map(day => {
+                            const startFieldName = `assignedEmployees.${assignedIndex}.assigned_${day}_start_time` as const;
+                            const endFieldName = `assignedEmployees.${assignedIndex}.assigned_${day}_end_time` as const;
+                            const objectStartTime = objects.find(obj => obj.id === selectedObjectId)?.[`${day}_start_time` as keyof typeof objects[0]] as string | null;
+                            const objectEndTime = objects.find(obj => obj.id === selectedObjectId)?.[`${day}_end_time` as keyof typeof objects[0]] as string | null;
+
+                            return (
+                              <div key={`${day}-times`}>
+                                <Label htmlFor={startFieldName} className="text-xs">Start</Label>
+                                <Input
+                                  id={startFieldName}
+                                  type="time"
+                                  className="w-full"
+                                  // Removed {...form.register(startFieldName as FieldPath<OrderFormValues>)}
+                                  disabled={true} // Always disabled for single employee, derived from object
+                                  readOnly={true}
+                                  value={objectStartTime || ''} // Display object's start time
+                                />
+                                <Label htmlFor={endFieldName} className="text-xs mt-1">Ende</Label>
+                                <Input
+                                  id={endFieldName}
+                                  type="time"
+                                  className="w-full"
+                                  // Removed {...form.register(endFieldName as FieldPath<OrderFormValues>)}
+                                  disabled={true} // Always disabled for single employee, derived from object
+                                  readOnly={true}
+                                  value={objectEndTime || ''} // Display object's end time
+                                />
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -763,5 +951,3 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
         {form.formState.isSubmitting ? `${submitButtonText}...` : submitButtonText}
       </Button>
     </form>
-  );
-}

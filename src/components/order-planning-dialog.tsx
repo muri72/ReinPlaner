@@ -41,6 +41,14 @@ export function OrderPlanningDialog({ order }: OrderPlanningDialogProps) {
     monday: null, tuesday: null, wednesday: null, thursday: null,
     friday: null, saturday: null, sunday: null,
   });
+  const [dailyStartTimes, setDailyStartTimes] = useState<{ [key: string]: string | null }>({
+    monday: null, tuesday: null, wednesday: null, thursday: null,
+    friday: null, saturday: null, sunday: null,
+  });
+  const [dailyEndTimes, setDailyEndTimes] = useState<{ [key: string]: string | null }>({
+    monday: null, tuesday: null, wednesday: null, thursday: null,
+    friday: null, saturday: null, sunday: null,
+  });
 
   const dayNames = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
   const germanDayNames: { [key: string]: string } = {
@@ -71,11 +79,11 @@ export function OrderPlanningDialog({ order }: OrderPlanningDialogProps) {
           setEmployees(employeesData);
         }
 
-        // Fetch object's daily hours if object_id is available
+        // Fetch object's daily hours and times if object_id is available
         if (order.object_id) {
           const { data: objectData, error: objectError } = await supabase
             .from('objects')
-            .select('monday_hours, tuesday_hours, wednesday_hours, thursday_hours, friday_hours, saturday_hours, sunday_hours')
+            .select('monday_hours, tuesday_hours, wednesday_hours, thursday_hours, friday_hours, saturday_hours, sunday_hours, monday_start_time, monday_end_time, tuesday_start_time, tuesday_end_time, wednesday_start_time, wednesday_end_time, thursday_start_time, thursday_end_time, friday_start_time, friday_end_time, saturday_start_time, saturday_end_time, sunday_start_time, sunday_end_time')
             .eq('id', order.object_id)
             .single();
 
@@ -84,14 +92,28 @@ export function OrderPlanningDialog({ order }: OrderPlanningDialogProps) {
             toast.error("Fehler beim Laden der Objektstunden.");
           } else if (objectData) {
             const newDailyHours: { [key: string]: number | null } = {};
+            const newDailyStartTimes: { [key: string]: string | null } = {};
+            const newDailyEndTimes: { [key: string]: string | null } = {};
             dayNames.forEach(day => {
               newDailyHours[day] = objectData[`${day}_hours` as keyof typeof objectData] || null;
+              newDailyStartTimes[day] = objectData[`${day}_start_time` as keyof typeof objectData] || null;
+              newDailyEndTimes[day] = objectData[`${day}_end_time` as keyof typeof objectData] || null;
             });
             setDailyHours(newDailyHours);
+            setDailyStartTimes(newDailyStartTimes);
+            setDailyEndTimes(newDailyEndTimes);
           }
         } else {
-          // Clear daily hours if no object is linked
+          // Clear daily hours and times if no object is linked
           setDailyHours({
+            monday: null, tuesday: null, wednesday: null, thursday: null,
+            friday: null, saturday: null, sunday: null,
+          });
+          setDailyStartTimes({
+            monday: null, tuesday: null, wednesday: null, thursday: null,
+            friday: null, saturday: null, sunday: null,
+          });
+          setDailyEndTimes({
             monday: null, tuesday: null, wednesday: null, thursday: null,
             friday: null, saturday: null, sunday: null,
           });
@@ -109,11 +131,27 @@ export function OrderPlanningDialog({ order }: OrderPlanningDialogProps) {
     }));
   };
 
+  const handleDailyStartTimeChange = (day: string, value: string) => {
+    setDailyStartTimes(prev => ({
+      ...prev,
+      [day]: value === '' ? null : value,
+    }));
+  };
+
+  const handleDailyEndTimeChange = (day: string, value: string) => {
+    setDailyEndTimes(prev => ({
+      ...prev,
+      [day]: value === '' ? null : value,
+    }));
+  };
+
   const handleSubmit = async (formData: FormData) => {
     setLoading(true);
-    // Append all daily hours to form data
+    // Append all daily hours and times to form data
     dayNames.forEach(day => {
       formData.append(`assigned_${day}_hours`, String(dailyHours[day] || ''));
+      formData.append(`assigned_${day}_start_time`, String(dailyStartTimes[day] || ''));
+      formData.append(`assigned_${day}_end_time`, String(dailyEndTimes[day] || ''));
     });
 
     const result = await processOrderRequest(formData);
@@ -176,31 +214,56 @@ export function OrderPlanningDialog({ order }: OrderPlanningDialogProps) {
             </div>
             {selectedEmployeeId && order.object_id && (
               <div className="space-y-2 mt-4">
-                <Label>Zugewiesene Stunden pro Wochentag</Label>
-                <div className="grid grid-cols-2 gap-2">
+                <Label>Zugewiesene Stunden & Zeiten pro Wochentag</Label>
+                <div className="grid grid-cols-1 gap-4">
                   {dayNames.map(day => (
-                    <div key={day}>
-                      <Label htmlFor={`assigned_${day}_hours`} className="text-xs">{germanDayNames[day]} Std.</Label>
-                      <Input
-                        id={`assigned_${day}_hours`}
-                        name={`assigned_${day}_hours`}
-                        type="number"
-                        step="0.5"
-                        placeholder="Std."
-                        value={dailyHours[day] !== null ? dailyHours[day] : ''}
-                        onChange={(e) => handleDailyHourChange(day, e.target.value)}
-                      />
+                    <div key={day} className="p-2 border rounded-md">
+                      <h4 className="font-medium text-sm mb-2">{germanDayNames[day]}</h4>
+                      <div className="grid grid-cols-3 gap-2">
+                        <div>
+                          <Label htmlFor={`assigned_${day}_hours`} className="text-xs">Std.</Label>
+                          <Input
+                            id={`assigned_${day}_hours`}
+                            name={`assigned_${day}_hours`}
+                            type="number"
+                            step="0.5"
+                            placeholder="Std."
+                            value={dailyHours[day] !== null ? dailyHours[day] : ''}
+                            onChange={(e) => handleDailyHourChange(day, e.target.value)}
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor={`assigned_${day}_start_time`} className="text-xs">Start</Label>
+                          <Input
+                            id={`assigned_${day}_start_time`}
+                            name={`assigned_${day}_start_time`}
+                            type="time"
+                            value={dailyStartTimes[day] || ''}
+                            onChange={(e) => handleDailyStartTimeChange(day, e.target.value)}
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor={`assigned_${day}_end_time`} className="text-xs">Ende</Label>
+                          <Input
+                            id={`assigned_${day}_end_time`}
+                            name={`assigned_${day}_end_time`}
+                            type="time"
+                            value={dailyEndTimes[day] || ''}
+                            onChange={(e) => handleDailyEndTimeChange(day, e.target.value)}
+                          />
+                        </div>
+                      </div>
                     </div>
                   ))}
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Diese Stunden werden für den zugewiesenen Mitarbeiter übernommen.
+                  Diese Stunden und Zeiten werden für den zugewiesenen Mitarbeiter übernommen.
                 </p>
               </div>
             )}
             {!order.object_id && selectedEmployeeId && (
               <p className="text-sm text-muted-foreground mt-2">
-                Kein Objekt für diesen Auftrag hinterlegt. Tägliche Stunden können nicht automatisch vorgeschlagen werden.
+                Kein Objekt für diesen Auftrag hinterlegt. Tägliche Stunden und Zeiten können nicht automatisch vorgeschlagen werden.
               </p>
             )}
           </form>
