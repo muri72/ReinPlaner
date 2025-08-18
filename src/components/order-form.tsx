@@ -326,22 +326,31 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     value: string
   ) => {
     const parsedHours = value === "" ? null : Number(value);
-    const fieldName = `assignedEmployees.${employeeIndex}.assigned_${day}_hours` as const;
-    form.setValue(fieldName, parsedHours, { shouldValidate: true });
+    const hoursFieldName = `assignedEmployees.${employeeIndex}.assigned_${day}_hours` as const;
+    form.setValue(hoursFieldName, parsedHours, { shouldValidate: true });
 
-    // Recalculate end time based on start time
-    const startTime = form.getValues(`assignedEmployees.${employeeIndex}.assigned_${day}_start_time`);
+    let startTime = form.getValues(`assignedEmployees.${employeeIndex}.assigned_${day}_start_time`);
+    
+    // **NEW LOGIC**: If start time is empty but we now have hours, populate it.
+    if (parsedHours != null && parsedHours > 0 && !startTime) {
+      const selectedObject = objects.find(obj => obj.id === selectedObjectId);
+      const objectStartTime = selectedObject?.[`${day}_start_time` as keyof typeof selectedObject] as string | null;
+      if (objectStartTime) {
+        startTime = objectStartTime;
+        form.setValue(`assignedEmployees.${employeeIndex}.assigned_${day}_start_time`, startTime, { shouldValidate: false }); // Set it without re-triggering validation yet
+      }
+    }
+
     let newEndTime: string | null = null;
     if (parsedHours != null && parsedHours > 0 && startTime && timeRegex.test(startTime)) {
       newEndTime = calculateEndTime(startTime, parsedHours);
     }
     form.setValue(`assignedEmployees.${employeeIndex}.assigned_${day}_end_time`, newEndTime, { shouldValidate: true });
-  }, [form]);
+  }, [form, objects, selectedObjectId]);
 
-  const handleAssignedTimeChange = useCallback((
+  const handleAssignedStartTimeChange = useCallback((
     employeeIndex: number,
     day: typeof dayNames[number],
-    timeType: 'start',
     value: string
   ) => {
     const startTimeFieldName = `assignedEmployees.${employeeIndex}.assigned_${day}_start_time` as const;
@@ -355,6 +364,24 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
       newEndTime = calculateEndTime(value, hours);
     }
     form.setValue(endTimeFieldName, newEndTime, { shouldValidate: true });
+  }, [form]);
+
+  const handleAssignedEndTimeChange = useCallback((
+    employeeIndex: number,
+    day: typeof dayNames[number],
+    value: string
+  ) => {
+    const endTimeFieldName = `assignedEmployees.${employeeIndex}.assigned_${day}_end_time` as const;
+    const startTimeFieldName = `assignedEmployees.${employeeIndex}.assigned_${day}_start_time` as const;
+    const hours = form.getValues(`assignedEmployees.${employeeIndex}.assigned_${day}_hours`);
+
+    form.setValue(endTimeFieldName, value || null, { shouldValidate: true });
+
+    let newStartTime: string | null = null;
+    if (hours != null && hours > 0 && value && timeRegex.test(value)) {
+      newStartTime = calculateStartTime(value, hours);
+    }
+    form.setValue(startTimeFieldName, newStartTime, { shouldValidate: true });
   }, [form]);
 
   const handleFormSubmit: SubmitHandler<OrderFormValues> = async (data) => {
@@ -678,6 +705,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
                   {dayNames.map(day => {
                     const hoursFieldName = `assignedEmployees.${assignedIndex}.assigned_${day}_hours` as const;
                     const startFieldName = `assignedEmployees.${assignedIndex}.assigned_${day}_start_time` as const;
+                    const endFieldName = `assignedEmployees.${assignedIndex}.assigned_${day}_end_time` as const;
                     const objectDailyHours = getObjectDailyHours(day);
                     const isDayValid = isDailyHoursValid(day);
                     const sumAssignedForDay = getSumAssignedHoursForDay(day);
@@ -741,21 +769,34 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
                                 value={field.value ?? ''}
                                 onChange={(e) => {
                                   field.onChange(e.target.value);
-                                  handleAssignedTimeChange(assignedIndex, day, 'start', e.target.value);
+                                  handleAssignedStartTimeChange(assignedIndex, day, e.target.value);
                                 }}
                               />
                             </div>
                           )}
                         />
                         
-                        {/* 3. Endzeit (unten, berechnet) */}
-                        <div>
-                          <Label className="text-xs">Endzeit (berechnet)</Label>
-                          <div className="flex items-center h-8 px-2 border rounded-md bg-muted text-xs">
-                            <Clock className="h-3 w-3 mr-1" />
-                            {(watchedAssignedEmployees?.[assignedIndex] as any)?.[`assigned_${day}_end_time`] || '--:--'}
-                          </div>
-                        </div>
+                        {/* 3. Endzeit (unten, jetzt bearbeitbar) */}
+                        <Controller
+                          name={endFieldName}
+                          control={form.control}
+                          render={({ field }) => (
+                            <div>
+                              <Label htmlFor={field.name} className="text-xs">Endzeit</Label>
+                              <Input
+                                {...field}
+                                id={field.name}
+                                type="time"
+                                className="w-full text-sm"
+                                value={field.value ?? ''}
+                                onChange={(e) => {
+                                  field.onChange(e.target.value);
+                                  handleAssignedEndTimeChange(assignedIndex, day, e.target.value);
+                                }}
+                              />
+                            </div>
+                          )}
+                        />
                       </div>
                     );
                   })}
