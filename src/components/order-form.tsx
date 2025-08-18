@@ -32,6 +32,7 @@ const availableServices = [
 
 // Helper function for number preprocessing
 const preprocessNumber = (val: unknown) => (val === "" || isNaN(Number(val)) ? null : Number(val));
+const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
 
 // Definieren von dayNames als const-Array
 const dayNames = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const;
@@ -786,7 +787,6 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
                                   id={startFieldName}
                                   type="time"
                                   className="w-full"
-                                  // Removed {...form.register(startFieldName as FieldPath<OrderFormValues>)}
                                   disabled={true} // Always disabled for single employee, derived from object
                                   readOnly={true}
                                   value={objectStartTime || ''} // Display object's start time
@@ -796,7 +796,6 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
                                   id={endFieldName}
                                   type="time"
                                   className="w-full"
-                                  // Removed {...form.register(endFieldName as FieldPath<OrderFormValues>)}
                                   disabled={true} // Always disabled for single employee, derived from object
                                   readOnly={true}
                                   value={objectEndTime || ''} // Display object's end time
@@ -940,7 +939,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
           <SelectContent>
             <SelectItem value="pending">Ausstehend</SelectItem>
             <SelectItem value="approved">Genehmigt</SelectItem>
-            <SelectItem value="rejected">Abgelehnt</SelectItem>
+            <SelectItem value="rejected">Abgelehnten</SelectItem>
           </SelectContent>
         </Select>
         {form.formState.errors.requestStatus && (
@@ -951,3 +950,5 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
         {form.formState.isSubmitting ? `${submitButtonText}...` : submitButtonText}
       </Button>
     </form>
+  );
+}
