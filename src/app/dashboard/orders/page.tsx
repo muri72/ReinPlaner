@@ -66,6 +66,10 @@ export interface DisplayOrder {
     image_urls: string[] | null;
     created_at: string;
   }[];
+  // Add nested objects for easier access in components
+  object: { name: string | null; address: string | null; notes: string | null; } | null;
+  customer: { name: string | null; } | null;
+  customer_contact: { first_name: string | null; last_name: string | null; phone: string | null; } | null;
 }
 
 const availableServices = [
@@ -152,7 +156,7 @@ export default function OrdersPage({
       const { data: customerData, error: customerDataError } = await supabase
         .from('customers')
         .select('id')
-        .eq('user.id', user.id)
+        .eq('user_id', user.id)
         .single();
       if (customerDataError && customerDataError.code !== 'PGRST116') {
         console.error("Error fetching customer ID for user:", customerDataError);
@@ -192,8 +196,8 @@ export default function OrdersPage({
           request_status,
           service_type,
           customers ( name ),
-          objects ( name ),
-          customer_contacts ( first_name, last_name ),
+          objects ( name, address, notes, time_of_day, access_method, pin, is_alarm_secured, alarm_password, security_code_word, total_weekly_hours ),
+          customer_contacts ( first_name, last_name, phone ),
           order_feedback ( id, rating, comment, image_urls, created_at ),
           order_employee_assignments ( 
             employee_id, 
@@ -226,6 +230,10 @@ export default function OrdersPage({
 
       ordersData = data?.map(order => {
         const assignedEmployeeData = order.order_employee_assignments?.[0];
+        const customerData = Array.isArray(order.customers) ? order.customers[0] : order.customers;
+        const objectData = Array.isArray(order.objects) ? order.objects[0] : order.objects;
+        const customerContactData = Array.isArray(order.customer_contacts) ? order.customer_contacts[0] : order.customer_contacts;
+
         return {
           id: order.id,
           user_id: order.user_id,
@@ -248,10 +256,10 @@ export default function OrdersPage({
           assigned_saturday_hours: assignedEmployeeData?.assigned_saturday_hours || null,
           assigned_sunday_hours: assignedEmployeeData?.assigned_sunday_hours || null,
           customer_contact_id: order.customer_contact_id,
-          customer_name: order.customers?.[0]?.name || null,
-          object_name: order.objects?.[0]?.name || null,
-          customer_contact_first_name: order.customer_contacts?.[0]?.first_name || null,
-          customer_contact_last_name: order.customer_contacts?.[0]?.last_name || null,
+          customer_name: customerData?.name || null,
+          object_name: objectData?.name || null,
+          customer_contact_first_name: customerContactData?.first_name || null,
+          customer_contact_last_name: customerContactData?.last_name || null,
           order_type: order.order_type,
           recurring_start_date: order.recurring_start_date,
           recurring_end_date: order.recurring_end_date,
@@ -261,6 +269,9 @@ export default function OrdersPage({
           request_status: order.request_status,
           service_type: order.service_type,
           order_feedback: order.order_feedback,
+          object: objectData, // Assign the nested object
+          customer: customerData, // Assign the nested customer
+          customer_contact: customerContactData, // Assign the nested customer_contact
         };
       }) || [];
       ordersError = selectError;
@@ -530,7 +541,7 @@ export default function OrdersPage({
                             {order.total_estimated_hours && <div className="flex items-center text-xs text-muted-foreground mt-1"><Clock className="mr-1 h-3 w-3" /><span>Geschätzte Stunden: {order.total_estimated_hours}</span></div>}
                             {order.notes && <div className="flex items-center text-xs text-muted-foreground mt-1"><FileText className="mr-1 h-3 w-3" /><span>Notizen: {order.notes}</span></div>}
                             {order.order_type === "one_time" && order.due_date && <p className="text-xs text-muted-foreground ml-auto mt-1">Fällig: {new Date(order.due_date).toLocaleDateString()}</p>}
-                            {(order.order_type === "recurring" || order.order_type === "substitution" || order.order_type === "permanent") && order.recurring_start_date && <div className="flex items-center text-xs text-muted-foreground mt-1"><CalendarDays className="mr-1 h-3 w-3" /><span>Start: {new Date(order.recurring_start_date).toLocaleDateString()}</span></div>}
+                            {(order.order_type === "recurring" || order.order_type === "substitution") && order.recurring_start_date && <div className="flex items-center text-xs text-muted-foreground mt-1"><CalendarDays className="mr-1 h-3 w-3" /><span>Start: {new Date(order.recurring_start_date).toLocaleDateString()}</span></div>}
                             {(order.order_type === "recurring" || order.order_type === "substitution") && order.recurring_end_date && <div className="flex items-center text-xs text-muted-foreground"><CalendarDays className="mr-1 h-3 w-3" /><span>Ende: {new Date(order.recurring_end_date).toLocaleDateString()}</span></div>}
                             
                             {feedback && (

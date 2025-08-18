@@ -1,6 +1,6 @@
 "use client";
 
-import { useForm, SubmitHandler, useFieldArray } from "react-hook-form";
+import { useForm, SubmitHandler, useFieldArray, FieldPath } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Input } from "@/components/ui/input";
@@ -580,10 +580,10 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
                               step="0.5"
                               placeholder="Std."
                               className="w-full text-right"
-                              {...form.register(fieldName, { valueAsNumber: true })}
+                              {...form.register(fieldName as FieldPath<OrderFormValues>, { valueAsNumber: true })}
                               disabled={objectDailyHours === null}
                             />
-                            {form.formState.errors.assignedEmployees?.[assignedIndex]?.[`assigned_${day}_hours` as keyof typeof form.formState.errors.assignedEmployees[0]] && (
+                            {form.formState.errors.assignedEmployees?.[assignedIndex]?.[`assigned_${day}_hours` as keyof typeof form.formState.errors.assignedEmployees[0]]?.message && (
                                 <p className="text-red-500 text-xs mt-1">
                                     {form.formState.errors.assignedEmployees[assignedIndex]?.[`assigned_${day}_hours` as keyof typeof form.formState.errors.assignedEmployees[0]]?.message}
                                 </p>

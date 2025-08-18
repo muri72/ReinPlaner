@@ -12,6 +12,38 @@ import { Badge } from "@/components/ui/badge";
 import { TodaysOrdersOverview } from "@/components/todays-orders-overview";
 import type { DisplayOrder } from '@/app/dashboard/orders/page'; // Import DisplayOrder
 
+// Define an interface for the raw data returned by Supabase select query for employee dashboard
+interface RawEmployeeOrderResponse {
+  id: string;
+  title: string;
+  description: string | null;
+  status: string;
+  due_date: string | null;
+  order_type: string;
+  recurring_start_date: string | null;
+  recurring_end_date: string | null;
+  priority: string;
+  total_estimated_hours: number | null;
+  notes: string | null;
+  service_type: string | null;
+  request_status: string;
+  objects: { name: string | null; address: string | null; notes: string | null; time_of_day: string | null; access_method: string | null; pin: string | null; is_alarm_secured: boolean | null; alarm_password: string | null; security_code_word: string | null; total_weekly_hours: number | null; }[] | null;
+  customers: { name: string | null; }[] | null;
+  customer_contacts: { first_name: string | null; last_name: string | null; phone: string | null; }[] | null;
+  order_employee_assignments: { 
+    employee_id: string; 
+    assigned_daily_hours: number | null;
+    assigned_monday_hours: number | null;
+    assigned_tuesday_hours: number | null;
+    assigned_wednesday_hours: number | null;
+    assigned_thursday_hours: number | null;
+    assigned_friday_hours: number | null;
+    assigned_saturday_hours: number | null;
+    assigned_sunday_hours: number | null;
+    employees: { first_name: string | null; last_name: string | null } | null; // This should be an object, not an array, if single select
+  }[] | null;
+}
+
 export default async function EmployeeDashboardPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -50,7 +82,7 @@ export default async function EmployeeDashboardPage() {
 
   const employeeId = employeeData?.id || null;
 
-  let todaysAssignedOrders: any[] = [];
+  let todaysAssignedOrders: DisplayOrder[] = []; // Explicitly type as DisplayOrder[]
   if (employeeId) {
     const { data: orders, error: ordersError } = await supabase
       .from('orders')
@@ -67,6 +99,7 @@ export default async function EmployeeDashboardPage() {
         total_estimated_hours,
         notes,
         service_type,
+        request_status,
         objects ( name, address, notes, time_of_day, access_method, pin, is_alarm_secured, alarm_password, security_code_word, total_weekly_hours ),
         customers ( name ),
         customer_contacts ( first_name, last_name, phone ),
@@ -75,7 +108,8 @@ export default async function EmployeeDashboardPage() {
           assigned_daily_hours,
           assigned_monday_hours, assigned_tuesday_hours, assigned_wednesday_hours,
           assigned_thursday_hours, assigned_friday_hours, assigned_saturday_hours,
-          assigned_sunday_hours
+          assigned_sunday_hours,
+          employees ( first_name, last_name ) 
         )
       `)
       .eq('order_employee_assignments.employee_id', employeeId)
@@ -89,20 +123,52 @@ export default async function EmployeeDashboardPage() {
     if (ordersError) {
       console.error("Fehler beim Laden der heutigen Aufträge für Mitarbeiter:", ordersError?.message || JSON.stringify(ordersError));
     } else {
-      todaysAssignedOrders = orders.map(order => ({
-        ...order,
-        object: Array.isArray(order.objects) ? order.objects[0] : order.objects,
-        customer: Array.isArray(order.customers) ? order.customers[0] : order.customers,
-        customer_contact: Array.isArray(order.customer_contacts) ? order.customer_contacts[0] : order.customer_contacts,
-        assigned_daily_hours: order.order_employee_assignments?.[0]?.assigned_daily_hours || null, // Keep for compatibility if needed elsewhere
-        assigned_monday_hours: order.order_employee_assignments?.[0]?.assigned_monday_hours || null,
-        assigned_tuesday_hours: order.order_employee_assignments?.[0]?.assigned_tuesday_hours || null,
-        assigned_wednesday_hours: order.order_employee_assignments?.[0]?.assigned_wednesday_hours || null,
-        assigned_thursday_hours: order.order_employee_assignments?.[0]?.assigned_thursday_hours || null,
-        assigned_friday_hours: order.order_employee_assignments?.[0]?.assigned_friday_hours || null,
-        assigned_saturday_hours: order.order_employee_assignments?.[0]?.assigned_saturday_hours || null,
-        assigned_sunday_hours: order.order_employee_assignments?.[0]?.assigned_sunday_hours || null,
-      }));
+      todaysAssignedOrders = orders.map((order: RawEmployeeOrderResponse) => {
+        const assignedEmployeeData = order.order_employee_assignments?.[0];
+        const customerData = order.customers?.[0];
+        const objectData = order.objects?.[0];
+        const customerContactData = order.customer_contacts?.[0];
+
+        return {
+          id: order.id,
+          user_id: user.id, // Assuming user_id is current user's ID for employee's orders
+          title: order.title,
+          description: order.description,
+          status: order.status,
+          due_date: order.due_date,
+          created_at: null, // Not selected in query, set to null
+          customer_id: null, // Not selected in query, set to null
+          object_id: null, // Not selected in query, set to null
+          employee_ids: order.order_employee_assignments?.map(a => a.employee_id) || null,
+          employee_first_names: order.order_employee_assignments?.map(a => a.employees?.first_name || '') || null,
+          employee_last_names: order.order_employee_assignments?.map(a => a.employees?.last_name || '') || null,
+          assigned_daily_hours: assignedEmployeeData?.assigned_daily_hours || null, // Keep for compatibility if needed elsewhere
+          assigned_monday_hours: assignedEmployeeData?.assigned_monday_hours || null,
+          assigned_tuesday_hours: assignedEmployeeData?.assigned_tuesday_hours || null,
+          assigned_wednesday_hours: assignedEmployeeData?.assigned_wednesday_hours || null,
+          assigned_thursday_hours: assignedEmployeeData?.assigned_thursday_hours || null,
+          assigned_friday_hours: assignedEmployeeData?.assigned_friday_hours || null,
+          assigned_saturday_hours: assignedEmployeeData?.assigned_saturday_hours || null,
+          assigned_sunday_hours: assignedEmployeeData?.assigned_sunday_hours || null,
+          customer_contact_id: null, // Not selected in query, set to null
+          customer_name: customerData?.name || null,
+          object_name: objectData?.name || null,
+          customer_contact_first_name: customerContactData?.first_name || null,
+          customer_contact_last_name: customerContactData?.last_name || null,
+          order_type: order.order_type,
+          recurring_start_date: order.recurring_start_date,
+          recurring_end_date: order.recurring_end_date,
+          priority: order.priority,
+          total_estimated_hours: order.total_estimated_hours,
+          notes: order.notes,
+          request_status: order.request_status,
+          service_type: order.service_type,
+          order_feedback: [], // Not selected in query, set to empty array
+          object: objectData, // Assign the nested object
+          customer: customerData, // Assign the nested customer
+          customer_contact: customerContactData, // Assign the nested customer_contact
+        };
+      });
     }
   }
 
@@ -158,7 +224,7 @@ export default async function EmployeeDashboardPage() {
                         <MapPin className="mr-2 h-4 w-4" />
                         <span>{order.object.address}</span>
                         <Button variant="link" size="sm" asChild className="ml-auto">
-                          <a href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(order.object.address)}`} target="_blank" rel="noopener noreferrer">
+                          <a href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(order.object.address!)}`} target="_blank" rel="noopener noreferrer">
                             Route
                           </a>
                         </Button>
