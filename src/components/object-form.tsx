@@ -177,7 +177,7 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
 
   // Calculate total weekly hours dynamically for display
   const totalWeeklyHours = dayNames.reduce((sum, day) => {
-    const hours = form.watch(`${day}_hours` as keyof ObjectFormValues) as number | null | undefined;
+    const hours = form.watch(`${day}_hours` as keyof ObjectFormValues) as number | null;
     return sum + (hours || 0);
   }, 0);
 
