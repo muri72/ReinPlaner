@@ -131,7 +131,7 @@ export function OrderEditDialog({ order }: OrderEditDialogProps) {
         </Tooltip>
         <DialogContent 
           key={open ? "order-edit-open" : "order-edit-closed"} 
-          className="sm:max-w-3xl max-h-[90vh] overflow-y-auto flex flex-col glassmorphism-card" // Changed sm:max-w-[425px] to sm:max-w-3xl
+          className="sm:max-w-5xl max-h-[90vh] overflow-y-auto flex flex-col glassmorphism-card" // Changed sm:max-w-3xl to sm:max-w-5xl
         >
           <DialogHeader>
             <DialogTitle>Auftrag bearbeiten</DialogTitle>

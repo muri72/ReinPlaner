@@ -789,122 +789,120 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
 
         {assignedEmployeeFields.length > 0 && ( // Use assignedEmployeeFields directly
           <div className="mt-4 space-y-4">
-            {assignedEmployeeFields.map((assignedEmp, assignedIndex) => {
-              const employee = allEmployees.find(emp => emp.id === assignedEmp.employeeId);
-              if (!employee) return null;
+            {assignedEmployeeFields.map((assignedEmp, assignedIndex) => (
+              <div key={assignedEmp.employeeId} className="border rounded-md p-3 space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <h4 className="font-semibold text-sm">
+                    {allEmployees.find(emp => emp.id === assignedEmp.employeeId)?.first_name}{' '}
+                    {allEmployees.find(emp => emp.id === assignedEmp.employeeId)?.last_name}
+                  </h4>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => {
+                      const newSelectedIds = assignedEmployeeFields.filter(emp => emp.employeeId !== assignedEmp.employeeId).map(emp => emp.employeeId);
+                      handleEmployeeSelectionChange(newSelectedIds);
+                    }}
+                    className="text-destructive hover:text-destructive/80"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+                {/* Hours input for single or multiple employees */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2">
+                  {dayNames.map(day => {
+                    const hoursFieldName = `assignedEmployees.${assignedIndex}.assigned_${day}_hours` as const;
+                    const objectDailyHours = getObjectDailyHours(day);
+                    const isDayValid = isDailyHoursValid(day); // Check overall validity for the day
 
-              return (
-                <div key={assignedEmp.employeeId} className="border rounded-md p-3 space-y-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <h4 className="font-semibold text-sm">{employee.first_name} {employee.last_name}</h4>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => {
-                        const newSelectedIds = assignedEmployeeFields.filter(emp => emp.employeeId !== employee.id).map(emp => emp.employeeId);
-                        handleEmployeeSelectionChange(newSelectedIds);
-                      }}
-                      className="text-destructive hover:text-destructive/80"
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  {/* Hours input for single or multiple employees */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2">
+                    return (
+                      <div key={day}>
+                        <Label htmlFor={hoursFieldName} className="text-xs font-medium">
+                          {germanDayNames[day]} {objectDailyHours !== null ? `(${objectDailyHours.toFixed(1)}h)` : ''}
+                        </Label>
+                        <Input
+                          id={hoursFieldName}
+                          type="number"
+                          step="0.5"
+                          placeholder="Std."
+                          className={cn(
+                            "w-full text-right",
+                            !isDayValid && "border-destructive focus-visible:ring-destructive" // Highlight if sum is invalid
+                          )}
+                          {...form.register(hoursFieldName as FieldPath<OrderFormValues>, { valueAsNumber: true })}
+                          disabled={!selectedObjectId || isSingleEmployeeAssigned} // Disable if no object or single employee
+                          readOnly={isSingleEmployeeAssigned} // Readonly if single employee
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+                {/* Time inputs for single employee */}
+                {isSingleEmployeeAssigned && (
+                  <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2 mt-2">
                     {dayNames.map(day => {
-                      const hoursFieldName = `assignedEmployees.${assignedIndex}.assigned_${day}_hours` as const;
-                      const objectDailyHours = getObjectDailyHours(day);
-                      const isDayValid = isDailyHoursValid(day); // Check overall validity for the day
-
+                      const startFieldName = `assignedEmployees.${assignedIndex}.assigned_${day}_start_time` as const;
+                      const endFieldName = `assignedEmployees.${assignedIndex}.assigned_${day}_end_time` as const;
+                      
                       return (
-                        <div key={day}>
-                          <Label htmlFor={hoursFieldName} className="text-xs font-medium">
-                            {germanDayNames[day]} {objectDailyHours !== null ? `(${objectDailyHours.toFixed(1)}h)` : ''}
-                          </Label>
+                        <div key={`${day}-times`}>
+                          <Label htmlFor={startFieldName} className="text-xs">{germanDayNames[day]} Start</Label>
                           <Input
-                            id={hoursFieldName}
-                            type="number"
-                            step="0.5"
-                            placeholder="Std."
-                            className={cn(
-                              "w-full text-right",
-                              !isDayValid && "border-destructive focus-visible:ring-destructive" // Highlight if sum is invalid
-                            )}
-                            {...form.register(hoursFieldName as FieldPath<OrderFormValues>, { valueAsNumber: true })}
-                            disabled={!selectedObjectId || isSingleEmployeeAssigned} // Disable if no object or single employee
-                            readOnly={isSingleEmployeeAssigned} // Readonly if single employee
+                            id={startFieldName}
+                            type="time"
+                            className="w-full"
+                            disabled={true} // Always disabled for single employee, derived from object
+                            readOnly={true}
+                            value={(assignedEmp as any)[startFieldName] || ''} // Display assigned employee's start time
+                          />
+                          <Label htmlFor={endFieldName} className="text-xs mt-1">{germanDayNames[day]} Ende</Label>
+                          <Input
+                            id={endFieldName}
+                            type="time"
+                            className="w-full"
+                            disabled={true} // Always disabled for single employee, derived from object
+                            readOnly={true}
+                            value={(assignedEmp as any)[endFieldName] || ''} // Display assigned employee's end time
                           />
                         </div>
                       );
                     })}
                   </div>
-                  {/* Time inputs for single employee */}
-                  {isSingleEmployeeAssigned && (
-                    <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2 mt-2">
-                      {dayNames.map(day => {
-                        const startFieldName = `assignedEmployees.${assignedIndex}.assigned_${day}_start_time` as const;
-                        const endFieldName = `assignedEmployees.${assignedIndex}.assigned_${day}_end_time` as const;
-                        
-                        return (
-                          <div key={`${day}-times`}>
-                            <Label htmlFor={startFieldName} className="text-xs">Start</Label>
-                            <Input
-                              id={startFieldName}
-                              type="time"
-                              className="w-full"
-                              disabled={true} // Always disabled for single employee, derived from object
-                              readOnly={true}
-                              value={(assignedEmp as any)[startFieldName] || ''} // Display assigned employee's start time
-                            />
-                            <Label htmlFor={endFieldName} className="text-xs mt-1">Ende</Label>
-                            <Input
-                              id={endFieldName}
-                              type="time"
-                              className="w-full"
-                              disabled={true} // Always disabled for single employee, derived from object
-                              readOnly={true}
-                              value={(assignedEmp as any)[endFieldName] || ''} // Display assigned employee's end time
-                            />
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                  {!isSingleEmployeeAssigned && (
-                    <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2 mt-2">
-                      {dayNames.map(day => {
-                        const startFieldName = `assignedEmployees.${assignedIndex}.assigned_${day}_start_time` as const;
-                        const endFieldName = `assignedEmployees.${assignedIndex}.assigned_${day}_end_time` as const;
+                )}
+                {!isSingleEmployeeAssigned && (
+                  <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2 mt-2">
+                    {dayNames.map(day => {
+                      const startFieldName = `assignedEmployees.${assignedIndex}.assigned_${day}_start_time` as const;
+                      const endFieldName = `assignedEmployees.${assignedIndex}.assigned_${day}_end_time` as const;
 
-                        return (
-                          <div key={`${day}-times-editable`}>
-                            <Label htmlFor={startFieldName} className="text-xs">Start</Label>
-                            <Input
-                              id={startFieldName}
-                              type="time"
-                              className="w-full"
-                              {...form.register(startFieldName as FieldPath<OrderFormValues>)}
-                              onChange={(e) => handleAssignedTimeChange(assignedIndex, day, 'start', e.target.value)}
-                              disabled={!selectedObjectId}
-                            />
-                            <Label htmlFor={endFieldName} className="text-xs mt-1">Ende</Label>
-                            <Input
-                              id={endFieldName}
-                              type="time"
-                              className="w-full"
-                              {...form.register(endFieldName as FieldPath<OrderFormValues>)}
-                              onChange={(e) => handleAssignedTimeChange(assignedIndex, day, 'end', e.target.value)}
-                              disabled={!selectedObjectId}
-                            />
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+                      return (
+                        <div key={`${day}-times-editable`}>
+                          <Label htmlFor={startFieldName} className="text-xs">{germanDayNames[day]} Start</Label>
+                          <Input
+                            id={startFieldName}
+                            type="time"
+                            className="w-full"
+                            {...form.register(startFieldName as FieldPath<OrderFormValues>)}
+                            onChange={(e) => handleAssignedTimeChange(assignedIndex, day, 'start', e.target.value)}
+                            disabled={!selectedObjectId}
+                          />
+                          <Label htmlFor={endFieldName} className="text-xs mt-1">{germanDayNames[day]} Ende</Label>
+                          <Input
+                            id={endFieldName}
+                            type="time"
+                            className="w-full"
+                            {...form.register(endFieldName as FieldPath<OrderFormValues>)}
+                            onChange={(e) => handleAssignedTimeChange(assignedIndex, day, 'end', e.target.value)}
+                            disabled={!selectedObjectId}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         )}
       </div>
