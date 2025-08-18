@@ -639,7 +639,8 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     return Math.abs(sumAssigned - objectHours) < 0.01;
   };
 
-  const isSingleEmployeeAssigned = assignedEmployeeFields.length === 1;
+  // Removed isSingleEmployeeAssigned as it's no longer used for disabling/readOnly
+  // const isSingleEmployeeAssigned = assignedEmployeeFields.length === 1;
 
   return (
     <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 w-full"> {/* Removed max-w-3xl mx-auto */}
@@ -833,12 +834,12 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
                               !isDayValid && "border-destructive focus-visible:ring-destructive" // Highlight if sum is invalid
                             )}
                             {...form.register(hoursFieldName as FieldPath<OrderFormValues>, { valueAsNumber: true })}
-                            disabled={!selectedObjectId || isSingleEmployeeAssigned} // Disable if no object or single employee
-                            readOnly={isSingleEmployeeAssigned} // Readonly if single employee
+                            disabled={!selectedObjectId} // Only disable if no object is selected
+                            // Removed readOnly={isSingleEmployeeAssigned}
                           />
                         </div>
-                        {/* Only show time inputs if not single employee or if single employee and times exist */}
-                        {(!isSingleEmployeeAssigned || (isSingleEmployeeAssigned && ((assignedEmp as any)[startFieldName] || (assignedEmp as any)[endFieldName]))) && (
+                        {/* Always show time inputs if an object is selected */}
+                        {selectedObjectId && (
                           <>
                             <div>
                               <Label htmlFor={startFieldName} className="text-xs">Start</Label>
@@ -848,8 +849,8 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
                                 className="w-full"
                                 {...form.register(startFieldName as FieldPath<OrderFormValues>)}
                                 onChange={(e) => handleAssignedTimeChange(assignedIndex, day, 'start', e.target.value)}
-                                disabled={!selectedObjectId || isSingleEmployeeAssigned}
-                                readOnly={isSingleEmployeeAssigned}
+                                disabled={!selectedObjectId} // Only disable if no object is selected
+                                // Removed readOnly={isSingleEmployeeAssigned}
                               />
                             </div>
                             <div>
@@ -860,8 +861,8 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
                                 className="w-full"
                                 {...form.register(endFieldName as FieldPath<OrderFormValues>)}
                                 onChange={(e) => handleAssignedTimeChange(assignedIndex, day, 'end', e.target.value)}
-                                disabled={!selectedObjectId || isSingleEmployeeAssigned}
-                                readOnly={isSingleEmployeeAssigned}
+                                disabled={!selectedObjectId} // Only disable if no object is selected
+                                // Removed readOnly={isSingleEmployeeAssigned}
                               />
                             </div>
                           </>
