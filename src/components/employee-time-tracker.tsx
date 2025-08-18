@@ -537,7 +537,7 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
               </>
             ) : (
               <p className="text-sm text-muted-foreground text-center">
-                Bitte stoppen Sie zuerst die Stoppuhr.
+                Bitte stempeln Sie zuerst aus.
               </p>
             )}
           </TabsContent>

@@ -87,7 +87,7 @@ export async function createOrder(data: OrderFormValues) {
       for (const admin of adminsAndManagers) {
         await sendNotification({
           userId: admin.id,
-          title: "Neue Auftragsanfrage",
+          title: "Neuer Auftragsanfrage",
           message: `Eine neue Auftragsanfrage "${title}" wurde erstellt.`,
           link: "/dashboard/orders"
         });
@@ -140,7 +140,7 @@ export async function updateOrder(orderId: string, data: OrderFormValues) {
       order_type: orderType,
       recurring_start_date: recurringStartDate ? recurringStartDate.toISOString().split('T')[0] : null,
       recurring_end_date: recurringEndDate ? recurringEndDate.toISOString().split('T')[0] : null,
-      priority: data.priority,
+      priority,
       total_estimated_hours: totalEstimatedHours,
       notes: data.notes,
       service_type: serviceType,

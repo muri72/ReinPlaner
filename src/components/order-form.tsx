@@ -311,232 +311,232 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Objekt auswählen" />
             </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="unassigned">Kein Objekt zugewiesen</SelectItem>
-              {filteredObjects.map(obj => (
-                <SelectItem key={obj.id} value={obj.id}>{obj.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {form.formState.errors.objectId && (
-            <p className="text-red-500 text-sm mt-1">{form.formState.errors.objectId.message}</p>
-          )}
-        </div>
-        <Dialog open={isNewObjectDialogOpen} onOpenChange={setIsNewObjectDialogOpen}>
-          <DialogTrigger asChild>
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              className="mb-1"
-              disabled={!form.watch("customerId")}
-              title={!form.watch("customerId") ? "Bitte zuerst einen Kunden auswählen" : "Neues Objekt für diesen Kunden erstellen"}
-            >
-              <PlusCircle className="h-4 w-4" />
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto" aria-labelledby="object-create-dialog-title">
-            <DialogHeader>
-              <DialogTitle id="object-create-dialog-title">Neues Objekt erstellen</DialogTitle>
-            </DialogHeader>
-            <ObjectForm
-              initialData={{ customerId: form.watch("customerId") }}
-              onSubmit={handleCreateObject}
-              submitButtonText="Objekt erstellen"
-              onSuccess={() => setIsNewObjectDialogOpen(false)}
-            />
-          </DialogContent>
-        </Dialog>
-      </div>
-
-      {/* Mitarbeiterzuweisung */}
-      <div className="space-y-2">
-        <Label>Zugewiesene Mitarbeiter (optional)</Label>
-        <div className="border rounded-md p-3 space-y-2 max-h-60 overflow-y-auto">
-          {allEmployees.length === 0 ? (
-            <p className="text-muted-foreground text-sm">Keine Mitarbeiter zum Zuweisen gefunden.</p>
-          ) : (
-            allEmployees.map((employee) => {
-              const isAssigned = selectedAssignedEmployees?.some(
-                (assigned) => assigned.employeeId === employee.id
-              );
-              const assignedIndex = assignedEmployeeFields.findIndex(
-                (field) => field.employeeId === employee.id
-              );
-
-              return (
-                <div key={employee.id} className="flex items-center justify-between gap-2">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id={`employee-${employee.id}`}
-                      checked={isAssigned}
-                      onCheckedChange={(checked) =>
-                        handleEmployeeAssignmentChange(employee.id, !!checked)
-                      }
-                    />
-                    <Label htmlFor={`employee-${employee.id}`} className="flex-grow">
-                      {employee.first_name} {employee.last_name}
-                    </Label>
-                  </div>
-                  {isAssigned && assignedIndex !== -1 && (
-                    <div className="flex items-center gap-1">
-                      <Label htmlFor={`assignedEmployees.${assignedIndex}.assignedDailyHours`} className="sr-only">Tägliche Stunden für {employee.first_name}</Label>
-                      <Input
-                        id={`assignedEmployees.${assignedIndex}.assignedDailyHours`}
-                        type="number"
-                        step="0.5"
-                        placeholder="Std. / Tag"
-                        className="w-24 text-right"
-                        {...form.register(`assignedEmployees.${assignedIndex}.assignedDailyHours`, { valueAsNumber: true })}
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => removeEmployee(assignedIndex)}
-                        className="text-destructive hover:text-destructive/80"
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              );
-            })
-          )}
-        </div>
-        {form.formState.errors.assignedEmployees && (
-          <p className="text-red-500 text-sm mt-1">{form.formState.errors.assignedEmployees.message}</p>
-        )}
-      </div>
-
-      <div>
-        <Label htmlFor="orderType">Auftragstyp</Label>
-        <Select onValueChange={(value) => {
-          form.setValue("orderType", value as OrderFormValues["orderType"]);
-          form.setValue("dueDate", null);
-          form.setValue("recurringStartDate", null);
-          form.setValue("recurringEndDate", null);
-        }} value={form.watch("orderType")}>
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Auftragstyp auswählen" />
-          </SelectTrigger>
           <SelectContent>
-            <SelectItem value="one_time">Einmalig</SelectItem>
-            <SelectItem value="recurring">Wiederkehrend</SelectItem>
-            <SelectItem value="substitution">Vertretung</SelectItem>
-            <SelectItem value="permanent">Permanent</SelectItem>
+            <SelectItem value="unassigned">Kein Objekt zugewiesen</SelectItem>
+            {filteredObjects.map(obj => (
+              <SelectItem key={obj.id} value={obj.id}>{obj.name}</SelectItem>
+            ))}
           </SelectContent>
         </Select>
-        {form.formState.errors.orderType && (
-          <p className="text-red-500 text-sm mt-1">{form.formState.errors.orderType.message}</p>
+        {form.formState.errors.objectId && (
+          <p className="text-red-500 text-sm mt-1">{form.formState.errors.objectId.message}</p>
         )}
       </div>
-
-      {orderType === "one_time" && (
-        <DatePicker
-          label="Fälligkeitsdatum (optional)"
-          value={form.watch("dueDate")}
-          onChange={(date) => form.setValue("dueDate", date)}
-          error={form.formState.errors.dueDate?.message}
-        />
-      )}
-
-      {(orderType === "recurring" || orderType === "substitution" || orderType === "permanent") && (
-        <>
-          <DatePicker
-            label="Startdatum"
-            value={form.watch("recurringStartDate")}
-            onChange={(date) => form.setValue("recurringStartDate", date)}
-            error={form.formState.errors.recurringStartDate?.message}
+      <Dialog open={isNewObjectDialogOpen} onOpenChange={setIsNewObjectDialogOpen}>
+        <DialogTrigger asChild>
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className="mb-1"
+            disabled={!form.watch("customerId")}
+            title={!form.watch("customerId") ? "Bitte zuerst einen Kunden auswählen" : "Neues Objekt für diesen Kunden erstellen"}
+          >
+            <PlusCircle className="h-4 w-4" />
+          </Button>
+        </DialogTrigger>
+        <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto" aria-labelledby="object-create-dialog-title">
+          <DialogHeader>
+            <DialogTitle id="object-create-dialog-title">Neues Objekt erstellen</DialogTitle>
+          </DialogHeader>
+          <ObjectForm
+            initialData={{ customerId: form.watch("customerId") }}
+            onSubmit={handleCreateObject}
+            submitButtonText="Objekt erstellen"
+            onSuccess={() => setIsNewObjectDialogOpen(false)}
           />
-          {orderType !== "permanent" && (
-            <DatePicker
-              label="Enddatum (optional)"
-              value={form.watch("recurringEndDate")}
-              onChange={(date) => form.setValue("recurringEndDate", date)}
-              error={form.formState.errors.recurringEndDate?.message}
-            />
-          )}
-        </>
-      )}
+        </DialogContent>
+      </Dialog>
+    </div>
 
-      <div>
-        <Label htmlFor="priority">Priorität</Label>
-        <Select onValueChange={(value) => form.setValue("priority", value as OrderFormValues["priority"])} value={form.watch("priority")}>
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Priorität auswählen" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="low">Niedrig</SelectItem>
-            <SelectItem value="medium">Mittel</SelectItem>
-            <SelectItem value="high">Hoch</SelectItem>
-          </SelectContent>
-        </Select>
-        {form.formState.errors.priority && (
-          <p className="text-red-500 text-sm mt-1">{form.formState.errors.priority.message}</p>
+    {/* Mitarbeiterzuweisung */}
+    <div className="space-y-2">
+      <Label>Zugewiesene Mitarbeiter (optional)</Label>
+      <div className="border rounded-md p-3 space-y-2 max-h-60 overflow-y-auto">
+        {allEmployees.length === 0 ? (
+          <p className="text-muted-foreground text-sm">Keine Mitarbeiter zum Zuweisen gefunden.</p>
+        ) : (
+          allEmployees.map((employee) => {
+            const isAssigned = selectedAssignedEmployees?.some(
+              (assigned) => assigned.employeeId === employee.id
+            );
+            const assignedIndex = assignedEmployeeFields.findIndex(
+              (field) => field.employeeId === employee.id
+            );
+
+            return (
+              <div key={employee.id} className="flex items-center justify-between gap-2">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`employee-${employee.id}`}
+                    checked={isAssigned}
+                    onCheckedChange={(checked) =>
+                      handleEmployeeAssignmentChange(employee.id, !!checked)
+                    }
+                  />
+                  <Label htmlFor={`employee-${employee.id}`} className="flex-grow">
+                    {employee.first_name} {employee.last_name}
+                  </Label>
+                </div>
+                {isAssigned && assignedIndex !== -1 && (
+                  <div className="flex items-center gap-1">
+                    <Label htmlFor={`assignedEmployees.${assignedIndex}.assignedDailyHours`} className="sr-only">Tägliche Stunden für {employee.first_name}</Label>
+                    <Input
+                      id={`assignedEmployees.${assignedIndex}.assignedDailyHours`}
+                      type="number"
+                      step="0.5"
+                      placeholder="Std. / Tag"
+                      className="w-24 text-right"
+                      {...form.register(`assignedEmployees.${assignedIndex}.assignedDailyHours`, { valueAsNumber: true })}
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => removeEmployee(assignedIndex)}
+                      className="text-destructive hover:text-destructive/80"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+              </div>
+            );
+          })
         )}
       </div>
-      <div>
-        <Label htmlFor="totalEstimatedHours">Geschätzte Stunden (optional)</Label>
-        <Input
-          id="totalEstimatedHours"
-          type="number"
-          step="0.5"
-          {...form.register("totalEstimatedHours")}
-          placeholder="Z.B. 2.5"
+      {form.formState.errors.assignedEmployees && (
+        <p className="text-red-500 text-sm mt-1">{form.formState.errors.assignedEmployees.message}</p>
+      )}
+    </div>
+
+    <div>
+      <Label htmlFor="orderType">Auftragstyp</Label>
+      <Select onValueChange={(value) => {
+        form.setValue("orderType", value as OrderFormValues["orderType"]);
+        form.setValue("dueDate", null);
+        form.setValue("recurringStartDate", null);
+        form.setValue("recurringEndDate", null);
+      }} value={form.watch("orderType")}>
+        <SelectTrigger className="w-full">
+          <SelectValue placeholder="Auftragstyp auswählen" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="one_time">Einmalig</SelectItem>
+          <SelectItem value="recurring">Wiederkehrend</SelectItem>
+          <SelectItem value="substitution">Vertretung</SelectItem>
+          <SelectItem value="permanent">Permanent</SelectItem>
+        </SelectContent>
+      </Select>
+      {form.formState.errors.orderType && (
+        <p className="text-red-500 text-sm mt-1">{form.formState.errors.orderType.message}</p>
+      )}
+    </div>
+
+    {orderType === "one_time" && (
+      <DatePicker
+        label="Fälligkeitsdatum (optional)"
+        value={form.watch("dueDate")}
+        onChange={(date) => form.setValue("dueDate", date)}
+        error={form.formState.errors.dueDate?.message}
+      />
+    )}
+
+    {(orderType === "recurring" || orderType === "substitution" || orderType === "permanent") && (
+      <>
+        <DatePicker
+          label="Startdatum"
+          value={form.watch("recurringStartDate")}
+          onChange={(date) => form.setValue("recurringStartDate", date)}
+          error={form.formState.errors.recurringStartDate?.message}
         />
-        {form.formState.errors.totalEstimatedHours && (
-          <p className="text-red-500 text-sm mt-1">{form.formState.errors.totalEstimatedHours.message}</p>
+        {orderType !== "permanent" && (
+          <DatePicker
+            label="Enddatum (optional)"
+            value={form.watch("recurringEndDate")}
+            onChange={(date) => form.setValue("recurringEndDate", date)}
+            error={form.formState.errors.recurringEndDate?.message}
+          />
         )}
-      </div>
-      <div>
-        <Label htmlFor="notes">Notizen (optional)</Label>
-        <Textarea
-          id="notes"
-          {...form.register("notes")}
-          placeholder="Zusätzliche Notizen zum Auftrag..."
-          rows={3}
-        />
-        {form.formState.errors.notes && (
-          <p className="text-red-500 text-sm mt-1">{form.formState.errors.notes.message}</p>
-        )}
-      </div>
-      <div>
-        <Label htmlFor="status">Status</Label>
-        <Select onValueChange={(value) => form.setValue("status", value as "pending" | "in_progress" | "completed")} value={form.watch("status")}>
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Status auswählen" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="pending">Ausstehend</SelectItem>
-            <SelectItem value="in_progress">In Bearbeitung</SelectItem>
-            <SelectItem value="completed">Abgeschlossen</SelectItem>
-          </SelectContent>
-        </Select>
-        {form.formState.errors.status && (
-          <p className="text-red-500 text-sm mt-1">{form.formState.errors.status.message}</p>
-        )}
-      </div>
-      <div>
-        <Label htmlFor="requestStatus">Anfragestatus</Label>
-        <Select onValueChange={(value) => form.setValue("requestStatus", value as "pending" | "approved" | "rejected")} value={form.watch("requestStatus")}>
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Anfragestatus auswählen" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="pending">Ausstehend</SelectItem>
-            <SelectItem value="approved">Genehmigt</SelectItem>
-            <SelectItem value="rejected">Abgelehnt</SelectItem>
-          </SelectContent>
-        </Select>
-        {form.formState.errors.requestStatus && (
-          <p className="text-red-500 text-sm mt-1">{form.formState.errors.requestStatus.message}</p>
-        )}
-      </div>
-      <Button type="submit" disabled={form.formState.isSubmitting}>
-        {form.formState.isSubmitting ? `${submitButtonText}...` : submitButtonText}
-      </Button>
-    </form>
-  );
+      </>
+    )}
+
+    <div>
+      <Label htmlFor="priority">Priorität</Label>
+      <Select onValueChange={(value) => form.setValue("priority", value as OrderFormValues["priority"])} value={form.watch("priority")}>
+        <SelectTrigger className="w-full">
+          <SelectValue placeholder="Priorität auswählen" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="low">Niedrig</SelectItem>
+          <SelectItem value="medium">Mittel</SelectItem>
+          <SelectItem value="high">Hoch</SelectItem>
+        </SelectContent>
+      </Select>
+      {form.formState.errors.priority && (
+        <p className="text-red-500 text-sm mt-1">{form.formState.errors.priority.message}</p>
+      )}
+    </div>
+    <div>
+      <Label htmlFor="totalEstimatedHours">Geschätzte Stunden (optional)</Label>
+      <Input
+        id="totalEstimatedHours"
+        type="number"
+        step="0.5"
+        {...form.register("totalEstimatedHours")}
+        placeholder="Z.B. 2.5"
+      />
+      {form.formState.errors.totalEstimatedHours && (
+        <p className="text-red-500 text-sm mt-1">{form.formState.errors.totalEstimatedHours.message}</p>
+      )}
+    </div>
+    <div>
+      <Label htmlFor="notes">Notizen (optional)</Label>
+      <Textarea
+        id="notes"
+        {...form.register("notes")}
+        placeholder="Zusätzliche Notizen zum Auftrag..."
+        rows={3}
+      />
+      {form.formState.errors.notes && (
+        <p className="text-red-500 text-sm mt-1">{form.formState.errors.notes.message}</p>
+      )}
+    </div>
+    <div>
+      <Label htmlFor="status">Status</Label>
+      <Select onValueChange={(value) => form.setValue("status", value as "pending" | "in_progress" | "completed")} value={form.watch("status")}>
+        <SelectTrigger className="w-full">
+          <SelectValue placeholder="Status auswählen" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="pending">Ausstehend</SelectItem>
+          <SelectItem value="in_progress">In Bearbeitung</SelectItem>
+          <SelectItem value="completed">Abgeschlossen</SelectItem>
+        </SelectContent>
+      </Select>
+      {form.formState.errors.status && (
+        <p className="text-red-500 text-sm mt-1">{form.formState.errors.status.message}</p>
+      )}
+    </div>
+    <div>
+      <Label htmlFor="requestStatus">Anfragestatus</Label>
+      <Select onValueChange={(value) => form.setValue("requestStatus", value as "pending" | "approved" | "rejected")} value={form.watch("requestStatus")}>
+        <SelectTrigger className="w-full">
+          <SelectValue placeholder="Anfragestatus auswählen" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="pending">Ausstehend</SelectItem>
+          <SelectItem value="approved">Genehmigt</SelectItem>
+          <SelectItem value="rejected">Abgelehnt</SelectItem>
+        </SelectContent>
+      </Select>
+      {form.formState.errors.requestStatus && (
+        <p className="text-red-500 text-sm mt-1">{form.formState.errors.requestStatus.message}</p>
+      )}
+    </div>
+    <Button type="submit" disabled={form.formState.isSubmitting}>
+      {form.formState.isSubmitting ? `${submitButtonText}...` : submitButtonText}
+    </Button>
+  </form>
+);
 }
