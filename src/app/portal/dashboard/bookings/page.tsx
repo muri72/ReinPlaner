@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Briefcase, CalendarDays, Building, Wrench, FileText, Clock } from "lucide-react";
 import { CustomerOrderRequestDialog } from "@/components/customer-order-request-dialog";
 import { OrderFeedbackDialog } from "@/components/order-feedback-dialog"; // For giving feedback on completed orders
+import { Button } from "@/components/ui/button"; // Import Button
 
 interface DisplayOrder {
   id: string;
@@ -35,6 +36,31 @@ interface DisplayOrder {
   request_status: string;
   service_type: string | null;
   order_feedback: { id: string }[]; // To check if feedback exists
+}
+
+// Define an interface for the raw data returned by Supabase select query
+interface RawOrderResponse {
+  id: string;
+  title: string;
+  description: string | null;
+  status: string;
+  due_date: string | null;
+  customer_id: string | null; // Direct column
+  object_id: string | null; // Direct column
+  customer_contact_id: string | null; // Direct column
+  order_type: string;
+  recurring_start_date: string | null;
+  recurring_end_date: string | null;
+  priority: string;
+  total_estimated_hours: number | null;
+  notes: string | null;
+  request_status: string;
+  service_type: string | null;
+  customers: { name: string }[] | null;
+  objects: { name: string }[] | null;
+  customer_contacts: { first_name: string | null; last_name: string | null }[] | null;
+  order_feedback: { id: string }[] | null;
+  order_employee_assignments: { employee_id: string; assigned_daily_hours: number | null; employees: { first_name: string | null; last_name: string | null }[] | null }[] | null;
 }
 
 export default async function CustomerBookingsPage() {
@@ -77,6 +103,9 @@ export default async function CustomerBookingsPage() {
         description,
         status,
         due_date,
+        customer_id,
+        object_id,
+        customer_contact_id,
         order_type,
         recurring_start_date,
         recurring_end_date,
@@ -97,7 +126,7 @@ export default async function CustomerBookingsPage() {
     if (error) {
       console.error("Fehler beim Laden der Kundenaufträge:", error?.message || JSON.stringify(error));
     } else {
-      allCustomerOrders = data.map(order => ({
+      allCustomerOrders = data.map((order: RawOrderResponse) => ({ // Explicitly type order here
         id: order.id,
         title: order.title,
         description: order.description,
@@ -106,8 +135,8 @@ export default async function CustomerBookingsPage() {
         customer_id: order.customer_id,
         object_id: order.object_id,
         employee_ids: order.order_employee_assignments?.map((a: any) => a.employee_id) || null,
-        employee_first_names: order.order_employee_assignments?.map((a: any) => a.employees?.first_name || '') || null,
-        employee_last_names: order.order_employee_assignments?.map((a: any) => a.employees?.last_name || '') || null,
+        employee_first_names: order.order_employee_assignments?.map((a: any) => a.employees?.[0]?.first_name || '') || null,
+        employee_last_names: order.order_employee_assignments?.map((a: any) => a.employees?.[0]?.last_name || '') || null,
         assigned_daily_hours: order.order_employee_assignments?.map((a: any) => a.assigned_daily_hours) || null,
         customer_contact_id: order.customer_contact_id,
         customer_name: order.customers?.[0]?.name || null,
@@ -122,7 +151,7 @@ export default async function CustomerBookingsPage() {
         notes: order.notes,
         request_status: order.request_status,
         service_type: order.service_type,
-        order_feedback: order.order_feedback,
+        order_feedback: order.order_feedback || [], // Ensure it's an array
       }));
     }
   }

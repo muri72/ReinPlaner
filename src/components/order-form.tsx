@@ -329,7 +329,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
       </div>
       <div>
         <Label htmlFor="serviceType">Reinigungsdienstleistung</Label>
-        <Select onValueChange={(value: OrderFormValues["serviceType"]) => form.setValue("serviceType", value)} value={form.watch("serviceType") || ""}>
+        <Select onValueChange={(value: string) => form.setValue("serviceType", value as OrderFormValues["serviceType"])} value={form.watch("serviceType") || ""}>
           <SelectTrigger className="w-full">
             <SelectValue placeholder="Dienstleistung auswählen" />
           </SelectTrigger>
