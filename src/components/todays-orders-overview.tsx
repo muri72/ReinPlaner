@@ -22,12 +22,12 @@ interface DisplayOrder {
   due_date: string | null;
   customer_id: string | null;
   object_id: string | null;
-  employee_id: string | null;
+  employee_ids: string[] | null; // Updated to array of IDs
+  employee_first_names: string[] | null; // Updated to array of first names
+  employee_last_names: string[] | null; // Updated to array of last names
   customer_contact_id: string | null;
   customer_name: string | null;
   object_name: string | null;
-  employee_first_name: string | null;
-  employee_last_name: string | null;
   customer_contact_first_name: string | null;
   customer_contact_last_name: string | null;
   order_type: string;
@@ -107,7 +107,6 @@ export function TodaysOrdersOverview() {
           due_date,
           customer_id,
           object_id,
-          employee_id,
           customer_contact_id,
           order_type,
           recurring_start_date,
@@ -119,8 +118,8 @@ export function TodaysOrdersOverview() {
           service_type,
           customers ( name ),
           objects ( name ),
-          employees ( first_name, last_name ),
-          customer_contacts ( first_name, last_name )
+          customer_contacts ( first_name, last_name ),
+          order_employee_assignments ( employee_id, employees ( first_name, last_name ) )
         `)
         .eq('request_status', 'approved') // Only show approved orders
         .order('due_date', { ascending: true })
@@ -139,7 +138,6 @@ export function TodaysOrdersOverview() {
         setOrders([]);
       } else {
         const mappedOrders = data.map(order => {
-          const employee = Array.isArray(order.employees) ? order.employees[0] : order.employees;
           const customer = Array.isArray(order.customers) ? order.customers[0] : order.customers;
           const object = Array.isArray(order.objects) ? order.objects[0] : order.objects;
           const customerContact = Array.isArray(order.customer_contacts) ? order.customer_contacts[0] : order.customer_contacts;
@@ -152,12 +150,12 @@ export function TodaysOrdersOverview() {
             due_date: order.due_date,
             customer_id: order.customer_id,
             object_id: order.object_id,
-            employee_id: order.employee_id,
+            employee_ids: order.order_employee_assignments?.map((a: any) => a.employee_id) || null,
+            employee_first_names: order.order_employee_assignments?.map((a: any) => a.employees?.first_name || '') || null,
+            employee_last_names: order.order_employee_assignments?.map((a: any) => a.employees?.last_name || '') || null,
             customer_contact_id: order.customer_contact_id,
             customer_name: customer?.name || null,
             object_name: object?.name || null,
-            employee_first_name: employee?.first_name || null,
-            employee_last_name: employee?.last_name || null,
             customer_contact_first_name: customerContact?.first_name || null,
             customer_contact_last_name: customerContact?.last_name || null,
             order_type: order.order_type,
@@ -175,7 +173,8 @@ export function TodaysOrdersOverview() {
         const filteredByRole = mappedOrders.filter(order => {
           if (currentUserRole === 'admin') return true;
           if (currentUserRole === 'employee') {
-            return order.employee_id === currentEmployeeId; // Korrigierte Filterung
+            // Check if any of the assigned employee IDs match the current employee's ID
+            return order.employee_ids?.includes(currentEmployeeId || '') || false;
           }
           if (currentUserRole === 'manager') {
             // Managers can see orders for customers they are assigned to
@@ -253,52 +252,55 @@ export function TodaysOrdersOverview() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {orders.map((order) => (
-                  <TableRow key={order.id}>
-                    <TableCell className="font-medium text-sm">{order.title}</TableCell>
-                    <TableCell>
-                      <p className="text-sm">{order.customer_name}</p>
-                      <p className="text-xs text-muted-foreground">{order.object_name}</p>
-                    </TableCell>
-                    <TableCell className="text-sm">
-                      {order.employee_first_name && order.employee_last_name
-                        ? `${order.employee_first_name} ${order.employee_last_name}`
-                        : 'N/A'}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={getStatusBadgeVariant(order.status)}>{order.status}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={getPriorityBadgeVariant(order.priority)}>{order.priority}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{order.order_type}</Badge>
-                    </TableCell>
-                    <TableCell className="text-sm">
-                      {order.order_type === "one_time" && order.due_date && (
-                        <div className="flex items-center">
-                          <CalendarDays className="mr-1 h-3 w-3" />
-                          {format(new Date(order.due_date), 'dd.MM.yyyy', { locale: de })}
-                        </div>
-                      )}
-                      {(order.order_type === "recurring" || order.order_type === "substitution" || order.order_type === "permanent") && order.recurring_start_date && (
-                        <div className="flex items-center">
-                          <CalendarDays className="mr-1 h-3 w-3" />
-                          {format(new Date(order.recurring_start_date), 'dd.MM.yyyy', { locale: de })}
-                          {order.recurring_end_date && ` - ${format(new Date(order.recurring_end_date), 'dd.MM.yyyy', { locale: de })}`}
-                        </div>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end space-x-1">
-                        <OrderEditDialog order={order} />
-                        {order.request_status === 'pending' && (
-                          <OrderPlanningDialog order={order} />
+                {orders.map((order) => {
+                  const employeeNames = (order.employee_first_names && order.employee_last_names)
+                    ? order.employee_first_names.map((f, i) => `${f} ${order.employee_last_names?.[i] || ''}`).join(', ')
+                    : 'N/A';
+                  return (
+                    <TableRow key={order.id}>
+                      <TableCell className="font-medium text-sm">{order.title}</TableCell>
+                      <TableCell>
+                        <p className="text-sm">{order.customer_name}</p>
+                        <p className="text-xs text-muted-foreground">{order.object_name}</p>
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {employeeNames}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={getStatusBadgeVariant(order.status)}>{order.status}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={getPriorityBadgeVariant(order.priority)}>{order.priority}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{order.order_type}</Badge>
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {order.order_type === "one_time" && order.due_date && (
+                          <div className="flex items-center">
+                            <CalendarDays className="mr-1 h-3 w-3" />
+                            {format(new Date(order.due_date), 'dd.MM.yyyy', { locale: de })}
+                          </div>
                         )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                        {(order.order_type === "recurring" || order.order_type === "substitution" || order.order_type === "permanent") && order.recurring_start_date && (
+                          <div className="flex items-center">
+                            <CalendarDays className="mr-1 h-3 w-3" />
+                            {format(new Date(order.recurring_start_date), 'dd.MM.yyyy', { locale: de })}
+                            {order.recurring_end_date && ` - ${format(new Date(order.recurring_end_date), 'dd.MM.yyyy', { locale: de })}`}
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end space-x-1">
+                          <OrderEditDialog order={order} />
+                          {order.request_status === 'pending' && (
+                            <OrderPlanningDialog order={order} />
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </div>

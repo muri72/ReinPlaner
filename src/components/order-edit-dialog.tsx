@@ -31,7 +31,7 @@ interface OrderEditDialogProps {
     status: string;
     customer_id: string | null;
     object_id: string | null;
-    employee_id: string | null; // Keep this for initial data mapping from DB
+    // employee_id wurde entfernt, da Zuweisungen jetzt über order_employee_assignments erfolgen
     customer_contact_id: string | null;
     order_type: string;
     recurring_start_date: string | null;

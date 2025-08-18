@@ -17,12 +17,12 @@ interface DisplayOrder {
   due_date: string | null;
   customer_id: string | null;
   object_id: string | null;
-  employee_id: string | null;
+  employee_ids: string[] | null; // Updated to array of IDs
+  employee_first_names: string[] | null; // Updated to array of first names
+  employee_last_names: string[] | null; // Updated to array of last names
   customer_contact_id: string | null;
   customer_name: string | null;
   object_name: string | null;
-  employee_first_name: string | null;
-  employee_last_name: string | null;
   customer_contact_first_name: string | null;
   customer_contact_last_name: string | null;
   order_type: string;
@@ -98,7 +98,6 @@ export default async function CustomerBookingsPage() {
       due_date,
       customer_id,
       object_id,
-      employee_id,
       customer_contact_id,
       order_type,
       recurring_start_date,
@@ -110,9 +109,9 @@ export default async function CustomerBookingsPage() {
       service_type,
       customers ( name ),
       objects ( name ),
-      employees ( first_name, last_name ),
       customer_contacts ( first_name, last_name ),
-      order_feedback ( id )
+      order_feedback ( id ),
+      order_employee_assignments ( employee_id, employees ( first_name, last_name ) )
     `)
     .eq('customer_id', customerId)
     .order('created_at', { ascending: false }); // Order by creation date, newest first
@@ -130,12 +129,12 @@ export default async function CustomerBookingsPage() {
     due_date: order.due_date,
     customer_id: order.customer_id,
     object_id: order.object_id,
-    employee_id: order.employee_id,
+    employee_ids: order.order_employee_assignments?.map((a: any) => a.employee_id) || null,
+    employee_first_names: order.order_employee_assignments?.map((a: any) => a.employees?.first_name || '') || null,
+    employee_last_names: order.order_employee_assignments?.map((a: any) => a.employees?.last_name || '') || null,
     customer_contact_id: order.customer_contact_id,
     customer_name: order.customers?.[0]?.name || null, // Korrigiert
     object_name: order.objects?.[0]?.name || null, // Korrigiert
-    employee_first_name: order.employees?.[0]?.first_name || null, // Korrigiert
-    employee_last_name: order.employees?.[0]?.last_name || null, // Korrigiert
     customer_contact_first_name: order.customer_contacts?.[0]?.first_name || null, // Korrigiert
     customer_contact_last_name: order.customer_contacts?.[0]?.last_name || null, // Korrigiert
     order_type: order.order_type,

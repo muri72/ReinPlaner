@@ -35,12 +35,12 @@ interface DisplayOrder {
   created_at: string | null;
   customer_id: string | null;
   object_id: string | null;
-  employee_id: string | null;
+  employee_ids: string[] | null; // Updated to array of IDs
+  employee_first_names: string[] | null; // Updated to array of first names
+  employee_last_names: string[] | null; // Updated to array of last names
   customer_contact_id: string | null;
   customer_name: string | null;
   object_name: string | null;
-  employee_first_name: string | null;
-  employee_last_name: string | null;
   customer_contact_first_name: string | null;
   customer_contact_last_name: string | null;
   order_type: string;
@@ -66,7 +66,7 @@ const availableServices = [
   "Grundreinigung",
   "Graffitientfernung",
   "Sonderreinigung",
-];
+] as const;
 
 // This component is now a client component. Data fetching will be handled by a separate server component or action.
 // For simplicity, I'm keeping the data fetching logic here for now, but it would ideally be moved to a server action
@@ -171,12 +171,29 @@ export default function OrdersPage({
       let selectQuery = supabase
         .from('orders')
         .select(`
-          *,
+          id,
+          user_id,
+          title,
+          description,
+          status,
+          due_date,
+          created_at,
+          customer_id,
+          object_id,
+          customer_contact_id,
+          order_type,
+          recurring_start_date,
+          recurring_end_date,
+          priority,
+          estimated_hours,
+          notes,
+          request_status,
+          service_type,
           customers ( name ),
           objects ( name ),
-          employees ( first_name, last_name ),
           customer_contacts ( first_name, last_name ),
-          order_feedback ( id, rating, comment, image_urls, created_at )
+          order_feedback ( id, rating, comment, image_urls, created_at ),
+          order_employee_assignments ( employee_id, employees ( first_name, last_name ) )
         `, { count: 'exact' })
         .order(sortColumn, { ascending: sortDirection === 'asc' });
 
@@ -199,7 +216,8 @@ export default function OrdersPage({
         selectQuery = selectQuery.eq('customer_id', customerIdFilter);
       }
       if (employeeIdFilter) {
-        selectQuery = selectQuery.eq('employee_id', employeeIdFilter);
+        // Filter by employee_id from the join table
+        selectQuery = selectQuery.eq('order_employee_assignments.employee_id', employeeIdFilter);
       }
 
       const { data, error: selectError, count: selectCount } = await selectQuery
@@ -215,14 +233,14 @@ export default function OrdersPage({
         created_at: order.created_at,
         customer_id: order.customer_id,
         object_id: order.object_id,
-        employee_id: order.employee_id,
+        employee_ids: order.order_employee_assignments?.map((a: any) => a.employee_id) || null,
+        employee_first_names: order.order_employee_assignments?.map((a: any) => a.employees?.first_name || '') || null,
+        employee_last_names: order.order_employee_assignments?.map((a: any) => a.employees?.last_name || '') || null,
         customer_contact_id: order.customer_contact_id,
-        customer_name: order.customers?.name || null,
-        object_name: order.objects?.name || null,
-        employee_first_name: order.employees?.first_name || null,
-        employee_last_name: order.employees?.last_name || null,
-        customer_contact_first_name: order.customer_contacts?.first_name || null,
-        customer_contact_last_name: order.customer_contacts?.last_name || null,
+        customer_name: order.customers?.[0]?.name || null,
+        object_name: order.objects?.[0]?.name || null,
+        customer_contact_first_name: order.customer_contacts?.[0]?.first_name || null,
+        customer_contact_last_name: order.customer_contacts?.[0]?.last_name || null,
         order_type: order.order_type,
         recurring_start_date: order.recurring_start_date,
         recurring_end_date: order.recurring_end_date,
@@ -465,6 +483,9 @@ export default function OrdersPage({
               ) : (
                 otherOrders.map((order) => {
                   const feedback = order.order_feedback?.[0];
+                  const employeeNames = (order.employee_first_names && order.employee_last_names)
+                    ? order.employee_first_names.map((f, i) => `${f} ${order.employee_last_names?.[i] || ''}`).join(', ')
+                    : 'N/A';
                   return (
                     <Card key={order.id} className="shadow-neumorphic glassmorphism-card">
                       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -488,7 +509,7 @@ export default function OrdersPage({
                             {order.customer_contact_first_name && order.customer_contact_last_name && (
                               <div className="flex items-center text-xs text-muted-foreground"><UserRound className="mr-1 h-3 w-3" /><span>Auftraggeber: {order.customer_contact_first_name} {order.customer_contact_last_name}</span></div>
                             )}
-                            {order.employee_first_name && order.employee_last_name && <p className="text-xs text-muted-foreground">Mitarbeiter: {order.employee_first_name} {order.employee_last_name}</p>}
+                            {employeeNames !== 'N/A' && <p className="text-xs text-muted-foreground">Mitarbeiter: {employeeNames}</p>}
                             {order.service_type && <div className="flex items-center text-xs text-muted-foreground mt-1"><Wrench className="mr-1 h-3 w-3" /><span>Dienstleistung: {order.service_type}</span></div>}
                             <div className="flex items-center mt-2 space-x-2">
                               <Badge variant={getStatusBadgeVariant(order.status)}>{order.status}</Badge>
@@ -513,7 +534,7 @@ export default function OrdersPage({
                             <h3 className="text-md font-semibold flex items-center">
                               <FileStack className="mr-2 h-5 w-5" /> Dokumente
                             </h3>
-                            <DocumentUploader associatedOrderId={order.id} />
+                            <DocumentUploader associatedOrderId={order.id} onDocumentUploaded={() => { /* Re-fetch documents if needed */ }} />
                             <DocumentList associatedOrderId={order.id} />
                           </TabsContent>
                         </Tabs>
