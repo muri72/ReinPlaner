@@ -40,7 +40,7 @@ interface RawEmployeeOrderResponse {
     assigned_friday_hours: number | null;
     assigned_saturday_hours: number | null;
     assigned_sunday_hours: number | null;
-    employees: { first_name: string | null; last_name: string | null } | null; // This should be an object, not an array, if single select
+    employees: { first_name: string | null; last_name: string | null }[] | null; // Correctly typed as array
   }[] | null;
 }
 
@@ -140,9 +140,9 @@ export default async function EmployeeDashboardPage() {
           customer_id: null, // Not selected in query, set to null
           object_id: null, // Not selected in query, set to null
           employee_ids: order.order_employee_assignments?.map(a => a.employee_id) || null,
-          employee_first_names: order.order_employee_assignments?.map(a => a.employees?.first_name || '') || null,
-          employee_last_names: order.order_employee_assignments?.map(a => a.employees?.last_name || '') || null,
-          assigned_daily_hours: assignedEmployeeData?.assigned_daily_hours || null, // Keep for compatibility if needed elsewhere
+          employee_first_names: order.order_employee_assignments?.map(a => a.employees?.[0]?.first_name || '') || null, // Access first element of employees array
+          employee_last_names: order.order_employee_assignments?.map(a => a.employees?.[0]?.last_name || '') || null, // Access first element of employees array
+          assigned_daily_hours: assignedEmployeeData?.assigned_daily_hours !== undefined ? [assignedEmployeeData.assigned_daily_hours] : null, // Map to array if exists
           assigned_monday_hours: assignedEmployeeData?.assigned_monday_hours || null,
           assigned_tuesday_hours: assignedEmployeeData?.assigned_tuesday_hours || null,
           assigned_wednesday_hours: assignedEmployeeData?.assigned_wednesday_hours || null,
@@ -164,9 +164,9 @@ export default async function EmployeeDashboardPage() {
           request_status: order.request_status,
           service_type: order.service_type,
           order_feedback: [], // Not selected in query, set to empty array
-          object: objectData, // Assign the nested object
-          customer: customerData, // Assign the nested customer
-          customer_contact: customerContactData, // Assign the nested customer_contact
+          object: objectData ?? null, // Assign the nested object, convert undefined to null
+          customer: customerData ?? null, // Assign the nested customer, convert undefined to null
+          customer_contact: customerContactData ?? null, // Assign the nested customer_contact, convert undefined to null
         };
       });
     }

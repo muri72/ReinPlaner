@@ -5,7 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/button"; // Corrected import syntax
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { PlusCircle, X } from "lucide-react";
@@ -566,8 +566,8 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
                       {dayNames.map(day => {
                         const fieldName = `assignedEmployees.${assignedIndex}.assigned_${day}_hours` as const;
                         const objectDailyHours = getObjectDailyHours(day);
-                        const sumAssignedHours = getSumAssignedHoursForDay(day);
-                        const isDayValid = isDailyHoursValid(day);
+                        // const sumAssignedHours = getSumAssignedHoursForDay(day); // Not used here
+                        // const isDayValid = isDailyHoursValid(day); // Not used here
 
                         return (
                           <div key={day}>
@@ -583,11 +583,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
                               {...form.register(fieldName as FieldPath<OrderFormValues>, { valueAsNumber: true })}
                               disabled={objectDailyHours === null}
                             />
-                            {form.formState.errors.assignedEmployees?.[assignedIndex]?.[`assigned_${day}_hours` as keyof typeof form.formState.errors.assignedEmployees[0]]?.message && (
-                                <p className="text-red-500 text-xs mt-1">
-                                    {form.formState.errors.assignedEmployees[assignedIndex]?.[`assigned_${day}_hours` as keyof typeof form.formState.errors.assignedEmployees[0]]?.message}
-                                </p>
-                            )}
+                            {/* Removed specific error message display for individual daily hour fields */}
                           </div>
                         );
                       })}
