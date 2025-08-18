@@ -232,7 +232,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
   const orderType = form.watch("orderType");
   const selectedCustomerId = form.watch("customerId");
   const selectedObjectId = form.watch("objectId");
-  const selectedAssignedEmployees = form.watch("assignedEmployees");
+  const selectedAssignedEmployees = form.watch("assignedEmployees"); // This can be undefined
 
   // Helper to get base start time based on object's time_of_day
   const getBaseStartTimeForTimeOfDay = useCallback((timeOfDay: string | null): string => {
@@ -342,78 +342,66 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
   useEffect(() => {
     const currentObjectId = form.getValues("objectId") ?? null;
     const selectedObject = objects.find(obj => obj.id === currentObjectId);
-    const numAssignedEmployees = assignedEmployeeFields.length;
+    const numAssignedEmployees = (selectedAssignedEmployees || []).length; // Safely access length
 
-    if (!selectedObject || numAssignedEmployees === 0) {
-      // If no object selected or no employees assigned, ensure all assigned hours/times are null
-      assignedEmployeeFields.forEach((field, index) => {
-        let hasChanged = false;
-        const updatedEmp = { ...field }; // Create a mutable copy
-        dayNames.forEach(day => {
-          const hoursFieldName = `assigned_${day}_hours` as keyof AssignedEmployee;
-          const startFieldName = `assigned_${day}_start_time` as keyof AssignedEmployee;
-          const endFieldName = `assigned_${day}_end_time` as keyof AssignedEmployee;
+    // Create a map of current assigned employee data for easy lookup
+    const currentAssignedMap = new Map((selectedAssignedEmployees || []).map(field => [field.employeeId, field])); // Safely map
 
-          if (updatedEmp[hoursFieldName] !== null) { (updatedEmp as any)[hoursFieldName] = null; hasChanged = true; }
-          if (updatedEmp[startFieldName] !== null) { (updatedEmp as any)[startFieldName] = null; hasChanged = true; }
-          if (updatedEmp[endFieldName] !== null) { (updatedEmp as any)[endFieldName] = null; hasChanged = true; }
-        });
-        if (hasChanged) {
-          updateEmployeeField(index, updatedEmp);
-        }
-      });
-      return;
-    }
+    const newAssignedEmployees: AssignedEmployee[] = [];
 
-    // Distribute hours and times based on the current state
-    assignedEmployeeFields.forEach((assignedEmp, index) => {
-      let shouldUpdateThisEmployee = false;
-      const updatedEmp: AssignedEmployee = { ...assignedEmp }; // Create a mutable copy
+    // Populate newAssignedEmployees based on selectedIds
+    (selectedAssignedEmployees || []).forEach(selectedEmp => { // Safely iterate
+      const existing = currentAssignedMap.get(selectedEmp.employeeId);
+      const updatedEmp: AssignedEmployee = existing ? { ...existing } : { employeeId: selectedEmp.employeeId };
 
       dayNames.forEach(day => {
         const hoursFieldName = `assigned_${day}_hours` as keyof AssignedEmployee;
         const startFieldName = `assigned_${day}_start_time` as keyof AssignedEmployee;
         const endFieldName = `assigned_${day}_end_time` as keyof AssignedEmployee;
 
-        const objectDailyHours = selectedObject[`${day}_hours` as keyof typeof selectedObject] as number | null;
-        const objectStartTime = selectedObject[`${day}_start_time` as keyof typeof selectedObject] as string | null;
-        const objectEndTime = selectedObject[`${day}_end_time` as keyof typeof selectedObject] as string | null;
+        const objectDailyHours = selectedObject?.[`${day}_hours` as keyof typeof selectedObject] as number | null;
+        const objectStartTime = selectedObject?.[`${day}_start_time` as keyof typeof selectedObject] as string | null;
+        const objectEndTime = selectedObject?.[`${day}_end_time` as keyof typeof selectedObject] as string | null;
+        const objectTimeOfDay = selectedObject?.time_of_day || 'any';
 
-        let newHours: number | null = null;
-        let newStartTime: string | null = null;
-        let newEndTime: string | null = null;
+        let calculatedHours: number | null = null;
+        let calculatedStartTime: string | null = null;
+        let calculatedEndTime: string | null = null;
 
-        if (objectDailyHours !== null) {
-          if (numAssignedEmployees === 1) {
-            newHours = objectDailyHours;
-            newStartTime = objectStartTime;
-            newEndTime = objectEndTime;
-          } else {
-            newHours = parseFloat((objectDailyHours / numAssignedEmployees).toFixed(2));
-            newStartTime = null; // Clear times for multiple assignments
-            newEndTime = null; // Clear times for multiple assignments
+        if (selectedObject) {
+          if (objectStartTime && objectEndTime) {
+            // Scenario 1: Object has specific start and end times
+            calculatedStartTime = objectStartTime;
+            calculatedEndTime = objectEndTime;
+            const totalDurationMinutes = (new Date(`2000/01/01 ${objectEndTime}`).getTime() - new Date(`2000/01/01 ${objectStartTime}`).getTime()) / (1000 * 60);
+            // Ensure numAssignedEmployees is not zero to avoid division by zero
+            calculatedHours = parseFloat((totalDurationMinutes / (numAssignedEmployees || 1)).toFixed(2));
+          } else if (objectDailyHours !== null) {
+            // Scenario 2: Object has only daily hours
+            // Ensure numAssignedEmployees is not zero to avoid division by zero
+            calculatedHours = parseFloat((objectDailyHours / (numAssignedEmployees || 1)).toFixed(2));
+            calculatedStartTime = getBaseStartTimeForTimeOfDay(objectTimeOfDay);
+            calculatedEndTime = calculateEndTime(calculatedStartTime, calculatedHours);
           }
-        } else {
-          // If object has no hours for this day, clear assigned hours/times
-          newHours = null;
-          newStartTime = null;
-          newEndTime = null;
         }
-        
+
         // Only update if the value is different from the current form value
-        if (updatedEmp[hoursFieldName] !== newHours || updatedEmp[startFieldName] !== newStartTime || updatedEmp[endFieldName] !== newEndTime) {
-          (updatedEmp as any)[hoursFieldName] = newHours; // Cast to any for direct assignment
-          (updatedEmp as any)[startFieldName] = newStartTime;
-          (updatedEmp as any)[endFieldName] = newEndTime;
-          shouldUpdateThisEmployee = true;
+        if (updatedEmp[hoursFieldName] !== calculatedHours) {
+          (updatedEmp as any)[hoursFieldName] = calculatedHours;
+        }
+        if (updatedEmp[startFieldName] !== calculatedStartTime) {
+          (updatedEmp as any)[startFieldName] = calculatedStartTime;
+        }
+        if (updatedEmp[endFieldName] !== calculatedEndTime) {
+          (updatedEmp as any)[endFieldName] = calculatedEndTime;
         }
       });
-
-      if (shouldUpdateThisEmployee) {
-        updateEmployeeField(index, updatedEmp);
-      }
+      newAssignedEmployees.push(updatedEmp);
     });
-  }, [selectedObjectId, assignedEmployeeFields.length, objects, updateEmployeeField, form]); // Dependencies: selectedObjectId, assignedEmployeeFields.length, objects, updateEmployeeField, form
+
+    // Update the form state with the completely new array.
+    form.setValue("assignedEmployees", newAssignedEmployees, { shouldValidate: true });
+  }, [selectedObjectId, (selectedAssignedEmployees || []).length, objects, form, getBaseStartTimeForTimeOfDay]); // Safely access length in dependency array
 
 
   // Manual change handlers for hours/times within assigned employees
@@ -426,6 +414,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     const currentAssignedEmployee = assignedEmployeeFields[employeeIndex];
     const currentObjectId = form.getValues("objectId") ?? null;
     const selectedObject = objects.find(obj => obj.id === currentObjectId);
+    const objectTimeOfDay = selectedObject?.time_of_day || 'any';
 
     let newStartTime: string | null = currentAssignedEmployee[`assigned_${day}_start_time` as keyof AssignedEmployee] as string | null;
     let newEndTime: string | null = currentAssignedEmployee[`assigned_${day}_end_time` as keyof AssignedEmployee] as string | null;
@@ -436,9 +425,9 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
         newEndTime = calculateEndTime(newStartTime, parsedHours);
       } else if (newEndTime && timeRegex.test(newEndTime)) {
         newStartTime = calculateStartTime(newEndTime, parsedHours);
-      } else if (selectedObject) {
+      } else {
         // If no times, use object's time_of_day preference for a base start time
-        newStartTime = getBaseStartTimeForTimeOfDay(selectedObject.time_of_day);
+        newStartTime = getBaseStartTimeForTimeOfDay(objectTimeOfDay);
         newEndTime = calculateEndTime(newStartTime, parsedHours);
       }
     } else {
@@ -480,6 +469,10 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
       } else if (newEndTime && timeRegex.test(newEndTime) && timeType === 'end') {
         newStartTime = calculateStartTime(newEndTime, currentHours);
       }
+    } else {
+      // If hours are null or 0, and a time is entered, set the other time to null
+      if (timeType === 'start') newEndTime = null;
+      if (timeType === 'end') newStartTime = null;
     }
 
     updateEmployeeField(employeeIndex, {
@@ -603,7 +596,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
             assignedEmp[`assigned_${day}_start_time`] = objectStartTime;
             assignedEmp[`assigned_${day}_end_time`] = objectEndTime;
           } else {
-            assignedEmp[`assigned_${day}_hours`] = parseFloat((objectDailyHours / numAssignedEmployees).toFixed(2));
+            assignedEmp[`assigned_${day}_hours`] = parseFloat((objectDailyHours / (numAssignedEmployees || 1)).toFixed(2)); // Divide by numAssignedEmployees, prevent division by zero
             assignedEmp[`assigned_${day}_start_time`] = null; // Clear times for multiple assignments
             assignedEmp[`assigned_${day}_end_time`] = null; // Clear times for multiple assignments
           }
@@ -833,9 +826,10 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
                               "w-full text-right",
                               !isDayValid && "border-destructive focus-visible:ring-destructive" // Highlight if sum is invalid
                             )}
-                            {...form.register(hoursFieldName as FieldPath<OrderFormValues>, { valueAsNumber: true })}
+                            {...form.register(hoursFieldName as FieldPath<OrderFormValues>, { valueAsNumber: true,
+                              onChange: (e) => handleAssignedHoursChange(assignedIndex, day, e.target.value)
+                            })}
                             disabled={!selectedObjectId} // Only disable if no object is selected
-                            // Removed readOnly={isSingleEmployeeAssigned}
                           />
                         </div>
                         {/* Always show time inputs if an object is selected */}
@@ -847,10 +841,10 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
                                 id={startFieldName}
                                 type="time"
                                 className="w-full"
-                                {...form.register(startFieldName as FieldPath<OrderFormValues>)}
-                                onChange={(e) => handleAssignedTimeChange(assignedIndex, day, 'start', e.target.value)}
+                                {...form.register(startFieldName as FieldPath<OrderFormValues>, {
+                                  onChange: (e) => handleAssignedTimeChange(assignedIndex, day, 'start', e.target.value)
+                                })}
                                 disabled={!selectedObjectId} // Only disable if no object is selected
-                                // Removed readOnly={isSingleEmployeeAssigned}
                               />
                             </div>
                             <div>
@@ -859,10 +853,10 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
                                 id={endFieldName}
                                 type="time"
                                 className="w-full"
-                                {...form.register(endFieldName as FieldPath<OrderFormValues>)}
-                                onChange={(e) => handleAssignedTimeChange(assignedIndex, day, 'end', e.target.value)}
+                                {...form.register(endFieldName as FieldPath<OrderFormValues>, {
+                                  onChange: (e) => handleAssignedTimeChange(assignedIndex, day, 'end', e.target.value)
+                                })}
                                 disabled={!selectedObjectId} // Only disable if no object is selected
-                                // Removed readOnly={isSingleEmployeeAssigned}
                               />
                             </div>
                           </>
