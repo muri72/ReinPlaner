@@ -145,58 +145,49 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
     };
   }, [userId, supabase]);
 
-  // Effect to fetch object schedule for selected order (if object_id exists)
+  // Effect to fetch employee's specific assignment schedule for the selected order
   useEffect(() => {
-    const fetchObjectSchedule = async () => {
+    const fetchAssignmentSchedule = async () => {
       setSuggestedStartTime(null);
       setSuggestedEndTime(null);
       setSuggestedDuration(null);
       setSuggestedBreakMinutes(null);
 
-      if (selectedOrderId) {
-        const selectedOrder = orders.find(o => o.id === selectedOrderId);
-        if (selectedOrder && selectedOrder.object_id && selectedOrder.order_type === 'permanent') {
-          const { data: objectData, error: objectError } = await supabase
-            .from('objects')
-            .select('monday_hours, tuesday_hours, wednesday_hours, thursday_hours, friday_hours, saturday_hours, sunday_hours, total_weekly_hours')
-            .eq('id', selectedOrder.object_id)
-            .single();
+      if (selectedOrderId && employeeId) {
+        const { data: assignmentData, error: assignmentError } = await supabase
+          .from('order_employee_assignments')
+          .select('*')
+          .eq('order_id', selectedOrderId)
+          .eq('employee_id', employeeId)
+          .single();
 
-          if (objectError) {
-            console.error("Fehler beim Laden des Objektplans:", objectError);
-            return;
-          }
+        if (assignmentError && assignmentError.code !== 'PGRST116') {
+          console.error("Fehler beim Laden des Zuweisungsplans:", assignmentError);
+          return;
+        }
 
-          if (objectData) {
-            const today = new Date();
-            const dayOfWeek = today.getDay();
+        if (assignmentData) {
+          const today = new Date();
+          const dayOfWeek = today.getDay(); // 0=So, 1=Mo, ...
+          const dayKeys = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+          const currentDayKey = dayKeys[dayOfWeek];
 
-            let dailyHours: number | null = null;
-            switch (dayOfWeek) {
-              case 0: dailyHours = objectData.sunday_hours || null; break;
-              case 1: dailyHours = objectData.monday_hours || null; break;
-              case 2: dailyHours = objectData.tuesday_hours || null; break;
-              case 3: dailyHours = objectData.wednesday_hours || null; break;
-              case 4: dailyHours = objectData.thursday_hours || null; break;
-              case 5: dailyHours = objectData.friday_hours || null; break;
-              case 6: dailyHours = objectData.saturday_hours || null; break;
-            }
+          const dailyHours = (assignmentData as any)[`assigned_${currentDayKey}_hours`] as number | null;
+          const startTime = (assignmentData as any)[`assigned_${currentDayKey}_start_time`] as string | null;
+          const endTime = (assignmentData as any)[`assigned_${currentDayKey}_end_time`] as string | null;
 
-            // If daily hours are defined for the object, use them as suggested duration
-            if (dailyHours !== null) {
-              setSuggestedDuration(Math.round(dailyHours * 60)); // Convert hours to minutes
-              setSuggestedBreakMinutes(calculateBreakMinutesFallback(Math.round(dailyHours * 60)));
-              // For simplicity, we're not deriving start/end times from object schedule here,
-              // as the TimeEntryForm handles that based on object_id and date.
-              // We're primarily suggesting the duration.
-            }
+          if (dailyHours !== null && dailyHours > 0) {
+            setSuggestedDuration(Math.round(dailyHours * 60));
+            setSuggestedBreakMinutes(calculateBreakMinutesFallback(Math.round(dailyHours * 60)));
+            setSuggestedStartTime(startTime);
+            setSuggestedEndTime(endTime);
           }
         }
       }
     };
 
-    fetchObjectSchedule();
-  }, [selectedOrderId, orders, supabase]);
+    fetchAssignmentSchedule();
+  }, [selectedOrderId, employeeId, supabase]);
 
   const handleClockOut = async () => {
     if (!activeEntry || activeEntry.type !== 'clock_in_out') {
@@ -364,7 +355,7 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
   }
 
   const selectedOrder = orders.find(o => o.id === selectedOrderId);
-  const isScheduledOrder = !!(selectedOrder && selectedOrder.order_type === 'permanent' && suggestedDuration !== null);
+  const isScheduledOrder = !!(selectedOrder && suggestedDuration !== null);
 
   const getInitialDataForDialog = (): Partial<TimeEntryFormValues> => {
     const now = new Date();
