@@ -143,16 +143,14 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
     monday_start_time: string | null;
     tuesday_start_time: string | null;
     wednesday_start_time: string | null;
-    thursday_start_time: string | null;
-    friday_start_time: string | null;
-    saturday_start_time: string | null;
-    sunday_start_time: string | null;
-    monday_end_time: string | null;
-    tuesday_end_time: string | null;
     wednesday_end_time: string | null;
+    thursday_start_time: string | null;
     thursday_end_time: string | null;
+    friday_start_time: string | null;
     friday_end_time: string | null;
+    saturday_start_time: string | null;
     saturday_end_time: string | null;
+    sunday_start_time: string | null;
     sunday_end_time: string | null;
     total_weekly_hours: number | null;
     time_of_day: string | null;
@@ -465,7 +463,7 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
                 <Input
                   id={`${day}_hours`}
                   type="number"
-                  step="0.5"
+                  step="0.01"
                   min="0"
                   max="24"
                   {...form.register(`${day}_hours`, { valueAsNumber: true })}

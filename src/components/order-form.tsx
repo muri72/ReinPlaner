@@ -350,6 +350,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
   ) => {
     const parsedHours = value === "" ? null : Number(value);
     const hoursFieldName = `assignedEmployees.${employeeIndex}.assigned_${day}_hours` as const;
+    const endTimeFieldName = `assignedEmployees.${employeeIndex}.assigned_${day}_end_time` as const; // Defined here
     form.setValue(hoursFieldName, parsedHours, { shouldValidate: true });
 
     let startTime = form.getValues(`assignedEmployees.${employeeIndex}.assigned_${day}_start_time`);
@@ -368,7 +369,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     if (parsedHours != null && parsedHours > 0 && startTime && timeRegex.test(startTime)) {
       newEndTime = calculateEndTime(startTime, parsedHours);
     }
-    form.setValue(`assignedEmployees.${employeeIndex}.assigned_${day}_end_time`, newEndTime, { shouldValidate: true });
+    form.setValue(endTimeFieldName, newEndTime, { shouldValidate: true });
   }, [form, objects, selectedObjectId]);
 
   const handleAssignedStartTimeChange = useCallback((
@@ -806,7 +807,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
                                 {...field}
                                 id={field.name}
                                 type="number"
-                                step="0.5"
+                                step="0.01"
                                 min="0"
                                 max={objectDailyHours ?? undefined}
                                 placeholder="Std."
@@ -875,7 +876,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
                 {/* Validation Summary for this Employee */}
                 {dayNames.some(day => !isDailyHoursValid(day) && getObjectDailyHours(day)) && (
                   <div className="text-sm text-destructive bg-destructive/10 p-2 rounded-md">
-                    ⚠️ Die Summe der zugewiesenen Stunden muss für jeden Tag den Objektstunden entsprechen.
+                    ⚠️ Die Summe der zugewiesenen Stunden für jeden Tag muss den Objektstunden entsprechen.
                   </div>
                 )}
               </div>
@@ -931,7 +932,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
         <Input
           id="totalEstimatedHours"
           type="number"
-          step="0.5"
+          step="0.01"
           {...form.register("totalEstimatedHours")}
           placeholder="Wird automatisch berechnet"
           readOnly

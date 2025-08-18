@@ -491,7 +491,7 @@ export default function OrderEmployeeAssignments({
                         <Label className="text-sm">Stunden</Label>
                         <Input
                           type="number"
-                          step="0.5"
+                          step="0.01"
                           min="0"
                           max={objectHours}
                           value={assignedHours || ''}
