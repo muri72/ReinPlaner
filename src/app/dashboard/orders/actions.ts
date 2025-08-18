@@ -65,8 +65,6 @@ export async function createOrder(data: OrderFormValues) {
     const assignmentsToInsert = assignedEmployees.map(assignment => ({
       order_id: newOrder.id,
       employee_id: assignment.employeeId,
-      // Fix for Error 10 & 11: Remove assigned_daily_hours if it's not used or is deprecated
-      // The schema for assignedEmployeeSchema now includes specific daily hours, so assignedDailyHours is not directly on the object.
       assigned_monday_hours: assignment.assigned_monday_hours,
       assigned_tuesday_hours: assignment.assigned_tuesday_hours,
       assigned_wednesday_hours: assignment.assigned_wednesday_hours,
@@ -176,7 +174,6 @@ export async function updateOrder(orderId: string, data: OrderFormValues) {
     const assignmentsToInsert = assignedEmployees.map(assignment => ({
       order_id: orderId,
       employee_id: assignment.employeeId,
-      // Fix for Error 10 & 11: Remove assigned_daily_hours from here too
       assigned_monday_hours: assignment.assigned_monday_hours,
       assigned_tuesday_hours: assignment.assigned_tuesday_hours,
       assigned_wednesday_hours: assignment.assigned_wednesday_hours,

@@ -268,14 +268,15 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
       if (selectedObject) {
         let validationError = false;
         dayNames.forEach(day => {
-          const objectDailyHours = selectedObject[`${day}_hours`] || 0;
+          const objectDailyHours = selectedObject[`${day}_hours` as keyof typeof selectedObject] || 0;
           let totalAssignedHoursForDay = 0;
 
           data.assignedEmployees?.forEach(assignedEmp => {
-            totalAssignedHoursForDay += (assignedEmp[`assigned_${day}_hours` as keyof typeof assignedEmp] as number || 0);
+            // Fix for Error 2: Ensure objectDailyHours is number for comparison
+            totalAssignedHoursForDay += (assignedEmp[`assigned_${day}_hours` as keyof typeof assignedEmployeeSchema.shape] as number || 0);
           });
 
-          if (totalAssignedHoursForDay > objectDailyHours) {
+          if (totalAssignedHoursForDay > (objectDailyHours as number)) { // Explicit cast to number
             form.setError(`assignedEmployees` as any, {
               type: "manual",
               message: `Die zugewiesenen Stunden für ${germanDayNames[day]} (${totalAssignedHoursForDay}h) überschreiten die Objektstunden (${objectDailyHours}h).`,
@@ -556,9 +557,9 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
                                 className="w-full"
                                 {...form.register(`assignedEmployees.${assignedIndex}.assigned_${day}_hours` as any, { valueAsNumber: true })}
                               />
-                              {form.formState.errors.assignedEmployees?.[assignedIndex]?.[`assigned_${day}_hours` as keyof typeof assignedEmployeeSchema.shape] && (
+                              {form.formState.errors.assignedEmployees?.[assignedIndex]?.[`assigned_${day}_hours` as keyof z.infer<typeof assignedEmployeeSchema>] && (
                                 <p className="text-red-500 text-xs mt-1">
-                                  {form.formState.errors.assignedEmployees[assignedIndex]?.[`assigned_${day}_hours` as keyof typeof assignedEmployeeSchema.shape]?.message}
+                                  {form.formState.errors.assignedEmployees[assignedIndex]?.[`assigned_${day}_hours` as keyof z.infer<typeof assignedEmployeeSchema>]?.message}
                                 </p>
                               )}
                             </div>

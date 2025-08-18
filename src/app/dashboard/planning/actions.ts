@@ -5,6 +5,9 @@ import { revalidatePath } from "next/cache";
 import { sendNotification } from "@/lib/actions/notifications";
 import { startOfWeek, endOfWeek, eachDayOfInterval, formatISO, parseISO, getDay } from 'date-fns';
 
+// Define dayNames here as it's used in this file
+const dayNames = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+
 export interface PlanningData {
   [employeeId: string]: {
     name: string;
@@ -142,7 +145,7 @@ export async function getPlanningDataForWeek(currentDate: Date): Promise<{ succe
           
           // Priorisiere die spezifischen Tagesstunden, dann assigned_daily_hours, dann Objektstunden
           const assignedDayHoursKey = `assigned_${dayNames[dayOfWeek === 0 ? 6 : dayOfWeek - 1]}_hours` as keyof typeof employeeAssignment; // dayOfWeek 0=So, 1=Mo... -> dayNames 0=Mo, 1=Di...
-          const objectDayHoursKey = `${dayNames[dayOfWeek === 0 ? 6 : dayOfWeek - 1]}_hours` as keyof typeof order.objects;
+          const objectDayHoursKey = `${dayNames[dayOfWeek === 0 ? 6 : dayOfWeek - 1]}_hours` as 'monday_hours' | 'tuesday_hours' | 'wednesday_hours' | 'thursday_hours' | 'friday_hours' | 'saturday_hours' | 'sunday_hours';
 
           if (['permanent', 'recurring', 'substitution'].includes(order.order_type)) {
             if (order.recurring_start_date && parseISO(order.recurring_start_date) <= day && (!order.recurring_end_date || parseISO(order.recurring_end_date) >= day)) {
@@ -152,9 +155,11 @@ export async function getPlanningDataForWeek(currentDate: Date): Promise<{ succe
                 dailyHours = employeeAssignment.assigned_daily_hours;
               } else if (order.objects) {
                 const schedule = Array.isArray(order.objects) ? order.objects[0] : order.objects;
-                if (schedule) {
+                // Fix for Error 6: Explicitly type schedule to allow indexing
+                const objectSchedule: { [key: string]: number | null } = schedule as { [key: string]: number | null };
+                if (objectSchedule) {
                   // Fallback to object's daily hours if no specific assignment
-                  dailyHours = schedule[objectDayHoursKey] || 0;
+                  dailyHours = objectSchedule[objectDayHoursKey] || 0;
                   // If multiple employees are assigned to this order, divide the object's hours
                   const assignedEmployeesCount = order.order_employee_assignments.filter((a: any) => a.order_id === order.id).length;
                   if (assignedEmployeesCount > 0) {
