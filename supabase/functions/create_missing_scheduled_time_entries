@@ -1,0 +1,137 @@
+CREATE OR REPLACE FUNCTION public.create_missing_scheduled_time_entries()
+ RETURNS integer
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+AS $function$
+DECLARE
+    r_order RECORD;
+    r_object RECORD;
+    v_employee_user_id UUID; -- Variable to store the employee's user_id
+    v_day_of_week INTEGER;
+    v_start_time_str TEXT;
+    v_end_time_str TEXT;
+    v_entry_date DATE;
+    v_start_timestamp TIMESTAMPTZ;
+    v_end_timestamp TIMESTAMPTZ;
+    v_net_duration_minutes NUMERIC;
+    v_break_minutes NUMERIC;
+    v_gross_duration_minutes NUMERIC;
+    v_existing_entry_count INTEGER;
+    v_created_count INTEGER := 0;
+    v_daily_hours_for_employee NUMERIC; -- Stunden für den einzelnen Mitarbeiter
+BEGIN
+    -- Schleife durch alle relevanten Aufträge
+    FOR r_order IN
+        SELECT id, user_id, employee_id, customer_id, object_id, recurring_start_date, recurring_end_date, estimated_hours
+        FROM public.orders
+        WHERE order_type IN ('permanent', 'recurring')
+          AND employee_id IS NOT NULL
+          AND object_id IS NOT NULL
+          AND recurring_start_date <= current_date
+    LOOP
+        -- Hole die user_id des zugewiesenen Mitarbeiters
+        SELECT user_id INTO v_employee_user_id
+        FROM public.employees
+        WHERE id = r_order.employee_id;
+
+        -- Wenn der Mitarbeiter nicht mit einem Benutzer verknüpft ist, überspringe diesen Auftrag
+        IF v_employee_user_id IS NULL THEN
+            CONTINUE;
+        END IF;
+
+        -- Zugehörige Objektdetails abrufen
+        SELECT * INTO r_object FROM public.objects WHERE id = r_order.object_id;
+
+        -- Wenn Objekt nicht gefunden, überspringen
+        IF NOT FOUND THEN
+            CONTINUE;
+        END IF;
+
+        -- Schleife durch jeden Tag für den Auftrag
+        FOR v_entry_date IN SELECT generate_series(
+            r_order.recurring_start_date,
+            LEAST(COALESCE(r_order.recurring_end_date, current_date), current_date),
+            '1 day'::interval
+        )::date
+        LOOP
+            -- Prüfen, ob bereits ein Eintrag für diesen Mitarbeiter und Tag existiert
+            SELECT count(*) INTO v_existing_entry_count
+            FROM public.time_entries
+            WHERE employee_id = r_order.employee_id
+              AND date_trunc('day', start_time AT TIME ZONE 'UTC') = v_entry_date;
+
+            -- Wenn kein Eintrag existiert, fortfahren
+            IF v_existing_entry_count = 0 THEN
+                v_day_of_week := EXTRACT(ISODOW FROM v_entry_date); -- 1=Mo, 7=So
+                
+                -- Priorisiere estimated_hours vom Auftrag, sonst Objekt-Stunden
+                v_daily_hours_for_employee := COALESCE(r_order.estimated_hours, 0);
+
+                -- Wenn estimated_hours nicht gesetzt sind, aber Objekt-Stunden vorhanden sind und <= 8 sind, verwende diese
+                IF v_daily_hours_for_employee = 0 THEN
+                    CASE v_day_of_week
+                        WHEN 1 THEN v_daily_hours_for_employee := COALESCE(r_object.monday_hours, 0);
+                        WHEN 2 THEN v_daily_hours_for_employee := COALESCE(r_object.tuesday_hours, 0);
+                        WHEN 3 THEN v_daily_hours_for_employee := COALESCE(r_object.wednesday_hours, 0);
+                        WHEN 4 THEN v_daily_hours_for_employee := COALESCE(r_object.thursday_hours, 0);
+                        WHEN 5 THEN v_daily_hours_for_employee := COALESCE(r_object.friday_hours, 0);
+                        WHEN 6 THEN v_daily_hours_for_employee := COALESCE(r_object.saturday_hours, 0);
+                        WHEN 7 THEN v_daily_hours_for_employee := COALESCE(r_object.sunday_hours, 0);
+                        ELSE v_daily_hours_for_employee := 0;
+                    END CASE;
+                    -- Wenn Objekt-Stunden > 8 sind, überspringe die automatische Erstellung
+                    IF v_daily_hours_for_employee > 8 THEN
+                        CONTINUE;
+                    END IF;
+                END IF;
+
+                -- Wenn ein Zeitplan für diesen Tag existiert (entweder über estimated_hours oder Objekt-Stunden <= 8)
+                IF v_daily_hours_for_employee > 0 THEN
+                    -- Startzeit aus Objektplan oder Standardwert
+                    CASE v_day_of_week
+                        WHEN 1 THEN v_start_time_str := COALESCE(r_object.monday_start_time::text, '08:00');
+                        WHEN 2 THEN v_start_time_str := COALESCE(r_object.tuesday_start_time::text, '08:00');
+                        WHEN 3 THEN v_start_time_str := COALESCE(r_object.wednesday_start_time::text, '08:00');
+                        WHEN 4 THEN v_start_time_str := COALESCE(r_object.thursday_start_time::text, '08:00');
+                        WHEN 5 THEN v_start_time_str := COALESCE(r_object.friday_start_time::text, '08:00');
+                        WHEN 6 THEN v_start_time_str := COALESCE(r_object.saturday_start_time::text, '08:00');
+                        WHEN 7 THEN v_start_time_str := COALESCE(r_object.sunday_start_time::text, '08:00');
+                        ELSE v_start_time_str := '08:00';
+                    END CASE;
+
+                    -- KORREKTUR: Zeitstempel mit expliziter Zeitzone erstellen
+                    v_start_timestamp := (v_entry_date + v_start_time_str::time) AT TIME ZONE 'Europe/Berlin';
+                    
+                    v_net_duration_minutes := v_daily_hours_for_employee * 60;
+                    
+                    -- Pausenminuten berechnen basierend auf der Netto-Dauer des Eintrags
+                    IF v_daily_hours_for_employee > 9 THEN
+                        v_break_minutes := 45;
+                    ELSIF v_daily_hours_for_employee > 6 THEN
+                        v_break_minutes := 30;
+                    ELSE
+                        v_break_minutes := 0;
+                    END IF;
+
+                    v_gross_duration_minutes := v_net_duration_minutes + v_break_minutes;
+                    v_end_timestamp := v_start_timestamp + (v_gross_duration_minutes * interval '1 minute');
+
+                    -- Den neuen Zeiteintrag einfügen
+                    INSERT INTO public.time_entries (
+                        user_id, employee_id, customer_id, object_id, order_id,
+                        start_time, end_time, duration_minutes, break_minutes, type, notes
+                    ) VALUES (
+                        v_employee_user_id, -- KORRIGIERT: Die ID des Mitarbeiter-Benutzers
+                        r_order.employee_id, r_order.customer_id, r_order.object_id, r_order.id,
+                        v_start_timestamp, v_end_timestamp, v_gross_duration_minutes, v_break_minutes, 'automatic_scheduled_order',
+                        'Automatisch erstellter Eintrag für ' || r_object.name || ' (Geplant: ' || v_daily_hours_for_employee || ' Std.)'
+                    );
+                    v_created_count := v_created_count + 1;
+                END IF;
+            END IF;
+        END LOOP;
+    END LOOP;
+
+    RETURN v_created_count;
+END;
+$function$;
