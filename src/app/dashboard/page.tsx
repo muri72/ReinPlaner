@@ -2,7 +2,8 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, Building, UsersRound, Briefcase, Clock, DollarSign, AlertTriangle, MessageSquare, CheckCircle2, TrendingUp, ListOrdered } from "lucide-react";
-import { OrderStatusChart } from "@/components/order-status-chart";
+import { OrderStatusChart }
+from "@/components/order-status-chart";
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
 import Link from "next/link"; // Import Link for clickable cards
