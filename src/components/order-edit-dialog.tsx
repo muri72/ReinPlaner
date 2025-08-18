@@ -65,23 +65,23 @@ export function OrderEditDialog({ order }: OrderEditDialogProps) {
   };
 
   return (
-    <TooltipProvider delayDuration={300}> {/* TooltipProvider moved here */}
+    <TooltipProvider delayDuration={300}>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogTrigger asChild>
-          <Tooltip>
-            <TooltipTrigger asChild>
+        <Tooltip> {/* Tooltip wraps DialogTrigger */}
+          <TooltipTrigger asChild>
+            <DialogTrigger asChild>
               <Button variant="ghost" size="icon" className="text-primary hover:text-primary/80">
                 <Pencil className="h-4 w-4" />
               </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Auftrag bearbeiten</p>
-            </TooltipContent>
-          </Tooltip>
-        </DialogTrigger>
+            </DialogTrigger>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Auftrag bearbeiten</p>
+          </TooltipContent>
+        </Tooltip>
         <DialogContent 
           key={open ? "order-edit-open" : "order-edit-closed"} 
-          className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto flex flex-col glassmorphism-card" // Added max-h-[90vh] and overflow-y-auto
+          className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto flex flex-col glassmorphism-card"
         >
           <DialogHeader>
             <DialogTitle>Auftrag bearbeiten</DialogTitle>
