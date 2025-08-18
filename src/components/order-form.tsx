@@ -331,8 +331,6 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
       if (triggeringField === 'hours') {
         if (newStartTime && timeRegex.test(newStartTime)) {
           newEndTime = calculateEndTime(newStartTime, currentHours);
-        } else if (newEndTime && timeRegex.test(newEndTime)) {
-          newStartTime = calculateStartTime(newEndTime, currentHours);
         } else {
           newStartTime = getBaseStartTimeForTimeOfDay(objectTimeOfDay);
           newEndTime = calculateEndTime(newStartTime, currentHours);
@@ -341,15 +339,13 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
         if (newStartTime && timeRegex.test(newStartTime)) {
           newEndTime = calculateEndTime(newStartTime, currentHours);
         } else {
-          newStartTime = getBaseStartTimeForTimeOfDay(objectTimeOfDay);
-          newEndTime = calculateEndTime(newStartTime, currentHours);
+          newEndTime = null;
         }
       } else if (triggeringField === 'endTime') {
         if (newEndTime && timeRegex.test(newEndTime)) {
           newStartTime = calculateStartTime(newEndTime, currentHours);
         } else {
-          newStartTime = getBaseStartTimeForTimeOfDay(objectTimeOfDay);
-          newEndTime = calculateEndTime(newStartTime, currentHours);
+          newStartTime = null;
         }
       } else if (triggeringField === 'employeeSelection' || triggeringField === 'objectSelection') {
         const selectedObject = objects.find(obj => obj.id === selectedObjectId);
@@ -448,14 +444,13 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
       'hours'
     );
 
-    const updatedField = {
+    const newFields = [...assignedEmployeeFields];
+    newFields[employeeIndex] = {
       ...currentAssignedEmployee,
       [`assigned_${day}_hours`]: parsedHours,
       [`assigned_${day}_start_time`]: newStartTime,
       [`assigned_${day}_end_time`]: newEndTime,
     };
-    const newFields = [...assignedEmployeeFields];
-    newFields[employeeIndex] = updatedField;
     replaceAssignedEmployees(newFields);
   }, [assignedEmployeeFields, replaceAssignedEmployees, form, objects, calculateEmployeeDayTimes]);
 
@@ -489,13 +484,12 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
       timeType === 'start' ? 'startTime' : 'endTime'
     );
 
-    const updatedField = {
+    const newFields = [...assignedEmployeeFields];
+    newFields[employeeIndex] = {
       ...currentAssignedEmployee,
       [`assigned_${day}_start_time`]: calculatedStartTime,
       [`assigned_${day}_end_time`]: calculatedEndTime,
     };
-    const newFields = [...assignedEmployeeFields];
-    newFields[employeeIndex] = updatedField;
     replaceAssignedEmployees(newFields);
   }, [assignedEmployeeFields, replaceAssignedEmployees, form, objects, calculateEmployeeDayTimes]);
 
