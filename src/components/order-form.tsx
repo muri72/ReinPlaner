@@ -107,7 +107,7 @@ const assignedEmployeeSchema = z.object({
           path: [endTimeKey],
         });
       }
-      if (hours !== null && hours !== undefined) {
+      if (hours != null) {
         const calculatedDurationMinutes = endTimeInMinutes - startTimeInMinutes;
         const calculatedHours = calculatedDurationMinutes / 60;
         if (Math.abs(calculatedHours - hours) > 0.01) {
@@ -225,15 +225,6 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
   const selectedCustomerId = form.watch("customerId");
   const selectedObjectId = form.watch("objectId");
 
-  const getBaseStartTimeForTimeOfDay = useCallback((timeOfDay: string | null): string => {
-    switch (timeOfDay) {
-      case 'morning': return '08:00';
-      case 'noon': return '12:00';
-      case 'afternoon': return '17:00';
-      default: return '08:00';
-    }
-  }, []);
-
   const fetchCustomerContacts = async (customerId: string) => {
     const { data: contactsData, error: contactsError } = await supabase
       .from('customer_contacts')
@@ -316,57 +307,6 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     }
   }, [selectedObjectId, objects, form, orderType, form.watch("dueDate")]);
 
-  const calculateEmployeeDayTimes = useCallback((
-    day: typeof dayNames[number],
-    currentHours: number | null,
-    currentStartTime: string | null,
-    currentEndTime: string | null,
-    objectTimeOfDay: string | null,
-    triggeringField: 'hours' | 'startTime' | 'endTime' | 'employeeSelection' | 'objectSelection'
-  ): { newStartTime: string | null; newEndTime: string | null } => {
-    let newStartTime: string | null = currentStartTime || null;
-    let newEndTime: string | null = currentEndTime || null;
-
-    if (currentHours !== null && currentHours > 0) {
-      if (triggeringField === 'hours') {
-        if (newStartTime && timeRegex.test(newStartTime)) {
-          newEndTime = calculateEndTime(newStartTime, currentHours);
-        } else {
-          newStartTime = getBaseStartTimeForTimeOfDay(objectTimeOfDay);
-          newEndTime = calculateEndTime(newStartTime, currentHours);
-        }
-      } else if (triggeringField === 'startTime') {
-        if (newStartTime && timeRegex.test(newStartTime)) {
-          newEndTime = calculateEndTime(newStartTime, currentHours);
-        } else {
-          newEndTime = null;
-        }
-      } else if (triggeringField === 'endTime') {
-        if (newEndTime && timeRegex.test(newEndTime)) {
-          newStartTime = calculateStartTime(newEndTime, currentHours);
-        } else {
-          newStartTime = null;
-        }
-      } else if (triggeringField === 'employeeSelection' || triggeringField === 'objectSelection') {
-        const selectedObject = objects.find(obj => obj.id === selectedObjectId);
-        const objStartTime = selectedObject?.[`${day}_start_time` as keyof typeof selectedObject] as string | null;
-        const objEndTime = selectedObject?.[`${day}_end_time` as keyof typeof selectedObject] as string | null;
-
-        if (objStartTime && objEndTime) {
-          newStartTime = objStartTime;
-          newEndTime = objEndTime;
-        } else {
-          newStartTime = getBaseStartTimeForTimeOfDay(objectTimeOfDay);
-          newEndTime = calculateEndTime(newStartTime, currentHours);
-        }
-      }
-    } else {
-      newStartTime = null;
-      newEndTime = null;
-    }
-    return { newStartTime, newEndTime };
-  }, [getBaseStartTimeForTimeOfDay, objects, selectedObjectId]);
-
   const recalculateAndSetAssignments = useCallback((employeeIds: string[]) => {
     const currentObjectId = form.getValues("objectId") ?? null;
     const selectedObject = objects.find(obj => obj.id === currentObjectId);
@@ -398,7 +338,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
           const objectEndTime = selectedObject?.[`${day}_end_time` as keyof typeof selectedObject] as string | null;
 
           let calculatedHours: number | null = null;
-          if (objectDailyHours !== null) {
+          if (objectDailyHours != null) {
             calculatedHours = parseFloat((objectDailyHours / numAssignedEmployees).toFixed(2));
           }
           
@@ -431,28 +371,21 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
   ) => {
     const parsedHours = value === "" ? null : Number(value);
     const currentAssignedEmployee = assignedEmployeeFields[employeeIndex];
-    const currentObjectId = form.getValues("objectId") ?? null;
-    const selectedObject = objects.find(obj => obj.id === currentObjectId);
-    const objectTimeOfDay = selectedObject?.time_of_day || 'any';
+    const startTime = currentAssignedEmployee[`assigned_${day}_start_time`] as string | null;
 
-    const { newStartTime, newEndTime } = calculateEmployeeDayTimes(
-      day,
-      parsedHours,
-      currentAssignedEmployee[`assigned_${day}_start_time`] as string | null,
-      currentAssignedEmployee[`assigned_${day}_end_time`] as string | null,
-      objectTimeOfDay,
-      'hours'
-    );
+    let newEndTime: string | null = null;
+    if (parsedHours != null && parsedHours > 0 && startTime && timeRegex.test(startTime)) {
+        newEndTime = calculateEndTime(startTime, parsedHours);
+    }
 
     const newFields = [...assignedEmployeeFields];
     newFields[employeeIndex] = {
       ...currentAssignedEmployee,
       [`assigned_${day}_hours`]: parsedHours,
-      [`assigned_${day}_start_time`]: newStartTime,
       [`assigned_${day}_end_time`]: newEndTime,
     };
     replaceAssignedEmployees(newFields);
-  }, [assignedEmployeeFields, replaceAssignedEmployees, form, objects, calculateEmployeeDayTimes]);
+  }, [assignedEmployeeFields, replaceAssignedEmployees]);
 
   const handleAssignedTimeChange = useCallback((
     employeeIndex: number,
@@ -461,37 +394,35 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     value: string
   ) => {
     const currentAssignedEmployee = assignedEmployeeFields[employeeIndex];
-    const currentHours = currentAssignedEmployee[`assigned_${day}_hours` as keyof AssignedEmployee] as number | null;
-    const currentObjectId = form.getValues("objectId") ?? null;
-    const selectedObject = objects.find(obj => obj.id === currentObjectId);
-    const objectTimeOfDay = selectedObject?.time_of_day || 'any';
+    const hours = currentAssignedEmployee[`assigned_${day}_hours` as keyof AssignedEmployee] as number | null;
 
     let newStartTime = currentAssignedEmployee[`assigned_${day}_start_time`] as string | null;
     let newEndTime = currentAssignedEmployee[`assigned_${day}_end_time`] as string | null;
 
     if (timeType === 'start') {
       newStartTime = value || null;
+      if (newStartTime && timeRegex.test(newStartTime) && hours != null && hours > 0) {
+        newEndTime = calculateEndTime(newStartTime, hours);
+      } else {
+        newEndTime = null;
+      }
     } else {
       newEndTime = value || null;
+      if (newEndTime && timeRegex.test(newEndTime) && hours != null && hours > 0) {
+        newStartTime = calculateStartTime(newEndTime, hours);
+      } else {
+        newStartTime = null;
+      }
     }
-
-    const { newStartTime: calculatedStartTime, newEndTime: calculatedEndTime } = calculateEmployeeDayTimes(
-      day,
-      currentHours,
-      newStartTime,
-      newEndTime,
-      objectTimeOfDay,
-      timeType === 'start' ? 'startTime' : 'endTime'
-    );
 
     const newFields = [...assignedEmployeeFields];
     newFields[employeeIndex] = {
       ...currentAssignedEmployee,
-      [`assigned_${day}_start_time`]: calculatedStartTime,
-      [`assigned_${day}_end_time`]: calculatedEndTime,
+      [`assigned_${day}_start_time`]: newStartTime,
+      [`assigned_${day}_end_time`]: newEndTime,
     };
     replaceAssignedEmployees(newFields);
-  }, [assignedEmployeeFields, replaceAssignedEmployees, form, objects, calculateEmployeeDayTimes]);
+  }, [assignedEmployeeFields, replaceAssignedEmployees]);
 
   const handleFormSubmit: SubmitHandler<OrderFormValues> = async (data) => {
     if (data.objectId && data.assignedEmployees && data.assignedEmployees.length > 0) {
