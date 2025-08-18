@@ -454,10 +454,12 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
   };
 
   const getSumAssignedHoursForDay = (day: string): number => {
-    return (assignedEmployeeFields || []).reduce((sum, emp) => {
+    const sum = (assignedEmployeeFields || []).reduce((total, emp) => {
       const assignedHours = (emp as any)[`assigned_${day}_hours`] as number | null;
-      return sum + (assignedHours || 0);
+      return total + (assignedHours || 0);
     }, 0);
+    // Ensure we always return a valid number
+    return typeof sum === 'number' && !isNaN(sum) ? sum : 0;
   };
 
   const getObjectDailyHours = (day: string): number | null => {
@@ -694,7 +696,6 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
                   {dayNames.map(day => {
                     const hoursFieldName = `assignedEmployees.${assignedIndex}.assigned_${day}_hours` as const;
                     const startFieldName = `assignedEmployees.${assignedIndex}.assigned_${day}_start_time` as const;
-                    const endFieldName = `assignedEmployees.${assignedIndex}.assigned_${day}_end_time` as const;
                     const objectDailyHours = getObjectDailyHours(day);
                     const isDayValid = isDailyHoursValid(day);
                     const sumAssignedForDay = getSumAssignedHoursForDay(day);
