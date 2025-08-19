@@ -73,7 +73,7 @@ export async function getObjectWorkTimeReport(objectId: string, month: number, y
     .order('start_time', { ascending: true });
 
   if (error) {
-    console.error("Fehler beim Laden des Arbeitszeitnachweises:", error?.message || error);
+    console.error("Fehler beim Laden des Objekt-Arbeitszeitnachweises:", error?.message || error);
     return { success: false, message: error.message, data: null };
   }
 
@@ -106,7 +106,7 @@ export async function getObjectWorkTimeReport(objectId: string, month: number, y
 
   return {
     success: true,
-    message: "Arbeitszeitnachweis erfolgreich geladen.",
+    message: "Arbeitszeitnachweis für Objekt erfolgreich geladen.",
     data: reportData,
   };
 }
