@@ -418,26 +418,15 @@ export default async function DashboardPage() {
                 <table className="w-full">
                   <thead>
                     <tr className="text-left [&amp;:has([data-selected])]:bg-accent [&amp;_th]:first:rounded-tl-md [&amp;_th]:last:rounded-tr-md [&amp;_th]:last:text-right">
-                      <th className="h-12 px-4 text-base font-semibold min-w-[150px]">Auftrag</th>
-                      <th className="h-12 px-4 text-base font-semibold min-w-[120px]">Kunde</th>
-                      <th className="h-12 px-4 text-base font-semibold min-w-[120px]">Objekt</th>
-                      <th className="h-12 px-4 text-base font-semibold min-w-[100px]">Dienstleistung</th>
-                      <th className="h-12 px-4 text-base font-semibold min-w-[100px]">Anfrage Status</th>
-                      <th className="h-12 px-4 text-base font-semibold min-w-[120px]">Zeitraum</th>
-                      <th className="h-12 px-4 text-base font-semibold text-right min-w-[120px]">Aktionen</th>
+                      <th className="h-12 px-4 text-base font-semibold min-w-[150px]">Auftrag</th><th className="h-12 px-4 text-base font-semibold min-w-[120px]">Kunde</th><th className="h-12 px-4 text-base font-semibold min-w-[120px]">Objekt</th><th className="h-12 px-4 text-base font-semibold min-w-[100px]">Dienstleistung</th><th className="h-12 px-4 text-base font-semibold min-w-[100px]">Anfrage Status</th><th className="h-12 px-4 text-base font-semibold min-w-[120px]">Zeitraum</th><th className="h-12 px-4 text-base font-semibold text-right min-w-[120px]">Aktionen</th>
                     </tr>
                   </thead>
                   <tbody>
                     {mappedPendingRequests.map((order) => (
                       <tr key={order.id} className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
-                        <td className="p-4 align-middle font-medium text-sm">{order.title}</td>
-                        <td className="p-4 align-middle text-sm">{order.customer_name || 'N/A'}</td>
-                        <td className="p-4 align-middle text-sm">{order.object_name || 'N/A'}</td>
-                        <td className="p-4 align-middle text-sm">{order.service_type || 'N/A'}</td>
-                        <td className="p-4 align-middle">
+                        <td className="p-4 align-middle font-medium text-sm">{order.title}</td><td className="p-4 align-middle text-sm">{order.customer_name || 'N/A'}</td><td className="p-4 align-middle text-sm">{order.object_name || 'N/A'}</td><td className="p-4 align-middle text-sm">{order.service_type || 'N/A'}</td><td className="p-4 align-middle">
                           <Badge variant={getRequestStatusBadgeVariant(order.request_status)}>{order.request_status}</Badge>
-                        </td>
-                        <td className="p-4 align-middle text-sm">
+                        </td><td className="p-4 align-middle text-sm">
                           {order.order_type === "one_time" && order.due_date && (
                             <div className="flex items-center">
                               <CalendarDays className="mr-1 h-3 w-3" />
@@ -451,8 +440,7 @@ export default async function DashboardPage() {
                               {order.recurring_end_date && ` - ${format(new Date(order.recurring_end_date), 'dd.MM.yyyy', { locale: de })}`}
                             </div>
                           )}
-                        </td>
-                        <td className="p-4 align-middle text-right">
+                        </td><td className="p-4 align-middle text-right">
                           <RecordDetailsDialog record={order} title={`Details zu Auftrag: ${order.title}`} />
                           <OrderPlanningDialog order={order} />
                         </td>
