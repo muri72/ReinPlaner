@@ -306,7 +306,7 @@ export function TodaysOrdersOverview() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="min-w-[150px]">Auftrag</TableHead><TableHead className="min-w-[120px]">Kunde / Objekt</TableHead><TableHead className="min-w-[120px]">Mitarbeiter</TableHead><TableHead className="min-w-[100px]">Status</TableHead><TableHead className="min-w-[100px]">Priorität</TableHead><TableHead className="min-w-[100px]">Typ</TableHead><TableHead className="min-w-[120px]">Zeitraum</TableHead><TableHead className="min-w-[120px]">Zugewiesene Zeit</TableHead> {/* New column */}<TableHead className="text-right min-w-[120px]">Aktionen</TableHead>
+                  <TableHead className="min-w-[150px]">Auftrag</TableHead><TableHead className="min-w-[120px]">Kunde / Objekt</TableHead><TableHead className="min-w-[120px]">Mitarbeiter</TableHead><TableHead className="min-w-[100px]">Status</TableHead><TableHead className="min-w-[100px]">Priorität</TableHead><TableHead className="min-w-[100px]">Typ</TableHead><TableHead className="min-w-[120px]">Zeitraum</TableHead><TableHead className="min-w-[120px]">Zugewiesene Zeit</TableHead><TableHead className="text-right min-w-[120px]">Aktionen</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
