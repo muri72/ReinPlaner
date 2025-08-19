@@ -53,9 +53,8 @@ export async function getWorkTimeReport(objectId: string, month: number, year: n
   const supabase = createAdminClient();
 
   const startDate = startOfMonth(new Date(year, month - 1, 1));
-  const endDate = endOfMonth(new Date(year, month - 1, 1));
+  const nextMonthStartDate = new Date(year, month, 1); // JS Date handles month overflow (e.g., month 12 becomes next year's month 0)
 
-  // --- NEW LOGIC: Direct query instead of RPC ---
   const { data, error } = await supabase
     .from('time_entries')
     .select(`
@@ -70,7 +69,7 @@ export async function getWorkTimeReport(objectId: string, month: number, year: n
     `)
     .eq('object_id', objectId)
     .gte('start_time', startDate.toISOString())
-    .lte('start_time', endDate.toISOString())
+    .lt('start_time', nextMonthStartDate.toISOString()) // Use less than the start of the next month
     .order('start_time', { ascending: true });
 
   if (error) {
@@ -116,7 +115,7 @@ export async function getWorkTimeReport(objectId: string, month: number, year: n
 export async function getEmployeeWorkTimeReport(employeeId: string, month: number, year: number): Promise<{ success: boolean; message: string; data: EmployeeWorkTimeReportData | null }> {
   const supabase = createAdminClient();
   const startDate = startOfMonth(new Date(year, month - 1, 1));
-  const endDate = endOfMonth(new Date(year, month - 1, 1));
+  const nextMonthStartDate = new Date(year, month, 1);
 
   const { data: employeeDetails, error: employeeError } = await supabase
     .from('employees')
@@ -142,7 +141,7 @@ export async function getEmployeeWorkTimeReport(employeeId: string, month: numbe
     `)
     .eq('employee_id', employeeId)
     .gte('start_time', startDate.toISOString())
-    .lte('start_time', endDate.toISOString())
+    .lt('start_time', nextMonthStartDate.toISOString()) // Use less than the start of the next month
     .order('start_time', { ascending: true });
 
   if (error) {
