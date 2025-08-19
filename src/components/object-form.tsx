@@ -19,7 +19,16 @@ import { DatePicker } from "@/components/date-picker";
 import { handleActionResponse } from "@/lib/toast-utils";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn, calculateEndTime, calculateStartTime } from "@/lib/utils";
+import { MultiSelectEmployees } from "@/components/multi-select-employees";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+
+const availableServices = [
+  "Unterhaltsreinigung",
+  "Glasreinigung",
+  "Grundreinigung",
+  "Graffitientfernung",
+  "Sonderreinigung",
+] as const;
 
 const preprocessNumber = (val: unknown) => (val === "" || isNaN(Number(val)) ? null : Number(val));
 const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
@@ -34,6 +43,33 @@ const germanDayNames: { [key: string]: string } = {
   saturday: 'Sa',
   sunday: 'So',
 };
+
+const assignedEmployeeSchema = z.object({
+  employeeId: z.string().uuid("Ungültige Mitarbeiter-ID"),
+  assigned_monday_hours: z.preprocess(preprocessNumber, z.nullable(z.number().min(0).max(24)).optional()),
+  assigned_tuesday_hours: z.preprocess(preprocessNumber, z.nullable(z.number().min(0).max(24)).optional()),
+  assigned_wednesday_hours: z.preprocess(preprocessNumber, z.nullable(z.number().min(0).max(24)).optional()),
+  assigned_thursday_hours: z.preprocess(preprocessNumber, z.nullable(z.number().min(0).max(24)).optional()),
+  assigned_friday_hours: z.preprocess(preprocessNumber, z.nullable(z.number().min(0).max(24)).optional()),
+  assigned_saturday_hours: z.preprocess(preprocessNumber, z.nullable(z.number().min(0).max(24)).optional()),
+  assigned_sunday_hours: z.preprocess(preprocessNumber, z.nullable(z.number().min(0).max(24)).optional()),
+  assigned_monday_start_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
+  assigned_monday_end_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
+  assigned_tuesday_start_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
+  assigned_tuesday_end_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
+  assigned_wednesday_start_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
+  assigned_wednesday_end_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
+  assigned_thursday_start_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
+  assigned_thursday_end_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
+  assigned_friday_start_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
+  assigned_friday_end_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
+  assigned_saturday_start_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
+  assigned_saturday_end_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
+  assigned_sunday_start_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
+  assigned_sunday_end_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
+});
+
+export type AssignedEmployee = z.infer<typeof assignedEmployeeSchema>;
 
 export const objectSchema = z.object({
   name: z.string().min(1, "Name ist erforderlich").max(100, "Name ist zu lang"),
