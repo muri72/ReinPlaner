@@ -21,6 +21,7 @@ export async function createOrder(data: OrderFormValues) {
     customerId,
     objectId,
     customerContactId,
+    employeeId, // Simplified
     orderType,
     recurringStartDate,
     recurringEndDate,
@@ -29,10 +30,9 @@ export async function createOrder(data: OrderFormValues) {
     notes,
     serviceType,
     requestStatus,
-    assignedEmployees,
   } = data;
 
-  const { data: newOrder, error } = await supabase
+  const { error } = await supabase
     .from('orders')
     .insert({
       user_id: user.id,
@@ -43,6 +43,7 @@ export async function createOrder(data: OrderFormValues) {
       customer_id: customerId,
       object_id: objectId,
       customer_contact_id: customerContactId,
+      employee_id: employeeId, // Simplified
       order_type: orderType,
       recurring_start_date: recurringStartDate ? recurringStartDate.toISOString().split('T')[0] : null,
       recurring_end_date: recurringEndDate ? recurringEndDate.toISOString().split('T')[0] : null,
@@ -51,54 +52,13 @@ export async function createOrder(data: OrderFormValues) {
       notes,
       service_type: serviceType,
       request_status: requestStatus,
-    })
-    .select('id')
-    .single();
+    });
 
   if (error) {
     console.error("Fehler beim Erstellen des Auftrags:", error?.message || error);
     return { success: false, message: error.message };
   }
 
-  // Mitarbeiterzuweisungen speichern
-  if (newOrder?.id && assignedEmployees && assignedEmployees.length > 0) {
-    const assignmentsToInsert = assignedEmployees.map(assignment => ({
-      order_id: newOrder.id,
-      employee_id: assignment.employeeId,
-      assigned_monday_hours: assignment.assigned_monday_hours,
-      assigned_tuesday_hours: assignment.assigned_tuesday_hours,
-      assigned_wednesday_hours: assignment.assigned_wednesday_hours,
-      assigned_thursday_hours: assignment.assigned_thursday_hours,
-      assigned_friday_hours: assignment.assigned_friday_hours,
-      assigned_saturday_hours: assignment.assigned_saturday_hours,
-      assigned_sunday_hours: assignment.assigned_sunday_hours,
-      // New time fields
-      assigned_monday_start_time: assignment.assigned_monday_start_time,
-      assigned_monday_end_time: assignment.assigned_monday_end_time,
-      assigned_tuesday_start_time: assignment.assigned_tuesday_start_time,
-      assigned_tuesday_end_time: assignment.assigned_tuesday_end_time,
-      assigned_wednesday_start_time: assignment.assigned_wednesday_start_time,
-      assigned_wednesday_end_time: assignment.assigned_wednesday_end_time,
-      assigned_thursday_start_time: assignment.assigned_thursday_start_time,
-      assigned_thursday_end_time: assignment.assigned_thursday_end_time,
-      assigned_friday_start_time: assignment.assigned_friday_start_time,
-      assigned_friday_end_time: assignment.assigned_friday_end_time,
-      assigned_saturday_start_time: assignment.assigned_saturday_start_time,
-      assigned_saturday_end_time: assignment.assigned_saturday_end_time,
-      assigned_sunday_start_time: assignment.assigned_sunday_start_time,
-      assigned_sunday_end_time: assignment.assigned_sunday_end_time,
-    }));
-
-    const { error: assignError } = await supabase
-      .from('order_employee_assignments')
-      .insert(assignmentsToInsert);
-
-    if (assignError) {
-      console.error("Fehler beim Speichern der Mitarbeiterzuweisungen:", assignError?.message || assignError);
-    }
-  }
-
-  // Benachrichtigung bei neuer Anfrage
   if (requestStatus === 'pending') {
     const supabaseAdmin = createAdminClient();
     const { data: adminsAndManagers } = await supabaseAdmin.from('profiles').select('id').in('role', ['admin', 'manager']);
@@ -106,7 +66,7 @@ export async function createOrder(data: OrderFormValues) {
       for (const admin of adminsAndManagers) {
         await sendNotification({
           userId: admin.id,
-          title: "Neuer Auftragsanfrage",
+          title: "Neue Auftragsanfrage",
           message: `Eine neue Auftragsanfrage "${title}" wurde erstellt.`,
           link: "/dashboard/orders"
         });
@@ -135,6 +95,7 @@ export async function updateOrder(orderId: string, data: OrderFormValues) {
     customerId,
     objectId,
     customerContactId,
+    employeeId, // Simplified
     orderType,
     recurringStartDate,
     recurringEndDate,
@@ -143,25 +104,25 @@ export async function updateOrder(orderId: string, data: OrderFormValues) {
     notes,
     serviceType,
     requestStatus,
-    assignedEmployees,
   } = data;
 
   const { error } = await supabase
     .from('orders')
     .update({
-      title: data.title,
-      description: data.description,
+      title,
+      description,
       due_date: dueDate ? dueDate.toISOString() : null,
-      status: data.status,
-      customer_id: data.customerId,
-      object_id: data.objectId,
-      customer_contact_id: data.customerContactId,
+      status,
+      customer_id: customerId,
+      object_id: objectId,
+      customer_contact_id: customerContactId,
+      employee_id: employeeId, // Simplified
       order_type: orderType,
       recurring_start_date: recurringStartDate ? recurringStartDate.toISOString().split('T')[0] : null,
       recurring_end_date: recurringEndDate ? recurringEndDate.toISOString().split('T')[0] : null,
       priority,
       total_estimated_hours: totalEstimatedHours,
-      notes: data.notes,
+      notes,
       service_type: serviceType,
       request_status: requestStatus,
     })
@@ -170,55 +131,6 @@ export async function updateOrder(orderId: string, data: OrderFormValues) {
   if (error) {
     console.error("Fehler beim Aktualisieren des Auftrags:", error?.message || error);
     return { success: false, message: error.message };
-  }
-
-  // Mitarbeiterzuweisungen aktualisieren: Zuerst alle löschen, dann neu einfügen
-  const { error: deleteAssignError } = await supabase
-    .from('order_employee_assignments')
-    .delete()
-    .eq('order_id', orderId);
-
-  if (deleteAssignError) {
-    console.error("Fehler beim Löschen alter Mitarbeiterzuweisungen:", deleteAssignError?.message || deleteAssignError);
-    return { success: false, message: `Fehler beim Aktualisieren der Zuweisungen: ${deleteAssignError.message}` };
-  }
-
-  if (assignedEmployees && assignedEmployees.length > 0) {
-    const assignmentsToInsert = assignedEmployees.map(assignment => ({
-      order_id: orderId,
-      employee_id: assignment.employeeId,
-      assigned_monday_hours: assignment.assigned_monday_hours,
-      assigned_tuesday_hours: assignment.assigned_tuesday_hours,
-      assigned_wednesday_hours: assignment.assigned_wednesday_hours,
-      assigned_thursday_hours: assignment.assigned_thursday_hours,
-      assigned_friday_hours: assignment.assigned_friday_hours,
-      assigned_saturday_hours: assignment.assigned_saturday_hours,
-      assigned_sunday_hours: assignment.assigned_sunday_hours,
-      // New time fields
-      assigned_monday_start_time: assignment.assigned_monday_start_time,
-      assigned_monday_end_time: assignment.assigned_monday_end_time,
-      assigned_tuesday_start_time: assignment.assigned_tuesday_start_time,
-      assigned_tuesday_end_time: assignment.assigned_tuesday_end_time,
-      assigned_wednesday_start_time: assignment.assigned_wednesday_start_time,
-      assigned_wednesday_end_time: assignment.assigned_wednesday_end_time,
-      assigned_thursday_start_time: assignment.assigned_thursday_start_time,
-      assigned_thursday_end_time: assignment.assigned_thursday_end_time,
-      assigned_friday_start_time: assignment.assigned_friday_start_time,
-      assigned_friday_end_time: assignment.assigned_friday_end_time,
-      assigned_saturday_start_time: assignment.assigned_saturday_start_time,
-      assigned_saturday_end_time: assignment.assigned_saturday_end_time,
-      assigned_sunday_start_time: assignment.assigned_sunday_start_time,
-      assigned_sunday_end_time: assignment.assigned_sunday_end_time,
-    }));
-
-    const { error: insertAssignError } = await supabase
-      .from('order_employee_assignments')
-      .insert(assignmentsToInsert);
-
-    if (insertAssignError) {
-      console.error("Fehler beim Einfügen neuer Mitarbeiterzuweisungen:", insertAssignError?.message || insertAssignError);
-      return { success: false, message: `Fehler beim Aktualisieren der Zuweisungen: ${insertAssignError.message}` };
-    }
   }
 
   revalidatePath("/dashboard/orders");
@@ -262,32 +174,6 @@ export async function processOrderRequest(formData: FormData): Promise<{ success
   const orderId = formData.get('orderId') as string;
   const employeeId = formData.get('employeeId') as string | null;
   const decision = formData.get('decision') as 'approved' | 'rejected';
-  
-  // Retrieve assigned daily hours for each day from form data
-  const assigned_monday_hours = formData.get('assigned_monday_hours') ? Number(formData.get('assigned_monday_hours')) : null;
-  const assigned_tuesday_hours = formData.get('assigned_tuesday_hours') ? Number(formData.get('assigned_tuesday_hours')) : null;
-  const assigned_wednesday_hours = formData.get('assigned_wednesday_hours') ? Number(formData.get('assigned_wednesday_hours')) : null;
-  const assigned_thursday_hours = formData.get('assigned_thursday_hours') ? Number(formData.get('assigned_thursday_hours')) : null;
-  const assigned_friday_hours = formData.get('assigned_friday_hours') ? Number(formData.get('assigned_friday_hours')) : null;
-  const assigned_saturday_hours = formData.get('assigned_saturday_hours') ? Number(formData.get('assigned_saturday_hours')) : null;
-  const assigned_sunday_hours = formData.get('assigned_sunday_hours') ? Number(formData.get('assigned_sunday_hours')) : null;
-
-  // Retrieve assigned daily start/end times from form data
-  const assigned_monday_start_time = formData.get('assigned_monday_start_time') as string || null;
-  const assigned_monday_end_time = formData.get('assigned_monday_end_time') as string || null;
-  const assigned_tuesday_start_time = formData.get('assigned_tuesday_start_time') as string || null;
-  const assigned_tuesday_end_time = formData.get('assigned_tuesday_end_time') as string || null;
-  const assigned_wednesday_start_time = formData.get('assigned_wednesday_start_time') as string || null;
-  const assigned_wednesday_end_time = formData.get('assigned_wednesday_end_time') as string || null;
-  const assigned_thursday_start_time = formData.get('assigned_thursday_start_time') as string || null;
-  const assigned_thursday_end_time = formData.get('assigned_thursday_end_time') as string || null;
-  const assigned_friday_start_time = formData.get('assigned_friday_start_time') as string || null;
-  const assigned_friday_end_time = formData.get('assigned_friday_end_time') as string || null;
-  const assigned_saturday_start_time = formData.get('assigned_saturday_start_time') as string || null;
-  const assigned_saturday_end_time = formData.get('assigned_saturday_end_time') as string || null;
-  const assigned_sunday_start_time = formData.get('assigned_sunday_start_time') as string || null;
-  const assigned_sunday_end_time = formData.get('assigned_sunday_end_time') as string || null;
-
 
   if (!orderId || !decision) {
     return { success: false, message: "Ungültige Anfrage." };
@@ -297,12 +183,12 @@ export async function processOrderRequest(formData: FormData): Promise<{ success
     return { success: false, message: "Bitte weisen Sie einen Mitarbeiter zu, um den Auftrag zu genehmigen." };
   }
 
-  // Update order request status
   const { error: orderUpdateError } = await supabase
     .from('orders')
     .update({
       request_status: decision,
       status: decision === 'approved' ? 'pending' : 'pending',
+      employee_id: decision === 'approved' ? employeeId : null,
     })
     .eq('id', orderId);
 
@@ -311,54 +197,7 @@ export async function processOrderRequest(formData: FormData): Promise<{ success
     return { success: false, message: orderUpdateError.message };
   }
 
-  // Handle employee assignment in order_employee_assignments table
   if (decision === 'approved' && employeeId) {
-    // First, remove any existing assignments for this order
-    const { error: deleteAssignmentError } = await supabase
-      .from('order_employee_assignments')
-      .delete()
-      .eq('order_id', orderId);
-
-    if (deleteAssignmentError) {
-      console.error("Fehler beim Löschen alter Zuweisungen:", deleteAssignmentError?.message || deleteAssignmentError);
-      return { success: false, message: `Fehler bei der Zuweisung: ${deleteAssignmentError.message}` };
-    }
-
-    // Then, insert the new assignment with daily hours and times
-    const { error: insertAssignmentError } = await supabase
-      .from('order_employee_assignments')
-      .insert({
-        order_id: orderId,
-        employee_id: employeeId,
-        assigned_monday_hours,
-        assigned_tuesday_hours,
-        assigned_wednesday_hours,
-        assigned_thursday_hours,
-        assigned_friday_hours,
-        assigned_saturday_hours,
-        assigned_sunday_hours,
-        assigned_monday_start_time,
-        assigned_monday_end_time,
-        assigned_tuesday_start_time,
-        assigned_tuesday_end_time,
-        assigned_wednesday_start_time,
-        assigned_wednesday_end_time,
-        assigned_thursday_start_time,
-        assigned_thursday_end_time,
-        assigned_friday_start_time,
-        assigned_friday_end_time,
-        assigned_saturday_start_time,
-        assigned_saturday_end_time,
-        assigned_sunday_start_time,
-        assigned_sunday_end_time,
-      });
-
-    if (insertAssignmentError) {
-      console.error("Fehler beim Einfügen neuer Zuweisung:", insertAssignmentError?.message || insertAssignmentError);
-      return { success: false, message: `Fehler bei der Zuweisung: ${insertAssignmentError.message}` };
-    }
-
-    // Notify employee
     const supabaseAdmin = createAdminClient();
     const { data: employeeData } = await supabaseAdmin.from('employees').select('user_id').eq('id', employeeId).single();
     const { data: orderData } = await supabaseAdmin.from('orders').select('title').eq('id', orderId).single();
@@ -370,18 +209,6 @@ export async function processOrderRequest(formData: FormData): Promise<{ success
         message: `Die Anfrage für "${orderData.title}" wurde genehmigt und Ihnen zugewiesen.`,
         link: "/dashboard/orders"
       });
-    } else {
-      console.warn(`Could not send notification for order assignment to employee ${employeeId}. User ID or order title missing.`);
-    }
-  } else if (decision === 'rejected') {
-    // If rejected, remove any existing assignments for this order
-    const { error: deleteAssignmentError } = await supabase
-      .from('order_employee_assignments')
-      .delete()
-      .eq('order_id', orderId);
-
-    if (deleteAssignmentError) {
-      console.error("Fehler beim Löschen von Zuweisungen nach Ablehnung:", deleteAssignmentError?.message || deleteAssignmentError);
     }
   }
 

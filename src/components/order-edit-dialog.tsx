@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Pencil } from "lucide-react";
-import { OrderForm, OrderFormValues, AssignedEmployee } from "@/components/order-form";
+import { OrderForm, OrderFormValues } from "@/components/order-form";
 import { updateOrder } from "@/app/dashboard/orders/actions";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
@@ -13,7 +13,6 @@ import { DocumentUploader } from "@/components/document-uploader";
 import { DocumentList } from "@/components/document-list";
 import { FileStack } from "lucide-react";
 
-// Definierte Liste der Dienstleistungen (muss mit order-form.tsx übereinstimmen)
 const availableServices = [
   "Unterhaltsreinigung",
   "Glasreinigung",
@@ -40,7 +39,7 @@ interface OrderEditDialogProps {
     notes: string | null;
     service_type: string | null;
     request_status: string;
-    assignedEmployees: AssignedEmployee[]; // Use the correct, structured type
+    employee_id: string | null; // Simplified
   };
 }
 
@@ -79,7 +78,7 @@ export function OrderEditDialog({ order }: OrderEditDialogProps) {
         </Tooltip>
         <DialogContent 
           key={open ? "order-edit-open" : "order-edit-closed"} 
-          className="sm:max-w-5xl max-h-[90vh] overflow-y-auto flex flex-col glassmorphism-card" // Changed sm:max-w-3xl to sm:max-w-5xl
+          className="sm:max-w-5xl max-h-[90vh] overflow-y-auto flex flex-col glassmorphism-card"
         >
           <DialogHeader>
             <DialogTitle>Auftrag bearbeiten</DialogTitle>
@@ -102,6 +101,7 @@ export function OrderEditDialog({ order }: OrderEditDialogProps) {
                   customerId: order.customer_id ?? undefined,
                   objectId: order.object_id ?? undefined,
                   customerContactId: order.customer_contact_id ?? undefined,
+                  employeeId: order.employee_id ?? undefined,
                   orderType: order.order_type as OrderFormValues["orderType"],
                   recurringStartDate: order.recurring_start_date ? new Date(order.recurring_start_date) : undefined,
                   recurringEndDate: order.recurring_end_date ? new Date(order.recurring_end_date) : undefined,
@@ -110,7 +110,6 @@ export function OrderEditDialog({ order }: OrderEditDialogProps) {
                   notes: order.notes,
                   serviceType: getServiceTypeForForm(order.service_type),
                   requestStatus: order.request_status as OrderFormValues["requestStatus"],
-                  assignedEmployees: order.assignedEmployees, // Pass the structured array directly
                 }}
                 onSubmit={handleUpdate}
                 submitButtonText="Änderungen speichern"

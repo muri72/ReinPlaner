@@ -12,7 +12,6 @@ import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import OrderEmployeeAssignments from '@/components/orders/OrderEmployeeAssignments';
 
 interface Customer {
   id: string;
@@ -37,38 +36,12 @@ interface ServiceRate {
   hourly_rate: number;
 }
 
-interface EmployeeAssignment {
-  employee_id: string;
-  assigned_monday_hours: number | null;
-  assigned_tuesday_hours: number | null;
-  assigned_wednesday_hours: number | null;
-  assigned_thursday_hours: number | null;
-  assigned_friday_hours: number | null;
-  assigned_saturday_hours: number | null;
-  assigned_sunday_hours: number | null;
-  assigned_monday_start_time: string | null;
-  assigned_tuesday_start_time: string | null;
-  assigned_wednesday_start_time: string | null;
-  assigned_thursday_start_time: string | null;
-  assigned_friday_start_time: string | null;
-  assigned_saturday_start_time: string | null;
-  assigned_sunday_start_time: string | null;
-  assigned_monday_end_time: string | null;
-  assigned_tuesday_end_time: string | null;
-  assigned_wednesday_end_time: string | null;
-  assigned_thursday_end_time: string | null;
-  assigned_friday_end_time: string | null;
-  assigned_saturday_end_time: string | null;
-  assigned_sunday_end_time: string | null;
-}
-
 export default function CreateOrderForm() {
   const [loading, setLoading] = useState(false);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [objects, setObjects] = useState<CustomerObject[]>([]);
   const [contacts, setContacts] = useState<CustomerContact[]>([]);
   const [serviceRates, setServiceRates] = useState<ServiceRate[]>([]);
-  const [employeeAssignments, setEmployeeAssignments] = useState<EmployeeAssignment[]>([]);
 
   const [formData, setFormData] = useState({
     title: '',
@@ -85,6 +58,7 @@ export default function CreateOrderForm() {
     due_date: undefined as Date | undefined,
     recurring_start_date: undefined as Date | undefined,
     recurring_end_date: undefined as Date | undefined,
+    employee_id: '', // Simplified
   });
 
   useEffect(() => {
@@ -100,12 +74,10 @@ export default function CreateOrderForm() {
   }, [formData.customer_id]);
 
   const navigateBack = () => {
-    // Simple navigation back - you can replace this with proper routing
     window.history.back();
   };
 
   const navigateToOrders = () => {
-    // Simple navigation - you can replace this with proper routing
     window.location.href = '/orders';
   };
 
@@ -190,7 +162,6 @@ export default function CreateOrderForm() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Nicht authentifiziert');
 
-      // Create the order
       const orderData = {
         user_id: user.id,
         title: formData.title,
@@ -198,6 +169,7 @@ export default function CreateOrderForm() {
         customer_id: formData.customer_id || null,
         object_id: formData.object_id || null,
         customer_contact_id: formData.customer_contact_id || null,
+        employee_id: formData.employee_id || null,
         order_type: formData.order_type,
         service_type: formData.service_type || null,
         priority: formData.priority,
@@ -211,50 +183,11 @@ export default function CreateOrderForm() {
         status: 'pending'
       };
 
-      const { data: order, error: orderError } = await supabase
+      const { error: orderError } = await supabase
         .from('orders')
-        .insert(orderData)
-        .select()
-        .single();
+        .insert(orderData);
 
       if (orderError) throw orderError;
-
-      // Create employee assignments if any
-      if (employeeAssignments.length > 0) {
-        const assignmentsToInsert = employeeAssignments
-          .filter(a => a.employee_id)
-          .map(assignment => ({
-            order_id: order.id,
-            employee_id: assignment.employee_id,
-            assigned_monday_hours: assignment.assigned_monday_hours,
-            assigned_tuesday_hours: assignment.assigned_tuesday_hours,
-            assigned_wednesday_hours: assignment.assigned_wednesday_hours,
-            assigned_thursday_hours: assignment.assigned_thursday_hours,
-            assigned_friday_hours: assignment.assigned_friday_hours,
-            assigned_saturday_hours: assignment.assigned_saturday_hours,
-            assigned_sunday_hours: assignment.assigned_sunday_hours,
-            assigned_monday_start_time: assignment.assigned_monday_start_time,
-            assigned_tuesday_start_time: assignment.assigned_tuesday_start_time,
-            assigned_wednesday_start_time: assignment.assigned_wednesday_start_time,
-            assigned_thursday_start_time: assignment.assigned_thursday_start_time,
-            assigned_friday_start_time: assignment.assigned_friday_start_time,
-            assigned_saturday_start_time: assignment.assigned_saturday_start_time,
-            assigned_sunday_start_time: assignment.assigned_sunday_start_time,
-            assigned_monday_end_time: assignment.assigned_monday_end_time,
-            assigned_tuesday_end_time: assignment.assigned_tuesday_end_time,
-            assigned_wednesday_end_time: assignment.assigned_wednesday_end_time,
-            assigned_thursday_end_time: assignment.assigned_thursday_end_time,
-            assigned_friday_end_time: assignment.assigned_friday_end_time,
-            assigned_saturday_end_time: assignment.assigned_saturday_end_time,
-            assigned_sunday_end_time: assignment.assigned_sunday_end_time,
-          }));
-
-        const { error: assignmentError } = await supabase
-          .from('order_employee_assignments')
-          .insert(assignmentsToInsert);
-
-        if (assignmentError) throw assignmentError;
-      }
 
       toast.success('Auftrag erfolgreich erstellt');
       navigateToOrders();
@@ -532,13 +465,6 @@ export default function CreateOrderForm() {
             </div>
           </CardContent>
         </Card>
-
-        {formData.object_id && (
-          <OrderEmployeeAssignments
-            objectId={formData.object_id}
-            onAssignmentsChange={setEmployeeAssignments}
-          />
-        )}
 
         <div className="flex justify-end gap-4">
           <Button type="button" variant="outline" onClick={navigateToOrders}>
