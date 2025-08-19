@@ -94,8 +94,6 @@ export function WorkTimeReportForm() {
     }
     setLoadingReport(true);
     try {
-      const logoPath = '/home.png'; // Pfad zum Logo im public-Ordner
-
       const canvas = await html2canvas(reportTableRef.current, { scale: 2 });
       const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF('p', 'mm', 'a4');
@@ -104,24 +102,12 @@ export function WorkTimeReportForm() {
       const imgHeight = canvas.height * imgWidth / canvas.width;
       let heightLeft = imgHeight;
       let position = 0;
-
-      // Logo-Details
-      const logoWidth = 30; // Breite des Logos in mm
-      const logoHeight = 30; // Höhe des Logos in mm
-      const margin = 10; // Rand von oben und rechts in mm
-      const logoX = imgWidth - logoWidth - margin;
-      const logoY = margin;
-
-      // Erste Seite hinzufügen
       pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-      pdf.addImage(logoPath, 'PNG', logoX, logoY, logoWidth, logoHeight); // Logo hinzufügen
-
       heightLeft -= pageHeight;
       while (heightLeft >= 0) {
         position = heightLeft - imgHeight;
         pdf.addPage();
         pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-        pdf.addImage(logoPath, 'PNG', logoX, logoY, logoWidth, logoHeight); // Logo zu weiteren Seiten hinzufügen
         heightLeft -= pageHeight;
       }
       
@@ -204,11 +190,25 @@ export function WorkTimeReportForm() {
                 <h3 className="text-lg font-bold mb-4">Bericht für {objects.find(obj => obj.id === form.getValues("objectId"))?.name} - {months.find(m => m.value === form.getValues("month"))?.label} {form.getValues("year")}</h3>
                 <Table>
                   <TableHeader>
-                    <TableRow><TableHead>Datum</TableHead><TableHead>Mitarbeiter</TableHead><TableHead>Start</TableHead><TableHead>Ende</TableHead><TableHead>Pause</TableHead><TableHead>Arbeitsstunden</TableHead></TableRow>
+                    <TableRow>
+                      <TableHead>Datum</TableHead>
+                      <TableHead>Mitarbeiter</TableHead>
+                      <TableHead>Start</TableHead>
+                      <TableHead>Ende</TableHead>
+                      <TableHead>Pause</TableHead> {/* Moved Pause column */}
+                      <TableHead>Arbeitsstunden</TableHead> {/* Renamed Duration to Arbeitsstunden */}
+                    </TableRow>
                   </TableHeader>
                   <TableBody>
                     {objectReportData.entries.map(entry => (
-                      <TableRow key={entry.id}><TableCell>{entry.date}</TableCell><TableCell>{entry.employeeName}</TableCell><TableCell>{entry.startTime}</TableCell><TableCell>{entry.endTime}</TableCell><TableCell>{formatDuration(entry.breakMinutes)}</TableCell><TableCell>{formatDuration(entry.duration - entry.breakMinutes)}</TableCell></TableRow>
+                      <TableRow key={entry.id}>
+                        <TableCell>{entry.date}</TableCell>
+                        <TableCell>{entry.employeeName}</TableCell>
+                        <TableCell>{entry.startTime}</TableCell>
+                        <TableCell>{entry.endTime}</TableCell>
+                        <TableCell>{formatDuration(entry.breakMinutes)}</TableCell> {/* Pause column */}
+                        <TableCell>{formatDuration(entry.duration - entry.breakMinutes)}</TableCell> {/* Arbeitsstunden (Netto) */}
+                      </TableRow>
                     ))}
                   </TableBody>
                 </Table>
@@ -220,11 +220,27 @@ export function WorkTimeReportForm() {
                 <h3 className="text-lg font-bold mb-4">Bericht für {employeeReportData.employeeName} - {months.find(m => m.value === form.getValues("month"))?.label} {form.getValues("year")}</h3>
                 <Table>
                   <TableHeader>
-                    <TableRow><TableHead>Datum</TableHead><TableHead>Objekt</TableHead><TableHead>Kunde</TableHead><TableHead>Start</TableHead><TableHead>Ende</TableHead><TableHead>Pause</TableHead><TableHead>Arbeitsstunden</TableHead></TableRow>
+                    <TableRow>
+                      <TableHead>Datum</TableHead>
+                      <TableHead>Objekt</TableHead>
+                      <TableHead>Kunde</TableHead>
+                      <TableHead>Start</TableHead>
+                      <TableHead>Ende</TableHead>
+                      <TableHead>Pause</TableHead> {/* Moved Pause column */}
+                      <TableHead>Arbeitsstunden</TableHead> {/* Renamed Duration to Arbeitsstunden */}
+                    </TableRow>
                   </TableHeader>
                   <TableBody>
                     {employeeReportData.entries.map(entry => (
-                      <TableRow key={entry.id}><TableCell>{entry.date}</TableCell><TableCell>{entry.objectName}</TableCell><TableCell>{entry.customerName}</TableCell><TableCell>{entry.startTime}</TableCell><TableCell>{entry.endTime}</TableCell><TableCell>{formatDuration(entry.breakMinutes)}</TableCell><TableCell>{formatDuration(entry.duration - entry.breakMinutes)}</TableCell></TableRow>
+                      <TableRow key={entry.id}>
+                        <TableCell>{entry.date}</TableCell>
+                        <TableCell>{entry.objectName}</TableCell>
+                        <TableCell>{entry.customerName}</TableCell>
+                        <TableCell>{entry.startTime}</TableCell>
+                        <TableCell>{entry.endTime}</TableCell>
+                        <TableCell>{formatDuration(entry.breakMinutes)}</TableCell> {/* Pause column */}
+                        <TableCell>{formatDuration(entry.duration - entry.breakMinutes)}</TableCell> {/* Arbeitsstunden (Netto) */}
+                      </TableRow>
                     ))}
                   </TableBody>
                 </Table>
