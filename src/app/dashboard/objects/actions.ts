@@ -49,6 +49,15 @@ export async function createObject(data: ObjectFormValues) {
     securityCodeWord,
   } = data;
 
+  // Calculate total_weekly_hours
+  const total_weekly_hours = (monday_hours || 0) +
+                             (tuesday_hours || 0) +
+                             (wednesday_hours || 0) +
+                             (thursday_hours || 0) +
+                             (friday_hours || 0) +
+                             (saturday_hours || 0) +
+                             (sunday_hours || 0);
+
   const { error } = await supabase
     .from('objects')
     .insert({
@@ -65,7 +74,7 @@ export async function createObject(data: ObjectFormValues) {
       friday_hours,
       saturday_hours,
       sunday_hours,
-      // total_weekly_hours wird von der Datenbank berechnet und hier nicht eingefügt.
+      total_weekly_hours, // Include the calculated total
       monday_start_time,
       monday_end_time,
       tuesday_start_time,
@@ -119,6 +128,52 @@ export async function updateObject(objectId: string, data: ObjectFormValues) {
     return { success: false, message: "Fehler beim Überprüfen der Berechtigungen." };
   }
 
+  const {
+    name,
+    address,
+    description,
+    customerId,
+    customerContactId,
+    monday_hours,
+    tuesday_hours,
+    wednesday_hours,
+    thursday_hours,
+    friday_hours,
+    saturday_hours,
+    sunday_hours,
+    monday_start_time,
+    monday_end_time,
+    tuesday_start_time,
+    tuesday_end_time,
+    wednesday_start_time,
+    wednesday_end_time,
+    thursday_start_time,
+    thursday_end_time,
+    friday_start_time,
+    friday_end_time,
+    saturday_start_time,
+    saturday_end_time,
+    sunday_start_time,
+    sunday_end_time,
+    notes,
+    priority,
+    timeOfDay,
+    accessMethod,
+    pin,
+    isAlarmSecured,
+    alarmPassword,
+    securityCodeWord,
+  } = data;
+
+  // Calculate total_weekly_hours
+  const total_weekly_hours = (monday_hours || 0) +
+                             (tuesday_hours || 0) +
+                             (wednesday_hours || 0) +
+                             (thursday_hours || 0) +
+                             (friday_hours || 0) +
+                             (saturday_hours || 0) +
+                             (sunday_hours || 0);
+
   let query = supabase
     .from('objects')
     .update({
@@ -134,7 +189,7 @@ export async function updateObject(objectId: string, data: ObjectFormValues) {
       friday_hours: data.friday_hours,
       saturday_hours: data.saturday_hours,
       sunday_hours: data.sunday_hours,
-      // total_weekly_hours wird von der Datenbank berechnet und kann hier nicht aktualisiert werden.
+      total_weekly_hours, // Include the calculated total
       monday_start_time: data.monday_start_time,
       monday_end_time: data.monday_end_time,
       tuesday_start_time: data.tuesday_start_time,
