@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useForm, SubmitHandler } from "react-hook-form"; // Korrigierter Import
-import { zodResolver } from "@hookform/resolvers/zod"; // Hinzugefügter Import
+import { useForm, SubmitHandler } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -94,6 +94,31 @@ export function WorkTimeReportForm() {
     }
     setLoadingReport(true);
     try {
+      // Pre-load the logo and convert to base64
+      const getBase64Image = (url: string): Promise<string> => {
+        return new Promise((resolve, reject) => {
+          const img = new Image();
+          img.crossOrigin = 'Anonymous'; // Needed for CORS if image is from different origin
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+              ctx.drawImage(img, 0, 0);
+              resolve(canvas.toDataURL('image/png')); // Convert to PNG data URL
+            } else {
+              reject(new Error('Could not get 2D context for canvas.'));
+            }
+          };
+          img.onerror = (error) => reject(new Error(`Failed to load image: ${url} - ${error}`));
+          img.src = url;
+        });
+      };
+
+      const logoPath = '/home.png'; // Pfad zum Logo im public-Ordner
+      const logoDataUrl = await getBase64Image(logoPath);
+
       const canvas = await html2canvas(reportTableRef.current, { scale: 2 });
       const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF('p', 'mm', 'a4');
@@ -104,7 +129,6 @@ export function WorkTimeReportForm() {
       let position = 0;
 
       // Logo-Details
-      const logoPath = '/home.png'; // Pfad zum Logo im public-Ordner
       const logoWidth = 30; // Breite des Logos in mm
       const logoHeight = 30; // Höhe des Logos in mm
       const margin = 10; // Rand von oben und rechts in mm
@@ -113,14 +137,14 @@ export function WorkTimeReportForm() {
 
       // Erste Seite hinzufügen
       pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-      pdf.addImage(logoPath, 'PNG', logoX, logoY, logoWidth, logoHeight); // Logo hinzufügen
+      pdf.addImage(logoDataUrl, 'PNG', logoX, logoY, logoWidth, logoHeight); // Use base64 logo
 
       heightLeft -= pageHeight;
       while (heightLeft >= 0) {
         position = heightLeft - imgHeight;
         pdf.addPage();
         pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-        pdf.addImage(logoPath, 'PNG', logoX, logoY, logoWidth, logoHeight); // Logo zu weiteren Seiten hinzufügen
+        pdf.addImage(logoDataUrl, 'PNG', logoX, logoY, logoWidth, logoHeight); // Use base64 logo
         heightLeft -= pageHeight;
       }
       
