@@ -10,7 +10,7 @@ export interface ReportEntry {
   startTime: string;
   endTime: string;
   employeeName: string;
-  duration: number; // in minutes (gross duration)
+  netDurationMinutes: number; // Changed from 'duration'
   breakMinutes: number; // calculated or stored break minutes
   // notes: string; // Entfernt
 }
@@ -28,7 +28,7 @@ export interface EmployeeReportEntry {
   endTime: string;
   objectName: string;
   customerName: string;
-  duration: number;
+  netDurationMinutes: number; // Changed from 'duration'
   breakMinutes: number;
 }
 
@@ -94,7 +94,7 @@ export async function getWorkTimeReport(objectId: string, month: number, year: n
       startTime: new Date(entry.start_time).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }),
       endTime: entry.end_time ? new Date(entry.end_time).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) : 'N/A',
       employeeName: `${employee?.first_name || ''} ${employee?.last_name || ''}`.trim() || 'Unbekannt',
-      duration: grossDurationMinutes, // Store gross duration
+      netDurationMinutes: netDurationMinutes, // Changed from 'duration'
       breakMinutes: breakMins,
       // notes: entry.notes || '', // Entfernt
     };
@@ -167,7 +167,7 @@ export async function getEmployeeWorkTimeReport(employeeId: string, month: numbe
       endTime: entry.end_time ? new Date(entry.end_time).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) : 'N/A',
       objectName: object?.name || 'N/A',
       customerName: customer?.name || 'N/A',
-      duration: grossDurationMinutes,
+      netDurationMinutes: netDurationMinutes, // Changed from 'duration'
       breakMinutes: breakMins,
     };
   });
