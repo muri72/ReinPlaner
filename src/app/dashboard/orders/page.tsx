@@ -486,7 +486,7 @@ export default function OrdersPage({
 
       {/* Section for Other Orders with View Toggle */}
       <div className="space-y-4 pt-8">
-        <h2 className="text-xl md:text-2xl font-bold">Bestehende Aufträge</h2>
+        {/* Removed h2 tag for "Bestehende Aufträge" */}
         {query && (
           <p className="text-sm text-muted-foreground mb-4">
             Hinweis: Bei aktiver Suche wird die Paginierung deaktiviert und alle passenden Ergebnisse angezeigt.

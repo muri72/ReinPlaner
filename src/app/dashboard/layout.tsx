@@ -22,7 +22,7 @@ export default async function DashboardLayout({
     .eq('id', user.id)
     .single();
 
-  if (profileError) {
+  if (profileError && profileError.code !== 'PGRST116') {
     console.error("Fehler beim Laden des Benutzerprofils:", profileError?.message || JSON.stringify(profileError));
   }
 
@@ -41,3 +41,4 @@ export default async function DashboardLayout({
     </DashboardClientLayout>
   );
 }
+// Added a comment to trigger re-evaluation of the route segment.
