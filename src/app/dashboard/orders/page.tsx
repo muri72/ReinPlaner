@@ -25,6 +25,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { RecordDetailsDialog } from "@/components/record-details-dialog";
 import { LoadingOverlay } from "@/components/loading-overlay";
 import { AssignedEmployee } from "@/components/order-form";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"; // Ensure these are imported
 
 const dayNames = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const;
 const germanDayNames: { [key: string]: string } = {
@@ -232,7 +233,7 @@ export default function OrdersPage({
           order_employee_assignments ( 
             employee_id, 
             assigned_monday_hours, assigned_tuesday_hours, assigned_wednesday_hours,
-            assigned_thursday_hours, assigned_friday_hours, assigned_saturday_hours,
+            assigned_thursday_hours, assigned_thursday_hours, assigned_friday_hours, assigned_saturday_hours,
             assigned_sunday_hours,
             assigned_monday_start_time, assigned_monday_end_time,
             assigned_tuesday_start_time, assigned_tuesday_end_time,
@@ -499,29 +500,29 @@ export default function OrdersPage({
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="text-left [&amp;:has([data-selected])]:bg-accent [&amp;_th]:first:rounded-tl-md [&amp;_th]:last:rounded-tr-md [&amp;_th]:last:text-right">
-                      <th className="h-12 px-4 text-base font-semibold min-w-[150px]">Auftrag</th>
-                      <th className="h-12 px-4 text-base font-semibold min-w-[120px]">Kunde</th>
-                      <th className="h-12 px-4 text-base font-semibold min-w-[120px]">Objekt</th>
-                      <th className="h-12 px-4 text-base font-semibold min-w-[100px]">Dienstleistung</th>
-                      <th className="h-12 px-4 text-base font-semibold min-w-[100px]">Anfrage Status</th>
-                      <th className="h-12 px-4 text-base font-semibold min-w-[120px]">Zeitraum</th>
-                      <th className="h-12 px-4 text-base font-semibold text-right min-w-[120px]">Aktionen</th>
-                    </tr>
-                  </thead>
-                  <tbody>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="min-w-[150px]">Auftrag</TableHead>
+                      <TableHead className="min-w-[120px]">Kunde</TableHead>
+                      <TableHead className="min-w-[120px]">Objekt</TableHead>
+                      <TableHead className="min-w-[100px]">Dienstleistung</TableHead>
+                      <TableHead className="min-w-[100px]">Anfrage Status</TableHead>
+                      <TableHead className="min-w-[120px]">Zeitraum</TableHead>
+                      <TableHead className="text-right min-w-[120px]">Aktionen</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {pendingRequests.map((order) => (
-                      <tr key={order.id} className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
-                        <td className="p-4 align-middle font-medium text-sm">{order.title}</td>
-                        <td className="p-4 align-middle text-sm">{order.customer_name || 'N/A'}</td>
-                        <td className="p-4 align-middle text-sm">{order.object_name || 'N/A'}</td>
-                        <td className="p-4 align-middle text-sm">{order.service_type || 'N/A'}</td>
-                        <td className="p-4 align-middle">
+                      <TableRow key={order.id}>
+                        <TableCell className="font-medium text-sm">{order.title}</TableCell>
+                        <TableCell className="text-sm">{order.customer_name || 'N/A'}</TableCell>
+                        <TableCell className="text-sm">{order.object_name || 'N/A'}</TableCell>
+                        <TableCell className="text-sm">{order.service_type || 'N/A'}</TableCell>
+                        <TableCell>
                           <Badge variant={getRequestStatusBadgeVariant(order.request_status)}>{order.request_status}</Badge>
-                        </td>
-                        <td className="p-4 align-middle text-sm">
+                        </TableCell>
+                        <TableCell className="text-sm">
                           {order.order_type === "one_time" && order.due_date && (
                             <div className="flex items-center">
                               <CalendarDays className="mr-1 h-3 w-3" />
@@ -535,15 +536,15 @@ export default function OrdersPage({
                               {order.recurring_end_date && ` - ${format(new Date(order.recurring_end_date), 'dd.MM.yyyy', { locale: de })}`}
                             </div>
                           )}
-                        </td>
-                        <td className="p-4 align-middle text-right">
+                        </TableCell>
+                        <TableCell className="text-right">
                           <RecordDetailsDialog record={order} title={`Details zu Auftrag: ${order.title}`} />
                           <OrderPlanningDialog order={order} />
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     ))}
-                  </tbody>
-                </table>
+                  </TableBody>
+                </Table>
               </div>
             )}
           </CardContent>
