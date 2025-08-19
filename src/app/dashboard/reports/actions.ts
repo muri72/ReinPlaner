@@ -52,8 +52,12 @@ function calculateBreakMinutesFallback(grossDurationMinutes: number): number {
 export async function getObjectWorkTimeReport(objectId: string, month: number, year: number): Promise<{ success: boolean; message: string; data: WorkTimeReportData | null }> {
   const supabase = createAdminClient();
 
+  console.log(`[getObjectWorkTimeReport] Aufruf mit: objectId=${objectId}, month=${month}, year=${year}`);
+
   const startDate = startOfMonth(new Date(year, month - 1, 1));
   const nextMonthStartDate = new Date(year, month, 1); // JS Date handles month overflow (e.g., month 12 becomes next year's month 0)
+
+  console.log(`[getObjectWorkTimeReport] Datumsbereich: startDate=${startDate.toISOString()}, nextMonthStartDate=${nextMonthStartDate.toISOString()}`);
 
   const { data, error } = await supabase
     .from('time_entries')
@@ -73,9 +77,12 @@ export async function getObjectWorkTimeReport(objectId: string, month: number, y
     .order('start_time', { ascending: true });
 
   if (error) {
-    console.error("Fehler beim Laden des Objekt-Arbeitszeitnachweises:", error?.message || error);
+    console.error(`[getObjectWorkTimeReport] Supabase-Fehler:`, error?.message || error);
     return { success: false, message: error.message, data: null };
   }
+
+  console.log(`[getObjectWorkTimeReport] Daten von Supabase erhalten: ${data.length} Einträge.`);
+  // Optional: console.log(JSON.stringify(data, null, 2)); // Nur für detaillierte Prüfung, kann sehr viel Output erzeugen
 
   let totalNetMinutes = 0;
 
@@ -104,9 +111,11 @@ export async function getObjectWorkTimeReport(objectId: string, month: number, y
     totalHours: parseFloat((totalNetMinutes / 60).toFixed(2)),
   };
 
+  console.log(`[getObjectWorkTimeReport] Generierter Bericht: totalHours=${reportData.totalHours}, entriesCount=${reportData.entries.length}`);
+
   return {
     success: true,
-    message: "Arbeitszeitnachweis für Objekt erfolgreich geladen.",
+    message: "Arbeitszeitnachweis erfolgreich geladen.",
     data: reportData,
   };
 }
