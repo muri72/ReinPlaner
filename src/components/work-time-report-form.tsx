@@ -94,30 +94,7 @@ export function WorkTimeReportForm() {
     }
     setLoadingReport(true);
     try {
-      // Pre-load the logo and convert to base64
-      const getBase64Image = (url: string): Promise<string> => {
-        return new Promise((resolve, reject) => {
-          const img = new Image();
-          img.crossOrigin = 'Anonymous'; // Needed for CORS if image is from different origin
-          img.onload = () => {
-            const canvas = document.createElement('canvas');
-            canvas.width = img.width;
-            canvas.height = img.height;
-            const ctx = canvas.getContext('2d');
-            if (ctx) {
-              ctx.drawImage(img, 0, 0);
-              resolve(canvas.toDataURL('image/png')); // Convert to PNG data URL
-            } else {
-              reject(new Error('Could not get 2D context for canvas.'));
-            }
-          };
-          img.onerror = (error) => reject(new Error(`Failed to load image: ${url} - ${error}`));
-          img.src = url;
-        });
-      };
-
       const logoPath = '/home.png'; // Pfad zum Logo im public-Ordner
-      const logoDataUrl = await getBase64Image(logoPath);
 
       const canvas = await html2canvas(reportTableRef.current, { scale: 2 });
       const imgData = canvas.toDataURL('image/png');
@@ -137,14 +114,14 @@ export function WorkTimeReportForm() {
 
       // Erste Seite hinzufügen
       pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-      pdf.addImage(logoDataUrl, 'PNG', logoX, logoY, logoWidth, logoHeight); // Use base64 logo
+      pdf.addImage(logoPath, 'PNG', logoX, logoY, logoWidth, logoHeight); // Logo hinzufügen
 
       heightLeft -= pageHeight;
       while (heightLeft >= 0) {
         position = heightLeft - imgHeight;
         pdf.addPage();
         pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-        pdf.addImage(logoDataUrl, 'PNG', logoX, logoY, logoWidth, logoHeight); // Use base64 logo
+        pdf.addImage(logoPath, 'PNG', logoX, logoY, logoWidth, logoHeight); // Logo zu weiteren Seiten hinzufügen
         heightLeft -= pageHeight;
       }
       
