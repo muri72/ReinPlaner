@@ -63,7 +63,6 @@ export function WorkTimeReportForm() {
   }, [supabase]);
 
   const onSubmit: SubmitHandler<ReportFormValues> = async (data) => {
-    console.log("Formular wird abgeschickt mit Daten:", data); // <-- NEUE CONSOLE.LOG
     setLoadingReport(true);
     setObjectReportData(null);
     setEmployeeReportData(null);
