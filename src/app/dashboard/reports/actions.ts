@@ -1,7 +1,7 @@
 "use server";
 
 import { createClient, createAdminClient } from "@/lib/supabase/server";
-import { startOfMonth, addMonths } from "date-fns";
+import { startOfMonth, addMonths, formatISO } from "date-fns";
 
 // Definieren Sie die Schnittstellen hier, damit sie importiert und importiert werden können
 export interface ReportEntry {
@@ -37,6 +37,19 @@ export interface EmployeeWorkTimeReportData {
   employeeName: string;
 }
 
+// Typ für die RPC-Antwort
+interface RpcWorkTimeReportEntry {
+  id: string;
+  start_time: string;
+  end_time: string | null;
+  duration_minutes: number | null;
+  break_minutes: number | null;
+  notes: string | null;
+  employee_first_name: string | null;
+  employee_last_name: string | null;
+  object_name: string | null;
+}
+
 
 // Helper function to calculate break minutes based on gross duration (fallback)
 function calculateBreakMinutesFallback(grossDurationMinutes: number): number {
@@ -52,46 +65,35 @@ export async function getWorkTimeReport(objectId: string, month: number, year: n
   const supabase = createAdminClient();
 
   const startDate = startOfMonth(new Date(year, month - 1, 1));
-  const nextMonthStartDate = addMonths(startDate, 1); // Start of the next month for a non-inclusive upper bound
+  const nextMonthStartDate = addMonths(startDate, 1);
 
+  // Use the new RPC function
   const { data: timeEntries, error } = await supabase
-    .from('time_entries')
-    .select(`
-      id,
-      start_time,
-      end_time,
-      duration_minutes,
-      break_minutes,
-      notes,
-      employees ( first_name, last_name ),
-      objects ( name )
-    `)
-    .eq('object_id', objectId)
-    .gte('start_time', startDate.toISOString())
-    .lt('start_time', nextMonthStartDate.toISOString()) // Use less than start of next month for accuracy
-    .order('start_time', { ascending: true });
+    .rpc('get_work_time_report_for_object', {
+      p_object_id: objectId,
+      p_start_date: formatISO(startDate, { representation: 'date' }),
+      p_end_date: formatISO(nextMonthStartDate, { representation: 'date' })
+    });
 
   if (error) {
-    console.error("Fehler beim Laden des Arbeitszeitnachweises:", error?.message || error);
+    console.error("Fehler beim Laden des Arbeitszeitnachweises via RPC:", error?.message || error);
     return { success: false, message: error.message, data: null };
   }
 
   let totalNetMinutes = 0;
 
-  const reportEntries: ReportEntry[] = timeEntries.map(entry => {
+  const reportEntries: ReportEntry[] = timeEntries.map((entry: RpcWorkTimeReportEntry) => {
     const grossDurationMinutes = entry.duration_minutes || 0;
     const breakMins = entry.break_minutes !== null ? entry.break_minutes : calculateBreakMinutesFallback(grossDurationMinutes);
     const netDurationMinutes = grossDurationMinutes - breakMins;
     totalNetMinutes += netDurationMinutes;
     
-    const employee = Array.isArray(entry.employees) ? entry.employees[0] : entry.employees;
-
     return {
       id: entry.id,
       date: new Date(entry.start_time).toLocaleDateString('de-DE'),
       startTime: new Date(entry.start_time).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }),
       endTime: entry.end_time ? new Date(entry.end_time).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) : 'N/A',
-      employeeName: `${employee?.first_name || ''} ${employee?.last_name || ''}`.trim() || 'Unbekannt',
+      employeeName: `${entry.employee_first_name || ''} ${entry.employee_last_name || ''}`.trim() || 'Unbekannt',
       duration: grossDurationMinutes,
       breakMinutes: breakMins,
     };
