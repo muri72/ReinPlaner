@@ -12,7 +12,7 @@ export interface ReportEntry {
   employeeName: string;
   duration: number; // in minutes (gross duration)
   breakMinutes: number; // calculated or stored break minutes
-  netDuration: number; // NEW: net duration in minutes
+  // notes: string; // Entfernt
 }
 
 export interface WorkTimeReportData {
@@ -30,7 +30,6 @@ export interface EmployeeReportEntry {
   customerName: string;
   duration: number;
   breakMinutes: number;
-  netDuration: number; // NEW
 }
 
 export interface EmployeeWorkTimeReportData {
@@ -38,6 +37,7 @@ export interface EmployeeWorkTimeReportData {
   totalHours: number;
   employeeName: string;
 }
+
 
 // Helper function to calculate break minutes based on gross duration (fallback)
 function calculateBreakMinutesFallback(grossDurationMinutes: number): number {
@@ -49,13 +49,13 @@ function calculateBreakMinutesFallback(grossDurationMinutes: number): number {
   return 0;
 }
 
-export async function getObjectWorkTimeReport(objectId: string, month: number, year: number): Promise<{ success: boolean; message: string; data: WorkTimeReportData | null }> {
-  const supabase = createAdminClient();
+export async function getWorkTimeReport(objectId: string, month: number, year: number): Promise<{ success: boolean; message: string; data: WorkTimeReportData | null }> {
+  const supabase = createAdminClient(); // HIER: createAdminClient() verwenden
 
-  const startDate = startOfMonth(new Date(year, month - 1, 1));
-  const nextMonthStartDate = new Date(year, month, 1); // JS Date handles month overflow (e.g., month 12 becomes next year's month 0)
+  const startDate = startOfMonth(new Date(year, month - 1, 1)); // month is 1-indexed from form
+  const endDate = endOfMonth(new Date(year, month - 1, 1));
 
-  const { data, error } = await supabase
+  const { data: timeEntries, error } = await supabase
     .from('time_entries')
     .select(`
       id,
@@ -69,7 +69,7 @@ export async function getObjectWorkTimeReport(objectId: string, month: number, y
     `)
     .eq('object_id', objectId)
     .gte('start_time', startDate.toISOString())
-    .lt('start_time', nextMonthStartDate.toISOString()) // Use less than the start of the next month
+    .lte('start_time', endDate.toISOString())
     .order('start_time', { ascending: true });
 
   if (error) {
@@ -79,23 +79,24 @@ export async function getObjectWorkTimeReport(objectId: string, month: number, y
 
   let totalNetMinutes = 0;
 
-  const reportEntries: ReportEntry[] = data.map((entry: any) => {
+  const reportEntries: ReportEntry[] = timeEntries.map(entry => {
     const grossDurationMinutes = entry.duration_minutes || 0;
+    // Verwende gespeicherte Pausenminuten, wenn vorhanden, sonst Fallback-Berechnung
     const breakMins = entry.break_minutes !== null ? entry.break_minutes : calculateBreakMinutesFallback(grossDurationMinutes);
     const netDurationMinutes = grossDurationMinutes - breakMins;
     totalNetMinutes += netDurationMinutes;
     
     const employee = Array.isArray(entry.employees) ? entry.employees[0] : entry.employees;
-    
+
     return {
       id: entry.id,
       date: new Date(entry.start_time).toLocaleDateString('de-DE'),
       startTime: new Date(entry.start_time).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }),
       endTime: entry.end_time ? new Date(entry.end_time).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) : 'N/A',
       employeeName: `${employee?.first_name || ''} ${employee?.last_name || ''}`.trim() || 'Unbekannt',
-      duration: grossDurationMinutes,
+      duration: grossDurationMinutes, // Store gross duration
       breakMinutes: breakMins,
-      netDuration: netDurationMinutes,
+      // notes: entry.notes || '', // Entfernt
     };
   });
 
@@ -111,11 +112,11 @@ export async function getObjectWorkTimeReport(objectId: string, month: number, y
   };
 }
 
-// Funktion für den Mitarbeiter-Arbeitszeitnachweis
+// Neue Funktion für den Mitarbeiter-Arbeitszeitnachweis
 export async function getEmployeeWorkTimeReport(employeeId: string, month: number, year: number): Promise<{ success: boolean; message: string; data: EmployeeWorkTimeReportData | null }> {
   const supabase = createAdminClient();
   const startDate = startOfMonth(new Date(year, month - 1, 1));
-  const nextMonthStartDate = new Date(year, month, 1);
+  const endDate = endOfMonth(new Date(year, month - 1, 1));
 
   const { data: employeeDetails, error: employeeError } = await supabase
     .from('employees')
@@ -141,7 +142,7 @@ export async function getEmployeeWorkTimeReport(employeeId: string, month: numbe
     `)
     .eq('employee_id', employeeId)
     .gte('start_time', startDate.toISOString())
-    .lt('start_time', nextMonthStartDate.toISOString()) // Use less than the start of the next month
+    .lte('start_time', endDate.toISOString())
     .order('start_time', { ascending: true });
 
   if (error) {
@@ -168,7 +169,6 @@ export async function getEmployeeWorkTimeReport(employeeId: string, month: numbe
       customerName: customer?.name || 'N/A',
       duration: grossDurationMinutes,
       breakMinutes: breakMins,
-      netDuration: netDurationMinutes, // NEW
     };
   });
 

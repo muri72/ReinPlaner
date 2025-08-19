@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
-import { getObjectWorkTimeReport, WorkTimeReportData, getEmployeeWorkTimeReport, EmployeeWorkTimeReportData } from "@/app/dashboard/reports/actions";
+import { getWorkTimeReport, WorkTimeReportData, getEmployeeWorkTimeReport, EmployeeWorkTimeReportData } from "@/app/dashboard/reports/actions";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatDuration } from "@/lib/utils";
 import jsPDF from 'jspdf';
@@ -68,7 +68,7 @@ export function WorkTimeReportForm() {
     setEmployeeReportData(null);
 
     if (data.reportType === 'object' && data.objectId) {
-      const result = await getObjectWorkTimeReport(data.objectId, parseInt(data.month), parseInt(data.year));
+      const result = await getWorkTimeReport(data.objectId, parseInt(data.month), parseInt(data.year));
       if (result.success && result.data) {
         setObjectReportData(result.data);
         toast.success(result.message);
@@ -189,30 +189,8 @@ export function WorkTimeReportForm() {
               <>
                 <h3 className="text-lg font-bold mb-4">Bericht für {objects.find(obj => obj.id === form.getValues("objectId"))?.name} - {months.find(m => m.value === form.getValues("month"))?.label} {form.getValues("year")}</h3>
                 <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Datum</TableHead>
-                      <TableHead>Mitarbeiter</TableHead>
-                      <TableHead>Start</TableHead>
-                      <TableHead>Ende</TableHead>
-                      <TableHead>Dauer (Brutto)</TableHead>
-                      <TableHead>Pause</TableHead>
-                      <TableHead>Dauer (Netto)</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {objectReportData.entries.map(entry => (
-                      <TableRow key={entry.id}>
-                        <TableCell>{entry.date}</TableCell>
-                        <TableCell>{entry.employeeName}</TableCell>
-                        <TableCell>{entry.startTime}</TableCell>
-                        <TableCell>{entry.endTime}</TableCell>
-                        <TableCell>{formatDuration(entry.duration)}</TableCell>
-                        <TableCell>{formatDuration(entry.breakMinutes)}</TableCell>
-                        <TableCell>{formatDuration(entry.netDuration)}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
+                  <TableHeader><TableRow><TableHead>Datum</TableHead><TableHead>Mitarbeiter</TableHead><TableHead>Start</TableHead><TableHead>Ende</TableHead><TableHead>Dauer</TableHead><TableHead>Pause</TableHead></TableRow></TableHeader>
+                  <TableBody>{objectReportData.entries.map(entry => (<TableRow key={entry.id}><TableCell>{entry.date}</TableCell><TableCell>{entry.employeeName}</TableCell><TableCell>{entry.startTime}</TableCell><TableCell>{entry.endTime}</TableCell><TableCell>{formatDuration(entry.duration)}</TableCell><TableCell>{formatDuration(entry.breakMinutes)}</TableCell></TableRow>))}</TableBody>
                 </Table>
                 <div className="text-right font-bold text-lg mt-4">Gesamtstunden: {objectReportData.totalHours}</div>
               </>
@@ -221,32 +199,8 @@ export function WorkTimeReportForm() {
               <>
                 <h3 className="text-lg font-bold mb-4">Bericht für {employeeReportData.employeeName} - {months.find(m => m.value === form.getValues("month"))?.label} {form.getValues("year")}</h3>
                 <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Datum</TableHead>
-                      <TableHead>Objekt</TableHead>
-                      <TableHead>Kunde</TableHead>
-                      <TableHead>Start</TableHead>
-                      <TableHead>Ende</TableHead>
-                      <TableHead>Dauer (Brutto)</TableHead>
-                      <TableHead>Pause</TableHead>
-                      <TableHead>Dauer (Netto)</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {employeeReportData.entries.map(entry => (
-                      <TableRow key={entry.id}>
-                        <TableCell>{entry.date}</TableCell>
-                        <TableCell>{entry.objectName}</TableCell>
-                        <TableCell>{entry.customerName}</TableCell>
-                        <TableCell>{entry.startTime}</TableCell>
-                        <TableCell>{entry.endTime}</TableCell>
-                        <TableCell>{formatDuration(entry.duration)}</TableCell>
-                        <TableCell>{formatDuration(entry.breakMinutes)}</TableCell>
-                        <TableCell>{formatDuration(entry.netDuration)}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
+                  <TableHeader><TableRow><TableHead>Datum</TableHead><TableHead>Objekt</TableHead><TableHead>Kunde</TableHead><TableHead>Start</TableHead><TableHead>Ende</TableHead><TableHead>Dauer</TableHead><TableHead>Pause</TableHead></TableRow></TableHeader>
+                  <TableBody>{employeeReportData.entries.map(entry => (<TableRow key={entry.id}><TableCell>{entry.date}</TableCell><TableCell>{entry.objectName}</TableCell><TableCell>{entry.customerName}</TableCell><TableCell>{entry.startTime}</TableCell><TableCell>{entry.endTime}</TableCell><TableCell>{formatDuration(entry.duration)}</TableCell><TableCell>{formatDuration(entry.breakMinutes)}</TableCell></TableRow>))}</TableBody>
                 </Table>
                 <div className="text-right font-bold text-lg mt-4">Gesamtstunden: {employeeReportData.totalHours}</div>
               </>
