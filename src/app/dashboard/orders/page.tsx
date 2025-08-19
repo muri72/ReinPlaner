@@ -292,9 +292,9 @@ export default function OrdersPage({
             assigned_friday_end_time: a.assigned_friday_end_time,
             assigned_saturday_start_time: a.assigned_saturday_start_time,
             assigned_saturday_end_time: a.assigned_saturday_end_time,
-            assigned_sunday_start_time: a.assigned_sunday_start_time,
-            assigned_sunday_end_time: a.assigned_sunday_end_time,
-        })) || [];
+            assigned_sunday_start_time: firstAssignment?.assigned_sunday_start_time || null,
+            assigned_sunday_end_time: firstAssignment?.assigned_sunday_end_time || null,
+        }));
         
         const firstAssignment = order.order_employee_assignments?.[0];
 
@@ -486,7 +486,6 @@ export default function OrdersPage({
 
       {/* Section for Other Orders with View Toggle */}
       <div className="space-y-4 pt-8">
-        <h2 className="text-xl md:text-2xl font-bold">Bestehende Aufträge</h2>
         {query && (
           <p className="text-sm text-muted-foreground mb-4">
             Hinweis: Bei aktiver Suche wird die Paginierung deaktiviert und alle passenden Ergebnisse angezeigt.
