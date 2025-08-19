@@ -25,7 +25,7 @@ export const calculateHours = (start: string | null, end: string | null): number
 
 // Helper to format duration from minutes to HH:MM
 export const formatDuration = (minutes: number | null) => {
-  if (minutes === null) return "N/A";
+  if (minutes === null || isNaN(minutes)) return "N/A"; // Add isNaN check
   const totalSeconds = Math.round(minutes * 60);
   const hours = Math.floor(totalSeconds / 3600);
   const remainingMinutes = Math.floor((totalSeconds % 3600) / 60);
