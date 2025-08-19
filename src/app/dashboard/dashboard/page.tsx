@@ -409,27 +409,29 @@ export default async function DashboardPage() {
           <MessageSquare className="mr-2 h-5 w-5 md:h-6 md:w-6 text-warning" />
           Offene Reklamationen ({allUnresolvedFeedback.length})
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-          {allUnresolvedFeedback.length === 0 ? (
-            <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30 shadow-neumorphic glassmorphism-card">
-              <Briefcase className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
-              <p className="text-base md:text-lg font-semibold">Keine offenen Auftragsanfragen</p>
-              <p className="text-sm">Alle Anfragen wurden bearbeitet oder es gibt keine neuen.</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 p-4">
-              {allUnresolvedFeedback.map((feedback: any) => (
-                <FeedbackCard
-                  key={feedback.id}
-                  feedback={feedback}
-                  feedbackType={feedback.rating ? 'order' : 'general'} // Determine type based on 'rating' field
-                  currentUserId={user.id}
-                  currentUserRole={currentUserRole}
-                />
-              ))}
-            </div>
-          )}
-        </div>
+        {allUnresolvedFeedback.length === 0 ? (
+          <div className="text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30 shadow-neumorphic glassmorphism-card">
+            <CheckCircle2 className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
+            <p className="text-base md:text-lg font-semibold">Keine offenen Reklamationen</p>
+            <p className="text-sm">Alle Feedbacks wurden bearbeitet. Gut gemacht!</p>
+          </div>
+        ) : (
+          <Card className="shadow-neumorphic glassmorphism-card">
+            <CardContent className="p-0">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 p-4">
+                {allUnresolvedFeedback.map((feedback: any) => (
+                  <FeedbackCard
+                    key={feedback.id}
+                    feedback={feedback}
+                    feedbackType={feedback.rating ? 'order' : 'general'} // Determine type based on 'rating' field
+                    currentUserId={user.id}
+                    currentUserRole={currentUserRole}
+                  />
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* NEU: Offene Anfragen Section */}
@@ -438,15 +440,15 @@ export default async function DashboardPage() {
           <AlertTriangle className="mr-2 h-5 w-5 md:h-6 md:w-6 text-warning" />
           Offene Anfragen ({mappedPendingRequests.length})
         </h2>
-        <Card className="shadow-neumorphic glassmorphism-card">
-          <CardContent className="p-0">
-            {mappedPendingRequests.length === 0 ? (
-              <div className="text-center text-muted-foreground py-8">
-                <Briefcase className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
-                <p className="text-base md:text-lg font-semibold">Keine offenen Auftragsanfragen</p>
-                <p className="text-sm">Alle Anfragen wurden bearbeitet oder es gibt keine neuen.</p>
-              </div>
-            ) : (
+        {mappedPendingRequests.length === 0 ? (
+          <div className="text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30 shadow-neumorphic glassmorphism-card">
+            <Briefcase className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
+            <p className="text-base md:text-lg font-semibold">Keine offenen Auftragsanfragen</p>
+            <p className="text-sm">Alle Anfragen wurden bearbeitet oder es gibt keine neuen.</p>
+          </div>
+        ) : (
+          <Card className="shadow-neumorphic glassmorphism-card">
+            <CardContent className="p-0">
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
@@ -456,7 +458,8 @@ export default async function DashboardPage() {
                   </TableHeader>
                   <TableBody>
                     {mappedPendingRequests.map((order) => (
-                      <TableRow key={order.id}><TableCell className="font-medium text-sm">{order.title}</TableCell><TableCell className="text-sm">{order.customer_name || 'N/A'}</TableCell><TableCell className="text-sm">{order.object_name || 'N/A'}</TableCell><TableCell className="text-sm">{order.service_type || 'N/A'}</TableCell><TableCell>
+                      <TableRow key={order.id}>
+                        <TableCell className="font-medium text-sm">{order.title}</TableCell><TableCell className="text-sm">{order.customer_name || 'N/A'}</TableCell><TableCell className="text-sm">{order.object_name || 'N/A'}</TableCell><TableCell className="text-sm">{order.service_type || 'N/A'}</TableCell><TableCell>
                           <Badge variant={getRequestStatusBadgeVariant(order.request_status)}>{order.request_status}</Badge>
                         </TableCell><TableCell className="text-sm">
                           {order.order_type === "one_time" && order.due_date && (
@@ -475,14 +478,15 @@ export default async function DashboardPage() {
                         </TableCell><TableCell className="text-right">
                           <RecordDetailsDialog record={order} title={`Details zu Auftrag: ${order.title}`} />
                           <OrderPlanningDialog order={order} />
-                        </TableCell></TableRow>
+                        </TableCell>
+                      </TableRow>
                     ))}
                   </TableBody>
                 </Table>
               </div>
-            )}
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Meistgebuchte Leistungen */}
