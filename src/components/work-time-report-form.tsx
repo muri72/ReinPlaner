@@ -16,7 +16,6 @@ import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { Download } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import Image from "next/image"; // Import Image component
 
 const reportSchema = z.object({
   reportType: z.enum(['object', 'employee']),
@@ -42,7 +41,7 @@ export function WorkTimeReportForm() {
   const [objectReportData, setObjectReportData] = useState<WorkTimeReportData | null>(null);
   const [employeeReportData, setEmployeeReportData] = useState<EmployeeWorkTimeReportData | null>(null);
   const [loadingReport, setLoadingReport] = useState(false);
-  const reportContentRef = useRef<HTMLDivElement>(null); // Ref for the entire report content
+  const reportTableRef = useRef<HTMLDivElement>(null);
 
   const form = useForm<ReportFormValues>({
     resolver: zodResolver(reportSchema),
@@ -89,13 +88,13 @@ export function WorkTimeReportForm() {
   };
 
   const handleExportPdf = async () => {
-    if (!reportContentRef.current) {
+    if (!reportTableRef.current) {
       toast.error("Keine Berichtsdaten zum Exportieren gefunden.");
       return;
     }
     setLoadingReport(true);
     try {
-      const canvas = await html2canvas(reportContentRef.current, { scale: 2 });
+      const canvas = await html2canvas(reportTableRef.current, { scale: 2 });
       const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF('p', 'mm', 'a4');
       const imgWidth = 210;
@@ -185,19 +184,13 @@ export function WorkTimeReportForm() {
 
       {(objectReportData || employeeReportData) && (
         <div className="space-y-4">
-          <div ref={reportContentRef} className="p-4 bg-white dark:bg-gray-900 rounded-md shadow-neumorphic glassmorphism-card">
-            {/* New Header for PDF */}
-            <div className="flex items-center justify-between mb-6 p-4 border-b border-gray-200">
-              <Image src="/home.png" alt="ARIS Management Logo" width={100} height={100} className="h-16 w-auto" /> {/* Adjust size as needed */}
-              <h2 className="text-xl font-bold text-right">Arbeitszeitnachweis</h2>
-            </div>
-
+          <div ref={reportTableRef} className="p-4 bg-white dark:bg-gray-900 rounded-md shadow-neumorphic glassmorphism-card">
             {objectReportData && (
               <>
                 <h3 className="text-lg font-bold mb-4">Bericht für {objects.find(obj => obj.id === form.getValues("objectId"))?.name} - {months.find(m => m.value === form.getValues("month"))?.label} {form.getValues("year")}</h3>
                 <Table>
-                  <TableHeader><TableRow><TableHead>Datum</TableHead><TableHead>Mitarbeiter</TableHead><TableHead>Start</TableHead><TableHead>Ende</TableHead><TableHead>Arbeitsstunden</TableHead><TableHead>Pause</TableHead></TableRow></TableHeader>
-                  <TableBody>{objectReportData.entries.map(entry => (<TableRow key={entry.id}><TableCell>{entry.date}</TableCell><TableCell>{entry.employeeName}</TableCell><TableCell>{entry.startTime}</TableCell><TableCell>{entry.endTime}</TableCell><TableCell>{formatDuration(entry.netDurationMinutes)}</TableCell><TableCell>{formatDuration(entry.breakMinutes)}</TableCell></TableRow>))}</TableBody>
+                  <TableHeader><TableRow><TableHead>Datum</TableHead><TableHead>Mitarbeiter</TableHead><TableHead>Start</TableHead><TableHead>Ende</TableHead><TableHead>Dauer</TableHead><TableHead>Pause</TableHead></TableRow></TableHeader>
+                  <TableBody>{objectReportData.entries.map(entry => (<TableRow key={entry.id}><TableCell>{entry.date}</TableCell><TableCell>{entry.employeeName}</TableCell><TableCell>{entry.startTime}</TableCell><TableCell>{entry.endTime}</TableCell><TableCell>{formatDuration(entry.duration)}</TableCell><TableCell>{formatDuration(entry.breakMinutes)}</TableCell></TableRow>))}</TableBody>
                 </Table>
                 <div className="text-right font-bold text-lg mt-4">Gesamtstunden: {objectReportData.totalHours}</div>
               </>
@@ -206,8 +199,8 @@ export function WorkTimeReportForm() {
               <>
                 <h3 className="text-lg font-bold mb-4">Bericht für {employeeReportData.employeeName} - {months.find(m => m.value === form.getValues("month"))?.label} {form.getValues("year")}</h3>
                 <Table>
-                  <TableHeader><TableRow><TableHead>Datum</TableHead><TableHead>Objekt</TableHead><TableHead>Kunde</TableHead><TableHead>Start</TableHead><TableHead>Ende</TableHead><TableHead>Arbeitsstunden</TableHead><TableHead>Pause</TableHead></TableRow></TableHeader>
-                  <TableBody>{employeeReportData.entries.map(entry => (<TableRow key={entry.id}><TableCell>{entry.date}</TableCell><TableCell>{entry.objectName}</TableCell><TableCell>{entry.customerName}</TableCell><TableCell>{entry.startTime}</TableCell><TableCell>{entry.endTime}</TableCell><TableCell>{formatDuration(entry.netDurationMinutes)}</TableCell><TableCell>{formatDuration(entry.breakMinutes)}</TableCell></TableRow>))}</TableBody>
+                  <TableHeader><TableRow><TableHead>Datum</TableHead><TableHead>Objekt</TableHead><TableHead>Kunde</TableHead><TableHead>Start</TableHead><TableHead>Ende</TableHead><TableHead>Dauer</TableHead><TableHead>Pause</TableHead></TableRow></TableHeader>
+                  <TableBody>{employeeReportData.entries.map(entry => (<TableRow key={entry.id}><TableCell>{entry.date}</TableCell><TableCell>{entry.objectName}</TableCell><TableCell>{entry.customerName}</TableCell><TableCell>{entry.startTime}</TableCell><TableCell>{entry.endTime}</TableCell><TableCell>{formatDuration(entry.duration)}</TableCell><TableCell>{formatDuration(entry.breakMinutes)}</TableCell></TableRow>))}</TableBody>
                 </Table>
                 <div className="text-right font-bold text-lg mt-4">Gesamtstunden: {employeeReportData.totalHours}</div>
               </>
