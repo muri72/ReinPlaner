@@ -1,7 +1,7 @@
 "use server";
 
 import { createClient, createAdminClient } from "@/lib/supabase/server";
-import { endOfMonth, startOfMonth } from "date-fns";
+import { startOfMonth, addMonths } from "date-fns";
 
 // Definieren Sie die Schnittstellen hier, damit sie importiert und importiert werden können
 export interface ReportEntry {
@@ -12,7 +12,6 @@ export interface ReportEntry {
   employeeName: string;
   duration: number; // in minutes (gross duration)
   breakMinutes: number; // calculated or stored break minutes
-  // notes: string; // Entfernt
 }
 
 export interface WorkTimeReportData {
@@ -50,10 +49,10 @@ function calculateBreakMinutesFallback(grossDurationMinutes: number): number {
 }
 
 export async function getWorkTimeReport(objectId: string, month: number, year: number): Promise<{ success: boolean; message: string; data: WorkTimeReportData | null }> {
-  const supabase = createAdminClient(); // HIER: createAdminClient() verwenden
+  const supabase = createAdminClient();
 
-  const startDate = startOfMonth(new Date(year, month - 1, 1)); // month is 1-indexed from form
-  const endDate = endOfMonth(new Date(year, month - 1, 1));
+  const startDate = startOfMonth(new Date(year, month - 1, 1));
+  const nextMonthStartDate = addMonths(startDate, 1); // Start of the next month for a non-inclusive upper bound
 
   const { data: timeEntries, error } = await supabase
     .from('time_entries')
@@ -69,7 +68,7 @@ export async function getWorkTimeReport(objectId: string, month: number, year: n
     `)
     .eq('object_id', objectId)
     .gte('start_time', startDate.toISOString())
-    .lte('start_time', endDate.toISOString())
+    .lt('start_time', nextMonthStartDate.toISOString()) // Use less than start of next month for accuracy
     .order('start_time', { ascending: true });
 
   if (error) {
@@ -81,7 +80,6 @@ export async function getWorkTimeReport(objectId: string, month: number, year: n
 
   const reportEntries: ReportEntry[] = timeEntries.map(entry => {
     const grossDurationMinutes = entry.duration_minutes || 0;
-    // Verwende gespeicherte Pausenminuten, wenn vorhanden, sonst Fallback-Berechnung
     const breakMins = entry.break_minutes !== null ? entry.break_minutes : calculateBreakMinutesFallback(grossDurationMinutes);
     const netDurationMinutes = grossDurationMinutes - breakMins;
     totalNetMinutes += netDurationMinutes;
@@ -94,9 +92,8 @@ export async function getWorkTimeReport(objectId: string, month: number, year: n
       startTime: new Date(entry.start_time).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }),
       endTime: entry.end_time ? new Date(entry.end_time).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) : 'N/A',
       employeeName: `${employee?.first_name || ''} ${employee?.last_name || ''}`.trim() || 'Unbekannt',
-      duration: grossDurationMinutes, // Store gross duration
+      duration: grossDurationMinutes,
       breakMinutes: breakMins,
-      // notes: entry.notes || '', // Entfernt
     };
   });
 
@@ -116,7 +113,7 @@ export async function getWorkTimeReport(objectId: string, month: number, year: n
 export async function getEmployeeWorkTimeReport(employeeId: string, month: number, year: number): Promise<{ success: boolean; message: string; data: EmployeeWorkTimeReportData | null }> {
   const supabase = createAdminClient();
   const startDate = startOfMonth(new Date(year, month - 1, 1));
-  const endDate = endOfMonth(new Date(year, month - 1, 1));
+  const nextMonthStartDate = addMonths(startDate, 1); // Start of the next month for a non-inclusive upper bound
 
   const { data: employeeDetails, error: employeeError } = await supabase
     .from('employees')
@@ -142,7 +139,7 @@ export async function getEmployeeWorkTimeReport(employeeId: string, month: numbe
     `)
     .eq('employee_id', employeeId)
     .gte('start_time', startDate.toISOString())
-    .lte('start_time', endDate.toISOString())
+    .lt('start_time', nextMonthStartDate.toISOString()) // Use less than start of next month for accuracy
     .order('start_time', { ascending: true });
 
   if (error) {
