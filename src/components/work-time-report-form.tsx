@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
-import { getWorkTimeReport, WorkTimeReportData, getEmployeeWorkTimeReport, EmployeeWorkTimeReportData } from "@/app/dashboard/reports/actions";
+import { getObjectWorkTimeReport, WorkTimeReportData, getEmployeeWorkTimeReport, EmployeeWorkTimeReportData } from "@/app/dashboard/reports/actions";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatDuration } from "@/lib/utils";
 import jsPDF from 'jspdf';
@@ -68,7 +68,7 @@ export function WorkTimeReportForm() {
     setEmployeeReportData(null);
 
     if (data.reportType === 'object' && data.objectId) {
-      const result = await getWorkTimeReport(data.objectId, parseInt(data.month), parseInt(data.year));
+      const result = await getObjectWorkTimeReport(data.objectId, parseInt(data.month), parseInt(data.year));
       if (result.success && result.data) {
         setObjectReportData(result.data);
         toast.success(result.message);

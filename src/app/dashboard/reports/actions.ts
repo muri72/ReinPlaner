@@ -49,7 +49,7 @@ function calculateBreakMinutesFallback(grossDurationMinutes: number): number {
   return 0;
 }
 
-export async function getWorkTimeReport(objectId: string, month: number, year: number): Promise<{ success: boolean; message: string; data: WorkTimeReportData | null }> {
+export async function getObjectWorkTimeReport(objectId: string, month: number, year: number): Promise<{ success: boolean; message: string; data: WorkTimeReportData | null }> {
   const supabase = createAdminClient();
 
   const startDate = startOfMonth(new Date(year, month - 1, 1));
@@ -111,7 +111,7 @@ export async function getWorkTimeReport(objectId: string, month: number, year: n
   };
 }
 
-// Neue Funktion für den Mitarbeiter-Arbeitszeitnachweis
+// Funktion für den Mitarbeiter-Arbeitszeitnachweis
 export async function getEmployeeWorkTimeReport(employeeId: string, month: number, year: number): Promise<{ success: boolean; message: string; data: EmployeeWorkTimeReportData | null }> {
   const supabase = createAdminClient();
   const startDate = startOfMonth(new Date(year, month - 1, 1));
