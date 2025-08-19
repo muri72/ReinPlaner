@@ -306,7 +306,15 @@ export function TodaysOrdersOverview() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="min-w-[150px]">Auftrag</TableHead><TableHead className="min-w-[120px]">Kunde / Objekt</TableHead><TableHead className="min-w-[120px]">Mitarbeiter</TableHead><TableHead className="min-w-[100px]">Status</TableHead><TableHead className="min-w-[100px]">Priorität</TableHead><TableHead className="min-w-[100px]">Typ</TableHead><TableHead className="min-w-[120px]">Zeitraum</TableHead><TableHead className="min-w-[120px]">Zugewiesene Zeit</TableHead><TableHead className="text-right min-w-[120px]">Aktionen</TableHead>
+                  <TableHead className="min-w-[150px]">Auftrag</TableHead>
+                  <TableHead className="min-w-[120px]">Kunde / Objekt</TableHead>
+                  <TableHead className="min-w-[120px]">Mitarbeiter</TableHead>
+                  <TableHead className="min-w-[100px]">Status</TableHead>
+                  <TableHead className="min-w-[100px]">Priorität</TableHead>
+                  <TableHead className="min-w-[100px]">Typ</TableHead>
+                  <TableHead className="min-w-[120px]">Zeitraum</TableHead>
+                  <TableHead className="min-w-[120px]">Zugewiesene Zeit</TableHead> {/* New column */}
+                  <TableHead className="text-right min-w-[120px]">Aktionen</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -316,18 +324,24 @@ export function TodaysOrdersOverview() {
                     : 'N/A';
                   return (
                     <TableRow key={order.id}>
-                      <TableCell className="font-medium text-sm">{order.title}</TableCell><TableCell>
+                      <TableCell className="font-medium text-sm">{order.title}</TableCell>
+                      <TableCell>
                         <p className="text-sm">{order.customer_name}</p>
                         <p className="text-xs text-muted-foreground">{order.object_name}</p>
-                      </TableCell><TableCell className="text-sm">
+                      </TableCell>
+                      <TableCell className="text-sm">
                         {employeeNames}
-                      </TableCell><TableCell>
+                      </TableCell>
+                      <TableCell>
                         <Badge variant={getStatusBadgeVariant(order.status)}>{order.status}</Badge>
-                      </TableCell><TableCell>
+                      </TableCell>
+                      <TableCell>
                         <Badge variant={getPriorityBadgeVariant(order.priority)}>{order.priority}</Badge>
-                      </TableCell><TableCell>
+                      </TableCell>
+                      <TableCell>
                         <Badge variant="outline">{order.order_type}</Badge>
-                      </TableCell><TableCell className="text-sm">
+                      </TableCell>
+                      <TableCell className="text-sm">
                         {order.order_type === "one_time" && order.due_date && (
                           <div className="flex items-center">
                             <CalendarDays className="mr-1 h-3 w-3" />
@@ -341,9 +355,11 @@ export function TodaysOrdersOverview() {
                             {order.recurring_end_date && ` - ${format(new Date(order.recurring_end_date), 'dd.MM.yyyy', { locale: de })}`}
                           </div>
                         )}
-                      </TableCell><TableCell className="text-sm">
+                      </TableCell>
+                      <TableCell className="text-sm">
                         {getAssignedTimeForToday(order)}
-                      </TableCell><TableCell className="text-right">
+                      </TableCell>
+                      <TableCell className="text-right">
                         <div className="flex justify-end space-x-1">
                           <OrderEditDialog order={order} />
                           {order.request_status === 'pending' && (

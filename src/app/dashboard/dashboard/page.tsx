@@ -1,23 +1,19 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, Building, UsersRound, Briefcase, Clock, DollarSign, AlertTriangle, MessageSquare, CheckCircle2, TrendingUp, ListOrdered, CalendarDays } from "lucide-react";
+import { Users, Building, UsersRound, Briefcase, Clock, DollarSign, AlertTriangle, MessageSquare, CheckCircle2, TrendingUp, ListOrdered } from "lucide-react";
 import { OrderStatusChart }
 from "@/components/order-status-chart";
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
-import Link from "next/link"; // Import Link for clickable cards
-import { FinancialTrendChart } from "@/components/financial-trend-chart"; // Import new chart
-import { EmployeeWorkloadChart } from "@/components/employee-workload-chart"; // Import new chart
-import { KpiCard } from "@/components/kpi-card"; // Import the new KpiCard
-import { TodaysOrdersOverview } from "@/components/todays-orders-overview"; // Import the new component
-import { FeedbackCard } from "@/components/feedback-card"; // Import FeedbackCard
-import { getRevenueLast7Days, getMostBookedServices } from "@/lib/actions/finances"; // Import new finance actions
-import { Badge } from "@/components/ui/badge"; // Hinzugefügt: Import der Badge-Komponente
-import { DisplayOrder } from '@/app/dashboard/orders/page'; // Import DisplayOrder type
-import { OrderPlanningDialog } from "@/components/order-planning-dialog"; // Import OrderPlanningDialog
-import { RecordDetailsDialog } from "@/components/record-details-dialog"; // Import RecordDetailsDialog
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"; // Import Table components
+import Link from "next/link";
+import { FinancialTrendChart } from "@/components/financial-trend-chart";
+import { EmployeeWorkloadChart } from "@/components/employee-workload-chart";
+import { KpiCard } from "@/components/kpi-card";
+import { TodaysOrdersOverview } from "@/components/todays-orders-overview";
+import { FeedbackCard } from "@/components/feedback-card";
+import { getRevenueLast7Days, getMostBookedServices } from "@/lib/actions/finances";
+import { Badge } from "@/components/ui/badge";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -27,10 +23,9 @@ export default async function DashboardPage() {
     redirect("/login");
   }
 
-  // Profildaten abrufen
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
-    .select('first_name, last_name, avatar_url, role') // Also fetch role for conditional display
+    .select('first_name, last_name, avatar_url, role')
     .eq('id', user.id)
     .single();
 
@@ -40,7 +35,7 @@ export default async function DashboardPage() {
 
   const currentUserRole = profile?.role || 'employee';
   const today = new Date();
-  today.setHours(0, 0, 0, 0); // Set to start of today for comparison
+  today.setHours(0, 0, 0, 0);
   const tomorrow = new Date(today);
   tomorrow.setDate(tomorrow.getDate() + 1);
 
@@ -55,7 +50,8 @@ export default async function DashboardPage() {
       recurring_start_date,
       recurring_end_date,
       status,
-      total_estimated_hours
+      total_estimated_hours,
+      order_employee_assignments ( employee_id )
     `)
     .or(`due_date.eq.${format(today, 'yyyy-MM-dd')},and(recurring_start_date.lte.${format(today, 'yyyy-MM-dd')},or(recurring_end_date.gte.${format(today, 'yyyy-MM-dd')},recurring_end_date.is.null))`)
     .in('order_type', ['one_time', 'recurring', 'permanent', 'substitution']);
@@ -66,150 +62,20 @@ export default async function DashboardPage() {
   if (scheduledOrdersError) console.error("Fehler beim Laden der geplanten Einsätze:", scheduledOrdersError?.message || scheduledOrdersError);
 
   // 2. Offene Kundenanfragen (request_status = 'pending')
-  const { data: pendingCustomerRequestsList, error: pendingRequestsError } = await supabase
+  const { count: pendingCustomerRequests, error: pendingRequestsError } = await supabase
     .from('orders')
-    .select(`
-      id,
-      user_id,
-      title,
-      description,
-      status,
-      due_date,
-      created_at,
-      customer_id,
-      object_id,
-      customer_contact_id,
-      order_type,
-      recurring_start_date,
-      recurring_end_date,
-      priority,
-      total_estimated_hours,
-      notes,
-      request_status,
-      service_type,
-      customers ( name ),
-      objects ( name, address, notes ),
-      customer_contacts ( first_name, last_name, phone ),
-      order_feedback ( id, rating, comment, image_urls, created_at ),
-      order_employee_assignments ( 
-        employee_id, 
-        assigned_monday_hours, assigned_tuesday_hours, assigned_wednesday_hours,
-        assigned_thursday_hours, assigned_friday_hours, assigned_saturday_hours,
-        assigned_sunday_hours,
-        assigned_monday_start_time, assigned_monday_end_time,
-        assigned_tuesday_start_time, assigned_tuesday_end_time,
-        assigned_wednesday_start_time, assigned_wednesday_end_time,
-        assigned_thursday_start_time, assigned_thursday_end_time,
-        assigned_friday_start_time, assigned_friday_end_time,
-        assigned_saturday_start_time, assigned_saturday_end_time,
-        assigned_sunday_start_time, assigned_sunday_end_time,
-        employees ( first_name, last_name ) 
-      )
-    `)
-    .eq('request_status', 'pending')
-    .order('created_at', { ascending: true });
-
-  const pendingRequestsCount = pendingCustomerRequestsList?.length || 0;
+    .select('*', { count: 'exact', head: true })
+    .eq('request_status', 'pending');
 
   if (pendingRequestsError) console.error("Fehler beim Laden der offenen Kundenanfragen:", pendingRequestsError?.message || pendingRequestsError);
-
-  // Map pending requests to DisplayOrder type
-  const mappedPendingRequests: DisplayOrder[] = pendingCustomerRequestsList?.map(order => {
-    const customerData = Array.isArray(order.customers) ? order.customers[0] : order.customers;
-    const objectData = Array.isArray(order.objects) ? order.objects[0] : order.objects;
-    const customerContactData = Array.isArray(order.customer_contacts) ? order.customer_contacts[0] : order.customer_contacts;
-
-    const mappedAssignments = order.order_employee_assignments?.map((a: any) => ({
-        employeeId: a.employee_id,
-        assigned_monday_hours: a.assigned_monday_hours,
-        assigned_tuesday_hours: a.assigned_tuesday_hours,
-        assigned_wednesday_hours: a.assigned_wednesday_hours,
-        assigned_thursday_hours: a.assigned_thursday_hours,
-        assigned_friday_hours: a.assigned_friday_hours,
-        assigned_saturday_hours: a.assigned_saturday_hours,
-        assigned_sunday_hours: a.assigned_sunday_hours,
-        assigned_monday_start_time: a.assigned_monday_start_time,
-        assigned_monday_end_time: a.assigned_monday_end_time,
-        assigned_tuesday_start_time: a.assigned_tuesday_start_time,
-        assigned_tuesday_end_time: a.assigned_tuesday_end_time,
-        assigned_wednesday_start_time: a.assigned_wednesday_start_time,
-        assigned_wednesday_end_time: a.assigned_wednesday_end_time,
-        assigned_thursday_start_time: a.assigned_thursday_start_time,
-        assigned_thursday_end_time: a.assigned_thursday_end_time,
-        assigned_friday_start_time: a.assigned_friday_start_time,
-        assigned_friday_end_time: a.assigned_friday_end_time,
-        assigned_saturday_start_time: a.assigned_saturday_start_time,
-        assigned_saturday_end_time: a.assigned_saturday_end_time,
-        assigned_sunday_start_time: a.assigned_sunday_start_time,
-        assigned_sunday_end_time: a.assigned_sunday_end_time,
-    })) || [];
-    
-    const firstAssignment = order.order_employee_assignments?.[0];
-
-    return {
-      id: order.id,
-      user_id: order.user_id,
-      title: order.title,
-      description: order.description,
-      status: order.status,
-      due_date: order.due_date,
-      created_at: order.created_at,
-      customer_id: order.customer_id,
-      object_id: order.object_id,
-      customer_contact_id: order.customer_contact_id,
-      order_type: order.order_type,
-      recurring_start_date: order.recurring_start_date,
-      recurring_end_date: order.recurring_end_date,
-      priority: order.priority,
-      total_estimated_hours: order.total_estimated_hours,
-      notes: order.notes,
-      request_status: order.request_status,
-      service_type: order.service_type,
-      order_feedback: order.order_feedback,
-      customer_name: customerData?.name || null,
-      object_name: objectData?.name || null,
-      customer_contact_first_name: customerContactData?.first_name || null,
-      customer_contact_last_name: customerContactData?.last_name || null,
-      employee_ids: order.order_employee_assignments?.map((a: any) => a.employee_id) || null,
-      employee_first_names: order.order_employee_assignments?.map((a: any) => a.employees?.[0]?.first_name || '') || null,
-      employee_last_names: order.order_employee_assignments?.map((a: any) => a.employees?.[0]?.last_name || '') || null,
-      assignedEmployees: mappedAssignments,
-      object: objectData,
-      customer: customerData,
-      customer_contact: customerContactData,
-      assigned_daily_hours: order.order_employee_assignments?.map((a: any) => a.assigned_daily_hours) || null,
-      assigned_monday_hours: firstAssignment?.assigned_monday_hours || null,
-      assigned_tuesday_hours: firstAssignment?.assigned_tuesday_hours || null,
-      assigned_wednesday_hours: firstAssignment?.assigned_wednesday_hours || null,
-      assigned_thursday_hours: firstAssignment?.assigned_thursday_hours || null,
-      assigned_friday_hours: firstAssignment?.assigned_friday_hours || null,
-      assigned_saturday_hours: firstAssignment?.assigned_saturday_hours || null,
-      assigned_sunday_hours: firstAssignment?.assigned_sunday_hours || null,
-      assigned_monday_start_time: firstAssignment?.assigned_monday_start_time || null,
-      assigned_monday_end_time: firstAssignment?.assigned_monday_end_time || null,
-      assigned_tuesday_start_time: firstAssignment?.assigned_tuesday_start_time || null,
-      assigned_tuesday_end_time: firstAssignment?.assigned_tuesday_end_time || null,
-      assigned_wednesday_start_time: firstAssignment?.assigned_wednesday_start_time || null,
-      assigned_wednesday_end_time: firstAssignment?.assigned_wednesday_end_time || null,
-      assigned_thursday_start_time: firstAssignment?.assigned_thursday_start_time || null,
-      assigned_thursday_end_time: firstAssignment?.assigned_thursday_end_time || null,
-      assigned_friday_start_time: firstAssignment?.assigned_friday_start_time || null,
-      assigned_friday_end_time: firstAssignment?.assigned_friday_end_time || null,
-      assigned_saturday_start_time: firstAssignment?.assigned_saturday_start_time || null,
-      assigned_saturday_end_time: firstAssignment?.assigned_saturday_end_time || null,
-      assigned_sunday_start_time: firstAssignment?.assigned_sunday_start_time || null,
-      assigned_sunday_end_time: firstAssignment?.assigned_sunday_end_time || null,
-    };
-  }) || [];
-
 
   // 3. Aktive Mitarbeiter im Einsatz (time_entries mit end_time IS NULL)
   const { count: activeEmployeesCount, error: activeEmployeesError } = await supabase
     .from('time_entries')
     .select('employee_id', { count: 'exact', head: true })
     .is('end_time', null)
-    .gte('start_time', today.toISOString()) // Only count entries started today
-    .lte('start_time', tomorrow.toISOString()); // And not started tomorrow
+    .gte('start_time', today.toISOString())
+    .lte('start_time', tomorrow.toISOString());
 
   if (activeEmployeesError) console.error("Fehler beim Laden der aktiven Mitarbeiter:", activeEmployeesError?.message || activeEmployeesError);
 
@@ -224,7 +90,7 @@ export default async function DashboardPage() {
   const { data: newOrderFeedback, error: orderFeedbackError } = await supabase
     .from('order_feedback')
     .select('id')
-    .eq('is_resolved', false) // Use the new field
+    .eq('is_resolved', false)
     .gte('created_at', today.toISOString())
     .lt('created_at', tomorrow.toISOString());
 
@@ -295,7 +161,7 @@ export default async function DashboardPage() {
     `)
     .eq('is_resolved', false)
     .order('created_at', { ascending: false })
-    .limit(3); // Limit to show only a few on dashboard
+    .limit(3);
 
   const { data: unresolvedGeneralFeedback, error: unresolvedGeneralFeedbackError } = await supabase
     .from('general_feedback')
@@ -305,7 +171,7 @@ export default async function DashboardPage() {
     `)
     .eq('is_resolved', false)
     .order('created_at', { ascending: false })
-    .limit(3); // Limit to show only a few on dashboard
+    .limit(3);
 
   if (unresolvedOrderFeedbackError) console.error("Fehler beim Laden des ungelösten Auftrags-Feedbacks:", unresolvedOrderFeedbackError?.message || unresolvedOrderFeedbackError);
   if (unresolvedGeneralFeedbackError) console.error("Fehler beim Laden des ungelösten allgemeinen Feedbacks:", unresolvedGeneralFeedbackError?.message || unresolvedGeneralFeedbackError);
@@ -333,15 +199,6 @@ export default async function DashboardPage() {
 
   const allUnresolvedFeedback = [...mappedUnresolvedOrderFeedback, ...mappedUnresolvedGeneralFeedback].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
-  const getRequestStatusBadgeVariant = (requestStatus: string) => {
-    switch (requestStatus) {
-      case 'approved': return 'default';
-      case 'pending': return 'warning';
-      case 'rejected': return 'destructive';
-      default: return 'outline';
-    }
-  };
-
 
   return (
     <div className="p-8 space-y-8">
@@ -368,7 +225,7 @@ export default async function DashboardPage() {
         />
         <KpiCard
           title="Offene Anfragen"
-          value={pendingRequestsCount ?? 0}
+          value={pendingCustomerRequests ?? 0}
           description="Kundenanfragen zur Bearbeitung"
           icon="AlertTriangle"
           linkHref="/dashboard/orders?requestStatus=pending"
@@ -400,61 +257,6 @@ export default async function DashboardPage() {
         />
       </div>
 
-      {/* NEU: Offene Anfragen Section */}
-      <div className="space-y-4">
-        <h2 className="text-xl md:text-2xl font-bold flex items-center">
-          <AlertTriangle className="mr-2 h-5 w-5 md:h-6 md:w-6 text-warning" />
-          Offene Anfragen ({mappedPendingRequests.length})
-        </h2>
-        <Card className="shadow-neumorphic glassmorphism-card">
-          <CardContent className="p-0">
-            {mappedPendingRequests.length === 0 ? (
-              <div className="text-center text-muted-foreground py-8">
-                <Briefcase className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
-                <p className="text-base md:text-lg font-semibold">Keine offenen Auftragsanfragen</p>
-                <p className="text-sm">Alle Anfragen wurden bearbeitet oder es gibt keine neuen.</p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="min-w-[150px]">Auftrag</TableHead><TableHead className="min-w-[120px]">Kunde</TableHead><TableHead className="min-w-[120px]">Objekt</TableHead><TableHead className="min-w-[100px]">Dienstleistung</TableHead><TableHead className="min-w-[100px]">Anfrage Status</TableHead><TableHead className="min-w-[120px]">Zeitraum</TableHead><TableHead className="text-right min-w-[120px]">Aktionen</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {mappedPendingRequests.map((order) => (
-                      <TableRow key={order.id}>
-                        <TableCell className="font-medium text-sm">{order.title}</TableCell><TableCell className="text-sm">{order.customer_name || 'N/A'}</TableCell><TableCell className="text-sm">{order.object_name || 'N/A'}</TableCell><TableCell className="text-sm">{order.service_type || 'N/A'}</TableCell><TableCell>
-                          <Badge variant={getRequestStatusBadgeVariant(order.request_status)}>{order.request_status}</Badge>
-                        </TableCell><TableCell className="text-sm">
-                          {order.order_type === "one_time" && order.due_date && (
-                            <div className="flex items-center">
-                              <CalendarDays className="mr-1 h-3 w-3" />
-                              {format(new Date(order.due_date), 'dd.MM.yyyy', { locale: de })}
-                            </div>
-                          )}
-                          {(order.order_type === "recurring" || order.order_type === "permanent" || order.order_type === "substitution") && order.recurring_start_date && (
-                            <div className="flex items-center">
-                              <CalendarDays className="mr-1 h-3 w-3" />
-                              {format(new Date(order.recurring_start_date), 'dd.MM.yyyy', { locale: de })}
-                              {order.recurring_end_date && ` - ${format(new Date(order.recurring_end_date), 'dd.MM.yyyy', { locale: de })}`}
-                            </div>
-                          )}
-                        </TableCell><TableCell className="text-right">
-                          <RecordDetailsDialog record={order} title={`Details zu Auftrag: ${order.title}`} />
-                          <OrderPlanningDialog order={order} />
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
       {/* Einsatzübersicht (Tagesliste) */}
       <TodaysOrdersOverview />
 
@@ -476,7 +278,7 @@ export default async function DashboardPage() {
               <FeedbackCard
                 key={feedback.id}
                 feedback={feedback}
-                feedbackType={feedback.rating ? 'order' : 'general'} // Determine type based on 'rating' field
+                feedbackType={feedback.rating ? 'order' : 'general'}
                 currentUserId={user.id}
                 currentUserRole={currentUserRole}
               />
@@ -551,7 +353,7 @@ export default async function DashboardPage() {
               <Briefcase className="h-4 w-4 md:h-5 md:w-5 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-xl md:text-2xl font-bold">{pendingRequestsCount ?? 0}</div>
+              <div className="text-xl md:text-2xl font-bold">{pendingCustomerRequests ?? 0}</div>
               <p className="text-xs text-muted-foreground">Aufträge, die noch bearbeitet werden müssen</p>
             </CardContent>
           </Card>
