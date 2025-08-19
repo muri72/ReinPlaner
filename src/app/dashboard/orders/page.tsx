@@ -292,9 +292,9 @@ export default function OrdersPage({
             assigned_friday_end_time: a.assigned_friday_end_time,
             assigned_saturday_start_time: a.assigned_saturday_start_time,
             assigned_saturday_end_time: a.assigned_saturday_end_time,
-            assigned_sunday_start_time: firstAssignment?.assigned_sunday_start_time || null,
-            assigned_sunday_end_time: firstAssignment?.assigned_sunday_end_time || null,
-        }));
+            assigned_sunday_start_time: a.assigned_sunday_start_time,
+            assigned_sunday_end_time: a.assigned_sunday_end_time,
+        })) || [];
         
         const firstAssignment = order.order_employee_assignments?.[0];
 
@@ -484,8 +484,76 @@ export default function OrdersPage({
         </div>
       </Suspense>
 
+      {/* Section for Pending Requests */}
+      <div className="space-y-4">
+        <h2 className="text-xl md:text-2xl font-bold flex items-center">
+          <AlertTriangle className="mr-2 h-5 w-5 md:h-6 md:w-6 text-warning" />
+          Offene Anfragen ({pendingRequests.length})
+        </h2>
+        <Card className="shadow-neumorphic glassmorphism-card">
+          <CardContent className="p-0">
+            {pendingRequests.length === 0 ? (
+              <div className="text-center text-muted-foreground py-8">
+                <Briefcase className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
+                <p className="text-base md:text-lg font-semibold">Keine offenen Auftragsanfragen</p>
+                <p className="text-sm">Alle Anfragen wurden bearbeitet oder es gibt keine neuen.</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="min-w-[150px]">Auftrag</TableHead>
+                      <TableHead className="min-w-[120px]">Kunde</TableHead>
+                      <TableHead className="min-w-[120px]">Objekt</TableHead>
+                      <TableHead className="min-w-[100px]">Dienstleistung</TableHead>
+                      <TableHead className="min-w-[100px]">Anfrage Status</TableHead>
+                      <TableHead className="min-w-[120px]">Zeitraum</TableHead>
+                      <TableHead className="text-right min-w-[120px]">Aktionen</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {pendingRequests.map((order) => (
+                      <TableRow key={order.id}>
+                        <TableCell className="font-medium text-sm">{order.title}</TableCell>
+                        <TableCell className="text-sm">{order.customer_name || 'N/A'}</TableCell>
+                        <TableCell className="text-sm">{order.object_name || 'N/A'}</TableCell>
+                        <TableCell className="text-sm">{order.service_type || 'N/A'}</TableCell>
+                        <TableCell>
+                          <Badge variant={getRequestStatusBadgeVariant(order.request_status)}>{order.request_status}</Badge>
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {order.order_type === "one_time" && order.due_date && (
+                            <div className="flex items-center">
+                              <CalendarDays className="mr-1 h-3 w-3" />
+                              {format(new Date(order.due_date), 'dd.MM.yyyy', { locale: de })}
+                            </div>
+                          )}
+                          {(order.order_type === "recurring" || order.order_type === "permanent" || order.order_type === "substitution") && order.recurring_start_date && (
+                            <div className="flex items-center">
+                              <CalendarDays className="mr-1 h-3 w-3" />
+                              {format(new Date(order.recurring_start_date), 'dd.MM.yyyy', { locale: de })}
+                              {order.recurring_end_date && ` - ${format(new Date(order.recurring_end_date), 'dd.MM.yyyy', { locale: de })}`}
+                            </div>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <RecordDetailsDialog record={order} title={`Details zu Auftrag: ${order.title}`} />
+                          <OrderPlanningDialog order={order} />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Section for Other Orders with View Toggle */}
       <div className="space-y-4 pt-8">
+        {/* Removed the h2 tag for "Bestehende Aufträge" */}
         {query && (
           <p className="text-sm text-muted-foreground mb-4">
             Hinweis: Bei aktiver Suche wird die Paginierung deaktiviert und alle passenden Ergebnisse angezeigt.
