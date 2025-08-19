@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useForm, SubmitHandler } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm, SubmitHandler } from "react-hook-form"; // Korrigierter Import
+import { zodResolver } from "@hookform/resolvers/zod"; // Hinzugefügter Import
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -102,12 +102,25 @@ export function WorkTimeReportForm() {
       const imgHeight = canvas.height * imgWidth / canvas.width;
       let heightLeft = imgHeight;
       let position = 0;
+
+      // Logo-Details
+      const logoPath = '/home.png'; // Pfad zum Logo im public-Ordner
+      const logoWidth = 30; // Breite des Logos in mm
+      const logoHeight = 30; // Höhe des Logos in mm
+      const margin = 10; // Rand von oben und rechts in mm
+      const logoX = imgWidth - logoWidth - margin;
+      const logoY = margin;
+
+      // Erste Seite hinzufügen
       pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      pdf.addImage(logoPath, 'PNG', logoX, logoY, logoWidth, logoHeight); // Logo hinzufügen
+
       heightLeft -= pageHeight;
       while (heightLeft >= 0) {
         position = heightLeft - imgHeight;
         pdf.addPage();
         pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        pdf.addImage(logoPath, 'PNG', logoX, logoY, logoWidth, logoHeight); // Logo zu weiteren Seiten hinzufügen
         heightLeft -= pageHeight;
       }
       
