@@ -39,20 +39,6 @@ export interface EmployeeWorkTimeReportData {
   employeeName: string;
 }
 
-// Schnittstelle für die Daten, die von der RPC-Funktion zurückgegeben werden
-interface RpcReportEntry {
-  id: string;
-  start_time: string;
-  end_time: string | null;
-  duration_minutes: number | null;
-  break_minutes: number | null;
-  notes: string | null;
-  employee_first_name: string | null;
-  employee_last_name: string | null;
-  object_name: string | null; // Although not directly used in this map, it's part of the RPC return
-}
-
-
 // Helper function to calculate break minutes based on gross duration (fallback)
 function calculateBreakMinutesFallback(grossDurationMinutes: number): number {
   if (grossDurationMinutes >= 9 * 60) { // More than 9 hours (540 minutes)
@@ -64,41 +50,53 @@ function calculateBreakMinutesFallback(grossDurationMinutes: number): number {
 }
 
 export async function getWorkTimeReport(objectId: string, month: number, year: number): Promise<{ success: boolean; message: string; data: WorkTimeReportData | null }> {
-  const supabase = createAdminClient(); // HIER: createAdminClient() verwenden
+  const supabase = createAdminClient();
 
-  const startDate = startOfMonth(new Date(year, month - 1, 1)); // month is 1-indexed from form
+  const startDate = startOfMonth(new Date(year, month - 1, 1));
   const endDate = endOfMonth(new Date(year, month - 1, 1));
 
-  // Use the RPC function to get the work time report for the object
-  const { data: rpcData, error } = await supabase.rpc('get_work_time_report_for_object', {
-    p_object_id: objectId,
-    p_start_date: startDate.toISOString().split('T')[0],
-    p_end_date: endDate.toISOString().split('T')[0],
-  });
+  // --- NEW LOGIC: Direct query instead of RPC ---
+  const { data, error } = await supabase
+    .from('time_entries')
+    .select(`
+      id,
+      start_time,
+      end_time,
+      duration_minutes,
+      break_minutes,
+      notes,
+      employees ( first_name, last_name ),
+      objects ( name )
+    `)
+    .eq('object_id', objectId)
+    .gte('start_time', startDate.toISOString())
+    .lte('start_time', endDate.toISOString())
+    .order('start_time', { ascending: true });
 
   if (error) {
-    console.error("Fehler beim Laden des Arbeitszeitnachweises über RPC:", error?.message || error);
+    console.error("Fehler beim Laden des Arbeitszeitnachweises:", error?.message || error);
     return { success: false, message: error.message, data: null };
   }
 
   let totalNetMinutes = 0;
 
-  const reportEntries: ReportEntry[] = rpcData.map((entry: RpcReportEntry) => {
+  const reportEntries: ReportEntry[] = data.map((entry: any) => {
     const grossDurationMinutes = entry.duration_minutes || 0;
-    // Verwende gespeicherte Pausenminuten, wenn vorhanden, sonst Fallback-Berechnung
     const breakMins = entry.break_minutes !== null ? entry.break_minutes : calculateBreakMinutesFallback(grossDurationMinutes);
     const netDurationMinutes = grossDurationMinutes - breakMins;
     totalNetMinutes += netDurationMinutes;
+    
+    const employee = Array.isArray(entry.employees) ? entry.employees[0] : entry.employees;
     
     return {
       id: entry.id,
       date: new Date(entry.start_time).toLocaleDateString('de-DE'),
       startTime: new Date(entry.start_time).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }),
       endTime: entry.end_time ? new Date(entry.end_time).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) : 'N/A',
-      employeeName: `${entry.employee_first_name || ''} ${entry.employee_last_name || ''}`.trim() || 'Unbekannt',
-      duration: grossDurationMinutes, // Store gross duration
+      employeeName: `${employee?.first_name || ''} ${employee?.last_name || ''}`.trim() || 'Unbekannt',
+      duration: grossDurationMinutes,
       breakMinutes: breakMins,
-      netDuration: netDurationMinutes, // NEW
+      netDuration: netDurationMinutes,
     };
   });
 
