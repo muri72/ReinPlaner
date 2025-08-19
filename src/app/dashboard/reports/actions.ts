@@ -12,7 +12,7 @@ export interface ReportEntry {
   employeeName: string;
   duration: number; // in minutes (gross duration)
   breakMinutes: number; // calculated or stored break minutes
-  // notes: string; // Entfernt
+  netDuration: number; // NEW: net duration in minutes
 }
 
 export interface WorkTimeReportData {
@@ -30,6 +30,7 @@ export interface EmployeeReportEntry {
   customerName: string;
   duration: number;
   breakMinutes: number;
+  netDuration: number; // NEW
 }
 
 export interface EmployeeWorkTimeReportData {
@@ -96,6 +97,7 @@ export async function getWorkTimeReport(objectId: string, month: number, year: n
       employeeName: `${employee?.first_name || ''} ${employee?.last_name || ''}`.trim() || 'Unbekannt',
       duration: grossDurationMinutes, // Store gross duration
       breakMinutes: breakMins,
+      netDuration: netDurationMinutes, // NEW
       // notes: entry.notes || '', // Entfernt
     };
   });
@@ -169,6 +171,7 @@ export async function getEmployeeWorkTimeReport(employeeId: string, month: numbe
       customerName: customer?.name || 'N/A',
       duration: grossDurationMinutes,
       breakMinutes: breakMins,
+      netDuration: netDurationMinutes, // NEW
     };
   });
 
