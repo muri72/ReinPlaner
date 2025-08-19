@@ -223,8 +223,8 @@ export default function OrdersPage({
           priority,
           total_estimated_hours,
           notes,
-          request_status,
           service_type,
+          request_status,
           customers ( name ),
           objects ( name, address, notes, time_of_day, access_method, pin, is_alarm_secured, alarm_password, security_code_word, total_weekly_hours ),
           customer_contacts ( first_name, last_name, phone ),
@@ -262,6 +262,9 @@ export default function OrdersPage({
         selectQuery = selectQuery.eq('order_employee_assignments.employee_id', employeeIdFilter);
       }
 
+      // Do not filter by request_status here, as all orders (pending and approved) should be visible
+      // on the main orders page. The 'pending requests' section is moved to dashboard.
+      
       const { data, error: selectError, count: selectCount } = await selectQuery
         .range(from, to);
 
@@ -387,8 +390,9 @@ export default function OrdersPage({
 
   const totalPages = totalCount ? Math.ceil(totalCount / pageSize) : 0;
 
-  const pendingRequests = allOrders.filter(order => order.request_status === 'pending');
-  const otherOrders = allOrders.filter(order => order.request_status !== 'pending');
+  // Removed filtering for pending requests here, as they are moved to dashboard.
+  // All orders are now considered 'otherOrders' for this page.
+  const allVisibleOrders = allOrders;
 
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
@@ -483,76 +487,11 @@ export default function OrdersPage({
         </div>
       </Suspense>
 
-      {/* Section for Pending Requests */}
-      <div className="space-y-4">
-        <h2 className="text-xl md:text-2xl font-bold flex items-center">
-          <AlertTriangle className="mr-2 h-5 w-5 md:h-6 md:w-6 text-warning" />
-          Offene Anfragen ({pendingRequests.length})
-        </h2>
-        <Card className="shadow-neumorphic glassmorphism-card">
-          <CardContent className="p-0">
-            {pendingRequests.length === 0 ? (
-              <div className="text-center text-muted-foreground py-8">
-                <Briefcase className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
-                <p className="text-base md:text-lg font-semibold">Keine offenen Auftragsanfragen</p>
-                <p className="text-sm">Alle Anfragen wurden bearbeitet oder es gibt keine neuen.</p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="text-left [&amp;:has([data-selected])]:bg-accent [&amp;_th]:first:rounded-tl-md [&amp;_th]:last:rounded-tr-md [&amp;_th]:last:text-right">
-                      <th className="h-12 px-4 text-base font-semibold min-w-[150px]">Auftrag</th>
-                      <th className="h-12 px-4 text-base font-semibold min-w-[120px]">Kunde</th>
-                      <th className="h-12 px-4 text-base font-semibold min-w-[120px]">Objekt</th>
-                      <th className="h-12 px-4 text-base font-semibold min-w-[100px]">Dienstleistung</th>
-                      <th className="h-12 px-4 text-base font-semibold min-w-[100px]">Anfrage Status</th>
-                      <th className="h-12 px-4 text-base font-semibold min-w-[120px]">Zeitraum</th>
-                      <th className="h-12 px-4 text-base font-semibold text-right min-w-[120px]">Aktionen</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {pendingRequests.map((order) => (
-                      <tr key={order.id} className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
-                        <td className="p-4 align-middle font-medium text-sm">{order.title}</td>
-                        <td className="p-4 align-middle text-sm">{order.customer_name || 'N/A'}</td>
-                        <td className="p-4 align-middle text-sm">{order.object_name || 'N/A'}</td>
-                        <td className="p-4 align-middle text-sm">{order.service_type || 'N/A'}</td>
-                        <td className="p-4 align-middle">
-                          <Badge variant={getRequestStatusBadgeVariant(order.request_status)}>{order.request_status}</Badge>
-                        </td>
-                        <td className="p-4 align-middle text-sm">
-                          {order.order_type === "one_time" && order.due_date && (
-                            <div className="flex items-center">
-                              <CalendarDays className="mr-1 h-3 w-3" />
-                              {format(new Date(order.due_date), 'dd.MM.yyyy', { locale: de })}
-                            </div>
-                          )}
-                          {(order.order_type === "recurring" || order.order_type === "permanent" || order.order_type === "substitution") && order.recurring_start_date && (
-                            <div className="flex items-center">
-                              <CalendarDays className="mr-1 h-3 w-3" />
-                              {format(new Date(order.recurring_start_date), 'dd.MM.yyyy', { locale: de })}
-                              {order.recurring_end_date && ` - ${format(new Date(order.recurring_end_date), 'dd.MM.yyyy', { locale: de })}`}
-                            </div>
-                          )}
-                        </td>
-                        <td className="p-4 align-middle text-right">
-                          <RecordDetailsDialog record={order} title={`Details zu Auftrag: ${order.title}`} />
-                          <OrderPlanningDialog order={order} />
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+      {/* Removed Section for Pending Requests */}
 
-      {/* Section for Other Orders with View Toggle */}
+      {/* Section for All Orders with View Toggle */}
       <div className="space-y-4 pt-8">
-        <h2 className="text-xl md:text-2xl font-bold">Bestehende Aufträge</h2>
+        <h2 className="text-xl md:text-2xl font-bold">Alle Aufträge</h2>
         {query && (
           <p className="text-sm text-muted-foreground mb-4">
             Hinweis: Bei aktiver Suche wird die Paginierung deaktiviert und alle passenden Ergebnisse angezeigt.
@@ -567,20 +506,20 @@ export default function OrdersPage({
           </div>
           <TabsContent value="grid" className="mt-0">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-              {otherOrders.length === 0 && !query && !statusFilter && !orderTypeFilter && !serviceTypeFilter && !customerIdFilter && !employeeIdFilter ? (
+              {allVisibleOrders.length === 0 && !query && !statusFilter && !orderTypeFilter && !serviceTypeFilter && !customerIdFilter && !employeeIdFilter ? (
                 <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30 shadow-neumorphic glassmorphism-card">
                   <Briefcase className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
                   <p className="text-base md:text-lg font-semibold">Noch keine Aufträge vorhanden</p>
                   <p className="text-sm">Beginnen Sie, indem Sie einen neuen Auftrag hinzufügen.</p>
                 </div>
-              ) : otherOrders.length === 0 && (query || statusFilter || orderTypeFilter || serviceTypeFilter || customerIdFilter || employeeIdFilter) ? (
+              ) : allVisibleOrders.length === 0 && (query || statusFilter || orderTypeFilter || serviceTypeFilter || customerIdFilter || employeeIdFilter) ? (
                 <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30 shadow-neumorphic glassmorphism-card">
                   <Briefcase className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
                   <p className="text-base md:text-lg font-semibold">Keine Aufträge gefunden</p>
                   <p className="text-sm">Ihre Filter ergaben keine Treffer.</p>
                 </div>
               ) : (
-                otherOrders.map((order) => {
+                allVisibleOrders.map((order) => {
                   const feedback = order.order_feedback?.[0];
                   const employeeNames = (order.employee_first_names && order.employee_last_names)
                     ? order.employee_first_names.map((f, i) => `${f} ${order.employee_last_names?.[i] || ''}`).join(', ')
@@ -672,7 +611,7 @@ export default function OrdersPage({
           </TabsContent>
           <TabsContent value="table" className="mt-0">
             <OrdersTableView
-              orders={otherOrders}
+              orders={allVisibleOrders}
               totalPages={totalPages}
               currentPage={currentPage}
               query={query}
