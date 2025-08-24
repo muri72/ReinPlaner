@@ -174,7 +174,7 @@ export function ObjectsTableView({
               </TableCell>
               <TableCell className="text-sm">{object.time_of_day}</TableCell>
               <TableCell className="text-sm">{object.access_method}</TableCell>
-              <TableCell className="text-sm">{object.total_weekly_hours !== null ? `${object.total_weekly_hours.toFixed(2)}` : 'N/A'}</TableCell>
+              <TableCell className="text-sm">{typeof object.total_weekly_hours === 'number' ? `${object.total_weekly_hours.toFixed(2)}` : 'N/A'}</TableCell>
               <TableCell className="text-sm">
                 {object.recurrence_interval_weeks > 1 ? `Alle ${object.recurrence_interval_weeks} Wo. (Offset: ${object.start_week_offset})` : 'Jede Woche'}
               </TableCell>

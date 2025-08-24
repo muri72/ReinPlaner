@@ -426,7 +426,7 @@ export default function ObjectsPage({
                             })}
                           </div>
                         ))}
-                        {object.total_weekly_hours !== null && (
+                        {typeof object.total_weekly_hours === 'number' && (
                           <div className="mt-2 text-sm font-semibold">
                             Gesamtstunden pro Woche (Durchschnitt): {object.total_weekly_hours.toFixed(2)}
                           </div>
