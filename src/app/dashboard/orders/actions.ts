@@ -65,28 +65,7 @@ export async function createOrder(data: OrderFormValues) {
     const assignmentsToInsert = assignedEmployees.map(assignment => ({
       order_id: newOrder.id,
       employee_id: assignment.employeeId,
-      assigned_monday_hours: assignment.assigned_monday_hours,
-      assigned_tuesday_hours: assignment.assigned_tuesday_hours,
-      assigned_wednesday_hours: assignment.assigned_wednesday_hours,
-      assigned_thursday_hours: assignment.assigned_thursday_hours,
-      assigned_friday_hours: assignment.assigned_friday_hours,
-      assigned_saturday_hours: assignment.assigned_saturday_hours,
-      assigned_sunday_hours: assignment.assigned_sunday_hours,
-      // New time fields
-      assigned_monday_start_time: assignment.assigned_monday_start_time,
-      assigned_monday_end_time: assignment.assigned_monday_end_time,
-      assigned_tuesday_start_time: assignment.assigned_tuesday_start_time,
-      assigned_tuesday_end_time: assignment.assigned_tuesday_end_time,
-      assigned_wednesday_start_time: assignment.assigned_wednesday_start_time,
-      assigned_wednesday_end_time: assignment.assigned_wednesday_end_time,
-      assigned_thursday_start_time: assignment.assigned_thursday_start_time,
-      assigned_thursday_end_time: assignment.assigned_thursday_end_time,
-      assigned_friday_start_time: assignment.assigned_friday_start_time,
-      assigned_friday_end_time: assignment.assigned_friday_end_time,
-      assigned_saturday_start_time: assignment.assigned_saturday_start_time,
-      assigned_saturday_end_time: assignment.assigned_saturday_end_time,
-      assigned_sunday_start_time: assignment.assigned_sunday_start_time,
-      assigned_sunday_end_time: assignment.assigned_sunday_end_time,
+      assigned_daily_schedules: assignment.assigned_daily_schedules ? JSON.parse(assignment.assigned_daily_schedules) : [], // Store as JSONB
       assigned_recurrence_interval_weeks: assignment.assigned_recurrence_interval_weeks,
       assigned_start_week_offset: assignment.assigned_start_week_offset,
     }));
@@ -189,28 +168,7 @@ export async function updateOrder(orderId: string, data: OrderFormValues) {
     const assignmentsToInsert = assignedEmployees.map(assignment => ({
       order_id: orderId,
       employee_id: assignment.employeeId,
-      assigned_monday_hours: assignment.assigned_monday_hours,
-      assigned_tuesday_hours: assignment.assigned_tuesday_hours,
-      assigned_wednesday_hours: assignment.assigned_wednesday_hours,
-      assigned_thursday_hours: assignment.assigned_thursday_hours,
-      assigned_friday_hours: assignment.assigned_friday_hours,
-      assigned_saturday_hours: assignment.assigned_saturday_hours,
-      assigned_sunday_hours: assignment.assigned_sunday_hours,
-      // New time fields
-      assigned_monday_start_time: assignment.assigned_monday_start_time,
-      assigned_monday_end_time: assignment.assigned_monday_end_time,
-      assigned_tuesday_start_time: assignment.assigned_tuesday_start_time,
-      assigned_tuesday_end_time: assignment.assigned_tuesday_end_time,
-      assigned_wednesday_start_time: assignment.assigned_wednesday_start_time,
-      assigned_wednesday_end_time: assignment.assigned_wednesday_end_time,
-      assigned_thursday_start_time: assignment.assigned_thursday_start_time,
-      assigned_thursday_end_time: assignment.assigned_thursday_end_time,
-      assigned_friday_start_time: assignment.assigned_friday_start_time,
-      assigned_friday_end_time: assignment.assigned_friday_end_time,
-      assigned_saturday_start_time: assignment.assigned_saturday_start_time,
-      assigned_saturday_end_time: assignment.assigned_saturday_end_time,
-      assigned_sunday_start_time: assignment.assigned_sunday_start_time,
-      assigned_sunday_end_time: assignment.assigned_sunday_end_time,
+      assigned_daily_schedules: assignment.assigned_daily_schedules ? JSON.parse(assignment.assigned_daily_schedules) : [], // Store as JSONB
       assigned_recurrence_interval_weeks: assignment.assigned_recurrence_interval_weeks,
       assigned_start_week_offset: assignment.assigned_start_week_offset,
     }));
@@ -267,34 +225,13 @@ export async function processOrderRequest(formData: FormData): Promise<{ success
   const employeeId = formData.get('employeeId') as string | null;
   const decision = formData.get('decision') as 'approved' | 'rejected';
   
-  // Retrieve assigned daily hours for each day from form data
-  const assigned_monday_hours = formData.get('assigned_monday_hours') ? Number(formData.get('assigned_monday_hours')) : null;
-  const assigned_tuesday_hours = formData.get('assigned_tuesday_hours') ? Number(formData.get('assigned_tuesday_hours')) : null;
-  const assigned_wednesday_hours = formData.get('assigned_wednesday_hours') ? Number(formData.get('assigned_wednesday_hours')) : null;
-  const assigned_thursday_hours = formData.get('assigned_thursday_hours') ? Number(formData.get('assigned_thursday_hours')) : null;
-  const assigned_friday_hours = formData.get('assigned_friday_hours') ? Number(formData.get('assigned_friday_hours')) : null;
-  const assigned_saturday_hours = formData.get('assigned_saturday_hours') ? Number(formData.get('assigned_saturday_hours')) : null;
-  const assigned_sunday_hours = formData.get('assigned_sunday_hours') ? Number(formData.get('assigned_sunday_hours')) : null;
-
-  // Retrieve assigned daily start/end times from form data
-  const assigned_monday_start_time = formData.get('assigned_monday_start_time') as string || null;
-  const assigned_monday_end_time = formData.get('assigned_monday_end_time') as string || null;
-  const assigned_tuesday_start_time = formData.get('assigned_tuesday_start_time') as string || null;
-  const assigned_tuesday_end_time = formData.get('assigned_tuesday_end_time') as string || null;
-  const assigned_wednesday_start_time = formData.get('assigned_wednesday_start_time') as string || null;
-  const assigned_wednesday_end_time = formData.get('assigned_wednesday_end_time') as string || null;
-  const assigned_thursday_start_time = formData.get('assigned_thursday_start_time') as string || null;
-  const assigned_thursday_end_time = formData.get('assigned_thursday_end_time') as string || null;
-  const assigned_friday_start_time = formData.get('assigned_friday_start_time') as string || null;
-  const assigned_friday_end_time = formData.get('assigned_friday_end_time') as string || null;
-  const assigned_saturday_start_time = formData.get('assigned_saturday_start_time') as string || null;
-  const assigned_saturday_end_time = formData.get('assigned_saturday_end_time') as string || null;
-  const assigned_sunday_start_time = formData.get('assigned_sunday_start_time') as string || null;
-  const assigned_sunday_end_time = formData.get('assigned_sunday_end_time') as string || null;
-
   // Retrieve recurrence fields
   const assigned_recurrence_interval_weeks = formData.get('assigned_recurrence_interval_weeks') ? Number(formData.get('assigned_recurrence_interval_weeks')) : 1;
   const assigned_start_week_offset = formData.get('assigned_start_week_offset') ? Number(formData.get('assigned_start_week_offset')) : 0;
+
+  // Retrieve assigned_daily_schedules JSON string
+  const assignedDailySchedulesJson = formData.get('assigned_daily_schedules') as string || '[]';
+  const assignedDailySchedules = JSON.parse(assignedDailySchedulesJson);
 
 
   if (!orderId || !decision) {
@@ -332,35 +269,15 @@ export async function processOrderRequest(formData: FormData): Promise<{ success
       return { success: false, message: `Fehler bei der Zuweisung: ${deleteAssignmentError.message}` };
     }
 
-    // Then, insert the new assignment with daily hours and times
+    // Then, insert the new assignment with daily schedules
     const { error: insertAssignmentError } = await supabase
       .from('order_employee_assignments')
       .insert({
         order_id: orderId,
         employee_id: employeeId,
-        assigned_monday_hours,
-        assigned_tuesday_hours,
-        assigned_wednesday_hours,
-        assigned_thursday_hours,
-        assigned_friday_hours,
-        assigned_saturday_hours,
-        assigned_sunday_hours,
-        assigned_monday_start_time,
-        assigned_monday_end_time,
-        assigned_tuesday_start_time,
-        assigned_tuesday_end_time,
-        assigned_wednesday_start_time,
-        assigned_wednesday_end_time,
-        assigned_thursday_start_time,
-        assigned_thursday_end_time,
-        assigned_friday_start_time,
-        assigned_friday_end_time,
-        assigned_saturday_start_time,
-        assigned_saturday_end_time,
-        assigned_sunday_start_time,
-        assigned_sunday_end_time,
-        assigned_recurrence_interval_weeks,
-        assigned_start_week_offset,
+        assigned_daily_schedules: assignedDailySchedules, // Store as JSONB
+        assigned_recurrence_interval_weeks: assigned_recurrence_interval_weeks,
+        assigned_start_week_offset: assigned_start_week_offset,
       });
 
     if (insertAssignmentError) {

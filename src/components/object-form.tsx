@@ -46,27 +46,7 @@ const germanDayNames: { [key: string]: string } = {
 
 const assignedEmployeeSchema = z.object({
   employeeId: z.string().uuid("Ungültige Mitarbeiter-ID"),
-  assigned_monday_hours: z.preprocess(preprocessNumber, z.nullable(z.number().min(0).max(24)).optional()),
-  assigned_tuesday_hours: z.preprocess(preprocessNumber, z.nullable(z.number().min(0).max(24)).optional()),
-  assigned_wednesday_hours: z.preprocess(preprocessNumber, z.nullable(z.number().min(0).max(24)).optional()),
-  assigned_thursday_hours: z.preprocess(preprocessNumber, z.nullable(z.number().min(0).max(24)).optional()),
-  assigned_friday_hours: z.preprocess(preprocessNumber, z.nullable(z.number().min(0).max(24)).optional()),
-  assigned_saturday_hours: z.preprocess(preprocessNumber, z.nullable(z.number().min(0).max(24)).optional()),
-  assigned_sunday_hours: z.preprocess(preprocessNumber, z.nullable(z.number().min(0).max(24)).optional()),
-  assigned_monday_start_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
-  assigned_monday_end_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
-  assigned_tuesday_start_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
-  assigned_tuesday_end_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
-  assigned_wednesday_start_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
-  assigned_wednesday_end_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
-  assigned_thursday_start_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
-  assigned_thursday_end_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
-  assigned_friday_start_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
-  assigned_friday_end_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
-  assigned_saturday_start_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
-  assigned_saturday_end_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
-  assigned_sunday_start_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
-  assigned_sunday_end_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
+  assigned_daily_schedules: z.string().optional().nullable(), // New JSONB field
   assigned_recurrence_interval_weeks: z.preprocess(preprocessNumber, z.number().min(1).max(52).default(1)),
   assigned_start_week_offset: z.preprocess(preprocessNumber, z.number().min(0).max(51).default(0)),
 });
@@ -87,27 +67,7 @@ export const objectSchema = z.object({
   isAlarmSecured: z.boolean().default(false),
   alarmPassword: z.string().max(50, "Alarmkennwort ist zu lang").optional().nullable(),
   securityCodeWord: z.string().max(50, "Sicherheitscodewort ist zu lang").optional().nullable(),
-  monday_hours: z.preprocess(preprocessNumber, z.nullable(z.number().min(0).max(24)).optional()),
-  tuesday_hours: z.preprocess(preprocessNumber, z.nullable(z.number().min(0).max(24)).optional()),
-  wednesday_hours: z.preprocess(preprocessNumber, z.nullable(z.number().min(0).max(24)).optional()),
-  thursday_hours: z.preprocess(preprocessNumber, z.nullable(z.number().min(0).max(24)).optional()),
-  friday_hours: z.preprocess(preprocessNumber, z.nullable(z.number().min(0).max(24)).optional()),
-  saturday_hours: z.preprocess(preprocessNumber, z.nullable(z.number().min(0).max(24)).optional()),
-  sunday_hours: z.preprocess(preprocessNumber, z.nullable(z.number().min(0).max(24)).optional()),
-  monday_start_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
-  monday_end_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
-  tuesday_start_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
-  tuesday_end_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
-  wednesday_start_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
-  wednesday_end_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
-  thursday_start_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
-  thursday_end_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
-  friday_start_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
-  friday_end_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
-  saturday_start_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
-  saturday_end_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
-  sunday_start_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
-  sunday_end_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
+  daily_schedules: z.string().optional().nullable(), // New JSONB field
   recurrence_interval_weeks: z.preprocess(preprocessNumber, z.number().min(1).max(52).default(1)),
   start_week_offset: z.preprocess(preprocessNumber, z.number().min(0).max(51).default(0)),
 }).superRefine((data, ctx) => {
@@ -117,6 +77,18 @@ export const objectSchema = z.object({
       message: "Alarmkennwort oder Sicherheitscodewort ist erforderlich, wenn alarmgesichert.",
       path: ["alarmPassword"],
     });
+  }
+  // Basic JSON validation for daily_schedules
+  if (data.daily_schedules) {
+    try {
+      JSON.parse(data.daily_schedules);
+    } catch (e) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Ungültiges JSON-Format für tägliche Zeitpläne.",
+        path: ["daily_schedules"],
+      });
+    }
   }
 });
 
@@ -133,35 +105,6 @@ interface ObjectFormProps {
 export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess }: ObjectFormProps) {
   const supabase = createClient();
   const [customers, setCustomers] = useState<{ id: string; name: string }[]>([]);
-  const [objects, setObjects] = useState<{ 
-    id: string; 
-    name: string; 
-    customer_id: string;
-    monday_hours: number | null;
-    tuesday_hours: number | null;
-    wednesday_hours: number | null;
-    thursday_hours: number | null;
-    friday_hours: number | null;
-    saturday_hours: number | null;
-    sunday_hours: number | null;
-    monday_start_time: string | null;
-    tuesday_start_time: string | null;
-    wednesday_start_time: string | null;
-    wednesday_end_time: string | null;
-    thursday_start_time: string | null;
-    thursday_end_time: string | null;
-    friday_start_time: string | null;
-    friday_end_time: string | null;
-    saturday_start_time: string | null;
-    saturday_end_time: string | null;
-    sunday_start_time: string | null;
-    sunday_end_time: string | null;
-    total_weekly_hours: number | null;
-    time_of_day: string | null;
-    recurrence_interval_weeks: number;
-    start_week_offset: number;
-  }[]>([]);
-  const [allEmployees, setAllEmployees] = useState<{ id: string; first_name: string; last_name: string }[]>([]);
   const [customerContacts, setCustomerContacts] = useState<{ id: string; first_name: string; last_name: string; customer_id: string }[]>([]);
   const [isNewObjectDialogOpen, setIsNewObjectDialogOpen] = useState(false);
 
@@ -179,27 +122,7 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
     isAlarmSecured: initialData?.isAlarmSecured ?? false,
     alarmPassword: initialData?.alarmPassword ?? null,
     securityCodeWord: initialData?.securityCodeWord ?? null,
-    monday_hours: (initialData?.monday_hours as number | null | undefined) ?? null,
-    tuesday_hours: (initialData?.tuesday_hours as number | null | undefined) ?? null,
-    wednesday_hours: (initialData?.wednesday_hours as number | null | undefined) ?? null,
-    thursday_hours: (initialData?.thursday_hours as number | null | undefined) ?? null,
-    friday_hours: (initialData?.friday_hours as number | null | undefined) ?? null,
-    saturday_hours: (initialData?.saturday_hours as number | null | undefined) ?? null,
-    sunday_hours: (initialData?.sunday_hours as number | null | undefined) ?? null,
-    monday_start_time: initialData?.monday_start_time ?? null,
-    monday_end_time: initialData?.monday_end_time ?? null,
-    tuesday_start_time: initialData?.tuesday_start_time ?? null,
-    tuesday_end_time: initialData?.tuesday_end_time ?? null,
-    wednesday_start_time: initialData?.wednesday_start_time ?? null,
-    wednesday_end_time: initialData?.wednesday_end_time ?? null,
-    thursday_start_time: initialData?.thursday_start_time ?? null,
-    thursday_end_time: initialData?.thursday_end_time ?? null,
-    friday_start_time: initialData?.friday_start_time ?? null,
-    friday_end_time: initialData?.friday_end_time ?? null,
-    saturday_start_time: initialData?.saturday_start_time ?? null,
-    saturday_end_time: initialData?.saturday_end_time ?? null,
-    sunday_start_time: initialData?.sunday_start_time ?? null,
-    sunday_end_time: initialData?.sunday_end_time ?? null,
+    daily_schedules: initialData?.daily_schedules ?? '[]', // Default to empty JSON array string
     recurrence_interval_weeks: (initialData?.recurrence_interval_weeks as number | undefined) ?? 1,
     start_week_offset: (initialData?.start_week_offset as number | undefined) ?? 0,
   };
@@ -227,10 +150,6 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
       const { data: customersData, error: customersError } = await supabase.from('customers').select('id, name');
       if (customersData) setCustomers(customersData);
       if (customersError) console.error("Fehler beim Laden der Kunden:", customersError);
-
-      const { data: objectsData, error: objectsError } = await supabase.from('objects').select('id, name, customer_id, monday_hours, tuesday_hours, wednesday_hours, thursday_hours, friday_hours, saturday_hours, sunday_hours, total_weekly_hours, monday_start_time, monday_end_time, tuesday_start_time, tuesday_end_time, wednesday_start_time, wednesday_end_time, thursday_start_time, thursday_end_time, friday_start_time, friday_end_time, saturday_start_time, saturday_end_time, sunday_start_time, sunday_end_time, time_of_day, recurrence_interval_weeks, start_week_offset');
-      if (objectsData) setObjects(objectsData);
-      if (objectsError) console.error("Fehler beim Laden der Objekte:", objectsError);
     };
     fetchDropdownData();
   }, [supabase]);
@@ -243,15 +162,6 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
       form.setValue("customerContactId", null);
     }
   }, [selectedCustomerId, supabase, form]);
-
-  // Calculate total weekly hours for display
-  const totalWeeklyHours = (form.watch("monday_hours") || 0) +
-                           (form.watch("tuesday_hours") || 0) +
-                           (form.watch("wednesday_hours") || 0) +
-                           (form.watch("thursday_hours") || 0) +
-                           (form.watch("friday_hours") || 0) +
-                           (form.watch("saturday_hours") || 0) +
-                           (form.watch("sunday_hours") || 0);
 
   const handleFormSubmit: SubmitHandler<ObjectFormValues> = async (data) => {
     const result = await onSubmit(data);
@@ -271,24 +181,6 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
       form.setValue("customerContactId", newContactId);
     }
   };
-
-  // Helper to calculate end time based on start time and hours
-  const calculateAndSetEndTime = useCallback((day: typeof dayNames[number], hours: number | null, startTime: string | null) => {
-    if (hours != null && hours > 0 && startTime && timeRegex.test(startTime)) {
-      form.setValue(`${day}_end_time`, calculateEndTime(startTime, hours), { shouldValidate: true });
-    } else {
-      form.setValue(`${day}_end_time`, null, { shouldValidate: true });
-    }
-  }, [form]);
-
-  // Helper to calculate start time based on end time and hours
-  const calculateAndSetStartTime = useCallback((day: typeof dayNames[number], hours: number | null, endTime: string | null) => {
-    if (hours != null && hours > 0 && endTime && timeRegex.test(endTime)) {
-      form.setValue(`${day}_start_time`, calculateStartTime(endTime, hours), { shouldValidate: true });
-    } else {
-      form.setValue(`${day}_start_time`, null, { shouldValidate: true });
-    }
-  }, [form]);
 
   return (
     <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 w-full">
@@ -497,67 +389,19 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
       </div>
 
       <div className="space-y-4">
-        <h3 className="text-lg font-semibold">Regelmäßige Arbeitszeiten pro Wochentag</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-          {dayNames.map(day => (
-            <div key={day} className="border p-3 rounded-md space-y-2">
-              <h4 className="font-medium text-sm">{germanDayNames[day]}</h4>
-              <div>
-                <Label htmlFor={`${day}_hours`} className="text-xs">Stunden (Netto)</Label>
-                <Input
-                  id={`${day}_hours`}
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  max="24"
-                  {...form.register(`${day}_hours`, { valueAsNumber: true })}
-                  placeholder="Std."
-                  onChange={(e) => {
-                    const hours = e.target.value === '' ? null : Number(e.target.value);
-                    form.setValue(`${day}_hours`, hours, { shouldValidate: true });
-                    calculateAndSetEndTime(day, hours, form.getValues(`${day}_start_time`) || null);
-                  }}
-                />
-                {form.formState.errors[`${day}_hours` as FieldPath<ObjectFormValues>] && (
-                  <p className="text-red-500 text-xs mt-1">{form.formState.errors[`${day}_hours` as FieldPath<ObjectFormValues>]?.message}</p>
-                )}
-              </div>
-              <div>
-                <Label htmlFor={`${day}_start_time`} className="text-xs">Startzeit</Label>
-                <Input
-                  id={`${day}_start_time`}
-                  type="time"
-                  {...form.register(`${day}_start_time`)}
-                  onChange={(e) => {
-                    form.setValue(`${day}_start_time`, e.target.value, { shouldValidate: true });
-                    calculateAndSetEndTime(day, form.getValues(`${day}_hours`) || null, e.target.value);
-                  }}
-                />
-                {form.formState.errors[`${day}_start_time` as FieldPath<ObjectFormValues>] && (
-                  <p className="text-red-500 text-xs mt-1">{form.formState.errors[`${day}_start_time` as FieldPath<ObjectFormValues>]?.message}</p>
-                )}
-              </div>
-              <div>
-                <Label htmlFor={`${day}_end_time`} className="text-xs">Endzeit</Label>
-                <Input
-                  id={`${day}_end_time`}
-                  type="time"
-                  {...form.register(`${day}_end_time`)}
-                  onChange={(e) => {
-                    form.setValue(`${day}_end_time`, e.target.value, { shouldValidate: true });
-                    calculateAndSetStartTime(day, form.getValues(`${day}_hours`) || null, e.target.value);
-                  }}
-                />
-                {form.formState.errors[`${day}_end_time` as FieldPath<ObjectFormValues>] && (
-                  <p className="text-red-500 text-xs mt-1">{form.formState.errors[`${day}_end_time` as FieldPath<ObjectFormValues>]?.message}</p>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-        <div className="mt-4 text-base font-semibold">
-          Geschätzte Wochenstunden (Netto): {totalWeeklyHours.toFixed(2)}
-        </div>
+        <h3 className="text-lg font-semibold">Regelmäßige Arbeitszeiten pro Wochentag (JSON)</h3>
+        <p className="text-sm text-muted-foreground">
+          Geben Sie die Zeitpläne als JSON-Array ein. Beispiel:
+          `[{"day_of_week": "monday", "week_offset_in_cycle": 0, "hours": 8, "start_time": "08:00", "end_time": "16:00"}, {"day_of_week": "monday", "week_offset_in_cycle": 1, "hours": 6, "start_time": "09:00", "end_time": "15:00"}]`
+        </p>
+        <Textarea
+          id="daily_schedules"
+          {...form.register("daily_schedules")}
+          placeholder="[{'day_of_week': 'monday', 'week_offset_in_cycle': 0, 'hours': 8, 'start_time': '08:00', 'end_time': '16:00'}]"
+          rows={10}
+          className="font-mono text-xs"
+        />
+        {form.formState.errors.daily_schedules && <p className="text-red-500 text-sm mt-1">{form.formState.errors.daily_schedules.message}</p>}
       </div>
       
       <Button type="submit" disabled={form.formState.isSubmitting}>

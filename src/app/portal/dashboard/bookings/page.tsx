@@ -11,6 +11,14 @@ import { OrderFeedbackDialog } from "@/components/order-feedback-dialog"; // For
 import { Button } from "@/components/ui/button"; // Import Button
 import { AssignedEmployee } from "@/components/order-form";
 
+interface DailySchedule {
+  day_of_week: string;
+  week_offset_in_cycle: number;
+  hours: number;
+  start_time: string;
+  end_time: string;
+}
+
 interface DisplayOrder {
   id: string;
   title: string;
@@ -37,7 +45,7 @@ interface DisplayOrder {
   request_status: string;
   service_type: string | null;
   order_feedback: { id: string }[]; // To check if feedback exists
-  object: { recurrence_interval_weeks: number; start_week_offset: number; } | null;
+  object: { recurrence_interval_weeks: number; start_week_offset: number; daily_schedules: any; } | null; // Added daily_schedules
 }
 
 // Define an interface for the raw data returned by Supabase select query
@@ -59,38 +67,23 @@ interface RawOrderResponse {
   request_status: string;
   service_type: string | null;
   customers: { name: string }[] | null;
-  objects: { name: string; recurrence_interval_weeks: number; start_week_offset: number; }[] | null;
+  objects: { name: string; recurrence_interval_weeks: number; start_week_offset: number; daily_schedules: any; }[] | null; // Added daily_schedules
   customer_contacts: { first_name: string | null; last_name: string | null }[] | null;
   order_feedback: { id: string }[] | null;
   order_employee_assignments: { 
     employee_id: string; 
-    assigned_daily_hours: number | null; 
-    assigned_monday_hours: number | null;
-    assigned_tuesday_hours: number | null;
-    assigned_wednesday_hours: number | null;
-    assigned_thursday_hours: number | null;
-    assigned_friday_hours: number | null;
-    assigned_saturday_hours: number | null;
-    assigned_sunday_hours: number | null;
-    assigned_monday_start_time: string | null;
-    assigned_monday_end_time: string | null;
-    assigned_tuesday_start_time: string | null;
-    assigned_tuesday_end_time: string | null;
-    assigned_wednesday_start_time: string | null;
-    assigned_wednesday_end_time: string | null;
-    assigned_thursday_start_time: string | null;
-    assigned_thursday_end_time: string | null;
-    assigned_friday_start_time: string | null;
-    assigned_friday_end_time: string | null;
-    assigned_saturday_start_time: string | null;
-    assigned_saturday_end_time: string | null;
-    assigned_sunday_start_time: string | null;
-    assigned_sunday_end_time: string | null;
+    assigned_daily_schedules: any; // New JSONB field
     assigned_recurrence_interval_weeks: number;
     assigned_start_week_offset: number;
     employees: { first_name: string | null; last_name: string | null }[] | null 
   }[] | null;
 }
+
+// Helper to parse daily schedules from JSONB
+const parseDailySchedules = (jsonb: any): DailySchedule[] => {
+  if (!jsonb) return [];
+  return Array.isArray(jsonb) ? jsonb : [];
+};
 
 export default async function CustomerBookingsPage() {
   const supabase = await createClient();
@@ -143,23 +136,13 @@ export default async function CustomerBookingsPage() {
         notes,
         request_status,
         service_type,
-        objects ( name, recurrence_interval_weeks, start_week_offset ),
+        objects ( name, recurrence_interval_weeks, start_week_offset, daily_schedules ),
         customers ( name ),
         customer_contacts ( first_name, last_name ),
         order_feedback ( id ),
         order_employee_assignments ( 
           employee_id, 
-          assigned_daily_hours,
-          assigned_monday_hours, assigned_tuesday_hours, assigned_wednesday_hours,
-          assigned_thursday_hours, assigned_friday_hours, assigned_saturday_hours,
-          assigned_sunday_hours,
-          assigned_monday_start_time, assigned_monday_end_time,
-          assigned_tuesday_start_time, assigned_tuesday_end_time,
-          assigned_wednesday_start_time, assigned_wednesday_end_time,
-          assigned_thursday_start_time, assigned_thursday_end_time,
-          assigned_friday_start_time, assigned_friday_end_time,
-          assigned_saturday_start_time, assigned_saturday_end_time,
-          assigned_sunday_start_time, assigned_sunday_end_time,
+          assigned_daily_schedules,
           assigned_recurrence_interval_weeks, assigned_start_week_offset,
           employees ( first_name, last_name ) 
         )
@@ -173,27 +156,7 @@ export default async function CustomerBookingsPage() {
       allCustomerOrders = data.map((order: RawOrderResponse) => {
         const mappedAssignments: AssignedEmployee[] = order.order_employee_assignments?.map((a: any) => ({
             employeeId: a.employee_id,
-            assigned_monday_hours: a.assigned_monday_hours,
-            assigned_tuesday_hours: a.assigned_tuesday_hours,
-            assigned_wednesday_hours: a.assigned_wednesday_hours,
-            assigned_thursday_hours: a.assigned_thursday_hours,
-            assigned_friday_hours: a.assigned_friday_hours,
-            assigned_saturday_hours: a.assigned_saturday_hours,
-            assigned_sunday_hours: a.assigned_sunday_hours,
-            assigned_monday_start_time: a.assigned_monday_start_time,
-            assigned_monday_end_time: a.assigned_monday_end_time,
-            assigned_tuesday_start_time: a.assigned_tuesday_start_time,
-            assigned_tuesday_end_time: a.assigned_tuesday_end_time,
-            assigned_wednesday_start_time: a.assigned_wednesday_start_time,
-            assigned_wednesday_end_time: a.assigned_wednesday_end_time,
-            assigned_thursday_start_time: a.assigned_thursday_start_time,
-            assigned_thursday_end_time: a.assigned_thursday_end_time,
-            assigned_friday_start_time: a.assigned_friday_start_time,
-            assigned_friday_end_time: a.assigned_friday_end_time,
-            assigned_saturday_start_time: a.assigned_saturday_start_time,
-            assigned_saturday_end_time: a.assigned_saturday_end_time,
-            assigned_sunday_start_time: a.assigned_sunday_start_time,
-            assigned_sunday_end_time: a.assigned_sunday_end_time,
+            assigned_daily_schedules: JSON.stringify(a.assigned_daily_schedules),
             assigned_recurrence_interval_weeks: a.assigned_recurrence_interval_weeks,
             assigned_start_week_offset: a.assigned_start_week_offset,
         })) || [];
@@ -251,36 +214,28 @@ export default async function CustomerBookingsPage() {
   const getAssignedTimeForDay = (order: DisplayOrder, dayIndex: number) => {
     const today = new Date();
     const currentWeekNumber = getWeek(today, { weekStartsOn: 1 });
+    const dayNamesArray = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const currentDayName = dayNamesArray[dayIndex];
 
     const assignedRecurrenceIntervalWeeks = order.assignedEmployees?.[0]?.assigned_recurrence_interval_weeks || order.object?.recurrence_interval_weeks || 1;
     const assignedStartWeekOffset = order.assignedEmployees?.[0]?.assigned_start_week_offset || order.object?.start_week_offset || 0;
 
-    if (assignedRecurrenceIntervalWeeks > 1) {
-      const orderStartDate = order.recurring_start_date ? new Date(order.recurring_start_date) : (order.due_date ? new Date(order.due_date) : today);
-      const startWeekNumber = getWeek(orderStartDate, { weekStartsOn: 1 });
-      const weekDifference = currentWeekNumber - startWeekNumber;
-      if (weekDifference % assignedRecurrenceIntervalWeeks !== assignedStartWeekOffset) {
-        return 'N/A (Nicht diese Woche)';
-      }
+    const orderStartDateForWeekCalc = order.recurring_start_date ? new Date(order.recurring_start_date) : (order.due_date ? new Date(order.due_date) : today);
+    const startWeekNumber = getWeek(orderStartDateForWeekCalc, { weekStartsOn: 1 });
+    const weekDifference = currentWeekNumber - startWeekNumber;
+
+    if (assignedRecurrenceIntervalWeeks > 1 && (weekDifference % assignedRecurrenceIntervalWeeks) !== assignedStartWeekOffset) {
+      return 'N/A (Nicht diese Woche)';
     }
 
-    const dayMap: { [key: number]: { start: keyof AssignedEmployee, end: keyof AssignedEmployee } } = {
-      0: { start: 'assigned_sunday_start_time', end: 'assigned_sunday_end_time' },
-      1: { start: 'assigned_monday_start_time', end: 'assigned_monday_end_time' },
-      2: { start: 'assigned_tuesday_start_time', end: 'assigned_tuesday_end_time' },
-      3: { start: 'assigned_wednesday_start_time', end: 'assigned_wednesday_end_time' },
-      4: { start: 'assigned_thursday_start_time', end: 'assigned_thursday_end_time' },
-      5: { start: 'assigned_friday_start_time', end: 'assigned_friday_end_time' },
-      6: { start: 'assigned_saturday_start_time', end: 'assigned_saturday_end_time' },
-    };
-    const startKey = dayMap[dayIndex]?.start;
-    const endKey = dayMap[dayIndex]?.end;
+    const schedules = parseDailySchedules(order.assignedEmployees?.[0]?.assigned_daily_schedules || order.object?.daily_schedules || '[]');
+    const scheduleForDay = schedules.find(s => 
+      s.day_of_week === currentDayName && 
+      s.week_offset_in_cycle === (weekDifference % assignedRecurrenceIntervalWeeks)
+    );
 
-    const startTime = startKey ? (order.assignedEmployees?.[0]?.[startKey] as string | null) : null;
-    const endTime = endKey ? (order.assignedEmployees?.[0]?.[endKey] as string | null) : null;
-
-    if (startTime && endTime) {
-      return `${startTime} - ${endTime}`;
+    if (scheduleForDay && scheduleForDay.start_time && scheduleForDay.end_time) {
+      return `${scheduleForDay.start_time} - ${scheduleForDay.end_time}`;
     }
     return 'N/A';
   };
@@ -357,7 +312,7 @@ export default async function CustomerBookingsPage() {
                         {/* Display assigned times for each day */}
                         {Array.from({ length: 7 }).map((_, dayIndex) => {
                           const assignedTime = getAssignedTimeForDay(order, dayIndex);
-                          if (assignedTime !== 'N/A') {
+                          if (assignedTime !== 'N/A (Nicht diese Woche)') {
                             return <div key={dayIndex}>{assignedTime}</div>;
                           }
                           return null;

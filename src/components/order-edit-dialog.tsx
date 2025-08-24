@@ -110,7 +110,10 @@ export function OrderEditDialog({ order }: OrderEditDialogProps) {
                   notes: order.notes,
                   serviceType: getServiceTypeForForm(order.service_type),
                   requestStatus: order.request_status as OrderFormValues["requestStatus"],
-                  assignedEmployees: order.assignedEmployees, // Pass the structured array directly
+                  assignedEmployees: order.assignedEmployees.map(emp => ({
+                    ...emp,
+                    assigned_daily_schedules: JSON.stringify(emp.assigned_daily_schedules), // Convert JSONB to string
+                  })),
                 }}
                 onSubmit={handleUpdate}
                 submitButtonText="Änderungen speichern"

@@ -14,6 +14,7 @@ import { createClient } from "@/lib/supabase/client";
 import { DatePicker } from "@/components/date-picker";
 import { calculateHours } from "@/lib/utils"; // Importiere von utils
 import { handleActionResponse } from "@/lib/toast-utils"; // Importiere die neue Utility
+import { getWeek } from 'date-fns'; // Import getWeek
 
 export const timeEntrySchema = z.object({
   employeeId: z.string().uuid("Ungültige Mitarbeiter-ID").optional().nullable(),
@@ -76,12 +77,47 @@ interface TimeEntryFormProps {
   isAdmin: boolean;
 }
 
+interface DailySchedule {
+  day_of_week: string;
+  week_offset_in_cycle: number;
+  hours: number;
+  start_time: string;
+  end_time: string;
+}
+
+// Helper to parse daily schedules from JSONB
+const parseDailySchedules = (jsonb: any): DailySchedule[] => {
+  if (!jsonb) return [];
+  return Array.isArray(jsonb) ? jsonb : [];
+};
+
+const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+
 export function TimeEntryForm({ initialData, onSubmit, submitButtonText, onSuccess, currentUserId, isAdmin }: TimeEntryFormProps) {
   const supabase = createClient();
-  const [employees, setEmployees] = useState<{ id: string; first_name: string; last_name: string }[]>([]);
+  const [employees, setEmployees] = useState<{ id: string; first_name: string; last_name: string; user_id: string | null }[]>([]);
   const [customers, setCustomers] = useState<{ id: string; name: string }[]>([]);
-  const [objects, setObjects] = useState<{ id: string; name: string; customer_id: string; monday_start_time: string | null; monday_end_time: string | null; tuesday_start_time: string | null; tuesday_end_time: string | null; wednesday_start_time: string | null; wednesday_end_time: string | null; thursday_start_time: string | null; thursday_end_time: string | null; friday_start_time: string | null; friday_end_time: string | null; saturday_start_time: string | null; saturday_end_time: string | null; sunday_start_time: string | null; sunday_end_time: string | null; }[]>([]);
-  const [orders, setOrders] = useState<{ id: string; title: string; customer_id: string; object_id: string }[]>([]);
+  const [objects, setObjects] = useState<{ 
+    id: string; 
+    name: string; 
+    customer_id: string; 
+    daily_schedules: any; 
+    recurrence_interval_weeks: number; 
+    start_week_offset: number; 
+  }[]>([]);
+  const [orders, setOrders] = useState<{ 
+    id: string; 
+    title: string; 
+    customer_id: string; 
+    object_id: string; 
+    order_type: string;
+    recurring_start_date: string | null;
+    due_date: string | null;
+    object: { daily_schedules: any; recurrence_interval_weeks: number; start_week_offset: number; } | null; // Added object details
+    assigned_daily_schedules: any;
+    assigned_recurrence_interval_weeks: number;
+    assigned_start_week_offset: number;
+  }[]>([]);
 
   const resolvedDefaultValues: TimeEntryFormValues = {
     employeeId: initialData?.employeeId ?? null,
@@ -105,6 +141,7 @@ export function TimeEntryForm({ initialData, onSubmit, submitButtonText, onSucce
 
   const selectedCustomerId = form.watch("customerId");
   const selectedObjectId = form.watch("objectId");
+  const selectedOrderId = form.watch("orderId");
   const selectedStartDate = form.watch("startDate"); // Watch for startDate changes
   const selectedType = form.watch("type");
 
@@ -112,7 +149,7 @@ export function TimeEntryForm({ initialData, onSubmit, submitButtonText, onSucce
   useEffect(() => {
     const fetchDropdownData = async () => {
       // Fetch all employees if admin, otherwise only the employee linked to the current user
-      let employeesQuery = supabase.from('employees').select('id, first_name, last_name').order('last_name', { ascending: true });
+      let employeesQuery = supabase.from('employees').select('id, first_name, last_name, user_id').order('last_name', { ascending: true });
       if (!isAdmin) {
         employeesQuery = employeesQuery.eq('user_id', currentUserId);
       }
@@ -130,13 +167,21 @@ export function TimeEntryForm({ initialData, onSubmit, submitButtonText, onSucce
       if (customersData) setCustomers(customersData);
       if (customersError) console.error("Fehler beim Laden der Kunden:", customersError);
 
-      // Fetch all object details including time schedules
-      const { data: objectsData, error: objectsError } = await supabase.from('objects').select('id, name, customer_id, monday_start_time, monday_end_time, tuesday_start_time, tuesday_end_time, wednesday_start_time, wednesday_end_time, thursday_start_time, thursday_end_time, friday_start_time, friday_end_time, saturday_start_time, saturday_end_time, sunday_start_time, sunday_end_time').order('name', { ascending: true });
+      // Fetch all object details including daily_schedules
+      const { data: objectsData, error: objectsError } = await supabase.from('objects').select('id, name, customer_id, daily_schedules, recurrence_interval_weeks, start_week_offset').order('name', { ascending: true });
       if (objectsData) setObjects(objectsData);
       if (objectsError) console.error("Fehler beim Laden der Objekte:", objectsError);
 
-      const { data: ordersData, error: ordersError } = await supabase.from('orders').select('id, title, customer_id, object_id').order('title', { ascending: true });
-      if (ordersData) setOrders(ordersData);
+      const { data: ordersData, error: ordersError } = await supabase.from('orders').select('id, title, customer_id, object_id, order_type, recurring_start_date, due_date, objects ( daily_schedules, recurrence_interval_weeks, start_week_offset ), order_employee_assignments ( assigned_daily_schedules, assigned_recurrence_interval_weeks, assigned_start_week_offset )').order('title', { ascending: true });
+      if (ordersData) {
+        setOrders(ordersData.map(order => ({
+          ...order,
+          object: Array.isArray(order.objects) ? order.objects[0] : order.objects, // Map nested object
+          assigned_daily_schedules: order.order_employee_assignments?.[0]?.assigned_daily_schedules || null,
+          assigned_recurrence_interval_weeks: order.order_employee_assignments?.[0]?.assigned_recurrence_interval_weeks || null,
+          assigned_start_week_offset: order.order_employee_assignments?.[0]?.assigned_start_week_offset || null,
+        })));
+      }
       if (ordersError) console.error("Fehler beim Laden der Aufträge:", ordersError);
     };
     fetchDropdownData();
@@ -161,70 +206,84 @@ export function TimeEntryForm({ initialData, onSubmit, submitButtonText, onSucce
     }
   }, [selectedCustomerId, selectedObjectId, filteredObjects, filteredOrders, form]);
 
-  // Intelligent pre-filling based on selected object and date
+  // Intelligent pre-filling based on selected object/order and date
   useEffect(() => {
-    if (selectedObjectId && selectedStartDate) {
-      const selectedObject = objects.find(obj => obj.id === selectedObjectId);
-      if (selectedObject) {
-        const dayOfWeek = selectedStartDate.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
-        let startTime: string | null = null;
-        let endTime: string | null = null;
+    if (selectedStartDate && (selectedObjectId || selectedOrderId)) {
+      let schedulesToUse: DailySchedule[] = [];
+      let recurrenceIntervalWeeks = 1;
+      let startWeekOffset = 0;
+      let orderStartDateForWeekCalc: Date | null = null;
 
-        switch (dayOfWeek) {
-          case 0: // Sunday
-            startTime = selectedObject.sunday_start_time;
-            endTime = selectedObject.sunday_end_time;
-            break;
-          case 1: // Monday
-            startTime = selectedObject.monday_start_time;
-            endTime = selectedObject.monday_end_time;
-            break;
-          case 2: // Tuesday
-            startTime = selectedObject.tuesday_start_time;
-            endTime = selectedObject.tuesday_end_time;
-            break;
-          case 3: // Wednesday
-            startTime = selectedObject.wednesday_start_time;
-            endTime = selectedObject.wednesday_end_time;
-            break;
-          case 4: // Thursday
-            startTime = selectedObject.thursday_start_time;
-            endTime = selectedObject.thursday_end_time;
-            break;
-          case 5: // Friday
-            startTime = selectedObject.friday_start_time;
-            endTime = selectedObject.friday_end_time;
-            break;
-          case 6: // Saturday
-            startTime = selectedObject.saturday_start_time;
-            endTime = selectedObject.saturday_end_time;
-            break;
+      if (selectedOrderId) {
+        const selectedOrder = orders.find(o => o.id === selectedOrderId);
+        if (selectedOrder) {
+          schedulesToUse = parseDailySchedules(selectedOrder.assigned_daily_schedules || selectedOrder.object?.daily_schedules || '[]');
+          recurrenceIntervalWeeks = selectedOrder.assigned_recurrence_interval_weeks || selectedOrder.object?.recurrence_interval_weeks || 1;
+          startWeekOffset = selectedOrder.assigned_start_week_offset || selectedOrder.object?.start_week_offset || 0;
+          orderStartDateForWeekCalc = selectedOrder.recurring_start_date ? new Date(selectedOrder.recurring_start_date) : (selectedOrder.due_date ? new Date(selectedOrder.due_date) : selectedStartDate);
         }
+      } else if (selectedObjectId) {
+        const selectedObject = objects.find(obj => obj.id === selectedObjectId);
+        if (selectedObject) {
+          schedulesToUse = parseDailySchedules(selectedObject.daily_schedules);
+          recurrenceIntervalWeeks = selectedObject.recurrence_interval_weeks;
+          startWeekOffset = selectedObject.start_week_offset;
+          orderStartDateForWeekCalc = selectedStartDate; // For object, use selectedStartDate as base
+        }
+      }
 
-        if (startTime && endTime) {
-          form.setValue("startTime", startTime);
-          form.setValue("endTime", endTime);
+      if (schedulesToUse.length > 0 && orderStartDateForWeekCalc) {
+        const dayOfWeek = selectedStartDate.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+        const currentDayName = dayNames[dayOfWeek];
+        const currentWeekNumber = getWeek(selectedStartDate, { weekStartsOn: 1 });
+        const startWeekNumber = getWeek(orderStartDateForWeekCalc, { weekStartsOn: 1 });
+        const weekDifference = currentWeekNumber - startWeekNumber;
+        const weekOffsetInCycle = weekDifference % recurrenceIntervalWeeks;
+
+        const scheduleForDayAndOffset = schedulesToUse.find(s => 
+          s.day_of_week === currentDayName && 
+          s.week_offset_in_cycle === weekOffsetInCycle
+        );
+
+        if (scheduleForDayAndOffset && scheduleForDayAndOffset.hours > 0) {
+          form.setValue("startTime", scheduleForDayAndOffset.start_time || new Date().toTimeString().slice(0, 5));
+          form.setValue("endTime", scheduleForDayAndOffset.end_time || null);
           form.setValue("endDate", selectedStartDate); // Set end date to start date if times are found
-          const duration = calculateHours(startTime, endTime);
-          if (duration !== null) {
-            form.setValue("durationMinutes", Math.round(duration * 60));
+          form.setValue("durationMinutes", Math.round(scheduleForDayAndOffset.hours * 60));
+          // Recalculate break minutes based on new duration
+          const grossDurationMinutes = Math.round(scheduleForDayAndOffset.hours * 60);
+          let breakMinutes = 0;
+          if (grossDurationMinutes > 9 * 60) {
+              breakMinutes = 45;
+          } else if (grossDurationMinutes > 6 * 60) {
+              breakMinutes = 30;
           }
+          form.setValue("breakMinutes", breakMinutes);
         } else {
-          // Clear times if no schedule found for the day
+          // Clear times if no schedule found for the day/offset
           form.setValue("startTime", new Date().toTimeString().slice(0, 5)); // Default to current time
           form.setValue("endTime", null);
           form.setValue("endDate", null);
           form.setValue("durationMinutes", null);
+          form.setValue("breakMinutes", null);
         }
+      } else if (!initialData) {
+        // Reset to current time if object/order or date is cleared and not in edit mode
+        form.setValue("startTime", new Date().toTimeString().slice(0, 5));
+        form.setValue("endTime", null);
+        form.setValue("endDate", null);
+        form.setValue("durationMinutes", null);
+        form.setValue("breakMinutes", null);
       }
     } else if (!initialData) {
-      // Reset to current time if object or date is cleared and not in edit mode
+      // Reset to current time if object/order or date is cleared and not in edit mode
       form.setValue("startTime", new Date().toTimeString().slice(0, 5));
       form.setValue("endTime", null);
       form.setValue("endDate", null);
       form.setValue("durationMinutes", null);
+      form.setValue("breakMinutes", null);
     }
-  }, [selectedObjectId, selectedStartDate, objects, form, initialData]);
+  }, [selectedObjectId, selectedOrderId, selectedStartDate, objects, orders, form, initialData]);
 
 
   const handleFormSubmit: SubmitHandler<TimeEntryFormValues> = async (data) => {
@@ -309,7 +368,6 @@ export function TimeEntryForm({ initialData, onSubmit, submitButtonText, onSucce
             <SelectValue placeholder="Kunde auswählen" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="unassigned">Kein Kunde zugewiesen</SelectItem>
             {customers.map(customer => (
               <SelectItem key={customer.id} value={customer.id}>{customer.name}</SelectItem>
             ))}
@@ -351,7 +409,6 @@ export function TimeEntryForm({ initialData, onSubmit, submitButtonText, onSucce
             <SelectValue placeholder="Auftrag auswählen" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="unassigned">Kein Auftrag zugewiesen</SelectItem>
             {filteredOrders.map(order => (
               <SelectItem key={order.id} value={order.id}>{order.title}</SelectItem>
             ))}

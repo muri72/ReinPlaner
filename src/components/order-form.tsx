@@ -47,29 +47,22 @@ const germanDayNames: { [key: string]: string } = {
 
 const assignedEmployeeSchema = z.object({
   employeeId: z.string().uuid("Ungültige Mitarbeiter-ID"),
-  assigned_monday_hours: z.preprocess(preprocessNumber, z.nullable(z.number().min(0).max(24)).optional()),
-  assigned_tuesday_hours: z.preprocess(preprocessNumber, z.nullable(z.number().min(0).max(24)).optional()),
-  assigned_wednesday_hours: z.preprocess(preprocessNumber, z.nullable(z.number().min(0).max(24)).optional()),
-  assigned_thursday_hours: z.preprocess(preprocessNumber, z.nullable(z.number().min(0).max(24)).optional()),
-  assigned_friday_hours: z.preprocess(preprocessNumber, z.nullable(z.number().min(0).max(24)).optional()),
-  assigned_saturday_hours: z.preprocess(preprocessNumber, z.nullable(z.number().min(0).max(24)).optional()),
-  assigned_sunday_hours: z.preprocess(preprocessNumber, z.nullable(z.number().min(0).max(24)).optional()),
-  assigned_monday_start_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
-  assigned_monday_end_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
-  assigned_tuesday_start_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
-  assigned_tuesday_end_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
-  assigned_wednesday_start_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
-  assigned_wednesday_end_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
-  assigned_thursday_start_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
-  assigned_thursday_end_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
-  assigned_friday_start_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
-  assigned_friday_end_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
-  assigned_saturday_start_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
-  assigned_saturday_end_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
-  assigned_sunday_start_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
-  assigned_sunday_end_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
+  assigned_daily_schedules: z.string().optional().nullable(), // New JSONB field
   assigned_recurrence_interval_weeks: z.preprocess(preprocessNumber, z.number().min(1).max(52).default(1)),
   assigned_start_week_offset: z.preprocess(preprocessNumber, z.number().min(0).max(51).default(0)),
+}).superRefine((data, ctx) => {
+  // Basic JSON validation for assigned_daily_schedules
+  if (data.assigned_daily_schedules) {
+    try {
+      JSON.parse(data.assigned_daily_schedules);
+    } catch (e) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Ungültiges JSON-Format für zugewiesene tägliche Zeitpläne.",
+        path: ["assigned_daily_schedules"],
+      });
+    }
+  }
 });
 
 export type AssignedEmployee = z.infer<typeof assignedEmployeeSchema>;
@@ -113,29 +106,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     id: string; 
     name: string; 
     customer_id: string;
-    monday_hours: number | null;
-    tuesday_hours: number | null;
-    wednesday_hours: number | null;
-    thursday_hours: number | null;
-    friday_hours: number | null;
-    saturday_hours: number | null;
-    sunday_hours: number | null;
-    monday_start_time: string | null;
-    tuesday_start_time: string | null;
-    wednesday_start_time: string | null;
-    thursday_start_time: string | null;
-    friday_start_time: string | null;
-    saturday_start_time: string | null;
-    sunday_start_time: string | null;
-    monday_end_time: string | null;
-    tuesday_end_time: string | null;
-    wednesday_end_time: string | null;
-    thursday_end_time: string | null;
-    friday_end_time: string | null;
-    saturday_end_time: string | null;
-    sunday_end_time: string | null;
-    total_weekly_hours: number | null;
-    time_of_day: string | null;
+    daily_schedules: any; // Changed to any as it's JSONB
     recurrence_interval_weeks: number;
     start_week_offset: number;
   }[]>([]);
@@ -196,7 +167,8 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
       if (customersData) setCustomers(customersData);
       if (customersError) console.error("Fehler beim Laden der Kunden:", customersError);
 
-      const { data: objectsData, error: objectsError } = await supabase.from('objects').select('id, name, customer_id, monday_hours, tuesday_hours, wednesday_hours, thursday_hours, friday_hours, saturday_hours, sunday_hours, total_weekly_hours, monday_start_time, monday_end_time, tuesday_start_time, tuesday_end_time, wednesday_start_time, wednesday_end_time, thursday_start_time, thursday_end_time, friday_start_time, friday_end_time, saturday_start_time, saturday_end_time, sunday_start_time, sunday_end_time, time_of_day, recurrence_interval_weeks, start_week_offset');
+      // Fetch daily_schedules as JSONB
+      const { data: objectsData, error: objectsError } = await supabase.from('objects').select('id, name, customer_id, daily_schedules, recurrence_interval_weeks, start_week_offset');
       if (objectsData) setObjects(objectsData);
       if (objectsError) console.error("Fehler beim Laden der Objekte:", objectsError);
 
@@ -234,6 +206,17 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     ? objects.filter(obj => obj.customer_id === selectedCustomerId)
     : [];
 
+  // Helper to parse daily schedules from JSON string
+  const parseDailySchedules = (jsonString: string | null | undefined) => { // Added undefined
+    if (!jsonString) return [];
+    try {
+      return JSON.parse(jsonString);
+    } catch (e) {
+      console.error("Error parsing daily schedules JSON:", e);
+      return [];
+    }
+  };
+
   // Effect to calculate total estimated hours based on assignments or object data
   useEffect(() => {
     const assignedEmployees = form.watch("assignedEmployees");
@@ -246,12 +229,10 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     if (assignedEmployees && assignedEmployees.length > 0) {
       // If employees are assigned, sum their hours
       if (['recurring', 'substitution', 'permanent'].includes(orderType)) {
-        // Sum all hours for the week
+        // Sum all hours for the week from assigned_daily_schedules
         newTotalEstimatedHours = assignedEmployees.reduce((total, emp) => {
-          const weeklySum = dayNames.reduce((dayTotal, day) => {
-            const hours = emp[`assigned_${day}_hours` as keyof typeof emp] as number | null;
-            return dayTotal + (hours || 0);
-          }, 0);
+          const schedules = parseDailySchedules(emp.assigned_daily_schedules);
+          const weeklySum = schedules.reduce((dayTotal: number, schedule: any) => dayTotal + (schedule.hours || 0), 0);
           return total + weeklySum;
         }, 0);
       } else if (orderType === 'one_time' && dueDate) {
@@ -259,18 +240,27 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
         const dayOfWeek = dueDate.getDay(); // 0=Sun, 1=Mon...
         const dayKey = dayNames[dayOfWeek === 0 ? 6 : dayOfWeek - 1]; // Adjust for dayNames array
         newTotalEstimatedHours = assignedEmployees.reduce((total, emp) => {
-          const hours = emp[`assigned_${dayKey}_hours` as keyof typeof emp] as number | null;
-          return total + (hours || 0);
+          const schedules = parseDailySchedules(emp.assigned_daily_schedules);
+          const scheduleForDay = schedules.find((s: any) => s.day_of_week === dayKey && s.week_offset_in_cycle === 0); // Assuming 0 for one-time
+          return total + (scheduleForDay?.hours || 0);
         }, 0);
       }
     } else if (selectedObject) {
       // Fallback to object hours if no employees are assigned
+      const objectSchedules = parseDailySchedules(selectedObject.daily_schedules);
       if (['recurring', 'substitution', 'permanent'].includes(orderType)) {
-        newTotalEstimatedHours = selectedObject.total_weekly_hours || null;
+        // Sum all hours for the week from object's daily_schedules (assuming week_offset_in_cycle 0 for total)
+        newTotalEstimatedHours = objectSchedules.reduce((total: number, schedule: any) => {
+          if (schedule.week_offset_in_cycle === 0) { // Sum only for the base week schedule
+            return total + (schedule.hours || 0);
+          }
+          return total;
+        }, 0);
       } else if (orderType === 'one_time' && dueDate) {
         const dayOfWeek = dueDate.getDay();
         const dayKey = dayNames[dayOfWeek === 0 ? 6 : dayOfWeek - 1];
-        newTotalEstimatedHours = selectedObject[`${dayKey}_hours` as keyof typeof selectedObject] as number | null;
+        const scheduleForDay = objectSchedules.find((s: any) => s.day_of_week === dayKey && s.week_offset_in_cycle === 0);
+        newTotalEstimatedHours = scheduleForDay?.hours || null;
       }
     }
 
@@ -296,6 +286,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     }
 
     const currentAssignments = form.getValues("assignedEmployees") || [];
+    const objectDailySchedules = parseDailySchedules(selectedObject.daily_schedules);
 
     const newAssignments = selectedIds.map(employeeId => {
       const existingAssignment = currentAssignments.find(emp => emp.employeeId === employeeId);
@@ -305,171 +296,132 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
         return existingAssignment;
       }
 
-      // Otherwise, create a new blank assignment with 0 hours but default start times.
+      // Otherwise, create a new blank assignment with default recurrence from object
       const newEmpData: AssignedEmployee = {
         employeeId,
-        assigned_monday_hours: null, assigned_tuesday_hours: null, assigned_wednesday_hours: null,
-        assigned_thursday_hours: null, assigned_friday_hours: null, assigned_saturday_hours: null,
-        assigned_sunday_hours: null,
-        assigned_monday_start_time: null, assigned_monday_end_time: null,
-        assigned_tuesday_start_time: null, assigned_tuesday_end_time: null,
-        assigned_wednesday_start_time: null, assigned_wednesday_end_time: null,
-        assigned_thursday_start_time: null, assigned_thursday_end_time: null,
-        assigned_friday_start_time: null, assigned_friday_end_time: null,
-        assigned_saturday_start_time: null, assigned_saturday_end_time: null,
-        assigned_sunday_start_time: null, assigned_sunday_end_time: null,
+        assigned_daily_schedules: '[]', // Default to empty JSON array string
         assigned_recurrence_interval_weeks: selectedObject.recurrence_interval_weeks,
         assigned_start_week_offset: selectedObject.start_week_offset,
       };
 
-      dayNames.forEach(day => {
-        const objectStartTime = selectedObject?.[`${day}_start_time` as keyof typeof selectedObject] as string | null;
-        (newEmpData as any)[`assigned_${day}_start_time`] = objectStartTime;
-      });
+      // If only one employee, distribute object's daily schedules to them
+      if (numAssignedEmployees === 1) {
+        const distributedSchedules = objectDailySchedules.map((schedule: any) => ({
+          ...schedule,
+          hours: schedule.hours, // Keep original hours if only one employee
+        }));
+        newEmpData.assigned_daily_schedules = JSON.stringify(distributedSchedules);
+      }
 
       return newEmpData;
     });
 
-    // If there's now only one employee, give them all the hours.
-    if (numAssignedEmployees === 1 && newAssignments.length === 1) {
-      const singleAssignment = newAssignments[0];
-      dayNames.forEach(day => {
-        const objectDailyHours = selectedObject?.[`${day}_hours` as keyof typeof selectedObject] as number | null;
-        const objectStartTime = selectedObject?.[`${day}_start_time` as keyof typeof selectedObject] as string | null;
-        
-        (singleAssignment as any)[`assigned_${day}_hours`] = objectDailyHours;
-        (singleAssignment as any)[`assigned_${day}_start_time`] = objectStartTime;
-        
-        if (objectStartTime && objectDailyHours) {
-          (singleAssignment as any)[`assigned_${day}_end_time`] = calculateEndTime(objectStartTime, objectDailyHours);
-        }
+    // If multiple employees, distribute object hours equally among them
+    if (numAssignedEmployees > 1) {
+      const distributedAssignments = newAssignments.map(assignment => {
+        const distributedSchedules = objectDailySchedules.map((schedule: any) => ({
+          ...schedule,
+          hours: (schedule.hours || 0) / numAssignedEmployees, // Distribute hours
+        }));
+        return {
+          ...assignment,
+          assigned_daily_schedules: JSON.stringify(distributedSchedules),
+        };
       });
+      replaceAssignedEmployees(distributedAssignments);
+    } else {
+      replaceAssignedEmployees(newAssignments);
     }
-
-    replaceAssignedEmployees(newAssignments);
   }, [objects, form, replaceAssignedEmployees]);
 
-  const handleAssignedHoursChange = useCallback((
+  const handleAssignedSchedulesChange = useCallback((
     employeeIndex: number,
-    day: typeof dayNames[number],
     value: string
   ) => {
-    const parsedHours = value === "" ? null : Number(value);
-    const hoursFieldName = `assignedEmployees.${employeeIndex}.assigned_${day}_hours` as const;
-    const endTimeFieldName = `assignedEmployees.${employeeIndex}.assigned_${day}_end_time` as const; // Defined here
-    form.setValue(hoursFieldName, parsedHours, { shouldValidate: true });
-
-    let startTime = form.getValues(`assignedEmployees.${employeeIndex}.assigned_${day}_start_time`);
-    
-    // **NEW LOGIC**: If start time is empty but we now have hours, populate it.
-    if (parsedHours != null && parsedHours > 0 && !startTime) {
-      const selectedObject = objects.find(obj => obj.id === selectedObjectId);
-      const objectStartTime = selectedObject?.[`${day}_start_time` as keyof typeof selectedObject] as string | null;
-      if (objectStartTime) {
-        startTime = objectStartTime;
-        form.setValue(`assignedEmployees.${employeeIndex}.assigned_${day}_start_time`, startTime, { shouldValidate: false }); // Set it without re-triggering validation yet
-      }
-    }
-
-    let newEndTime: string | null = null;
-    if (parsedHours != null && parsedHours > 0 && startTime && timeRegex.test(startTime)) {
-      newEndTime = calculateEndTime(startTime, parsedHours);
-    }
-    form.setValue(endTimeFieldName, newEndTime, { shouldValidate: true });
-  }, [form, objects, selectedObjectId]);
-
-  const handleAssignedStartTimeChange = useCallback((
-    employeeIndex: number,
-    day: typeof dayNames[number],
-    value: string
-  ) => {
-    const startTimeFieldName = `assignedEmployees.${employeeIndex}.assigned_${day}_start_time` as const;
-    const endTimeFieldName = `assignedEmployees.${employeeIndex}.assigned_${day}_end_time` as const;
-    const hours = form.getValues(`assignedEmployees.${employeeIndex}.assigned_${day}_hours`);
-
-    form.setValue(startTimeFieldName, value || null, { shouldValidate: true });
-    
-    let newEndTime: string | null = null;
-    if (hours != null && hours > 0 && value && timeRegex.test(value)) {
-      newEndTime = calculateEndTime(value, hours);
-    }
-    form.setValue(endTimeFieldName, newEndTime, { shouldValidate: true });
+    const fieldName = `assignedEmployees.${employeeIndex}.assigned_daily_schedules` as const;
+    form.setValue(fieldName, value, { shouldValidate: true });
   }, [form]);
 
-  const handleAssignedEndTimeChange = useCallback((
-    employeeIndex: number,
-    day: typeof dayNames[number],
-    value: string
-  ) => {
-    const endTimeFieldName = `assignedEmployees.${employeeIndex}.assigned_${day}_end_time` as const;
-    const startTimeFieldName = `assignedEmployees.${employeeIndex}.assigned_${day}_start_time` as const;
-    const hours = form.getValues(`assignedEmployees.${employeeIndex}.assigned_${day}_hours`);
+  const handleCopyDay = (employeeIndex: number, sourceDay: typeof dayNames[number], sourceWeekOffset: number) => {
+    const currentAssignedSchedules = parseDailySchedules(form.getValues(`assignedEmployees.${employeeIndex}.assigned_daily_schedules`) ?? '[]'); // Added ?? '[]'
+    const sourceSchedule = currentAssignedSchedules.find((s: any) => s.day_of_week === sourceDay && s.week_offset_in_cycle === sourceWeekOffset);
 
-    form.setValue(endTimeFieldName, value || null, { shouldValidate: true });
-
-    let newStartTime: string | null = null;
-    if (hours != null && hours > 0 && value && timeRegex.test(value)) {
-      newStartTime = calculateStartTime(value, hours);
-    }
-    form.setValue(startTimeFieldName, newStartTime, { shouldValidate: true });
-  }, [form]);
-
-  const handleCopyDay = (employeeIndex: number, sourceDay: typeof dayNames[number]) => {
-    const sourceHours = form.getValues(`assignedEmployees.${employeeIndex}.assigned_${sourceDay}_hours`);
-    const sourceStartTime = form.getValues(`assignedEmployees.${employeeIndex}.assigned_${sourceDay}_start_time`);
-    const sourceEndTime = form.getValues(`assignedEmployees.${employeeIndex}.assigned_${sourceDay}_end_time`);
-
-    if (sourceHours === null || sourceHours === 0) {
+    if (!sourceSchedule || sourceSchedule.hours === null || sourceSchedule.hours === 0) {
       toast.info("Keine Stunden zum Kopieren vorhanden.");
       return;
     }
 
     let copiedDaysCount = 0;
+    const newSchedules = [...currentAssignedSchedules];
+    const selectedObject = objects.find(obj => obj.id === selectedObjectId);
+    const objectDailySchedules = parseDailySchedules(selectedObject?.daily_schedules || '[]');
+
     dayNames.forEach(targetDay => {
-      if (targetDay !== sourceDay) {
-        // NEW CHECK: Only copy if the target day has hours defined in the object.
-        const objectHoursForTargetDay = getObjectDailyHours(targetDay);
-        if (objectHoursForTargetDay && objectHoursForTargetDay > 0) {
-          form.setValue(`assignedEmployees.${employeeIndex}.assigned_${targetDay}_hours`, sourceHours, { shouldValidate: true });
-          form.setValue(`assignedEmployees.${employeeIndex}.assigned_${targetDay}_start_time`, sourceStartTime, { shouldValidate: true });
-          form.setValue(`assignedEmployees.${employeeIndex}.assigned_${targetDay}_end_time`, sourceEndTime, { shouldValidate: true });
+      // Iterate through all possible week offsets for the target day
+      for (let offset = 0; offset < (form.getValues(`assignedEmployees.${employeeIndex}.assigned_recurrence_interval_weeks`) || 1); offset++) {
+        // Check if the target day/offset has hours defined in the object's base schedule
+        const objectScheduleForTarget = objectDailySchedules.find((s: any) => s.day_of_week === targetDay && s.week_offset_in_cycle === offset);
+        if (!objectScheduleForTarget || objectScheduleForTarget.hours === 0) continue; // Only copy to days/offsets that are actually scheduled in the object
+
+        const existingTargetScheduleIndex = newSchedules.findIndex((s: any) => s.day_of_week === targetDay && s.week_offset_in_cycle === offset);
+
+        if (existingTargetScheduleIndex === -1) {
+          // Add new schedule entry
+          newSchedules.push({
+            ...sourceSchedule,
+            day_of_week: targetDay,
+            week_offset_in_cycle: offset,
+          });
+          copiedDaysCount++;
+        } else if (targetDay !== sourceDay || offset !== sourceWeekOffset) {
+          // Update existing schedule entry if it's a different day/offset
+          newSchedules[existingTargetScheduleIndex] = {
+            ...sourceSchedule,
+            day_of_week: targetDay,
+            week_offset_in_cycle: offset,
+          };
           copiedDaysCount++;
         }
       }
     });
 
+    form.setValue(`assignedEmployees.${employeeIndex}.assigned_daily_schedules`, JSON.stringify(newSchedules), { shouldValidate: true });
+
     if (copiedDaysCount > 0) {
-        toast.success(`Zeiten von ${germanDayNames[sourceDay]} wurden für ${copiedDaysCount} weitere Tage übernommen.`);
+        toast.success(`Zeiten von ${germanDayNames[sourceDay]} (Woche ${sourceWeekOffset + 1}) wurden für ${copiedDaysCount} weitere Tage übernommen.`);
     } else {
         toast.info("Keine weiteren relevanten Tage zum Kopieren gefunden.");
     }
   };
 
   const handleFormSubmit: SubmitHandler<OrderFormValues> = async (data) => {
-    // Validate that assigned hours match object hours for each day
+    // Validate that assigned hours match object hours for each day and week_offset
     if (data.objectId && data.assignedEmployees && data.assignedEmployees.length > 0) {
       const selectedObject = objects.find(obj => obj.id === data.objectId);
       if (selectedObject) {
+        const objectDailySchedules = parseDailySchedules(selectedObject.daily_schedules);
         let validationError = false;
-        dayNames.forEach(day => {
-          const objectDailyHours = selectedObject[`${day}_hours` as keyof typeof selectedObject] as number | null;
-          // Skip validation for days with no object hours
+
+        // Iterate through all possible day/week_offset combinations from the object's schedule
+        objectDailySchedules.forEach((objSchedule: any) => {
+          const objectDailyHours = objSchedule.hours;
           if (objectDailyHours === null || objectDailyHours === undefined || objectDailyHours === 0) return;
 
-          // Calculate sum using the actual form data being submitted
-          let sumAssignedHoursForDay = 0;
+          let sumAssignedHoursForSlot = 0;
           data.assignedEmployees?.forEach(assignedEmp => {
-            const assignedHours = (assignedEmp as any)[`assigned_${day}_hours`] as number | null;
-            sumAssignedHoursForDay += (assignedHours || 0);
+            const assignedSchedules = parseDailySchedules(assignedEmp.assigned_daily_schedules ?? '[]'); // Added ?? '[]'
+            const assignedScheduleForSlot = assignedSchedules.find((s: any) => 
+              s.day_of_week === objSchedule.day_of_week && 
+              s.week_offset_in_cycle === objSchedule.week_offset_in_cycle
+            );
+            sumAssignedHoursForSlot += (assignedScheduleForSlot?.hours || 0);
           });
 
-          // Only validate if there are actually assigned hours for this day
-          if (sumAssignedHoursForDay > 0) {
-            // Use a more lenient tolerance for floating point comparison
-            if (Math.abs(sumAssignedHoursForDay - objectDailyHours) > 0.1) {
+          if (sumAssignedHoursForSlot > 0) {
+            if (Math.abs(sumAssignedHoursForSlot - objectDailyHours) > 0.1) {
               form.setError(`assignedEmployees`, {
                 type: "manual",
-                message: `Die Summe der zugewiesenen Stunden für ${germanDayNames[day]} (${sumAssignedHoursForDay.toFixed(2)} Std.) muss den Objektstunden (${objectDailyHours.toFixed(2)} Std.) entsprechen.`,
+                message: `Die Summe der zugewiesenen Stunden für ${germanDayNames[objSchedule.day_of_week]} (Woche ${objSchedule.week_offset_in_cycle + 1}) (${sumAssignedHoursForSlot.toFixed(2)} Std.) muss den Objektstunden (${objectDailyHours.toFixed(2)} Std.) entsprechen.`,
               });
               validationError = true;
             }
@@ -498,7 +450,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     const result = await createObject(data);
     handleActionResponse(result);
     if (result.success) {
-      const { data: newObjectsData, error: newObjectsError } = await supabase.from('objects').select('id, name, customer_id, monday_hours, tuesday_hours, wednesday_hours, thursday_hours, friday_hours, saturday_hours, sunday_hours, total_weekly_hours, monday_start_time, monday_end_time, tuesday_start_time, tuesday_end_time, wednesday_start_time, wednesday_end_time, thursday_start_time, thursday_end_time, friday_start_time, friday_end_time, saturday_start_time, saturday_end_time, sunday_start_time, sunday_end_time, time_of_day, recurrence_interval_weeks, start_week_offset');
+      const { data: newObjectsData, error: newObjectsError } = await supabase.from('objects').select('id, name, customer_id, daily_schedules, recurrence_interval_weeks, start_week_offset');
       if (newObjectsData) {
         setObjects(newObjectsData);
         const newObject = newObjectsData.find(obj => obj.name === data.name && obj.customer_id === data.customerId);
@@ -519,30 +471,35 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     }
   };
 
-  // FIXED: Use watch() to get real-time form values
-  const getSumAssignedHoursForDay = (day: string): number => {
+  const getSumAssignedHoursForSlot = (day: string, weekOffset: number): number => {
     const currentAssignments = form.watch("assignedEmployees") || [];
     const sum = currentAssignments.reduce((total, emp) => {
-      const assignedHours = (emp as any)[`assigned_${day}_hours`] as number | null;
-      return total + (assignedHours || 0);
+      const schedules = parseDailySchedules(emp.assigned_daily_schedules ?? '[]'); // Added ?? '[]'
+      const scheduleForSlot = schedules.find((s: any) => s.day_of_week === day && s.week_offset_in_cycle === weekOffset);
+      return total + (scheduleForSlot?.hours || 0);
     }, 0);
-    // Ensure we always return a valid number
     return typeof sum === 'number' && !isNaN(sum) ? sum : 0;
   };
 
-  const getObjectDailyHours = (day: string): number | null => {
+  const getObjectDailyScheduleForSlot = (day: string, weekOffset: number): { hours: number | null; start_time: string | null; end_time: string | null } | null => {
     const selectedObject = objects.find(obj => obj.id === selectedObjectId);
-    return selectedObject ? (selectedObject[`${day}_hours` as keyof typeof selectedObject] as number || null) : null;
+    if (!selectedObject) return null;
+    const objectSchedules = parseDailySchedules(selectedObject.daily_schedules);
+    return objectSchedules.find((s: any) => s.day_of_week === day && s.week_offset_in_cycle === weekOffset) || null;
   };
 
-  const isDailyHoursValid = (day: string): boolean => {
-    const objectHours = getObjectDailyHours(day);
-    if (objectHours === null || objectHours === 0) return true;
-    const sumAssigned = getSumAssignedHoursForDay(day);
-    // Only validate if there are actually assigned hours
+  const isDailyHoursValidForSlot = (day: string, weekOffset: number): boolean => {
+    const objectSchedule = getObjectDailyScheduleForSlot(day, weekOffset);
+    const objectHours = objectSchedule?.hours;
+    if (objectHours === null || objectHours === undefined || objectHours === 0) return true;
+    const sumAssigned = getSumAssignedHoursForSlot(day, weekOffset);
     if (sumAssigned === 0) return true;
     return Math.abs(sumAssigned - objectHours) <= 0.1;
   };
+
+  const selectedObject = objects.find(obj => obj.id === selectedObjectId);
+  const objectRecurrenceIntervalWeeks = selectedObject?.recurrence_interval_weeks || 1;
+  const objectDailySchedules = parseDailySchedules(selectedObject?.daily_schedules || '[]');
 
   return (
     <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 w-full">
@@ -797,159 +754,27 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
                   </p>
                 </div>
                 
-                {/* Daily Hours and Times Grid - RESTRUCTURED */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-                  {dayNames.map(day => {
-                    const hoursFieldName = `assignedEmployees.${assignedIndex}.assigned_${day}_hours` as const;
-                    const startFieldName = `assignedEmployees.${assignedIndex}.assigned_${day}_start_time` as const;
-                    const endFieldName = `assignedEmployees.${assignedIndex}.assigned_${day}_end_time` as const;
-                    const objectDailyHours = getObjectDailyHours(day);
-                    const isDayValid = isDailyHoursValid(day);
-                    const sumAssignedHoursForDay = getSumAssignedHoursForDay(day);
-
-                    // Only show days that have object hours
-                    if (!objectDailyHours || objectDailyHours === 0) return null;
-
-                    return (
-                      <div key={day} className={cn(
-                        "border p-3 rounded-md space-y-2",
-                        !isDayValid && "border-destructive bg-destructive/5"
-                      )}>
-                        <h5 className="font-medium text-sm flex items-center justify-between">
-                          {germanDayNames[day]}
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-5 w-5 text-muted-foreground hover:text-primary"
-                                  onClick={() => handleCopyDay(assignedIndex, day)}
-                                  disabled={!watchedAssignedEmployees?.[assignedIndex]?.[`assigned_${day}_hours`]}
-                                >
-                                  <Copy className="h-3 w-3" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>Zeiten für alle anderen Tage übernehmen</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        </h5>
-                        
-                        {/* 1. Arbeitsstunden (oben) */}
-                        <Controller
-                          name={hoursFieldName}
-                          control={form.control}
-                          render={({ field }) => (
-                            <div>
-                              <Label htmlFor={field.name} className="text-xs">Arbeitsstunden</Label>
-                              <Input
-                                {...field}
-                                id={field.name}
-                                type="number"
-                                step="0.01"
-                                min="0"
-                                max={objectDailyHours ?? undefined}
-                                placeholder="Std."
-                                className={cn(
-                                  "w-full text-sm",
-                                  !isDayValid && "border-destructive focus-visible:ring-destructive"
-                                )}
-                                value={field.value ?? ''}
-                                onChange={(e) => {
-                                  field.onChange(e.target.value === '' ? null : Number(e.target.value));
-                                  handleAssignedHoursChange(assignedIndex, day, e.target.value);
-                                }}
-                              />
-                            </div>
-                          )}
-                        />
-                        
-                        {/* 2. Startzeit (mitte) */}
-                        <Controller
-                          name={startFieldName}
-                          control={form.control}
-                          render={({ field }) => (
-                            <div>
-                              <Label htmlFor={field.name} className="text-xs">Startzeit</Label>
-                              <Input
-                                {...field}
-                                id={field.name}
-                                type="time"
-                                className="w-full text-sm"
-                                value={field.value ?? ''}
-                                onChange={(e) => {
-                                  field.onChange(e.target.value);
-                                  handleAssignedStartTimeChange(assignedIndex, day, e.target.value);
-                                }}
-                              />
-                            </div>
-                          )}
-                        />
-                        
-                        {/* 3. Endzeit (unten, jetzt bearbeitbar) */}
-                        <Controller
-                          name={endFieldName}
-                          control={form.control}
-                          render={({ field }) => (
-                            <div>
-                              <Label htmlFor={field.name} className="text-xs">Endzeit</Label>
-                              <Input
-                                {...field}
-                                id={field.name}
-                                type="time"
-                                className="w-full text-sm"
-                                value={field.value ?? ''}
-                                onChange={(e) => {
-                                  field.onChange(e.target.value);
-                                  handleAssignedEndTimeChange(assignedIndex, day, e.target.value);
-                                }}
-                              />
-                            </div>
-                          )}
-                        />
-                      </div>
-                    );
-                  })}
+                {/* Daily Schedules JSON Textarea */}
+                <div className="space-y-2">
+                  <Label htmlFor={`assignedEmployees.${assignedIndex}.assigned_daily_schedules`} className="text-xs">Zugewiesene tägliche Zeitpläne (JSON)</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Geben Sie die Zeitpläne als JSON-Array ein. Beispiel:
+                    `&#91;{&#34;day_of_week&#34;: &#34;monday&#34;, &#34;week_offset_in_cycle&#34;: 0, &#34;hours&#34;: 4, &#34;start_time&#34;: &#34;08:00&#34;, &#34;end_time&#34;: &#34;12:00&#34;}]`
+                  </p>
+                  <Textarea
+                    id={`assignedEmployees.${assignedIndex}.assigned_daily_schedules`}
+                    {...form.register(`assignedEmployees.${assignedIndex}.assigned_daily_schedules`)}
+                    placeholder="[{'day_of_week': 'monday', 'week_offset_in_cycle': 0, 'hours': 4, 'start_time': '08:00', 'end_time': '12:00'}]"
+                    rows={5}
+                    className="font-mono text-xs"
+                    onChange={(e) => handleAssignedSchedulesChange(assignedIndex, e.target.value)}
+                  />
+                  {form.formState.errors.assignedEmployees?.[assignedIndex]?.assigned_daily_schedules && (
+                    <p className="text-red-500 text-sm mt-1">{form.formState.errors.assignedEmployees?.[assignedIndex]?.assigned_daily_schedules?.message}</p>
+                  )}
                 </div>
-                
-                {/* Validation Summary for this Employee */}
-                {dayNames.some(day => !isDailyHoursValid(day) && getObjectDailyHours(day)) && (
-                  <div className="text-sm text-destructive bg-destructive/10 p-2 rounded-md">
-                    ⚠️ Die Summe der zugewiesenen Stunden für jeden Tag muss den Objektstunden entsprechen.
-                  </div>
-                )}
               </div>
             ))}
-            
-            {/* Object Hours Overview */}
-            {selectedObjectId && (
-              <div className="bg-muted p-4 rounded-lg">
-                <h4 className="font-medium mb-2">Objektarbeitszeiten Übersicht</h4>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
-                  {dayNames.map(day => {
-                    const objectDayHours = getObjectDailyHours(day);
-                    const totalAssigned = getSumAssignedHoursForDay(day);
-                    
-                    if (!objectDayHours || objectDayHours === 0) return null;
-                    
-                    return (
-                      <div key={day} className="flex justify-between">
-                        <span>{germanDayNames[day]}:</span>
-                        <span className={cn(
-                          "font-medium",
-                          Math.abs(totalAssigned - objectDayHours) > 0.1 ? 'text-destructive' : 'text-success'
-                        )}>
-                          {totalAssigned.toFixed(1)}h / {objectDayHours.toFixed(1)}h
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
           </div>
         )}
       </div>

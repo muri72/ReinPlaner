@@ -8,6 +8,10 @@ import { ObjectForm, ObjectFormValues } from "@/components/object-form";
 import { updateObject } from "@/app/dashboard/objects/actions";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { DocumentUploader } from "@/components/document-uploader";
+import { DocumentList } from "@/components/document-list";
+import { FileStack } from "lucide-react";
 
 interface ObjectEditDialogProps {
   object: {
@@ -25,28 +29,7 @@ interface ObjectEditDialogProps {
     is_alarm_secured: boolean;
     alarm_password: string | null;
     security_code_word: string | null;
-    monday_start_time: string | null;
-    monday_end_time: string | null;
-    tuesday_start_time: string | null;
-    tuesday_end_time: string | null;
-    wednesday_start_time: string | null;
-    wednesday_end_time: string | null;
-    thursday_start_time: string | null;
-    thursday_end_time: string | null;
-    friday_start_time: string | null;
-    friday_end_time: string | null;
-    saturday_start_time: string | null;
-    saturday_end_time: string | null;
-    sunday_start_time: string | null;
-    sunday_end_time: string | null;
-    monday_hours: number | null;
-    tuesday_hours: number | null;
-    wednesday_hours: number | null;
-    thursday_hours: number | null;
-    friday_hours: number | null;
-    saturday_hours: number | null;
-    sunday_hours: number | null;
-    total_weekly_hours: number | null;
+    daily_schedules: any; // JSONB field
     recurrence_interval_weeks: number;
     start_week_offset: number;
   };
@@ -65,8 +48,8 @@ export function ObjectEditDialog({ object }: ObjectEditDialogProps) {
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <TooltipProvider delayDuration={300}>
+    <TooltipProvider delayDuration={300}>
+      <Dialog open={open} onOpenChange={setOpen}>
         <Tooltip>
           <TooltipTrigger asChild>
             <DialogTrigger asChild>
@@ -79,63 +62,56 @@ export function ObjectEditDialog({ object }: ObjectEditDialogProps) {
             <p>Objekt bearbeiten</p>
           </TooltipContent>
         </Tooltip>
-      </TooltipProvider>
-      <DialogContent 
-        key={open ? "object-edit-open" : "object-edit-closed"} 
-        className="sm:max-w-5xl max-h-[90vh] flex flex-col glassmorphism-card" // Changed sm:max-w-3xl to sm:max-w-5xl
-      >
-        <DialogHeader>
-          <DialogTitle>Objekt bearbeiten</DialogTitle>
-          <DialogDescription>
-            Formular zum Bearbeiten der Objektdaten.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="flex-grow overflow-y-auto pr-4"> {/* Added flex-grow and overflow-y-auto */}
-          <ObjectForm
-            initialData={{
-              name: object.name,
-              address: object.address,
-              description: object.description,
-              customerId: object.customer_id,
-              customerContactId: object.customer_contact_id,
-              notes: object.notes,
-              priority: object.priority as ObjectFormValues["priority"],
-              timeOfDay: object.time_of_day as ObjectFormValues["timeOfDay"],
-              accessMethod: object.access_method as ObjectFormValues["accessMethod"],
-              pin: object.pin,
-              isAlarmSecured: object.is_alarm_secured,
-              alarmPassword: object.alarm_password,
-              securityCodeWord: object.security_code_word,
-              monday_start_time: object.monday_start_time,
-              monday_end_time: object.monday_end_time,
-              tuesday_start_time: object.tuesday_start_time,
-              tuesday_end_time: object.tuesday_end_time,
-              wednesday_start_time: object.wednesday_start_time,
-              wednesday_end_time: object.wednesday_end_time,
-              thursday_start_time: object.thursday_start_time,
-              thursday_end_time: object.thursday_end_time,
-              friday_start_time: object.friday_start_time,
-              friday_end_time: object.friday_end_time,
-              saturday_start_time: object.saturday_start_time,
-              saturday_end_time: object.saturday_end_time,
-              sunday_start_time: object.sunday_start_time,
-              sunday_end_time: object.sunday_end_time,
-              monday_hours: object.monday_hours,
-              tuesday_hours: object.tuesday_hours,
-              wednesday_hours: object.wednesday_hours,
-              thursday_hours: object.thursday_hours,
-              friday_hours: object.friday_hours,
-              saturday_hours: object.saturday_hours,
-              sunday_hours: object.sunday_hours,
-              recurrence_interval_weeks: object.recurrence_interval_weeks,
-              start_week_offset: object.start_week_offset,
-            }}
-            onSubmit={handleUpdate}
-            submitButtonText="Änderungen speichern"
-            onSuccess={() => setOpen(false)}
-          />
-        </div>
-      </DialogContent>
-    </Dialog>
+        <DialogContent 
+          key={open ? "object-edit-open" : "object-edit-closed"} 
+          className="sm:max-w-5xl max-h-[90vh] flex flex-col glassmorphism-card" // Changed sm:max-w-3xl to sm:max-w-5xl
+        >
+          <DialogHeader>
+            <DialogTitle>Objekt bearbeiten</DialogTitle>
+            <DialogDescription>
+              Formular zum Bearbeiten der Objektdaten.
+            </DialogDescription>
+          </DialogHeader>
+          <Tabs defaultValue="details" className="flex-grow flex flex-col">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="details">Details</TabsTrigger>
+              <TabsTrigger value="documents">Dokumente</TabsTrigger>
+            </TabsList>
+            <TabsContent value="details" className="flex-grow overflow-y-auto pr-4">
+              <ObjectForm
+                initialData={{
+                  name: object.name,
+                  address: object.address,
+                  description: object.description,
+                  customerId: object.customer_id,
+                  customerContactId: object.customer_contact_id,
+                  notes: object.notes,
+                  priority: object.priority as ObjectFormValues["priority"],
+                  timeOfDay: object.time_of_day as ObjectFormValues["timeOfDay"],
+                  accessMethod: object.access_method as ObjectFormValues["accessMethod"],
+                  pin: object.pin,
+                  isAlarmSecured: object.is_alarm_secured,
+                  alarmPassword: object.alarm_password,
+                  securityCodeWord: object.security_code_word,
+                  daily_schedules: JSON.stringify(object.daily_schedules), // Pass JSONB as string
+                  recurrence_interval_weeks: object.recurrence_interval_weeks,
+                  start_week_offset: object.start_week_offset,
+                }}
+                onSubmit={handleUpdate}
+                submitButtonText="Änderungen speichern"
+                onSuccess={() => setOpen(false)}
+              />
+            </TabsContent>
+            <TabsContent value="documents" className="flex-grow overflow-y-auto pr-4 space-y-4">
+              <h3 className="text-md font-semibold flex items-center">
+                <FileStack className="mr-2 h-5 w-5" /> Dokumente
+              </h3>
+              <DocumentUploader associatedOrderId={object.id} />
+              <DocumentList associatedOrderId={object.id} />
+            </TabsContent>
+          </Tabs>
+        </DialogContent>
+      </Dialog>
+    </TooltipProvider>
   );
 }
