@@ -59,10 +59,10 @@ export function ObjectEditDialog({ object }: ObjectEditDialogProps) {
             <p>Objekt bearbeiten</p>
           </TooltipContent>
         </Tooltip>
-      </DialogProvider>
+      </TooltipProvider>
       <DialogContent 
         key={open ? "object-edit-open" : "object-edit-closed"} 
-        className="sm:max-w-5xl max-h-[90vh] flex flex-col glassmorphism-card" // Changed sm:max-w-3xl to sm:max-w-5xl
+        className="sm:max-w-5xl max-h-[90vh] flex flex-col glassmorphism-card"
       >
         <DialogHeader>
           <DialogTitle>Objekt bearbeiten</DialogTitle>
@@ -70,7 +70,7 @@ export function ObjectEditDialog({ object }: ObjectEditDialogProps) {
             Formular zum Bearbeiten der Objektdaten.
           </DialogDescription>
         </DialogHeader>
-        <div className="flex-grow overflow-y-auto pr-4"> {/* Added flex-grow and overflow-y-auto */}
+        <div className="flex-grow overflow-y-auto pr-4">
           <ObjectForm
             initialData={{
               name: object.name,

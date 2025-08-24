@@ -37,6 +37,8 @@ export interface PlanningPageData {
   unassignedOrders: UnassignedOrder[];
 }
 
+const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as const;
+
 export async function getPlanningDataForWeek(currentDate: Date): Promise<{ success: boolean; data: PlanningPageData | null; message: string }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -165,17 +167,12 @@ export async function getPlanningDataForWeek(currentDate: Date): Promise<{ succe
           const effectiveWeekIndex = (weekDifference - startWeekOffset) % recurrenceIntervalWeeks;
           
           if (effectiveWeekIndex < 0) { // Ensure positive index
-              weekDifference += recurrenceIntervalWeeks;
-              const newEffectiveWeekIndex = (weekDifference - startWeekOffset) % recurrenceIntervalWeeks;
-              if (newEffectiveWeekIndex < 0) { // Fallback for edge cases
-                console.warn(`Negative effectiveWeekIndex after adjustment for order ${order.id}. Using 0.`);
-                // This should ideally not happen with correct modulo arithmetic, but as a safeguard
-                // If the offset is larger than the difference, it means the cycle hasn't started yet or is in a previous year.
-                // For simplicity, if it's still negative, we'll default to the first week of the cycle.
-                // A more robust solution might involve calculating the week number relative to a fixed epoch.
-                // For now, if it's still negative, we'll assume it's not the correct week.
-                continue;
-              }
+              // This case should ideally not happen with correct modulo arithmetic, but as a safeguard
+              // If the offset is larger than the difference, it means the cycle hasn't started yet or is in a previous year.
+              // For simplicity, if it's still negative, we'll default to the first week of the cycle.
+              // A more robust solution might involve calculating the week number relative to a fixed epoch.
+              // For now, if it's still negative, we'll assume it's not the correct week.
+              continue;
           }
 
           // Check if the current week falls within the recurrence pattern
@@ -209,7 +206,7 @@ export async function getPlanningDataForWeek(currentDate: Date): Promise<{ succe
             const employeeDailySchedules = assignment.assigned_daily_schedules;
             if (employeeDailySchedules && employeeDailySchedules.length > effectiveWeekIndex) {
               const weekSchedule = employeeDailySchedules[effectiveWeekIndex];
-              const daySchedule = (weekSchedule as any)?.[dayNames[dayOfWeek === 0 ? 6 : dayOfWeek - 1]]; // Adjust for dayNames array (0=Sun, 1=Mon...)
+              const daySchedule = (weekSchedule as any)?.[dayNames[dayOfWeek]]; // Adjust for dayNames array (0=Sun, 1=Mon...)
               if (daySchedule) {
                 dailyHours = daySchedule.hours || 0;
                 assignedStartTime = daySchedule.start;

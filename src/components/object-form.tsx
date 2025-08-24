@@ -1,6 +1,6 @@
 "use client";
 
-import { useForm, SubmitHandler, FieldPath, Controller } from "react-hook-form";
+import { useForm, SubmitHandler, FieldPath, Controller, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Input } from "@/components/ui/input";
@@ -202,8 +202,8 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
   }, [selectedCustomerId, supabase, form]);
 
   // Calculate total weekly hours for display (sum of all weeks in the recurrence cycle)
-  const totalWeeklyHours = dailySchedulesFields.reduce((totalSum, weekSchedule) => {
-    return totalSum + dayNames.reduce((weekSum, day) => {
+  const totalWeeklyHours = dailySchedulesFields.reduce((totalSum: number, weekSchedule: any) => {
+    return totalSum + dayNames.reduce((weekSum: number, day) => {
       const dailyHours = (weekSchedule as any)[day]?.hours;
       return weekSum + (dailyHours || 0);
     }, 0);
@@ -286,7 +286,7 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
     }
 
     let copiedCount = 0;
-    dailySchedulesFields.forEach((_, weekIndex) => {
+    dailySchedulesFields.forEach((_field: any, weekIndex: number) => {
       if (weekIndex !== sourceWeekIndex) {
         form.setValue(`daily_schedules.${weekIndex}.${sourceDay}`, sourceSchedule, { shouldValidate: true });
         copiedCount++;
@@ -307,7 +307,7 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
     }
 
     let copiedCount = 0;
-    dailySchedulesFields.forEach((_, weekIndex) => {
+    dailySchedulesFields.forEach((_field: any, weekIndex: number) => {
       if (weekIndex !== sourceWeekIndex) {
         form.setValue(`daily_schedules.${weekIndex}`, sourceWeekSchedule, { shouldValidate: true });
         copiedCount++;
@@ -529,7 +529,7 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
       <div className="space-y-4">
         <h3 className="text-lg font-semibold">Regelmäßige Arbeitszeiten pro Wochentag</h3>
         {form.formState.errors.daily_schedules && <p className="text-red-500 text-sm mt-1">{form.formState.errors.daily_schedules.message}</p>}
-        {dailySchedulesFields.map((weekSchedule, weekIndex) => (
+        {dailySchedulesFields.map((weekSchedule, weekIndex: number) => (
           <div key={weekSchedule.id} className="border p-4 rounded-md space-y-4 bg-muted/20">
             <div className="flex items-center justify-between">
               <h4 className="font-semibold text-base">Woche {weekIndex + 1} (Offset {(startWeekOffset + weekIndex) % recurrenceIntervalWeeks})</h4>
@@ -575,8 +575,8 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
                         value={form.watch(hoursFieldName) ?? ''}
                         onChange={(e) => handleDailyHoursChange(weekIndex, day, e.target.value)}
                       />
-                      {form.formState.errors[hoursFieldName] && (
-                        <p className="text-red-500 text-xs mt-1">{form.formState.errors[hoursFieldName]?.message}</p>
+                      {(form.formState.errors as any)[hoursFieldName] && (
+                        <p className="text-red-500 text-xs mt-1">{(form.formState.errors as any)[hoursFieldName]?.message}</p>
                       )}
                     </div>
                     <div>
@@ -588,8 +588,8 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
                         value={form.watch(startFieldName) ?? ''}
                         onChange={(e) => handleDailyStartTimeChange(weekIndex, day, e.target.value)}
                       />
-                      {form.formState.errors[startFieldName] && (
-                        <p className="text-red-500 text-xs mt-1">{form.formState.errors[startFieldName]?.message}</p>
+                      {(form.formState.errors as any)[startFieldName] && (
+                        <p className="text-red-500 text-xs mt-1">{(form.formState.errors as any)[startFieldName]?.message}</p>
                       )}
                     </div>
                     <div>
@@ -601,8 +601,8 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
                         value={form.watch(endFieldName) ?? ''}
                         onChange={(e) => handleDailyEndTimeChange(weekIndex, day, e.target.value)}
                       />
-                      {form.formState.errors[endFieldName] && (
-                        <p className="text-red-500 text-xs mt-1">{form.formState.errors[endFieldName]?.message}</p>
+                      {(form.formState.errors as any)[endFieldName] && (
+                        <p className="text-red-500 text-xs mt-1">{(form.formState.errors as any)[endFieldName]?.message}</p>
                       )}
                     </div>
                     <TooltipProvider>

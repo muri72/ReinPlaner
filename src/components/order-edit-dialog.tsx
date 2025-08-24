@@ -63,8 +63,8 @@ export function OrderEditDialog({ order }: OrderEditDialogProps) {
   };
 
   return (
-    <TooltipProvider delayDuration={300}>
-      <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={setOpen}>
+      <TooltipProvider delayDuration={300}>
         <Tooltip>
           <TooltipTrigger asChild>
             <DialogTrigger asChild>
@@ -77,56 +77,56 @@ export function OrderEditDialog({ order }: OrderEditDialogProps) {
             <p>Auftrag bearbeiten</p>
           </TooltipContent>
         </Tooltip>
-        <DialogContent 
-          key={open ? "order-edit-open" : "order-edit-closed"} 
-          className="sm:max-w-5xl max-h-[90vh] overflow-y-auto flex flex-col glassmorphism-card" // Changed sm:max-w-3xl to sm:max-w-5xl
-        >
-          <DialogHeader>
-            <DialogTitle>Auftrag bearbeiten</DialogTitle>
-            <DialogDescription>
-              Formular zum Bearbeiten der Auftragsdetails.
-            </DialogDescription>
-          </DialogHeader>
-          <Tabs defaultValue="details" className="flex-grow flex flex-col">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="details">Details</TabsTrigger>
-              <TabsTrigger value="documents">Dokumente</TabsTrigger>
-            </TabsList>
-            <TabsContent value="details" className="flex-grow overflow-y-auto pr-4">
-              <OrderForm
-                initialData={{
-                  title: order.title,
-                  description: order.description || undefined,
-                  dueDate: order.due_date ? new Date(order.due_date) : undefined,
-                  status: order.status as OrderFormValues["status"],
-                  customerId: order.customer_id ?? undefined,
-                  objectId: order.object_id ?? undefined,
-                  customerContactId: order.customer_contact_id ?? undefined,
-                  orderType: order.order_type as OrderFormValues["orderType"],
-                  recurringStartDate: order.recurring_start_date ? new Date(order.recurring_start_date) : undefined,
-                  recurringEndDate: order.recurring_end_date ? new Date(order.recurring_end_date) : undefined,
-                  priority: order.priority as OrderFormValues["priority"],
-                  totalEstimatedHours: order.total_estimated_hours,
-                  notes: order.notes,
-                  serviceType: getServiceTypeForForm(order.service_type),
-                  requestStatus: order.request_status as OrderFormValues["requestStatus"],
-                  assignedEmployees: order.assignedEmployees, // Pass the structured array directly
-                }}
-                onSubmit={handleUpdate}
-                submitButtonText="Änderungen speichern"
-                onSuccess={() => setOpen(false)}
-              />
-            </TabsContent>
-            <TabsContent value="documents" className="flex-grow overflow-y-auto pr-4 space-y-4">
-              <h3 className="text-md font-semibold flex items-center">
-                <FileStack className="mr-2 h-5 w-5" /> Dokumente
-              </h3>
-              <DocumentUploader associatedOrderId={order.id} onDocumentUploaded={() => { /* Re-fetch documents if needed */ }} />
-              <DocumentList associatedOrderId={order.id} />
-            </TabsContent>
-          </Tabs>
-        </DialogContent>
-      </Dialog>
-    </TooltipProvider>
+      </TooltipProvider>
+      <DialogContent 
+        key={open ? "order-edit-open" : "order-edit-closed"} 
+        className="sm:max-w-5xl max-h-[90vh] overflow-y-auto flex flex-col glassmorphism-card"
+      >
+        <DialogHeader>
+          <DialogTitle>Auftrag bearbeiten</DialogTitle>
+          <DialogDescription>
+            Formular zum Bearbeiten der Auftragsdetails.
+          </DialogDescription>
+        </DialogHeader>
+        <Tabs defaultValue="details" className="flex-grow flex flex-col">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="details">Details</TabsTrigger>
+            <TabsTrigger value="documents">Dokumente</TabsTrigger>
+          </TabsList>
+          <TabsContent value="details" className="flex-grow overflow-y-auto pr-4">
+            <OrderForm
+              initialData={{
+                title: order.title,
+                description: order.description || undefined,
+                dueDate: order.due_date ? new Date(order.due_date) : undefined,
+                status: order.status as OrderFormValues["status"],
+                customerId: order.customer_id ?? undefined,
+                objectId: order.object_id ?? undefined,
+                customerContactId: order.customer_contact_id ?? undefined,
+                orderType: order.order_type as OrderFormValues["orderType"],
+                recurringStartDate: order.recurring_start_date ? new Date(order.recurring_start_date) : undefined,
+                recurringEndDate: order.recurring_end_date ? new Date(order.recurring_end_date) : undefined,
+                priority: order.priority as OrderFormValues["priority"],
+                totalEstimatedHours: order.total_estimated_hours,
+                notes: order.notes,
+                serviceType: getServiceTypeForForm(order.service_type),
+                requestStatus: order.request_status as OrderFormValues["requestStatus"],
+                assignedEmployees: order.assignedEmployees,
+              }}
+              onSubmit={handleUpdate}
+              submitButtonText="Änderungen speichern"
+              onSuccess={() => setOpen(false)}
+            />
+          </TabsContent>
+          <TabsContent value="documents" className="flex-grow overflow-y-auto pr-4 space-y-4">
+            <h3 className="text-md font-semibold flex items-center">
+              <FileStack className="mr-2 h-5 w-5" /> Dokumente
+            </h3>
+            <DocumentUploader associatedOrderId={order.id} onDocumentUploaded={() => { /* Re-fetch documents if needed */ }} />
+            <DocumentList associatedOrderId={order.id} />
+          </TabsContent>
+        </Tabs>
+      </DialogContent>
+    </Dialog>
   );
 }

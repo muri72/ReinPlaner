@@ -32,8 +32,8 @@ export async function createObject(data: ObjectFormValues) {
   } = data;
 
   // Calculate total_weekly_hours from daily_schedules
-  const total_weekly_hours = daily_schedules.reduce((totalSum, weekSchedule) => {
-    return totalSum + Object.values(weekSchedule).reduce((weekSum, daySchedule: any) => {
+  const total_weekly_hours = daily_schedules.reduce((totalSum: number, weekSchedule: any) => {
+    return totalSum + Object.values(weekSchedule).reduce((weekSum: number, daySchedule: any) => {
       return weekSum + (daySchedule?.hours || 0);
     }, 0);
   }, 0);
@@ -110,8 +110,8 @@ export async function updateObject(objectId: string, data: ObjectFormValues) {
   } = data;
 
   // Calculate total_weekly_hours from daily_schedules
-  const total_weekly_hours = daily_schedules.reduce((totalSum, weekSchedule) => {
-    return totalSum + Object.values(weekSchedule).reduce((weekSum, daySchedule: any) => {
+  const total_weekly_hours = daily_schedules.reduce((totalSum: number, weekSchedule: any) => {
+    return totalSum + Object.values(weekSchedule).reduce((weekSum: number, daySchedule: any) => {
       return weekSum + (daySchedule?.hours || 0);
     }, 0);
   }, 0);
