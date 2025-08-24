@@ -88,7 +88,7 @@ export default async function DashboardPage() {
       request_status,
       service_type,
       customers ( name ),
-      objects ( name, address, notes, recurrence_interval_weeks, start_week_offset ),
+      objects ( name, address, notes ),
       customer_contacts ( first_name, last_name, phone ),
       order_feedback ( id, rating, comment, image_urls, created_at ),
       order_employee_assignments ( 
@@ -103,7 +103,6 @@ export default async function DashboardPage() {
         assigned_friday_start_time, assigned_friday_end_time,
         assigned_saturday_start_time, assigned_saturday_end_time,
         assigned_sunday_start_time, assigned_sunday_end_time,
-        assigned_recurrence_interval_weeks, assigned_start_week_offset,
         employees ( first_name, last_name ) 
       )
     `)
@@ -143,8 +142,6 @@ export default async function DashboardPage() {
         assigned_saturday_end_time: a.assigned_saturday_end_time,
         assigned_sunday_start_time: a.assigned_sunday_start_time,
         assigned_sunday_end_time: a.assigned_sunday_end_time,
-        assigned_recurrence_interval_weeks: a.assigned_recurrence_interval_weeks,
-        assigned_start_week_offset: a.assigned_start_week_offset,
     })) || [];
     
     const firstAssignment = order.order_employee_assignments?.[0];
@@ -202,8 +199,6 @@ export default async function DashboardPage() {
       assigned_saturday_end_time: firstAssignment?.assigned_saturday_end_time || null,
       assigned_sunday_start_time: firstAssignment?.assigned_sunday_start_time || null,
       assigned_sunday_end_time: firstAssignment?.assigned_sunday_end_time || null,
-      assigned_recurrence_interval_weeks: firstAssignment?.assigned_recurrence_interval_weeks || null,
-      assigned_start_week_offset: firstAssignment?.assigned_start_week_offset || null,
     };
   }) || [];
 
