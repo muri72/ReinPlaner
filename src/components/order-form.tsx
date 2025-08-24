@@ -48,8 +48,12 @@ const germanDayNames: { [key: string]: string } = {
 
 const dailyScheduleSchema = z.object({
   hours: z.preprocess(preprocessNumber, z.nullable(z.number().min(0).max(24)).optional()),
-  start: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
-  end: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
+  start: z.string().optional().nullable().refine(val => !val || timeRegex.test(val), {
+    message: "Ungültiges Zeitformat (HH:MM)",
+  }),
+  end: z.string().optional().nullable().refine(val => !val || timeRegex.test(val), {
+    message: "Ungültiges Zeitformat (HH:MM)",
+  }),
 });
 
 const weeklyScheduleSchema = z.object({
@@ -531,24 +535,6 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     }
   };
 
-  const handleCreateObject = async (data: ObjectFormValues) => {
-    const result = await createObject(data);
-    handleActionResponse(result);
-    if (result.success) {
-      const { data: newObjectsData, error: newObjectsError } = await supabase.from('objects').select('id, name, customer_id, recurrence_interval_weeks, start_week_offset, daily_schedules');
-      if (newObjectsData) {
-        setObjects(newObjectsData);
-        const newObject = newObjectsData.find(obj => obj.name === data.name && obj.customer_id === data.customerId);
-        if (newObject) {
-          form.setValue("objectId", newObject.id);
-        }
-      }
-      if (newObjectsError) console.error("Fehler beim Neuladen der Objekte:", newObjectsError);
-      setIsNewObjectDialogOpen(false);
-    }
-    return result;
-  };
-
   const handleCustomerContactCreated = async (newContactId: string) => {
     if (selectedCustomerId) {
       await fetchCustomerContacts(selectedCustomerId);
@@ -654,31 +640,11 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
           </Select>
           {form.formState.errors.customerContactId && <p className="text-red-500 text-sm mt-1">{form.formState.errors.customerContactId.message}</p>}
         </div>
-        <Dialog open={isNewObjectDialogOpen} onOpenChange={setIsNewObjectDialogOpen}>
-          <DialogTrigger asChild>
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              className="mb-1"
-              disabled={!form.watch("customerId")}
-              title={!form.watch("customerId") ? "Bitte zuerst einen Kunden auswählen" : "Neues Objekt für diesen Kunden erstellen"}
-            >
-              <PlusCircle className="h-4 w-4" />
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto" aria-labelledby="object-create-dialog-title">
-            <DialogHeader>
-              <DialogTitle id="object-create-dialog-title">Neues Objekt erstellen</DialogTitle>
-            </DialogHeader>
-            <ObjectForm
-              initialData={{ customerId: form.watch("customerId") }}
-              onSubmit={handleCreateObject}
-              submitButtonText="Objekt erstellen"
-              onSuccess={() => setIsNewObjectDialogOpen(false)}
-            />
-          </DialogContent>
-        </Dialog>
+        <CustomerContactCreateDialog
+          customerId={selectedCustomerId}
+          onContactCreated={handleCustomerContactCreated}
+          disabled={!selectedCustomerId}
+        />
       </div>
 
       {/* MOVED: Order Type before Employee Assignment */}
