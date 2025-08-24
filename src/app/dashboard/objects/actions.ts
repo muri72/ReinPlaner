@@ -31,13 +31,6 @@ export async function createObject(data: ObjectFormValues) {
     start_week_offset,
   } = data;
 
-  // Calculate total_weekly_hours from daily_schedules
-  const total_weekly_hours = daily_schedules.reduce((totalSum: number, weekSchedule: any) => {
-    return totalSum + Object.values(weekSchedule).reduce((weekSum: number, daySchedule: any) => {
-      return weekSum + (daySchedule?.hours || 0);
-    }, 0);
-  }, 0);
-
   const { error } = await supabase
     .from('objects')
     .insert({
@@ -48,7 +41,6 @@ export async function createObject(data: ObjectFormValues) {
       customer_id: customerId,
       customer_contact_id: customerContactId,
       daily_schedules,
-      total_weekly_hours, // Include the calculated total
       notes,
       priority,
       time_of_day: timeOfDay,
@@ -109,13 +101,6 @@ export async function updateObject(objectId: string, data: ObjectFormValues) {
     start_week_offset,
   } = data;
 
-  // Calculate total_weekly_hours from daily_schedules
-  const total_weekly_hours = daily_schedules.reduce((totalSum: number, weekSchedule: any) => {
-    return totalSum + Object.values(weekSchedule).reduce((weekSum: number, daySchedule: any) => {
-      return weekSum + (daySchedule?.hours || 0);
-    }, 0);
-  }, 0);
-
   let query = supabase
     .from('objects')
     .update({
@@ -125,7 +110,6 @@ export async function updateObject(objectId: string, data: ObjectFormValues) {
       customer_id: data.customerId,
       customer_contact_id: data.customerContactId,
       daily_schedules: data.daily_schedules,
-      total_weekly_hours, // Include the calculated total
       notes: data.notes,
       priority: data.priority,
       time_of_day: data.timeOfDay,
