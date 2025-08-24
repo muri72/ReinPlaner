@@ -134,9 +134,9 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
     isAlarmSecured: initialData?.isAlarmSecured ?? false,
     alarmPassword: initialData?.alarmPassword ?? null,
     securityCodeWord: initialData?.securityCodeWord ?? null,
-    daily_schedules: initialData?.daily_schedules ?? [],
-    recurrence_interval_weeks: initialData?.recurrence_interval_weeks ?? 1,
-    start_week_offset: initialData?.start_week_offset ?? 0,
+    daily_schedules: (initialData?.daily_schedules as z.infer<typeof weeklyScheduleSchema>[]) ?? [],
+    recurrence_interval_weeks: (initialData?.recurrence_interval_weeks as number | undefined) ?? 1,
+    start_week_offset: (initialData?.start_week_offset as number | undefined) ?? 0,
   };
 
   const form = useForm<ObjectFormValues>({

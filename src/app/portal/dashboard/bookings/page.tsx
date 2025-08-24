@@ -96,7 +96,7 @@ export default async function CustomerBookingsPage() {
   const customerIdResult = await supabase
     .from('customers')
     .select('id')
-    .eq('user_id', user.id)
+    .eq('user.id', user.id)
     .single();
 
   const customerId = customerIdResult.data?.id || null;
@@ -214,39 +214,15 @@ export default async function CustomerBookingsPage() {
       if (weekDifference % assignedRecurrenceIntervalWeeks !== assignedStartWeekOffset) {
         return 'N/A (Nicht diese Woche)';
       }
-
-      const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-      const currentDayKey = dayNames[dayIndex];
-      const weekSchedule = order.assignedEmployees?.[0]?.assigned_daily_schedules?.[effectiveWeekIndex];
-      const daySchedule = (weekSchedule as any)?.[currentDayKey];
-
-      const startTime = daySchedule?.start;
-      const endTime = daySchedule?.end;
-
-      if (startTime && endTime) {
-        return `${startTime} - ${endTime}`;
-      }
-      return 'N/A';
     }
 
-    const dayMap: { [key: number]: { start: keyof AssignedEmployee, end: keyof AssignedEmployee } } = {
-      0: { start: 'assigned_sunday_start_time', end: 'assigned_sunday_end_time' },
-      1: { start: 'assigned_monday_start_time', end: 'assigned_monday_end_time' },
-      2: { start: 'assigned_tuesday_start_time', end: 'assigned_tuesday_end_time' },
-      3: { start: 'assigned_wednesday_start_time', end: 'assigned_wednesday_end_time' },
-      4: { start: 'assigned_thursday_start_time', end: 'assigned_thursday_end_time' },
-      5: { start: 'assigned_friday_start_time', end: 'assigned_friday_end_time' },
-      6: { start: 'assigned_saturday_start_time', end: 'assigned_saturday_end_time' },
-    };
-    const startKey = dayMap[dayIndex]?.start;
-    const endKey = dayMap[dayIndex]?.end;
+    const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const currentDayKey = dayNames[dayIndex];
+    const weekSchedule = order.assignedEmployees?.[0]?.assigned_daily_schedules?.[0]; // Assuming first week for display
+    const daySchedule = (weekSchedule as any)?.[currentDayKey];
 
-    const assignedEmployee = order.assignedEmployees?.[0];
-    if (!assignedEmployee) return 'N/A';
-
-    // Fallback to old structure if new one is not present
-    const startTime = startKey ? (assignedEmployee[startKey] as string | null) : null;
-    const endTime = endKey ? (assignedEmployee[endKey] as string | null) : null;
+    const startTime = daySchedule?.start;
+    const endTime = daySchedule?.end;
 
     if (startTime && endTime) {
       return `${startTime} - ${endTime}`;

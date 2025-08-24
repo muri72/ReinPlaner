@@ -49,6 +49,7 @@ interface DisplayOrder {
     image_urls: string[] | null;
     created_at: string;
   }[];
+  object: { recurrence_interval_weeks: number; start_week_offset: number; daily_schedules: any[]; } | null;
 }
 
 interface OrdersTableViewProps {
@@ -132,6 +133,17 @@ export function OrdersTableView({
       return sortDirection === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />;
     }
     return null;
+  };
+
+  const dayNames = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const;
+  const germanDayNames: { [key: string]: string } = {
+    monday: 'Mo',
+    tuesday: 'Di',
+    wednesday: 'Mi',
+    thursday: 'Do',
+    friday: 'Fr',
+    saturday: 'Sa',
+    sunday: 'So',
   };
 
   if (orders.length === 0 && !query && !statusFilter && !orderTypeFilter && !serviceTypeFilter && !customerIdFilter && !employeeIdFilter) {

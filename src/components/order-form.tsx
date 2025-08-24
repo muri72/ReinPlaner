@@ -171,7 +171,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
   const form = useForm<OrderFormValues>({
     resolver: zodResolver(orderSchema.superRefine((data, ctx) => {
       // Pass objects to the superRefine context for validation
-      (ctx as any).parent = { objects };
+      (ctx as any).objects = objects; // Correctly pass objects to context
     }) as z.ZodSchema<OrderFormValues>),
     defaultValues: resolvedDefaultValues,
     mode: "onChange",
@@ -361,7 +361,8 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
           if (objectDailySchedule) {
             // Distribute object hours equally among selected employees
             const hoursPerEmployee = objectDailySchedule.hours && numAssignedEmployees > 0 
-              ? objectDailySchedule.hours / numAss AssignedEmployees.length;
+              ? objectDailySchedule.hours / numAssignedEmployees 
+              : null;
             
             newWeekSchedule[day] = {
               hours: hoursPerEmployee ? parseFloat(hoursPerEmployee.toFixed(2)) : null,

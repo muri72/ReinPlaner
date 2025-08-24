@@ -168,8 +168,7 @@ export async function getPlanningDataForWeek(currentDate: Date): Promise<{ succe
           
           if (effectiveWeekIndex < 0) { // Ensure positive index
               // This case should ideally not happen with correct modulo arithmetic, but as a safeguard
-              // If the offset is larger than the difference, it means the cycle hasn't started yet or is in a previous year.
-              // For simplicity, if it's still negative, we'll default to the first week of the cycle.
+              // If the offset is larger than the difference, it's still negative, we'll default to the first week of the cycle.
               // A more robust solution might involve calculating the week number relative to a fixed epoch.
               // For now, if it's still negative, we'll assume it's not the correct week.
               continue;
@@ -206,7 +205,7 @@ export async function getPlanningDataForWeek(currentDate: Date): Promise<{ succe
             const employeeDailySchedules = assignment.assigned_daily_schedules;
             if (employeeDailySchedules && employeeDailySchedules.length > effectiveWeekIndex) {
               const weekSchedule = employeeDailySchedules[effectiveWeekIndex];
-              const daySchedule = (weekSchedule as any)?.[dayNames[dayOfWeek]]; // Adjust for dayNames array (0=Sun, 1=Mon...)
+              const daySchedule = (weekSchedule as any)?.[dayNames[dayOfWeek === 0 ? 6 : dayOfWeek - 1]]; // Adjust for dayNames array (0=Sun, 1=Mon...)
               if (daySchedule) {
                 dailyHours = daySchedule.hours || 0;
                 assignedStartTime = daySchedule.start;
