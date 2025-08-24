@@ -391,7 +391,6 @@ export default function OrdersPage({
       }
     }
 
-    const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
     const currentDayKey = dayNames[dayIndex];
     const weekSchedule = order.assignedEmployees?.[0]?.assigned_daily_schedules?.[0]; // Assuming first week for display
     const daySchedule = (weekSchedule as any)?.[currentDayKey];
@@ -523,7 +522,7 @@ export default function OrdersPage({
                             {(order.order_type === "recurring" || order.order_type === "substitution") && order.recurring_end_date && <div className="flex items-center text-xs text-muted-foreground"><CalendarDays className="mr-1 h-3 w-3" /><span>Ende: {new Date(order.recurring_end_date).toLocaleDateString()}</span></div>}
                             
                             {/* Display assigned times for each day */}
-                            {Array.from({ length: 7 }).map((_, dayIndex) => {
+                            {dayNames.map((day, dayIndex) => {
                                 const assignmentsForDay = order.assignedEmployees
                                     ?.map(emp => {
                                         const startTime = getAssignedTimeForDay(order, dayIndex);
@@ -540,7 +539,7 @@ export default function OrdersPage({
                                     return (
                                         <div key={dayIndex} className="flex items-start text-xs text-muted-foreground">
                                             <Clock className="mr-1 h-3 w-3 mt-0.5 flex-shrink-0" />
-                                            <span>{germanDayNames[dayNames[dayIndex]]}: {assignmentsForDay.join('; ')}</span>
+                                            <span>{germanDayNames[day]}: {assignmentsForDay.join('; ')}</span>
                                         </div>
                                     );
                                 }

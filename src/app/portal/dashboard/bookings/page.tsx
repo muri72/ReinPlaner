@@ -71,6 +71,17 @@ interface RawOrderResponse {
   }[] | null;
 }
 
+const dayNames = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const;
+const germanDayNames: { [key: string]: string } = {
+  monday: 'Mo',
+  tuesday: 'Di',
+  wednesday: 'Mi',
+  thursday: 'Do',
+  friday: 'Fr',
+  saturday: 'Sa',
+  sunday: 'So',
+};
+
 export default async function CustomerBookingsPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -216,7 +227,6 @@ export default async function CustomerBookingsPage() {
       }
     }
 
-    const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
     const currentDayKey = dayNames[dayIndex];
     const weekSchedule = order.assignedEmployees?.[0]?.assigned_daily_schedules?.[0]; // Assuming first week for display
     const daySchedule = (weekSchedule as any)?.[currentDayKey];
@@ -300,10 +310,10 @@ export default async function CustomerBookingsPage() {
                       </TableCell>
                       <TableCell className="text-sm">
                         {/* Display assigned times for each day */}
-                        {Array.from({ length: 7 }).map((_, dayIndex) => {
+                        {dayNames.map((day, dayIndex) => {
                           const assignedTime = getAssignedTimeForDay(order, dayIndex);
                           if (assignedTime !== 'N/A') {
-                            return <div key={dayIndex}>{assignedTime}</div>;
+                            return <div key={dayIndex}>{germanDayNames[day]}: {assignedTime}</div>;
                           }
                           return null;
                         })}
