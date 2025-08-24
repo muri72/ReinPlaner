@@ -218,7 +218,7 @@ export function TodaysOrdersOverview() {
     };
 
     fetchTodaysOrders();
-  }, [supabase, getWeek]); // Added getWeek to dependency array
+  }, [supabase]);
 
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
@@ -248,7 +248,8 @@ export function TodaysOrdersOverview() {
   };
 
   const getAssignedTimeForToday = (order: DisplayOrder) => {
-    const todayDayOfWeek = new Date().getDay(); // 0=So, 1=Mo, ..., 6=Sa
+    const today = new Date();
+    const todayDayOfWeek = today.getDay(); // 0=So, 1=Mo, ..., 6=Sa
     const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
     const currentDayKey = dayNames[todayDayOfWeek];
 
@@ -258,9 +259,9 @@ export function TodaysOrdersOverview() {
     const employeeRecurrenceInterval = assignedEmployee.assigned_recurrence_interval_weeks || order.object?.recurrence_interval_weeks || 1;
     const employeeStartWeekOffset = assignedEmployee.assigned_start_week_offset || order.object?.start_week_offset || 0;
 
-    const orderStartDateForWeekCalc = order.recurring_start_date ? new Date(order.recurring_start_date) : (order.due_date ? new Date(order.due_date) : new Date());
+    const orderStartDateForWeekCalc = order.recurring_start_date ? new Date(order.recurring_start_date) : (order.due_date ? new Date(order.due_date) : today);
     const startWeekNumber = getWeek(orderStartDateForWeekCalc, { weekStartsOn: 1 });
-    const currentWeekNumber = getWeek(new Date(), { weekStartsOn: 1 });
+    const currentWeekNumber = getWeek(today, { weekStartsOn: 1 });
     let weekDifference = currentWeekNumber - startWeekNumber;
     if (weekDifference < 0) { weekDifference += 52; } // Handle year boundary
     const effectiveWeekIndex = (weekDifference - employeeStartWeekOffset) % employeeRecurrenceInterval;

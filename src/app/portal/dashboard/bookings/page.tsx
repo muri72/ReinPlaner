@@ -96,7 +96,7 @@ export default async function CustomerBookingsPage() {
   const customerIdResult = await supabase
     .from('customers')
     .select('id')
-    .eq('user.id', user.id)
+    .eq('user_id', user.id)
     .single();
 
   const customerId = customerIdResult.data?.id || null;

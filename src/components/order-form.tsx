@@ -71,7 +71,7 @@ const assignedEmployeeSchema = z.object({
 
 export type AssignedEmployee = z.infer<typeof assignedEmployeeSchema>;
 
-export const orderSchema = z.object({
+const baseOrderSchema = z.object({
   title: z.string().min(1, "Titel ist erforderlich").max(100, "Titel ist zu lang"),
   description: z.string().max(500, "Beschreibung ist zu lang").optional().nullable(),
   dueDate: z.date().optional().nullable(),
@@ -91,9 +91,11 @@ export const orderSchema = z.object({
   serviceType: z.enum(availableServices).optional().nullable(),
   requestStatus: z.enum(["pending", "approved", "rejected"]).default("approved"),
   assignedEmployees: z.array(assignedEmployeeSchema).optional(),
-}).superRefine((data, ctx) => {
+});
+
+const createOrderSchema = (objects: any[]) => baseOrderSchema.superRefine((data, ctx) => {
   if (data.assignedEmployees && data.objectId) {
-    const selectedObject = (ctx.parent as any).objects?.find((obj: any) => obj.id === data.objectId);
+    const selectedObject = objects.find((obj: any) => obj.id === data.objectId);
     if (selectedObject) {
       data.assignedEmployees.forEach((assignedEmp, empIndex) => {
         if (assignedEmp.assigned_daily_schedules.length !== assignedEmp.assigned_recurrence_interval_weeks) {
@@ -131,8 +133,8 @@ export const orderSchema = z.object({
   }
 });
 
-export type OrderFormInput = z.input<typeof orderSchema>;
-export type OrderFormValues = z.infer<typeof orderSchema>;
+export type OrderFormValues = z.infer<typeof baseOrderSchema>;
+export type OrderFormInput = z.input<typeof baseOrderSchema>;
 
 interface OrderFormProps {
   initialData?: Partial<OrderFormInput>;
@@ -169,10 +171,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
   };
 
   const form = useForm<OrderFormValues>({
-    resolver: zodResolver(orderSchema.superRefine((data, ctx) => {
-      // Pass objects to the superRefine context for validation
-      (ctx as any).objects = objects; // Correctly pass objects to context
-    }) as z.ZodSchema<OrderFormValues>),
+    resolver: zodResolver(createOrderSchema(objects)),
     defaultValues: resolvedDefaultValues,
     mode: "onChange",
   });
