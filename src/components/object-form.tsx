@@ -45,12 +45,8 @@ const germanDayNames: { [key: string]: string } = {
 
 const dailyScheduleSchema = z.object({
   hours: z.preprocess(preprocessNumber, z.nullable(z.number().min(0).max(24)).optional()),
-  start: z.string().optional().nullable().refine(val => !val || timeRegex.test(val), {
-    message: "Ungültiges Zeitformat (HH:MM)",
-  }),
-  end: z.string().optional().nullable().refine(val => !val || timeRegex.test(val), {
-    message: "Ungültiges Zeitformat (HH:MM)",
-  }),
+  start: z.string().regex(timeRegex, "Ungültiges Format (HH:MM)").or(z.literal("")).optional().nullable(),
+  end: z.string().regex(timeRegex, "Ungültiges Format (HH:MM)").or(z.literal("")).optional().nullable(),
 });
 
 const weeklyScheduleSchema = z.object({
