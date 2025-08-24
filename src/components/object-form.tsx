@@ -392,8 +392,12 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
         <h3 className="text-lg font-semibold">Regelmäßige Arbeitszeiten pro Wochentag (JSON)</h3>
         <p className="text-sm text-muted-foreground">
           Geben Sie die Zeitpläne als JSON-Array ein. Beispiel:
-          `[{"day_of_week": "monday", "week_offset_in_cycle": 0, "hours": 8, "start_time": "08:00", "end_time": "16:00"}, {"day_of_week": "monday", "week_offset_in_cycle": 1, "hours": 6, "start_time": "09:00", "end_time": "15:00"}]`
         </p>
+        <pre className="bg-muted p-2 rounded-md text-xs font-mono overflow-x-auto">
+          <code>
+            {`[{"day_of_week": "monday", "week_offset_in_cycle": 0, "hours": 8, "start_time": "08:00", "end_time": "16:00"}, {"day_of_week": "monday", "week_offset_in_cycle": 1, "hours": 6, "start_time": "09:00", "end_time": "15:00"}]`}
+          </code>
+        </pre>
         <Textarea
           id="daily_schedules"
           {...form.register("daily_schedules")}

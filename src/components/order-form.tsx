@@ -759,8 +759,12 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
                   <Label htmlFor={`assignedEmployees.${assignedIndex}.assigned_daily_schedules`} className="text-xs">Zugewiesene tägliche Zeitpläne (JSON)</Label>
                   <p className="text-sm text-muted-foreground">
                     Geben Sie die Zeitpläne als JSON-Array ein. Beispiel:
-                    `&#91;{&#34;day_of_week&#34;: &#34;monday&#34;, &#34;week_offset_in_cycle&#34;: 0, &#34;hours&#34;: 4, &#34;start_time&#34;: &#34;08:00&#34;, &#34;end_time&#34;: &#34;12:00&#34;}]`
                   </p>
+                  <pre className="bg-muted p-2 rounded-md text-xs font-mono overflow-x-auto">
+                    <code>
+                      {`[{"day_of_week": "monday", "week_offset_in_cycle": 0, "hours": 4, "start_time": "08:00", "end_time": "12:00"}]`}
+                    </code>
+                  </pre>
                   <Textarea
                     id={`assignedEmployees.${assignedIndex}.assigned_daily_schedules`}
                     {...form.register(`assignedEmployees.${assignedIndex}.assigned_daily_schedules`)}
