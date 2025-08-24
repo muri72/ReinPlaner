@@ -7,13 +7,14 @@ import { createClient } from "@/lib/supabase/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Clock, Play, StopCircle, PauseCircle, RotateCcw, PlusCircle } from "lucide-react";
+import { Clock, Play, StopCircle, PauseCircle, RotateCcw, PlusCircle, CalendarDays } from "lucide-react";
 import { createTimeEntry, updateTimeEntry } from "@/app/dashboard/time-tracking/actions";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { calculateHours } from "@/lib/utils";
 import { TimeEntryCreateDialog } from "@/components/time-entry-create-dialog";
 import { TimeEntryFormValues } from "@/components/time-entry-form";
 import { Skeleton } from "@/components/ui/skeleton";
+import { getWeek } from "date-fns";
 
 interface EmployeeTimeTrackerProps {
   userId: string;
@@ -30,12 +31,70 @@ interface ActiveTimeEntry {
   notes?: string | null;
 }
 
+interface OrderWithDetails {
+  id: string;
+  title: string;
+  customer_id: string;
+  object_id: string | null;
+  order_type: string;
+  recurring_start_date: string | null;
+  due_date: string | null;
+  object: {
+    recurrence_interval_weeks: number;
+    start_week_offset: number;
+    monday_hours: number | null;
+    tuesday_hours: number | null;
+    wednesday_hours: number | null;
+    thursday_hours: number | null;
+    friday_hours: number | null;
+    saturday_hours: number | null;
+    sunday_hours: number | null;
+    monday_start_time: string | null;
+    tuesday_start_time: string | null;
+    wednesday_start_time: string | null;
+    thursday_start_time: string | null;
+    friday_start_time: string | null;
+    saturday_start_time: string | null;
+    sunday_start_time: string | null;
+    monday_end_time: string | null;
+    tuesday_end_time: string | null;
+    wednesday_end_time: string | null;
+    thursday_end_time: string | null;
+    friday_end_time: string | null;
+    saturday_end_time: string | null;
+    sunday_end_time: string | null;
+  } | null;
+  assigned_recurrence_interval_weeks: number | null;
+  assigned_start_week_offset: number | null;
+  assigned_monday_hours: number | null;
+  assigned_tuesday_hours: number | null;
+  assigned_wednesday_hours: number | null;
+  assigned_thursday_hours: number | null;
+  assigned_friday_hours: number | null;
+  assigned_saturday_hours: number | null;
+  assigned_sunday_hours: number | null;
+  assigned_monday_start_time: string | null;
+  assigned_tuesday_start_time: string | null;
+  assigned_wednesday_start_time: string | null;
+  assigned_thursday_start_time: string | null;
+  assigned_friday_start_time: string | null;
+  assigned_saturday_start_time: string | null;
+  assigned_sunday_start_time: string | null;
+  assigned_monday_end_time: string | null;
+  assigned_tuesday_end_time: string | null;
+  assigned_wednesday_end_time: string | null;
+  assigned_thursday_end_time: string | null;
+  assigned_friday_end_time: string | null;
+  assigned_saturday_end_time: string | null;
+  assigned_sunday_end_time: string | null;
+}
+
 export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
   const supabase = createClient();
   const [employeeId, setEmployeeId] = useState<string | null>(null);
   const [activeEntry, setActiveEntry] = useState<ActiveTimeEntry | null>(null);
   const [loading, setLoading] = useState(true);
-  const [orders, setOrders] = useState<{ id: string; title: string; customer_id: string; object_id: string; order_type: string }[]>([]);
+  const [orders, setOrders] = useState<OrderWithDetails[]>([]);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [currentTab, setCurrentTab] = useState<'clock_in_out' | 'stopwatch'>('clock_in_out');
 
@@ -43,6 +102,8 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
   const [suggestedEndTime, setSuggestedEndTime] = useState<string | null>(null);
   const [suggestedDuration, setSuggestedDuration] = useState<number | null>(null);
   const [suggestedBreakMinutes, setSuggestedBreakMinutes] = useState<number | null>(null);
+  const [recurrenceInfo, setRecurrenceInfo] = useState<string | null>(null);
+
 
   const stopwatchElapsedTime = useRef(0); // Use ref for elapsed time
   const stopwatchIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -126,11 +187,58 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
 
         const { data: ordersData, error: ordersError } = await supabase
           .from('orders')
-          .select('id, title, customer_id, object_id, order_type, order_employee_assignments!inner(employee_id)')
+          .select(`
+            id, title, customer_id, object_id, order_type, recurring_start_date, due_date,
+            objects ( recurrence_interval_weeks, start_week_offset, monday_hours, tuesday_hours, wednesday_hours, thursday_hours, friday_hours, saturday_hours, sunday_hours, monday_start_time, tuesday_start_time, wednesday_start_time, thursday_start_time, friday_start_time, saturday_start_time, sunday_start_time, monday_end_time, tuesday_end_time, wednesday_end_time, thursday_end_time, friday_end_time, saturday_end_time, sunday_end_time ),
+            order_employee_assignments!inner ( 
+              employee_id, assigned_recurrence_interval_weeks, assigned_start_week_offset,
+              assigned_monday_hours, assigned_tuesday_hours, assigned_wednesday_hours, thursday_hours,
+              assigned_thursday_hours, assigned_friday_hours, assigned_saturday_hours, assigned_sunday_hours,
+              assigned_monday_start_time, assigned_tuesday_start_time, assigned_wednesday_start_time, assigned_thursday_start_time,
+              assigned_friday_start_time, assigned_saturday_start_time, assigned_sunday_start_time,
+              assigned_monday_end_time, assigned_tuesday_end_time, assigned_wednesday_end_time, assigned_thursday_end_time,
+              assigned_friday_end_time, assigned_saturday_end_time, assigned_sunday_end_time
+            )
+          `)
           .eq('order_employee_assignments.employee_id', empId)
           .order('title', { ascending: true });
 
-        if (ordersData) setOrders(ordersData);
+        if (ordersData) {
+          const mappedOrders: OrderWithDetails[] = ordersData.map(order => ({
+            id: order.id,
+            title: order.title,
+            customer_id: order.customer_id,
+            object_id: order.object_id,
+            order_type: order.order_type,
+            recurring_start_date: order.recurring_start_date,
+            due_date: order.due_date,
+            object: Array.isArray(order.objects) ? order.objects[0] : order.objects,
+            assigned_recurrence_interval_weeks: order.order_employee_assignments?.[0]?.assigned_recurrence_interval_weeks || null,
+            assigned_start_week_offset: order.order_employee_assignments?.[0]?.assigned_start_week_offset || null,
+            assigned_monday_hours: order.order_employee_assignments?.[0]?.assigned_monday_hours || null,
+            assigned_tuesday_hours: order.order_employee_assignments?.[0]?.assigned_tuesday_hours || null,
+            assigned_wednesday_hours: order.order_employee_assignments?.[0]?.assigned_wednesday_hours || null,
+            assigned_thursday_hours: order.order_employee_assignments?.[0]?.assigned_thursday_hours || null,
+            assigned_friday_hours: order.order_employee_assignments?.[0]?.assigned_friday_hours || null,
+            assigned_saturday_hours: order.order_employee_assignments?.[0]?.assigned_saturday_hours || null,
+            assigned_sunday_hours: order.order_employee_assignments?.[0]?.assigned_sunday_hours || null,
+            assigned_monday_start_time: order.order_employee_assignments?.[0]?.assigned_monday_start_time || null,
+            assigned_tuesday_start_time: order.order_employee_assignments?.[0]?.assigned_tuesday_start_time || null,
+            assigned_wednesday_start_time: order.order_employee_assignments?.[0]?.assigned_wednesday_start_time || null,
+            assigned_thursday_start_time: order.order_employee_assignments?.[0]?.assigned_thursday_start_time || null,
+            assigned_friday_start_time: order.order_employee_assignments?.[0]?.assigned_friday_start_time || null,
+            assigned_saturday_start_time: order.order_employee_assignments?.[0]?.assigned_saturday_start_time || null,
+            assigned_sunday_start_time: order.order_employee_assignments?.[0]?.assigned_sunday_start_time || null,
+            assigned_monday_end_time: order.order_employee_assignments?.[0]?.assigned_monday_end_time || null,
+            assigned_tuesday_end_time: order.order_employee_assignments?.[0]?.assigned_tuesday_end_time || null,
+            assigned_wednesday_end_time: order.order_employee_assignments?.[0]?.assigned_wednesday_end_time || null,
+            assigned_thursday_end_time: order.order_employee_assignments?.[0]?.assigned_thursday_end_time || null,
+            assigned_friday_end_time: order.order_employee_assignments?.[0]?.assigned_friday_end_time || null,
+            assigned_saturday_end_time: order.order_employee_assignments?.[0]?.assigned_saturday_end_time || null,
+            assigned_sunday_end_time: order.order_employee_assignments?.[0]?.assigned_sunday_end_time || null,
+          }));
+          setOrders(mappedOrders);
+        }
         if (ordersError) console.error("Fehler beim Laden der Aufträge:", ordersError);
       }
       setLoading(false);
@@ -152,29 +260,41 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
       setSuggestedEndTime(null);
       setSuggestedDuration(null);
       setSuggestedBreakMinutes(null);
+      setRecurrenceInfo(null);
 
       if (selectedOrderId && employeeId) {
-        const { data: assignmentData, error: assignmentError } = await supabase
-          .from('order_employee_assignments')
-          .select('*')
-          .eq('order_id', selectedOrderId)
-          .eq('employee_id', employeeId)
-          .single();
+        const selectedOrder = orders.find(o => o.id === selectedOrderId);
 
-        if (assignmentError && assignmentError.code !== 'PGRST116') {
-          console.error("Fehler beim Laden des Zuweisungsplans:", assignmentError);
-          return;
-        }
-
-        if (assignmentData) {
+        if (selectedOrder) {
           const today = new Date();
           const dayOfWeek = today.getDay(); // 0=So, 1=Mo, ...
           const dayKeys = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
           const currentDayKey = dayKeys[dayOfWeek];
 
-          const dailyHours = (assignmentData as any)[`assigned_${currentDayKey}_hours`] as number | null;
-          const startTime = (assignmentData as any)[`assigned_${currentDayKey}_start_time`] as string | null;
-          const endTime = (assignmentData as any)[`assigned_${currentDayKey}_end_time`] as string | null;
+          // Determine recurrence from assignment or object
+          const recurrenceIntervalWeeks = selectedOrder.assigned_recurrence_interval_weeks || selectedOrder.object?.recurrence_interval_weeks || 1;
+          const startWeekOffset = selectedOrder.assigned_start_week_offset || selectedOrder.object?.start_week_offset || 0;
+
+          if (recurrenceIntervalWeeks > 1) {
+            const orderStartDate = selectedOrder.recurring_start_date ? new Date(selectedOrder.recurring_start_date) : (selectedOrder.due_date ? new Date(selectedOrder.due_date) : today);
+            const startWeekNumber = getWeek(orderStartDate, { weekStartsOn: 1 });
+            const currentWeekNumber = getWeek(today, { weekStartsOn: 1 });
+            const weekDifference = currentWeekNumber - startWeekNumber;
+
+            if (weekDifference % recurrenceIntervalWeeks !== startWeekOffset) {
+              setRecurrenceInfo(`Dieser Auftrag ist nicht für diese Woche geplant (Alle ${recurrenceIntervalWeeks} Wochen, Offset ${startWeekOffset}).`);
+              return;
+            } else {
+              setRecurrenceInfo(`Dieser Auftrag ist für diese Woche geplant (Alle ${recurrenceIntervalWeeks} Wochen, Offset ${startWeekOffset}).`);
+            }
+          } else {
+            setRecurrenceInfo(null);
+          }
+
+          // Prioritize assigned hours/times, then fallback to object hours/times
+          const dailyHours = (selectedOrder as any)[`assigned_${currentDayKey}_hours`] || (selectedOrder.object as any)?.[`${currentDayKey}_hours`];
+          const startTime = (selectedOrder as any)[`assigned_${currentDayKey}_start_time`] || (selectedOrder.object as any)?.[`${currentDayKey}_start_time`];
+          const endTime = (selectedOrder as any)[`assigned_${currentDayKey}_end_time`] || (selectedOrder.object as any)?.[`${currentDayKey}_end_time`];
 
           if (dailyHours !== null && dailyHours > 0) {
             setSuggestedDuration(Math.round(dailyHours * 60));
@@ -187,7 +307,7 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
     };
 
     fetchAssignmentSchedule();
-  }, [selectedOrderId, employeeId, supabase]);
+  }, [selectedOrderId, employeeId, orders, supabase]);
 
   const handleClockOut = async () => {
     if (!activeEntry || activeEntry.type !== 'clock_in_out') {
@@ -215,6 +335,7 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
       toast.success("Erfolgreich ausgestempelt!");
       setActiveEntry(null);
       setSelectedOrderId(null);
+      setRecurrenceInfo(null);
     } else {
       toast.error(result.message);
     }
@@ -302,6 +423,7 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
       toast.success("Stoppuhr gestoppt!");
       setActiveEntry(null);
       setSelectedOrderId(null);
+      setRecurrenceInfo(null);
       stopwatchElapsedTime.current = 0;
       setDisplayTime('00:00:00');
     } else {
@@ -355,7 +477,7 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
   }
 
   const selectedOrder = orders.find(o => o.id === selectedOrderId);
-  const isScheduledOrder = !!(selectedOrder && suggestedDuration !== null);
+  const isScheduledOrder = !!(selectedOrder && suggestedDuration !== null && !recurrenceInfo); // Only if no recurrence conflict
 
   const getInitialDataForDialog = (): Partial<TimeEntryFormValues> => {
     const now = new Date();
@@ -454,6 +576,13 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
                   )}
                 </div>
 
+                {recurrenceInfo && (
+                  <div className="text-sm text-muted-foreground mt-2 p-2 border rounded-md bg-warning/10 dark:bg-warning/20 flex items-center">
+                    <CalendarDays className="mr-2 h-4 w-4 flex-shrink-0" />
+                    <p>{recurrenceInfo}</p>
+                  </div>
+                )}
+
                 {isScheduledOrder && suggestedDuration !== null && (
                   <div className="text-sm text-muted-foreground mt-2 p-2 border rounded-md bg-primary-foreground/10 dark:bg-primary-foreground/20">
                     <p>Vorgeschlagene Dauer für diesen Auftrag heute:</p>
@@ -498,6 +627,7 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
                           if (error && error.code !== 'PGRST116') console.error("Fehler beim Neuladen des aktiven Eintrags:", error);
                         });
                       setSelectedOrderId(null);
+                      setRecurrenceInfo(null);
                     }}
                     currentUserId={userId}
                     isAdmin={false}
@@ -542,6 +672,13 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
                   )}
                 </div>
 
+                {recurrenceInfo && (
+                  <div className="text-sm text-muted-foreground mt-2 p-2 border rounded-md bg-warning/10 dark:bg-warning/20 flex items-center">
+                    <CalendarDays className="mr-2 h-4 w-4 flex-shrink-0" />
+                    <p>{recurrenceInfo}</p>
+                  </div>
+                )}
+
                 {isScheduledOrder && suggestedDuration !== null && (
                   <div className="text-sm text-muted-foreground mt-2 p-2 border rounded-md bg-primary-foreground/10 dark:bg-primary-foreground/20">
                     <p>Vorgeschlagene Dauer für diesen Auftrag heute:</p>
@@ -561,7 +698,7 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
                   {!activeEntry ? (
                     <Button
                       onClick={handleStopwatchStart}
-                      disabled={loading}
+                      disabled={loading || !!recurrenceInfo}
                       className="flex-1 bg-success hover:bg-success/90"
                     >
                       <Play className="mr-2 h-4 w-4" />

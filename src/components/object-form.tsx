@@ -67,6 +67,8 @@ const assignedEmployeeSchema = z.object({
   assigned_saturday_end_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
   assigned_sunday_start_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
   assigned_sunday_end_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
+  assigned_recurrence_interval_weeks: z.preprocess(preprocessNumber, z.number().min(1).max(52).default(1)),
+  assigned_start_week_offset: z.preprocess(preprocessNumber, z.number().min(0).max(51).default(0)),
 });
 
 export type AssignedEmployee = z.infer<typeof assignedEmployeeSchema>;
@@ -106,6 +108,8 @@ export const objectSchema = z.object({
   saturday_end_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
   sunday_start_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
   sunday_end_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
+  recurrence_interval_weeks: z.preprocess(preprocessNumber, z.number().min(1).max(52).default(1)),
+  start_week_offset: z.preprocess(preprocessNumber, z.number().min(0).max(51).default(0)),
 }).superRefine((data, ctx) => {
   if (data.isAlarmSecured && !data.alarmPassword && !data.securityCodeWord) {
     ctx.addIssue({
@@ -154,6 +158,8 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
     sunday_end_time: string | null;
     total_weekly_hours: number | null;
     time_of_day: string | null;
+    recurrence_interval_weeks: number;
+    start_week_offset: number;
   }[]>([]);
   const [allEmployees, setAllEmployees] = useState<{ id: string; first_name: string; last_name: string }[]>([]);
   const [customerContacts, setCustomerContacts] = useState<{ id: string; first_name: string; last_name: string; customer_id: string }[]>([]);
@@ -173,13 +179,13 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
     isAlarmSecured: initialData?.isAlarmSecured ?? false,
     alarmPassword: initialData?.alarmPassword ?? null,
     securityCodeWord: initialData?.securityCodeWord ?? null,
-    monday_hours: initialData?.monday_hours as number | null | undefined,
-    tuesday_hours: initialData?.tuesday_hours as number | null | undefined,
-    wednesday_hours: initialData?.wednesday_hours as number | null | undefined,
-    thursday_hours: initialData?.thursday_hours as number | null | undefined,
-    friday_hours: initialData?.friday_hours as number | null | undefined,
-    saturday_hours: initialData?.saturday_hours as number | null | undefined,
-    sunday_hours: initialData?.sunday_hours as number | null | undefined,
+    monday_hours: initialData?.monday_hours ?? null,
+    tuesday_hours: initialData?.tuesday_hours ?? null,
+    wednesday_hours: initialData?.wednesday_hours ?? null,
+    thursday_hours: initialData?.thursday_hours ?? null,
+    friday_hours: initialData?.friday_hours ?? null,
+    saturday_hours: initialData?.saturday_hours ?? null,
+    sunday_hours: initialData?.sunday_hours ?? null,
     monday_start_time: initialData?.monday_start_time ?? null,
     monday_end_time: initialData?.monday_end_time ?? null,
     tuesday_start_time: initialData?.tuesday_start_time ?? null,
@@ -194,6 +200,8 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
     saturday_end_time: initialData?.saturday_end_time ?? null,
     sunday_start_time: initialData?.sunday_start_time ?? null,
     sunday_end_time: initialData?.sunday_end_time ?? null,
+    recurrence_interval_weeks: initialData?.recurrence_interval_weeks ?? 1,
+    start_week_offset: initialData?.start_week_offset ?? 0,
   };
 
   const form = useForm<ObjectFormValues>({
@@ -220,7 +228,7 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
       if (customersData) setCustomers(customersData);
       if (customersError) console.error("Fehler beim Laden der Kunden:", customersError);
 
-      const { data: objectsData, error: objectsError } = await supabase.from('objects').select('id, name, customer_id, monday_hours, tuesday_hours, wednesday_hours, thursday_hours, friday_hours, saturday_hours, sunday_hours, monday_start_time, monday_end_time, tuesday_start_time, tuesday_end_time, wednesday_start_time, wednesday_end_time, thursday_start_time, thursday_end_time, friday_start_time, friday_end_time, saturday_start_time, saturday_end_time, sunday_start_time, sunday_end_time, total_weekly_hours, time_of_day');
+      const { data: objectsData, error: objectsError } = await supabase.from('objects').select('id, name, customer_id, monday_hours, tuesday_hours, wednesday_hours, thursday_hours, friday_hours, saturday_hours, sunday_hours, total_weekly_hours, monday_start_time, monday_end_time, tuesday_start_time, tuesday_end_time, wednesday_start_time, wednesday_end_time, thursday_start_time, thursday_end_time, friday_start_time, friday_end_time, saturday_start_time, saturday_end_time, sunday_start_time, sunday_end_time, time_of_day, recurrence_interval_weeks, start_week_offset');
       if (objectsData) setObjects(objectsData);
       if (objectsError) console.error("Fehler beim Laden der Objekte:", objectsError);
     };
@@ -451,6 +459,42 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
           </div>
         </div>
       )}
+
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold">Wiederholungsintervall</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <Label htmlFor="recurrence_interval_weeks">Wiederholt sich alle X Wochen</Label>
+            <Input
+              id="recurrence_interval_weeks"
+              type="number"
+              step="1"
+              min="1"
+              max="52"
+              {...form.register("recurrence_interval_weeks", { valueAsNumber: true })}
+              placeholder="Z.B. 1 für jede Woche, 2 für jede zweite Woche"
+            />
+            {form.formState.errors.recurrence_interval_weeks && <p className="text-red-500 text-sm mt-1">{form.formState.errors.recurrence_interval_weeks.message}</p>}
+          </div>
+          <div>
+            <Label htmlFor="start_week_offset">Start-Wochen-Offset (0-basierend)</Label>
+            <Input
+              id="start_week_offset"
+              type="number"
+              step="1"
+              min="0"
+              max={form.watch("recurrence_interval_weeks") - 1}
+              {...form.register("start_week_offset", { valueAsNumber: true })}
+              placeholder="Z.B. 0 für die erste Woche, 1 für die zweite Woche"
+            />
+            {form.formState.errors.start_week_offset && <p className="text-red-500 text-sm mt-1">{form.formState.errors.start_week_offset.message}</p>}
+          </div>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Definiert, in welchem Wochenintervall die untenstehenden Arbeitszeiten gelten.
+          Ein Intervall von 1 bedeutet jede Woche. Ein Intervall von 2 mit Offset 0 bedeutet jede zweite Woche, beginnend mit der aktuellen Woche.
+        </p>
+      </div>
 
       <div className="space-y-4">
         <h3 className="text-lg font-semibold">Regelmäßige Arbeitszeiten pro Wochentag</h3>

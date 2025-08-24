@@ -87,6 +87,8 @@ export async function createOrder(data: OrderFormValues) {
       assigned_saturday_end_time: assignment.assigned_saturday_end_time,
       assigned_sunday_start_time: assignment.assigned_sunday_start_time,
       assigned_sunday_end_time: assignment.assigned_sunday_end_time,
+      assigned_recurrence_interval_weeks: assignment.assigned_recurrence_interval_weeks,
+      assigned_start_week_offset: assignment.assigned_start_week_offset,
     }));
 
     const { error: assignError } = await supabase
@@ -209,6 +211,8 @@ export async function updateOrder(orderId: string, data: OrderFormValues) {
       assigned_saturday_end_time: assignment.assigned_saturday_end_time,
       assigned_sunday_start_time: assignment.assigned_sunday_start_time,
       assigned_sunday_end_time: assignment.assigned_sunday_end_time,
+      assigned_recurrence_interval_weeks: assignment.assigned_recurrence_interval_weeks,
+      assigned_start_week_offset: assignment.assigned_start_week_offset,
     }));
 
     const { error: insertAssignError } = await supabase
@@ -288,6 +292,10 @@ export async function processOrderRequest(formData: FormData): Promise<{ success
   const assigned_sunday_start_time = formData.get('assigned_sunday_start_time') as string || null;
   const assigned_sunday_end_time = formData.get('assigned_sunday_end_time') as string || null;
 
+  // Retrieve recurrence fields
+  const assigned_recurrence_interval_weeks = formData.get('assigned_recurrence_interval_weeks') ? Number(formData.get('assigned_recurrence_interval_weeks')) : 1;
+  const assigned_start_week_offset = formData.get('assigned_start_week_offset') ? Number(formData.get('assigned_start_week_offset')) : 0;
+
 
   if (!orderId || !decision) {
     return { success: false, message: "Ungültige Anfrage." };
@@ -351,6 +359,8 @@ export async function processOrderRequest(formData: FormData): Promise<{ success
         assigned_saturday_end_time,
         assigned_sunday_start_time,
         assigned_sunday_end_time,
+        assigned_recurrence_interval_weeks,
+        assigned_start_week_offset,
       });
 
     if (insertAssignmentError) {

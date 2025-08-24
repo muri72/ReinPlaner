@@ -22,6 +22,7 @@ interface OrderPlanningDialogProps {
     service_type: string | null;
     total_estimated_hours: number | null;
     object_id: string | null;
+    object: { recurrence_interval_weeks: number; start_week_offset: number; } | null;
   };
 }
 
@@ -49,6 +50,8 @@ export function OrderPlanningDialog({ order }: OrderPlanningDialogProps) {
     monday: null, tuesday: null, wednesday: null, thursday: null,
     friday: null, saturday: null, sunday: null,
   });
+  const [recurrenceIntervalWeeks, setRecurrenceIntervalWeeks] = useState<number>(1);
+  const [startWeekOffset, setStartWeekOffset] = useState<number>(0);
 
   const dayNames = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
   const germanDayNames: { [key: string]: string } = {
@@ -83,7 +86,7 @@ export function OrderPlanningDialog({ order }: OrderPlanningDialogProps) {
         if (order.object_id) {
           const { data: objectData, error: objectError } = await supabase
             .from('objects')
-            .select('monday_hours, tuesday_hours, wednesday_hours, thursday_hours, friday_hours, saturday_hours, sunday_hours, monday_start_time, monday_end_time, tuesday_start_time, tuesday_end_time, wednesday_start_time, wednesday_end_time, thursday_start_time, thursday_end_time, friday_start_time, friday_end_time, saturday_start_time, saturday_end_time, sunday_start_time, sunday_end_time')
+            .select('monday_hours, tuesday_hours, wednesday_hours, thursday_hours, friday_hours, saturday_hours, sunday_hours, monday_start_time, monday_end_time, tuesday_start_time, tuesday_end_time, wednesday_start_time, wednesday_end_time, thursday_start_time, thursday_end_time, friday_start_time, friday_end_time, saturday_start_time, saturday_end_time, sunday_start_time, sunday_end_time, recurrence_interval_weeks, start_week_offset')
             .eq('id', order.object_id)
             .single();
 
@@ -102,6 +105,8 @@ export function OrderPlanningDialog({ order }: OrderPlanningDialogProps) {
             setDailyHours(newDailyHours);
             setDailyStartTimes(newDailyStartTimes);
             setDailyEndTimes(newDailyEndTimes);
+            setRecurrenceIntervalWeeks(objectData.recurrence_interval_weeks);
+            setStartWeekOffset(objectData.start_week_offset);
           }
         } else {
           // Clear daily hours and times if no object is linked
@@ -117,6 +122,8 @@ export function OrderPlanningDialog({ order }: OrderPlanningDialogProps) {
             monday: null, tuesday: null, wednesday: null, thursday: null,
             friday: null, saturday: null, sunday: null,
           });
+          setRecurrenceIntervalWeeks(1);
+          setStartWeekOffset(0);
         }
         setLoading(false);
       };
@@ -153,6 +160,8 @@ export function OrderPlanningDialog({ order }: OrderPlanningDialogProps) {
       formData.append(`assigned_${day}_start_time`, String(dailyStartTimes[day] || ''));
       formData.append(`assigned_${day}_end_time`, String(dailyEndTimes[day] || ''));
     });
+    formData.append('assigned_recurrence_interval_weeks', String(recurrenceIntervalWeeks));
+    formData.append('assigned_start_week_offset', String(startWeekOffset));
 
     const result = await processOrderRequest(formData);
     if (result.success) {
@@ -212,6 +221,45 @@ export function OrderPlanningDialog({ order }: OrderPlanningDialogProps) {
                 </SelectContent>
               </Select>
             </div>
+            {selectedEmployeeId && (
+              <div className="space-y-4 mt-4">
+                <h3 className="text-lg font-semibold">Wiederholungsintervall für Mitarbeiter</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="assigned_recurrence_interval_weeks">Wiederholt sich alle X Wochen</Label>
+                    <Input
+                      id="assigned_recurrence_interval_weeks"
+                      name="assigned_recurrence_interval_weeks"
+                      type="number"
+                      step="1"
+                      min="1"
+                      max="52"
+                      value={recurrenceIntervalWeeks}
+                      onChange={(e) => setRecurrenceIntervalWeeks(Number(e.target.value))}
+                      placeholder="Z.B. 1 für jede Woche, 2 für jede zweite Woche"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="assigned_start_week_offset">Start-Wochen-Offset (0-basierend)</Label>
+                    <Input
+                      id="assigned_start_week_offset"
+                      name="assigned_start_week_offset"
+                      type="number"
+                      step="1"
+                      min="0"
+                      max={recurrenceIntervalWeeks - 1}
+                      value={startWeekOffset}
+                      onChange={(e) => setStartWeekOffset(Number(e.target.value))}
+                      placeholder="Z.B. 0 für die erste Woche, 1 für die zweite Woche"
+                    />
+                  </div>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Definiert, in welchem Wochenintervall die untenstehenden Arbeitszeiten für diesen Mitarbeiter gelten.
+                  Ein Intervall von 1 bedeutet jede Woche. Ein Intervall von 2 mit Offset 0 bedeutet jede zweite Woche, beginnend mit der aktuellen Woche.
+                </p>
+              </div>
+            )}
             {selectedEmployeeId && order.object_id && (
               <div className="space-y-2 mt-4">
                 <Label>Zugewiesene Stunden & Zeiten pro Wochentag</Label>

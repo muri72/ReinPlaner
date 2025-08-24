@@ -68,6 +68,8 @@ const assignedEmployeeSchema = z.object({
   assigned_saturday_end_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
   assigned_sunday_start_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
   assigned_sunday_end_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
+  assigned_recurrence_interval_weeks: z.preprocess(preprocessNumber, z.number().min(1).max(52).default(1)),
+  assigned_start_week_offset: z.preprocess(preprocessNumber, z.number().min(0).max(51).default(0)),
 });
 
 export type AssignedEmployee = z.infer<typeof assignedEmployeeSchema>;
@@ -134,6 +136,8 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     sunday_end_time: string | null;
     total_weekly_hours: number | null;
     time_of_day: string | null;
+    recurrence_interval_weeks: number;
+    start_week_offset: number;
   }[]>([]);
   const [allEmployees, setAllEmployees] = useState<{ id: string; first_name: string; last_name: string }[]>([]);
   const [customerContacts, setCustomerContacts] = useState<{ id: string; first_name: string; last_name: string; customer_id: string }[]>([]);
@@ -192,7 +196,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
       if (customersData) setCustomers(customersData);
       if (customersError) console.error("Fehler beim Laden der Kunden:", customersError);
 
-      const { data: objectsData, error: objectsError } = await supabase.from('objects').select('id, name, customer_id, monday_hours, tuesday_hours, wednesday_hours, thursday_hours, friday_hours, saturday_hours, sunday_hours, monday_start_time, monday_end_time, tuesday_start_time, tuesday_end_time, wednesday_start_time, wednesday_end_time, thursday_start_time, thursday_end_time, friday_start_time, friday_end_time, saturday_start_time, saturday_end_time, sunday_start_time, sunday_end_time, total_weekly_hours, time_of_day');
+      const { data: objectsData, error: objectsError } = await supabase.from('objects').select('id, name, customer_id, monday_hours, tuesday_hours, wednesday_hours, thursday_hours, friday_hours, saturday_hours, sunday_hours, total_weekly_hours, monday_start_time, monday_end_time, tuesday_start_time, tuesday_end_time, wednesday_start_time, wednesday_end_time, thursday_start_time, thursday_end_time, friday_start_time, friday_end_time, saturday_start_time, saturday_end_time, sunday_start_time, sunday_end_time, time_of_day, recurrence_interval_weeks, start_week_offset');
       if (objectsData) setObjects(objectsData);
       if (objectsError) console.error("Fehler beim Laden der Objekte:", objectsError);
 
@@ -314,6 +318,8 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
         assigned_friday_start_time: null, assigned_friday_end_time: null,
         assigned_saturday_start_time: null, assigned_saturday_end_time: null,
         assigned_sunday_start_time: null, assigned_sunday_end_time: null,
+        assigned_recurrence_interval_weeks: selectedObject.recurrence_interval_weeks,
+        assigned_start_week_offset: selectedObject.start_week_offset,
       };
 
       dayNames.forEach(day => {
@@ -492,7 +498,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     const result = await createObject(data);
     handleActionResponse(result);
     if (result.success) {
-      const { data: newObjectsData, error: newObjectsError } = await supabase.from('objects').select('id, name, customer_id, monday_hours, tuesday_hours, wednesday_hours, thursday_hours, friday_hours, saturday_hours, sunday_hours, total_weekly_hours, monday_start_time, monday_end_time, tuesday_start_time, tuesday_end_time, wednesday_start_time, wednesday_end_time, thursday_start_time, thursday_end_time, friday_start_time, friday_end_time, saturday_start_time, saturday_end_time, sunday_start_time, sunday_end_time, time_of_day');
+      const { data: newObjectsData, error: newObjectsError } = await supabase.from('objects').select('id, name, customer_id, monday_hours, tuesday_hours, wednesday_hours, thursday_hours, friday_hours, saturday_hours, sunday_hours, total_weekly_hours, monday_start_time, monday_end_time, tuesday_start_time, tuesday_end_time, wednesday_start_time, wednesday_end_time, thursday_start_time, thursday_end_time, friday_start_time, friday_end_time, saturday_start_time, saturday_end_time, sunday_start_time, sunday_end_time, time_of_day, recurrence_interval_weeks, start_week_offset');
       if (newObjectsData) {
         setObjects(newObjectsData);
         const newObject = newObjectsData.find(obj => obj.name === data.name && obj.customer_id === data.customerId);
@@ -754,6 +760,42 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
                     <X className="h-4 w-4" />
                   </Button>
                 </div>
+
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold">Wiederholungsintervall für Mitarbeiter</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor={`assignedEmployees.${assignedIndex}.assigned_recurrence_interval_weeks`}>Wiederholt sich alle X Wochen</Label>
+                      <Input
+                        id={`assignedEmployees.${assignedIndex}.assigned_recurrence_interval_weeks`}
+                        type="number"
+                        step="1"
+                        min="1"
+                        max="52"
+                        {...form.register(`assignedEmployees.${assignedIndex}.assigned_recurrence_interval_weeks`, { valueAsNumber: true })}
+                        placeholder="Z.B. 1 für jede Woche, 2 für jede zweite Woche"
+                      />
+                      {form.formState.errors.assignedEmployees?.[assignedIndex]?.assigned_recurrence_interval_weeks && <p className="text-red-500 text-sm mt-1">{form.formState.errors.assignedEmployees?.[assignedIndex]?.assigned_recurrence_interval_weeks?.message}</p>}
+                    </div>
+                    <div>
+                      <Label htmlFor={`assignedEmployees.${assignedIndex}.assigned_start_week_offset`}>Start-Wochen-Offset (0-basierend)</Label>
+                      <Input
+                        id={`assignedEmployees.${assignedIndex}.assigned_start_week_offset`}
+                        type="number"
+                        step="1"
+                        min="0"
+                        max={form.watch(`assignedEmployees.${assignedIndex}.assigned_recurrence_interval_weeks`) - 1}
+                        {...form.register(`assignedEmployees.${assignedIndex}.assigned_start_week_offset`, { valueAsNumber: true })}
+                        placeholder="Z.B. 0 für die erste Woche, 1 für die zweite Woche"
+                      />
+                      {form.formState.errors.assignedEmployees?.[assignedIndex]?.assigned_start_week_offset && <p className="text-red-500 text-sm mt-1">{form.formState.errors.assignedEmployees?.[assignedIndex]?.assigned_start_week_offset?.message}</p>}
+                    </div>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Definiert, in welchem Wochenintervall die untenstehenden Arbeitszeiten für diesen Mitarbeiter gelten.
+                    Ein Intervall von 1 bedeutet jede Woche. Ein Intervall von 2 mit Offset 0 bedeutet jede zweite Woche, beginnend mit der aktuellen Woche.
+                  </p>
+                </div>
                 
                 {/* Daily Hours and Times Grid - RESTRUCTURED */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
@@ -763,7 +805,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
                     const endFieldName = `assignedEmployees.${assignedIndex}.assigned_${day}_end_time` as const;
                     const objectDailyHours = getObjectDailyHours(day);
                     const isDayValid = isDailyHoursValid(day);
-                    const sumAssignedForDay = getSumAssignedHoursForDay(day);
+                    const sumAssignedHoursForDay = getSumAssignedHoursForDay(day);
 
                     // Only show days that have object hours
                     if (!objectDailyHours || objectDailyHours === 0) return null;

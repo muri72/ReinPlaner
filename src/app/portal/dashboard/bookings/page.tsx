@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { format } from "date-fns";
+import { format, getWeek } from "date-fns";
 import { de } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";
 import { Briefcase, CalendarDays, Building, Wrench, FileText, Clock } from "lucide-react";
@@ -37,6 +37,7 @@ interface DisplayOrder {
   request_status: string;
   service_type: string | null;
   order_feedback: { id: string }[]; // To check if feedback exists
+  object: { recurrence_interval_weeks: number; start_week_offset: number; } | null;
 }
 
 // Define an interface for the raw data returned by Supabase select query
@@ -58,7 +59,7 @@ interface RawOrderResponse {
   request_status: string;
   service_type: string | null;
   customers: { name: string }[] | null;
-  objects: { name: string }[] | null;
+  objects: { name: string; recurrence_interval_weeks: number; start_week_offset: number; }[] | null;
   customer_contacts: { first_name: string | null; last_name: string | null }[] | null;
   order_feedback: { id: string }[] | null;
   order_employee_assignments: { 
@@ -85,6 +86,8 @@ interface RawOrderResponse {
     assigned_saturday_end_time: string | null;
     assigned_sunday_start_time: string | null;
     assigned_sunday_end_time: string | null;
+    assigned_recurrence_interval_weeks: number;
+    assigned_start_week_offset: number;
     employees: { first_name: string | null; last_name: string | null }[] | null 
   }[] | null;
 }
@@ -140,7 +143,7 @@ export default async function CustomerBookingsPage() {
         notes,
         request_status,
         service_type,
-        objects ( name ),
+        objects ( name, recurrence_interval_weeks, start_week_offset ),
         customers ( name ),
         customer_contacts ( first_name, last_name ),
         order_feedback ( id ),
@@ -157,6 +160,7 @@ export default async function CustomerBookingsPage() {
           assigned_friday_start_time, assigned_friday_end_time,
           assigned_saturday_start_time, assigned_saturday_end_time,
           assigned_sunday_start_time, assigned_sunday_end_time,
+          assigned_recurrence_interval_weeks, assigned_start_week_offset,
           employees ( first_name, last_name ) 
         )
       `)
@@ -190,6 +194,8 @@ export default async function CustomerBookingsPage() {
             assigned_saturday_end_time: a.assigned_saturday_end_time,
             assigned_sunday_start_time: a.assigned_sunday_start_time,
             assigned_sunday_end_time: a.assigned_sunday_end_time,
+            assigned_recurrence_interval_weeks: a.assigned_recurrence_interval_weeks,
+            assigned_start_week_offset: a.assigned_start_week_offset,
         })) || [];
 
         return {
@@ -218,6 +224,7 @@ export default async function CustomerBookingsPage() {
           request_status: order.request_status,
           service_type: order.service_type,
           order_feedback: order.order_feedback || [], // Ensure it's an array
+          object: order.objects?.[0] || null,
         };
       });
     }
@@ -242,6 +249,21 @@ export default async function CustomerBookingsPage() {
   };
 
   const getAssignedTimeForDay = (order: DisplayOrder, dayIndex: number) => {
+    const today = new Date();
+    const currentWeekNumber = getWeek(today, { weekStartsOn: 1 });
+
+    const assignedRecurrenceIntervalWeeks = order.assignedEmployees?.[0]?.assigned_recurrence_interval_weeks || order.object?.recurrence_interval_weeks || 1;
+    const assignedStartWeekOffset = order.assignedEmployees?.[0]?.assigned_start_week_offset || order.object?.start_week_offset || 0;
+
+    if (assignedRecurrenceIntervalWeeks > 1) {
+      const orderStartDate = order.recurring_start_date ? new Date(order.recurring_start_date) : (order.due_date ? new Date(order.due_date) : today);
+      const startWeekNumber = getWeek(orderStartDate, { weekStartsOn: 1 });
+      const weekDifference = currentWeekNumber - startWeekNumber;
+      if (weekDifference % assignedRecurrenceIntervalWeeks !== assignedStartWeekOffset) {
+        return 'N/A (Nicht diese Woche)';
+      }
+    }
+
     const dayMap: { [key: number]: { start: keyof AssignedEmployee, end: keyof AssignedEmployee } } = {
       0: { start: 'assigned_sunday_start_time', end: 'assigned_sunday_end_time' },
       1: { start: 'assigned_monday_start_time', end: 'assigned_monday_end_time' },
@@ -340,6 +362,18 @@ export default async function CustomerBookingsPage() {
                           }
                           return null;
                         })}
+                        {order.object?.recurrence_interval_weeks && order.object.recurrence_interval_weeks > 1 && (
+                          <div className="flex items-center text-xs text-muted-foreground mt-1">
+                            <CalendarDays className="mr-1 h-3 w-3" />
+                            <span>Objekt-Wiederholung: Alle {order.object.recurrence_interval_weeks} Wochen (Offset: {order.object.start_week_offset})</span>
+                          </div>
+                        )}
+                        {order.assignedEmployees?.[0]?.assigned_recurrence_interval_weeks && order.assignedEmployees[0].assigned_recurrence_interval_weeks > 1 && (
+                          <div className="flex items-center text-xs text-muted-foreground mt-1">
+                            <CalendarDays className="mr-1 h-3 w-3" />
+                            <span>Mitarbeiter-Wiederholung: Alle {order.assignedEmployees[0].assigned_recurrence_interval_weeks} Wochen (Offset: {order.assignedEmployees[0].assigned_start_week_offset})</span>
+                          </div>
+                        )}
                       </TableCell>
                       <TableCell><Badge variant={getRequestStatusBadgeVariant(order.request_status)}>{order.request_status}</Badge></TableCell>
                       <TableCell className="text-right">

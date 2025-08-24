@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { format } from 'date-fns';
+import { format, getWeek } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { Briefcase, CalendarDays, DollarSign, MessageSquare, Star, FileText, CheckCircle2, AlertCircle, Clock } from "lucide-react";
 import { TodaysOrdersOverview } from "@/components/todays-orders-overview";
@@ -27,7 +27,7 @@ interface RawEmployeeOrderResponse {
   notes: string | null;
   service_type: string | null;
   request_status: string;
-  objects: { name: string | null; address: string | null; notes: string | null; time_of_day: string | null; access_method: string | null; pin: string | null; is_alarm_secured: boolean | null; alarm_password: string | null; security_code_word: string | null; total_weekly_hours: number | null; }[] | null;
+  objects: { name: string | null; address: string | null; notes: string | null; time_of_day: string | null; access_method: string | null; pin: string | null; is_alarm_secured: boolean | null; alarm_password: string | null; security_code_word: string | null; total_weekly_hours: number | null; recurrence_interval_weeks: number; start_week_offset: number; }[] | null;
   customers: { name: string | null; }[] | null;
   customer_contacts: { first_name: string | null; last_name: string | null; phone: string | null; }[] | null;
   order_employee_assignments: { 
@@ -55,6 +55,8 @@ interface RawEmployeeOrderResponse {
     assigned_saturday_end_time: string | null;
     assigned_sunday_start_time: string | null;
     assigned_sunday_end_time: string | null;
+    assigned_recurrence_interval_weeks: number;
+    assigned_start_week_offset: number;
     employees: { first_name: string | null; last_name: string | null }[] | null; // Correctly typed as array
   }[] | null;
 }
@@ -113,7 +115,7 @@ export default async function CustomerDashboardPage() {
         recurring_end_date,
         status,
         order_type,
-        objects ( name ),
+        objects ( name, recurrence_interval_weeks, start_week_offset ),
         order_employee_assignments ( 
           employee_id, 
           assigned_monday_hours, assigned_tuesday_hours, assigned_wednesday_hours,
@@ -126,6 +128,7 @@ export default async function CustomerDashboardPage() {
           assigned_friday_start_time, assigned_friday_end_time,
           assigned_saturday_start_time, assigned_saturday_end_time,
           assigned_sunday_start_time, assigned_sunday_end_time,
+          assigned_recurrence_interval_weeks, assigned_start_week_offset,
           employees ( first_name, last_name ) 
         )
       `)
@@ -140,8 +143,22 @@ export default async function CustomerDashboardPage() {
     } else {
       const now = new Date();
       now.setHours(0, 0, 0, 0);
+      const currentWeekNumber = getWeek(now, { weekStartsOn: 1 });
 
       const relevantOrders = upcomingOrders?.filter(order => {
+        // Check recurrence interval for recurring/permanent/substitution orders
+        const assignedRecurrenceIntervalWeeks = order.order_employee_assignments?.[0]?.assigned_recurrence_interval_weeks || order.objects?.[0]?.recurrence_interval_weeks || 1;
+        const assignedStartWeekOffset = order.order_employee_assignments?.[0]?.assigned_start_week_offset || order.objects?.[0]?.start_week_offset || 0;
+
+        if (assignedRecurrenceIntervalWeeks > 1) {
+          const orderStartDate = order.recurring_start_date ? new Date(order.recurring_start_date) : (order.due_date ? new Date(order.due_date) : now);
+          const startWeekNumber = getWeek(orderStartDate, { weekStartsOn: 1 });
+          const weekDifference = currentWeekNumber - startWeekNumber;
+          if (weekDifference % assignedRecurrenceIntervalWeeks !== assignedStartWeekOffset) {
+            return false; // Not the correct recurrence week
+          }
+        }
+
         if (order.order_type === 'one_time' && order.due_date) {
           const dueDate = new Date(order.due_date);
           dueDate.setHours(0, 0, 0, 0);
@@ -167,6 +184,19 @@ export default async function CustomerDashboardPage() {
       nextOrder = relevantOrders?.[0] || null;
 
       const todaysOrders = upcomingOrders?.filter(order => {
+        // Check recurrence interval for recurring/permanent/substitution orders
+        const assignedRecurrenceIntervalWeeks = order.order_employee_assignments?.[0]?.assigned_recurrence_interval_weeks || order.objects?.[0]?.recurrence_interval_weeks || 1;
+        const assignedStartWeekOffset = order.order_employee_assignments?.[0]?.assigned_start_week_offset || order.objects?.[0]?.start_week_offset || 0;
+
+        if (assignedRecurrenceIntervalWeeks > 1) {
+          const orderStartDate = order.recurring_start_date ? new Date(order.recurring_start_date) : (order.due_date ? new Date(order.due_date) : now);
+          const startWeekNumber = getWeek(orderStartDate, { weekStartsOn: 1 });
+          const weekDifference = currentWeekNumber - startWeekNumber;
+          if (weekDifference % assignedRecurrenceIntervalWeeks !== assignedStartWeekOffset) {
+            return false; // Not the correct recurrence week
+          }
+        }
+
         if (order.order_type === 'one_time' && order.due_date) {
           const dueDate = new Date(order.due_date);
           dueDate.setHours(0, 0, 0, 0);
@@ -201,15 +231,6 @@ export default async function CustomerDashboardPage() {
       case 'completed': return 'default';
       case 'in_progress': return 'secondary';
       case 'pending':
-      default: return 'outline';
-    }
-  };
-
-  const getRequestStatusBadgeVariant = (requestStatus: string) => {
-    switch (requestStatus) {
-      case 'approved': return 'default';
-      case 'pending': return 'warning';
-      case 'rejected': return 'destructive';
       default: return 'outline';
     }
   };
@@ -274,6 +295,12 @@ export default async function CustomerDashboardPage() {
                 <Clock className="mr-2 h-4 w-4" />
                 <span>Zugewiesene Zeit: {getAssignedTimeForToday(nextOrder)}</span>
               </div>
+              {nextOrder.order_employee_assignments?.[0]?.assigned_recurrence_interval_weeks && nextOrder.order_employee_assignments[0].assigned_recurrence_interval_weeks > 1 && (
+                <div className="flex items-center text-xs text-muted-foreground mt-1">
+                  <CalendarDays className="mr-1 h-3 w-3" />
+                  <span>Wiederholung: Alle {nextOrder.order_employee_assignments[0].assigned_recurrence_interval_weeks} Wochen (Offset: {nextOrder.order_employee_assignments[0].assigned_start_week_offset})</span>
+                </div>
+              )}
               <div className="flex items-center text-sm text-muted-foreground">
                 <Briefcase className="mr-2 h-4 w-4" />
                 <span>Status: <Badge variant={getStatusBadgeVariant(nextOrder.status)}>{nextOrder.status}</Badge></span>

@@ -75,7 +75,7 @@ export interface DisplayOrder {
     created_at: string;
   }[];
   // Nested objects for easier access in components
-  object: { name: string | null; address: string | null; notes: string | null; } | null;
+  object: { name: string | null; address: string | null; notes: string | null; recurrence_interval_weeks: number; start_week_offset: number; } | null;
   customer: { name: string | null; } | null;
   customer_contact: { first_name: string | null; last_name: string | null; phone: string | null; } | null;
   // Add fields for employee dashboard compatibility
@@ -101,6 +101,8 @@ export interface DisplayOrder {
   assigned_saturday_end_time: string | null;
   assigned_sunday_start_time: string | null;
   assigned_sunday_end_time: string | null;
+  assigned_recurrence_interval_weeks: number | null;
+  assigned_start_week_offset: number | null;
 }
 
 const availableServices = [
@@ -227,7 +229,7 @@ export default function OrdersPage({
           request_status,
           service_type,
           customers ( name ),
-          objects ( name, address, notes, time_of_day, access_method, pin, is_alarm_secured, alarm_password, security_code_word, total_weekly_hours ),
+          objects ( name, address, notes, time_of_day, access_method, pin, is_alarm_secured, alarm_password, security_code_word, total_weekly_hours, recurrence_interval_weeks, start_week_offset ),
           customer_contacts ( first_name, last_name, phone ),
           order_feedback ( id, rating, comment, image_urls, created_at ),
           order_employee_assignments ( 
@@ -242,6 +244,7 @@ export default function OrdersPage({
             assigned_friday_start_time, assigned_friday_end_time,
             assigned_saturday_start_time, assigned_saturday_end_time,
             assigned_sunday_start_time, assigned_sunday_end_time,
+            assigned_recurrence_interval_weeks, assigned_start_week_offset,
             employees ( first_name, last_name ) 
           )
         `, { count: 'exact' })
@@ -294,6 +297,8 @@ export default function OrdersPage({
             assigned_saturday_end_time: a.assigned_saturday_end_time,
             assigned_sunday_start_time: a.assigned_sunday_start_time,
             assigned_sunday_end_time: a.assigned_sunday_end_time,
+            assigned_recurrence_interval_weeks: a.assigned_recurrence_interval_weeks,
+            assigned_start_week_offset: a.assigned_start_week_offset,
         })) || [];
         
         const firstAssignment = order.order_employee_assignments?.[0];
@@ -351,6 +356,8 @@ export default function OrdersPage({
           assigned_saturday_end_time: firstAssignment?.assigned_saturday_end_time || null,
           assigned_sunday_start_time: firstAssignment?.assigned_sunday_start_time || null,
           assigned_sunday_end_time: firstAssignment?.assigned_sunday_end_time || null,
+          assigned_recurrence_interval_weeks: firstAssignment?.assigned_recurrence_interval_weeks || null,
+          assigned_start_week_offset: firstAssignment?.assigned_start_week_offset || null,
         };
       }) || [];
       ordersError = selectError;
@@ -581,6 +588,18 @@ export default function OrdersPage({
                                 }
                                 return null;
                             })}
+                            {order.object?.recurrence_interval_weeks && order.object.recurrence_interval_weeks > 1 && (
+                              <div className="flex items-center text-xs text-muted-foreground mt-1">
+                                <CalendarDays className="mr-1 h-3 w-3" />
+                                <span>Objekt-Wiederholung: Alle {order.object.recurrence_interval_weeks} Wochen (Offset: {order.object.start_week_offset})</span>
+                              </div>
+                            )}
+                            {order.assignedEmployees?.[0]?.assigned_recurrence_interval_weeks && order.assignedEmployees[0].assigned_recurrence_interval_weeks > 1 && (
+                              <div className="flex items-center text-xs text-muted-foreground mt-1">
+                                <CalendarDays className="mr-1 h-3 w-3" />
+                                <span>Mitarbeiter-Wiederholung: Alle {order.assignedEmployees[0].assigned_recurrence_interval_weeks} Wochen (Offset: {order.assignedEmployees[0].assigned_start_week_offset})</span>
+                              </div>
+                            )}
 
                             {feedback && (
                               <div className="flex items-center text-xs text-warning mt-2">

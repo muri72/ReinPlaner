@@ -63,6 +63,8 @@ interface DisplayObject {
   saturday_hours: number | null;
   sunday_hours: number | null;
   total_weekly_hours: number | null; // Neues Feld
+  recurrence_interval_weeks: number;
+  start_week_offset: number;
 }
 
 export default function ObjectsPage({
@@ -244,6 +246,7 @@ export default function ObjectsPage({
   const accessMethodOptions = [
     { value: 'key', label: 'Schlüssel' },
     { value: 'card', label: 'Karte' },
+    { value: 'code', label: 'Code' },
     { value: 'other', label: 'Andere' },
   ];
 
@@ -438,6 +441,9 @@ export default function ObjectsPage({
                             Gesamtstunden pro Woche: {object.total_weekly_hours.toFixed(2)}
                           </div>
                         )}
+                        <div className="mt-2 text-sm font-semibold">
+                          Wiederholung: Alle {object.recurrence_interval_weeks} Wochen (Offset: {object.start_week_offset})
+                        </div>
                       </TabsContent>
                       <TabsContent value="documents" className="pt-4 space-y-4">
                         <h3 className="text-md font-semibold flex items-center">

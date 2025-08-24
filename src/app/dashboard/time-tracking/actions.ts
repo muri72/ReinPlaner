@@ -3,6 +3,7 @@
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { TimeEntryFormValues } from "@/components/time-entry-form";
+import { getWeek, getDay, parseISO, formatISO } from 'date-fns';
 
 export async function createTimeEntry(data: TimeEntryFormValues): Promise<{ success: boolean; message: string; newEntryId?: string }> {
   const supabase = await createClient();

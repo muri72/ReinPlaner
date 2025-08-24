@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { format } from "date-fns";
+import { format, getWeek } from "date-fns";
 import { de } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -40,6 +40,7 @@ interface DisplayOrder {
   notes: string | null;
   request_status: string;
   service_type: string | null;
+  object: { recurrence_interval_weeks: number; start_week_offset: number; } | null;
 }
 
 export function TodaysOrdersOverview() {
@@ -54,6 +55,7 @@ export function TodaysOrdersOverview() {
       today.setHours(0, 0, 0, 0);
       const tomorrow = new Date(today);
       tomorrow.setDate(tomorrow.getDate() + 1);
+      const currentWeekNumber = getWeek(today, { weekStartsOn: 1 });
 
       const { data: user } = await supabase.auth.getUser();
       const currentUserId = user?.user?.id;
@@ -117,7 +119,7 @@ export function TodaysOrdersOverview() {
           request_status,
           service_type,
           customers ( name ),
-          objects ( name ),
+          objects ( name, recurrence_interval_weeks, start_week_offset ),
           customer_contacts ( first_name, last_name ),
           order_employee_assignments ( 
             employee_id, 
@@ -131,6 +133,7 @@ export function TodaysOrdersOverview() {
             assigned_friday_start_time, assigned_friday_end_time,
             assigned_saturday_start_time, assigned_saturday_end_time,
             assigned_sunday_start_time, assigned_sunday_end_time,
+            assigned_recurrence_interval_weeks, assigned_start_week_offset,
             employees ( first_name, last_name ) 
           )
         `)
@@ -177,6 +180,8 @@ export function TodaysOrdersOverview() {
             assigned_saturday_end_time: a.assigned_saturday_end_time,
             assigned_sunday_start_time: a.assigned_sunday_start_time,
             assigned_sunday_end_time: a.assigned_sunday_end_time,
+            assigned_recurrence_interval_weeks: a.assigned_recurrence_interval_weeks,
+            assigned_start_week_offset: a.assigned_start_week_offset,
           })) || [];
 
           return {
@@ -204,10 +209,25 @@ export function TodaysOrdersOverview() {
             notes: order.notes,
             request_status: order.request_status,
             service_type: order.service_type,
+            object: object || null,
           };
         });
 
         const filteredByRole = mappedOrders.filter(order => {
+          // Filter based on recurrence_interval_weeks and start_week_offset
+          const assignedRecurrenceIntervalWeeks = order.assignedEmployees?.[0]?.assigned_recurrence_interval_weeks || order.object?.recurrence_interval_weeks || 1;
+          const assignedStartWeekOffset = order.assignedEmployees?.[0]?.assigned_start_week_offset || order.object?.start_week_offset || 0;
+
+          if (assignedRecurrenceIntervalWeeks > 1) {
+            const orderStartDate = order.recurring_start_date ? new Date(order.recurring_start_date) : (order.due_date ? new Date(order.due_date) : today);
+            const startWeekNumber = getWeek(orderStartDate, { weekStartsOn: 1 }); // ISO week number, starts Monday
+
+            const weekDifference = currentWeekNumber - startWeekNumber;
+            if (weekDifference % assignedRecurrenceIntervalWeeks !== assignedStartWeekOffset) {
+              return false; // Not the correct recurrence week
+            }
+          }
+
           if (currentUserRole === 'admin') return true;
           if (currentUserRole === 'employee') {
             return order.employee_ids?.includes(currentEmployeeId || '') || false;
@@ -342,6 +362,18 @@ export function TodaysOrdersOverview() {
                         )}
                       </TableCell><TableCell className="text-sm">
                         {getAssignedTimeForToday(order)}
+                        {order.object?.recurrence_interval_weeks && order.object.recurrence_interval_weeks > 1 && (
+                          <div className="flex items-center text-xs text-muted-foreground mt-1">
+                            <CalendarDays className="mr-1 h-3 w-3" />
+                            <span>Objekt-Wiederholung: Alle {order.object.recurrence_interval_weeks} Wochen (Offset: {order.object.start_week_offset})</span>
+                          </div>
+                        )}
+                        {order.assignedEmployees?.[0]?.assigned_recurrence_interval_weeks && order.assignedEmployees[0].assigned_recurrence_interval_weeks > 1 && (
+                          <div className="flex items-center text-xs text-muted-foreground mt-1">
+                            <CalendarDays className="mr-1 h-3 w-3" />
+                            <span>Mitarbeiter-Wiederholung: Alle {order.assignedEmployees[0].assigned_recurrence_interval_weeks} Wochen (Offset: {order.assignedEmployees[0].assigned_start_week_offset})</span>
+                          </div>
+                        )}
                       </TableCell><TableCell className="text-right">
                         <div className="flex justify-end space-x-1">
                           <OrderEditDialog order={order} />

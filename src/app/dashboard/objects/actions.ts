@@ -47,6 +47,8 @@ export async function createObject(data: ObjectFormValues) {
     isAlarmSecured,
     alarmPassword,
     securityCodeWord,
+    recurrence_interval_weeks,
+    start_week_offset,
   } = data;
 
   // Calculate total_weekly_hours
@@ -97,6 +99,8 @@ export async function createObject(data: ObjectFormValues) {
       is_alarm_secured: isAlarmSecured,
       alarm_password: alarmPassword,
       security_code_word: securityCodeWord,
+      recurrence_interval_weeks,
+      start_week_offset,
     });
 
   if (error) {
@@ -163,6 +167,8 @@ export async function updateObject(objectId: string, data: ObjectFormValues) {
     isAlarmSecured,
     alarmPassword,
     securityCodeWord,
+    recurrence_interval_weeks,
+    start_week_offset,
   } = data;
 
   // Calculate total_weekly_hours
@@ -212,6 +218,8 @@ export async function updateObject(objectId: string, data: ObjectFormValues) {
       is_alarm_secured: data.isAlarmSecured,
       alarm_password: data.alarmPassword,
       security_code_word: data.securityCodeWord,
+      recurrence_interval_weeks,
+      start_week_offset,
     })
     .eq('id', objectId);
 

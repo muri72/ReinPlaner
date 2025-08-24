@@ -54,6 +54,8 @@ interface DisplayObject {
   saturday_hours: number | null;
   sunday_hours: number | null;
   total_weekly_hours: number | null; // Neues Feld
+  recurrence_interval_weeks: number;
+  start_week_offset: number;
 }
 
 interface ObjectsTableViewProps {
@@ -173,6 +175,11 @@ export function ObjectsTableView({
                 Wöchentliche Std. {renderSortIcon('total_weekly_hours')}
               </Button>
             </TableHead>
+            <TableHead className="min-w-[120px]">
+              <Button variant="ghost" onClick={() => handleSort('recurrence_interval_weeks')} className="px-0 hover:bg-transparent">
+                Wiederholung {renderSortIcon('recurrence_interval_weeks')}
+              </Button>
+            </TableHead>
             <TableHead className="text-right min-w-[120px]">Aktionen</TableHead>
           </TableRow>
         </TableHeader>
@@ -188,6 +195,9 @@ export function ObjectsTableView({
               <TableCell className="text-sm">{object.time_of_day}</TableCell>
               <TableCell className="text-sm">{object.access_method}</TableCell>
               <TableCell className="text-sm">{object.total_weekly_hours !== null ? `${object.total_weekly_hours.toFixed(2)}` : 'N/A'}</TableCell>
+              <TableCell className="text-sm">
+                {object.recurrence_interval_weeks > 1 ? `Alle ${object.recurrence_interval_weeks} Wo. (Offset: ${object.start_week_offset})` : 'Jede Woche'}
+              </TableCell>
               <TableCell className="text-right">
                 <div className="flex justify-end space-x-1">
                   <RecordDetailsDialog record={object} title={`Details zu Objekt: ${object.name}`} />
