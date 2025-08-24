@@ -15,14 +15,6 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { AssignedEmployee } from "@/components/order-form";
 
-interface DailySchedule {
-  day_of_week: string;
-  week_offset_in_cycle: number;
-  hours: number;
-  start_time: string;
-  end_time: string;
-}
-
 interface DisplayOrder {
   id: string;
   title: string;
@@ -48,14 +40,8 @@ interface DisplayOrder {
   notes: string | null;
   request_status: string;
   service_type: string | null;
-  object: { recurrence_interval_weeks: number; start_week_offset: number; daily_schedules: any; } | null; // Added daily_schedules
+  object: { recurrence_interval_weeks: number; start_week_offset: number; } | null;
 }
-
-// Helper to parse daily schedules from JSONB
-const parseDailySchedules = (jsonb: any): DailySchedule[] => {
-  if (!jsonb) return [];
-  return Array.isArray(jsonb) ? jsonb : [];
-};
 
 export function TodaysOrdersOverview() {
   const supabase = createClient();
@@ -70,9 +56,6 @@ export function TodaysOrdersOverview() {
       const tomorrow = new Date(today);
       tomorrow.setDate(tomorrow.getDate() + 1);
       const currentWeekNumber = getWeek(today, { weekStartsOn: 1 });
-      const dayOfWeek = today.getDay(); // 0=So, 1=Mo, ..., 6=Sa
-      const dayNamesArray = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-      const currentDayName = dayNamesArray[dayOfWeek];
 
       const { data: user } = await supabase.auth.getUser();
       const currentUserId = user?.user?.id;
@@ -91,7 +74,7 @@ export function TodaysOrdersOverview() {
 
       if (profileError) {
         console.error("Fehler beim Abrufen des Benutzerprofils:", profileError?.message || profileError);
-        toast.error("Fehler beim Laden Ihrer Benutzerberechtigungen.");
+        toast.error("Fehler beim Laden der Benutzerberechtigungen.");
         setLoading(false);
         return;
       }
@@ -136,11 +119,20 @@ export function TodaysOrdersOverview() {
           request_status,
           service_type,
           customers ( name ),
-          objects ( name, recurrence_interval_weeks, start_week_offset, daily_schedules ),
+          objects ( name, recurrence_interval_weeks, start_week_offset ),
           customer_contacts ( first_name, last_name ),
           order_employee_assignments ( 
             employee_id, 
-            assigned_daily_schedules,
+            assigned_monday_hours, assigned_tuesday_hours, assigned_wednesday_hours,
+            assigned_thursday_hours, assigned_friday_hours, assigned_saturday_hours,
+            assigned_sunday_hours,
+            assigned_monday_start_time, assigned_monday_end_time,
+            assigned_tuesday_start_time, assigned_tuesday_end_time,
+            assigned_wednesday_start_time, assigned_wednesday_end_time,
+            assigned_thursday_start_time, assigned_thursday_end_time,
+            assigned_friday_start_time, assigned_friday_end_time,
+            assigned_saturday_start_time, assigned_saturday_end_time,
+            assigned_sunday_start_time, assigned_sunday_end_time,
             assigned_recurrence_interval_weeks, assigned_start_week_offset,
             employees ( first_name, last_name ) 
           )
@@ -167,7 +159,27 @@ export function TodaysOrdersOverview() {
           
           const mappedAssignments: AssignedEmployee[] = order.order_employee_assignments?.map((a: any) => ({
             employeeId: a.employee_id,
-            assigned_daily_schedules: JSON.stringify(a.assigned_daily_schedules),
+            assigned_monday_hours: a.assigned_monday_hours,
+            assigned_tuesday_hours: a.assigned_tuesday_hours,
+            assigned_wednesday_hours: a.assigned_wednesday_hours,
+            assigned_thursday_hours: a.assigned_thursday_hours,
+            assigned_friday_hours: a.assigned_friday_hours,
+            assigned_saturday_hours: a.assigned_saturday_hours,
+            assigned_sunday_hours: a.assigned_sunday_hours,
+            assigned_monday_start_time: a.assigned_monday_start_time,
+            assigned_monday_end_time: a.assigned_monday_end_time,
+            assigned_tuesday_start_time: a.assigned_tuesday_start_time,
+            assigned_tuesday_end_time: a.assigned_tuesday_end_time,
+            assigned_wednesday_start_time: a.assigned_wednesday_start_time,
+            assigned_wednesday_end_time: a.assigned_wednesday_end_time,
+            assigned_thursday_start_time: a.assigned_thursday_start_time,
+            assigned_thursday_end_time: a.assigned_thursday_end_time,
+            assigned_friday_start_time: a.assigned_friday_start_time,
+            assigned_friday_end_time: a.assigned_friday_end_time,
+            assigned_saturday_start_time: a.assigned_saturday_start_time,
+            assigned_saturday_end_time: a.assigned_saturday_end_time,
+            assigned_sunday_start_time: a.assigned_sunday_start_time,
+            assigned_sunday_end_time: a.assigned_sunday_end_time,
             assigned_recurrence_interval_weeks: a.assigned_recurrence_interval_weeks,
             assigned_start_week_offset: a.assigned_start_week_offset,
           })) || [];
@@ -201,7 +213,7 @@ export function TodaysOrdersOverview() {
           };
         });
 
-        const filteredByRoleAndRecurrence = mappedOrders.filter(order => {
+        const filteredByRole = mappedOrders.filter(order => {
           // Filter based on recurrence_interval_weeks and start_week_offset
           const assignedRecurrenceIntervalWeeks = order.assignedEmployees?.[0]?.assigned_recurrence_interval_weeks || order.object?.recurrence_interval_weeks || 1;
           const assignedStartWeekOffset = order.assignedEmployees?.[0]?.assigned_start_week_offset || order.object?.start_week_offset || 0;
@@ -216,17 +228,6 @@ export function TodaysOrdersOverview() {
             }
           }
 
-          // Also check if there's a schedule for today's day and week offset
-          const assignedSchedules = parseDailySchedules(order.assignedEmployees?.[0]?.assigned_daily_schedules || order.object?.daily_schedules || '[]');
-          const scheduleForToday = assignedSchedules.find(s => 
-            s.day_of_week === currentDayName && 
-            s.week_offset_in_cycle === (currentWeekNumber - getWeek(order.recurring_start_date ? new Date(order.recurring_start_date) : (order.due_date ? new Date(order.due_date) : today), { weekStartsOn: 1 })) % assignedRecurrenceIntervalWeeks
-          );
-          if (!scheduleForToday || scheduleForToday.hours === 0) {
-            return false; // No hours scheduled for today
-          }
-
-
           if (currentUserRole === 'admin') return true;
           if (currentUserRole === 'employee') {
             return order.employee_ids?.includes(currentEmployeeId || '') || false;
@@ -240,7 +241,7 @@ export function TodaysOrdersOverview() {
           return false;
         });
 
-        setOrders(filteredByRoleAndRecurrence);
+        setOrders(filteredByRole);
       }
       setLoading(false);
     };
@@ -276,27 +277,27 @@ export function TodaysOrdersOverview() {
   };
 
   const getAssignedTimeForToday = (order: DisplayOrder) => {
-    const today = new Date();
-    const currentWeekNumber = getWeek(today, { weekStartsOn: 1 });
-    const dayOfWeek = today.getDay(); // 0=So, 1=Mo, ..., 6=Sa
-    const dayNamesArray = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-    const currentDayName = dayNamesArray[dayOfWeek];
+    const todayDayOfWeek = new Date().getDay(); // 0=So, 1=Mo, ..., 6=Sa
+    const dayMap: { [key: number]: { start: keyof AssignedEmployee, end: keyof AssignedEmployee } } = {
+      0: { start: 'assigned_sunday_start_time', end: 'assigned_sunday_end_time' },
+      1: { start: 'assigned_monday_start_time', end: 'assigned_monday_end_time' },
+      2: { start: 'assigned_tuesday_start_time', end: 'assigned_tuesday_end_time' },
+      3: { start: 'assigned_wednesday_start_time', end: 'assigned_wednesday_end_time' },
+      4: { start: 'assigned_thursday_start_time', end: 'assigned_thursday_end_time' },
+      5: { start: 'assigned_friday_start_time', end: 'assigned_friday_end_time' },
+      6: { start: 'assigned_saturday_start_time', end: 'assigned_saturday_end_time' },
+    };
+    const startKey = dayMap[todayDayOfWeek]?.start;
+    const endKey = dayMap[todayDayOfWeek]?.end;
 
     const assignedEmployee = order.assignedEmployees?.[0];
-    const orderStartDateForWeekCalc = order.recurring_start_date ? new Date(order.recurring_start_date) : (order.due_date ? new Date(order.due_date) : today);
-    const startWeekNumber = getWeek(orderStartDateForWeekCalc, { weekStartsOn: 1 });
-    const weekDifference = currentWeekNumber - startWeekNumber;
+    if (!assignedEmployee) return 'N/A';
 
-    const assignedRecurrenceIntervalWeeks = assignedEmployee?.assigned_recurrence_interval_weeks || order.object?.recurrence_interval_weeks || 1;
+    const startTime = startKey ? (assignedEmployee[startKey] as string | null) : null;
+    const endTime = endKey ? (assignedEmployee[endKey] as string | null) : null;
 
-    const schedules = parseDailySchedules(assignedEmployee?.assigned_daily_schedules || order.object?.daily_schedules || '[]');
-    const scheduleForToday = schedules.find(s => 
-      s.day_of_week === currentDayName && 
-      s.week_offset_in_cycle === (weekDifference % assignedRecurrenceIntervalWeeks)
-    );
-
-    if (scheduleForToday && scheduleForToday.start_time && scheduleForToday.end_time) {
-      return `${scheduleForToday.start_time} - ${scheduleForToday.end_time}`;
+    if (startTime && endTime) {
+      return `${startTime} - ${endTime}`;
     }
     return 'N/A';
   };

@@ -12,14 +12,6 @@ import { useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { RecordDetailsDialog } from "@/components/record-details-dialog"; // Import RecordDetailsDialog
 
-interface DailySchedule {
-  day_of_week: string;
-  week_offset_in_cycle: number;
-  hours: number;
-  start_time: string;
-  end_time: string;
-}
-
 interface DisplayObject {
   id: string;
   user_id: string | null;
@@ -40,7 +32,28 @@ interface DisplayObject {
   is_alarm_secured: boolean;
   alarm_password: string | null;
   security_code_word: string | null;
-  daily_schedules: DailySchedule[] | null; // New JSONB field
+  monday_start_time: string | null;
+  monday_end_time: string | null;
+  tuesday_start_time: string | null;
+  tuesday_end_time: string | null;
+  wednesday_start_time: string | null;
+  wednesday_end_time: string | null;
+  thursday_start_time: string | null;
+  thursday_end_time: string | null;
+  friday_start_time: string | null;
+  friday_end_time: string | null;
+  saturday_start_time: string | null;
+  saturday_end_time: string | null;
+  sunday_start_time: string | null;
+  sunday_end_time: string | null;
+  monday_hours: number | null;
+  tuesday_hours: number | null;
+  wednesday_hours: number | null;
+  thursday_hours: number | null;
+  friday_hours: number | null;
+  saturday_hours: number | null;
+  sunday_hours: number | null;
+  total_weekly_hours: number | null; // Neues Feld
   recurrence_interval_weeks: number;
   start_week_offset: number;
 }
@@ -57,13 +70,6 @@ interface ObjectsTableViewProps {
   sortColumn: string;
   sortDirection: string;
 }
-
-// Helper to calculate total weekly hours from daily schedules
-const calculateTotalWeeklyHours = (schedules: DailySchedule[] | null): number => {
-  if (!schedules) return 0;
-  // Sum hours only for the base week (week_offset_in_cycle = 0) for a general weekly total
-  return schedules.filter(s => s.week_offset_in_cycle === 0).reduce((sum, s) => sum + (s.hours || 0), 0);
-};
 
 export function ObjectsTableView({
   objects,
@@ -188,7 +194,7 @@ export function ObjectsTableView({
               </TableCell>
               <TableCell className="text-sm">{object.time_of_day}</TableCell>
               <TableCell className="text-sm">{object.access_method}</TableCell>
-              <TableCell className="text-sm">{calculateTotalWeeklyHours(object.daily_schedules).toFixed(2) || 'N/A'}</TableCell>
+              <TableCell className="text-sm">{object.total_weekly_hours !== null ? `${object.total_weekly_hours.toFixed(2)}` : 'N/A'}</TableCell>
               <TableCell className="text-sm">
                 {object.recurrence_interval_weeks > 1 ? `Alle ${object.recurrence_interval_weeks} Wo. (Offset: ${object.start_week_offset})` : 'Jede Woche'}
               </TableCell>

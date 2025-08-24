@@ -19,12 +19,6 @@ import { OrderPlanningDialog } from "@/components/order-planning-dialog"; // Imp
 import { RecordDetailsDialog } from "@/components/record-details-dialog"; // Import RecordDetailsDialog
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"; // Import Table components
 
-// Helper to parse daily schedules from JSONB
-const parseDailySchedules = (jsonb: any): { day_of_week: string; week_offset_in_cycle: number; hours: number; start_time: string; end_time: string }[] => {
-  if (!jsonb) return [];
-  return Array.isArray(jsonb) ? jsonb : [];
-};
-
 export default async function DashboardPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -49,7 +43,6 @@ export default async function DashboardPage() {
   today.setHours(0, 0, 0, 0); // Set to start of today for comparison
   const tomorrow = new Date(today);
   tomorrow.setDate(tomorrow.getDate() + 1);
-  const currentWeekNumber = format(today, 'w', { locale: de }); // Get ISO week number
 
   // --- KPI Data Fetching ---
   // 1. Geplante Einsätze heute
@@ -62,28 +55,13 @@ export default async function DashboardPage() {
       recurring_start_date,
       recurring_end_date,
       status,
-      total_estimated_hours,
-      objects ( recurrence_interval_weeks, start_week_offset ),
-      order_employee_assignments ( assigned_recurrence_interval_weeks, assigned_start_week_offset )
+      total_estimated_hours
     `)
     .or(`due_date.eq.${format(today, 'yyyy-MM-dd')},and(recurring_start_date.lte.${format(today, 'yyyy-MM-dd')},or(recurring_end_date.gte.${format(today, 'yyyy-MM-dd')},recurring_end_date.is.null))`)
     .in('order_type', ['one_time', 'recurring', 'permanent', 'substitution']);
 
-  const filteredScheduledOrdersToday = scheduledOrdersToday?.filter(order => {
-    const assignedRecurrenceIntervalWeeks = order.order_employee_assignments?.[0]?.assigned_recurrence_interval_weeks || order.objects?.[0]?.recurrence_interval_weeks || 1;
-    const assignedStartWeekOffset = order.order_employee_assignments?.[0]?.assigned_start_week_offset || order.objects?.[0]?.start_week_offset || 0;
-
-    if (assignedRecurrenceIntervalWeeks === 1) return true;
-
-    const orderStartDate = order.recurring_start_date ? new Date(order.recurring_start_date) : (order.due_date ? new Date(order.due_date) : today);
-    const startWeekNumber = format(orderStartDate, 'w', { locale: de });
-    const weekDifference = (Number(currentWeekNumber) - Number(startWeekNumber) + 52) % 52; // Handle year wrap-around
-
-    return weekDifference % assignedRecurrenceIntervalWeeks === assignedStartWeekOffset;
-  }) || [];
-
-  const totalScheduledToday = filteredScheduledOrdersToday.length || 0;
-  const completedScheduledToday = filteredScheduledOrdersToday.filter(order => order.status === 'completed').length || 0;
+  const totalScheduledToday = scheduledOrdersToday?.length || 0;
+  const completedScheduledToday = scheduledOrdersToday?.filter(order => order.status === 'completed').length || 0;
 
   if (scheduledOrdersError) console.error("Fehler beim Laden der geplanten Einsätze:", scheduledOrdersError?.message || scheduledOrdersError);
 
@@ -110,12 +88,21 @@ export default async function DashboardPage() {
       request_status,
       service_type,
       customers ( name ),
-      objects ( name, address, notes, recurrence_interval_weeks, start_week_offset, daily_schedules ),
+      objects ( name, address, notes, recurrence_interval_weeks, start_week_offset ),
       customer_contacts ( first_name, last_name, phone ),
       order_feedback ( id, rating, comment, image_urls, created_at ),
       order_employee_assignments ( 
         employee_id, 
-        assigned_daily_schedules,
+        assigned_monday_hours, assigned_tuesday_hours, assigned_wednesday_hours,
+        assigned_thursday_hours, assigned_friday_hours, assigned_saturday_hours,
+        assigned_sunday_hours,
+        assigned_monday_start_time, assigned_monday_end_time,
+        assigned_tuesday_start_time, assigned_tuesday_end_time,
+        assigned_wednesday_start_time, assigned_wednesday_end_time,
+        assigned_thursday_start_time, assigned_thursday_end_time,
+        assigned_friday_start_time, assigned_friday_end_time,
+        assigned_saturday_start_time, assigned_saturday_end_time,
+        assigned_sunday_start_time, assigned_sunday_end_time,
         assigned_recurrence_interval_weeks, assigned_start_week_offset,
         employees ( first_name, last_name ) 
       )
@@ -135,7 +122,27 @@ export default async function DashboardPage() {
 
     const mappedAssignments = order.order_employee_assignments?.map((a: any) => ({
         employeeId: a.employee_id,
-        assigned_daily_schedules: JSON.stringify(a.assigned_daily_schedules),
+        assigned_monday_hours: a.assigned_monday_hours,
+        assigned_tuesday_hours: a.assigned_tuesday_hours,
+        assigned_wednesday_hours: a.assigned_wednesday_hours,
+        assigned_thursday_hours: a.assigned_thursday_hours,
+        assigned_friday_hours: a.assigned_friday_hours,
+        assigned_saturday_hours: a.assigned_saturday_hours,
+        assigned_sunday_hours: a.assigned_sunday_hours,
+        assigned_monday_start_time: a.assigned_monday_start_time,
+        assigned_monday_end_time: a.assigned_monday_end_time,
+        assigned_tuesday_start_time: a.assigned_tuesday_start_time,
+        assigned_tuesday_end_time: a.assigned_tuesday_end_time,
+        assigned_wednesday_start_time: a.assigned_wednesday_start_time,
+        assigned_wednesday_end_time: a.assigned_wednesday_end_time,
+        assigned_thursday_start_time: a.assigned_thursday_start_time,
+        assigned_thursday_end_time: a.assigned_thursday_end_time,
+        assigned_friday_start_time: a.assigned_friday_start_time,
+        assigned_friday_end_time: a.assigned_friday_end_time,
+        assigned_saturday_start_time: a.assigned_saturday_start_time,
+        assigned_saturday_end_time: a.assigned_saturday_end_time,
+        assigned_sunday_start_time: a.assigned_sunday_start_time,
+        assigned_sunday_end_time: a.assigned_sunday_end_time,
         assigned_recurrence_interval_weeks: a.assigned_recurrence_interval_weeks,
         assigned_start_week_offset: a.assigned_start_week_offset,
     })) || [];
@@ -173,28 +180,28 @@ export default async function DashboardPage() {
       object: objectData,
       customer: customerData,
       customer_contact: customerContactData,
-      assigned_daily_hours: null, // Deprecated
-      assigned_monday_hours: null, // Deprecated
-      assigned_tuesday_hours: null, // Deprecated
-      assigned_wednesday_hours: null, // Deprecated
-      assigned_thursday_hours: null, // Deprecated
-      assigned_friday_hours: null, // Deprecated
-      assigned_saturday_hours: null, // Deprecated
-      assigned_sunday_hours: null, // Deprecated
-      assigned_monday_start_time: null, // Deprecated
-      assigned_monday_end_time: null, // Deprecated
-      assigned_tuesday_start_time: null, // Deprecated
-      assigned_tuesday_end_time: null, // Deprecated
-      assigned_wednesday_start_time: null, // Deprecated
-      assigned_wednesday_end_time: null, // Deprecated
-      assigned_thursday_start_time: null, // Deprecated
-      assigned_thursday_end_time: null, // Deprecated
-      assigned_friday_start_time: null, // Deprecated
-      assigned_friday_end_time: null, // Deprecated
-      assigned_saturday_start_time: null, // Deprecated
-      assigned_saturday_end_time: null, // Deprecated
-      assigned_sunday_start_time: null, // Deprecated
-      assigned_sunday_end_time: null, // Deprecated
+      assigned_daily_hours: order.order_employee_assignments?.map((a: any) => a.assigned_daily_hours) || null,
+      assigned_monday_hours: firstAssignment?.assigned_monday_hours || null,
+      assigned_tuesday_hours: firstAssignment?.assigned_tuesday_hours || null,
+      assigned_wednesday_hours: firstAssignment?.assigned_wednesday_hours || null,
+      assigned_thursday_hours: firstAssignment?.assigned_thursday_hours || null,
+      assigned_friday_hours: firstAssignment?.assigned_friday_hours || null,
+      assigned_saturday_hours: firstAssignment?.assigned_saturday_hours || null,
+      assigned_sunday_hours: firstAssignment?.assigned_sunday_hours || null,
+      assigned_monday_start_time: firstAssignment?.assigned_monday_start_time || null,
+      assigned_monday_end_time: firstAssignment?.assigned_monday_end_time || null,
+      assigned_tuesday_start_time: firstAssignment?.assigned_tuesday_start_time || null,
+      assigned_tuesday_end_time: firstAssignment?.assigned_tuesday_end_time || null,
+      assigned_wednesday_start_time: firstAssignment?.assigned_wednesday_start_time || null,
+      assigned_wednesday_end_time: firstAssignment?.assigned_wednesday_end_time || null,
+      assigned_thursday_start_time: firstAssignment?.assigned_thursday_start_time || null,
+      assigned_thursday_end_time: firstAssignment?.assigned_thursday_end_time || null,
+      assigned_friday_start_time: firstAssignment?.assigned_friday_start_time || null,
+      assigned_friday_end_time: firstAssignment?.assigned_friday_end_time || null,
+      assigned_saturday_start_time: firstAssignment?.assigned_saturday_start_time || null,
+      assigned_saturday_end_time: firstAssignment?.assigned_saturday_end_time || null,
+      assigned_sunday_start_time: firstAssignment?.assigned_sunday_start_time || null,
+      assigned_sunday_end_time: firstAssignment?.assigned_sunday_end_time || null,
       assigned_recurrence_interval_weeks: firstAssignment?.assigned_recurrence_interval_weeks || null,
       assigned_start_week_offset: firstAssignment?.assigned_start_week_offset || null,
     };

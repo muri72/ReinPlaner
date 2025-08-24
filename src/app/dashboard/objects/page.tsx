@@ -21,14 +21,6 @@ import { useIsMobile } from "@/hooks/use-mobile"; // Import the hook
 import { RecordDetailsDialog } from "@/components/record-details-dialog"; // Import RecordDetailsDialog
 import { LoadingOverlay } from "@/components/loading-overlay"; // Import the new LoadingOverlay
 
-interface DailySchedule {
-  day_of_week: string;
-  week_offset_in_cycle: number;
-  hours: number;
-  start_time: string;
-  end_time: string;
-}
-
 interface DisplayObject {
   id: string;
   user_id: string | null;
@@ -49,16 +41,31 @@ interface DisplayObject {
   is_alarm_secured: boolean;
   alarm_password: string | null;
   security_code_word: string | null;
-  daily_schedules: DailySchedule[] | null; // New JSONB field
+  monday_start_time: string | null;
+  monday_end_time: string | null;
+  tuesday_start_time: string | null;
+  tuesday_end_time: string | null;
+  wednesday_start_time: string | null;
+  wednesday_end_time: string | null;
+  thursday_start_time: string | null;
+  thursday_end_time: string | null;
+  friday_start_time: string | null;
+  friday_end_time: string | null;
+  saturday_start_time: string | null;
+  saturday_end_time: string | null;
+  sunday_start_time: string | null;
+  sunday_end_time: string | null;
+  monday_hours: number | null;
+  tuesday_hours: number | null;
+  wednesday_hours: number | null;
+  thursday_hours: number | null;
+  friday_hours: number | null;
+  saturday_hours: number | null;
+  sunday_hours: number | null;
+  total_weekly_hours: number | null; // Neues Feld
   recurrence_interval_weeks: number;
   start_week_offset: number;
 }
-
-// Helper to parse daily schedules from JSONB
-const parseDailySchedules = (jsonb: any): DailySchedule[] => {
-  if (!jsonb) return [];
-  return Array.isArray(jsonb) ? jsonb : [];
-};
 
 export default function ObjectsPage({
   searchParams,
@@ -155,24 +162,7 @@ export default function ObjectsPage({
       let selectQuery = supabase
         .from('objects')
         .select(`
-          id,
-          user_id,
-          customer_id,
-          name,
-          address,
-          description,
-          created_at,
-          notes,
-          priority,
-          time_of_day,
-          access_method,
-          pin,
-          is_alarm_secured,
-          alarm_password,
-          security_code_word,
-          daily_schedules,
-          recurrence_interval_weeks,
-          start_week_offset,
+          *,
           customers ( name ),
           customer_contacts ( first_name, last_name )
         `, { count: 'exact' })
@@ -205,7 +195,6 @@ export default function ObjectsPage({
         customer_name: obj.customers?.[0]?.name || null,
         object_leader_first_name: obj.customer_contacts?.[0]?.first_name || null,
         object_leader_last_name: obj.customer_contacts?.[0]?.last_name || null,
-        daily_schedules: parseDailySchedules(obj.daily_schedules),
       })) || [];
       objectsError = selectError;
       objectsCount = selectCount;
@@ -276,12 +265,6 @@ export default function ObjectsPage({
     const params = new URLSearchParams(currentSearchParams);
     params.set('viewMode', value);
     router.replace(`?${params.toString()}`);
-  };
-
-  const calculateTotalWeeklyHours = (schedules: DailySchedule[] | null): number => {
-    if (!schedules) return 0;
-    // Sum hours only for the base week (week_offset_in_cycle = 0) for a general weekly total
-    return schedules.filter(s => s.week_offset_in_cycle === 0).reduce((sum, s) => sum + (s.hours || 0), 0);
   };
 
   return (
@@ -434,23 +417,33 @@ export default function ObjectsPage({
                           </>
                         )}
                         <div className="mt-4 text-sm font-semibold">Arbeitszeiten pro Wochentag:</div>
-                        {object.daily_schedules?.filter(s => s.week_offset_in_cycle === 0).map(schedule => (
-                          <p key={schedule.day_of_week} className="text-xs text-muted-foreground ml-2">
-                            {schedule.day_of_week.charAt(0).toUpperCase() + schedule.day_of_week.slice(1)}:
-                            {schedule.start_time && schedule.end_time ? ` ${schedule.start_time} - ${schedule.end_time}` : ''}
-                            {schedule.hours ? ` (${Number(schedule.hours).toFixed(2)} Std. Netto)` : ''}
-                          </p>
-                        ))}
-                        {object.recurrence_interval_weeks > 1 && (
+                        {['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map(day => {
+                          const startTimeKey = `${day}_start_time` as keyof DisplayObject;
+                          const endTimeKey = `${day}_end_time` as keyof DisplayObject;
+                          const hoursKey = `${day}_hours` as keyof DisplayObject;
+                          const startTime = object[startTimeKey] as string | null;
+                          const endTime = object[endTimeKey] as string | null;
+                          const hours = object[hoursKey] as number | null;
+
+                          if (startTime || hours) {
+                            return (
+                              <p key={day} className="text-xs text-muted-foreground ml-2">
+                                {day.charAt(0).toUpperCase() + day.slice(1)}:
+                                {startTime && endTime ? ` ${startTime} - ${endTime}` : ''}
+                                {hours ? ` (${Number(hours).toFixed(2)} Std. Netto)` : ''}
+                              </p>
+                            );
+                          }
+                          return null;
+                        })}
+                        {object.total_weekly_hours !== null && (
                           <div className="mt-2 text-sm font-semibold">
-                            Wiederholung: Alle {object.recurrence_interval_weeks} Wochen (Offset: {object.start_week_offset})
+                            Gesamtstunden pro Woche: {object.total_weekly_hours.toFixed(2)}
                           </div>
                         )}
-                        {object.daily_schedules && object.daily_schedules.some(s => s.week_offset_in_cycle > 0) && (
-                          <p className="text-xs text-muted-foreground mt-1">
-                            (Zusätzliche Zeitpläne für andere Wochen-Offsets vorhanden)
-                          </p>
-                        )}
+                        <div className="mt-2 text-sm font-semibold">
+                          Wiederholung: Alle {object.recurrence_interval_weeks} Wochen (Offset: {object.start_week_offset})
+                        </div>
                       </TabsContent>
                       <TabsContent value="documents" className="pt-4 space-y-4">
                         <h3 className="text-md font-semibold flex items-center">
