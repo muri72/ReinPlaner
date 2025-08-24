@@ -384,8 +384,33 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
           </Select>
           {form.formState.errors.customerContactId && <p className="text-red-500 text-sm mt-1">{form.formState.errors.customerContactId.message}</p>}
         </div>
-        <CustomerContactCreateDialog customerId={selectedCustomerId} onContactCreated={handleCustomerContactCreated} disabled={!selectedCustomerId} />
+        <Dialog open={isNewObjectDialogOpen} onOpenChange={setIsNewObjectDialogOpen}>
+          <DialogTrigger asChild>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="mb-1"
+              disabled={!form.watch("customerId")}
+              title={!form.watch("customerId") ? "Bitte zuerst einen Kunden auswählen" : "Neues Objekt für diesen Kunden erstellen"}
+            >
+              <PlusCircle className="h-4 w-4" />
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto" aria-labelledby="object-create-dialog-title">
+            <DialogHeader>
+              <DialogTitle id="object-create-dialog-title">Neues Objekt erstellen</DialogTitle>
+            </DialogHeader>
+            <ObjectForm
+              initialData={{ customerId: form.watch("customerId") }}
+              onSubmit={handleCreateObject}
+              submitButtonText="Objekt erstellen"
+              onSuccess={() => setIsNewObjectDialogOpen(false)}
+            />
+          </DialogContent>
+        </Dialog>
       </div>
+
       <div>
         <Label htmlFor="notes">Interne Notizen (optional)</Label>
         <Textarea
@@ -501,7 +526,12 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
               step="1"
               min="1"
               max="52"
-              {...form.register("recurrence_interval_weeks", { valueAsNumber: true })}
+              {...form.register("recurrence_interval_weeks")}
+              value={form.watch("recurrence_interval_weeks") ?? ''}
+              onChange={(e) => {
+                const value = e.target.value;
+                form.setValue("recurrence_interval_weeks", value === '' ? null : Number(value), { shouldValidate: true });
+              }}
               placeholder="Z.B. 1 für jede Woche, 2 für jede zweite Woche"
             />
             {form.formState.errors.recurrence_interval_weeks && <p className="text-red-500 text-sm mt-1">{form.formState.errors.recurrence_interval_weeks.message}</p>}
@@ -514,7 +544,12 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
               step="1"
               min="0"
               max={recurrenceIntervalWeeks - 1}
-              {...form.register("start_week_offset", { valueAsNumber: true })}
+              {...form.register("start_week_offset")}
+              value={form.watch("start_week_offset") ?? ''}
+              onChange={(e) => {
+                const value = e.target.value;
+                form.setValue("start_week_offset", value === '' ? null : Number(value), { shouldValidate: true });
+              }}
               placeholder="Z.B. 0 für die erste Woche, 1 für die zweite Woche"
             />
             {form.formState.errors.start_week_offset && <p className="text-red-500 text-sm mt-1">{form.formState.errors.start_week_offset.message}</p>}
@@ -570,7 +605,7 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
                         step="0.01"
                         min="0"
                         max="24"
-                        {...form.register(hoursFieldName, { valueAsNumber: true })}
+                        {...form.register(hoursFieldName)}
                         placeholder="Std."
                         value={form.watch(hoursFieldName) ?? ''}
                         onChange={(e) => handleDailyHoursChange(weekIndex, day, e.target.value)}
