@@ -508,7 +508,7 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
               value={form.watch("recurrence_interval_weeks") ?? ''}
               onChange={(e) => {
                 const value = e.target.value;
-                form.setValue("recurrence_interval_weeks", value === '' ? null : Number(value), { shouldValidate: true });
+                form.setValue("recurrence_interval_weeks", Number(value), { shouldValidate: true });
               }}
               placeholder="Z.B. 1 für jede Woche, 2 für jede zweite Woche"
             />
@@ -526,7 +526,7 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
               value={form.watch("start_week_offset") ?? ''}
               onChange={(e) => {
                 const value = e.target.value;
-                form.setValue("start_week_offset", value === '' ? null : Number(value), { shouldValidate: true });
+                form.setValue("start_week_offset", Number(value), { shouldValidate: true });
               }}
               placeholder="Z.B. 0 für die erste Woche, 1 für die zweite Woche"
             />
