@@ -173,7 +173,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
   };
 
   const form = useForm<OrderFormValues>({
-    resolver: zodResolver(createOrderSchema(objects)),
+    resolver: zodResolver(createOrderSchema(objects) as z.ZodSchema<OrderFormValues>),
     defaultValues: resolvedDefaultValues,
     mode: "onChange",
   });
