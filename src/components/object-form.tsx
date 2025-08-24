@@ -13,7 +13,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { createObject } from "@/app/dashboard/objects/actions";
 import { CustomerContactCreateDialog } from "@/components/customer-contact-create-dialog";
 import { DatePicker } from "@/components/date-picker";
 import { handleActionResponse } from "@/lib/toast-utils";
@@ -118,7 +117,6 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
   const [customers, setCustomers] = useState<{ id: string; name: string }[]>([]);
   const [objects, setObjects] = useState<any[]>([]); // Keep as any[] for now, detailed type not needed here
   const [customerContacts, setCustomerContacts] = useState<{ id: string; first_name: string; last_name: string; customer_id: string }[]>([]);
-  const [isNewObjectDialogOpen, setIsNewObjectDialogOpen] = useState(false);
 
   const resolvedDefaultValues: ObjectFormValues = {
     name: initialData?.name ?? "",
@@ -384,31 +382,11 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
           </Select>
           {form.formState.errors.customerContactId && <p className="text-red-500 text-sm mt-1">{form.formState.errors.customerContactId.message}</p>}
         </div>
-        <Dialog open={isNewObjectDialogOpen} onOpenChange={setIsNewObjectDialogOpen}>
-          <DialogTrigger asChild>
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              className="mb-1"
-              disabled={!form.watch("customerId")}
-              title={!form.watch("customerId") ? "Bitte zuerst einen Kunden auswählen" : "Neues Objekt für diesen Kunden erstellen"}
-            >
-              <PlusCircle className="h-4 w-4" />
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto" aria-labelledby="object-create-dialog-title">
-            <DialogHeader>
-              <DialogTitle id="object-create-dialog-title">Neues Objekt erstellen</DialogTitle>
-            </DialogHeader>
-            <ObjectForm
-              initialData={{ customerId: form.watch("customerId") }}
-              onSubmit={handleCreateObject}
-              submitButtonText="Objekt erstellen"
-              onSuccess={() => setIsNewObjectDialogOpen(false)}
-            />
-          </DialogContent>
-        </Dialog>
+        <CustomerContactCreateDialog
+          customerId={selectedCustomerId}
+          onContactCreated={handleCustomerContactCreated}
+          disabled={!selectedCustomerId}
+        />
       </div>
 
       <div>
