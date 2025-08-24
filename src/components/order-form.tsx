@@ -119,9 +119,11 @@ const createOrderSchema = (objects: any[]) => baseOrderSchema.superRefine((data,
                   path: [`assignedEmployees.${empIndex}.assigned_daily_schedules.${weekIndex}.${day}.hours`],
                 });
               } else if (Math.abs(assignedHours - objectDailyHours) > 0.1) {
+                const assignedHoursStr = typeof assignedHours === 'number' ? assignedHours.toFixed(2) : 'N/A';
+                const objectHoursStr = typeof objectDailyHours === 'number' ? objectDailyHours.toFixed(2) : 'N/A';
                 ctx.addIssue({
                   code: z.ZodIssueCode.custom,
-                  message: `Stunden für ${germanDayNames[day]} in Woche ${weekIndex + 1} (${assignedHours.toFixed(2)} Std.) müssen den Objektstunden (${objectDailyHours.toFixed(2)} Std.) entsprechen.`,
+                  message: `Stunden für ${germanDayNames[day]} in Woche ${weekIndex + 1} (${assignedHoursStr} Std.) müssen den Objektstunden (${objectHoursStr} Std.) entsprechen.`,
                   path: [`assignedEmployees.${empIndex}.assigned_daily_schedules.${weekIndex}.${day}.hours`],
                 });
               }
