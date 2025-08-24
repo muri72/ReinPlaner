@@ -272,8 +272,14 @@ export default function OrdersPage({
           customer_contact_first_name: customerContactData?.first_name || null,
           customer_contact_last_name: customerContactData?.last_name || null,
           employee_ids: order.order_employee_assignments?.map((a: any) => a.employee_id) || null,
-          employee_first_names: order.order_employee_assignments?.map((a: any) => a.employees?.[0]?.first_name || '') || null,
-          employee_last_names: order.order_employee_assignments?.map((a: any) => a.employees?.[0]?.last_name || '') || null,
+          employee_first_names: order.order_employee_assignments?.map((a: any) => {
+            const employee = Array.isArray(a.employees) ? a.employees[0] : a.employees;
+            return employee?.first_name || '';
+          }) || null,
+          employee_last_names: order.order_employee_assignments?.map((a: any) => {
+            const employee = Array.isArray(a.employees) ? a.employees[0] : a.employees;
+            return employee?.last_name || '';
+          }) || null,
           assignedEmployees: mappedAssignments,
           object: objectData,
           customer: customerData,
