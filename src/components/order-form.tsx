@@ -100,7 +100,7 @@ export type OrderFormInput = z.input<typeof orderSchema>;
 export type OrderFormValues = z.infer<typeof orderSchema>;
 
 interface OrderFormProps {
-  initialData?: Partial<OrderFormInput>;
+  initialData?: Partial<OrderFormValues>; // Changed from OrderFormInput to OrderFormValues
   onSubmit: (data: OrderFormValues) => Promise<{ success: boolean; message: string }>;
   submitButtonText: string;
   onSuccess?: () => void;
@@ -123,16 +123,14 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     monday_start_time: string | null;
     tuesday_start_time: string | null;
     wednesday_start_time: string | null;
-    thursday_start_time: string | null;
-    friday_start_time: string | null;
-    saturday_start_time: string | null;
-    sunday_start_time: string | null;
-    monday_end_time: string | null;
-    tuesday_end_time: string | null;
     wednesday_end_time: string | null;
+    thursday_start_time: string | null;
     thursday_end_time: string | null;
+    friday_start_time: string | null;
     friday_end_time: string | null;
+    saturday_start_time: string | null;
     saturday_end_time: string | null;
+    sunday_start_time: string | null;
     sunday_end_time: string | null;
     total_weekly_hours: number | null;
     time_of_day: string | null;

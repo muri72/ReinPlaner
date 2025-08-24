@@ -154,7 +154,8 @@ export async function getPlanningDataForWeek(currentDate: Date): Promise<{ succe
 
           // Calculate current week number (ISO week, starts Monday)
           const currentWeekNumber = getWeek(day, { weekStartsOn: 1 });
-          const startWeekNumber = getWeek(parseISO(order.recurring_start_date || order.due_date || formatISO(new Date())), { weekStartsOn: 1 });
+          const orderStartDateForWeekCalc = order.recurring_start_date ? parseISO(order.recurring_start_date) : (order.due_date ? parseISO(order.due_date) : new Date());
+          const startWeekNumber = getWeek(orderStartDateForWeekCalc, { weekStartsOn: 1 });
 
           // Check if the current week falls within the recurrence pattern
           const weekDifference = currentWeekNumber - startWeekNumber;
@@ -245,7 +246,7 @@ export async function assignOrderToEmployee(
     // 1. Get order details
     const { data: order, error: orderError } = await supabaseAdmin
       .from('orders')
-      .select('title, total_estimated_hours, order_type, object_id')
+      .select('title, total_estimated_hours, order_type, object_id, recurring_start_date, due_date')
       .eq('id', orderId)
       .single();
 

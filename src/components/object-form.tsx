@@ -124,7 +124,7 @@ export type ObjectFormInput = z.input<typeof objectSchema>;
 export type ObjectFormValues = z.infer<typeof objectSchema>;
 
 interface ObjectFormProps {
-  initialData?: Partial<ObjectFormInput>;
+  initialData?: Partial<ObjectFormValues>; // Changed from ObjectFormInput to ObjectFormValues
   onSubmit: (data: ObjectFormValues) => Promise<{ success: boolean; message: string }>;
   submitButtonText: string;
   onSuccess?: () => void;
