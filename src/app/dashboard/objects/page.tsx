@@ -41,7 +41,27 @@ interface DisplayObject {
   is_alarm_secured: boolean;
   alarm_password: string | null;
   security_code_word: string | null;
-  daily_schedules: any[]; // Updated to JSONB array
+  monday_start_time: string | null;
+  monday_end_time: string | null;
+  tuesday_start_time: string | null;
+  tuesday_end_time: string | null;
+  wednesday_start_time: string | null;
+  wednesday_end_time: string | null;
+  thursday_start_time: string | null;
+  thursday_end_time: string | null;
+  friday_start_time: string | null;
+  friday_end_time: string | null;
+  saturday_start_time: string | null;
+  saturday_end_time: string | null;
+  sunday_start_time: string | null;
+  sunday_end_time: string | null;
+  monday_hours: number | null;
+  tuesday_hours: number | null;
+  wednesday_hours: number | null;
+  thursday_hours: number | null;
+  friday_hours: number | null;
+  saturday_hours: number | null;
+  sunday_hours: number | null;
   total_weekly_hours: number | null; // Neues Feld
   recurrence_interval_weeks: number;
   start_week_offset: number;
@@ -149,7 +169,7 @@ export default function ObjectsPage({
         .order(sortColumn, { ascending: sortDirection === 'asc' });
 
       // Apply RLS-like filtering for non-admin roles if not already handled by RLS policies
-      // The RPC function handles it, but for direct table selects, we might need it.
+      // The RPC function handles this, but for direct table selects, we might need it.
       // However, the existing RLS policies for 'objects' table should cover this.
       // So, no explicit `eq('user_id', user.id)` or `in('customer_id', ...)` needed here
       // as the RPC handles it and direct selects are covered by RLS.
@@ -237,17 +257,6 @@ export default function ObjectsPage({
       case 'low':
       default: return 'secondary';
     }
-  };
-
-  const dayNames = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const;
-  const germanDayNames: { [key: string]: string } = {
-    monday: 'Mo',
-    tuesday: 'Di',
-    wednesday: 'Mi',
-    thursday: 'Do',
-    friday: 'Fr',
-    saturday: 'Sa',
-    sunday: 'So',
   };
 
   const activeTab = isMobile ? 'grid' : viewMode;
@@ -408,27 +417,28 @@ export default function ObjectsPage({
                           </>
                         )}
                         <div className="mt-4 text-sm font-semibold">Arbeitszeiten pro Wochentag:</div>
-                        {object.daily_schedules.map((weekSchedule: any, weekIndex: number) => (
-                          <div key={weekIndex} className="ml-2 mb-2">
-                            <p className="text-xs font-semibold text-muted-foreground">Woche {weekIndex + 1}:</p>
-                            {dayNames.map(day => {
-                              const daySchedule = weekSchedule[day];
-                              if (daySchedule?.hours || daySchedule?.start || daySchedule?.end) {
-                                return (
-                                  <p key={day} className="text-xs text-muted-foreground ml-2">
-                                    {germanDayNames[day]}:
-                                    {daySchedule.start && daySchedule.end ? ` ${daySchedule.start} - ${daySchedule.end}` : ''}
-                                    {daySchedule.hours ? ` (${Number(daySchedule.hours).toFixed(2)} Std. Netto)` : ''}
-                                  </p>
-                                );
-                              }
-                              return null;
-                            })}
-                          </div>
-                        ))}
+                        {['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map(day => {
+                          const startTimeKey = `${day}_start_time` as keyof DisplayObject;
+                          const endTimeKey = `${day}_end_time` as keyof DisplayObject;
+                          const hoursKey = `${day}_hours` as keyof DisplayObject;
+                          const startTime = object[startTimeKey] as string | null;
+                          const endTime = object[endTimeKey] as string | null;
+                          const hours = object[hoursKey] as number | null;
+
+                          if (startTime || hours) {
+                            return (
+                              <p key={day} className="text-xs text-muted-foreground ml-2">
+                                {day.charAt(0).toUpperCase() + day.slice(1)}:
+                                {startTime && endTime ? ` ${startTime} - ${endTime}` : ''}
+                                {hours ? ` (${Number(hours).toFixed(2)} Std. Netto)` : ''}
+                              </p>
+                            );
+                          }
+                          return null;
+                        })}
                         {object.total_weekly_hours !== null && (
                           <div className="mt-2 text-sm font-semibold">
-                            Gesamtstunden pro Woche (Durchschnitt): {object.total_weekly_hours.toFixed(2)}
+                            Gesamtstunden pro Woche: {object.total_weekly_hours.toFixed(2)}
                           </div>
                         )}
                         <div className="mt-2 text-sm font-semibold">

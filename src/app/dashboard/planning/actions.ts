@@ -37,8 +37,6 @@ export interface PlanningPageData {
   unassignedOrders: UnassignedOrder[];
 }
 
-const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as const;
-
 export async function getPlanningDataForWeek(currentDate: Date): Promise<{ success: boolean; data: PlanningPageData | null; message: string }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -95,7 +93,7 @@ export async function getPlanningDataForWeek(currentDate: Date): Promise<{ succe
         orders!inner(
             id, title, order_type, due_date, total_estimated_hours,
             recurring_start_date, recurring_end_date,
-            objects ( recurrence_interval_weeks, start_week_offset, daily_schedules )
+            objects ( recurrence_interval_weeks, start_week_offset )
         )
       `)
       .eq('orders.request_status', 'approved')
@@ -156,25 +154,10 @@ export async function getPlanningDataForWeek(currentDate: Date): Promise<{ succe
 
           // Calculate current week number (ISO week, starts Monday)
           const currentWeekNumber = getWeek(day, { weekStartsOn: 1 });
-          const orderStartDateForWeekCalc = order.recurring_start_date ? parseISO(order.recurring_start_date) : (order.due_date ? parseISO(order.due_date) : new Date());
-          const startWeekNumber = getWeek(orderStartDateForWeekCalc, { weekStartsOn: 1 });
-
-          // Calculate the effective week index within the recurrence cycle
-          let weekDifference = currentWeekNumber - startWeekNumber;
-          if (weekDifference < 0) { // Handle year boundary
-              weekDifference += 52; // Assuming max 52 weeks in a year for simplicity
-          }
-          const effectiveWeekIndex = (weekDifference - startWeekOffset) % recurrenceIntervalWeeks;
-          
-          if (effectiveWeekIndex < 0) { // Ensure positive index
-              // This case should ideally not happen with correct modulo arithmetic, but as a safeguard
-              // If the offset is larger than the difference, it's still negative, we'll default to the first week of the cycle.
-              // A more robust solution might involve calculating the week number relative to a fixed epoch.
-              // For now, if it's still negative, we'll assume it's not the correct week.
-              continue;
-          }
+          const startWeekNumber = getWeek(parseISO(order.recurring_start_date || order.due_date || formatISO(new Date())), { weekStartsOn: 1 });
 
           // Check if the current week falls within the recurrence pattern
+          const weekDifference = currentWeekNumber - startWeekNumber;
           const isRecurrenceWeek = recurrenceIntervalWeeks === 1 || (weekDifference % recurrenceIntervalWeeks === startWeekOffset);
 
           if (!isRecurrenceWeek) continue; // Skip if not the correct recurrence week
@@ -193,7 +176,7 @@ export async function getPlanningDataForWeek(currentDate: Date): Promise<{ succe
           
           if (!isOrderActiveToday) continue;
 
-          // If active, get the hours for this specific day from the assignment's daily_schedules
+          // If active, get the hours for this specific day from the assignment
           let dailyHours = 0;
           let assignedStartTime: string | null = null;
           let assignedEndTime: string | null = null;
@@ -202,15 +185,14 @@ export async function getPlanningDataForWeek(currentDate: Date): Promise<{ succe
           if (order.order_type === 'one_time') {
             dailyHours = order.total_estimated_hours || 0;
           } else {
-            const employeeDailySchedules = assignment.assigned_daily_schedules;
-            if (employeeDailySchedules && employeeDailySchedules.length > effectiveWeekIndex) {
-              const weekSchedule = employeeDailySchedules[effectiveWeekIndex];
-              const daySchedule = (weekSchedule as any)?.[dayNames[dayOfWeek === 0 ? 6 : dayOfWeek - 1]]; // Adjust for dayNames array (0=Sun, 1=Mon...)
-              if (daySchedule) {
-                dailyHours = daySchedule.hours || 0;
-                assignedStartTime = daySchedule.start;
-                assignedEndTime = daySchedule.end;
-              }
+            switch (dayOfWeek) {
+              case 1: dailyHours = Number(assignment.assigned_monday_hours) || 0; assignedStartTime = assignment.assigned_monday_start_time; assignedEndTime = assignment.assigned_monday_end_time; break;
+              case 2: dailyHours = Number(assignment.assigned_tuesday_hours) || 0; assignedStartTime = assignment.assigned_tuesday_start_time; assignedEndTime = assignment.assigned_tuesday_end_time; break;
+              case 3: dailyHours = Number(assignment.assigned_wednesday_hours) || 0; assignedStartTime = assignment.assigned_wednesday_start_time; assignedEndTime = assignment.assigned_wednesday_end_time; break;
+              case 4: dailyHours = Number(assignment.assigned_thursday_hours) || 0; assignedStartTime = assignment.assigned_thursday_start_time; assignedEndTime = assignment.assigned_thursday_end_time; break;
+              case 5: dailyHours = Number(assignment.assigned_friday_hours) || 0; assignedStartTime = assignment.assigned_friday_start_time; assignedEndTime = assignment.assigned_friday_end_time; break;
+              case 6: dailyHours = Number(assignment.assigned_saturday_hours) || 0; assignedStartTime = assignment.assigned_saturday_start_time; assignedEndTime = assignment.assigned_saturday_end_time; break;
+              case 0: dailyHours = Number(assignment.assigned_sunday_hours) || 0; assignedStartTime = assignment.assigned_sunday_start_time; assignedEndTime = assignment.assigned_sunday_end_time; break;
             }
           }
 
@@ -249,7 +231,7 @@ export async function assignOrderToEmployee(
   orderId: string,
   employeeId: string,
   dateString: string,
-  assignedDailyHours: number | null // This parameter is now deprecated, but kept for compatibility
+  assignedDailyHours: number | null
 ): Promise<{ success: boolean; message: string }> {
   const supabaseAdmin = createAdminClient();
   const supabaseUserClient = await createClient();
@@ -271,22 +253,19 @@ export async function assignOrderToEmployee(
       throw new Error("Auftrag nicht gefunden.");
     }
 
-    // 2. Get object recurrence details and daily schedules if object_id exists
+    // 2. Get object recurrence details if object_id exists
     let objectRecurrenceIntervalWeeks = 1;
     let objectStartWeekOffset = 0;
-    let objectDailySchedules: any[] = [];
-
     if (order.object_id) {
       const { data: objectData, error: objectError } = await supabaseAdmin
         .from('objects')
-        .select('recurrence_interval_weeks, start_week_offset, daily_schedules')
+        .select('recurrence_interval_weeks, start_week_offset')
         .eq('id', order.object_id)
         .single();
       if (objectError) console.warn("Fehler beim Laden der Objekt-Wiederholungsdetails:", objectError.message);
       if (objectData) {
         objectRecurrenceIntervalWeeks = objectData.recurrence_interval_weeks;
         objectStartWeekOffset = objectData.start_week_offset;
-        objectDailySchedules = objectData.daily_schedules;
       }
     }
 
@@ -299,25 +278,20 @@ export async function assignOrderToEmployee(
       if (updateError) throw updateError;
     }
 
-    // 4. Prepare assigned_daily_schedules for the new assignment
-    // For drag-and-drop, we'll assign the object's default schedule to the employee
-    // If multiple employees are assigned later, this will be redistributed by the form.
-    const newAssignedDailySchedules = objectDailySchedules.length > 0 ? objectDailySchedules : [{}]; // Default to one empty week if no object schedule
-
-    // 5. Create or update assignment
+    // 4. Create or update assignment
     const { error: assignmentError } = await supabaseAdmin
       .from('order_employee_assignments')
       .upsert({
         order_id: orderId,
         employee_id: employeeId,
-        assigned_daily_schedules: newAssignedDailySchedules,
+        assigned_daily_hours: assignedDailyHours ?? order.total_estimated_hours,
         assigned_recurrence_interval_weeks: objectRecurrenceIntervalWeeks,
         assigned_start_week_offset: objectStartWeekOffset,
       }, { onConflict: 'order_id,employee_id' });
 
     if (assignmentError) throw assignmentError;
 
-    // 6. Send notification
+    // 5. Send notification
     const { data: employee } = await supabaseAdmin.from('employees').select('user_id, first_name, last_name').eq('id', employeeId).single();
     if (employee?.user_id) {
       await sendNotification({
@@ -328,7 +302,7 @@ export async function assignOrderToEmployee(
       });
     }
 
-    // 7. Revalidate paths
+    // 6. Revalidate paths
     revalidatePath("/dashboard/planning");
     revalidatePath("/dashboard/orders");
 

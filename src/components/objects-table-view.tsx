@@ -32,7 +32,27 @@ interface DisplayObject {
   is_alarm_secured: boolean;
   alarm_password: string | null;
   security_code_word: string | null;
-  daily_schedules: any[]; // Updated to JSONB array
+  monday_start_time: string | null;
+  monday_end_time: string | null;
+  tuesday_start_time: string | null;
+  tuesday_end_time: string | null;
+  wednesday_start_time: string | null;
+  wednesday_end_time: string | null;
+  thursday_start_time: string | null;
+  thursday_end_time: string | null;
+  friday_start_time: string | null;
+  friday_end_time: string | null;
+  saturday_start_time: string | null;
+  saturday_end_time: string | null;
+  sunday_start_time: string | null;
+  sunday_end_time: string | null;
+  monday_hours: number | null;
+  tuesday_hours: number | null;
+  wednesday_hours: number | null;
+  thursday_hours: number | null;
+  friday_hours: number | null;
+  saturday_hours: number | null;
+  sunday_hours: number | null;
   total_weekly_hours: number | null; // Neues Feld
   recurrence_interval_weeks: number;
   start_week_offset: number;

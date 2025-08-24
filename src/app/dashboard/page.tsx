@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, Building, UsersRound, Briefcase, Clock, DollarSign, AlertTriangle, MessageSquare, CheckCircle2, TrendingUp, ListOrdered, CalendarDays } from "lucide-react";
 import { OrderStatusChart }
 from "@/components/order-status-chart";
-import { format, getWeek } from 'date-fns';
+import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
 import Link from "next/link"; // Import Link for clickable cards
 import { FinancialTrendChart } from "@/components/financial-trend-chart"; // Import new chart
@@ -88,12 +88,21 @@ export default async function DashboardPage() {
       request_status,
       service_type,
       customers ( name ),
-      objects ( name, address, notes, recurrence_interval_weeks, start_week_offset, daily_schedules ),
+      objects ( name, address, notes, recurrence_interval_weeks, start_week_offset ),
       customer_contacts ( first_name, last_name, phone ),
       order_feedback ( id, rating, comment, image_urls, created_at ),
       order_employee_assignments ( 
         employee_id, 
-        assigned_daily_schedules,
+        assigned_monday_hours, assigned_tuesday_hours, assigned_wednesday_hours,
+        assigned_thursday_hours, assigned_friday_hours, assigned_saturday_hours,
+        assigned_sunday_hours,
+        assigned_monday_start_time, assigned_monday_end_time,
+        assigned_tuesday_start_time, assigned_tuesday_end_time,
+        assigned_wednesday_start_time, assigned_wednesday_end_time,
+        assigned_thursday_start_time, assigned_thursday_end_time,
+        assigned_friday_start_time, assigned_friday_end_time,
+        assigned_saturday_start_time, assigned_saturday_end_time,
+        assigned_sunday_start_time, assigned_sunday_end_time,
         assigned_recurrence_interval_weeks, assigned_start_week_offset,
         employees ( first_name, last_name ) 
       )
@@ -113,11 +122,33 @@ export default async function DashboardPage() {
 
     const mappedAssignments = order.order_employee_assignments?.map((a: any) => ({
         employeeId: a.employee_id,
-        assigned_daily_schedules: a.assigned_daily_schedules,
+        assigned_monday_hours: a.assigned_monday_hours,
+        assigned_tuesday_hours: a.assigned_tuesday_hours,
+        assigned_wednesday_hours: a.assigned_wednesday_hours,
+        assigned_thursday_hours: a.assigned_thursday_hours,
+        assigned_friday_hours: a.assigned_friday_hours,
+        assigned_saturday_hours: a.assigned_saturday_hours,
+        assigned_sunday_hours: a.assigned_sunday_hours,
+        assigned_monday_start_time: a.assigned_monday_start_time,
+        assigned_monday_end_time: a.assigned_monday_end_time,
+        assigned_tuesday_start_time: a.assigned_tuesday_start_time,
+        assigned_tuesday_end_time: a.assigned_tuesday_end_time,
+        assigned_wednesday_start_time: a.assigned_wednesday_start_time,
+        assigned_wednesday_end_time: a.assigned_wednesday_end_time,
+        assigned_thursday_start_time: a.assigned_thursday_start_time,
+        assigned_thursday_end_time: a.assigned_thursday_end_time,
+        assigned_friday_start_time: a.assigned_friday_start_time,
+        assigned_friday_end_time: a.assigned_friday_end_time,
+        assigned_saturday_start_time: a.assigned_saturday_start_time,
+        assigned_saturday_end_time: a.assigned_saturday_end_time,
+        assigned_sunday_start_time: a.assigned_sunday_start_time,
+        assigned_sunday_end_time: a.assigned_sunday_end_time,
         assigned_recurrence_interval_weeks: a.assigned_recurrence_interval_weeks,
         assigned_start_week_offset: a.assigned_start_week_offset,
     })) || [];
     
+    const firstAssignment = order.order_employee_assignments?.[0];
+
     return {
       id: order.id,
       user_id: order.user_id,
@@ -149,6 +180,30 @@ export default async function DashboardPage() {
       object: objectData,
       customer: customerData,
       customer_contact: customerContactData,
+      assigned_daily_hours: order.order_employee_assignments?.map((a: any) => a.assigned_daily_hours) || null,
+      assigned_monday_hours: firstAssignment?.assigned_monday_hours || null,
+      assigned_tuesday_hours: firstAssignment?.assigned_tuesday_hours || null,
+      assigned_wednesday_hours: firstAssignment?.assigned_wednesday_hours || null,
+      assigned_thursday_hours: firstAssignment?.assigned_thursday_hours || null,
+      assigned_friday_hours: firstAssignment?.assigned_friday_hours || null,
+      assigned_saturday_hours: firstAssignment?.assigned_saturday_hours || null,
+      assigned_sunday_hours: firstAssignment?.assigned_sunday_hours || null,
+      assigned_monday_start_time: firstAssignment?.assigned_monday_start_time || null,
+      assigned_monday_end_time: firstAssignment?.assigned_monday_end_time || null,
+      assigned_tuesday_start_time: firstAssignment?.assigned_tuesday_start_time || null,
+      assigned_tuesday_end_time: firstAssignment?.assigned_tuesday_end_time || null,
+      assigned_wednesday_start_time: firstAssignment?.assigned_wednesday_start_time || null,
+      assigned_wednesday_end_time: firstAssignment?.assigned_wednesday_end_time || null,
+      assigned_thursday_start_time: firstAssignment?.assigned_thursday_start_time || null,
+      assigned_thursday_end_time: firstAssignment?.assigned_thursday_end_time || null,
+      assigned_friday_start_time: firstAssignment?.assigned_friday_start_time || null,
+      assigned_friday_end_time: firstAssignment?.assigned_friday_end_time || null,
+      assigned_saturday_start_time: firstAssignment?.assigned_saturday_start_time || null,
+      assigned_saturday_end_time: firstAssignment?.assigned_saturday_end_time || null,
+      assigned_sunday_start_time: firstAssignment?.assigned_sunday_start_time || null,
+      assigned_sunday_end_time: firstAssignment?.assigned_sunday_end_time || null,
+      assigned_recurrence_interval_weeks: firstAssignment?.assigned_recurrence_interval_weeks || null,
+      assigned_start_week_offset: firstAssignment?.assigned_start_week_offset || null,
     };
   }) || [];
 

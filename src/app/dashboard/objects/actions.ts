@@ -18,7 +18,27 @@ export async function createObject(data: ObjectFormValues) {
     description,
     customerId,
     customerContactId,
-    daily_schedules,
+    monday_hours,
+    tuesday_hours,
+    wednesday_hours,
+    thursday_hours,
+    friday_hours,
+    saturday_hours,
+    sunday_hours,
+    monday_start_time,
+    monday_end_time,
+    tuesday_start_time,
+    tuesday_end_time,
+    wednesday_start_time,
+    wednesday_end_time,
+    thursday_start_time,
+    thursday_end_time,
+    friday_start_time,
+    friday_end_time,
+    saturday_start_time,
+    saturday_end_time,
+    sunday_start_time,
+    sunday_end_time,
     notes,
     priority,
     timeOfDay,
@@ -31,12 +51,14 @@ export async function createObject(data: ObjectFormValues) {
     start_week_offset,
   } = data;
 
-  // Calculate total_weekly_hours from daily_schedules
-  const total_weekly_hours = daily_schedules.reduce((totalSum: number, weekSchedule: any) => {
-    return totalSum + Object.values(weekSchedule).reduce((weekSum: number, daySchedule: any) => {
-      return weekSum + (daySchedule?.hours || 0);
-    }, 0);
-  }, 0);
+  // Calculate total_weekly_hours
+  const total_weekly_hours = (monday_hours || 0) +
+                             (tuesday_hours || 0) +
+                             (wednesday_hours || 0) +
+                             (thursday_hours || 0) +
+                             (friday_hours || 0) +
+                             (saturday_hours || 0) +
+                             (sunday_hours || 0);
 
   const { error } = await supabase
     .from('objects')
@@ -47,8 +69,28 @@ export async function createObject(data: ObjectFormValues) {
       description,
       customer_id: customerId,
       customer_contact_id: customerContactId,
-      daily_schedules,
+      monday_hours,
+      tuesday_hours,
+      wednesday_hours,
+      thursday_hours,
+      friday_hours,
+      saturday_hours,
+      sunday_hours,
       total_weekly_hours, // Include the calculated total
+      monday_start_time,
+      monday_end_time,
+      tuesday_start_time,
+      tuesday_end_time,
+      wednesday_start_time,
+      wednesday_end_time,
+      thursday_start_time,
+      thursday_end_time,
+      friday_start_time,
+      friday_end_time,
+      saturday_start_time,
+      saturday_end_time,
+      sunday_start_time,
+      sunday_end_time,
       notes,
       priority,
       time_of_day: timeOfDay,
@@ -96,7 +138,27 @@ export async function updateObject(objectId: string, data: ObjectFormValues) {
     description,
     customerId,
     customerContactId,
-    daily_schedules,
+    monday_hours,
+    tuesday_hours,
+    wednesday_hours,
+    thursday_hours,
+    friday_hours,
+    saturday_hours,
+    sunday_hours,
+    monday_start_time,
+    monday_end_time,
+    tuesday_start_time,
+    tuesday_end_time,
+    wednesday_start_time,
+    wednesday_end_time,
+    thursday_start_time,
+    thursday_end_time,
+    friday_start_time,
+    friday_end_time,
+    saturday_start_time,
+    saturday_end_time,
+    sunday_start_time,
+    sunday_end_time,
     notes,
     priority,
     timeOfDay,
@@ -109,12 +171,14 @@ export async function updateObject(objectId: string, data: ObjectFormValues) {
     start_week_offset,
   } = data;
 
-  // Calculate total_weekly_hours from daily_schedules
-  const total_weekly_hours = daily_schedules.reduce((totalSum: number, weekSchedule: any) => {
-    return totalSum + Object.values(weekSchedule).reduce((weekSum: number, daySchedule: any) => {
-      return weekSum + (daySchedule?.hours || 0);
-    }, 0);
-  }, 0);
+  // Calculate total_weekly_hours
+  const total_weekly_hours = (monday_hours || 0) +
+                             (tuesday_hours || 0) +
+                             (wednesday_hours || 0) +
+                             (thursday_hours || 0) +
+                             (friday_hours || 0) +
+                             (saturday_hours || 0) +
+                             (sunday_hours || 0);
 
   let query = supabase
     .from('objects')
@@ -124,8 +188,28 @@ export async function updateObject(objectId: string, data: ObjectFormValues) {
       description: data.description,
       customer_id: data.customerId,
       customer_contact_id: data.customerContactId,
-      daily_schedules: data.daily_schedules,
+      monday_hours: data.monday_hours,
+      tuesday_hours: data.tuesday_hours,
+      wednesday_hours: data.wednesday_hours,
+      thursday_hours: data.thursday_hours,
+      friday_hours: data.friday_hours,
+      saturday_hours: data.saturday_hours,
+      sunday_hours: data.sunday_hours,
       total_weekly_hours, // Include the calculated total
+      monday_start_time: data.monday_start_time,
+      monday_end_time: data.monday_end_time,
+      tuesday_start_time: data.tuesday_start_time,
+      tuesday_end_time: data.tuesday_end_time,
+      wednesday_start_time: data.wednesday_start_time,
+      wednesday_end_time: data.wednesday_end_time,
+      thursday_start_time: data.thursday_start_time,
+      thursday_end_time: data.thursday_end_time,
+      friday_start_time: data.friday_start_time,
+      friday_end_time: data.friday_end_time,
+      saturday_start_time: data.saturday_start_time,
+      saturday_end_time: data.saturday_end_time,
+      sunday_start_time: data.sunday_start_time,
+      sunday_end_time: data.sunday_end_time,
       notes: data.notes,
       priority: data.priority,
       time_of_day: data.timeOfDay,
