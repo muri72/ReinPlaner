@@ -28,34 +28,12 @@ interface RawEmployeeOrderResponse {
   notes: string | null;
   service_type: string | null;
   request_status: string;
-  objects: { name: string | null; address: string | null; notes: string | null; time_of_day: string | null; access_method: string | null; pin: string | null; is_alarm_secured: boolean | null; alarm_password: string | null; security_code_word: string | null; total_weekly_hours: number | null; recurrence_interval_weeks: number; start_week_offset: number; }[] | null;
+  objects: { name: string | null; address: string | null; notes: string | null; time_of_day: string | null; access_method: string | null; pin: string | null; is_alarm_secured: boolean | null; alarm_password: string | null; security_code_word: string | null; total_weekly_hours: number | null; recurrence_interval_weeks: number; start_week_offset: number; daily_schedules: any[]; }[] | null;
   customers: { name: string | null; }[] | null;
   customer_contacts: { first_name: string | null; last_name: string | null; phone: string | null; }[] | null;
   order_employee_assignments: { 
     employee_id: string; 
-    assigned_daily_hours: number | null;
-    assigned_monday_hours: number | null;
-    assigned_tuesday_hours: number | null;
-    assigned_wednesday_hours: number | null;
-    assigned_thursday_hours: number | null;
-    assigned_friday_hours: number | null;
-    assigned_saturday_hours: number | null;
-    assigned_sunday_hours: number | null;
-    // New time fields
-    assigned_monday_start_time: string | null;
-    assigned_monday_end_time: string | null;
-    assigned_tuesday_start_time: string | null;
-    assigned_tuesday_end_time: string | null;
-    assigned_wednesday_start_time: string | null;
-    assigned_wednesday_end_time: string | null;
-    assigned_thursday_start_time: string | null;
-    assigned_thursday_end_time: string | null;
-    assigned_friday_start_time: string | null;
-    assigned_friday_end_time: string | null;
-    assigned_saturday_start_time: string | null;
-    assigned_saturday_end_time: string | null;
-    assigned_sunday_start_time: string | null;
-    assigned_sunday_end_time: string | null;
+    assigned_daily_schedules: any[];
     assigned_recurrence_interval_weeks: number;
     assigned_start_week_offset: number;
     employees: { first_name: string | null; last_name: string | null }[] | null; // Correctly typed as array
@@ -118,22 +96,12 @@ export default async function EmployeeDashboardPage() {
         notes,
         service_type,
         request_status,
-        objects ( name, address, notes, time_of_day, access_method, pin, is_alarm_secured, alarm_password, security_code_word, total_weekly_hours, recurrence_interval_weeks, start_week_offset ),
+        objects ( name, address, notes, time_of_day, access_method, pin, is_alarm_secured, alarm_password, security_code_word, total_weekly_hours, recurrence_interval_weeks, start_week_offset, daily_schedules ),
         customers ( name ),
         customer_contacts ( first_name, last_name, phone ),
         order_employee_assignments!inner ( 
           employee_id, 
-          assigned_daily_hours,
-          assigned_monday_hours, assigned_tuesday_hours, assigned_wednesday_hours,
-          assigned_thursday_hours, assigned_friday_hours, assigned_saturday_hours,
-          assigned_sunday_hours,
-          assigned_monday_start_time, assigned_monday_end_time,
-          assigned_tuesday_start_time, assigned_tuesday_end_time,
-          assigned_wednesday_start_time, assigned_wednesday_end_time,
-          assigned_thursday_start_time, assigned_thursday_end_time,
-          assigned_friday_start_time, assigned_friday_end_time,
-          assigned_saturday_start_time, assigned_saturday_end_time,
-          assigned_sunday_start_time, assigned_sunday_end_time,
+          assigned_daily_schedules,
           assigned_recurrence_interval_weeks, assigned_start_week_offset,
           employees ( first_name, last_name ) 
         )
@@ -150,6 +118,9 @@ export default async function EmployeeDashboardPage() {
       console.error("Fehler beim Laden der heutigen Aufträge für Mitarbeiter:", ordersError?.message || JSON.stringify(ordersError));
     } else {
       const currentWeekNumber = getWeek(today, { weekStartsOn: 1 }); // ISO week number, starts Monday
+      const dayOfWeek = today.getDay(); // 0=So, 1=Mo, ..., 6=Sa
+      const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+      const currentDayKey = dayNames[dayOfWeek];
 
       todaysAssignedOrders = orders.map((order: RawEmployeeOrderResponse) => {
         const assignedEmployeeData = order.order_employee_assignments?.[0];
@@ -159,27 +130,7 @@ export default async function EmployeeDashboardPage() {
 
         const mappedAssignments: AssignedEmployee[] = order.order_employee_assignments?.map((a: any) => ({
             employeeId: a.employee_id,
-            assigned_monday_hours: a.assigned_monday_hours,
-            assigned_tuesday_hours: a.assigned_tuesday_hours,
-            assigned_wednesday_hours: a.assigned_wednesday_hours,
-            assigned_thursday_hours: a.assigned_thursday_hours,
-            assigned_friday_hours: a.assigned_friday_hours,
-            assigned_saturday_hours: a.assigned_saturday_hours,
-            assigned_sunday_hours: a.assigned_sunday_hours,
-            assigned_monday_start_time: a.assigned_monday_start_time,
-            assigned_monday_end_time: a.assigned_monday_end_time,
-            assigned_tuesday_start_time: a.assigned_tuesday_start_time,
-            assigned_tuesday_end_time: a.assigned_tuesday_end_time,
-            assigned_wednesday_start_time: a.assigned_wednesday_start_time,
-            assigned_wednesday_end_time: a.assigned_wednesday_end_time,
-            assigned_thursday_start_time: a.assigned_thursday_start_time,
-            assigned_thursday_end_time: a.assigned_thursday_end_time,
-            assigned_friday_start_time: a.assigned_friday_start_time,
-            assigned_friday_end_time: a.assigned_friday_end_time,
-            assigned_saturday_start_time: a.assigned_saturday_start_time,
-            assigned_saturday_end_time: a.assigned_saturday_end_time,
-            assigned_sunday_start_time: a.assigned_sunday_start_time,
-            assigned_sunday_end_time: a.assigned_sunday_end_time,
+            assigned_daily_schedules: a.assigned_daily_schedules,
             assigned_recurrence_interval_weeks: a.assigned_recurrence_interval_weeks,
             assigned_start_week_offset: a.assigned_start_week_offset,
         })) || [];
@@ -217,28 +168,17 @@ export default async function EmployeeDashboardPage() {
           object: objectData ?? null, // Assign the nested object, convert undefined to null
           customer: customerData ?? null, // Assign the nested customer, convert undefined to null
           customer_contact: customerContactData ?? null, // Assign the nested customer_contact, convert undefined to null
-          assigned_daily_hours: order.order_employee_assignments?.map((a: any) => a.assigned_daily_hours) || null,
-          assigned_monday_hours: firstAssignment?.assigned_monday_hours || null,
-          assigned_tuesday_hours: firstAssignment?.assigned_tuesday_hours || null,
-          assigned_wednesday_hours: firstAssignment?.assigned_wednesday_hours || null,
-          assigned_thursday_hours: firstAssignment?.assigned_thursday_hours || null,
-          assigned_friday_hours: firstAssignment?.assigned_friday_hours || null,
-          assigned_saturday_hours: firstAssignment?.assigned_saturday_hours || null,
-          assigned_sunday_hours: firstAssignment?.assigned_sunday_hours || null,
-          assigned_monday_start_time: firstAssignment?.assigned_monday_start_time || null,
-          assigned_monday_end_time: firstAssignment?.assigned_monday_end_time || null,
-          assigned_tuesday_start_time: firstAssignment?.assigned_tuesday_start_time || null,
-          assigned_tuesday_end_time: firstAssignment?.assigned_tuesday_end_time || null,
-          assigned_wednesday_start_time: firstAssignment?.assigned_wednesday_start_time || null,
-          assigned_wednesday_end_time: firstAssignment?.assigned_wednesday_end_time || null,
-          assigned_thursday_start_time: firstAssignment?.assigned_thursday_start_time || null,
-          assigned_thursday_end_time: firstAssignment?.assigned_thursday_end_time || null,
-          assigned_friday_start_time: firstAssignment?.assigned_friday_start_time || null,
-          assigned_friday_end_time: firstAssignment?.assigned_friday_end_time || null,
-          assigned_saturday_start_time: firstAssignment?.assigned_saturday_start_time || null,
-          assigned_saturday_end_time: firstAssignment?.assigned_saturday_end_time || null,
-          assigned_sunday_start_time: firstAssignment?.assigned_sunday_start_time || null,
-          assigned_sunday_end_time: firstAssignment?.assigned_sunday_end_time || null,
+          assigned_daily_hours: null, // This field is no longer directly mapped
+          assigned_monday_hours: null, assigned_tuesday_hours: null, assigned_wednesday_hours: null,
+          assigned_thursday_hours: null, assigned_friday_hours: null, assigned_saturday_hours: null,
+          assigned_sunday_hours: null,
+          assigned_monday_start_time: null, assigned_monday_end_time: null,
+          assigned_tuesday_start_time: null, assigned_tuesday_end_time: null,
+          assigned_wednesday_start_time: null, assigned_wednesday_end_time: null,
+          assigned_thursday_start_time: null, assigned_thursday_end_time: null,
+          assigned_friday_start_time: null, assigned_friday_end_time: null,
+          assigned_saturday_start_time: null, assigned_saturday_end_time: null,
+          assigned_sunday_start_time: null, assigned_sunday_end_time: null,
           assigned_recurrence_interval_weeks: firstAssignment?.assigned_recurrence_interval_weeks || null,
           assigned_start_week_offset: firstAssignment?.assigned_start_week_offset || null,
         };
@@ -247,13 +187,14 @@ export default async function EmployeeDashboardPage() {
         const assignedRecurrenceIntervalWeeks = order.assignedEmployees?.[0]?.assigned_recurrence_interval_weeks || order.object?.recurrence_interval_weeks || 1;
         const assignedStartWeekOffset = order.assignedEmployees?.[0]?.assigned_start_week_offset || order.object?.start_week_offset || 0;
 
-        if (assignedRecurrenceIntervalWeeks === 1) return true; // Always active if weekly
+        if (assignedRecurrenceIntervalWeeks > 1) {
+          const orderStartDate = order.recurring_start_date ? new Date(order.recurring_start_date) : (order.due_date ? new Date(order.due_date) : today);
+          const startWeekNumber = getWeek(orderStartDate, { weekStartsOn: 1 }); // ISO week number, starts Monday
 
-        const orderStartDate = order.recurring_start_date ? new Date(order.recurring_start_date) : (order.due_date ? new Date(order.due_date) : today);
-        const startWeekNumber = getWeek(orderStartDate, { weekStartsOn: 1 }); // ISO week number, starts Monday
-
-        const weekDifference = currentWeekNumber - startWeekNumber;
-        return weekDifference % assignedRecurrenceIntervalWeeks === assignedStartWeekOffset;
+          const weekDifference = currentWeekNumber - startWeekNumber;
+          return weekDifference % assignedRecurrenceIntervalWeeks === assignedStartWeekOffset;
+        }
+        return true; // Always active if weekly
       });
     }
   }
@@ -269,23 +210,31 @@ export default async function EmployeeDashboardPage() {
 
   const getAssignedTimeForToday = (order: DisplayOrder) => {
     const todayDayOfWeek = today.getDay(); // 0=So, 1=Mo, ..., 6=Sa
+    const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const currentDayKey = dayNames[todayDayOfWeek];
+
     const assignedEmployee = order.assignedEmployees?.[0]; // Assuming one assignment for simplicity
     if (!assignedEmployee) return 'N/A';
 
-    const dayMap: { [key: number]: { start: keyof AssignedEmployee, end: keyof AssignedEmployee } } = {
-      0: { start: 'assigned_sunday_start_time', end: 'assigned_sunday_end_time' },
-      1: { start: 'assigned_monday_start_time', end: 'assigned_monday_end_time' },
-      2: { start: 'assigned_tuesday_start_time', end: 'assigned_tuesday_end_time' },
-      3: { start: 'assigned_wednesday_start_time', end: 'assigned_wednesday_end_time' },
-      4: { start: 'assigned_thursday_start_time', end: 'assigned_thursday_end_time' },
-      5: { start: 'assigned_friday_start_time', end: 'assigned_friday_end_time' },
-      6: { start: 'assigned_saturday_start_time', end: 'assigned_saturday_end_time' },
-    };
-    const startKey = dayMap[todayDayOfWeek]?.start;
-    const endKey = dayMap[todayDayOfWeek]?.end;
+    const employeeRecurrenceInterval = assignedEmployee.assigned_recurrence_interval_weeks || order.object?.recurrence_interval_weeks || 1;
+    const employeeStartWeekOffset = assignedEmployee.assigned_start_week_offset || order.object?.start_week_offset || 0;
 
-    const startTime = startKey ? (assignedEmployee[startKey] as string | null) : null;
-    const endTime = endKey ? (assignedEmployee[endKey] as string | null) : null;
+    const orderStartDateForWeekCalc = order.recurring_start_date ? new Date(order.recurring_start_date) : (order.due_date ? new Date(order.due_date) : today);
+    const startWeekNumber = getWeek(orderStartDateForWeekCalc, { weekStartsOn: 1 });
+    const currentWeekNumber = getWeek(today, { weekStartsOn: 1 });
+    let weekDifference = currentWeekNumber - startWeekNumber;
+    if (weekDifference < 0) { weekDifference += 52; } // Handle year boundary
+    const effectiveWeekIndex = (weekDifference - employeeStartWeekOffset) % employeeRecurrenceInterval;
+
+    if (employeeRecurrenceInterval > 1 && (weekDifference % employeeRecurrenceInterval !== employeeStartWeekOffset)) {
+      return 'N/A (Nicht diese Woche)';
+    }
+
+    const weekSchedule = assignedEmployee.assigned_daily_schedules?.[effectiveWeekIndex];
+    const daySchedule = (weekSchedule as any)?.[currentDayKey];
+
+    const startTime = daySchedule?.start;
+    const endTime = daySchedule?.end;
 
     if (startTime && endTime) {
       return `${startTime} - ${endTime}`;
@@ -380,18 +329,30 @@ export default async function EmployeeDashboardPage() {
                     {/* Display assigned daily hours for the current day */}
                     {(() => {
                       const todayDayOfWeek = today.getDay(); // 0=So, 1=Mo, ..., 6=Sa
+                      const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+                      const currentDayKey = dayNames[todayDayOfWeek];
+
                       const assignedEmployee = order.assignedEmployees?.[0];
                       if (!assignedEmployee) return null;
-                      const dayMap: { [key: number]: keyof AssignedEmployee } = {
-                        0: 'assigned_sunday_hours',
-                        1: 'assigned_monday_hours',
-                        2: 'assigned_tuesday_hours',
-                        3: 'assigned_wednesday_hours',
-                        4: 'assigned_thursday_hours',
-                        5: 'assigned_friday_hours',
-                        6: 'assigned_saturday_hours',
-                      };
-                      const assignedHoursToday = assignedEmployee[dayMap[todayDayOfWeek]] as number | null;
+
+                      const employeeRecurrenceInterval = assignedEmployee.assigned_recurrence_interval_weeks || order.object?.recurrence_interval_weeks || 1;
+                      const employeeStartWeekOffset = assignedEmployee.assigned_start_week_offset || order.object?.start_week_offset || 0;
+
+                      const orderStartDateForWeekCalc = order.recurring_start_date ? new Date(order.recurring_start_date) : (order.due_date ? new Date(order.due_date) : today);
+                      const startWeekNumber = getWeek(orderStartDateForWeekCalc, { weekStartsOn: 1 });
+                      const currentWeekNumber = getWeek(today, { weekStartsOn: 1 });
+                      let weekDifference = currentWeekNumber - startWeekNumber;
+                      if (weekDifference < 0) { weekDifference += 52; } // Handle year boundary
+                      const effectiveWeekIndex = (weekDifference - employeeStartWeekOffset) % employeeRecurrenceInterval;
+
+                      if (employeeRecurrenceInterval > 1 && (weekDifference % employeeRecurrenceInterval !== employeeStartWeekOffset)) {
+                        return null; // Not the correct recurrence week
+                      }
+
+                      const weekSchedule = assignedEmployee.assigned_daily_schedules?.[effectiveWeekIndex];
+                      const daySchedule = (weekSchedule as any)?.[currentDayKey];
+                      const assignedHoursToday = daySchedule?.hours;
+
                       if (assignedHoursToday !== null && assignedHoursToday > 0) {
                         return (
                           <div className="flex items-center">

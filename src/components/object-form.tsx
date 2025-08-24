@@ -44,29 +44,25 @@ const germanDayNames: { [key: string]: string } = {
   sunday: 'So',
 };
 
+const dailyScheduleSchema = z.object({
+  hours: z.preprocess(preprocessNumber, z.nullable(z.number().min(0).max(24)).optional()),
+  start: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
+  end: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
+});
+
+const weeklyScheduleSchema = z.object({
+  monday: dailyScheduleSchema.optional(),
+  tuesday: dailyScheduleSchema.optional(),
+  wednesday: dailyScheduleSchema.optional(),
+  thursday: dailyScheduleSchema.optional(),
+  friday: dailyScheduleSchema.optional(),
+  saturday: dailyScheduleSchema.optional(),
+  sunday: dailyScheduleSchema.optional(),
+});
+
 const assignedEmployeeSchema = z.object({
   employeeId: z.string().uuid("Ungültige Mitarbeiter-ID"),
-  assigned_monday_hours: z.preprocess(preprocessNumber, z.nullable(z.number().min(0).max(24)).optional()),
-  assigned_tuesday_hours: z.preprocess(preprocessNumber, z.nullable(z.number().min(0).max(24)).optional()),
-  assigned_wednesday_hours: z.preprocess(preprocessNumber, z.nullable(z.number().min(0).max(24)).optional()),
-  assigned_thursday_hours: z.preprocess(preprocessNumber, z.nullable(z.number().min(0).max(24)).optional()),
-  assigned_friday_hours: z.preprocess(preprocessNumber, z.nullable(z.number().min(0).max(24)).optional()),
-  assigned_saturday_hours: z.preprocess(preprocessNumber, z.nullable(z.number().min(0).max(24)).optional()),
-  assigned_sunday_hours: z.preprocess(preprocessNumber, z.nullable(z.number().min(0).max(24)).optional()),
-  assigned_monday_start_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
-  assigned_monday_end_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
-  assigned_tuesday_start_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
-  assigned_tuesday_end_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
-  assigned_wednesday_start_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
-  assigned_wednesday_end_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
-  assigned_thursday_start_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
-  assigned_thursday_end_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
-  assigned_friday_start_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
-  assigned_friday_end_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
-  assigned_saturday_start_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
-  assigned_saturday_end_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
-  assigned_sunday_start_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
-  assigned_sunday_end_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
+  assigned_daily_schedules: z.array(weeklyScheduleSchema).default([]),
   assigned_recurrence_interval_weeks: z.preprocess(preprocessNumber, z.number().min(1).max(52).default(1)),
   assigned_start_week_offset: z.preprocess(preprocessNumber, z.number().min(0).max(51).default(0)),
 });
@@ -87,27 +83,7 @@ export const objectSchema = z.object({
   isAlarmSecured: z.boolean().default(false),
   alarmPassword: z.string().max(50, "Alarmkennwort ist zu lang").optional().nullable(),
   securityCodeWord: z.string().max(50, "Sicherheitscodewort ist zu lang").optional().nullable(),
-  monday_hours: z.preprocess(preprocessNumber, z.nullable(z.number().min(0).max(24)).optional()),
-  tuesday_hours: z.preprocess(preprocessNumber, z.nullable(z.number().min(0).max(24)).optional()),
-  wednesday_hours: z.preprocess(preprocessNumber, z.nullable(z.number().min(0).max(24)).optional()),
-  thursday_hours: z.preprocess(preprocessNumber, z.nullable(z.number().min(0).max(24)).optional()),
-  friday_hours: z.preprocess(preprocessNumber, z.nullable(z.number().min(0).max(24)).optional()),
-  saturday_hours: z.preprocess(preprocessNumber, z.nullable(z.number().min(0).max(24)).optional()),
-  sunday_hours: z.preprocess(preprocessNumber, z.nullable(z.number().min(0).max(24)).optional()),
-  monday_start_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
-  monday_end_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
-  tuesday_start_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
-  tuesday_end_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
-  wednesday_start_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
-  wednesday_end_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
-  thursday_start_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
-  thursday_end_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
-  friday_start_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
-  friday_end_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
-  saturday_start_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
-  saturday_end_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
-  sunday_start_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
-  sunday_end_time: z.string().regex(timeRegex, "Ungültiges Format").optional().nullable(),
+  daily_schedules: z.array(weeklyScheduleSchema).default([]),
   recurrence_interval_weeks: z.preprocess(preprocessNumber, z.number().min(1).max(52).default(1)),
   start_week_offset: z.preprocess(preprocessNumber, z.number().min(0).max(51).default(0)),
 }).superRefine((data, ctx) => {
@@ -116,6 +92,13 @@ export const objectSchema = z.object({
       code: z.ZodIssueCode.custom,
       message: "Alarmkennwort oder Sicherheitscodewort ist erforderlich, wenn alarmgesichert.",
       path: ["alarmPassword"],
+    });
+  }
+  if (data.daily_schedules.length !== data.recurrence_interval_weeks) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: `Die Anzahl der Wochenpläne muss dem Wiederholungsintervall (${data.recurrence_interval_weeks}) entsprechen.`,
+      path: ["daily_schedules"],
     });
   }
 });
@@ -133,35 +116,7 @@ interface ObjectFormProps {
 export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess }: ObjectFormProps) {
   const supabase = createClient();
   const [customers, setCustomers] = useState<{ id: string; name: string }[]>([]);
-  const [objects, setObjects] = useState<{ 
-    id: string; 
-    name: string; 
-    customer_id: string;
-    monday_hours: number | null;
-    tuesday_hours: number | null;
-    wednesday_hours: number | null;
-    thursday_hours: number | null;
-    friday_hours: number | null;
-    saturday_hours: number | null;
-    sunday_hours: number | null;
-    monday_start_time: string | null;
-    tuesday_start_time: string | null;
-    wednesday_start_time: string | null;
-    wednesday_end_time: string | null;
-    thursday_start_time: string | null;
-    thursday_end_time: string | null;
-    friday_start_time: string | null;
-    friday_end_time: string | null;
-    saturday_start_time: string | null;
-    saturday_end_time: string | null;
-    sunday_start_time: string | null;
-    sunday_end_time: string | null;
-    total_weekly_hours: number | null;
-    time_of_day: string | null;
-    recurrence_interval_weeks: number;
-    start_week_offset: number;
-  }[]>([]);
-  const [allEmployees, setAllEmployees] = useState<{ id: string; first_name: string; last_name: string }[]>([]);
+  const [objects, setObjects] = useState<any[]>([]); // Keep as any[] for now, detailed type not needed here
   const [customerContacts, setCustomerContacts] = useState<{ id: string; first_name: string; last_name: string; customer_id: string }[]>([]);
   const [isNewObjectDialogOpen, setIsNewObjectDialogOpen] = useState(false);
 
@@ -179,29 +134,9 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
     isAlarmSecured: initialData?.isAlarmSecured ?? false,
     alarmPassword: initialData?.alarmPassword ?? null,
     securityCodeWord: initialData?.securityCodeWord ?? null,
-    monday_hours: (initialData?.monday_hours as number | null | undefined) ?? null,
-    tuesday_hours: (initialData?.tuesday_hours as number | null | undefined) ?? null,
-    wednesday_hours: (initialData?.wednesday_hours as number | null | undefined) ?? null,
-    thursday_hours: (initialData?.thursday_hours as number | null | undefined) ?? null,
-    friday_hours: (initialData?.friday_hours as number | null | undefined) ?? null,
-    saturday_hours: (initialData?.saturday_hours as number | null | undefined) ?? null,
-    sunday_hours: (initialData?.sunday_hours as number | null | undefined) ?? null,
-    monday_start_time: initialData?.monday_start_time ?? null,
-    monday_end_time: initialData?.monday_end_time ?? null,
-    tuesday_start_time: initialData?.tuesday_start_time ?? null,
-    tuesday_end_time: initialData?.tuesday_end_time ?? null,
-    wednesday_start_time: initialData?.wednesday_start_time ?? null,
-    wednesday_end_time: initialData?.wednesday_end_time ?? null,
-    thursday_start_time: initialData?.thursday_start_time ?? null,
-    thursday_end_time: initialData?.thursday_end_time ?? null,
-    friday_start_time: initialData?.friday_start_time ?? null,
-    friday_end_time: initialData?.friday_end_time ?? null,
-    saturday_start_time: initialData?.saturday_start_time ?? null,
-    saturday_end_time: initialData?.saturday_end_time ?? null,
-    sunday_start_time: initialData?.sunday_start_time ?? null,
-    sunday_end_time: initialData?.sunday_end_time ?? null,
-    recurrence_interval_weeks: (initialData?.recurrence_interval_weeks as number | undefined) ?? 1,
-    start_week_offset: (initialData?.start_week_offset as number | undefined) ?? 0,
+    daily_schedules: initialData?.daily_schedules ?? [],
+    recurrence_interval_weeks: initialData?.recurrence_interval_weeks ?? 1,
+    start_week_offset: initialData?.start_week_offset ?? 0,
   };
 
   const form = useForm<ObjectFormValues>({
@@ -210,8 +145,29 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
     mode: "onChange",
   });
 
+  const { fields: dailySchedulesFields, append: appendDailySchedule, remove: removeDailySchedule, replace: replaceDailySchedules } = useFieldArray({
+    control: form.control,
+    name: "daily_schedules",
+  });
+
   const selectedCustomerId = form.watch("customerId");
-  
+  const recurrenceIntervalWeeks = form.watch("recurrence_interval_weeks");
+  const startWeekOffset = form.watch("start_week_offset");
+
+  // Ensure daily_schedules array length matches recurrence_interval_weeks
+  useEffect(() => {
+    const currentLength = dailySchedulesFields.length;
+    if (currentLength < recurrenceIntervalWeeks) {
+      for (let i = currentLength; i < recurrenceIntervalWeeks; i++) {
+        appendDailySchedule({}); // Append empty weekly schedules
+      }
+    } else if (currentLength > recurrenceIntervalWeeks) {
+      for (let i = currentLength - 1; i >= recurrenceIntervalWeeks; i--) {
+        removeDailySchedule(i); // Remove excess weekly schedules
+      }
+    }
+  }, [recurrenceIntervalWeeks, dailySchedulesFields.length, appendDailySchedule, removeDailySchedule]);
+
   const fetchCustomerContacts = async (customerId: string) => {
     const { data: contactsData, error: contactsError } = await supabase
       .from('customer_contacts')
@@ -228,7 +184,8 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
       if (customersData) setCustomers(customersData);
       if (customersError) console.error("Fehler beim Laden der Kunden:", customersError);
 
-      const { data: objectsData, error: objectsError } = await supabase.from('objects').select('id, name, customer_id, monday_hours, tuesday_hours, wednesday_hours, thursday_hours, friday_hours, saturday_hours, sunday_hours, total_weekly_hours, monday_start_time, monday_end_time, tuesday_start_time, tuesday_end_time, wednesday_start_time, wednesday_end_time, thursday_start_time, thursday_end_time, friday_start_time, friday_end_time, saturday_start_time, saturday_end_time, sunday_start_time, sunday_end_time, time_of_day, recurrence_interval_weeks, start_week_offset');
+      // Fetch objects to populate dropdowns if needed, but not for initial data
+      const { data: objectsData, error: objectsError } = await supabase.from('objects').select('id, name, customer_id, recurrence_interval_weeks, start_week_offset, daily_schedules');
       if (objectsData) setObjects(objectsData);
       if (objectsError) console.error("Fehler beim Laden der Objekte:", objectsError);
     };
@@ -244,14 +201,13 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
     }
   }, [selectedCustomerId, supabase, form]);
 
-  // Calculate total weekly hours for display
-  const totalWeeklyHours = (form.watch("monday_hours") || 0) +
-                           (form.watch("tuesday_hours") || 0) +
-                           (form.watch("wednesday_hours") || 0) +
-                           (form.watch("thursday_hours") || 0) +
-                           (form.watch("friday_hours") || 0) +
-                           (form.watch("saturday_hours") || 0) +
-                           (form.watch("sunday_hours") || 0);
+  // Calculate total weekly hours for display (sum of all weeks in the recurrence cycle)
+  const totalWeeklyHours = dailySchedulesFields.reduce((totalSum, weekSchedule) => {
+    return totalSum + dayNames.reduce((weekSum, day) => {
+      const dailyHours = (weekSchedule as any)[day]?.hours;
+      return weekSum + (dailyHours || 0);
+    }, 0);
+  }, 0);
 
   const handleFormSubmit: SubmitHandler<ObjectFormValues> = async (data) => {
     const result = await onSubmit(data);
@@ -260,6 +216,7 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
     if (result.success) {
       if (!initialData) {
         form.reset();
+        replaceDailySchedules([]); // Reset schedules after successful creation
       }
       onSuccess?.();
     }
@@ -272,23 +229,96 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
     }
   };
 
-  // Helper to calculate end time based on start time and hours
-  const calculateAndSetEndTime = useCallback((day: typeof dayNames[number], hours: number | null, startTime: string | null) => {
-    if (hours != null && hours > 0 && startTime && timeRegex.test(startTime)) {
-      form.setValue(`${day}_end_time`, calculateEndTime(startTime, hours), { shouldValidate: true });
+  const handleDailyHoursChange = useCallback((
+    weekIndex: number,
+    day: typeof dayNames[number],
+    value: string
+  ) => {
+    const parsedHours = value === "" ? null : Number(value);
+    const currentSchedule = form.getValues(`daily_schedules.${weekIndex}.${day}`) || {};
+    form.setValue(`daily_schedules.${weekIndex}.${day}`, { ...currentSchedule, hours: parsedHours }, { shouldValidate: true });
+
+    const startTime = currentSchedule.start;
+    if (parsedHours != null && parsedHours > 0 && startTime && timeRegex.test(startTime)) {
+      form.setValue(`daily_schedules.${weekIndex}.${day}.end`, calculateEndTime(startTime, parsedHours), { shouldValidate: true });
     } else {
-      form.setValue(`${day}_end_time`, null, { shouldValidate: true });
+      form.setValue(`daily_schedules.${weekIndex}.${day}.end`, null, { shouldValidate: true });
     }
   }, [form]);
 
-  // Helper to calculate start time based on end time and hours
-  const calculateAndSetStartTime = useCallback((day: typeof dayNames[number], hours: number | null, endTime: string | null) => {
-    if (hours != null && hours > 0 && endTime && timeRegex.test(endTime)) {
-      form.setValue(`${day}_start_time`, calculateStartTime(endTime, hours), { shouldValidate: true });
+  const handleDailyStartTimeChange = useCallback((
+    weekIndex: number,
+    day: typeof dayNames[number],
+    value: string
+  ) => {
+    const currentSchedule = form.getValues(`daily_schedules.${weekIndex}.${day}`) || {};
+    form.setValue(`daily_schedules.${weekIndex}.${day}`, { ...currentSchedule, start: value || null }, { shouldValidate: true });
+
+    const hours = currentSchedule.hours;
+    if (hours != null && hours > 0 && value && timeRegex.test(value)) {
+      form.setValue(`daily_schedules.${weekIndex}.${day}.end`, calculateEndTime(value, hours), { shouldValidate: true });
     } else {
-      form.setValue(`${day}_start_time`, null, { shouldValidate: true });
+      form.setValue(`daily_schedules.${weekIndex}.${day}.end`, null, { shouldValidate: true });
     }
   }, [form]);
+
+  const handleDailyEndTimeChange = useCallback((
+    weekIndex: number,
+    day: typeof dayNames[number],
+    value: string
+  ) => {
+    const currentSchedule = form.getValues(`daily_schedules.${weekIndex}.${day}`) || {};
+    form.setValue(`daily_schedules.${weekIndex}.${day}`, { ...currentSchedule, end: value || null }, { shouldValidate: true });
+
+    const hours = currentSchedule.hours;
+    if (hours != null && hours > 0 && value && timeRegex.test(value)) {
+      form.setValue(`daily_schedules.${weekIndex}.${day}.start`, calculateStartTime(value, hours), { shouldValidate: true });
+    } else {
+      form.setValue(`daily_schedules.${weekIndex}.${day}.start`, null, { shouldValidate: true });
+    }
+  }, [form]);
+
+  const handleCopyDayToAllWeeks = (sourceWeekIndex: number, sourceDay: typeof dayNames[number]) => {
+    const sourceSchedule = form.getValues(`daily_schedules.${sourceWeekIndex}.${sourceDay}`);
+    if (!sourceSchedule?.hours && !sourceSchedule?.start && !sourceSchedule?.end) {
+      toast.info("Keine Zeiten zum Kopieren vorhanden.");
+      return;
+    }
+
+    let copiedCount = 0;
+    dailySchedulesFields.forEach((_, weekIndex) => {
+      if (weekIndex !== sourceWeekIndex) {
+        form.setValue(`daily_schedules.${weekIndex}.${sourceDay}`, sourceSchedule, { shouldValidate: true });
+        copiedCount++;
+      }
+    });
+    if (copiedCount > 0) {
+      toast.success(`Zeiten für ${germanDayNames[sourceDay]} wurden in ${copiedCount} weitere Wochen kopiert.`);
+    } else {
+      toast.info("Keine weiteren Wochen zum Kopieren gefunden.");
+    }
+  };
+
+  const handleCopyWeekToAllWeeks = (sourceWeekIndex: number) => {
+    const sourceWeekSchedule = form.getValues(`daily_schedules.${sourceWeekIndex}`);
+    if (!sourceWeekSchedule || Object.keys(sourceWeekSchedule).length === 0) {
+      toast.info("Kein Wochenplan zum Kopieren vorhanden.");
+      return;
+    }
+
+    let copiedCount = 0;
+    dailySchedulesFields.forEach((_, weekIndex) => {
+      if (weekIndex !== sourceWeekIndex) {
+        form.setValue(`daily_schedules.${weekIndex}`, sourceWeekSchedule, { shouldValidate: true });
+        copiedCount++;
+      }
+    });
+    if (copiedCount > 0) {
+      toast.success(`Wochenplan von Woche ${sourceWeekIndex + 1} wurde in ${copiedCount} weitere Wochen kopiert.`);
+    } else {
+      toast.info("Keine weiteren Wochen zum Kopieren gefunden.");
+    }
+  };
 
   return (
     <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 w-full">
@@ -483,7 +513,7 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
               type="number"
               step="1"
               min="0"
-              max={form.watch("recurrence_interval_weeks") - 1}
+              max={recurrenceIntervalWeeks - 1}
               {...form.register("start_week_offset", { valueAsNumber: true })}
               placeholder="Z.B. 0 für die erste Woche, 1 für die zweite Woche"
             />
@@ -498,65 +528,110 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
 
       <div className="space-y-4">
         <h3 className="text-lg font-semibold">Regelmäßige Arbeitszeiten pro Wochentag</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-          {dayNames.map(day => (
-            <div key={day} className="border p-3 rounded-md space-y-2">
-              <h4 className="font-medium text-sm">{germanDayNames[day]}</h4>
-              <div>
-                <Label htmlFor={`${day}_hours`} className="text-xs">Stunden (Netto)</Label>
-                <Input
-                  id={`${day}_hours`}
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  max="24"
-                  {...form.register(`${day}_hours`, { valueAsNumber: true })}
-                  placeholder="Std."
-                  onChange={(e) => {
-                    const hours = e.target.value === '' ? null : Number(e.target.value);
-                    form.setValue(`${day}_hours`, hours, { shouldValidate: true });
-                    calculateAndSetEndTime(day, hours, form.getValues(`${day}_start_time`) || null);
-                  }}
-                />
-                {form.formState.errors[`${day}_hours` as FieldPath<ObjectFormValues>] && (
-                  <p className="text-red-500 text-xs mt-1">{form.formState.errors[`${day}_hours` as FieldPath<ObjectFormValues>]?.message}</p>
-                )}
-              </div>
-              <div>
-                <Label htmlFor={`${day}_start_time`} className="text-xs">Startzeit</Label>
-                <Input
-                  id={`${day}_start_time`}
-                  type="time"
-                  {...form.register(`${day}_start_time`)}
-                  onChange={(e) => {
-                    form.setValue(`${day}_start_time`, e.target.value, { shouldValidate: true });
-                    calculateAndSetEndTime(day, form.getValues(`${day}_hours`) || null, e.target.value);
-                  }}
-                />
-                {form.formState.errors[`${day}_start_time` as FieldPath<ObjectFormValues>] && (
-                  <p className="text-red-500 text-xs mt-1">{form.formState.errors[`${day}_start_time` as FieldPath<ObjectFormValues>]?.message}</p>
-                )}
-              </div>
-              <div>
-                <Label htmlFor={`${day}_end_time`} className="text-xs">Endzeit</Label>
-                <Input
-                  id={`${day}_end_time`}
-                  type="time"
-                  {...form.register(`${day}_end_time`)}
-                  onChange={(e) => {
-                    form.setValue(`${day}_end_time`, e.target.value, { shouldValidate: true });
-                    calculateAndSetStartTime(day, form.getValues(`${day}_hours`) || null, e.target.value);
-                  }}
-                />
-                {form.formState.errors[`${day}_end_time` as FieldPath<ObjectFormValues>] && (
-                  <p className="text-red-500 text-xs mt-1">{form.formState.errors[`${day}_end_time` as FieldPath<ObjectFormValues>]?.message}</p>
-                )}
-              </div>
+        {form.formState.errors.daily_schedules && <p className="text-red-500 text-sm mt-1">{form.formState.errors.daily_schedules.message}</p>}
+        {dailySchedulesFields.map((weekSchedule, weekIndex) => (
+          <div key={weekSchedule.id} className="border p-4 rounded-md space-y-4 bg-muted/20">
+            <div className="flex items-center justify-between">
+              <h4 className="font-semibold text-base">Woche {weekIndex + 1} (Offset {(startWeekOffset + weekIndex) % recurrenceIntervalWeeks})</h4>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 text-muted-foreground hover:text-primary"
+                      onClick={() => handleCopyWeekToAllWeeks(weekIndex)}
+                      disabled={recurrenceIntervalWeeks === 1}
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Diesen Wochenplan in alle anderen Wochen kopieren</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
-          ))}
-        </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+              {dayNames.map(day => {
+                const hoursFieldName = `daily_schedules.${weekIndex}.${day}.hours` as const;
+                const startFieldName = `daily_schedules.${weekIndex}.${day}.start` as const;
+                const endFieldName = `daily_schedules.${weekIndex}.${day}.end` as const;
+
+                return (
+                  <div key={day} className="border p-3 rounded-md space-y-2">
+                    <h5 className="font-medium text-sm">{germanDayNames[day]}</h5>
+                    <div>
+                      <Label htmlFor={hoursFieldName} className="text-xs">Stunden (Netto)</Label>
+                      <Input
+                        id={hoursFieldName}
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        max="24"
+                        {...form.register(hoursFieldName, { valueAsNumber: true })}
+                        placeholder="Std."
+                        value={form.watch(hoursFieldName) ?? ''}
+                        onChange={(e) => handleDailyHoursChange(weekIndex, day, e.target.value)}
+                      />
+                      {form.formState.errors[hoursFieldName] && (
+                        <p className="text-red-500 text-xs mt-1">{form.formState.errors[hoursFieldName]?.message}</p>
+                      )}
+                    </div>
+                    <div>
+                      <Label htmlFor={startFieldName} className="text-xs">Startzeit</Label>
+                      <Input
+                        id={startFieldName}
+                        type="time"
+                        {...form.register(startFieldName)}
+                        value={form.watch(startFieldName) ?? ''}
+                        onChange={(e) => handleDailyStartTimeChange(weekIndex, day, e.target.value)}
+                      />
+                      {form.formState.errors[startFieldName] && (
+                        <p className="text-red-500 text-xs mt-1">{form.formState.errors[startFieldName]?.message}</p>
+                      )}
+                    </div>
+                    <div>
+                      <Label htmlFor={endFieldName} className="text-xs">Endzeit</Label>
+                      <Input
+                        id={endFieldName}
+                        type="time"
+                        {...form.register(endFieldName)}
+                        value={form.watch(endFieldName) ?? ''}
+                        onChange={(e) => handleDailyEndTimeChange(weekIndex, day, e.target.value)}
+                      />
+                      {form.formState.errors[endFieldName] && (
+                        <p className="text-red-500 text-xs mt-1">{form.formState.errors[endFieldName]?.message}</p>
+                      )}
+                    </div>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 text-muted-foreground hover:text-primary"
+                            onClick={() => handleCopyDayToAllWeeks(weekIndex, day)}
+                            disabled={recurrenceIntervalWeeks === 1 || (!form.watch(hoursFieldName) && !form.watch(startFieldName) && !form.watch(endFieldName))}
+                          >
+                            <Copy className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Zeiten für diesen Tag in alle anderen Wochen kopieren</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ))}
         <div className="mt-4 text-base font-semibold">
-          Geschätzte Wochenstunden (Netto): {totalWeeklyHours.toFixed(2)}
+          Geschätzte Wochenstunden (Netto, über alle Wochen): {totalWeeklyHours.toFixed(2)}
         </div>
       </div>
       
