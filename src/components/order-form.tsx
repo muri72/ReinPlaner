@@ -94,43 +94,48 @@ const baseOrderSchema = z.object({
 });
 
 const createOrderSchema = (objects: any[]) => baseOrderSchema.superRefine((data, ctx) => {
-  if (data.assignedEmployees && data.objectId) {
+  if (data.assignedEmployees && data.assignedEmployees.length > 0 && data.objectId) {
     const selectedObject = objects.find((obj: any) => obj.id === data.objectId);
     if (selectedObject) {
+      // Check for schedule length mismatch first
       data.assignedEmployees.forEach((assignedEmp, empIndex) => {
         if (assignedEmp.assigned_daily_schedules.length !== assignedEmp.assigned_recurrence_interval_weeks) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
-            message: `Die Anzahl der Wochenpläne für Mitarbeiter ${assignedEmp.employeeId} muss dem Wiederholungsintervall (${assignedEmp.assigned_recurrence_interval_weeks}) entsprechen.`,
+            message: `Die Anzahl der Wochenpläne muss dem Wiederholungsintervall (${assignedEmp.assigned_recurrence_interval_weeks}) entsprechen.`,
             path: [`assignedEmployees.${empIndex}.assigned_daily_schedules`],
           });
         }
-
-        assignedEmp.assigned_daily_schedules.forEach((weekSchedule, weekIndex) => {
-          dayNames.forEach(day => {
-            const objectDailyHours = (selectedObject.daily_schedules?.[weekIndex] as any)?.[day]?.hours;
-            const assignedHours = (weekSchedule as any)?.[day]?.hours;
-
-            if (objectDailyHours !== undefined && objectDailyHours !== null && objectDailyHours > 0) {
-              if (assignedHours === undefined || assignedHours === null || assignedHours === 0) {
-                ctx.addIssue({
-                  code: z.ZodIssueCode.custom,
-                  message: `Stunden für ${germanDayNames[day]} in Woche ${weekIndex + 1} müssen zugewiesen werden, da Objektstunden vorhanden sind.`,
-                  path: [`assignedEmployees.${empIndex}.assigned_daily_schedules.${weekIndex}.${day}.hours`],
-                });
-              } else if (Math.abs(assignedHours - objectDailyHours) > 0.1) {
-                const assignedHoursStr = typeof assignedHours === 'number' ? assignedHours.toFixed(2) : 'N/A';
-                const objectHoursStr = typeof objectDailyHours === 'number' ? objectDailyHours.toFixed(2) : 'N/A';
-                ctx.addIssue({
-                  code: z.ZodIssueCode.custom,
-                  message: `Stunden für ${germanDayNames[day]} in Woche ${weekIndex + 1} (${assignedHoursStr} Std.) müssen den Objektstunden (${objectHoursStr} Std.) entsprechen.`,
-                  path: [`assignedEmployees.${empIndex}.assigned_daily_schedules.${weekIndex}.${day}.hours`],
-                });
-              }
-            }
-          });
-        });
       });
+
+      // Now, check the sum of hours for each day in each week of the cycle
+      const recurrenceInterval = selectedObject.recurrence_interval_weeks || 1;
+      for (let weekIndex = 0; weekIndex < recurrenceInterval; weekIndex++) {
+        dayNames.forEach(day => {
+          const objectDailyHours = (selectedObject.daily_schedules?.[weekIndex] as any)?.[day]?.hours;
+
+          // Only validate if the object has hours defined for this day
+          if (objectDailyHours !== undefined && objectDailyHours !== null && objectDailyHours > 0) {
+            
+            // Calculate the sum of hours assigned to all employees for this specific day and week
+            let sumAssignedHoursForDay = 0;
+            data.assignedEmployees?.forEach((assignedEmp: AssignedEmployee) => {
+              const assignedHours = (assignedEmp.assigned_daily_schedules?.[weekIndex] as any)?.[day]?.hours;
+              sumAssignedHoursForDay += (assignedHours || 0);
+            });
+
+            // Compare the sum with the object's required hours
+            if (Math.abs(sumAssignedHoursForDay - objectDailyHours) > 0.1) {
+              ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: `Die Summe der zugewiesenen Stunden für ${germanDayNames[day]} in Woche ${weekIndex + 1} (${sumAssignedHoursForDay.toFixed(2)} Std.) muss den Objektstunden (${objectDailyHours.toFixed(2)} Std.) entsprechen.`,
+                // Attach the error to a general field, as it's a collective issue
+                path: [`assignedEmployees`], 
+              });
+            }
+          }
+        });
+      }
     }
   }
 });
