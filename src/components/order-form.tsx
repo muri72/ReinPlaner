@@ -335,13 +335,14 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
   const handleEmployeeSelectionChange = useCallback((selectedIds: string[]) => {
     const currentObjectId = form.getValues("objectId") ?? null;
     const selectedObject = objects.find(obj => obj.id === currentObjectId);
-    
+
     if (!selectedObject) {
         replaceAssignedEmployees([]);
         return;
     }
 
     const currentAssignments = form.getValues("assignedEmployees") || [];
+    const wasEmpty = currentAssignments.length === 0;
 
     // Filter out removed employees, keeping their data intact
     const keptAssignments = currentAssignments.filter(a => selectedIds.includes(a.employeeId));
@@ -349,8 +350,9 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     // Identify new employees to add
     const newEmployeeIds = selectedIds.filter(id => !currentAssignments.some(a => a.employeeId === id));
 
-    // Create blank assignments for new employees
-    const newAssignments = newEmployeeIds.map(employeeId => {
+    const newAssignments = newEmployeeIds.map((employeeId, index) => {
+        const isFirstEverAssignment = wasEmpty && index === 0;
+
         const newEmpData: AssignedEmployee = {
             employeeId,
             assigned_daily_schedules: [],
@@ -358,17 +360,24 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
             assigned_start_week_offset: selectedObject.start_week_offset,
         };
 
-        // Initialize with blank schedules based on object's recurrence
+        // Initialize assigned_daily_schedules based on object's recurrence interval
         for (let i = 0; i < selectedObject.recurrence_interval_weeks; i++) {
             const newWeekSchedule: z.infer<typeof weeklyScheduleSchema> = {};
             dayNames.forEach(day => {
                 const objectDailySchedule = (selectedObject.daily_schedules?.[i] as any)?.[day];
-                // Pre-fill start/end times from object, but leave hours empty for manual input
-                newWeekSchedule[day] = {
-                    hours: null,
-                    start: objectDailySchedule?.start || null,
-                    end: objectDailySchedule?.end || null,
-                };
+                if (objectDailySchedule) {
+                    // If it's the very first employee being assigned, copy hours 1-to-1.
+                    // Otherwise, new employees get null hours.
+                    const hours = isFirstEverAssignment ? objectDailySchedule.hours : null;
+                    
+                    newWeekSchedule[day] = {
+                        hours: hours,
+                        start: objectDailySchedule.start,
+                        end: hours && objectDailySchedule.start 
+                            ? calculateEndTime(objectDailySchedule.start, hours) 
+                            : null,
+                    };
+                }
             });
             newEmpData.assigned_daily_schedules.push(newWeekSchedule);
         }
