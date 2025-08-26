@@ -256,19 +256,16 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     if (assignedEmployees && assignedEmployees.length > 0) {
       // If employees are assigned, sum their hours
       if (['recurring', 'substitution', 'permanent'].includes(orderType)) {
-        // Sum all hours for the week, considering recurrence
+        // Sum of hours for the first week of the schedule for all assigned employees.
         newTotalEstimatedHours = assignedEmployees.reduce((total: number, emp: AssignedEmployee) => {
-          const employeeRecurrenceInterval = emp.assigned_recurrence_interval_weeks;
           const employeeSchedules = emp.assigned_daily_schedules;
-          
-          if (employeeRecurrenceInterval > 0 && employeeSchedules.length === employeeRecurrenceInterval) {
-            const totalHoursInCycle = employeeSchedules.reduce((cycleTotal: number, weekSchedule: any) => {
-              return cycleTotal + dayNames.reduce((weekSum: number, day) => {
-                const dailyHours = (weekSchedule as any)[day]?.hours;
-                return weekSum + (dailyHours || 0);
-              }, 0);
+          if (employeeSchedules && employeeSchedules.length > 0) {
+            const firstWeekSchedule = employeeSchedules[0];
+            const totalHoursInFirstWeek = dayNames.reduce((weekSum: number, day) => {
+              const dailyHours = (firstWeekSchedule as any)[day]?.hours;
+              return weekSum + (dailyHours || 0);
             }, 0);
-            return total + (totalHoursInCycle / employeeRecurrenceInterval); // Average weekly hours
+            return total + totalHoursInFirstWeek;
           }
           return total;
         }, 0);
@@ -290,17 +287,13 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     } else if (selectedObject) {
       // Fallback to object hours if no employees are assigned
       if (['recurring', 'substitution', 'permanent'].includes(orderType)) {
-        const objectRecurrenceInterval = selectedObject.recurrence_interval_weeks;
         const objectSchedules = selectedObject.daily_schedules;
-
-        if (objectRecurrenceInterval > 0 && objectSchedules.length === objectRecurrenceInterval) {
-          const totalHoursInCycle = objectSchedules.reduce((cycleTotal: number, weekSchedule: any) => {
-            return cycleTotal + dayNames.reduce((weekSum: number, day) => {
-              const dailyHours = (weekSchedule as any)[day]?.hours;
-              return weekSum + (dailyHours || 0);
-            }, 0);
+        if (objectSchedules && objectSchedules.length > 0) {
+          const firstWeekSchedule = objectSchedules[0];
+          newTotalEstimatedHours = dayNames.reduce((weekSum: number, day) => {
+            const dailyHours = (firstWeekSchedule as any)[day]?.hours;
+            return weekSum + (dailyHours || 0);
           }, 0);
-          newTotalEstimatedHours = (totalHoursInCycle / objectRecurrenceInterval); // Average weekly hours
         }
       } else if (orderType === 'one_time' && dueDate) {
         const dayOfWeek = dueDate.getDay();
@@ -966,7 +959,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
       </div>
       
       <div>
-        <Label htmlFor="totalEstimatedHours">Geschätzte Stunden (automatisch berechnet)</Label>
+        <Label htmlFor="totalEstimatedHours">Wochenstunden (automatisch berechnet)</Label>
         <Input
           id="totalEstimatedHours"
           type="number"
