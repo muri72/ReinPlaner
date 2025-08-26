@@ -332,62 +332,52 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
   }, [watchedAssignedEmployees, orderType, form.watch("dueDate"), selectedObjectId, objects, form]);
 
 
-  // EXACT LOGIC: Employee assignment distribution
   const handleEmployeeSelectionChange = useCallback((selectedIds: string[]) => {
     const currentObjectId = form.getValues("objectId") ?? null;
     const selectedObject = objects.find(obj => obj.id === currentObjectId);
-    const numAssignedEmployees = selectedIds.length;
-
+    
     if (!selectedObject) {
-      replaceAssignedEmployees([]);
-      return;
+        replaceAssignedEmployees([]);
+        return;
     }
 
     const currentAssignments = form.getValues("assignedEmployees") || [];
 
-    const newAssignments = selectedIds.map(employeeId => {
-      const existingAssignment = currentAssignments.find((emp: AssignedEmployee) => emp.employeeId === employeeId);
-      
-      // If employee already has an assignment, keep it.
-      if (existingAssignment) {
-        return existingAssignment;
-      }
+    // Filter out removed employees, keeping their data intact
+    const keptAssignments = currentAssignments.filter(a => selectedIds.includes(a.employeeId));
 
-      // Otherwise, create a new blank assignment with default recurrence and empty schedules.
-      const newEmpData: AssignedEmployee = {
-        employeeId,
-        assigned_daily_schedules: [],
-        assigned_recurrence_interval_weeks: selectedObject.recurrence_interval_weeks,
-        assigned_start_week_offset: selectedObject.start_week_offset,
-      };
+    // Identify new employees to add
+    const newEmployeeIds = selectedIds.filter(id => !currentAssignments.some(a => a.employeeId === id));
 
-      // Initialize assigned_daily_schedules based on object's recurrence interval
-      for (let i = 0; i < selectedObject.recurrence_interval_weeks; i++) {
-        const newWeekSchedule: z.infer<typeof weeklyScheduleSchema> = {};
-        dayNames.forEach(day => {
-          const objectDailySchedule = (selectedObject.daily_schedules?.[i] as any)?.[day];
-          if (objectDailySchedule) {
-            // Distribute object hours equally among selected employees
-            const hoursPerEmployee = objectDailySchedule.hours && numAssignedEmployees > 0 
-              ? objectDailySchedule.hours / numAssignedEmployees 
-              : null;
-            
-            newWeekSchedule[day] = {
-              hours: hoursPerEmployee ? parseFloat(hoursPerEmployee.toFixed(2)) : null,
-              start: objectDailySchedule.start,
-              end: hoursPerEmployee && objectDailySchedule.start 
-                ? calculateEndTime(objectDailySchedule.start, hoursPerEmployee) 
-                : null,
-            };
-          }
-        });
-        newEmpData.assigned_daily_schedules.push(newWeekSchedule);
-      }
+    // Create blank assignments for new employees
+    const newAssignments = newEmployeeIds.map(employeeId => {
+        const newEmpData: AssignedEmployee = {
+            employeeId,
+            assigned_daily_schedules: [],
+            assigned_recurrence_interval_weeks: selectedObject.recurrence_interval_weeks,
+            assigned_start_week_offset: selectedObject.start_week_offset,
+        };
 
-      return newEmpData;
+        // Initialize with blank schedules based on object's recurrence
+        for (let i = 0; i < selectedObject.recurrence_interval_weeks; i++) {
+            const newWeekSchedule: z.infer<typeof weeklyScheduleSchema> = {};
+            dayNames.forEach(day => {
+                const objectDailySchedule = (selectedObject.daily_schedules?.[i] as any)?.[day];
+                // Pre-fill start/end times from object, but leave hours empty for manual input
+                newWeekSchedule[day] = {
+                    hours: null,
+                    start: objectDailySchedule?.start || null,
+                    end: objectDailySchedule?.end || null,
+                };
+            });
+            newEmpData.assigned_daily_schedules.push(newWeekSchedule);
+        }
+        return newEmpData;
     });
 
-    replaceAssignedEmployees(newAssignments);
+    // Combine kept and new assignments
+    replaceAssignedEmployees([...keptAssignments, ...newAssignments]);
+
   }, [objects, form, replaceAssignedEmployees]);
 
   const handleAssignedDailyHoursChange = useCallback((
