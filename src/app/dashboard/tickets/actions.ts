@@ -212,6 +212,28 @@ interface CustomerName { name: string | null; }
 interface ObjectName { name: string | null; }
 interface ProfileName { first_name: string | null; last_name: string | null; }
 
+// Define a type for the raw ticket data returned by the select query
+interface RawTicketQueryResult {
+  id: string;
+  created_at: string;
+  updated_at: string;
+  user_id: string;
+  customer_id: string | null;
+  object_id: string | null;
+  title: string;
+  description: string | null;
+  status: string;
+  priority: string;
+  assigned_to_user_id: string | null;
+  image_urls: string[] | null;
+  comments: any[];
+  customers: CustomerName[] | null;
+  objects: ObjectName[] | null;
+  // Explicitly allow these to be either a single object or an array of objects
+  creator_profile: ProfileName | ProfileName[] | null;
+  assigned_to_profile: ProfileName | ProfileName[] | null;
+}
+
 export async function getTickets(
   filters: {
     query?: string;
@@ -321,15 +343,29 @@ export async function getTickets(
     return { success: false, message: error.message };
   }
 
-  const mappedData = data.map(ticket => ({
-    ...ticket,
-    customer_name: (ticket.customers as CustomerName[] | null)?.[0]?.name || null,
-    object_name: (ticket.objects as ObjectName[] | null)?.[0]?.name || null,
-    creator_first_name: (ticket.creator_profile as ProfileName | null)?.first_name || null,
-    creator_last_name: (ticket.creator_profile as ProfileName | null)?.last_name || null,
-    assigned_to_first_name: (ticket.assigned_to_profile as ProfileName | null)?.first_name || null,
-    assigned_to_last_name: (ticket.assigned_to_profile as ProfileName | null)?.last_name || null,
-  }));
+  const mappedData = data.map((ticket: RawTicketQueryResult) => {
+    // Helper to safely get a single profile from a potentially array-like nested result
+    const getSingleProfile = (profileData: ProfileName | ProfileName[] | null | undefined): ProfileName | null => {
+      if (!profileData) return null;
+      if (Array.isArray(profileData)) {
+        return profileData.length > 0 ? profileData[0] : null;
+      }
+      return profileData;
+    };
+
+    const creatorProfile = getSingleProfile(ticket.creator_profile);
+    const assignedToProfile = getSingleProfile(ticket.assigned_to_profile);
+
+    return {
+      ...ticket,
+      customer_name: (ticket.customers as CustomerName[] | null)?.[0]?.name || null,
+      object_name: (ticket.objects as ObjectName[] | null)?.[0]?.name || null,
+      creator_first_name: creatorProfile?.first_name || null,
+      creator_last_name: creatorProfile?.last_name || null,
+      assigned_to_first_name: assignedToProfile?.first_name || null,
+      assigned_to_last_name: assignedToProfile?.last_name || null,
+    };
+  });
 
   return { success: true, message: "Tickets erfolgreich geladen.", data: mappedData, totalCount: count };
 }

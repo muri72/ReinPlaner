@@ -9,11 +9,12 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils"; // Import cn
 
 interface EmployeeAbsenceData {
   [employeeId: string]: {
     name: string;
-    absences: { [day: number]: string }; // day -> type
+    absences: { [day: number]: { type: string; start_date: string; end_date: string } }; // day -> type, with full absence data
   };
 }
 
@@ -60,7 +61,11 @@ export function AbsenceTimelineCalendar() {
           });
 
           interval.forEach((day) => {
-            processedData[employeeId].absences[getDate(day)] = absence.type;
+            processedData[employeeId].absences[getDate(day)] = {
+              type: absence.type,
+              start_date: absence.start_date,
+              end_date: absence.end_date,
+            };
           });
         });
       }
@@ -78,7 +83,7 @@ export function AbsenceTimelineCalendar() {
   const employeeIds = Object.keys(employeeData);
 
   return (
-    <div className="p-4 border rounded-lg">
+    <div className="p-4 border rounded-lg shadow-neumorphic glassmorphism-card">
       <div className="flex justify-between items-center mb-4">
         <Button variant="outline" size="icon" onClick={handlePrevMonth}><ChevronLeft className="h-4 w-4" /></Button>
         <h2 className="text-xl font-semibold">{format(month, "MMMM yyyy", { locale: de })}</h2>
@@ -107,18 +112,25 @@ export function AbsenceTimelineCalendar() {
               employeeIds.map(id => (
                 <TableRow key={id}>
                   <TableCell className="font-medium sticky left-0 bg-card z-10">{employeeData[id].name}</TableCell>{daysArray.map(day => {
-                    const absenceType = employeeData[id].absences[day];
+                    const absenceEntry = employeeData[id].absences[day];
                     return (
                       <TableCell key={day} className="p-0 text-center">
-                        {absenceType ? (
+                        {absenceEntry ? (
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <div className={`w-full h-10 flex items-center justify-center ${typeColors[absenceType] || 'bg-muted'}`}>
+                                <div className={cn(
+                                  "w-full h-10 flex flex-col items-center justify-center p-1 rounded-md",
+                                  typeColors[absenceEntry.type] || 'bg-muted'
+                                )}>
+                                  <span className="font-semibold text-xs leading-tight">{typeTranslations[absenceEntry.type] || absenceEntry.type}</span>
                                 </div>
                               </TooltipTrigger>
                                 <TooltipContent>
-                                  <p>{typeTranslations[absenceType] || absenceType}</p>
+                                  <p>{typeTranslations[absenceEntry.type] || absenceEntry.type}</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {format(new Date(absenceEntry.start_date), 'dd.MM.yyyy', { locale: de })} - {format(new Date(absenceEntry.end_date), 'dd.MM.yyyy', { locale: de })}
+                                  </p>
                                 </TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
