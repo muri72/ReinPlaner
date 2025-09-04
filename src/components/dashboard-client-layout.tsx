@@ -132,7 +132,7 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut, us
           </Button>
         </div>
 
-        <nav className="flex-grow space-y-2 pt-4 border-t border-sidebar-border">
+        <nav className="flex-grow space-y-2 pt-4 border-t border-sidebar-border overflow-y-auto">
           <SidebarNav
             isCollapsed={isCollapsed}
             currentUserRole={currentUserRole}
