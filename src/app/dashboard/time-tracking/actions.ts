@@ -26,6 +26,11 @@ export async function createTimeEntry(data: TimeEntryFormValues): Promise<{ succ
     breakMinutes,
     type,
     notes,
+    clockInLatitude, // New field
+    clockInLongitude, // New field
+    clockOutLatitude, // New field
+    clockOutLongitude, // New field
+    locationDeviationWarning, // New field
   } = data;
 
   let finalUserId = user.id;
@@ -79,6 +84,11 @@ export async function createTimeEntry(data: TimeEntryFormValues): Promise<{ succ
       break_minutes: breakMinutes,
       type,
       notes,
+      clock_in_latitude: clockInLatitude, // New field
+      clock_in_longitude: clockInLongitude, // New field
+      clock_out_latitude: clockOutLatitude, // New field
+      clock_out_longitude: clockOutLongitude, // New field
+      location_deviation_warning: locationDeviationWarning, // New field
     })
     .select('id')
     .single();
@@ -114,6 +124,11 @@ export async function updateTimeEntry(entryId: string, data: Partial<TimeEntryFo
     breakMinutes, // Neues Feld
     type,
     notes,
+    clockInLatitude, // New field
+    clockInLongitude, // New field
+    clockOutLatitude, // New field
+    clockOutLongitude, // New field
+    locationDeviationWarning, // New field
   } = data;
 
   let startDateTime: Date | undefined;
@@ -153,6 +168,11 @@ export async function updateTimeEntry(entryId: string, data: Partial<TimeEntryFo
       break_minutes: breakMinutes, // Neues Feld aktualisieren
       type,
       notes,
+      clock_in_latitude: clockInLatitude, // New field
+      clock_in_longitude: clockInLongitude, // New field
+      clock_out_latitude: clockOutLatitude, // New field
+      clock_out_longitude: clockOutLongitude, // New field
+      location_deviation_warning: locationDeviationWarning, // New field
       updated_at: new Date().toISOString(),
     })
     .eq('id', entryId);

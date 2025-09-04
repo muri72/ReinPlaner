@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { CustomerOrderRequestDialog } from "@/components/customer-order-request-dialog";
+import { TicketCreateDialog } from "@/components/ticket-create-dialog"; // Import TicketCreateDialog
 
 // Define an interface for the raw data returned by Supabase select query for employee dashboard
 interface RawEmployeeOrderResponse {
@@ -300,6 +301,30 @@ export default async function CustomerDashboardPage() {
               <p>Keine zukünftigen Termine gefunden.</p>
               <CustomerOrderRequestDialog customerId={customerId} />
             </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Ticket erstellen */}
+      <Card className="shadow-neumorphic glassmorphism-card">
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold flex items-center">
+            <MessageSquare className="mr-2 h-5 w-5" /> Neues Ticket erstellen
+          </CardTitle>
+          <CardDescription>Melden Sie ein Problem oder stellen Sie eine Anfrage.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {customerId ? (
+            <TicketCreateDialog
+              onTicketCreated={() => { /* Optional: Refresh relevant data */ }}
+              triggerButtonText="Ticket erstellen"
+              triggerButtonClassName="w-full"
+              initialData={{ customerId: customerId }}
+            />
+          ) : (
+            <p className="text-muted-foreground text-sm text-center">
+              Ihre Kunden-ID konnte nicht geladen werden. Bitte kontaktieren Sie den Support.
+            </p>
           )}
         </CardContent>
       </Card>

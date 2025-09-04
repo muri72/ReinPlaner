@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Home, Briefcase, Users, ContactRound, Building, UsersRound, Clock, CalendarOff,
-  CalendarCheck, TrendingUp, FileText, Star, DollarSign, ListOrdered
+  CalendarCheck, TrendingUp, FileText, Star, DollarSign, ListOrdered, MessageSquare
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -75,6 +75,7 @@ const navItems: NavItem[] = [
       { title: "Kunden", href: "/dashboard/customers", icon: Users, roles: ['admin', 'manager', 'employee'] },
       { title: "Kontakte", href: "/dashboard/customer-contacts", icon: ContactRound, roles: ['admin', 'manager', 'employee'] },
       { title: "Feedback", href: "/dashboard/feedback", icon: Star, roles: ['admin', 'manager', 'employee', 'customer'] },
+      { title: "Tickets", href: "/dashboard/tickets", icon: MessageSquare, roles: ['admin', 'manager', 'employee', 'customer'] }, // New Tickets link
     ],
   },
   {

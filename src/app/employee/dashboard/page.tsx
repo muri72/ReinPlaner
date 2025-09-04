@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { TodaysOrdersOverview } from "@/components/todays-orders-overview";
 import type { DisplayOrder } from '@/app/dashboard/orders/page'; // Import DisplayOrder
 import { AssignedEmployee } from "@/components/order-form";
+import { TicketCreateDialog } from "@/components/ticket-create-dialog"; // Import TicketCreateDialog
 
 // Define an interface for the raw data returned by Supabase select query for employee dashboard
 interface RawEmployeeOrderResponse {
@@ -194,6 +195,8 @@ export default async function EmployeeDashboardPage() {
   };
 
   const getAssignedTimeForToday = (order: DisplayOrder) => {
+    if (!order || !order.assignedEmployees || order.assignedEmployees.length === 0) return 'N/A';
+
     const todayDayOfWeek = today.getDay(); // 0=So, 1=Mo, ..., 6=Sa
     const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
     const currentDayKey = dayNames[todayDayOfWeek];
@@ -377,6 +380,23 @@ export default async function EmployeeDashboardPage() {
               ))}
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Ticket erstellen */}
+      <Card className="shadow-neumorphic glassmorphism-card">
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold flex items-center">
+            <MessageSquare className="mr-2 h-5 w-5" /> Neues Ticket erstellen
+          </CardTitle>
+          <CardDescription>Melden Sie ein Problem oder stellen Sie eine Anfrage an die Zentrale.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <TicketCreateDialog
+            onTicketCreated={() => { /* Optional: Refresh relevant data */ }}
+            triggerButtonText="Ticket erstellen"
+            triggerButtonClassName="w-full"
+          />
         </CardContent>
       </Card>
 

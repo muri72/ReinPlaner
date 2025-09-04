@@ -121,7 +121,21 @@ export function RecordDetailsDialog({ record, title, triggerButtonTitle = "Detai
       role: "Rolle",
       assigned_employee_name: "Zugewiesener Mitarbeiter",
       assigned_customer_name: "Zugewiesener Kunde",
-      // Add more translations as needed
+      latitude: "Breitengrad", // New
+      longitude: "Längengrad", // New
+      radius_meters: "Radius (Meter)", // New
+      clock_in_latitude: "Ein-Stempel Breitengrad", // New
+      clock_in_longitude: "Ein-Stempel Längengrad", // New
+      clock_out_latitude: "Aus-Stempel Breitengrad", // New
+      clock_out_longitude: "Aus-Stempel Längengrad", // New
+      location_deviation_warning: "Standortabweichung Warnung", // New
+      assigned_to_user_id: "Zugewiesen an Benutzer-ID", // New
+      assigned_to_first_name: "Zugewiesen an Vorname", // New
+      assigned_to_last_name: "Zugewiesen an Nachname", // New
+      creator_first_name: "Ersteller Vorname", // New
+      creator_last_name: "Ersteller Nachname", // New
+      image_urls: "Bild-URLs", // New
+      comments: "Kommentare", // New
     };
     return translations[key] || key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
@@ -156,8 +170,40 @@ export function RecordDetailsDialog({ record, title, triggerButtonTitle = "Detai
               return null; // Skip nested objects for this generic view
             }
             // Skip specific keys that are already displayed or not relevant for generic view
-            if (['user_id', 'customer_id', 'object_id', 'employee_id', 'customer_contact_id', 'order_id', 'order_feedback', 'customers', 'employees', 'objects', 'customer_contacts', 'profiles'].includes(key)) {
+            if (['user_id', 'customer_id', 'object_id', 'employee_id', 'customer_contact_id', 'order_id', 'order_feedback', 'customers', 'employees', 'objects', 'customer_contacts', 'profiles', 'assignedEmployees'].includes(key)) {
               return null;
+            }
+            // Special handling for comments array
+            if (key === 'comments' && Array.isArray(value)) {
+              return (
+                <div key={key} className="grid grid-cols-3 items-start gap-4">
+                  <div className="text-sm font-medium text-muted-foreground">{translateKey(key)}:</div>
+                  <div className="col-span-2 text-sm text-foreground break-words space-y-2">
+                    {value.length > 0 ? value.map((comment, idx) => (
+                      <div key={idx} className="border-l-2 pl-2">
+                        <p className="font-semibold">{comment.user_first_name || comment.user_last_name ? `${comment.user_first_name || ''} ${comment.user_last_name || ''}`.trim() : 'Unbekannt'}</p>
+                        <p className="text-xs text-muted-foreground">{format(new Date(comment.timestamp), 'dd.MM.yyyy HH:mm', { locale: de })}</p>
+                        <p>{comment.text}</p>
+                      </div>
+                    )) : 'N/A'}
+                  </div>
+                </div>
+              );
+            }
+            // Special handling for image_urls array
+            if (key === 'image_urls' && Array.isArray(value)) {
+              return (
+                <div key={key} className="grid grid-cols-3 items-start gap-4">
+                  <div className="text-sm font-medium text-muted-foreground">{translateKey(key)}:</div>
+                  <div className="col-span-2 text-sm text-foreground break-words space-y-2">
+                    {value.length > 0 ? value.map((url, idx) => (
+                      <a key={idx} href={url} target="_blank" rel="noopener noreferrer" className="block text-primary hover:underline truncate">
+                        {url.split('/').pop()}
+                      </a>
+                    )) : 'N/A'}
+                  </div>
+                </div>
+              );
             }
 
             return (

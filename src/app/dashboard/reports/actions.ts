@@ -2,6 +2,7 @@
 
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { endOfMonth, startOfMonth } from "date-fns";
+import { sendNotification } from "@/lib/actions/notifications";
 
 // Definieren Sie die Schnittstellen hier, damit sie importiert und importiert werden können
 export interface ReportEntry {
@@ -183,4 +184,59 @@ export async function getEmployeeWorkTimeReport(employeeId: string, month: numbe
     message: "Arbeitszeitnachweis für Mitarbeiter erfolgreich geladen.",
     data: reportData,
   };
+}
+
+export async function sendWorkTimeReportToCustomer(
+  reportType: 'object' | 'employee',
+  id: string, // objectId or employeeId
+  month: number,
+  year: number,
+  customerEmail: string,
+  customerName: string,
+  reportTitle: string,
+): Promise<{ success: boolean; message: string }> {
+  const supabase = createAdminClient(); // Use admin client for sending emails
+
+  let reportData: WorkTimeReportData | EmployeeWorkTimeReportData | null = null;
+  let reportResult;
+
+  if (reportType === 'object') {
+    reportResult = await getWorkTimeReport(id, month, year);
+  } else { // reportType === 'employee'
+    reportResult = await getEmployeeWorkTimeReport(id, month, year);
+  }
+
+  if (!reportResult.success || !reportResult.data) {
+    return { success: false, message: reportResult.message || "Fehler beim Generieren des Berichts." };
+  }
+  reportData = reportResult.data;
+
+  // Construct a simple HTML email body
+  let emailHtml = `
+    <p>Sehr geehrte/r ${customerName},</p>
+    <p>anbei erhalten Sie Ihren Arbeitszeitnachweis für ${reportTitle} im Monat ${new Date(year, month - 1).toLocaleString('de-DE', { month: 'long', year: 'numeric' })}.</p>
+    <p><strong>Gesamtstunden (Netto):</strong> ${reportData.totalHours} Stunden</p>
+    <p>Sie können den vollständigen Bericht jederzeit in Ihrem Kundenportal einsehen:</p>
+    <p><a href="${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/portal/reports?reportType=${reportType}&id=${id}&month=${month}&year=${year}">Bericht im Portal ansehen</a></p>
+    <p>Mit freundlichen Grüßen,</p>
+    <p>Ihr ARIS Management Team</p>
+  `;
+
+  try {
+    const { error: functionError } = await supabase.functions.invoke('send-email', {
+      body: {
+        to: customerEmail,
+        subject: `Ihr Arbeitszeitnachweis für ${reportTitle} (${new Date(year, month - 1).toLocaleString('de-DE', { month: 'long', year: 'numeric' })})`,
+        html: emailHtml,
+      },
+    });
+
+    if (functionError) {
+      throw functionError;
+    }
+    return { success: true, message: "Arbeitszeitnachweis erfolgreich per E-Mail versendet!" };
+  } catch (error: any) {
+    console.error(`Fehler beim Versenden der E-Mail für Arbeitszeitnachweis an ${customerEmail}:`, error?.message || error);
+    return { success: false, message: `Fehler beim Versenden der E-Mail: ${error.message}` };
+  }
 }

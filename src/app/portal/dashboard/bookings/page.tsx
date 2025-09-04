@@ -5,11 +5,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { format, getWeek } from "date-fns";
 import { de } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";
-import { Briefcase, CalendarDays, Building, Wrench, FileText, Clock } from "lucide-react";
+import { Briefcase, CalendarDays, Building, Wrench, FileText, Clock, MessageSquare } from "lucide-react";
 import { CustomerOrderRequestDialog } from "@/components/customer-order-request-dialog";
 import { OrderFeedbackDialog } from "@/components/order-feedback-dialog"; // For giving feedback on completed orders
 import { Button } from "@/components/ui/button"; // Import Button
 import { AssignedEmployee } from "@/components/order-form";
+import { TicketCreateDialog } from "@/components/ticket-create-dialog"; // Import TicketCreateDialog
 
 interface DisplayOrder {
   id: string;
@@ -339,6 +340,15 @@ export default async function CustomerBookingsPage() {
                           <Button variant="ghost" size="icon" title="Details anzeigen">
                             <FileText className="h-4 w-4" />
                           </Button>
+                          {customerId && (
+                            <TicketCreateDialog
+                              onTicketCreated={() => { /* Optional: Refresh relevant data */ }}
+                              triggerButtonText=""
+                              triggerButtonVariant="ghost"
+                              triggerButtonClassName="h-8 w-8 p-0 text-muted-foreground hover:text-primary"
+                              initialData={{ customerId: customerId, objectId: order.object_id, title: `Problem mit Auftrag: ${order.title}` }}
+                            />
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>

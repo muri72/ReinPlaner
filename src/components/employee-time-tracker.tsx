@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Clock, Play, StopCircle, PauseCircle, RotateCcw, PlusCircle, CalendarDays } from "lucide-react";
+import { Clock, Play, StopCircle, PauseCircle, RotateCcw, PlusCircle, CalendarDays, MapPin, AlertTriangle } from "lucide-react";
 import { createTimeEntry, updateTimeEntry } from "@/app/dashboard/time-tracking/actions";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { calculateHours } from "@/lib/utils";
@@ -40,6 +40,10 @@ interface OrderWithDetails {
   recurring_start_date: string | null;
   due_date: string | null;
   object: {
+    name: string;
+    latitude: number | null;
+    longitude: number | null;
+    radius_meters: number | null;
     recurrence_interval_weeks: number;
     start_week_offset: number;
     monday_hours: number | null;
@@ -104,10 +108,55 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
   const [suggestedBreakMinutes, setSuggestedBreakMinutes] = useState<number | null>(null);
   const [recurrenceInfo, setRecurrenceInfo] = useState<string | null>(null);
 
+  const [currentLocation, setCurrentLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const [locationDeviation, setLocationDeviation] = useState(false);
+
 
   const stopwatchElapsedTime = useRef(0); // Use ref for elapsed time
   const stopwatchIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const [displayTime, setDisplayTime] = useState('00:00:00'); // State for displayed time
+
+  // Haversine formula to calculate distance between two lat/lon points
+  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+    const R = 6371e3; // metres
+    const φ1 = lat1 * Math.PI / 180; // φ, λ in radians
+    const φ2 = lat2 * Math.PI / 180;
+    const Δφ = (lat2 - lat1) * Math.PI / 180;
+    const Δλ = (lon2 - lon1) * Math.PI / 180;
+
+    const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+              Math.cos(φ1) * Math.cos(φ2) *
+              Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    const d = R * c; // in metres
+    return d;
+  };
+
+  // Get current geolocation
+  const getCurrentLocation = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setCurrentLocation({
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+          });
+          setLocationError(null);
+        },
+        (error) => {
+          console.error("Geolocation error:", error);
+          setLocationError("Standort konnte nicht abgerufen werden. Bitte erlauben Sie den Standortzugriff.");
+          setCurrentLocation(null);
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      );
+    } else {
+      setLocationError("Geolocation wird von Ihrem Browser nicht unterstützt.");
+      setCurrentLocation(null);
+    }
+  };
 
   // Helper to format time for display
   const formatTime = (totalSeconds: number) => {
@@ -133,6 +182,8 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
   useEffect(() => {
     const fetchInitialData = async () => {
       setLoading(true);
+      getCurrentLocation(); // Get location on load
+
       const { data: employeeData, error: employeeError } = await supabase
         .from('employees')
         .select('id')
@@ -189,7 +240,7 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
           .from('orders')
           .select(`
             id, title, customer_id, object_id, order_type, recurring_start_date, due_date,
-            objects ( recurrence_interval_weeks, start_week_offset, monday_hours, tuesday_hours, wednesday_hours, thursday_hours, friday_hours, saturday_hours, sunday_hours, monday_start_time, tuesday_start_time, wednesday_start_time, thursday_start_time, friday_start_time, saturday_start_time, sunday_start_time, monday_end_time, tuesday_end_time, wednesday_end_time, thursday_end_time, friday_end_time, saturday_end_time, sunday_end_time ),
+            objects ( name, latitude, longitude, radius_meters, recurrence_interval_weeks, start_week_offset, monday_hours, tuesday_hours, wednesday_hours, thursday_hours, friday_hours, saturday_hours, sunday_hours, monday_start_time, tuesday_start_time, wednesday_start_time, thursday_start_time, friday_start_time, saturday_start_time, sunday_start_time, monday_end_time, tuesday_end_time, wednesday_end_time, thursday_end_time, friday_end_time, saturday_end_time, sunday_end_time ),
             order_employee_assignments!inner ( 
               employee_id, assigned_recurrence_interval_weeks, assigned_start_week_offset,
               assigned_monday_hours, assigned_tuesday_hours, assigned_wednesday_hours, thursday_hours,
@@ -261,6 +312,7 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
       setSuggestedDuration(null);
       setSuggestedBreakMinutes(null);
       setRecurrenceInfo(null);
+      setLocationDeviation(false); // Reset location deviation
 
       if (selectedOrderId && employeeId) {
         const selectedOrder = orders.find(o => o.id === selectedOrderId);
@@ -302,12 +354,30 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
             setSuggestedStartTime(startTime);
             setSuggestedEndTime(endTime);
           }
+
+          // Check location deviation
+          if (currentLocation && selectedOrder.object?.latitude && selectedOrder.object?.longitude && selectedOrder.object?.radius_meters !== null) {
+            const distance = calculateDistance(
+              currentLocation.latitude,
+              currentLocation.longitude,
+              selectedOrder.object.latitude,
+              selectedOrder.object.longitude
+            );
+            if (distance > selectedOrder.object.radius_meters) {
+              setLocationDeviation(true);
+              toast.warning(`Sie sind ${Math.round(distance - selectedOrder.object.radius_meters)}m außerhalb des Objekt-Radius.`);
+            } else {
+              setLocationDeviation(false);
+            }
+          } else if (selectedOrder.object?.name && (!selectedOrder.object?.latitude || !selectedOrder.object?.longitude)) {
+            setLocationError(`Standortdaten für Objekt "${selectedOrder.object.name}" nicht hinterlegt.`);
+          }
         }
       }
     };
 
     fetchAssignmentSchedule();
-  }, [selectedOrderId, employeeId, orders, supabase]);
+  }, [selectedOrderId, employeeId, orders, supabase, currentLocation]);
 
   const handleClockOut = async () => {
     if (!activeEntry || activeEntry.type !== 'clock_in_out') {
@@ -329,6 +399,9 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
       durationMinutes: durationMinutes,
       breakMinutes: calculatedBreakMinutes,
       notes: `${activeEntry.notes || ''} Ausgestempelt um ${now.toLocaleTimeString()}`,
+      clockOutLatitude: currentLocation?.latitude, // Save clock-out location
+      clockOutLongitude: currentLocation?.longitude,
+      locationDeviationWarning: locationDeviation, // Save deviation status
     });
 
     if (result.success) {
@@ -336,6 +409,8 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
       setActiveEntry(null);
       setSelectedOrderId(null);
       setRecurrenceInfo(null);
+      setLocationDeviation(false);
+      getCurrentLocation(); // Refresh location
     } else {
       toast.error(result.message);
     }
@@ -369,6 +444,9 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
       orderId: selectedOrderId,
       objectId: selectedOrder?.object_id || null,
       notes: `Stoppuhr gestartet um ${now.toLocaleTimeString()}${selectedOrder ? ` für Auftrag ${selectedOrder.title}` : ''}`,
+      clockInLatitude: currentLocation?.latitude, // Save clock-in location
+      clockInLongitude: currentLocation?.longitude,
+      locationDeviationWarning: locationDeviation, // Save deviation status
     });
 
     if (result.success && result.newEntryId) {
@@ -417,6 +495,9 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
       durationMinutes: durationMinutes,
       breakMinutes: calculatedBreakMinutes,
       notes: `${activeEntry.notes || ''} Stoppuhr gestoppt um ${now.toLocaleTimeString()}`,
+      clockOutLatitude: currentLocation?.latitude, // Save clock-out location
+      clockOutLongitude: currentLocation?.longitude,
+      locationDeviationWarning: locationDeviation, // Save deviation status
     });
 
     if (result.success) {
@@ -424,8 +505,10 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
       setActiveEntry(null);
       setSelectedOrderId(null);
       setRecurrenceInfo(null);
+      setLocationDeviation(false);
       stopwatchElapsedTime.current = 0;
       setDisplayTime('00:00:00');
+      getCurrentLocation(); // Refresh location
     } else {
       toast.error(result.message);
     }
@@ -487,6 +570,9 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
       objectId: selectedOrder?.object_id || null,
       orderId: selectedOrderId,
       notes: selectedOrder ? `Zeiteintrag für Auftrag: ${selectedOrder.title}` : '',
+      clockInLatitude: currentLocation?.latitude,
+      clockInLongitude: currentLocation?.longitude,
+      locationDeviationWarning: locationDeviation,
     };
 
     if (isScheduledOrder) {
@@ -583,6 +669,20 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
                   </div>
                 )}
 
+                {locationError && (
+                  <div className="text-sm text-destructive mt-2 p-2 border rounded-md bg-destructive/10 dark:bg-destructive/20 flex items-center">
+                    <AlertTriangle className="mr-2 h-4 w-4 flex-shrink-0" />
+                    <p>{locationError}</p>
+                  </div>
+                )}
+
+                {locationDeviation && (
+                  <div className="text-sm text-warning mt-2 p-2 border rounded-md bg-warning/10 dark:bg-warning/20 flex items-center">
+                    <MapPin className="mr-2 h-4 w-4 flex-shrink-0" />
+                    <p>Sie befinden sich außerhalb des Objekt-Radius.</p>
+                  </div>
+                )}
+
                 {isScheduledOrder && suggestedDuration !== null && (
                   <div className="text-sm text-muted-foreground mt-2 p-2 border rounded-md bg-primary-foreground/10 dark:bg-primary-foreground/20">
                     <p>Vorgeschlagene Dauer für diesen Auftrag heute:</p>
@@ -628,6 +728,8 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
                         });
                       setSelectedOrderId(null);
                       setRecurrenceInfo(null);
+                      setLocationDeviation(false);
+                      getCurrentLocation(); // Refresh location
                     }}
                     currentUserId={userId}
                     isAdmin={false}
@@ -676,6 +778,20 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
                   <div className="text-sm text-muted-foreground mt-2 p-2 border rounded-md bg-warning/10 dark:bg-warning/20 flex items-center">
                     <CalendarDays className="mr-2 h-4 w-4 flex-shrink-0" />
                     <p>{recurrenceInfo}</p>
+                  </div>
+                )}
+
+                {locationError && (
+                  <div className="text-sm text-destructive mt-2 p-2 border rounded-md bg-destructive/10 dark:bg-destructive/20 flex items-center">
+                    <AlertTriangle className="mr-2 h-4 w-4 flex-shrink-0" />
+                    <p>{locationError}</p>
+                  </div>
+                )}
+
+                {locationDeviation && (
+                  <div className="text-sm text-warning mt-2 p-2 border rounded-md bg-warning/10 dark:bg-warning/20 flex items-center">
+                    <MapPin className="mr-2 h-4 w-4 flex-shrink-0" />
+                    <p>Sie befinden sich außerhalb des Objekt-Radius.</p>
                   </div>
                 )}
 
