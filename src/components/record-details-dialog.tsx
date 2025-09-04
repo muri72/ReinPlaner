@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Eye } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+import { format } from "date-fns"; // Added import
+import { de } from "date-fns/locale"; // Added import
 
 interface RecordDetailsDialogProps {
   record: Record<string, any>;
@@ -20,14 +22,14 @@ export function RecordDetailsDialog({ record, title, triggerButtonTitle = "Detai
   const formatValue = (key: string, value: any): string => {
     if (value === null || value === undefined) return "N/A";
     if (typeof value === 'boolean') return value ? "Ja" : "Nein";
-    if (typeof value === 'object' && value instanceof Date) return value.toLocaleString('de-DE');
+    if (typeof value === 'object' && value instanceof Date) return format(value, 'dd.MM.yyyy HH:mm', { locale: de }); // Use format
     if (typeof value === 'string' && (key.includes('date') || key.includes('time')) && !isNaN(new Date(value).getTime())) {
       try {
         const date = new Date(value);
         if (key.includes('time') && !key.includes('date')) {
-          return date.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+          return format(date, 'HH:mm', { locale: de }); // Use format
         }
-        return date.toLocaleDateString('de-DE');
+        return format(date, 'dd.MM.yyyy', { locale: de }); // Use format
       } catch (e) {
         return String(value);
       }

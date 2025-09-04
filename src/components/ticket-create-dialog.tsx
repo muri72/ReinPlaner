@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, MessageSquare } from "lucide-react";
-import { TicketForm, TicketFormValues } from "@/components/ticket-form";
+import { TicketForm, TicketFormValues, TicketFormInput } from "@/components/ticket-form"; // Import TicketFormInput
 import { createTicket } from "@/app/dashboard/tickets/actions";
 
 interface TicketCreateDialogProps {
@@ -12,6 +12,7 @@ interface TicketCreateDialogProps {
   triggerButtonText?: string;
   triggerButtonVariant?: "default" | "destructive" | "outline" | "secondary" | "ghost" | "link";
   triggerButtonClassName?: string;
+  initialData?: Partial<TicketFormInput>; // Added initialData prop
 }
 
 export function TicketCreateDialog({
@@ -19,6 +20,7 @@ export function TicketCreateDialog({
   triggerButtonText = "Neues Ticket erstellen",
   triggerButtonVariant = "default",
   triggerButtonClassName,
+  initialData, // Destructure initialData
 }: TicketCreateDialogProps) {
   const [open, setOpen] = useState(false);
 
@@ -50,6 +52,7 @@ export function TicketCreateDialog({
           </DialogDescription>
         </DialogHeader>
         <TicketForm
+          initialData={initialData} // Pass initialData to TicketForm
           onSubmit={handleCreate}
           submitButtonText="Ticket erstellen"
           onSuccess={() => setOpen(false)}

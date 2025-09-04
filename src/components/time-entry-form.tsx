@@ -101,11 +101,11 @@ export function TimeEntryForm({ initialData, onSubmit, submitButtonText, onSucce
     breakMinutes: typeof initialData?.breakMinutes === 'number' ? initialData.breakMinutes : null, // Initialwert für Pausenminuten
     type: initialData?.type ?? "manual",
     notes: initialData?.notes ?? null,
-    clockInLatitude: initialData?.clockInLatitude ?? null, // New field
-    clockInLongitude: initialData?.clockInLongitude ?? null, // New field
-    clockOutLatitude: initialData?.clockOutLatitude ?? null, // New field
-    clockOutLongitude: initialData?.clockOutLongitude ?? null, // New field
-    locationDeviationWarning: initialData?.locationDeviationWarning ?? false, // New field
+    clockInLatitude: initialData?.clockInLatitude as number | null | undefined ?? null, // Explicit cast
+    clockInLongitude: initialData?.clockInLongitude as number | null | undefined ?? null, // Explicit cast
+    clockOutLatitude: initialData?.clockOutLatitude as number | null | undefined ?? null, // Explicit cast
+    clockOutLongitude: initialData?.clockOutLongitude as number | null | undefined ?? null, // Explicit cast
+    locationDeviationWarning: initialData?.locationDeviationWarning as boolean | null | undefined ?? false, // Explicit cast
   };
 
   const form = useForm<TimeEntryFormValues>({

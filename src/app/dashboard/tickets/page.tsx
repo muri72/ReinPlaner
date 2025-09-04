@@ -3,7 +3,7 @@
 import { createClient } from "@/lib/supabase/client";
 import { redirect, useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { MessageSquare, PlusCircle } from "lucide-react";
+import { MessageSquare, PlusCircle, AlertCircle, Building, Briefcase, UserRound, Clock } from "lucide-react"; // Added missing imports
 import { TicketCreateDialog } from "@/components/ticket-create-dialog";
 import { TicketEditDialog } from "@/components/ticket-edit-dialog";
 import { DeleteTicketButton } from "@/components/delete-ticket-button";

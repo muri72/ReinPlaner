@@ -40,9 +40,10 @@ interface TicketFormProps {
   submitButtonText: string;
   onSuccess?: () => void;
   isEditMode?: boolean;
+  ticketId?: string; // Added ticketId prop for edit mode
 }
 
-export function TicketForm({ initialData, onSubmit, submitButtonText, onSuccess, isEditMode = false }: TicketFormProps) {
+export function TicketForm({ initialData, onSubmit, submitButtonText, onSuccess, isEditMode = false, ticketId }: TicketFormProps) {
   const supabase = createClient();
   const [customers, setCustomers] = useState<{ id: string; name: string }[]>([]);
   const [objects, setObjects] = useState<{ id: string; name: string; customer_id: string }[]>([]);
@@ -130,7 +131,7 @@ export function TicketForm({ initialData, onSubmit, submitButtonText, onSuccess,
       if (files.length > 0) {
         toast.info(`Lade ${files.length} Bilder hoch...`);
         const fileDetails = files.map(f => ({ name: f.name, type: f.type }));
-        const referenceId = initialData?.id || uuidv4(); // Use existing ID or generate new
+        const referenceId = ticketId || uuidv4(); // Use existing ID or generate new
         const signedUrlResult = await generateSignedUploadUrlsForTickets(referenceId, fileDetails);
 
         if (!signedUrlResult.success || !signedUrlResult.uploads) {

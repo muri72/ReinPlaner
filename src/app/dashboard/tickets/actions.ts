@@ -4,6 +4,7 @@ import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { sendNotification } from "@/lib/actions/notifications";
 import { TicketFormValues } from "@/components/ticket-form";
+import { v4 as uuidv4 } from 'uuid'; // Added uuidv4 import
 
 interface Comment {
   user_id: string;
@@ -159,10 +160,10 @@ export async function addTicketComment(ticketId: string, commentText: string): P
     text: commentText,
   };
 
-  // Fetch existing comments
+  // Fetch existing comments and title
   const { data: existingTicket, error: fetchError } = await supabase
     .from('tickets')
-    .select('comments, user_id, assigned_to_user_id')
+    .select('comments, user_id, assigned_to_user_id, title') // Added title
     .eq('id', ticketId)
     .single();
 
@@ -206,6 +207,11 @@ export async function addTicketComment(ticketId: string, commentText: string): P
   return { success: true, message: "Kommentar erfolgreich hinzugefügt!" };
 }
 
+// Define types for the joined tables to help TypeScript
+interface CustomerName { name: string | null; }
+interface ObjectName { name: string | null; }
+interface ProfileName { first_name: string | null; last_name: string | null; }
+
 export async function getTickets(
   filters: {
     query?: string;
@@ -219,7 +225,7 @@ export async function getTickets(
     sortColumn?: string;
     sortDirection?: string;
   }
-): Promise<{ success: boolean; message: string; data?: any[]; totalCount?: number }> {
+): Promise<{ success: boolean; message: string; data?: any[]; totalCount?: number | null }> { // Changed totalCount type
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -261,8 +267,8 @@ export async function getTickets(
       comments,
       customers ( name ),
       objects ( name ),
-      profiles!tickets_user_id_fkey ( first_name, last_name ),
-      profiles!tickets_assigned_to_user_id_fkey ( first_name, last_name )
+      creator_profile:profiles!tickets_user_id_fkey ( first_name, last_name ),
+      assigned_to_profile:profiles!tickets_assigned_to_user_id_fkey ( first_name, last_name )
     `, { count: 'exact' })
     .order(sortColumn, { ascending: sortDirection === 'asc' });
 
@@ -317,12 +323,12 @@ export async function getTickets(
 
   const mappedData = data.map(ticket => ({
     ...ticket,
-    customer_name: Array.isArray(ticket.customers) ? ticket.customers[0]?.name : ticket.customers?.name || null,
-    object_name: Array.isArray(ticket.objects) ? ticket.objects[0]?.name : ticket.objects?.name || null,
-    creator_first_name: Array.isArray(ticket.profiles!tickets_user_id_fkey) ? ticket.profiles!tickets_user_id_fkey[0]?.first_name : ticket.profiles!tickets_user_id_fkey?.first_name || null,
-    creator_last_name: Array.isArray(ticket.profiles!tickets_user_id_fkey) ? ticket.profiles!tickets_user_id_fkey[0]?.last_name : ticket.profiles!tickets_user_id_fkey?.last_name || null,
-    assigned_to_first_name: Array.isArray(ticket.profiles!tickets_assigned_to_user_id_fkey) ? ticket.profiles!tickets_assigned_to_user_id_fkey[0]?.first_name : ticket.profiles!tickets_assigned_to_user_id_fkey?.first_name || null,
-    assigned_to_last_name: Array.isArray(ticket.profiles!tickets_assigned_to_user_id_fkey) ? ticket.profiles!tickets_assigned_to_user_id_fkey[0]?.last_name : ticket.profiles!tickets_assigned_to_user_id_fkey?.last_name || null,
+    customer_name: (ticket.customers as CustomerName[] | null)?.[0]?.name || null,
+    object_name: (ticket.objects as ObjectName[] | null)?.[0]?.name || null,
+    creator_first_name: (ticket.creator_profile as ProfileName | null)?.first_name || null,
+    creator_last_name: (ticket.creator_profile as ProfileName | null)?.last_name || null,
+    assigned_to_first_name: (ticket.assigned_to_profile as ProfileName | null)?.first_name || null,
+    assigned_to_last_name: (ticket.assigned_to_profile as ProfileName | null)?.last_name || null,
   }));
 
   return { success: true, message: "Tickets erfolgreich geladen.", data: mappedData, totalCount: count };
