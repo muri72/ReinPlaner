@@ -260,7 +260,7 @@ export function WorkTimeReportForm() {
                       <TableHead>Start</TableHead>
                       <TableHead>Ende</TableHead>
                       <TableHead>Pause</TableHead> {/* Moved Pause column */}
-                      <TableHead>Arbeitsstunden</TableHead> {/* Renamed Duration to Arbeitsstunden */}
+                      <TableHead>Arbeitsstunden (Netto)</TableHead> {/* Renamed Duration to Arbeitsstunden */}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -291,7 +291,7 @@ export function WorkTimeReportForm() {
                       <TableHead>Start</TableHead>
                       <TableHead>Ende</TableHead>
                       <TableHead>Pause</TableHead> {/* Moved Pause column */}
-                      <TableHead>Arbeitsstunden</TableHead> {/* Renamed Duration to Arbeitsstunden */}
+                      <TableHead>Arbeitsstunden (Netto)</TableHead> {/* Renamed Duration to Arbeitsstunden */}
                     </TableRow>
                   </TableHeader>
                   <TableBody>

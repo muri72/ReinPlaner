@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Trash2, Plus, Clock, Users } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { calculateEndTime } from '@/lib/utils'; // Import calculateEndTime
 
 interface Employee {
   id: string;
@@ -30,6 +31,13 @@ interface ObjectWorkingHours {
   friday_start_time: string | null;
   saturday_start_time: string | null;
   sunday_start_time: string | null;
+  monday_end_time: string | null;
+  tuesday_end_time: string | null;
+  wednesday_end_time: string | null;
+  thursday_end_time: string | null;
+  friday_end_time: string | null;
+  saturday_end_time: string | null;
+  sunday_end_time: string | null;
 }
 
 interface EmployeeAssignment {
@@ -132,7 +140,9 @@ export default function OrderEmployeeAssignments({
           monday_hours, tuesday_hours, wednesday_hours, thursday_hours,
           friday_hours, saturday_hours, sunday_hours,
           monday_start_time, tuesday_start_time, wednesday_start_time, thursday_start_time,
-          friday_start_time, saturday_start_time, sunday_start_time
+          friday_start_time, saturday_start_time, sunday_start_time,
+          monday_end_time, tuesday_end_time, wednesday_end_time, thursday_end_time,
+          friday_end_time, saturday_end_time, sunday_end_time
         `)
         .eq('id', objectId)
         .single();
@@ -189,17 +199,6 @@ export default function OrderEmployeeAssignments({
     }
   };
 
-  const calculateEndTime = (startTime: string, hours: number): string => {
-    if (!startTime || !hours) return '';
-    
-    const [startHour, startMinute] = startTime.split(':').map(Number);
-    const totalMinutes = startHour * 60 + startMinute + (hours * 60);
-    const endHour = Math.floor(totalMinutes / 60);
-    const endMinute = totalMinutes % 60;
-    
-    return `${endHour.toString().padStart(2, '0')}:${endMinute.toString().padStart(2, '0')}`;
-  };
-
   const distributeObjectHours = (employeeIds: string[]): EmployeeAssignment[] => {
     if (!objectHours || employeeIds.length === 0) return [];
 
@@ -233,6 +232,7 @@ export default function OrderEmployeeAssignments({
       WEEKDAYS.forEach(({ key }) => {
         const objectDayHours = objectHours[`${key}_hours` as keyof ObjectWorkingHours] as number | null;
         const objectStartTime = objectHours[`${key}_start_time` as keyof ObjectWorkingHours] as string | null;
+        const objectEndTime = objectHours[`${key}_end_time` as keyof ObjectWorkingHours] as string | null;
 
         if (objectDayHours && objectDayHours > 0) {
           // If only one employee, give them all hours
@@ -241,10 +241,7 @@ export default function OrderEmployeeAssignments({
           
           (assignment as any)[`assigned_${key}_hours`] = hoursPerEmployee;
           (assignment as any)[`assigned_${key}_start_time`] = objectStartTime;
-          
-          if (objectStartTime && hoursPerEmployee) {
-            (assignment as any)[`assigned_${key}_end_time`] = calculateEndTime(objectStartTime, hoursPerEmployee);
-          }
+          (assignment as any)[`assigned_${key}_end_time`] = objectEndTime; // Copy end time directly
         }
       });
 
@@ -339,20 +336,13 @@ export default function OrderEmployeeAssignments({
     const newAssignments = [...assignments];
     const assignment = newAssignments[index];
     
-    // Validate that total hours don't exceed object hours
+    // Validate that individual assigned hours do not exceed object hours
     if (objectHours && hours) {
       const objectDayHours = objectHours[`${day}_hours` as keyof ObjectWorkingHours] as number | null;
-      if (objectDayHours) {
-        const otherAssignedHours = newAssignments.reduce((sum, a, i) => {
-          if (i === index) return sum; // Skip current assignment
-          const assignedHours = (a as any)[`assigned_${day}_hours`] as number | null;
-          return sum + (assignedHours || 0);
-        }, 0);
-
-        if (otherAssignedHours + hours > objectDayHours) {
-          toast.error(`Die Gesamtstunden für ${WEEKDAYS.find(w => w.key === day)?.label} dürfen ${objectDayHours} Stunden nicht überschreiten`);
-          return;
-        }
+      // Allow assigned hours to be less than or equal to object hours
+      if (objectDayHours !== null && hours > objectDayHours + 0.1) { // Allow slight tolerance
+        toast.error(`Die Stunden für ${WEEKDAYS.find(w => w.key === day)?.label} dürfen ${objectDayHours} Stunden nicht überschreiten`);
+        return;
       }
     }
     
@@ -533,7 +523,7 @@ export default function OrderEmployeeAssignments({
                 return (
                   <div key={key} className="flex justify-between">
                     <span>{label}:</span>
-                    <span className={totalAssigned > objectDayHours ? 'text-red-600 font-medium' : ''}>
+                    <span className={totalAssigned > objectDayHours + 0.1 ? 'text-red-600 font-medium' : ''}>
                       {totalAssigned}h / {objectDayHours}h
                     </span>
                   </div>

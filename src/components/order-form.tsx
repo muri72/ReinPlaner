@@ -84,7 +84,7 @@ const baseOrderSchema = z.object({
   recurringEndDate: z.date().optional().nullable(),
   priority: z.enum(["low", "medium", "high"]).default("low"),
   totalEstimatedHours: z.preprocess(
-    (val) => (val === "" ? null : Number(val)),
+    (val) => (val === "" || isNaN(Number(val)) ? null : Number(val)),
     z.nullable(z.number().min(0, "Stunden müssen positiv sein").max(999, "Stunden sind zu hoch")).optional()
   ),
   notes: z.string().max(500, "Notizen sind zu lang").optional().nullable(),
@@ -125,10 +125,11 @@ const createOrderSchema = (objects: any[]) => baseOrderSchema.superRefine((data,
             });
 
             // Compare the sum with the object's required hours
-            if (Math.abs(sumAssignedHoursForDay - objectDailyHours) > 0.1) {
+            // Allow assigned hours to be less than or equal to object hours
+            if (sumAssignedHoursForDay > objectDailyHours + 0.1) { // Add a small tolerance for float comparison
               ctx.addIssue({
                 code: z.ZodIssueCode.custom,
-                message: `Die Summe der zugewiesenen Stunden für ${germanDayNames[day]} in Woche ${weekIndex + 1} (${sumAssignedHoursForDay.toFixed(2)} Std.) muss den Objektstunden (${objectDailyHours.toFixed(2)} Std.) entsprechen.`,
+                message: `Die Summe der zugewiesenen Stunden für ${germanDayNames[day]} in Woche ${weekIndex + 1} (${sumAssignedHoursForDay.toFixed(2)} Std.) darf die Objektstunden (${objectDailyHours.toFixed(2)} Std.) nicht überschreiten.`,
                 // Attach the error to a general field, as it's a collective issue
                 path: [`assignedEmployees`], 
               });
@@ -356,8 +357,6 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     const newEmployeeIds = selectedIds.filter(id => !currentAssignments.some(a => a.employeeId === id));
 
     const newAssignments = newEmployeeIds.map((employeeId, index) => {
-        const isFirstEverAssignment = wasEmpty && index === 0;
-
         const newEmpData: AssignedEmployee = {
             employeeId,
             assigned_daily_schedules: [],
@@ -371,16 +370,12 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
             dayNames.forEach(day => {
                 const objectDailySchedule = (selectedObject.daily_schedules?.[i] as any)?.[day];
                 if (objectDailySchedule) {
-                    // If it's the very first employee being assigned, copy hours 1-to-1.
-                    // Otherwise, new employees get null hours.
-                    const hours = isFirstEverAssignment ? objectDailySchedule.hours : null;
-                    
+                    // For new employees, hours are initially null, allowing flexible assignment.
+                    // Start and end times are copied from the object schedule.
                     newWeekSchedule[day] = {
-                        hours: hours,
+                        hours: null, // Initially null for flexible assignment
                         start: objectDailySchedule.start,
-                        end: hours && objectDailySchedule.start 
-                            ? calculateEndTime(objectDailySchedule.start, hours) 
-                            : null,
+                        end: objectDailySchedule.end, // Copy end time directly
                     };
                 }
             });
@@ -513,10 +508,11 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
             // Only validate if there are actually assigned hours for this day
             if (sumAssignedHoursForDay > 0) {
               // Use a more lenient tolerance for floating point comparison
-              if (Math.abs(sumAssignedHoursForDay - objectDailyHours) > 0.1) {
+              // Validation: sumAssignedHoursForDay must be less than or equal to objectDailyHours
+              if (sumAssignedHoursForDay > objectDailyHours + 0.1) {
                 form.setError(`assignedEmployees`, {
                   type: "manual",
-                  message: `Die Summe der zugewiesenen Stunden für ${germanDayNames[day]} in Woche ${weekIndex + 1} (${sumAssignedHoursForDay.toFixed(2)} Std.) muss den Objektstunden (${objectDailyHours.toFixed(2)} Std.) entsprechen.`,
+                  message: `Die Summe der zugewiesenen Stunden für ${germanDayNames[day]} in Woche ${weekIndex + 1} (${sumAssignedHoursForDay.toFixed(2)} Std.) darf die Objektstunden (${objectDailyHours.toFixed(2)} Std.) nicht überschreiten.`,
                 });
                 validationError = true;
               }
@@ -567,8 +563,8 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     const objectHours = getObjectDailyHours(weekIndex, day);
     if (objectHours === null || objectHours === 0) return true;
     const sumAssigned = getSumAssignedHoursForDay(weekIndex, day);
-    if (sumAssigned === 0) return true;
-    return Math.abs(sumAssigned - objectHours) <= 0.1;
+    // Validation: sumAssigned must be less than or equal to objectHours
+    return sumAssigned <= objectHours + 0.1; // Add a small tolerance for float comparison
   };
 
   const totalHoursLabel = ['recurring', 'substitution', 'permanent'].includes(orderType)
@@ -642,7 +638,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Kundenkontakt auswählen" />
             </SelectTrigger>
-            <SelectContent>
+          <SelectContent>
               <SelectItem value="unassigned">Kein Kundenkontakt zugewiesen</SelectItem>
               {customerContacts.map(contact => (
                 <SelectItem key={contact.id} value={contact.id}>{contact.first_name} {contact.last_name}</SelectItem>
@@ -861,7 +857,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
                                     type="number"
                                     step="0.01"
                                     min="0"
-                                    max={objectDailyHours ?? undefined}
+                                    max={objectDailyHours ?? undefined} // Max is object's daily hours
                                     placeholder="Std."
                                     className={cn(
                                       "w-full text-sm",
@@ -963,7 +959,6 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
             )}
           </div>
         )}
-      </div>
       
       <div>
         <Label htmlFor="priority">Priorität</Label>

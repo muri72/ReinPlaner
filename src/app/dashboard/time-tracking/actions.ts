@@ -5,6 +5,16 @@ import { revalidatePath } from "next/cache";
 import { TimeEntryFormValues } from "@/components/time-entry-form";
 import { getWeek, getDay, parseISO, formatISO } from 'date-fns';
 
+// Helper function to calculate break minutes based on gross duration (same as in reports/actions.ts)
+function calculateBreakMinutesFallback(grossDurationMinutes: number): number {
+  if (grossDurationMinutes >= 9 * 60) { // More than 9 hours (540 minutes)
+    return 45;
+  } else if (grossDurationMinutes >= 6 * 60) { // More than 6 hours (360 minutes)
+    return 30;
+  }
+  return 0;
+}
+
 export async function createTimeEntry(data: TimeEntryFormValues): Promise<{ success: boolean; message: string; newEntryId?: string }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -64,10 +74,20 @@ export async function createTimeEntry(data: TimeEntryFormValues): Promise<{ succ
 
   // Calculate duration if start and end times are provided and durationMinutes is not
   let finalDurationMinutes = durationMinutes;
+  let finalBreakMinutes = breakMinutes;
+
   if (startDateTime && endDateTime && finalDurationMinutes === null) {
     const diffMs = endDateTime.getTime() - startDateTime.getTime();
     finalDurationMinutes = diffMs / (1000 * 60); // Convert milliseconds to minutes
+    // If breakMinutes is not explicitly set, calculate it based on the gross duration
+    if (finalBreakMinutes === null) {
+      finalBreakMinutes = calculateBreakMinutesFallback(finalDurationMinutes ?? 0); // Use ?? 0
+    }
+  } else if (finalDurationMinutes !== null && finalBreakMinutes === null) {
+    // If durationMinutes is provided but breakMinutes is not, calculate breakMinutes based on provided duration
+    finalBreakMinutes = calculateBreakMinutesFallback(finalDurationMinutes ?? 0); // Use ?? 0
   }
+
 
   const supabaseAdmin = createAdminClient();
   const { data: newEntry, error } = await supabaseAdmin
@@ -81,7 +101,7 @@ export async function createTimeEntry(data: TimeEntryFormValues): Promise<{ succ
       start_time: startDateTime.toISOString(),
       end_time: endDateTime ? endDateTime.toISOString() : null,
       duration_minutes: finalDurationMinutes,
-      break_minutes: breakMinutes,
+      break_minutes: finalBreakMinutes,
       type,
       notes,
       clock_in_latitude: clockInLatitude, // New field
@@ -150,9 +170,17 @@ export async function updateTimeEntry(entryId: string, data: Partial<TimeEntryFo
 
   // Dauer berechnen, falls Start- und Endzeiten angegeben sind und durationMinutes nicht
   let finalDurationMinutes = durationMinutes;
+  let finalBreakMinutes = breakMinutes;
   if (startDateTime && endDateTime && finalDurationMinutes === null) {
     const diffMs = endDateTime.getTime() - startDateTime.getTime();
     finalDurationMinutes = diffMs / (1000 * 60); // Millisekunden in Minuten umwandeln
+    // If breakMinutes is not explicitly set, calculate it based on the gross duration
+    if (finalBreakMinutes === null) {
+      finalBreakMinutes = calculateBreakMinutesFallback(finalDurationMinutes ?? 0); // Use ?? 0
+    }
+  } else if (finalDurationMinutes !== null && finalBreakMinutes === null) {
+    // If durationMinutes is provided but breakMinutes is not, calculate breakMinutes based on provided duration
+    finalBreakMinutes = calculateBreakMinutesFallback(finalDurationMinutes ?? 0); // Use ?? 0
   }
 
   const { error } = await supabase
@@ -165,7 +193,7 @@ export async function updateTimeEntry(entryId: string, data: Partial<TimeEntryFo
       start_time: startDateTime ? startDateTime.toISOString() : undefined,
       end_time: endDateTime ? endDateTime.toISOString() : null,
       duration_minutes: finalDurationMinutes,
-      break_minutes: breakMinutes, // Neues Feld aktualisieren
+      break_minutes: finalBreakMinutes, // Neues Feld aktualisieren
       type,
       notes,
       clock_in_latitude: clockInLatitude, // New field

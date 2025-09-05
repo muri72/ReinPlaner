@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Clock, Play, StopCircle, PauseCircle, RotateCcw, PlusCircle, CalendarDays, MapPin, AlertTriangle } from "lucide-react";
 import { createTimeEntry, updateTimeEntry } from "@/app/dashboard/time-tracking/actions";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { calculateHours } from "@/lib/utils";
+import { calculateHours, calculateEndTime } from "@/lib/utils"; // Import calculateEndTime
 import { TimeEntryCreateDialog } from "@/components/time-entry-create-dialog";
 import { TimeEntryFormValues } from "@/components/time-entry-form";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -117,6 +117,16 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
   const stopwatchIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const [displayTime, setDisplayTime] = useState('00:00:00'); // State for displayed time
 
+  // Helper function to format seconds into HH:MM:SS
+  const formatTime = (totalSeconds: number): string => {
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+
+    const pad = (num: number) => String(num).padStart(2, '0');
+    return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+  };
+
   // Haversine formula to calculate distance between two lat/lon points
   const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
     const R = 6371e3; // metres
@@ -156,16 +166,6 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
       setLocationError("Geolocation wird von Ihrem Browser nicht unterstützt.");
       setCurrentLocation(null);
     }
-  };
-
-  // Helper to format time for display
-  const formatTime = (totalSeconds: number) => {
-    const hours = Math.floor(totalSeconds / 3600);
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
-    const seconds = totalSeconds % 60;
-    return [hours, minutes, seconds]
-      .map(unit => String(unit).padStart(2, '0'))
-      .join(':');
   };
 
   // Helper function to calculate break minutes based on gross duration (same as in reports/actions.ts)
@@ -243,8 +243,8 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
             objects ( name, latitude, longitude, radius_meters, recurrence_interval_weeks, start_week_offset, monday_hours, tuesday_hours, wednesday_hours, thursday_hours, friday_hours, saturday_hours, sunday_hours, monday_start_time, tuesday_start_time, wednesday_start_time, thursday_start_time, friday_start_time, saturday_start_time, sunday_start_time, monday_end_time, tuesday_end_time, wednesday_end_time, thursday_end_time, friday_end_time, saturday_end_time, sunday_end_time ),
             order_employee_assignments!inner ( 
               employee_id, assigned_recurrence_interval_weeks, assigned_start_week_offset,
-              assigned_monday_hours, assigned_tuesday_hours, assigned_wednesday_hours, thursday_hours,
-              assigned_thursday_hours, assigned_friday_hours, assigned_saturday_hours, assigned_sunday_hours,
+              assigned_monday_hours, assigned_tuesday_hours, assigned_wednesday_hours, assigned_thursday_hours,
+              assigned_friday_hours, assigned_saturday_hours, assigned_sunday_hours,
               assigned_monday_start_time, assigned_tuesday_start_time, assigned_wednesday_start_time, assigned_thursday_start_time,
               assigned_friday_start_time, assigned_saturday_start_time, assigned_sunday_start_time,
               assigned_monday_end_time, assigned_tuesday_end_time, assigned_wednesday_end_time, assigned_thursday_end_time,
@@ -344,15 +344,26 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
           }
 
           // Prioritize assigned hours/times, then fallback to object hours/times
-          const dailyHours = (selectedOrder as any)[`assigned_${currentDayKey}_hours`] || (selectedOrder.object as any)?.[`${currentDayKey}_hours`];
-          const startTime = (selectedOrder as any)[`assigned_${currentDayKey}_start_time`] || (selectedOrder.object as any)?.[`${currentDayKey}_start_time`];
-          const endTime = (selectedOrder as any)[`assigned_${currentDayKey}_end_time`] || (selectedOrder.object as any)?.[`${currentDayKey}_end_time`];
+          const netHoursFromSchedule = (selectedOrder as any)[`assigned_${currentDayKey}_hours`] || (selectedOrder.object as any)?.[`${currentDayKey}_hours`];
+          let grossStartTimeFromSchedule = (selectedOrder as any)[`assigned_${currentDayKey}_start_time`] || (selectedOrder.object as any)?.[`${currentDayKey}_start_time`];
+          let grossEndTimeFromSchedule = (selectedOrder as any)[`assigned_${currentDayKey}_end_time`] || (selectedOrder.object as any)?.[`${currentDayKey}_end_time`];
 
-          if (dailyHours !== null && dailyHours > 0) {
-            setSuggestedDuration(Math.round(dailyHours * 60));
-            setSuggestedBreakMinutes(calculateBreakMinutesFallback(Math.round(dailyHours * 60)));
-            setSuggestedStartTime(startTime);
-            setSuggestedEndTime(endTime);
+
+          if (netHoursFromSchedule !== null && netHoursFromSchedule > 0) {
+            const netMinutes = Math.round(netHoursFromSchedule * 60);
+            const calculatedBreakMinutes = calculateBreakMinutesFallback(netMinutes); // Break based on NET hours
+            const grossMinutesToStore = netMinutes + calculatedBreakMinutes;
+
+            setSuggestedDuration(grossMinutesToStore);
+            setSuggestedBreakMinutes(calculatedBreakMinutes);
+            setSuggestedStartTime(grossStartTimeFromSchedule);
+            
+            // Calculate suggestedEndTime based on suggestedStartTime and grossMinutesToStore
+            if (grossStartTimeFromSchedule) {
+              setSuggestedEndTime(calculateEndTime(grossStartTimeFromSchedule, grossMinutesToStore / 60));
+            } else {
+              setSuggestedEndTime(null);
+            }
           }
 
           // Check location deviation
@@ -460,7 +471,7 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
         notes: `Stoppuhr gestartet um ${now.toLocaleTimeString()}`,
       });
       stopwatchElapsedTime.current = 0;
-      setDisplayTime('00:00:00');
+      setDisplayTime(formatTime(stopwatchElapsedTime.current));
       stopwatchIntervalRef.current = setInterval(() => {
         stopwatchElapsedTime.current += 1;
         setDisplayTime(formatTime(stopwatchElapsedTime.current));
@@ -585,7 +596,7 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
         durationMinutes: suggestedDuration,
         breakMinutes: suggestedBreakMinutes,
         type: 'automatic_scheduled_order' as const,
-        notes: `Automatisch erfasster geplanter Auftrag: ${suggestedDuration !== null ? (suggestedDuration / 60).toFixed(2) : 'N/A'} Stunden`,
+        notes: `Automatisch erfasster geplanter Auftrag: ${suggestedDuration !== null && suggestedBreakMinutes !== null ? ((suggestedDuration - suggestedBreakMinutes) / 60).toFixed(2) : 'N/A'} Netto-Stunden`,
       };
     } else {
       return {
@@ -686,7 +697,7 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
                 {isScheduledOrder && suggestedDuration !== null && (
                   <div className="text-sm text-muted-foreground mt-2 p-2 border rounded-md bg-primary-foreground/10 dark:bg-primary-foreground/20">
                     <p>Vorgeschlagene Dauer für diesen Auftrag heute:</p>
-                    <p className="font-semibold">{ (suggestedDuration / 60).toFixed(2)} Stunden</p>
+                    <p className="font-semibold">{ suggestedDuration !== null && suggestedBreakMinutes !== null ? ((suggestedDuration - suggestedBreakMinutes) / 60).toFixed(2) : 'N/A'} Netto-Stunden</p>
                     {suggestedBreakMinutes !== null && suggestedBreakMinutes > 0 && (
                       <p className="text-xs mt-1">
                         Inkl. {suggestedBreakMinutes} Minuten Pause.
@@ -798,7 +809,7 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
                 {isScheduledOrder && suggestedDuration !== null && (
                   <div className="text-sm text-muted-foreground mt-2 p-2 border rounded-md bg-primary-foreground/10 dark:bg-primary-foreground/20">
                     <p>Vorgeschlagene Dauer für diesen Auftrag heute:</p>
-                    <p className="font-semibold">{ (suggestedDuration / 60).toFixed(2)} Stunden</p>
+                    <p className="font-semibold">{ suggestedDuration !== null && suggestedBreakMinutes !== null ? ((suggestedDuration - suggestedBreakMinutes) / 60).toFixed(2) : 'N/A'} Netto-Stunden</p>
                     {suggestedBreakMinutes !== null && suggestedBreakMinutes > 0 && (
                       <p className="text-xs mt-1">
                         Die Stoppuhr verfolgt die tatsächliche Zeit, aber dies ist der erwartete Zeitrahmen.
