@@ -5,6 +5,136 @@ import { revalidatePath } from "next/cache";
 import { UserFormValues } from "@/components/user-form";
 import { sendNotification } from "@/lib/actions/notifications";
 
+// Define interfaces for the data to avoid using 'any'
+interface ProfileData {
+  id: string;
+  first_name: string | null;
+  last_name: string | null;
+  role: string;
+}
+
+interface EmployeeData {
+  user_id: string | null;
+  first_name: string | null;
+  last_name: string | null;
+}
+
+interface CustomerData {
+  user_id: string | null;
+  name: string | null;
+}
+
+interface CustomerContactData {
+  user_id: string | null;
+  first_name: string | null;
+  last_name: string | null;
+}
+
+interface AuthUser {
+  id: string;
+  email?: string;
+  created_at: string;
+  user_metadata: {
+    first_name?: string;
+    last_name?: string;
+  };
+}
+
+export async function getUsers(
+  filters: {
+    query?: string;
+    role?: string;
+    page?: number;
+    pageSize?: number;
+    sortColumn?: string;
+    sortDirection?: string;
+  }
+): Promise<{ success: boolean; message: string; data?: any[]; totalCount?: number }> {
+  const supabaseAdmin = createAdminClient();
+  const { page = 1, pageSize = 10, sortColumn = 'last_name', sortDirection = 'asc' } = filters;
+
+  try {
+    // 1. Fetch all necessary data in parallel
+    const [
+      { data: authUsersResult, error: authUsersError },
+      { data: profiles, error: profilesError },
+      { data: employees, error: employeesError },
+      { data: customers, error: customersError },
+      { data: customerContacts, error: customerContactsError }
+    ] = await Promise.all([
+      supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 }), // Fetch all users
+      supabaseAdmin.from('profiles').select('id, first_name, last_name, role'),
+      supabaseAdmin.from('employees').select('user_id, first_name, last_name'),
+      supabaseAdmin.from('customers').select('user_id, name'),
+      supabaseAdmin.from('customer_contacts').select('user_id, first_name, last_name')
+    ]);
+
+    if (authUsersError) throw authUsersError;
+    if (profilesError) throw profilesError;
+    if (employeesError) throw employeesError;
+    if (customersError) throw customersError;
+    if (customerContactsError) throw customerContactsError;
+
+    // 2. Create lookup maps for efficient data mapping
+    const profilesMap = new Map(profiles?.map((p: ProfileData) => [p.id, p]));
+    const employeesMap = new Map(employees?.filter(e => e.user_id).map((e: EmployeeData) => [e.user_id, `${e.first_name} ${e.last_name}`]));
+    const customersMap = new Map(customers?.filter(c => c.user_id).map((c: CustomerData) => [c.user_id, c.name]));
+    const customerContactsMap = new Map(customerContacts?.filter(cc => cc.user_id).map((cc: CustomerContactData) => [cc.user_id, `${cc.first_name} ${cc.last_name}`]));
+
+    // 3. Combine auth user data with profile and assignment data
+    let combinedUsers = (authUsersResult.users as AuthUser[]).map(authUser => {
+      const profile = profilesMap.get(authUser.id);
+      const role = profile?.role || 'employee';
+      return {
+        id: authUser.id,
+        email: authUser.email || 'N/A',
+        first_name: profile?.first_name || authUser.user_metadata.first_name || null,
+        last_name: profile?.last_name || authUser.user_metadata.last_name || null,
+        role: role,
+        created_at: authUser.created_at,
+        assigned_employee_name: employeesMap.get(authUser.id) || null,
+        assigned_customer_name: role === 'customer' ? (customersMap.get(authUser.id) || customerContactsMap.get(authUser.id)) : null,
+      };
+    });
+
+    // 4. Apply filters
+    if (filters.query) {
+      const lowerCaseQuery = filters.query.toLowerCase();
+      combinedUsers = combinedUsers.filter(u =>
+        u.email.toLowerCase().includes(lowerCaseQuery) ||
+        u.first_name?.toLowerCase().includes(lowerCaseQuery) ||
+        u.last_name?.toLowerCase().includes(lowerCaseQuery) ||
+        u.role.toLowerCase().includes(lowerCaseQuery) ||
+        u.assigned_employee_name?.toLowerCase().includes(lowerCaseQuery) ||
+        u.assigned_customer_name?.toLowerCase().includes(lowerCaseQuery)
+      );
+    }
+    if (filters.role) {
+      combinedUsers = combinedUsers.filter(u => u.role === filters.role);
+    }
+
+    // 5. Apply sorting
+    combinedUsers.sort((a, b) => {
+      const valA = (a as any)[sortColumn] || '';
+      const valB = (b as any)[sortColumn] || '';
+      if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
+      if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+    // 6. Apply pagination
+    const totalCount = combinedUsers.length;
+    const paginatedData = combinedUsers.slice((page - 1) * pageSize, page * pageSize);
+
+    return { success: true, message: "Benutzer erfolgreich geladen.", data: paginatedData, totalCount };
+
+  } catch (error: any) {
+    console.error("Fehler beim Abrufen der Benutzer:", error.message);
+    return { success: false, message: `Fehler beim Abrufen der Benutzer: ${error.message}` };
+  }
+}
+
+
 export async function registerUser(data: UserFormValues) {
   const supabase = await createClient(); // Für die Überprüfung des aktuellen Benutzers
   const { data: { user: adminUser } } = await supabase.auth.getUser();
