@@ -1,5 +1,6 @@
 "use client";
 
+import React, { useState, useEffect, useCallback } from "react"; // Explicitly import React
 import { useForm, SubmitHandler, useFieldArray, FieldPath, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -10,7 +11,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { PlusCircle, X, Clock, Copy } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { ObjectForm, ObjectFormValues } from "@/components/object-form";
@@ -572,56 +572,81 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     : "Gesamtstunden (automatisch berechnet)";
 
   return (
-    <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 w-full">
+    <div className="space-y-4 w-full"> {/* Wrapped in a single div */}
       <div>
-        <Label htmlFor="title">Titel des Auftrags</Label>
-        <Input
-          id="title"
-          {...form.register("title")}
-          placeholder="Wird automatisch generiert"
-          disabled={!initialData}
-        />
-        {form.formState.errors.title && <p className="text-red-500 text-sm mt-1">{form.formState.errors.title.message}</p>}
-      </div>
-      
-      <div>
-        <Label htmlFor="description">Beschreibung</Label>
-        <Textarea
-          id="description"
-          {...form.register("description")}
-          placeholder="Details zum Auftrag..."
-          rows={4}
-        />
-        {form.formState.errors.description && <p className="text-red-500 text-sm mt-1">{form.formState.errors.description.message}</p>}
-      </div>
-      
-      <div>
-        <Label htmlFor="serviceType">Reinigungsdienstleistung</Label>
-        <Select onValueChange={(value: string) => form.setValue("serviceType", value as OrderFormValues["serviceType"])} value={form.watch("serviceType") || ""}>
+        <Label htmlFor="objectId">Objekt</Label>
+        <Select onValueChange={(value: string) => {
+          form.setValue("objectId", value);
+          form.setValue("customerContactId", null);
+          // Clear employee assignments when object changes
+          replaceAssignedEmployees([]);
+        }} value={form.watch("objectId") || "unassigned"} disabled={!selectedCustomerId}>
           <SelectTrigger className="w-full">
-            <SelectValue placeholder="Dienstleistung auswählen" />
+            <SelectValue placeholder="Objekt auswählen" />
           </SelectTrigger>
           <SelectContent>
-            {availableServices.map(service => (
-              <SelectItem key={service} value={service}>{service}</SelectItem>
+            <SelectItem value="unassigned">Kein Objekt zugewiesen</SelectItem>
+            {filteredObjects.map(obj => (
+              <SelectItem key={obj.id} value={obj.id}>{obj.name}</SelectItem>
             ))}
           </SelectContent>
         </Select>
-        {form.formState.errors.serviceType && <p className="text-red-500 text-sm mt-1">{form.formState.errors.serviceType.message}</p>}
+        {form.formState.errors.objectId && <p className="text-red-500 text-sm mt-1">{form.formState.errors.objectId.message}</p>}
+        {!selectedCustomerId && (
+          <p className="text-muted-foreground text-sm mt-1">Bitte wählen Sie zuerst einen Kunden aus.</p>
+        )}
       </div>
-      
-      <div>
-        <Label htmlFor="customerId">Kunde</Label>
-        <Select onValueChange={(value: string) => {
-          form.setValue("customerId", value);
-          form.setValue("objectId", null);
-          form.setValue("customerContactId", null);
-          // Clear employee assignments when customer changes
-          replaceAssignedEmployees([]);
-        }} value={form.watch("customerId")}>
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Kunde auswählen" />
-          </SelectTrigger>
+
+      <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 w-full">
+        <div>
+          <Label htmlFor="title">Titel des Auftrags</Label>
+          <Input
+            id="title"
+            {...form.register("title")}
+            placeholder="Wird automatisch generiert"
+            disabled={!initialData}
+          />
+          {form.formState.errors.title && <p className="text-red-500 text-sm mt-1">{form.formState.errors.title.message}</p>}
+        </div>
+        
+        <div>
+          <Label htmlFor="description">Beschreibung</Label>
+          <Textarea
+            id="description"
+            {...form.register("description")}
+            placeholder="Details zum Auftrag..."
+            rows={4}
+          />
+          {form.formState.errors.description && <p className="text-red-500 text-sm mt-1">{form.formState.errors.description.message}</p>}
+        </div>
+        
+        <div>
+          <Label htmlFor="serviceType">Reinigungsdienstleistung</Label>
+          <Select onValueChange={(value: string) => form.setValue("serviceType", value as OrderFormValues["serviceType"])} value={form.watch("serviceType") || ""}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Dienstleistung auswählen" />
+            </SelectTrigger>
+            <SelectContent>
+              {availableServices.map(service => (
+                <SelectItem key={service} value={service}>{service}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {form.formState.errors.serviceType && <p className="text-red-500 text-sm mt-1">{form.formState.errors.serviceType.message}</p>}
+        </div>
+        
+        <div>
+          <Label htmlFor="customerId">Kunde</Label>
+          <Select onValueChange={(value: string) => {
+            form.setValue("customerId", value);
+            form.setValue("objectId", null);
+            form.setValue("customerContactId", null);
+            // Clear employee assignments when customer changes
+            replaceAssignedEmployees([]);
+          }} value={form.watch("customerId")}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Kunde auswählen" />
+            </SelectTrigger>
           <SelectContent>
             {customers.map(customer => (
               <SelectItem key={customer.id} value={customer.id}>{customer.name}</SelectItem>
@@ -1034,5 +1059,6 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
         {form.formState.isSubmitting ? `${submitButtonText}...` : submitButtonText}
       </Button>
     </form>
+  </div>
   );
 }
