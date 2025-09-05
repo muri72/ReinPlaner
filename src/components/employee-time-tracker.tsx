@@ -10,11 +10,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Clock, Play, StopCircle, PauseCircle, RotateCcw, PlusCircle, CalendarDays, MapPin, AlertTriangle } from "lucide-react";
 import { createTimeEntry, updateTimeEntry } from "@/app/dashboard/time-tracking/actions";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { calculateHours, calculateEndTime } from "@/lib/utils"; // Import calculateEndTime
+import { calculateHours, calculateEndTime, formatDuration } from "@/lib/utils";
 import { TimeEntryCreateDialog } from "@/components/time-entry-create-dialog";
 import { TimeEntryFormValues } from "@/components/time-entry-form";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getWeek } from "date-fns";
+import { cn } from "@/lib/utils";
 
 interface EmployeeTimeTrackerProps {
   userId: string;
@@ -93,6 +94,47 @@ interface OrderWithDetails {
   assigned_sunday_end_time: string | null;
 }
 
+// Helper to format seconds into HH:MM:SS for live display
+const formatLiveTime = (totalSeconds: number): string => {
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  const pad = (num: number) => String(num).padStart(2, '0');
+  return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+};
+
+// New component for displaying time progress
+const TimeProgressDisplay = ({ plannedMinutes, actualSeconds }: { plannedMinutes: number | null, actualSeconds: number }) => {
+  if (plannedMinutes === null || plannedMinutes <= 0) return null;
+
+  const plannedSeconds = plannedMinutes * 60;
+  const progressPercentage = plannedSeconds > 0 ? (actualSeconds / plannedSeconds) * 100 : 0;
+  const isOvertime = actualSeconds > plannedSeconds;
+
+  return (
+    <div className="space-y-2 pt-2 mt-2 border-t">
+      <div className="flex justify-between text-sm font-medium">
+        <span>Tatsächliche Zeit: {formatLiveTime(actualSeconds)}</span>
+        <span>Geplante Zeit: {formatDuration(plannedMinutes)}</span>
+      </div>
+      <div className="w-full bg-muted rounded-full h-4 overflow-hidden">
+        <div
+          className={cn(
+            "h-4 rounded-full transition-all duration-500",
+            isOvertime ? "bg-destructive" : "bg-success"
+          )}
+          style={{ width: `${Math.min(progressPercentage, 100)}%` }}
+        />
+      </div>
+      {isOvertime && (
+        <p className="text-xs text-destructive text-center font-semibold">
+          Überstunden: {formatLiveTime(actualSeconds - plannedSeconds)}
+        </p>
+      )}
+    </div>
+  );
+};
+
 export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
   const supabase = createClient();
   const [employeeId, setEmployeeId] = useState<string | null>(null);
@@ -112,20 +154,12 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
   const [locationError, setLocationError] = useState<string | null>(null);
   const [locationDeviation, setLocationDeviation] = useState(false);
 
+  const [elapsedTime, setElapsedTime] = useState(0);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  const stopwatchElapsedTime = useRef(0); // Use ref for elapsed time
+  const stopwatchElapsedTime = useRef(0);
   const stopwatchIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const [displayTime, setDisplayTime] = useState('00:00:00'); // State for displayed time
-
-  // Helper function to format seconds into HH:MM:SS
-  const formatTime = (totalSeconds: number): string => {
-    const hours = Math.floor(totalSeconds / 3600);
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
-    const seconds = totalSeconds % 60;
-
-    const pad = (num: number) => String(num).padStart(2, '0');
-    return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
-  };
+  const [displayTime, setDisplayTime] = useState('00:00:00');
 
   // Haversine formula to calculate distance between two lat/lon points
   const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
@@ -178,6 +212,31 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
     return 0;
   };
 
+  // Effect for the live timer of an active clock-in/out entry
+  useEffect(() => {
+    if (activeEntry && activeEntry.type === 'clock_in_out') {
+      const updateElapsedTime = () => {
+        const startTime = new Date(activeEntry.start_time).getTime();
+        const now = Date.now();
+        setElapsedTime(Math.floor((now - startTime) / 1000));
+      };
+
+      updateElapsedTime(); // Initial update
+      intervalRef.current = setInterval(updateElapsedTime, 1000);
+
+      return () => {
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current);
+        }
+      };
+    } else {
+      setElapsedTime(0);
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    }
+  }, [activeEntry]);
+
   // Fetch initial data and active entry
   useEffect(() => {
     const fetchInitialData = async () => {
@@ -228,10 +287,10 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
           if (activeEntryData.type === 'stopwatch') {
             const startTime = new Date(activeEntryData.start_time).getTime();
             stopwatchElapsedTime.current = Math.floor((Date.now() - startTime) / 1000);
-            setDisplayTime(formatTime(stopwatchElapsedTime.current));
+            setDisplayTime(formatLiveTime(stopwatchElapsedTime.current));
             stopwatchIntervalRef.current = setInterval(() => {
               stopwatchElapsedTime.current += 1;
-              setDisplayTime(formatTime(stopwatchElapsedTime.current));
+              setDisplayTime(formatLiveTime(stopwatchElapsedTime.current));
             }, 1000);
           }
         }
@@ -471,10 +530,10 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
         notes: `Stoppuhr gestartet um ${now.toLocaleTimeString()}`,
       });
       stopwatchElapsedTime.current = 0;
-      setDisplayTime(formatTime(stopwatchElapsedTime.current));
+      setDisplayTime(formatLiveTime(stopwatchElapsedTime.current));
       stopwatchIntervalRef.current = setInterval(() => {
         stopwatchElapsedTime.current += 1;
-        setDisplayTime(formatTime(stopwatchElapsedTime.current));
+        setDisplayTime(formatLiveTime(stopwatchElapsedTime.current));
       }, 1000);
     } else {
       toast.error(result.message);
@@ -641,6 +700,12 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
               <p className="text-2xl font-bold text-primary">
                 {displayTime}
               </p>
+            )}
+            {activeEntry.type === 'clock_in_out' && (
+              <TimeProgressDisplay
+                plannedMinutes={suggestedDuration !== null && suggestedBreakMinutes !== null ? suggestedDuration - suggestedBreakMinutes : null}
+                actualSeconds={elapsedTime}
+              />
             )}
           </div>
         )}
