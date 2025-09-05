@@ -71,7 +71,7 @@ const assignedEmployeeSchema = z.object({
 
 export type AssignedEmployee = z.infer<typeof assignedEmployeeSchema>;
 
-const baseOrderSchema = z.object({
+export const baseOrderSchema = z.object({
   title: z.string().min(1, "Titel ist erforderlich").max(100, "Titel ist zu lang"),
   description: z.string().max(500, "Beschreibung ist zu lang").optional().nullable(),
   dueDate: z.date().optional().nullable(),
@@ -983,6 +983,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
             )}
           </div>
         )}
+      </div>
       
       <div>
         <Label htmlFor="priority">Priorität</Label>
