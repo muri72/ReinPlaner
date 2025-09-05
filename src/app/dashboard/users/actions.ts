@@ -40,7 +40,7 @@ export async function registerUser(data: UserFormValues) {
     email: userEmail,
     password,
     email_confirm: true, // Bestätigt die E-Mail automatisch
-    user_metadata: { first_name: firstName, last_name: lastName },
+    user_metadata: { first_name: firstName, last_name: lastName, role: role },
   });
 
   if (authError) {
@@ -69,35 +69,36 @@ export async function registerUser(data: UserFormValues) {
     return { success: false, message: profileUpdateError.message };
   }
 
-  // Zuweisung des Benutzers zu einem Mitarbeiter
-  if (employeeId) {
-    // Zuerst prüfen, ob der Mitarbeiter bereits einem anderen Benutzer zugewiesen ist
-    const { data: existingEmployee, error: fetchEmployeeError } = await supabaseAdmin
-      .from('employees')
-      .select('user_id')
-      .eq('id', employeeId)
-      .single();
-
-    if (fetchEmployeeError && fetchEmployeeError.code !== 'PGRST116') { // PGRST116 = no rows found
-      console.error("Fehler beim Abrufen des Mitarbeiters für Zuweisung:", fetchEmployeeError?.message || fetchEmployeeError);
-      // Nicht abbrechen, da dies ein optionaler Schritt ist
-    } else if (existingEmployee && existingEmployee.user_id && existingEmployee.user_id !== newUserId) {
-      // Wenn der Mitarbeiter bereits einem ANDEREN Benutzer zugewiesen ist, diesen entknüpfen
-      const { error: unlinkOtherUserError } = await supabaseAdmin
+  // Explizite Logik zur Erstellung/Verknüpfung von Mitarbeiterdatensätzen
+  if (role !== 'customer') {
+    if (employeeId) {
+      // Verknüpfe den neuen Benutzer mit einem BESTEHENDEN Mitarbeiterdatensatz
+      const { error: assignEmployeeError } = await supabaseAdmin
         .from('employees')
-        .update({ user_id: null })
-        .eq('user_id', existingEmployee.user_id)
+        .update({ user_id: newUserId })
         .eq('id', employeeId);
-      if (unlinkOtherUserError) console.error("Fehler beim Entknüpfen des Mitarbeiters von anderem Benutzer:", unlinkOtherUserError?.message || unlinkOtherUserError);
-    }
-
-    const { error: assignEmployeeError } = await supabaseAdmin
-      .from('employees')
-      .update({ user_id: newUserId })
-      .eq('id', employeeId);
-    if (assignEmployeeError) {
-      console.error("Fehler beim Zuweisen des Mitarbeiters zum Benutzer:", assignEmployeeError?.message || assignEmployeeError);
-      // Nicht abbrechen, da dies ein optionaler Schritt ist
+      if (assignEmployeeError) {
+        console.error("Fehler beim Zuweisen des Mitarbeiters zum Benutzer:", assignEmployeeError.message);
+        // Rollback
+        await supabaseAdmin.auth.admin.deleteUser(newUserId);
+        return { success: false, message: `Fehler beim Zuweisen des Mitarbeiters: ${assignEmployeeError.message}` };
+      }
+    } else {
+      // Erstelle einen NEUEN Mitarbeiterdatensatz für den neuen Benutzer
+      const { error: createEmployeeError } = await supabaseAdmin
+        .from('employees')
+        .insert({
+          user_id: newUserId,
+          first_name: firstName,
+          last_name: lastName,
+          email: userEmail,
+        });
+      if (createEmployeeError) {
+        console.error("Fehler beim Erstellen des neuen Mitarbeiterdatensatzes:", createEmployeeError.message);
+        // Rollback
+        await supabaseAdmin.auth.admin.deleteUser(newUserId);
+        return { success: false, message: `Fehler beim Erstellen des Mitarbeiterdatensatzes: ${createEmployeeError.message}` };
+      }
     }
   }
 
