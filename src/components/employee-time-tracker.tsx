@@ -180,42 +180,26 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
 
   // Get current geolocation
   const getCurrentLocation = () => {
-    if (!navigator.geolocation) {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setCurrentLocation({
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+          });
+          setLocationError(null);
+        },
+        (error) => {
+          console.error("Geolocation error:", error);
+          setLocationError("Standort konnte nicht abgerufen werden. Bitte erlauben Sie den Standortzugriff.");
+          setCurrentLocation(null);
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      );
+    } else {
       setLocationError("Geolocation wird von Ihrem Browser nicht unterstützt.");
-      return;
+      setCurrentLocation(null);
     }
-    if (window.isSecureContext === false) {
-      setLocationError("Standortabfrage ist nur in einer sicheren (HTTPS) Umgebung möglich.");
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setCurrentLocation({
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-        });
-        setLocationError(null);
-      },
-      (error) => {
-        console.error("Geolocation error:", error.code, error.message);
-        let message = "Standort konnte nicht abgerufen werden.";
-        switch (error.code) {
-          case error.PERMISSION_DENIED:
-            message = "Standortzugriff verweigert. Bitte in den Browsereinstellungen erlauben.";
-            break;
-          case error.POSITION_UNAVAILABLE:
-            message = "Standortinformationen sind nicht verfügbar.";
-            break;
-          case error.TIMEOUT:
-            message = "Zeitüberschreitung bei der Standortabfrage.";
-            break;
-        }
-        setLocationError(message);
-        setCurrentLocation(null);
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-    );
   };
 
   // Helper function to calculate break minutes based on gross duration (same as in reports/actions.ts)
