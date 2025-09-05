@@ -572,7 +572,28 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     : "Gesamtstunden (automatisch berechnet)";
 
   return (
-    <div className="space-y-4 w-full"> {/* Wrapped in a single div */}
+    <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 w-full">
+      <div>
+        <Label htmlFor="customerId">Kunde</Label>
+        <Select onValueChange={(value: string) => {
+          form.setValue("customerId", value);
+          form.setValue("objectId", null);
+          form.setValue("customerContactId", null);
+          // Clear employee assignments when customer changes
+          replaceAssignedEmployees([]);
+        }} value={form.watch("customerId")}>
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="Kunde auswählen" />
+          </SelectTrigger>
+          <SelectContent>
+            {customers.map(customer => (
+              <SelectItem key={customer.id} value={customer.id}>{customer.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {form.formState.errors.customerId && <p className="text-red-500 text-sm mt-1">{form.formState.errors.customerId.message}</p>}
+      </div>
+
       <div>
         <Label htmlFor="objectId">Objekt</Label>
         <Select onValueChange={(value: string) => {
@@ -597,63 +618,41 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
         )}
       </div>
 
-      <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 w-full">
-        <div>
-          <Label htmlFor="title">Titel des Auftrags</Label>
-          <Input
-            id="title"
-            {...form.register("title")}
-            placeholder="Wird automatisch generiert"
-            disabled={!initialData}
-          />
-          {form.formState.errors.title && <p className="text-red-500 text-sm mt-1">{form.formState.errors.title.message}</p>}
-        </div>
-        
-        <div>
-          <Label htmlFor="description">Beschreibung</Label>
-          <Textarea
-            id="description"
-            {...form.register("description")}
-            placeholder="Details zum Auftrag..."
-            rows={4}
-          />
-          {form.formState.errors.description && <p className="text-red-500 text-sm mt-1">{form.formState.errors.description.message}</p>}
-        </div>
-        
-        <div>
-          <Label htmlFor="serviceType">Reinigungsdienstleistung</Label>
-          <Select onValueChange={(value: string) => form.setValue("serviceType", value as OrderFormValues["serviceType"])} value={form.watch("serviceType") || ""}>
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Dienstleistung auswählen" />
-            </SelectTrigger>
-            <SelectContent>
-              {availableServices.map(service => (
-                <SelectItem key={service} value={service}>{service}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {form.formState.errors.serviceType && <p className="text-red-500 text-sm mt-1">{form.formState.errors.serviceType.message}</p>}
-        </div>
-        
-        <div>
-          <Label htmlFor="customerId">Kunde</Label>
-          <Select onValueChange={(value: string) => {
-            form.setValue("customerId", value);
-            form.setValue("objectId", null);
-            form.setValue("customerContactId", null);
-            // Clear employee assignments when customer changes
-            replaceAssignedEmployees([]);
-          }} value={form.watch("customerId")}>
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Kunde auswählen" />
-            </SelectTrigger>
+      <div>
+        <Label htmlFor="title">Titel des Auftrags</Label>
+        <Input
+          id="title"
+          {...form.register("title")}
+          placeholder="Wird automatisch generiert"
+          disabled={!initialData}
+        />
+        {form.formState.errors.title && <p className="text-red-500 text-sm mt-1">{form.formState.errors.title.message}</p>}
+      </div>
+      
+      <div>
+        <Label htmlFor="description">Beschreibung</Label>
+        <Textarea
+          id="description"
+          {...form.register("description")}
+          placeholder="Details zum Auftrag..."
+          rows={4}
+        />
+        {form.formState.errors.description && <p className="text-red-500 text-sm mt-1">{form.formState.errors.description.message}</p>}
+      </div>
+      
+      <div>
+        <Label htmlFor="serviceType">Reinigungsdienstleistung</Label>
+        <Select onValueChange={(value: string) => form.setValue("serviceType", value as OrderFormValues["serviceType"])} value={form.watch("serviceType") || ""}>
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="Dienstleistung auswählen" />
+          </SelectTrigger>
           <SelectContent>
-            {customers.map(customer => (
-              <SelectItem key={customer.id} value={customer.id}>{customer.name}</SelectItem>
+            {availableServices.map(service => (
+              <SelectItem key={service} value={service}>{service}</SelectItem>
             ))}
           </SelectContent>
         </Select>
-        {form.formState.errors.customerId && <p className="text-red-500 text-sm mt-1">{form.formState.errors.customerId.message}</p>}
+        {form.formState.errors.serviceType && <p className="text-red-500 text-sm mt-1">{form.formState.errors.serviceType.message}</p>}
       </div>
       
       <div className="flex items-end gap-2">
@@ -1059,6 +1058,5 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
         {form.formState.isSubmitting ? `${submitButtonText}...` : submitButtonText}
       </Button>
     </form>
-  </div>
   );
 }
