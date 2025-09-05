@@ -33,7 +33,6 @@ interface DisplayObject {
   alarm_password: string | null;
   security_code_word: string | null;
   daily_schedules: any[]; // Updated to JSONB array
-  total_weekly_hours: number | null; // Neues Feld
   recurrence_interval_weeks: number;
   start_week_offset: number;
 }
@@ -151,11 +150,6 @@ export function ObjectsTableView({
               </Button>
             </TableHead>
             <TableHead className="min-w-[120px]">
-              <Button variant="ghost" onClick={() => handleSort('total_weekly_hours')} className="px-0 hover:bg-transparent">
-                Wöchentliche Std. {renderSortIcon('total_weekly_hours')}
-              </Button>
-            </TableHead>
-            <TableHead className="min-w-[120px]">
               <Button variant="ghost" onClick={() => handleSort('recurrence_interval_weeks')} className="px-0 hover:bg-transparent">
                 Wiederholung {renderSortIcon('recurrence_interval_weeks')}
               </Button>
@@ -174,7 +168,6 @@ export function ObjectsTableView({
               </TableCell>
               <TableCell className="text-sm">{object.time_of_day}</TableCell>
               <TableCell className="text-sm">{object.access_method}</TableCell>
-              <TableCell className="text-sm">{typeof object.total_weekly_hours === 'number' ? `${object.total_weekly_hours.toFixed(2)}` : 'N/A'}</TableCell>
               <TableCell className="text-sm">
                 {object.recurrence_interval_weeks > 1 ? `Alle ${object.recurrence_interval_weeks} Wo. (Offset: ${object.start_week_offset})` : 'Jede Woche'}
               </TableCell>

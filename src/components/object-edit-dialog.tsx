@@ -26,7 +26,6 @@ interface ObjectEditDialogProps {
     alarm_password: string | null;
     security_code_word: string | null;
     daily_schedules: any[]; // Updated to JSONB array
-    total_weekly_hours: number | null;
     recurrence_interval_weeks: number;
     start_week_offset: number;
   };

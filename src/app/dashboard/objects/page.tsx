@@ -42,7 +42,6 @@ interface DisplayObject {
   alarm_password: string | null;
   security_code_word: string | null;
   daily_schedules: any[]; // Updated to JSONB array
-  total_weekly_hours: number | null; // Neues Feld
   recurrence_interval_weeks: number;
   start_week_offset: number;
 }
@@ -426,11 +425,6 @@ export default function ObjectsPage({
                             })}
                           </div>
                         ))}
-                        {typeof object.total_weekly_hours === 'number' && (
-                          <div className="mt-2 text-sm font-semibold">
-                            Gesamtstunden pro Woche (Durchschnitt): {object.total_weekly_hours.toFixed(2)}
-                          </div>
-                        )}
                         <div className="mt-2 text-sm font-semibold">
                           Wiederholung: Alle {object.recurrence_interval_weeks} Wochen (Offset: {object.start_week_offset})
                         </div>
