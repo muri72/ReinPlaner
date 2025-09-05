@@ -1,4 +1,6 @@
-import { createClient } from "@/lib/supabase/server";
+"use client";
+
+import { createClient } from "@/lib/supabase/client";
 import { redirect } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { format, getWeek } from 'date-fns';
@@ -11,9 +13,11 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { CustomerOrderRequestDialog } from "@/components/customer-order-request-dialog";
-import { TicketCreateDialog } from "@/components/ticket-create-dialog"; // Import TicketCreateDialog
+import { TicketCreateDialog } from "@/components/ticket-create-dialog";
+import { useState, useEffect, useCallback } from "react";
+import { toast } from "sonner";
+import { LoadingOverlay } from "@/components/loading-overlay";
 
-// Define an interface for the raw data returned by Supabase select query for employee dashboard
 interface RawEmployeeOrderResponse {
   id: string;
   title: string;
@@ -28,7 +32,7 @@ interface RawEmployeeOrderResponse {
   notes: string | null;
   service_type: string | null;
   request_status: string;
-  objects: { name: string | null; address: string | null; notes: string | null; time_of_day: string | null; access_method: string | null; pin: string | null; is_alarm_secured: boolean | null; alarm_password: string | null; security_code_word: string | null; total_weekly_hours: number | null; recurrence_interval_weeks: number; start_week_offset: number; daily_schedules: any[]; }[] | null;
+  objects: { name: string | null; address: string | null; notes: string | null; time_of_day: string | null; access_method: string | null; pin: string | null; is_alarm_secured: boolean | null; alarm_password: string | null; security_code_word: string | null; recurrence_interval_weeks: number; start_week_offset: number; daily_schedules: any[]; }[] | null;
   customers: { name: string | null; }[] | null;
   customer_contacts: { first_name: string | null; last_name: string | null; phone: string | null; }[] | null;
   order_employee_assignments: { 
@@ -36,218 +40,185 @@ interface RawEmployeeOrderResponse {
     assigned_daily_schedules: any[];
     assigned_recurrence_interval_weeks: number;
     assigned_start_week_offset: number;
-    employees: { first_name: string | null; last_name: string | null }[] | null; // Correctly typed as array
+    employees: { first_name: string | null; last_name: string | null }[] | null;
   }[] | null;
 }
 
-export default async function CustomerDashboardPage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+export default function CustomerDashboardPage() {
+  const supabase = createClient();
+  const [user, setUser] = useState<any>(null);
+  const [customerName, setCustomerName] = useState('');
+  const [customerData, setCustomerData] = useState<any>(null);
+  const [nextOrder, setNextOrder] = useState<RawEmployeeOrderResponse | null>(null);
+  const [todayOrderStatus, setTodayOrderStatus] = useState("Kein Auftrag geplant.");
+  const [loading, setLoading] = useState(true);
 
-  if (!user) {
-    redirect("/login");
-  }
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      redirect("/login");
+      return;
+    }
+    setUser(user);
 
-  const { data: profile, error: profileError } = await supabase
-    .from('profiles')
-    .select('first_name, last_name, role')
-    .eq('id', user.id)
-    .single();
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('first_name, last_name, role')
+      .eq('id', user.id)
+      .single();
 
-  if (profileError) {
-    console.error("Fehler beim Abrufen des Benutzerprofils:", profileError?.message || JSON.stringify(profileError));
-  }
+    if (profileError) console.error("Fehler beim Abrufen des Benutzerprofils:", profileError?.message || JSON.stringify(profileError));
+    if (profile?.role !== 'customer') redirect("/dashboard");
 
-  if (profile?.role !== 'customer') {
-    redirect("/dashboard");
-  }
+    setCustomerName(profile?.first_name || user.email || '');
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-  const customerName = profile?.first_name || user.email;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const tomorrow = new Date(today);
-  tomorrow.setDate(tomorrow.getDate() + 1);
+    const { data: customerData, error: customerError } = await supabase
+      .from('customers')
+      .select('id, name, contact_email, contact_phone, customer_type, contractual_services')
+      .eq('user_id', user.id)
+      .single();
 
-  const { data: customerData, error: customerError } = await supabase
-    .from('customers')
-    .select('id, name, contact_email, contact_phone, customer_type, contractual_services')
-    .eq('user_id', user.id)
-    .single();
+    if (customerError && customerError.code !== 'PGRST116') console.error("Fehler beim Laden der Kundendaten:", customerError?.message || JSON.stringify(customerError));
+    setCustomerData(customerData);
+    const customerId = customerData?.id || null;
 
-  if (customerError && customerError.code !== 'PGRST116') {
-    console.error("Fehler beim Laden der Kundendaten:", customerError?.message || JSON.stringify(customerError));
-  }
+    if (customerId) {
+      const { data: upcomingOrders, error: upcomingOrdersError } = await supabase
+        .from('orders')
+        .select(`
+          id, title, due_date, recurring_start_date, recurring_end_date, status, order_type,
+          objects ( name, recurrence_interval_weeks, start_week_offset, daily_schedules ),
+          order_employee_assignments ( employee_id, assigned_daily_schedules, assigned_recurrence_interval_weeks, assigned_start_week_offset, employees ( first_name, last_name ) )
+        `)
+        .eq('customer_id', customerId)
+        .eq('request_status', 'approved')
+        .order('due_date', { ascending: true })
+        .order('recurring_start_date', { ascending: true })
+        .limit(5);
 
-  const customerId = customerData?.id || null;
+      if (upcomingOrdersError) {
+        console.error("Fehler beim Laden der kommenden Aufträge:", upcomingOrdersError?.message || JSON.stringify(upcomingOrdersError));
+      } else {
+        const now = new Date();
+        now.setHours(0, 0, 0, 0);
+        const currentWeekNumber = getWeek(now, { weekStartsOn: 1 });
 
-  let nextOrder = null;
-  let todayOrderStatus = "Kein Auftrag geplant.";
+        const relevantOrders = upcomingOrders?.filter(order => {
+          const assignedRecurrenceIntervalWeeks = order.order_employee_assignments?.[0]?.assigned_recurrence_interval_weeks || order.objects?.[0]?.recurrence_interval_weeks || 1;
+          const assignedStartWeekOffset = order.order_employee_assignments?.[0]?.assigned_start_week_offset || order.objects?.[0]?.start_week_offset || 0;
 
-  if (customerId) {
-    const { data: upcomingOrders, error: upcomingOrdersError } = await supabase
-      .from('orders')
-      .select(`
-        id,
-        title,
-        due_date,
-        recurring_start_date,
-        recurring_end_date,
-        status,
-        order_type,
-        objects ( name, recurrence_interval_weeks, start_week_offset, daily_schedules ),
-        order_employee_assignments ( 
-          employee_id, 
-          assigned_daily_schedules,
-          assigned_recurrence_interval_weeks, assigned_start_week_offset,
-          employees ( first_name, last_name ) 
-        )
-      `)
-      .eq('customer_id', customerId)
-      .eq('request_status', 'approved')
-      .order('due_date', { ascending: true })
-      .order('recurring_start_date', { ascending: true })
-      .limit(5);
-
-    if (upcomingOrdersError) {
-      console.error("Fehler beim Laden der kommenden Aufträge:", upcomingOrdersError?.message || JSON.stringify(upcomingOrdersError));
-    } else {
-      const now = new Date();
-      now.setHours(0, 0, 0, 0);
-      const currentWeekNumber = getWeek(now, { weekStartsOn: 1 });
-      const dayOfWeek = now.getDay(); // 0=So, 1=Mo, ..., 6=Sa
-      const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-      const currentDayKey = dayNames[dayOfWeek];
-
-      const relevantOrders = upcomingOrders?.filter(order => {
-        // Check recurrence interval for recurring/permanent/substitution orders
-        const assignedRecurrenceIntervalWeeks = order.order_employee_assignments?.[0]?.assigned_recurrence_interval_weeks || order.objects?.[0]?.recurrence_interval_weeks || 1;
-        const assignedStartWeekOffset = order.order_employee_assignments?.[0]?.assigned_start_week_offset || order.objects?.[0]?.start_week_offset || 0;
-
-        if (assignedRecurrenceIntervalWeeks > 1) {
-          const orderStartDate = order.recurring_start_date ? new Date(order.recurring_start_date) : (order.due_date ? new Date(order.due_date) : now);
-          const startWeekNumber = getWeek(orderStartDate, { weekStartsOn: 1 });
-          let weekDifference = currentWeekNumber - startWeekNumber;
-          if (weekDifference < 0) { weekDifference += 52; } // Handle year boundary
-          const effectiveWeekIndex = (weekDifference - assignedStartWeekOffset) % assignedRecurrenceIntervalWeeks;
-
-          if (weekDifference % assignedRecurrenceIntervalWeeks !== assignedStartWeekOffset) {
-            return false; // Not the correct recurrence week
+          if (assignedRecurrenceIntervalWeeks > 1) {
+            const orderStartDate = order.recurring_start_date ? new Date(order.recurring_start_date) : (order.due_date ? new Date(order.due_date) : now);
+            const startWeekNumber = getWeek(orderStartDate, { weekStartsOn: 1 });
+            let weekDifference = currentWeekNumber - startWeekNumber;
+            if (weekDifference < 0) { weekDifference += 52; }
+            if (weekDifference % assignedRecurrenceIntervalWeeks !== assignedStartWeekOffset) return false;
           }
-        }
 
-        if (order.order_type === 'one_time' && order.due_date) {
-          const dueDate = new Date(order.due_date);
-          dueDate.setHours(0, 0, 0, 0);
-          return dueDate >= now;
-        }
-        if (['recurring', 'permanent', 'substitution'].includes(order.order_type) && order.recurring_start_date) {
-          const startDate = new Date(order.recurring_start_date);
-          startDate.setHours(0, 0, 0, 0);
-          const endDate = order.recurring_end_date ? new Date(order.recurring_end_date) : null;
-          if (endDate) endDate.setHours(0, 0, 0, 0);
-
-          return (startDate <= now && (!endDate || endDate >= now)) || startDate > now;
-        }
-        return false;
-      });
-
-      relevantOrders?.sort((a, b) => {
-        const dateA = a.due_date ? new Date(a.due_date) : (a.recurring_start_date ? new Date(a.recurring_start_date) : new Date(0));
-        const dateB = b.due_date ? new Date(b.due_date) : (b.recurring_start_date ? new Date(b.recurring_start_date) : new Date(0));
-        return dateA.getTime() - dateB.getTime();
-      });
-
-      nextOrder = relevantOrders?.[0] || null;
-
-      const todaysOrders = upcomingOrders?.filter(order => {
-        // Check recurrence interval for recurring/permanent/substitution orders
-        const assignedRecurrenceIntervalWeeks = order.order_employee_assignments?.[0]?.assigned_recurrence_interval_weeks || order.objects?.[0]?.recurrence_interval_weeks || 1;
-        const assignedStartWeekOffset = order.order_employee_assignments?.[0]?.assigned_start_week_offset || order.objects?.[0]?.start_week_offset || 0;
-
-        if (assignedRecurrenceIntervalWeeks > 1) {
-          const orderStartDate = order.recurring_start_date ? new Date(order.recurring_start_date) : (order.due_date ? new Date(order.due_date) : now);
-          const startWeekNumber = getWeek(orderStartDate, { weekStartsOn: 1 });
-          let weekDifference = currentWeekNumber - startWeekNumber;
-          if (weekDifference < 0) { weekDifference += 52; } // Handle year boundary
-          const effectiveWeekIndex = (weekDifference - assignedStartWeekOffset) % assignedRecurrenceIntervalWeeks;
-
-          if (weekDifference % assignedRecurrenceIntervalWeeks !== assignedStartWeekOffset) {
-            return false; // Not the correct recurrence week
+          if (order.order_type === 'one_time' && order.due_date) {
+            const dueDate = new Date(order.due_date);
+            dueDate.setHours(0, 0, 0, 0);
+            return dueDate >= now;
           }
-        }
+          if (['recurring', 'permanent', 'substitution'].includes(order.order_type) && order.recurring_start_date) {
+            const startDate = new Date(order.recurring_start_date);
+            startDate.setHours(0, 0, 0, 0);
+            const endDate = order.recurring_end_date ? new Date(order.recurring_end_date) : null;
+            if (endDate) endDate.setHours(0, 0, 0, 0);
+            return (startDate <= now && (!endDate || endDate >= now)) || startDate > now;
+          }
+          return false;
+        });
 
-        if (order.order_type === 'one_time' && order.due_date) {
-          const dueDate = new Date(order.due_date);
-          dueDate.setHours(0, 0, 0, 0);
-          return dueDate.getTime() === today.getTime();
-        }
-        if (['recurring', 'permanent', 'substitution'].includes(order.order_type) && order.recurring_start_date) {
-          const startDate = new Date(order.recurring_start_date);
-          startDate.setHours(0, 0, 0, 0);
-          const endDate = order.recurring_end_date ? new Date(order.recurring_end_date) : null;
-          if (endDate) endDate.setHours(0, 0, 0, 0);
-          return startDate <= today && (!endDate || endDate >= today);
-        }
-        return false;
-      });
+        relevantOrders?.sort((a, b) => {
+          const dateA = a.due_date ? new Date(a.due_date) : (a.recurring_start_date ? new Date(a.recurring_start_date) : new Date(0));
+          const dateB = b.due_date ? new Date(b.due_date) : (b.recurring_start_date ? new Date(b.recurring_start_date) : new Date(0));
+          return dateA.getTime() - dateB.getTime();
+        });
 
-      if (todaysOrders && todaysOrders.length > 0) {
-        const allCompleted = todaysOrders.every(order => order.status === 'completed');
-        const anyInProgress = todaysOrders.some(order => order.status === 'in_progress');
-        if (allCompleted) {
-          todayOrderStatus = "Ihr Auftrag heute ist abgeschlossen. Vielen Dank!";
-        } else if (anyInProgress) {
-          todayOrderStatus = "Ihr Auftrag heute ist in Bearbeitung.";
-        } else {
-          todayOrderStatus = "Ihr Auftrag heute ist geplant.";
+        setNextOrder((relevantOrders?.[0] as RawEmployeeOrderResponse) || null);
+
+        const todaysOrders = upcomingOrders?.filter(order => {
+          const assignedRecurrenceIntervalWeeks = order.order_employee_assignments?.[0]?.assigned_recurrence_interval_weeks || order.objects?.[0]?.recurrence_interval_weeks || 1;
+          const assignedStartWeekOffset = order.order_employee_assignments?.[0]?.assigned_start_week_offset || order.objects?.[0]?.start_week_offset || 0;
+
+          if (assignedRecurrenceIntervalWeeks > 1) {
+            const orderStartDate = order.recurring_start_date ? new Date(order.recurring_start_date) : (order.due_date ? new Date(order.due_date) : now);
+            const startWeekNumber = getWeek(orderStartDate, { weekStartsOn: 1 });
+            let weekDifference = currentWeekNumber - startWeekNumber;
+            if (weekDifference < 0) { weekDifference += 52; }
+            if (weekDifference % assignedRecurrenceIntervalWeeks !== assignedStartWeekOffset) return false;
+          }
+
+          if (order.order_type === 'one_time' && order.due_date) {
+            const dueDate = new Date(order.due_date);
+            dueDate.setHours(0, 0, 0, 0);
+            return dueDate.getTime() === today.getTime();
+          }
+          if (['recurring', 'permanent', 'substitution'].includes(order.order_type) && order.recurring_start_date) {
+            const startDate = new Date(order.recurring_start_date);
+            startDate.setHours(0, 0, 0, 0);
+            const endDate = order.recurring_end_date ? new Date(order.recurring_end_date) : null;
+            if (endDate) endDate.setHours(0, 0, 0, 0);
+            return startDate <= today && (!endDate || endDate >= today);
+          }
+          return false;
+        });
+
+        if (todaysOrders && todaysOrders.length > 0) {
+          const allCompleted = todaysOrders.every(order => order.status === 'completed');
+          const anyInProgress = todaysOrders.some(order => order.status === 'in_progress');
+          if (allCompleted) setTodayOrderStatus("Ihr Auftrag heute ist abgeschlossen. Vielen Dank!");
+          else if (anyInProgress) setTodayOrderStatus("Ihr Auftrag heute ist in Bearbeitung.");
+          else setTodayOrderStatus("Ihr Auftrag heute ist geplant.");
         }
       }
     }
-  }
+    setLoading(false);
+  }, [supabase]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
       case 'completed': return 'default';
       case 'in_progress': return 'secondary';
-      case 'pending':
-      default: return 'outline';
+      case 'pending': default: return 'outline';
     }
   };
 
-  const getAssignedTimeForToday = (order: typeof nextOrder) => {
+  const getAssignedTimeForToday = (order: RawEmployeeOrderResponse | null) => {
     if (!order || !order.order_employee_assignments || order.order_employee_assignments.length === 0) return 'N/A';
-
-    const todayDayOfWeek = today.getDay(); // 0=So, 1=Mo, ..., 6=Sa
+    const today = new Date();
+    const todayDayOfWeek = today.getDay();
     const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
     const currentDayKey = dayNames[todayDayOfWeek];
-
-    const assignedData = order.order_employee_assignments[0]; // Assuming one assignment for simplicity
-
+    const assignedData = order.order_employee_assignments[0];
     const employeeRecurrenceInterval = assignedData.assigned_recurrence_interval_weeks || order.objects?.[0]?.recurrence_interval_weeks || 1;
     const employeeStartWeekOffset = assignedData.assigned_start_week_offset || order.objects?.[0]?.start_week_offset || 0;
-
     const orderStartDateForWeekCalc = order.recurring_start_date ? new Date(order.recurring_start_date) : (order.due_date ? new Date(order.due_date) : today);
     const startWeekNumber = getWeek(orderStartDateForWeekCalc, { weekStartsOn: 1 });
     const currentWeekNumber = getWeek(today, { weekStartsOn: 1 });
     let weekDifference = currentWeekNumber - startWeekNumber;
-    if (weekDifference < 0) { weekDifference += 52; } // Handle year boundary
+    if (weekDifference < 0) { weekDifference += 52; }
     const effectiveWeekIndex = (weekDifference - employeeStartWeekOffset) % employeeRecurrenceInterval;
-
-    if (employeeRecurrenceInterval > 1 && (weekDifference % employeeRecurrenceInterval !== employeeStartWeekOffset)) {
-      return 'N/A (Nicht diese Woche)';
-    }
-
+    if (employeeRecurrenceInterval > 1 && (weekDifference % employeeRecurrenceInterval !== employeeStartWeekOffset)) return 'N/A (Nicht diese Woche)';
     const weekSchedule = assignedData.assigned_daily_schedules?.[effectiveWeekIndex];
     const daySchedule = (weekSchedule as any)?.[currentDayKey];
-
     const startTime = daySchedule?.start;
     const endTime = daySchedule?.end;
-
-    if (startTime && endTime) {
-      return `${startTime} - ${endTime}`;
-    }
+    if (startTime && endTime) return `${startTime} - ${endTime}`;
     return 'N/A';
   };
+
+  if (loading || !user) {
+    return <LoadingOverlay isLoading={true} />;
+  }
 
   return (
     <div className="p-4 md:p-8 space-y-8">
@@ -255,8 +226,6 @@ export default async function CustomerDashboardPage() {
       <p className="text-sm md:text-base text-muted-foreground">
         {todayOrderStatus}
       </p>
-
-      {/* Willkommensbereich & Nächster Termin */}
       <Card className="shadow-neumorphic glassmorphism-card">
         <CardHeader>
           <CardTitle className="text-lg font-semibold">Ihr nächster Termin</CardTitle>
@@ -299,13 +268,11 @@ export default async function CustomerDashboardPage() {
           ) : (
             <div className="text-center text-muted-foreground py-4">
               <p>Keine zukünftigen Termine gefunden.</p>
-              <CustomerOrderRequestDialog customerId={customerId} />
+              <CustomerOrderRequestDialog customerId={customerData?.id} />
             </div>
           )}
         </CardContent>
       </Card>
-
-      {/* Ticket erstellen */}
       <Card className="shadow-neumorphic glassmorphism-card">
         <CardHeader>
           <CardTitle className="text-lg font-semibold flex items-center">
@@ -314,12 +281,12 @@ export default async function CustomerDashboardPage() {
           <CardDescription>Melden Sie ein Problem oder stellen Sie eine Anfrage.</CardDescription>
         </CardHeader>
         <CardContent>
-          {customerId ? (
+          {customerData?.id ? (
             <TicketCreateDialog
-              onTicketCreated={() => { /* Optional: Refresh relevant data */ }}
+              onTicketCreated={fetchData}
               triggerButtonText="Ticket erstellen"
               triggerButtonClassName="w-full"
-              initialData={{ customerId: customerId }}
+              initialData={{ customerId: customerData.id }}
             />
           ) : (
             <p className="text-muted-foreground text-sm text-center">
@@ -328,8 +295,6 @@ export default async function CustomerDashboardPage() {
           )}
         </CardContent>
       </Card>
-
-      {/* Rechnungen & Zahlungen (Platzhalter) */}
       <Card className="shadow-neumorphic glassmorphism-card">
         <CardHeader>
           <CardTitle className="text-lg font-semibold">Rechnungen & Zahlungen</CardTitle>
@@ -341,8 +306,6 @@ export default async function CustomerDashboardPage() {
           <p className="text-sm">Diese Funktion wird in Kürze verfügbar sein.</p>
         </CardContent>
       </Card>
-
-      {/* Feedback & Support */}
       <Card className="shadow-neumorphic glassmorphism-card">
         <CardHeader>
           <CardTitle className="text-lg font-semibold">Feedback & Support</CardTitle>
@@ -356,8 +319,6 @@ export default async function CustomerDashboardPage() {
           </Button>
         </CardContent>
       </Card>
-
-      {/* Kundenspezifische Infos */}
       <Card className="shadow-neumorphic glassmorphism-card">
         <CardHeader>
           <CardTitle className="text-lg font-semibold">Ihre Vertragsdetails</CardTitle>

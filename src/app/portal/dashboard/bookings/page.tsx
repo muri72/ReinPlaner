@@ -1,4 +1,6 @@
-import { createClient } from "@/lib/supabase/server";
+"use client";
+
+import { createClient } from "@/lib/supabase/client";
 import { redirect } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -7,12 +9,13 @@ import { de } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";
 import { Briefcase, CalendarDays, Building, Wrench, FileText, Clock, MessageSquare } from "lucide-react";
 import { CustomerOrderRequestDialog } from "@/components/customer-order-request-dialog";
-import { OrderFeedbackDialog } from "@/components/order-feedback-dialog"; // For giving feedback on completed orders
-import { Button } from "@/components/ui/button"; // Import Button
+import { OrderFeedbackDialog } from "@/components/order-feedback-dialog";
+import { Button } from "@/components/ui/button";
 import { AssignedEmployee } from "@/components/order-form";
-import { TicketCreateDialog } from "@/components/ticket-create-dialog"; // Import TicketCreateDialog
-import { sendNotification } from "@/lib/actions/notifications"; // Added missing import
-import { v4 as uuidv4 } from 'uuid'; // Added missing import
+import { TicketCreateDialog } from "@/components/ticket-create-dialog";
+import { useState, useEffect, useCallback } from "react";
+import { toast } from "sonner";
+import { LoadingOverlay } from "@/components/loading-overlay";
 
 interface DisplayOrder {
   id: string;
@@ -22,9 +25,9 @@ interface DisplayOrder {
   due_date: string | null;
   customer_id: string | null;
   object_id: string | null;
-  employee_ids: string[] | null; // Updated to array of IDs
-  employee_first_names: string[] | null; // Updated to array of first names
-  employee_last_names: string[] | null; // Updated to array of last names
+  employee_ids: string[] | null;
+  employee_first_names: string[] | null;
+  employee_last_names: string[] | null;
   assignedEmployees: AssignedEmployee[];
   customer_contact_id: string | null;
   customer_name: string | null;
@@ -35,24 +38,23 @@ interface DisplayOrder {
   recurring_start_date: string | null;
   recurring_end_date: string | null;
   priority: string;
-  total_estimated_hours: number | null; // Corrected column name
+  total_estimated_hours: number | null;
   notes: string | null;
   request_status: string;
   service_type: string | null;
-  order_feedback: { id: string }[]; // To check if feedback exists
+  order_feedback: { id: string }[];
   object: { recurrence_interval_weeks: number; start_week_offset: number; daily_schedules: any[]; } | null;
 }
 
-// Define an interface for the raw data returned by Supabase select query
 interface RawOrderResponse {
   id: string;
   title: string;
   description: string | null;
   status: string;
   due_date: string | null;
-  customer_id: string | null; // Direct column
-  object_id: string | null; // Direct column
-  customer_contact_id: string | null; // Direct column
+  customer_id: string | null;
+  object_id: string | null;
+  customer_contact_id: string | null;
   order_type: string;
   recurring_start_date: string | null;
   recurring_end_date: string | null;
@@ -63,7 +65,7 @@ interface RawOrderResponse {
   service_type: string | null;
   customers: { name: string }[] | null;
   objects: { name: string; recurrence_interval_weeks: number; start_week_offset: number; daily_schedules: any[]; }[] | null;
-  customer_contacts: { first_name: string | null; last_name: string | null }[] | null; // Corrected type
+  customer_contacts: { first_name: string | null; last_name: string | null }[] | null;
   order_feedback: { id: string }[] | null;
   order_employee_assignments: { 
     employee_id: string; 
@@ -85,120 +87,93 @@ const germanDayNames: { [key: string]: string } = {
   sunday: 'So',
 };
 
-export default async function CustomerBookingsPage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+export default function CustomerBookingsPage() {
+  const supabase = createClient();
+  const [user, setUser] = useState<any>(null);
+  const [customerId, setCustomerId] = useState<string | null>(null);
+  const [allCustomerOrders, setAllCustomerOrders] = useState<DisplayOrder[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  if (!user) {
-    redirect("/login");
-  }
-
-  const { data: profile, error: profileError } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single();
-
-  if (profileError) {
-    console.error("Fehler beim Abrufen des Benutzerprofils:", profileError?.message || JSON.stringify(profileError));
-  }
-
-  if (profile?.role !== 'customer') {
-    redirect("/dashboard");
-  }
-
-  const customerIdResult = await supabase
-    .from('customers')
-    .select('id')
-    .eq('user_id', user.id)
-    .single();
-
-  const customerId = customerIdResult.data?.id || null;
-
-  let allCustomerOrders: DisplayOrder[] = [];
-  if (customerId) {
-    const { data, error } = await supabase
-      .from('orders')
-      .select(`
-        id,
-        title,
-        description,
-        status,
-        due_date,
-        customer_id,
-        object_id,
-        customer_contact_id,
-        order_type,
-        recurring_start_date,
-        recurring_end_date,
-        priority,
-        total_estimated_hours,
-        notes,
-        request_status,
-        service_type,
-        objects ( name, recurrence_interval_weeks, start_week_offset, daily_schedules ),
-        customers ( name ),
-        customer_contacts ( first_name, last_name ),
-        order_feedback ( id ),
-        order_employee_assignments ( 
-          employee_id, 
-          assigned_daily_schedules,
-          assigned_recurrence_interval_weeks, assigned_start_week_offset,
-          employees ( first_name, last_name ) 
-        )
-      `)
-      .eq('customer_id', customerId)
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      console.error("Fehler beim Laden der Kundenaufträge:", error?.message || JSON.stringify(error));
-    } else {
-      allCustomerOrders = data.map((order: RawOrderResponse) => {
-        const mappedAssignments: AssignedEmployee[] = order.order_employee_assignments?.map((a: any) => ({
-            employeeId: a.employee_id,
-            assigned_daily_schedules: a.assigned_daily_schedules,
-            assigned_recurrence_interval_weeks: a.assigned_recurrence_interval_weeks,
-            assigned_start_week_offset: a.assigned_start_week_offset,
-        })) || [];
-
-        return {
-          id: order.id,
-          title: order.title,
-          description: order.description,
-          status: order.status,
-          due_date: order.due_date,
-          customer_id: order.customer_id,
-          object_id: order.object_id,
-          employee_ids: order.order_employee_assignments?.map((a: any) => a.employee_id) || null,
-          employee_first_names: order.order_employee_assignments?.map((a: any) => a.employees?.[0]?.first_name || '') || null,
-          employee_last_names: order.order_employee_assignments?.map((a: any) => a.employees?.[0]?.last_name || '') || null,
-          assignedEmployees: mappedAssignments,
-          customer_contact_id: order.customer_contact_id,
-          customer_name: order.customers?.[0]?.name || null,
-          object_name: order.objects?.[0]?.name || null,
-          customer_contact_first_name: order.customer_contacts?.[0]?.first_name || null, // Corrected access
-          customer_contact_last_name: order.customer_contacts?.[0]?.last_name || null, // Corrected access
-          order_type: order.order_type,
-          recurring_start_date: order.recurring_start_date,
-          recurring_end_date: order.recurring_end_date,
-          priority: order.priority,
-          total_estimated_hours: order.total_estimated_hours,
-          notes: order.notes,
-          request_status: order.request_status,
-          service_type: order.service_type,
-          order_feedback: order.order_feedback || [], // Ensure it's an array
-          object: order.objects?.[0] || null,
-        };
-      });
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      redirect("/login");
+      return;
     }
-  }
+    setUser(user);
+
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+
+    if (profileError) console.error("Fehler beim Abrufen des Benutzerprofils:", profileError?.message || JSON.stringify(profileError));
+    if (profile?.role !== 'customer') redirect("/dashboard");
+
+    const customerIdResult = await supabase
+      .from('customers')
+      .select('id')
+      .eq('user_id', user.id)
+      .single();
+    
+    const custId = customerIdResult.data?.id || null;
+    setCustomerId(custId);
+
+    if (custId) {
+      const { data, error } = await supabase
+        .from('orders')
+        .select(`
+          id, title, description, status, due_date, customer_id, object_id, customer_contact_id, order_type, recurring_start_date, recurring_end_date, priority, total_estimated_hours, notes, request_status, service_type,
+          objects ( name, recurrence_interval_weeks, start_week_offset, daily_schedules ),
+          customers ( name ),
+          customer_contacts ( first_name, last_name ),
+          order_feedback ( id ),
+          order_employee_assignments ( employee_id, assigned_daily_schedules, assigned_recurrence_interval_weeks, assigned_start_week_offset, employees ( first_name, last_name ) )
+        `)
+        .eq('customer_id', custId)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error("Fehler beim Laden der Kundenaufträge:", error?.message || JSON.stringify(error));
+        toast.error("Fehler beim Laden Ihrer Buchungen.");
+      } else {
+        const mappedOrders = data.map((order: RawOrderResponse) => {
+          const mappedAssignments: AssignedEmployee[] = order.order_employee_assignments?.map((a: any) => ({
+              employeeId: a.employee_id,
+              assigned_daily_schedules: a.assigned_daily_schedules,
+              assigned_recurrence_interval_weeks: a.assigned_recurrence_interval_weeks,
+              assigned_start_week_offset: a.assigned_start_week_offset,
+          })) || [];
+
+          return {
+            id: order.id, title: order.title, description: order.description, status: order.status, due_date: order.due_date, customer_id: order.customer_id, object_id: order.object_id,
+            employee_ids: order.order_employee_assignments?.map((a: any) => a.employee_id) || null,
+            employee_first_names: order.order_employee_assignments?.map((a: any) => a.employees?.[0]?.first_name || '') || null,
+            employee_last_names: order.order_employee_assignments?.map((a: any) => a.employees?.[0]?.last_name || '') || null,
+            assignedEmployees: mappedAssignments, customer_contact_id: order.customer_contact_id, customer_name: order.customers?.[0]?.name || null, object_name: order.objects?.[0]?.name || null,
+            customer_contact_first_name: order.customer_contacts?.[0]?.first_name || null, customer_contact_last_name: order.customer_contacts?.[0]?.last_name || null,
+            order_type: order.order_type, recurring_start_date: order.recurring_start_date, recurring_end_date: order.recurring_end_date, priority: order.priority,
+            total_estimated_hours: order.total_estimated_hours, notes: order.notes, request_status: order.request_status, service_type: order.service_type,
+            order_feedback: order.order_feedback || [], object: order.objects?.[0] || null,
+          };
+        });
+        setAllCustomerOrders(mappedOrders);
+      }
+    }
+    setLoading(false);
+  }, [supabase]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
       case 'completed': return 'default';
       case 'in_progress': return 'secondary';
-      case 'pending':
-      default: return 'outline';
+      case 'pending': default: return 'outline';
     }
   };
 
@@ -214,34 +189,28 @@ export default async function CustomerBookingsPage() {
   const getAssignedTimeForDay = (order: DisplayOrder, dayIndex: number) => {
     const today = new Date();
     const currentWeekNumber = getWeek(today, { weekStartsOn: 1 });
-
     const assignedRecurrenceIntervalWeeks = order.assignedEmployees?.[0]?.assigned_recurrence_interval_weeks || order.object?.recurrence_interval_weeks || 1;
     const assignedStartWeekOffset = order.assignedEmployees?.[0]?.assigned_start_week_offset || order.object?.start_week_offset || 0;
-
     if (assignedRecurrenceIntervalWeeks > 1) {
       const orderStartDate = order.recurring_start_date ? new Date(order.recurring_start_date) : (order.due_date ? new Date(order.due_date) : today);
       const startWeekNumber = getWeek(orderStartDate, { weekStartsOn: 1 });
       let weekDifference = currentWeekNumber - startWeekNumber;
-      if (weekDifference < 0) { weekDifference += 52; } // Handle year boundary
+      if (weekDifference < 0) { weekDifference += 52; }
       const effectiveWeekIndex = (weekDifference - assignedStartWeekOffset) % assignedRecurrenceIntervalWeeks;
-
-      if (weekDifference % assignedRecurrenceIntervalWeeks !== assignedStartWeekOffset) {
-        return 'N/A (Nicht diese Woche)';
-      }
+      if (weekDifference % assignedRecurrenceIntervalWeeks !== assignedStartWeekOffset) return 'N/A (Nicht diese Woche)';
     }
-
     const currentDayKey = dayNames[dayIndex];
-    const weekSchedule = order.assignedEmployees?.[0]?.assigned_daily_schedules?.[0]; // Assuming first week for display
+    const weekSchedule = order.assignedEmployees?.[0]?.assigned_daily_schedules?.[0];
     const daySchedule = (weekSchedule as any)?.[currentDayKey];
-
     const startTime = daySchedule?.start;
     const endTime = daySchedule?.end;
-
-    if (startTime && endTime) {
-      return `${startTime} - ${endTime}`;
-    }
+    if (startTime && endTime) return `${startTime} - ${endTime}`;
     return 'N/A';
   };
+
+  if (loading || !user) {
+    return <LoadingOverlay isLoading={true} />;
+  }
 
   return (
     <div className="p-4 md:p-8 space-y-8">
@@ -252,7 +221,7 @@ export default async function CustomerBookingsPage() {
         </CardHeader>
         <CardContent>
           {customerId ? (
-            <CustomerOrderRequestDialog customerId={customerId} />
+            <CustomerOrderRequestDialog customerId={customerId} onOrderRequested={fetchData} />
           ) : (
             <p className="text-muted-foreground text-sm text-center">
               Ihre Kunden-ID konnte nicht geladen werden. Bitte kontaktieren Sie den Support.
@@ -260,7 +229,6 @@ export default async function CustomerBookingsPage() {
           )}
         </CardContent>
       </Card>
-
       <Card className="shadow-neumorphic glassmorphism-card">
         <CardHeader>
           <CardTitle className="text-lg font-semibold">Übersicht Ihrer Buchungen</CardTitle>
@@ -283,7 +251,7 @@ export default async function CustomerBookingsPage() {
                     <TableHead className="min-w-[100px]">Typ</TableHead>
                     <TableHead className="min-w-[100px]">Status</TableHead>
                     <TableHead className="min-w-[120px]">Zeitraum</TableHead>
-                    <TableHead className="min-w-[120px]">Zugewiesene Zeiten</TableHead> {/* New column */}
+                    <TableHead className="min-w-[120px]">Zugewiesene Zeiten</TableHead>
                     <TableHead className="min-w-[120px]">Anfrage Status</TableHead>
                     <TableHead className="text-right min-w-[120px]">Aktionen</TableHead>
                   </TableRow>
@@ -312,7 +280,6 @@ export default async function CustomerBookingsPage() {
                         )}
                       </TableCell>
                       <TableCell className="text-sm">
-                        {/* Display assigned times for each day */}
                         {dayNames.map((day, dayIndex) => {
                           const assignedTime = getAssignedTimeForDay(order, dayIndex);
                           if (assignedTime !== 'N/A') {
@@ -344,7 +311,7 @@ export default async function CustomerBookingsPage() {
                           </Button>
                           {customerId && (
                             <TicketCreateDialog
-                              onTicketCreated={() => { /* Optional: Refresh relevant data */ }}
+                              onTicketCreated={fetchData}
                               triggerButtonText=""
                               triggerButtonVariant="ghost"
                               triggerButtonClassName="h-8 w-8 p-0 text-muted-foreground hover:text-primary"
