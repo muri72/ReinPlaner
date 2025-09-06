@@ -191,35 +191,70 @@ export function TodaysOrdersOverview() {
           };
         });
 
-        const filteredByRole = mappedOrders.filter(order => {
-          // Filter based on recurrence_interval_weeks and start_week_offset
+        const filteredByRoleAndDay = mappedOrders.filter(order => {
+          const todayDayOfWeek = today.getDay(); // 0=So, 1=Mo, ...
+          const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+          const currentDayKey = dayNames[todayDayOfWeek];
+
+          // Check if order is active today based on date range
+          let isActiveToday = false;
+          if (order.order_type === 'one_time' && order.due_date) {
+            const dueDate = new Date(order.due_date);
+            dueDate.setHours(0, 0, 0, 0);
+            isActiveToday = dueDate.getTime() === today.getTime();
+          } else if (['recurring', 'permanent', 'substitution'].includes(order.order_type) && order.recurring_start_date) {
+            const startDate = new Date(order.recurring_start_date);
+            startDate.setHours(0, 0, 0, 0);
+            const endDate = order.recurring_end_date ? new Date(order.recurring_end_date) : null;
+            if (endDate) endDate.setHours(0, 0, 0, 0);
+            isActiveToday = startDate <= today && (!endDate || endDate >= today);
+          }
+
+          if (!isActiveToday) return false;
+
+          // Check recurrence interval
           const assignedRecurrenceIntervalWeeks = order.assignedEmployees?.[0]?.assigned_recurrence_interval_weeks || order.object?.recurrence_interval_weeks || 1;
           const assignedStartWeekOffset = order.assignedEmployees?.[0]?.assigned_start_week_offset || order.object?.start_week_offset || 0;
 
           if (assignedRecurrenceIntervalWeeks > 1) {
             const orderStartDate = order.recurring_start_date ? new Date(order.recurring_start_date) : (order.due_date ? new Date(order.due_date) : today);
-            const startWeekNumber = getWeek(orderStartDate, { weekStartsOn: 1 }); // ISO week number, starts Monday
-
+            const startWeekNumber = getWeek(orderStartDate, { weekStartsOn: 1 });
             const weekDifference = currentWeekNumber - startWeekNumber;
             if (weekDifference % assignedRecurrenceIntervalWeeks !== assignedStartWeekOffset) {
-              return false; // Not the correct recurrence week
+              return false;
             }
           }
 
-          if (currentUserRole === 'admin') return true;
+          // Check if there are hours scheduled for today
+          let hasHoursToday = false;
+          if (order.order_type === 'one_time') {
+            hasHoursToday = true; // One-time orders are always considered scheduled for their due date
+          } else {
+            const assignedEmployee = order.assignedEmployees?.[0];
+            if (assignedEmployee) {
+              const effectiveWeekIndex = (currentWeekNumber - getWeek(new Date(order.recurring_start_date!), { weekStartsOn: 1 }) - assignedStartWeekOffset) % assignedRecurrenceIntervalWeeks;
+              const weekSchedule = assignedEmployee.assigned_daily_schedules?.[effectiveWeekIndex];
+              const daySchedule = (weekSchedule as any)?.[currentDayKey];
+              if (daySchedule && daySchedule.hours > 0) {
+                hasHoursToday = true;
+              }
+            }
+          }
+
+          if (!hasHoursToday) return false;
+
+          // Finally, filter by user role
+          if (currentUserRole === 'admin' || currentUserRole === 'manager') return true;
           if (currentUserRole === 'employee') {
             return order.employee_ids?.includes(currentEmployeeId || '') || false;
           }
-          if (currentUserRole === 'manager') {
-            return true;
-          }
           if (currentUserRole === 'customer') {
-            return true;
+            return true; // Assuming customers see all their orders for today
           }
           return false;
         });
 
-        setOrders(filteredByRole);
+        setOrders(filteredByRoleAndDay);
       }
       setLoading(false);
     };
