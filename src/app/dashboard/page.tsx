@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, Building, UsersRound, Briefcase, Clock, DollarSign, AlertTriangle, MessageSquare, CheckCircle2, TrendingUp, ListOrdered, CalendarDays } from "lucide-react";
 import { OrderStatusChart }
 from "@/components/order-status-chart";
-import { format } from 'date-fns';
+import { format, getWeek } from 'date-fns';
 import { de } from 'date-fns/locale';
 import Link from "next/link"; // Import Link for clickable cards
 import { FinancialTrendChart } from "@/components/financial-trend-chart"; // Import new chart
@@ -43,27 +43,62 @@ export default async function DashboardPage() {
   today.setHours(0, 0, 0, 0); // Set to start of today for comparison
   const tomorrow = new Date(today);
   tomorrow.setDate(tomorrow.getDate() + 1);
+  const currentWeekNumber = getWeek(today, { weekStartsOn: 1 });
 
   // --- KPI Data Fetching ---
-  // 1. Geplante Einsätze heute
-  const { data: scheduledOrdersToday, error: scheduledOrdersError } = await supabase
+  // 1. Geplante Einsätze heute (FIXED LOGIC)
+  const { data: allPotentiallyScheduledOrders, error: scheduledOrdersError } = await supabase
     .from('orders')
     .select(`
-      id,
-      order_type,
-      due_date,
-      recurring_start_date,
-      recurring_end_date,
-      status,
-      total_estimated_hours
+      id, order_type, due_date, recurring_start_date, recurring_end_date, status,
+      object:objects ( recurrence_interval_weeks, start_week_offset ),
+      order_employee_assignments ( assigned_daily_schedules, assigned_recurrence_interval_weeks, assigned_start_week_offset )
     `)
-    .or(`due_date.eq.${format(today, 'yyyy-MM-dd')},and(recurring_start_date.lte.${format(today, 'yyyy-MM-dd')},or(recurring_end_date.gte.${format(today, 'yyyy-MM-dd')},recurring_end_date.is.null))`)
-    .in('order_type', ['one_time', 'recurring', 'permanent', 'substitution']);
-
-  const totalScheduledToday = scheduledOrdersToday?.length || 0;
-  const completedScheduledToday = scheduledOrdersToday?.filter(order => order.status === 'completed').length || 0;
+    .eq('request_status', 'approved')
+    .or(`due_date.eq.${format(today, 'yyyy-MM-dd')},and(recurring_start_date.lte.${format(today, 'yyyy-MM-dd')},or(recurring_end_date.gte.${format(today, 'yyyy-MM-dd')},recurring_end_date.is.null))`);
 
   if (scheduledOrdersError) console.error("Fehler beim Laden der geplanten Einsätze:", scheduledOrdersError?.message || scheduledOrdersError);
+
+  const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+  const todayDayOfWeek = today.getDay();
+  const currentDayKey = dayNames[todayDayOfWeek];
+
+  const scheduledOrdersToday = allPotentiallyScheduledOrders?.filter(order => {
+    if (order.order_type === 'one_time') {
+      return true; // Already filtered by due_date in query
+    }
+
+    if (['recurring', 'permanent', 'substitution'].includes(order.order_type)) {
+      const assignedRecurrenceIntervalWeeks = order.order_employee_assignments?.[0]?.assigned_recurrence_interval_weeks || order.object?.[0]?.recurrence_interval_weeks || 1;
+      const assignedStartWeekOffset = order.order_employee_assignments?.[0]?.assigned_start_week_offset || order.object?.[0]?.start_week_offset || 0;
+
+      const orderStartDate = order.recurring_start_date ? new Date(order.recurring_start_date) : today;
+      const startWeekNumber = getWeek(orderStartDate, { weekStartsOn: 1 });
+      let weekDifference = currentWeekNumber - startWeekNumber;
+      if (weekDifference < 0) weekDifference += 52; // Handle year boundary
+
+      if (weekDifference % assignedRecurrenceIntervalWeeks !== assignedStartWeekOffset) {
+        return false; // Not the correct recurrence week
+      }
+
+      // Check if there are hours scheduled for today
+      const assignedEmployee = order.order_employee_assignments?.[0];
+      if (assignedEmployee) {
+        const effectiveWeekIndex = (weekDifference - assignedStartWeekOffset + 52 * assignedRecurrenceIntervalWeeks) % assignedRecurrenceIntervalWeeks;
+        const weekSchedule = assignedEmployee.assigned_daily_schedules?.[effectiveWeekIndex];
+        const daySchedule = (weekSchedule as any)?.[currentDayKey];
+        if (daySchedule && daySchedule.hours > 0) {
+          return true; // Has hours scheduled for today
+        }
+      }
+      return false; // No hours scheduled for today
+    }
+    return false;
+  }) || [];
+
+  const totalScheduledToday = scheduledOrdersToday.length;
+  const completedScheduledToday = scheduledOrdersToday.filter(order => order.status === 'completed').length;
+
 
   // 2. Offene Kundenanfragen (request_status = 'pending')
   const { data: pendingCustomerRequestsList, error: pendingRequestsError } = await supabase
