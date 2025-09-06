@@ -14,6 +14,7 @@ import { Briefcase, CalendarDays, Clock, UserRound, Building, Wrench } from "luc
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { AssignedEmployee } from "@/components/order-form";
+import { TimeProgressBar } from "@/components/time-progress-bar"; // Import the new component
 
 interface DisplayOrder {
   id: string;
@@ -253,14 +254,14 @@ export function TodaysOrdersOverview() {
     }
   };
 
-  const getAssignedTimeForToday = (order: DisplayOrder) => {
+  const getAssignedTimeForToday = (order: DisplayOrder): { start: string; end: string } | null => {
     const today = new Date();
     const todayDayOfWeek = today.getDay(); // 0=So, 1=Mo, ..., 6=Sa
     const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
     const currentDayKey = dayNames[todayDayOfWeek];
 
     const assignedEmployee = order.assignedEmployees?.[0];
-    if (!assignedEmployee) return 'N/A';
+    if (!assignedEmployee) return null;
 
     const employeeRecurrenceInterval = assignedEmployee.assigned_recurrence_interval_weeks || order.object?.recurrence_interval_weeks || 1;
     const employeeStartWeekOffset = assignedEmployee.assigned_start_week_offset || order.object?.start_week_offset || 0;
@@ -273,7 +274,7 @@ export function TodaysOrdersOverview() {
     const effectiveWeekIndex = (weekDifference - employeeStartWeekOffset) % employeeRecurrenceInterval;
 
     if (employeeRecurrenceInterval > 1 && (weekDifference % employeeRecurrenceInterval !== employeeStartWeekOffset)) {
-      return 'N/A (Nicht diese Woche)';
+      return null;
     }
 
     const weekSchedule = assignedEmployee.assigned_daily_schedules?.[effectiveWeekIndex];
@@ -283,9 +284,9 @@ export function TodaysOrdersOverview() {
     const endTime = daySchedule?.end;
 
     if (startTime && endTime) {
-      return `${startTime} - ${endTime}`;
+      return { start: startTime, end: endTime };
     }
-    return 'N/A';
+    return null;
   };
 
   return (
@@ -312,7 +313,7 @@ export function TodaysOrdersOverview() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="min-w-[150px]">Auftrag</TableHead><TableHead className="min-w-[120px]">Kunde / Objekt</TableHead><TableHead className="min-w-[120px]">Mitarbeiter</TableHead><TableHead className="min-w-[100px]">Status</TableHead><TableHead className="min-w-[100px]">Priorität</TableHead><TableHead className="min-w-[100px]">Typ</TableHead><TableHead className="min-w-[120px]">Zeitraum</TableHead><TableHead className="min-w-[120px]">Zugewiesene Zeit</TableHead><TableHead className="text-right min-w-[120px]">Aktionen</TableHead>
+                  <TableHead className="min-w-[150px]">Auftrag</TableHead><TableHead className="min-w-[120px]">Kunde / Objekt</TableHead><TableHead className="min-w-[120px]">Mitarbeiter</TableHead><TableHead className="min-w-[100px]">Status</TableHead><TableHead className="min-w-[120px]">Zugewiesene Zeit</TableHead><TableHead className="min-w-[150px]">Fortschritt</TableHead><TableHead className="text-right min-w-[120px]">Aktionen</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -320,6 +321,7 @@ export function TodaysOrdersOverview() {
                   const employeeNames = (order.employee_first_names && order.employee_last_names)
                     ? order.employee_first_names.map((f, i) => `${f} ${order.employee_last_names?.[i] || ''}`).join(', ')
                     : 'N/A';
+                  const assignedTime = getAssignedTimeForToday(order);
                   return (
                     <TableRow key={order.id}><TableCell className="font-medium text-sm">{order.title}</TableCell><TableCell>
                         <p className="text-sm">{order.customer_name}</p>
@@ -328,37 +330,13 @@ export function TodaysOrdersOverview() {
                         {employeeNames}
                       </TableCell><TableCell>
                         <Badge variant={getStatusBadgeVariant(order.status)}>{order.status}</Badge>
-                      </TableCell><TableCell>
-                        <Badge variant={getPriorityBadgeVariant(order.priority)}>{order.priority}</Badge>
-                      </TableCell><TableCell>
-                        <Badge variant="outline">{order.order_type}</Badge>
                       </TableCell><TableCell className="text-sm">
-                        {order.order_type === "one_time" && order.due_date && (
-                          <div className="flex items-center">
-                            <CalendarDays className="mr-1 h-3 w-3" />
-                            {format(new Date(order.due_date), 'dd.MM.yyyy', { locale: de })}
-                          </div>
-                        )}
-                        {(order.order_type === "recurring" || order.order_type === "permanent" || order.order_type === "substitution") && order.recurring_start_date && (
-                          <div className="flex items-center">
-                            <CalendarDays className="mr-1 h-3 w-3" />
-                            {format(new Date(order.recurring_start_date), 'dd.MM.yyyy', { locale: de })}
-                            {order.recurring_end_date && ` - ${format(new Date(order.recurring_end_date), 'dd.MM.yyyy', { locale: de })}`}
-                          </div>
-                        )}
-                      </TableCell><TableCell className="text-sm">
-                        {getAssignedTimeForToday(order)}
-                        {order.object?.recurrence_interval_weeks && order.object.recurrence_interval_weeks > 1 && (
-                          <div className="flex items-center text-xs text-muted-foreground mt-1">
-                            <CalendarDays className="mr-1 h-3 w-3" />
-                            <span>Objekt-Wiederholung: Alle {order.object.recurrence_interval_weeks} Wochen (Offset: {order.object.start_week_offset})</span>
-                          </div>
-                        )}
-                        {order.assignedEmployees?.[0]?.assigned_recurrence_interval_weeks && order.assignedEmployees[0].assigned_recurrence_interval_weeks > 1 && (
-                          <div className="flex items-center text-xs text-muted-foreground mt-1">
-                            <CalendarDays className="mr-1 h-3 w-3" />
-                            <span>Mitarbeiter-Wiederholung: Alle {order.assignedEmployees[0].assigned_recurrence_interval_weeks} Wochen (Offset: {order.assignedEmployees[0].assigned_start_week_offset})</span>
-                          </div>
+                        {assignedTime ? `${assignedTime.start} - ${assignedTime.end}` : 'N/A'}
+                      </TableCell><TableCell>
+                        {assignedTime ? (
+                          <TimeProgressBar startTime={assignedTime.start} endTime={assignedTime.end} />
+                        ) : (
+                          'N/A'
                         )}
                       </TableCell><TableCell className="text-right">
                         <div className="flex justify-end space-x-1">
