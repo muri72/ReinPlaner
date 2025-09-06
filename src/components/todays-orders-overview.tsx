@@ -57,8 +57,8 @@ export function TodaysOrdersOverview() {
       tomorrow.setDate(tomorrow.getDate() + 1);
       const currentWeekNumber = getWeek(today, { weekStartsOn: 1 });
 
-      const { data: user } = await supabase.auth.getUser();
-      const currentUserId = user?.user?.id;
+      const { data: { user } } = await supabase.auth.getUser();
+      const currentUserId = user?.id;
 
       if (!currentUserId) {
         toast.error("Benutzer nicht authentifiziert.");
@@ -164,8 +164,14 @@ export function TodaysOrdersOverview() {
             customer_id: order.customer_id,
             object_id: order.object_id,
             employee_ids: order.order_employee_assignments?.map((a: any) => a.employee_id) || null,
-            employee_first_names: order.order_employee_assignments?.map((a: any) => a.employees?.[0]?.first_name || '') || null,
-            employee_last_names: order.order_employee_assignments?.map((a: any) => a.employees?.[0]?.last_name || '') || null,
+            employee_first_names: order.order_employee_assignments?.map((a: any) => {
+              const employee = Array.isArray(a.employees) ? a.employees[0] : a.employees;
+              return employee?.first_name || '';
+            }) || null,
+            employee_last_names: order.order_employee_assignments?.map((a: any) => {
+              const employee = Array.isArray(a.employees) ? a.employees[0] : a.employees;
+              return employee?.last_name || '';
+            }) || null,
             assignedEmployees: mappedAssignments,
             customer_contact_id: order.customer_contact_id,
             customer_name: customer?.name || null,
