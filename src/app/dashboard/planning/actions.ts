@@ -3,7 +3,7 @@
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { sendNotification } from "@/lib/actions/notifications";
-import { startOfWeek, endOfWeek, eachDayOfInterval, formatISO, parseISO, getDay, getWeek, addWeeks } from 'date-fns';
+import { startOfWeek, endOfWeek, eachDayOfInterval, formatISO, parseISO, getDay, differenceInDays } from 'date-fns';
 
 export interface PlanningData {
   [employeeId: string]: {
@@ -160,50 +160,21 @@ export async function getPlanningDataForWeek(currentDate: Date): Promise<{ succe
           const order = assignment.orders;
           if (!order) continue;
 
-          // Determine recurrence for this assignment
-          const recurrenceIntervalWeeks = assignment.assigned_recurrence_interval_weeks || order.objects?.[0]?.recurrence_interval_weeks || 1;
-          const startWeekOffset = assignment.assigned_start_week_offset || order.objects?.[0]?.start_week_offset || 0;
-
-          // Calculate current week number (ISO week, starts Monday)
-          const currentWeekNumber = getWeek(day, { weekStartsOn: 1 });
-          const orderStartDateForWeekCalc = order.recurring_start_date ? parseISO(order.recurring_start_date) : (order.due_date ? parseISO(order.due_date) : new Date());
-          const startWeekNumber = getWeek(orderStartDateForWeekCalc, { weekStartsOn: 1 });
-
-          // Calculate the effective week index within the recurrence cycle
-          let weekDifference = currentWeekNumber - startWeekNumber;
-          if (weekDifference < 0) { // Handle year boundary
-              weekDifference += 52; // Assuming max 52 weeks in a year for simplicity
-          }
-          const effectiveWeekIndex = (weekDifference - startWeekOffset) % recurrenceIntervalWeeks;
-          
-          if (effectiveWeekIndex < 0) { // Ensure positive index
-              // This case should ideally not happen with correct modulo arithmetic, but as a safeguard
-              // If the offset is larger than the difference, it's still negative, we'll default to the first week of the cycle.
-              // A more robust solution might involve calculating the week number relative to a fixed epoch.
-              // For now, if it's still negative, we'll assume it's not the correct week.
-              continue;
-          }
-
-          // Check if the current week falls within the recurrence pattern
-          const isRecurrenceWeek = recurrenceIntervalWeeks === 1 || (weekDifference % recurrenceIntervalWeeks === startWeekOffset);
-
-          if (!isRecurrenceWeek) continue; // Skip if not the correct recurrence week
-
           // Check if the order is active on the current day
           let isOrderActiveToday = false;
-          if (order.due_date && formatISO(parseISO(order.due_date), { representation: 'date' }) === dateString) {
+          if (order.order_type === 'one_time' && order.due_date && formatISO(parseISO(order.due_date), { representation: 'date' }) === dateString) {
             isOrderActiveToday = true;
-          } else {
-            const startDate = order.recurring_start_date ? parseISO(order.recurring_start_date) : null;
+          } else if (['recurring', 'permanent', 'substitution'].includes(order.order_type) && order.recurring_start_date) {
+            const startDate = parseISO(order.recurring_start_date);
             const endDate = order.recurring_end_date ? parseISO(order.recurring_end_date) : null;
-            if (startDate && startDate <= day && (!endDate || endDate >= day)) {
+            if (startDate <= day && (!endDate || endDate >= day)) {
               isOrderActiveToday = true;
             }
           }
           
           if (!isOrderActiveToday) continue;
 
-          // If active, get the hours for this specific day from the assignment's daily_schedules
+          // If active, get the hours for this specific day
           let dailyHours = 0;
           let assignedStartTime: string | null = null;
           let assignedEndTime: string | null = null;
@@ -212,20 +183,32 @@ export async function getPlanningDataForWeek(currentDate: Date): Promise<{ succe
           if (order.order_type === 'one_time') {
             dailyHours = order.total_estimated_hours || 0;
           } else {
+            // *** KORRIGIERTE, ROBUSTERE LOGIK FÜR WIEDERHOLUNGEN ***
+            const recurrenceIntervalWeeks = assignment.assigned_recurrence_interval_weeks || order.objects?.[0]?.recurrence_interval_weeks || 1;
+            const startWeekOffset = assignment.assigned_start_week_offset || order.objects?.[0]?.start_week_offset || 0;
+            
+            const orderStartDate = parseISO(order.recurring_start_date!);
+            const daysPassed = differenceInDays(day, orderStartDate);
+            
+            if (daysPassed < 0) continue;
+
+            const weeksPassed = Math.floor(daysPassed / 7);
+            const effectiveWeekIndex = (weeksPassed + startWeekOffset) % recurrenceIntervalWeeks;
+
             const employeeDailySchedules = assignment.assigned_daily_schedules;
             if (employeeDailySchedules && employeeDailySchedules.length > effectiveWeekIndex) {
               const weekSchedule = employeeDailySchedules[effectiveWeekIndex];
-              const daySchedule = (weekSchedule as any)?.[dayNames[dayOfWeek === 0 ? 6 : dayOfWeek - 1]]; // Adjust for dayNames array (0=Sun, 1=Mon...)
+              const daySchedule = (weekSchedule as any)?.[dayNames[dayOfWeek === 0 ? 0 : dayOfWeek]]; // Corrected day index
               if (daySchedule) {
                 dailyHours = daySchedule.hours || 0;
                 assignedStartTime = daySchedule.start;
                 assignedEndTime = daySchedule.end;
               }
             }
-          }
-
-          if (recurrenceIntervalWeeks > 1) {
-            recurrenceLabel = `(Alle ${recurrenceIntervalWeeks} Wo.)`;
+            
+            if (recurrenceIntervalWeeks > 1) {
+              recurrenceLabel = `(Alle ${recurrenceIntervalWeeks} Wo.)`;
+            }
           }
 
           if (dailyHours > 0) {

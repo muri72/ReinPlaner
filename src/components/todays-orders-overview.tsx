@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { format, getWeek } from "date-fns";
+import { format, getWeek, differenceInDays } from "date-fns";
 import { de } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -56,7 +56,6 @@ export function TodaysOrdersOverview() {
       today.setHours(0, 0, 0, 0);
       const tomorrow = new Date(today);
       tomorrow.setDate(tomorrow.getDate() + 1);
-      const currentWeekNumber = getWeek(today, { weekStartsOn: 1 });
 
       const { data: { user } } = await supabase.auth.getUser();
       const currentUserId = user?.id;
@@ -217,10 +216,11 @@ export function TodaysOrdersOverview() {
           const assignedStartWeekOffset = order.assignedEmployees?.[0]?.assigned_start_week_offset || order.object?.start_week_offset || 0;
 
           if (assignedRecurrenceIntervalWeeks > 1) {
-            const orderStartDate = order.recurring_start_date ? new Date(order.recurring_start_date) : (order.due_date ? new Date(order.due_date) : today);
-            const startWeekNumber = getWeek(orderStartDate, { weekStartsOn: 1 });
-            const weekDifference = currentWeekNumber - startWeekNumber;
-            if (weekDifference % assignedRecurrenceIntervalWeeks !== assignedStartWeekOffset) {
+            const orderStartDate = order.recurring_start_date ? new Date(order.recurring_start_date) : today;
+            const daysPassed = differenceInDays(today, orderStartDate);
+            if (daysPassed < 0) return false;
+            const weeksPassed = Math.floor(daysPassed / 7);
+            if ((weeksPassed + assignedStartWeekOffset) % assignedRecurrenceIntervalWeeks !== 0) {
               return false;
             }
           }
@@ -232,11 +232,16 @@ export function TodaysOrdersOverview() {
           } else {
             const assignedEmployee = order.assignedEmployees?.[0];
             if (assignedEmployee) {
-              const effectiveWeekIndex = (currentWeekNumber - getWeek(new Date(order.recurring_start_date!), { weekStartsOn: 1 }) - assignedStartWeekOffset) % assignedRecurrenceIntervalWeeks;
-              const weekSchedule = assignedEmployee.assigned_daily_schedules?.[effectiveWeekIndex];
-              const daySchedule = (weekSchedule as any)?.[currentDayKey];
-              if (daySchedule && daySchedule.hours > 0) {
-                hasHoursToday = true;
+              const orderStartDate = order.recurring_start_date ? new Date(order.recurring_start_date) : today;
+              const daysPassed = differenceInDays(today, orderStartDate);
+              if (daysPassed >= 0) {
+                const weeksPassed = Math.floor(daysPassed / 7);
+                const effectiveWeekIndex = (weeksPassed + assignedStartWeekOffset) % assignedRecurrenceIntervalWeeks;
+                const weekSchedule = assignedEmployee.assigned_daily_schedules?.[effectiveWeekIndex];
+                const daySchedule = (weekSchedule as any)?.[currentDayKey];
+                if (daySchedule && daySchedule.hours > 0) {
+                  hasHoursToday = true;
+                }
               }
             }
           }
@@ -271,24 +276,6 @@ export function TodaysOrdersOverview() {
     }
   };
 
-  const getPriorityBadgeVariant = (priority: string) => {
-    switch (priority) {
-      case 'high': return 'destructive';
-      case 'medium': return 'default';
-      case 'low':
-      default: return 'secondary';
-    }
-  };
-
-  const getRequestStatusBadgeVariant = (requestStatus: string) => {
-    switch (requestStatus) {
-      case 'approved': return 'default';
-      case 'pending': return 'warning';
-      case 'rejected': return 'destructive';
-      default: return 'outline';
-    }
-  };
-
   const getAssignedTimeForToday = (order: DisplayOrder): { start: string; end: string } | null => {
     const today = new Date();
     const todayDayOfWeek = today.getDay(); // 0=So, 1=Mo, ..., 6=Sa
@@ -301,16 +288,12 @@ export function TodaysOrdersOverview() {
     const employeeRecurrenceInterval = assignedEmployee.assigned_recurrence_interval_weeks || order.object?.recurrence_interval_weeks || 1;
     const employeeStartWeekOffset = assignedEmployee.assigned_start_week_offset || order.object?.start_week_offset || 0;
 
-    const orderStartDateForWeekCalc = order.recurring_start_date ? new Date(order.recurring_start_date) : (order.due_date ? new Date(order.due_date) : today);
-    const startWeekNumber = getWeek(orderStartDateForWeekCalc, { weekStartsOn: 1 });
-    const currentWeekNumber = getWeek(today, { weekStartsOn: 1 });
-    let weekDifference = currentWeekNumber - startWeekNumber;
-    if (weekDifference < 0) { weekDifference += 52; } // Handle year boundary
-    const effectiveWeekIndex = (weekDifference - employeeStartWeekOffset) % employeeRecurrenceInterval;
+    const orderStartDateForWeekCalc = order.recurring_start_date ? new Date(order.recurring_start_date) : today;
+    const daysPassed = differenceInDays(today, orderStartDateForWeekCalc);
+    if (daysPassed < 0) return null;
 
-    if (employeeRecurrenceInterval > 1 && (weekDifference % employeeRecurrenceInterval !== employeeStartWeekOffset)) {
-      return null;
-    }
+    const weeksPassed = Math.floor(daysPassed / 7);
+    const effectiveWeekIndex = (weeksPassed + employeeStartWeekOffset) % employeeRecurrenceInterval;
 
     const weekSchedule = assignedEmployee.assigned_daily_schedules?.[effectiveWeekIndex];
     const daySchedule = (weekSchedule as any)?.[currentDayKey];
