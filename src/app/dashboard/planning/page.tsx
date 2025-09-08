@@ -227,15 +227,11 @@ export default function ResourcePlanningCalendar() {
                                     <TooltipProvider>
                                       <Tooltip>
                                         <TooltipTrigger asChild>
-                                          <div className="flex flex-col w-full h-full justify-center items-center">
-                                            {dayData.assignments.map((assignment, idx) => (
-                                              <Badge key={idx} variant="secondary" className="w-full text-xs h-auto py-0.5 px-1 mb-0.5 last:mb-0 truncate">
-                                                {assignment.title} ({assignment.hours.toFixed(2)}h)
-                                              </Badge>
-                                            ))}
-                                            {dayData.assignments.length > 1 && (
-                                              <span className="text-xs font-semibold mt-1">Total: {dayData.totalHours.toFixed(2)}h</span>
-                                            )}
+                                          <div className="flex flex-col items-center justify-center text-center p-1 cursor-pointer w-full h-full">
+                                            <span className="font-bold text-sm">{dayData.totalHours.toFixed(2)}h</span>
+                                            <span className="text-xs text-muted-foreground">
+                                              {dayData.assignments.length} {dayData.assignments.length === 1 ? 'Auftrag' : 'Aufträge'}
+                                            </span>
                                           </div>
                                         </TooltipTrigger>
                                         {dayData.assignments.length > 0 && (
