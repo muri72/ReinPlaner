@@ -316,7 +316,7 @@ export default function EmployeeDashboardPage() {
                         return (
                           <div className="flex items-center">
                             <Clock className="mr-2 h-4 w-4" />
-                            <span>Zugewiesene Stunden heute: {assignedHoursToday.toFixed(1)} Std.</span>
+                            <span>Zugewiesene Stunden heute: {assignedHoursToday.toFixed(2)} Std.</span>
                           </div>
                         );
                       }

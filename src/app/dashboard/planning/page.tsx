@@ -54,7 +54,7 @@ function DraggableOrder({ order }: { order: UnassignedOrder }) {
             <p className="font-semibold text-sm">{order.title}</p>
             <div className="flex items-center justify-between text-xs text-muted-foreground">
               <span>{order.service_type || 'Allgemein'}</span>
-              <span>{order.total_estimated_hours ? `${order.total_estimated_hours}h` : ''}</span>
+              <span>{order.total_estimated_hours ? `${Number(order.total_estimated_hours).toFixed(2)}h` : ''}</span>
             </div>
           </div>
         </div>
@@ -219,30 +219,46 @@ export default function ResourcePlanningCalendar() {
 
                             return (
                               <DroppableCell key={dateString} id={droppableId} isOver={activeId !== null && droppableId === (activeId as string)}>
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <div className={cn("w-full h-16 flex flex-col items-center justify-center", getWorkloadColor(dayData.totalHours))}>
-                                        <span className="font-semibold text-xs sm:text-sm">{dayData.totalHours > 0 ? `${dayData.totalHours.toFixed(1)}h` : '-'}</span>
-                                      </div>
-                                    </TooltipTrigger>
-                                    {dayData.assignments.length > 0 && (
-                                      <TooltipContent>
-                                        <ul className="text-sm space-y-1">
-                                          {dayData.assignments.map((a, i) => (
-                                            <li key={i}>
-                                              <div className="font-semibold">{a.title}</div>
-                                              <div className="text-xs text-muted-foreground">
-                                                {a.startTime && a.endTime ? `${a.startTime} - ${a.endTime}` : ''} ({a.hours.toFixed(1)}h)
-                                                {a.recurrence && ` ${a.recurrence}`}
-                                              </div>
-                                            </li>
-                                          ))}
-                                        </ul>
-                                      </TooltipContent>
-                                    )}
-                                  </Tooltip>
-                                </TooltipProvider>
+                                <div className={cn(
+                                  "w-full h-16 flex flex-col items-center justify-center p-1 space-y-0.5 overflow-hidden",
+                                  getWorkloadColor(dayData.totalHours)
+                                )}>
+                                  {dayData.assignments.length > 0 ? (
+                                    <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <div className="flex flex-col w-full h-full justify-center items-center">
+                                            {dayData.assignments.map((assignment, idx) => (
+                                              <Badge key={idx} variant="secondary" className="w-full text-xs h-auto py-0.5 px-1 mb-0.5 last:mb-0 truncate">
+                                                {assignment.title} ({assignment.hours.toFixed(2)}h)
+                                              </Badge>
+                                            ))}
+                                            {dayData.assignments.length > 1 && (
+                                              <span className="text-xs font-semibold mt-1">Total: {dayData.totalHours.toFixed(2)}h</span>
+                                            )}
+                                          </div>
+                                        </TooltipTrigger>
+                                        {dayData.assignments.length > 0 && (
+                                          <TooltipContent>
+                                            <ul className="text-sm space-y-1">
+                                              {dayData.assignments.map((a, i) => (
+                                                <li key={i}>
+                                                  <div className="font-semibold">{a.title}</div>
+                                                  <div className="text-xs text-muted-foreground">
+                                                    {a.startTime && a.endTime ? `${a.startTime} - ${a.endTime}` : ''} ({a.hours.toFixed(2)}h)
+                                                    {a.recurrence && ` ${a.recurrence}`}
+                                                  </div>
+                                                </li>
+                                              ))}
+                                            </ul>
+                                          </TooltipContent>
+                                        )}
+                                      </Tooltip>
+                                    </TooltipProvider>
+                                  ) : (
+                                    <span className="text-sm text-muted-foreground">-</span>
+                                  )}
+                                </div>
                               </DroppableCell>
                             );
                           })}
