@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { PlusCircle, X, Clock, Copy } from "lucide-react";
+import { PlusCircle, X, Clock, Copy, MapPin } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { createClient } from "@/lib/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -348,7 +348,6 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     }
 
     const currentAssignments = form.getValues("assignedEmployees") || [];
-    const wasEmpty = currentAssignments.length === 0;
 
     // Filter out removed employees, keeping their data intact
     const keptAssignments = currentAssignments.filter(a => selectedIds.includes(a.employeeId));
@@ -356,7 +355,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     // Identify new employees to add
     const newEmployeeIds = selectedIds.filter(id => !currentAssignments.some(a => a.employeeId === id));
 
-    const newAssignments = newEmployeeIds.map((employeeId, index) => {
+    const newAssignments = newEmployeeIds.map((employeeId) => {
         const newEmpData: AssignedEmployee = {
             employeeId,
             assigned_daily_schedules: [],
@@ -370,12 +369,10 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
             dayNames.forEach(day => {
                 const objectDailySchedule = (selectedObject.daily_schedules?.[i] as any)?.[day];
                 if (objectDailySchedule) {
-                    // For new employees, hours are initially null, allowing flexible assignment.
-                    // Start and end times are copied from the object schedule.
                     newWeekSchedule[day] = {
-                        hours: null, // Initially null for flexible assignment
+                        hours: null, // Start with null hours for new employees
                         start: objectDailySchedule.start,
-                        end: objectDailySchedule.end, // Copy end time directly
+                        end: objectDailySchedule.end,
                     };
                 }
             });
@@ -384,8 +381,26 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
         return newEmpData;
     });
 
-    // Combine kept and new assignments
-    replaceAssignedEmployees([...keptAssignments, ...newAssignments]);
+    let finalAssignments = [...keptAssignments, ...newAssignments];
+
+    // If there is now exactly one employee assigned, automatically assign all object hours to them.
+    if (finalAssignments.length === 1) {
+      const singleAssignment = finalAssignments[0];
+      for (let i = 0; i < selectedObject.recurrence_interval_weeks; i++) {
+        dayNames.forEach(day => {
+          const objectDailySchedule = (selectedObject.daily_schedules?.[i] as any)?.[day];
+          // Ensure the schedule structure exists before trying to assign to it
+          if (objectDailySchedule && singleAssignment.assigned_daily_schedules[i]) {
+            (singleAssignment.assigned_daily_schedules[i] as any)[day] = {
+              ...((singleAssignment.assigned_daily_schedules[i] as any)[day] || {}),
+              hours: objectDailySchedule.hours, // Assign full hours from object
+            };
+          }
+        });
+      }
+    }
+
+    replaceAssignedEmployees(finalAssignments);
 
   }, [objects, form, replaceAssignedEmployees]);
 
