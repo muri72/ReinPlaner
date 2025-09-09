@@ -38,31 +38,30 @@ export function TodaysOrdersOverview() {
   const [completedOrders, setCompletedOrders] = useState<DisplayOrder[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const getAssignedTimeForToday = (order: DisplayOrder): { start: string; end: string } | null => {
-    if (!order.assignedEmployees || order.assignedEmployees.length === 0) return null;
+  const getAssignedTimeForEmployeeToday = (
+    assignment: AssignedEmployee,
+    order: DisplayOrder
+  ): { start: string; end: string } | null => {
     const today = new Date();
     const todayDayOfWeek = today.getDay();
     const currentDayKey = dayNames[todayDayOfWeek];
-
-    const assignment = order.assignedEmployees[0];
-    if (!assignment) return null;
-
+  
     const recurrenceInterval = assignment.assigned_recurrence_interval_weeks || order.object?.recurrence_interval_weeks || 1;
     const startWeekOffset = assignment.assigned_start_week_offset || order.object?.start_week_offset || 0;
     const orderStartDate = order.recurring_start_date ? new Date(order.recurring_start_date) : today;
     
     const daysPassed = differenceInDays(today, orderStartDate);
     if (daysPassed < 0) return null;
-
+  
     const weeksPassed = Math.floor(daysPassed / 7);
     const effectiveWeekIndex = (weeksPassed + startWeekOffset) % recurrenceInterval;
-
+  
     const weekSchedule = assignment.assigned_daily_schedules?.[effectiveWeekIndex];
     const daySchedule = (weekSchedule as any)?.[currentDayKey];
-
+  
     const startTime = daySchedule?.start;
     const endTime = daySchedule?.end;
-
+  
     if (startTime && endTime) {
       return { start: startTime, end: endTime };
     }
@@ -176,16 +175,26 @@ export function TodaysOrdersOverview() {
       if (order.status === 'completed') {
         completed.push(mappedOrder);
       } else {
-        const assignedTime = getAssignedTimeForToday(mappedOrder);
-        if (assignedTime) {
+        // Check if any employee has a start time today to determine if it's upcoming or in progress
+        const assignedTimes = mappedOrder.assignedEmployees.map(emp => getAssignedTimeForEmployeeToday(emp, mappedOrder)).filter(Boolean);
+        if (assignedTimes.length > 0) {
           const now = new Date();
-          const startTime = parse(assignedTime.start, 'HH:mm', new Date());
-          startTime.setFullYear(now.getFullYear(), now.getMonth(), now.getDate());
-          
-          if (now < startTime) {
-            upcoming.push(mappedOrder);
+          const earliestStartTime = assignedTimes.reduce((earliest, current) => {
+            if (!current) return earliest;
+            if (!earliest) return current;
+            return current.start < earliest.start ? current : earliest;
+          });
+
+          if (earliestStartTime) {
+            const startTimeDate = parse(earliestStartTime.start, 'HH:mm', new Date());
+            startTimeDate.setFullYear(now.getFullYear(), now.getMonth(), now.getDate());
+            if (now < startTimeDate) {
+              upcoming.push(mappedOrder);
+            } else {
+              inProgress.push(mappedOrder);
+            }
           } else {
-            inProgress.push(mappedOrder);
+            upcoming.push(mappedOrder);
           }
         } else {
           upcoming.push(mappedOrder); // If no specific time, assume it's upcoming
@@ -194,8 +203,8 @@ export function TodaysOrdersOverview() {
     });
 
     const sortOrdersByStartTime = (a: DisplayOrder, b: DisplayOrder) => {
-      const timeA = getAssignedTimeForToday(a)?.start;
-      const timeB = getAssignedTimeForToday(b)?.start;
+      const timeA = a.assignedEmployees.map(e => getAssignedTimeForEmployeeToday(e, a)?.start).filter(Boolean).sort()[0];
+      const timeB = b.assignedEmployees.map(e => getAssignedTimeForEmployeeToday(e, b)?.start).filter(Boolean).sort()[0];
       if (!timeA && !timeB) return 0;
       if (!timeA) return 1;
       if (!timeB) return -1;
@@ -216,7 +225,6 @@ export function TodaysOrdersOverview() {
   }, [fetchData]);
 
   const renderOrderCard = (order: DisplayOrder) => {
-    const assignedTime = getAssignedTimeForToday(order);
     const location = [order.object_name, order.customer_name].filter(Boolean).join(' - ');
     return (
       <div key={order.id} className="border p-3 rounded-md space-y-2 bg-background/70">
@@ -227,26 +235,30 @@ export function TodaysOrdersOverview() {
           </div>
           <Badge variant={getStatusBadgeVariant(order.status)}>{order.status}</Badge>
         </div>
-        {assignedTime && (
-          <>
-            <div className="flex items-center text-sm text-muted-foreground">
-              <Clock className="mr-2 h-4 w-4" />
-              <span>{assignedTime.start} - {assignedTime.end}</span>
-            </div>
-            {order.status !== 'completed' && <TimeProgressBar startTime={assignedTime.start} endTime={assignedTime.end} />}
-          </>
-        )}
+        
         {order.assignedEmployees.length > 0 && (
-          <div className="flex items-start text-sm text-muted-foreground pt-2 mt-2 border-t">
-            <UserRound className="mr-2 h-4 w-4 mt-1 flex-shrink-0" />
-            <div className="flex flex-wrap gap-1 items-center">
-              <span className="font-medium mr-1">Mitarbeiter:</span>
-              {order.assignedEmployees.map(emp => (
-                <Badge key={emp.employeeId} variant="secondary" className="font-normal">
-                  {emp.name}
-                </Badge>
-              ))}
-            </div>
+          <div className="pt-2 mt-2 border-t space-y-2">
+            {order.assignedEmployees.map(emp => {
+              const assignedTime = getAssignedTimeForEmployeeToday(emp, order);
+              return (
+                <div key={emp.employeeId} className="space-y-1">
+                  <div className="flex justify-between items-center text-sm">
+                    <div className="flex items-center gap-2">
+                      <UserRound className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">{emp.name}</span>
+                    </div>
+                    {assignedTime ? (
+                      <Badge variant="outline" className="font-mono text-xs">{assignedTime.start} - {assignedTime.end}</Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-xs">N/A</Badge>
+                    )}
+                  </div>
+                  {assignedTime && order.status !== 'completed' && (
+                    <TimeProgressBar startTime={assignedTime.start} endTime={assignedTime.end} />
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
