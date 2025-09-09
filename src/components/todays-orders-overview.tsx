@@ -13,6 +13,8 @@ import { toast } from "sonner";
 import { AssignedEmployee } from "@/components/order-form";
 import { TimeProgressBar } from "@/components/time-progress-bar";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface DisplayOrder {
   id: string;
@@ -115,6 +117,7 @@ export function TodaysOrdersOverview() {
         const weeksPassed = Math.floor(daysPassed / 7);
         if ((weeksPassed + startWeekOffset) % recurrenceInterval !== 0) return false;
 
+        // **FIX**: Check if there are actual hours scheduled for today
         const effectiveWeekIndex = (weeksPassed + startWeekOffset) % recurrenceInterval;
         const todayDayOfWeek = today.getDay();
         const currentDayKey = dayNames[todayDayOfWeek];
@@ -157,7 +160,7 @@ export function TodaysOrdersOverview() {
           return {
             employeeId: a.employee_id,
             name: name || 'Unbekannt',
-            avatarUrl: null,
+            avatarUrl: null, // Avatar URL is not available in this query
             assigned_daily_schedules: a.assigned_daily_schedules,
             assigned_recurrence_interval_weeks: a.assigned_recurrence_interval_weeks,
             assigned_start_week_offset: a.assigned_start_week_offset,
@@ -185,7 +188,7 @@ export function TodaysOrdersOverview() {
             inProgress.push(mappedOrder);
           }
         } else {
-          upcoming.push(mappedOrder);
+          upcoming.push(mappedOrder); // If no specific time, assume it's upcoming
         }
       }
     });
@@ -214,12 +217,13 @@ export function TodaysOrdersOverview() {
 
   const renderOrderCard = (order: DisplayOrder) => {
     const assignedTime = getAssignedTimeForToday(order);
+    const location = [order.object_name, order.customer_name].filter(Boolean).join(' - ');
     return (
       <div key={order.id} className="border p-3 rounded-md space-y-2 bg-background/70">
         <div className="flex justify-between items-start">
           <div>
             <p className="font-semibold text-sm">{order.title}</p>
-            <p className="text-xs text-muted-foreground">{order.object_name} ({order.customer_name})</p>
+            <p className="text-xs text-muted-foreground">{location}</p>
           </div>
           <Badge variant={getStatusBadgeVariant(order.status)}>{order.status}</Badge>
         </div>
