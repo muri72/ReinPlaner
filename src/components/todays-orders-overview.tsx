@@ -26,16 +26,6 @@ interface DisplayOrder {
   order_type: string;
   recurring_start_date: string | null;
   object: { recurrence_interval_weeks: number; start_week_offset: number; } | null;
-  // Added missing fields to match the query and logic
-  order_employee_assignments?: { 
-    employee_id: string; 
-    assigned_daily_schedules: any[];
-    assigned_recurrence_interval_weeks: number;
-    assigned_start_week_offset: number;
-    employees: { first_name: string | null; last_name: string | null; profiles: { avatar_url: string | null }[] | null }[] | null 
-  }[] | null;
-  objects?: { name: string | null; recurrence_interval_weeks: number; start_week_offset: number; daily_schedules: any[] }[] | null;
-  customers?: { name: string | null }[] | null;
 }
 
 interface EmployeeSchedule {
@@ -107,7 +97,7 @@ export function TodaysOrdersOverview() {
           employee_id, 
           assigned_daily_schedules,
           assigned_recurrence_interval_weeks, assigned_start_week_offset,
-          employees ( first_name, last_name, profiles ( avatar_url ) )
+          employees ( first_name, last_name )
         )
       `)
       .eq('request_status', 'approved')
@@ -181,9 +171,6 @@ export function TodaysOrdersOverview() {
         order_type: order.order_type,
         recurring_start_date: order.recurring_start_date,
         object: order.objects?.[0] || null,
-        order_employee_assignments: order.order_employee_assignments,
-        objects: order.objects,
-        customers: order.customers,
       };
 
       if (order.status === 'completed') {
