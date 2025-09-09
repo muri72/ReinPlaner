@@ -13,8 +13,6 @@ import { toast } from "sonner";
 import { AssignedEmployee } from "@/components/order-form";
 import { TimeProgressBar } from "@/components/time-progress-bar";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface DisplayOrder {
   id: string;
@@ -117,7 +115,6 @@ export function TodaysOrdersOverview() {
         const weeksPassed = Math.floor(daysPassed / 7);
         if ((weeksPassed + startWeekOffset) % recurrenceInterval !== 0) return false;
 
-        // **FIX**: Check if there are actual hours scheduled for today
         const effectiveWeekIndex = (weeksPassed + startWeekOffset) % recurrenceInterval;
         const todayDayOfWeek = today.getDay();
         const currentDayKey = dayNames[todayDayOfWeek];
@@ -160,7 +157,7 @@ export function TodaysOrdersOverview() {
           return {
             employeeId: a.employee_id,
             name: name || 'Unbekannt',
-            avatarUrl: null, // Avatar URL is not available in this query
+            avatarUrl: null,
             assigned_daily_schedules: a.assigned_daily_schedules,
             assigned_recurrence_interval_weeks: a.assigned_recurrence_interval_weeks,
             assigned_start_week_offset: a.assigned_start_week_offset,
@@ -188,7 +185,7 @@ export function TodaysOrdersOverview() {
             inProgress.push(mappedOrder);
           }
         } else {
-          upcoming.push(mappedOrder); // If no specific time, assume it's upcoming
+          upcoming.push(mappedOrder);
         }
       }
     });
@@ -236,24 +233,14 @@ export function TodaysOrdersOverview() {
           </>
         )}
         {order.assignedEmployees.length > 0 && (
-          <div className="flex items-center text-sm text-muted-foreground pt-2 mt-2 border-t">
-            <UserRound className="mr-2 h-4 w-4" />
-            <div className="flex items-center gap-2">
-              <span>Mitarbeiter:</span>
+          <div className="flex items-start text-sm text-muted-foreground pt-2 mt-2 border-t">
+            <UserRound className="mr-2 h-4 w-4 mt-1 flex-shrink-0" />
+            <div className="flex flex-wrap gap-1 items-center">
+              <span className="font-medium mr-1">Mitarbeiter:</span>
               {order.assignedEmployees.map(emp => (
-                <TooltipProvider key={emp.employeeId}>
-                  <Tooltip>
-                    <TooltipTrigger>
-                      <Avatar className="h-6 w-6">
-                        <AvatarImage src={emp.avatarUrl || undefined} />
-                        <AvatarFallback>{emp.name.charAt(0)}</AvatarFallback>
-                      </Avatar>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>{emp.name}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                <Badge key={emp.employeeId} variant="secondary" className="font-normal">
+                  {emp.name}
+                </Badge>
               ))}
             </div>
           </div>
