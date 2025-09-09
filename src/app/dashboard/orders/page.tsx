@@ -372,38 +372,6 @@ export default function OrdersPage({
     router.replace(`?${params.toString()}`);
   };
 
-  const getAssignedTimeForDay = (order: DisplayOrder, dayIndex: number) => {
-    const today = new Date();
-    const currentWeekNumber = getWeek(today, { weekStartsOn: 1 });
-
-    const assignedRecurrenceIntervalWeeks = order.assignedEmployees?.[0]?.assigned_recurrence_interval_weeks || order.object?.recurrence_interval_weeks || 1;
-    const assignedStartWeekOffset = order.assignedEmployees?.[0]?.assigned_start_week_offset || order.object?.start_week_offset || 0;
-
-    if (assignedRecurrenceIntervalWeeks > 1) {
-      const orderStartDate = order.recurring_start_date ? new Date(order.recurring_start_date) : (order.due_date ? new Date(order.due_date) : today);
-      const startWeekNumber = getWeek(orderStartDate, { weekStartsOn: 1 });
-      let weekDifference = currentWeekNumber - startWeekNumber;
-      if (weekDifference < 0) { weekDifference += 52; } // Handle year boundary
-      const effectiveWeekIndex = (weekDifference - assignedStartWeekOffset) % assignedRecurrenceIntervalWeeks;
-
-      if (weekDifference % assignedRecurrenceIntervalWeeks !== assignedStartWeekOffset) {
-        return 'N/A (Nicht diese Woche)';
-      }
-    }
-
-    const currentDayKey = dayNames[dayIndex];
-    const weekSchedule = order.assignedEmployees?.[0]?.assigned_daily_schedules?.[0]; // Assuming first week for display
-    const daySchedule = (weekSchedule as any)?.[currentDayKey];
-
-    const startTime = daySchedule?.start;
-    const endTime = daySchedule?.end;
-
-    if (startTime && endTime) {
-      return `${startTime} - ${endTime}`;
-    }
-    return 'N/A';
-  };
-
   return (
     <div className="p-4 md:p-8 space-y-8">
       {loading && <LoadingOverlay isLoading={loading} />}
@@ -521,30 +489,34 @@ export default function OrdersPage({
                             {(order.order_type === "recurring" || order.order_type === "substitution") && order.recurring_start_date && <div className="flex items-center text-xs text-muted-foreground mt-1"><CalendarDays className="mr-1 h-3 w-3" /><span>Start: {new Date(order.recurring_start_date).toLocaleDateString()}</span></div>}
                             {(order.order_type === "recurring" || order.order_type === "substitution") && order.recurring_end_date && <div className="flex items-center text-xs text-muted-foreground"><CalendarDays className="mr-1 h-3 w-3" /><span>Ende: {new Date(order.recurring_end_date).toLocaleDateString()}</span></div>}
                             
-                            {/* Display assigned times for each day */}
-                            {dayNames.map((day, dayIndex) => {
-                                const assignmentsForDay = order.assignedEmployees
-                                    ?.map(emp => {
-                                        const startTime = getAssignedTimeForDay(order, dayIndex);
-                                        if (startTime !== 'N/A') {
-                                            const employee = employees.find(e => e.id === emp.employeeId);
-                                            const empName = employee ? `${employee.first_name?.charAt(0)}.` : '??';
-                                            return `${empName}: ${startTime}`;
+                            {['recurring', 'permanent', 'substitution'].includes(order.order_type) && (
+                                <div className="space-y-1 mt-2">
+                                    {dayNames.map(day => {
+                                        const assignmentsForDay = order.assignedEmployees?.map(emp => {
+                                            // Show schedule for the first week of the cycle as a summary
+                                            const weekSchedule = emp.assigned_daily_schedules?.[0];
+                                            const daySchedule = (weekSchedule as any)?.[day];
+                                            
+                                            if (daySchedule && daySchedule.start && daySchedule.end) {
+                                                const employee = employees.find(e => e.id === emp.employeeId);
+                                                const empInitial = employee ? `${employee.first_name?.charAt(0)}.` : '??';
+                                                return `${empInitial}: ${daySchedule.start} - ${daySchedule.end}`;
+                                            }
+                                            return null;
+                                        }).filter(Boolean);
+
+                                        if (assignmentsForDay && assignmentsForDay.length > 0) {
+                                            return (
+                                                <div key={day} className="flex items-start text-xs text-muted-foreground">
+                                                    <Clock className="mr-1 h-3 w-3 mt-0.5 flex-shrink-0" />
+                                                    <span>{germanDayNames[day]}: {assignmentsForDay.join('; ')}</span>
+                                                </div>
+                                            );
                                         }
                                         return null;
-                                    })
-                                    .filter(Boolean);
-
-                                if (assignmentsForDay && assignmentsForDay.length > 0) {
-                                    return (
-                                        <div key={dayIndex} className="flex items-start text-xs text-muted-foreground">
-                                            <Clock className="mr-1 h-3 w-3 mt-0.5 flex-shrink-0" />
-                                            <span>{germanDayNames[day]}: {assignmentsForDay.join('; ')}</span>
-                                        </div>
-                                    );
-                                }
-                                return null;
-                            })}
+                                    })}
+                                </div>
+                            )}
                             {order.object?.recurrence_interval_weeks && order.object.recurrence_interval_weeks > 1 && (
                               <div className="flex items-center text-xs text-muted-foreground mt-1">
                                 <CalendarDays className="mr-1 h-3 w-3" />
