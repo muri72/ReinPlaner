@@ -26,21 +26,16 @@ interface DisplayOrder {
   order_type: string;
   recurring_start_date: string | null;
   object: { recurrence_interval_weeks: number; start_week_offset: number; } | null;
-  description: string | null;
-  customer_id: string | null;
-  object_id: string | null;
-  employee_ids: string[] | null;
-  employee_first_names: string[] | null;
-  employee_last_names: string[] | null;
-  customer_contact_id: string | null;
-  customer_contact_first_name: string | null;
-  customer_contact_last_name: string | null;
-  recurring_end_date: string | null;
-  priority: string;
-  total_estimated_hours: number | null;
-  notes: string | null;
-  request_status: string;
-  service_type: string | null;
+  // Added missing fields to match the query and logic
+  order_employee_assignments?: { 
+    employee_id: string; 
+    assigned_daily_schedules: any[];
+    assigned_recurrence_interval_weeks: number;
+    assigned_start_week_offset: number;
+    employees: { first_name: string | null; last_name: string | null; profiles: { avatar_url: string | null }[] | null }[] | null 
+  }[] | null;
+  objects?: { name: string | null; recurrence_interval_weeks: number; start_week_offset: number; daily_schedules: any[] }[] | null;
+  customers?: { name: string | null }[] | null;
 }
 
 interface EmployeeSchedule {
@@ -65,8 +60,6 @@ export function TodaysOrdersOverview() {
     const todayDayOfWeek = today.getDay();
     const currentDayKey = dayNames[todayDayOfWeek];
 
-    // For simplicity, we'll check the first assigned employee's schedule.
-    // A more complex system might show times for each assigned employee.
     const assignment = order.assignedEmployees[0];
     if (!assignment) return null;
 
@@ -108,7 +101,7 @@ export function TodaysOrdersOverview() {
       .from('orders')
       .select(`
         id, title, status, due_date, customer_id, object_id, order_type, recurring_start_date, recurring_end_date,
-        objects ( name, recurrence_interval_weeks, start_week_offset ),
+        objects ( name, recurrence_interval_weeks, start_week_offset, daily_schedules ),
         customers ( name ),
         order_employee_assignments ( 
           employee_id, 
@@ -139,7 +132,30 @@ export function TodaysOrdersOverview() {
         if (daysPassed < 0) return false;
         const weeksPassed = Math.floor(daysPassed / 7);
         if ((weeksPassed + startWeekOffset) % recurrenceInterval !== 0) return false;
-        return true;
+
+        // **FIX**: Check if there are actual hours scheduled for today
+        const effectiveWeekIndex = (weeksPassed + startWeekOffset) % recurrenceInterval;
+        const todayDayOfWeek = today.getDay();
+        const currentDayKey = dayNames[todayDayOfWeek];
+
+        const assignment = order.order_employee_assignments?.[0];
+        if (assignment) {
+            const weekSchedule = assignment.assigned_daily_schedules?.[effectiveWeekIndex];
+            const daySchedule = (weekSchedule as any)?.[currentDayKey];
+            if (daySchedule && daySchedule.hours > 0) {
+                return true;
+            }
+        }
+        
+        const object = order.objects?.[0];
+        if (object) {
+            const weekSchedule = object.daily_schedules?.[effectiveWeekIndex];
+            const daySchedule = (weekSchedule as any)?.[currentDayKey];
+            if (daySchedule && daySchedule.hours > 0) {
+                return true;
+            }
+        }
+        return false;
       }
       return false;
     });
@@ -165,8 +181,9 @@ export function TodaysOrdersOverview() {
         order_type: order.order_type,
         recurring_start_date: order.recurring_start_date,
         object: order.objects?.[0] || null,
-        // Add other fields if needed by child components
-        description: null, customer_id: null, object_id: null, employee_ids: null, employee_first_names: null, employee_last_names: null, customer_contact_id: null, customer_contact_first_name: null, customer_contact_last_name: null, recurring_end_date: null, priority: '', total_estimated_hours: null, notes: null, request_status: '', service_type: null
+        order_employee_assignments: order.order_employee_assignments,
+        objects: order.objects,
+        customers: order.customers,
       };
 
       if (order.status === 'completed') {
