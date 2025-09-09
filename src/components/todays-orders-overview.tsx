@@ -14,25 +14,19 @@ import { AssignedEmployee } from "@/components/order-form";
 import { TimeProgressBar } from "@/components/time-progress-bar";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface DisplayOrder {
   id: string;
   title: string;
   status: string;
   due_date: string | null;
-  assignedEmployees: AssignedEmployee[];
+  assignedEmployees: (AssignedEmployee & { name: string; avatarUrl: string | null })[];
   customer_name: string | null;
   object_name: string | null;
   order_type: string;
   recurring_start_date: string | null;
   object: { recurrence_interval_weeks: number; start_week_offset: number; } | null;
-}
-
-interface EmployeeSchedule {
-  employeeName: string;
-  employeeAvatarUrl: string | null;
-  totalHours: number;
-  orders: (DisplayOrder & { assignedTimeToday: { start: string; end: string } | null })[];
 }
 
 const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as const;
@@ -160,12 +154,18 @@ export function TodaysOrdersOverview() {
         title: order.title,
         status: order.status,
         due_date: order.due_date,
-        assignedEmployees: order.order_employee_assignments?.map((a: any) => ({
-          employeeId: a.employee_id,
-          assigned_daily_schedules: a.assigned_daily_schedules,
-          assigned_recurrence_interval_weeks: a.assigned_recurrence_interval_weeks,
-          assigned_start_week_offset: a.assigned_start_week_offset,
-        })) || [],
+        assignedEmployees: order.order_employee_assignments?.map((a: any) => {
+          const employee = Array.isArray(a.employees) ? a.employees[0] : a.employees;
+          const name = `${employee?.first_name || ''} ${employee?.last_name || ''}`.trim();
+          return {
+            employeeId: a.employee_id,
+            name: name || 'Unbekannt',
+            avatarUrl: null, // Avatar URL is not available in this query
+            assigned_daily_schedules: a.assigned_daily_schedules,
+            assigned_recurrence_interval_weeks: a.assigned_recurrence_interval_weeks,
+            assigned_start_week_offset: a.assigned_start_week_offset,
+          };
+        }) || [],
         customer_name: order.customers?.[0]?.name || null,
         object_name: order.objects?.[0]?.name || null,
         order_type: order.order_type,
@@ -192,6 +192,18 @@ export function TodaysOrdersOverview() {
         }
       }
     });
+
+    const sortOrdersByStartTime = (a: DisplayOrder, b: DisplayOrder) => {
+      const timeA = getAssignedTimeForToday(a)?.start;
+      const timeB = getAssignedTimeForToday(b)?.start;
+      if (!timeA && !timeB) return 0;
+      if (!timeA) return 1;
+      if (!timeB) return -1;
+      return timeA.localeCompare(timeB);
+    };
+
+    upcoming.sort(sortOrdersByStartTime);
+    inProgress.sort(sortOrdersByStartTime);
 
     setUpcomingOrders(upcoming);
     setInProgressOrders(inProgress);
@@ -222,6 +234,29 @@ export function TodaysOrdersOverview() {
             </div>
             {order.status !== 'completed' && <TimeProgressBar startTime={assignedTime.start} endTime={assignedTime.end} />}
           </>
+        )}
+        {order.assignedEmployees.length > 0 && (
+          <div className="flex items-center text-sm text-muted-foreground pt-2 mt-2 border-t">
+            <UserRound className="mr-2 h-4 w-4" />
+            <div className="flex items-center gap-2">
+              <span>Mitarbeiter:</span>
+              {order.assignedEmployees.map(emp => (
+                <TooltipProvider key={emp.employeeId}>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <Avatar className="h-6 w-6">
+                        <AvatarImage src={emp.avatarUrl || undefined} />
+                        <AvatarFallback>{emp.name.charAt(0)}</AvatarFallback>
+                      </Avatar>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>{emp.name}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              ))}
+            </div>
+          </div>
         )}
       </div>
     );
