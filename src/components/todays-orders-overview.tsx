@@ -13,8 +13,7 @@ import { toast } from "sonner";
 import { AssignedEmployee } from "@/components/order-form";
 import { TimeProgressBar } from "@/components/time-progress-bar";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface DisplayOrder {
   id: string;
@@ -33,11 +32,11 @@ const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'frida
 
 export function TodaysOrdersOverview() {
   const supabase = createClient();
-  const [allTodaysOrders, setAllTodaysOrders] = useState<DisplayOrder[]>([]);
   const [upcomingOrders, setUpcomingOrders] = useState<DisplayOrder[]>([]);
   const [inProgressOrders, setInProgressOrders] = useState<DisplayOrder[]>([]);
   const [completedOrders, setCompletedOrders] = useState<DisplayOrder[]>([]);
   const [loading, setLoading] = useState(true);
+  const isMobile = useIsMobile();
 
   const getAssignedTimeForEmployeeToday = (
     assignment: AssignedEmployee,
@@ -108,7 +107,6 @@ export function TodaysOrdersOverview() {
           inProgress.push(order);
         }
       } else {
-        // If no specific time, it's upcoming unless completed
         upcoming.push(order);
       }
     });
@@ -221,14 +219,13 @@ export function TodaysOrdersOverview() {
       object: order.objects?.[0] || null,
     }));
 
-    setAllTodaysOrders(mappedOrders);
     categorizeOrders(mappedOrders);
     setLoading(false);
   }, [supabase, categorizeOrders]);
 
   useEffect(() => {
     fetchData();
-    const interval = setInterval(fetchData, 60000); // Re-fetch every minute
+    const interval = setInterval(fetchData, 60000);
     return () => clearInterval(interval);
   }, [fetchData]);
 
@@ -281,21 +278,34 @@ export function TodaysOrdersOverview() {
     }
   };
 
-  return (
-    <Card className="shadow-neumorphic glassmorphism-card">
-      <CardHeader>
-        <CardTitle className="text-lg font-semibold flex items-center">
-          <Briefcase className="mr-2 h-5 w-5" /> Heutige Einsätze
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        {loading ? (
-          <div className="space-y-2">
-            <Skeleton className="h-12 w-full" />
-            <Skeleton className="h-12 w-full" />
-            <Skeleton className="h-12 w-full" />
+  if (loading || isMobile === undefined) {
+    return (
+      <Card className="shadow-neumorphic glassmorphism-card">
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold flex items-center">
+            <Briefcase className="mr-2 h-5 w-5" /> Heutige Einsätze
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid md:grid-cols-3 gap-4">
+            <Skeleton className="h-48 w-full" />
+            <Skeleton className="h-48 w-full" />
+            <Skeleton className="h-48 w-full" />
           </div>
-        ) : (
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (isMobile) {
+    return (
+      <Card className="shadow-neumorphic glassmorphism-card">
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold flex items-center">
+            <Briefcase className="mr-2 h-5 w-5" /> Heutige Einsätze
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
           <Accordion type="multiple" defaultValue={['upcoming', 'inProgress']} className="w-full space-y-2">
             <AccordionItem value="upcoming" className="border rounded-lg bg-card/50">
               <AccordionTrigger className="p-4 hover:no-underline">
@@ -314,7 +324,6 @@ export function TodaysOrdersOverview() {
                 )}
               </AccordionContent>
             </AccordionItem>
-
             <AccordionItem value="inProgress" className="border rounded-lg bg-card/50">
               <AccordionTrigger className="p-4 hover:no-underline">
                 <div className="flex items-center gap-3">
@@ -332,7 +341,6 @@ export function TodaysOrdersOverview() {
                 )}
               </AccordionContent>
             </AccordionItem>
-
             <AccordionItem value="completed" className="border rounded-lg bg-card/50">
               <AccordionTrigger className="p-4 hover:no-underline">
                 <div className="flex items-center gap-3">
@@ -351,8 +359,63 @@ export function TodaysOrdersOverview() {
               </AccordionContent>
             </AccordionItem>
           </Accordion>
-        )}
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <h2 className="text-xl md:text-2xl font-bold flex items-center">
+        <Briefcase className="mr-2 h-5 w-5" /> Heutige Einsätze
+      </h2>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <Card className="shadow-elevation-2 bg-card/50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-3">
+              <Hourglass className="h-5 w-5 text-primary" />
+              Bevorstehend ({upcomingOrders.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {upcomingOrders.length > 0 ? (
+              upcomingOrders.map(renderOrderCard)
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-2">Keine bevorstehenden Aufträge.</p>
+            )}
+          </CardContent>
+        </Card>
+        <Card className="shadow-elevation-2 bg-card/50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-3">
+              <PlayCircle className="h-5 w-5 text-warning" />
+              In Bearbeitung ({inProgressOrders.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {inProgressOrders.length > 0 ? (
+              inProgressOrders.map(renderOrderCard)
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-2">Keine Aufträge in Bearbeitung.</p>
+            )}
+          </CardContent>
+        </Card>
+        <Card className="shadow-elevation-2 bg-card/50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-3">
+              <CheckCircle2 className="h-5 w-5 text-success" />
+              Abgeschlossen ({completedOrders.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {completedOrders.length > 0 ? (
+              completedOrders.map(renderOrderCard)
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-2">Noch keine Aufträge abgeschlossen.</p>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
   );
 }
