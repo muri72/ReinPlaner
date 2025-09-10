@@ -7,7 +7,7 @@ import { format, getWeek, differenceInDays, parse } from "date-fns";
 import { de } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Briefcase, CalendarDays, Clock, UserRound, Building, CheckCircle2, PlayCircle, Hourglass } from "lucide-react";
+import { Briefcase, UserRound, CheckCircle2, PlayCircle, Hourglass } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { AssignedEmployee } from "@/components/order-form";
@@ -146,7 +146,7 @@ export function TodaysOrdersOverview() {
           employee_id, 
           assigned_daily_schedules,
           assigned_recurrence_interval_weeks, assigned_start_week_offset,
-          employees ( first_name, last_name )
+          employees ( first_name, last_name ) 
         )
       `)
       .eq('request_status', 'approved')
@@ -236,7 +236,7 @@ export function TodaysOrdersOverview() {
   const renderOrderCard = (order: DisplayOrder) => {
     const location = [order.object_name, order.customer_name].filter(Boolean).join(' - ');
     return (
-      <div key={order.id} className="border p-3 rounded-md space-y-2 bg-background/70">
+      <div key={order.id} className="border p-3 rounded-md space-y-2 bg-background/70 hover:bg-muted/50 transition-colors">
         <div className="flex justify-between items-start">
           <div>
             <p className="font-semibold text-sm">{order.title}</p>
@@ -302,65 +302,81 @@ export function TodaysOrdersOverview() {
   }
 
   return (
-    <div className="space-y-4">
-      <h2 className="text-xl md:text-2xl font-bold flex items-center">
-        <Briefcase className="mr-2 h-5 w-5" /> Heutige Einsätze
-      </h2>
-      <Accordion type="multiple" defaultValue={['upcoming', 'inProgress']} className="w-full grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-        <AccordionItem value="upcoming" className="border rounded-lg bg-card/50">
-          <AccordionTrigger className="p-4 hover:no-underline">
-            <div className="flex items-center gap-3">
-              <Hourglass className="h-5 w-5 text-primary" />
-              <div className="text-left">
-                <p className="font-semibold">Bevorstehend ({upcomingOrders.length})</p>
+    <Card className="shadow-neumorphic glassmorphism-card">
+      <CardHeader>
+        <CardTitle className="text-xl md:text-2xl font-bold flex items-center">
+          <Briefcase className="mr-2 h-5 w-5" /> Heutige Einsätze
+        </CardTitle>
+        <CardDescription>
+          Eine Übersicht aller geplanten, laufenden und abgeschlossenen Aufträge für heute.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Accordion type="multiple" defaultValue={['upcoming', 'inProgress']} className="w-full grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+          <AccordionItem value="upcoming" className="border rounded-lg bg-card/50">
+            <AccordionTrigger className="p-4 hover:no-underline">
+              <div className="flex items-center justify-between w-full">
+                <div className="flex items-center gap-3">
+                  <Hourglass className="h-5 w-5 text-primary" />
+                  <div className="text-left">
+                    <p className="font-semibold">Bevorstehend</p>
+                  </div>
+                </div>
+                <Badge variant="secondary">{upcomingOrders.length}</Badge>
               </div>
-            </div>
-          </AccordionTrigger>
-          <AccordionContent className="p-4 pt-0">
-            {upcomingOrders.length > 0 ? (
-              <div className="space-y-3">{upcomingOrders.map(renderOrderCard)}</div>
-            ) : (
-              <p className="text-sm text-muted-foreground text-center py-2">Keine bevorstehenden Aufträge.</p>
-            )}
-          </AccordionContent>
-        </AccordionItem>
+            </AccordionTrigger>
+            <AccordionContent className="p-4 pt-0 h-[40vh] overflow-y-auto">
+              {upcomingOrders.length > 0 ? (
+                <div className="space-y-3">{upcomingOrders.map(renderOrderCard)}</div>
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-2">Keine bevorstehenden Aufträge.</p>
+              )}
+            </AccordionContent>
+          </AccordionItem>
 
-        <AccordionItem value="inProgress" className="border rounded-lg bg-card/50">
-          <AccordionTrigger className="p-4 hover:no-underline">
-            <div className="flex items-center gap-3">
-              <PlayCircle className="h-5 w-5 text-warning" />
-              <div className="text-left">
-                <p className="font-semibold">In Bearbeitung ({inProgressOrders.length})</p>
+          <AccordionItem value="inProgress" className="border rounded-lg bg-card/50">
+            <AccordionTrigger className="p-4 hover:no-underline">
+              <div className="flex items-center justify-between w-full">
+                <div className="flex items-center gap-3">
+                  <PlayCircle className="h-5 w-5 text-warning" />
+                  <div className="text-left">
+                    <p className="font-semibold">In Bearbeitung</p>
+                  </div>
+                </div>
+                <Badge variant="secondary">{inProgressOrders.length}</Badge>
               </div>
-            </div>
-          </AccordionTrigger>
-          <AccordionContent className="p-4 pt-0">
-            {inProgressOrders.length > 0 ? (
-              <div className="space-y-3">{inProgressOrders.map(renderOrderCard)}</div>
-            ) : (
-              <p className="text-sm text-muted-foreground text-center py-2">Keine Aufträge in Bearbeitung.</p>
-            )}
-          </AccordionContent>
-        </AccordionItem>
+            </AccordionTrigger>
+            <AccordionContent className="p-4 pt-0 h-[40vh] overflow-y-auto">
+              {inProgressOrders.length > 0 ? (
+                <div className="space-y-3">{inProgressOrders.map(renderOrderCard)}</div>
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-2">Keine Aufträge in Bearbeitung.</p>
+              )}
+            </AccordionContent>
+          </AccordionItem>
 
-        <AccordionItem value="completed" className="border rounded-lg bg-card/50">
-          <AccordionTrigger className="p-4 hover:no-underline">
-            <div className="flex items-center gap-3">
-              <CheckCircle2 className="h-5 w-5 text-success" />
-              <div className="text-left">
-                <p className="font-semibold">Abgeschlossen ({completedOrders.length})</p>
+          <AccordionItem value="completed" className="border rounded-lg bg-card/50">
+            <AccordionTrigger className="p-4 hover:no-underline">
+              <div className="flex items-center justify-between w-full">
+                <div className="flex items-center gap-3">
+                  <CheckCircle2 className="h-5 w-5 text-success" />
+                  <div className="text-left">
+                    <p className="font-semibold">Abgeschlossen</p>
+                  </div>
+                </div>
+                <Badge variant="secondary">{completedOrders.length}</Badge>
               </div>
-            </div>
-          </AccordionTrigger>
-          <AccordionContent className="p-4 pt-0">
-            {completedOrders.length > 0 ? (
-              <div className="space-y-3">{completedOrders.map(renderOrderCard)}</div>
-            ) : (
-              <p className="text-sm text-muted-foreground text-center py-2">Noch keine Aufträge abgeschlossen.</p>
-            )}
-          </AccordionContent>
-        </AccordionItem>
-      </Accordion>
-    </div>
+            </AccordionTrigger>
+            <AccordionContent className="p-4 pt-0 h-[40vh] overflow-y-auto">
+              {completedOrders.length > 0 ? (
+                <div className="space-y-3">{completedOrders.map(renderOrderCard)}</div>
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-2">Noch keine Aufträge abgeschlossen.</p>
+              )}
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
+      </CardContent>
+    </Card>
   );
 }
