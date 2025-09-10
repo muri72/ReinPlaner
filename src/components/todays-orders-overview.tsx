@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { AssignedEmployee } from "@/components/order-form";
 import { TimeProgressBar } from "@/components/time-progress-bar";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface DisplayOrder {
   id: string;
@@ -35,6 +36,7 @@ export function TodaysOrdersOverview() {
   const [inProgressOrders, setInProgressOrders] = useState<DisplayOrder[]>([]);
   const [completedOrders, setCompletedOrders] = useState<DisplayOrder[]>([]);
   const [loading, setLoading] = useState(true);
+  const isMobile = useIsMobile();
 
   const getAssignedTimeForEmployeeToday = (
     assignment: AssignedEmployee,
@@ -120,14 +122,16 @@ export function TodaysOrdersOverview() {
     setCompletedOrders(completed.sort(sortOrdersByStartTime));
   }, []);
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
+  const fetchData = useCallback(async (isInitialLoad = false) => {
+    if (isInitialLoad) {
+      setLoading(true);
+    }
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
-      toast.error("Benutzer nicht authentifiziert.");
+      if (isInitialLoad) toast.error("Benutzer nicht authentifiziert.");
       setLoading(false);
       return;
     }
@@ -152,7 +156,7 @@ export function TodaysOrdersOverview() {
 
     if (error) {
       console.error("Fehler beim Laden der heutigen Aufträge:", error.message);
-      toast.error("Fehler beim Laden der heutigen Aufträge.");
+      if (isInitialLoad) toast.error("Fehler beim Laden der heutigen Aufträge.");
       setLoading(false);
       return;
     }
@@ -218,12 +222,14 @@ export function TodaysOrdersOverview() {
     }));
 
     categorizeOrders(mappedOrders);
-    setLoading(false);
+    if (isInitialLoad) {
+      setLoading(false);
+    }
   }, [supabase, categorizeOrders]);
 
   useEffect(() => {
-    fetchData();
-    const interval = setInterval(fetchData, 60000);
+    fetchData(true); // Initial load with loading state
+    const interval = setInterval(() => fetchData(false), 60000); // Subsequent loads without loading state
     return () => clearInterval(interval);
   }, [fetchData]);
 

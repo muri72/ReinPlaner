@@ -97,7 +97,7 @@ export default async function DashboardPage() {
     .from('orders')
     .select(`
       id, order_type, due_date, recurring_start_date, recurring_end_date, status,
-      object:objects ( recurrence_interval_weeks, start_week_offset ),
+      object:objects ( recurrence_interval_weeks, start_week_offset, daily_schedules ),
       order_employee_assignments ( assigned_daily_schedules, assigned_recurrence_interval_weeks, assigned_start_week_offset )
     `)
     .eq('request_status', 'approved')
@@ -114,19 +114,33 @@ export default async function DashboardPage() {
     }
 
     if (['recurring', 'permanent', 'substitution'].includes(order.order_type)) {
-      const assignedRecurrenceIntervalWeeks = order.order_employee_assignments?.[0]?.assigned_recurrence_interval_weeks || order.object?.[0]?.recurrence_interval_weeks || 1;
-      const assignedStartWeekOffset = order.order_employee_assignments?.[0]?.assigned_start_week_offset || order.object?.[0]?.start_week_offset || 0;
-
+      const recurrenceInterval = order.order_employee_assignments?.[0]?.assigned_recurrence_interval_weeks || order.object?.[0]?.recurrence_interval_weeks || 1;
+      const startWeekOffset = order.order_employee_assignments?.[0]?.assigned_start_week_offset || order.object?.[0]?.start_week_offset || 0;
       const orderStartDate = order.recurring_start_date ? new Date(order.recurring_start_date) : today;
       const daysPassed = differenceInDays(today, orderStartDate);
       if (daysPassed < 0) return false;
-
       const weeksPassed = Math.floor(daysPassed / 7);
-      const effectiveWeekIndex = (weeksPassed + assignedStartWeekOffset) % assignedRecurrenceIntervalWeeks;
+      if ((weeksPassed + startWeekOffset) % recurrenceInterval !== 0) return false;
 
-      // This check is simplified; a full check would need to see if there are hours on this day of the week
-      // For now, we assume if the recurrence matches, it's a valid day.
-      return true;
+      const effectiveWeekIndex = (weeksPassed + startWeekOffset) % recurrenceInterval;
+
+      const hasHours = order.order_employee_assignments?.some(assignment => {
+        const weekSchedule = assignment.assigned_daily_schedules?.[effectiveWeekIndex];
+        const daySchedule = (weekSchedule as any)?.[currentDayKey];
+        return daySchedule && daySchedule.hours > 0;
+      });
+
+      if (hasHours) return true;
+      
+      const object = order.object?.[0];
+      if (object) {
+          const weekSchedule = object.daily_schedules?.[effectiveWeekIndex];
+          const daySchedule = (weekSchedule as any)?.[currentDayKey];
+          if (daySchedule && daySchedule.hours > 0) {
+              return true;
+          }
+      }
+      return false;
     }
     return false;
   }) || [];
