@@ -186,12 +186,13 @@
 /* Custom Scrollbar for specific elements */
 .custom-scrollbar {
   scrollbar-width: thin !important; /* For Firefox */
-  scrollbar-color: hsl(var(--border)) transparent !important; /* For Firefox */
+  /* A more modern, subtle color for Firefox scrollbar */
+  scrollbar-color: hsl(var(--muted-foreground) / 0.5) transparent !important;
 }
 
 .custom-scrollbar::-webkit-scrollbar {
-  width: 6px !important;
-  height: 6px !important;
+  width: 8px !important; /* A bit more space for the border trick */
+  height: 8px !important;
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
@@ -199,12 +200,17 @@
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background-color: hsl(var(--border)) !important;
+  background-color: hsl(var(--muted-foreground) / 0.5) !important; /* Subtle default color */
   border-radius: 10px !important;
-  border: 2px solid transparent !important;
+  border: 2px solid transparent !important; /* Creates padding around the thumb */
   background-clip: content-box !important;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background-color: hsl(var(--muted-foreground)) !important;
+  background-color: hsl(var(--muted-foreground)) !important; /* More visible on hover */
+}
+
+/* Explicitly hide scrollbar buttons (arrows) */
+.custom-scrollbar::-webkit-scrollbar-button {
+  display: none;
 }
