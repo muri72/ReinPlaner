@@ -325,7 +325,7 @@ export function TodaysOrdersOverview() {
                 <Badge variant="secondary">{upcomingOrders.length}</Badge>
               </div>
             </AccordionTrigger>
-            <AccordionContent className="p-4 pt-0 h-[40vh] overflow-y-auto custom-scrollbar">
+            <AccordionContent className="p-4 pt-0 h-[40vh] overflow-y-auto custom-scrollbar [mask-image:linear-gradient(to_bottom,white_90%,transparent)]">
               {upcomingOrders.length > 0 ? (
                 <div className="space-y-3">{upcomingOrders.map(renderOrderCard)}</div>
               ) : (
@@ -346,7 +346,7 @@ export function TodaysOrdersOverview() {
                 <Badge variant="secondary">{inProgressOrders.length}</Badge>
               </div>
             </AccordionTrigger>
-            <AccordionContent className="p-4 pt-0 h-[40vh] overflow-y-auto custom-scrollbar">
+            <AccordionContent className="p-4 pt-0 h-[40vh] overflow-y-auto custom-scrollbar [mask-image:linear-gradient(to_bottom,white_90%,transparent)]">
               {inProgressOrders.length > 0 ? (
                 <div className="space-y-3">{inProgressOrders.map(renderOrderCard)}</div>
               ) : (
@@ -367,7 +367,7 @@ export function TodaysOrdersOverview() {
                 <Badge variant="secondary">{completedOrders.length}</Badge>
               </div>
             </AccordionTrigger>
-            <AccordionContent className="p-4 pt-0 h-[40vh] overflow-y-auto custom-scrollbar">
+            <AccordionContent className="p-4 pt-0 h-[40vh] overflow-y-auto custom-scrollbar [mask-image:linear-gradient(to_bottom,white_90%,transparent)]">
               {completedOrders.length > 0 ? (
                 <div className="space-y-3">{completedOrders.map(renderOrderCard)}</div>
               ) : (
