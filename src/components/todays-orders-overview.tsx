@@ -33,6 +33,7 @@ const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'frida
 
 export function TodaysOrdersOverview() {
   const supabase = createClient();
+  const [allTodaysOrders, setAllTodaysOrders] = useState<DisplayOrder[]>([]);
   const [upcomingOrders, setUpcomingOrders] = useState<DisplayOrder[]>([]);
   const [inProgressOrders, setInProgressOrders] = useState<DisplayOrder[]>([]);
   const [completedOrders, setCompletedOrders] = useState<DisplayOrder[]>([]);
@@ -67,6 +68,61 @@ export function TodaysOrdersOverview() {
     }
     return null;
   };
+
+  const getOrderTimeRangeForToday = (order: DisplayOrder): { start: Date; end: Date } | null => {
+    const assignedTimes = order.assignedEmployees
+      .map(emp => getAssignedTimeForEmployeeToday(emp, order))
+      .filter((time): time is { start: string; end: string } => time !== null);
+
+    if (assignedTimes.length === 0) return null;
+
+    const now = new Date();
+    const startDates = assignedTimes.map(t => parse(t.start, 'HH:mm', now));
+    const endDates = assignedTimes.map(t => parse(t.end, 'HH:mm', now));
+
+    const earliestStart = new Date(Math.min(...startDates.map(d => d.getTime())));
+    const latestEnd = new Date(Math.max(...endDates.map(d => d.getTime())));
+
+    return { start: earliestStart, end: latestEnd };
+  };
+
+  const categorizeOrders = useCallback((orders: DisplayOrder[]) => {
+    const upcoming: DisplayOrder[] = [];
+    const inProgress: DisplayOrder[] = [];
+    const completed: DisplayOrder[] = [];
+    const now = new Date();
+
+    orders.forEach(order => {
+      if (order.status === 'completed') {
+        completed.push(order);
+        return;
+      }
+
+      const timeRange = getOrderTimeRangeForToday(order);
+      if (timeRange) {
+        if (now < timeRange.start) {
+          upcoming.push(order);
+        } else if (now > timeRange.end) {
+          completed.push(order);
+        } else {
+          inProgress.push(order);
+        }
+      } else {
+        // If no specific time, it's upcoming unless completed
+        upcoming.push(order);
+      }
+    });
+
+    const sortOrdersByStartTime = (a: DisplayOrder, b: DisplayOrder) => {
+      const timeA = getOrderTimeRangeForToday(a)?.start.getTime() || Infinity;
+      const timeB = getOrderTimeRangeForToday(b)?.start.getTime() || Infinity;
+      return timeA - timeB;
+    };
+
+    setUpcomingOrders(upcoming.sort(sortOrdersByStartTime));
+    setInProgressOrders(inProgress.sort(sortOrdersByStartTime));
+    setCompletedOrders(completed.sort(sortOrdersByStartTime));
+  }, []);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -116,19 +172,17 @@ export function TodaysOrdersOverview() {
         const weeksPassed = Math.floor(daysPassed / 7);
         if ((weeksPassed + startWeekOffset) % recurrenceInterval !== 0) return false;
 
-        // **FIX**: Check if there are actual hours scheduled for today
         const effectiveWeekIndex = (weeksPassed + startWeekOffset) % recurrenceInterval;
         const todayDayOfWeek = today.getDay();
         const currentDayKey = dayNames[todayDayOfWeek];
 
-        const assignment = order.order_employee_assignments?.[0];
-        if (assignment) {
-            const weekSchedule = assignment.assigned_daily_schedules?.[effectiveWeekIndex];
-            const daySchedule = (weekSchedule as any)?.[currentDayKey];
-            if (daySchedule && daySchedule.hours > 0) {
-                return true;
-            }
-        }
+        const hasHours = order.order_employee_assignments?.some(assignment => {
+          const weekSchedule = assignment.assigned_daily_schedules?.[effectiveWeekIndex];
+          const daySchedule = (weekSchedule as any)?.[currentDayKey];
+          return daySchedule && daySchedule.hours > 0;
+        });
+
+        if (hasHours) return true;
         
         const object = order.objects?.[0];
         if (object) {
@@ -143,85 +197,39 @@ export function TodaysOrdersOverview() {
       return false;
     });
 
-    const upcoming: DisplayOrder[] = [];
-    const inProgress: DisplayOrder[] = [];
-    const completed: DisplayOrder[] = [];
+    const mappedOrders: DisplayOrder[] = todaysOrders.map(order => ({
+      id: order.id,
+      title: order.title,
+      status: order.status,
+      due_date: order.due_date,
+      assignedEmployees: order.order_employee_assignments?.map((a: any) => {
+        const employee = Array.isArray(a.employees) ? a.employees[0] : a.employees;
+        const name = `${employee?.first_name || ''} ${employee?.last_name || ''}`.trim();
+        return {
+          employeeId: a.employee_id,
+          name: name || 'Unbekannt',
+          avatarUrl: null,
+          assigned_daily_schedules: a.assigned_daily_schedules,
+          assigned_recurrence_interval_weeks: a.assigned_recurrence_interval_weeks,
+          assigned_start_week_offset: a.assigned_start_week_offset,
+        };
+      }) || [],
+      customer_name: order.customers?.[0]?.name || null,
+      object_name: order.objects?.[0]?.name || null,
+      order_type: order.order_type,
+      recurring_start_date: order.recurring_start_date,
+      object: order.objects?.[0] || null,
+    }));
 
-    todaysOrders.forEach(order => {
-      const mappedOrder: DisplayOrder = {
-        id: order.id,
-        title: order.title,
-        status: order.status,
-        due_date: order.due_date,
-        assignedEmployees: order.order_employee_assignments?.map((a: any) => {
-          const employee = Array.isArray(a.employees) ? a.employees[0] : a.employees;
-          const name = `${employee?.first_name || ''} ${employee?.last_name || ''}`.trim();
-          return {
-            employeeId: a.employee_id,
-            name: name || 'Unbekannt',
-            avatarUrl: null, // Avatar URL is not available in this query
-            assigned_daily_schedules: a.assigned_daily_schedules,
-            assigned_recurrence_interval_weeks: a.assigned_recurrence_interval_weeks,
-            assigned_start_week_offset: a.assigned_start_week_offset,
-          };
-        }) || [],
-        customer_name: order.customers?.[0]?.name || null,
-        object_name: order.objects?.[0]?.name || null,
-        order_type: order.order_type,
-        recurring_start_date: order.recurring_start_date,
-        object: order.objects?.[0] || null,
-      };
-
-      if (order.status === 'completed') {
-        completed.push(mappedOrder);
-      } else {
-        // Check if any employee has a start time today to determine if it's upcoming or in progress
-        const assignedTimes = mappedOrder.assignedEmployees.map(emp => getAssignedTimeForEmployeeToday(emp, mappedOrder)).filter(Boolean);
-        if (assignedTimes.length > 0) {
-          const now = new Date();
-          const earliestStartTime = assignedTimes.reduce((earliest, current) => {
-            if (!current) return earliest;
-            if (!earliest) return current;
-            return current.start < earliest.start ? current : earliest;
-          });
-
-          if (earliestStartTime) {
-            const startTimeDate = parse(earliestStartTime.start, 'HH:mm', new Date());
-            startTimeDate.setFullYear(now.getFullYear(), now.getMonth(), now.getDate());
-            if (now < startTimeDate) {
-              upcoming.push(mappedOrder);
-            } else {
-              inProgress.push(mappedOrder);
-            }
-          } else {
-            upcoming.push(mappedOrder);
-          }
-        } else {
-          upcoming.push(mappedOrder); // If no specific time, assume it's upcoming
-        }
-      }
-    });
-
-    const sortOrdersByStartTime = (a: DisplayOrder, b: DisplayOrder) => {
-      const timeA = a.assignedEmployees.map(e => getAssignedTimeForEmployeeToday(e, a)?.start).filter(Boolean).sort()[0];
-      const timeB = b.assignedEmployees.map(e => getAssignedTimeForEmployeeToday(e, b)?.start).filter(Boolean).sort()[0];
-      if (!timeA && !timeB) return 0;
-      if (!timeA) return 1;
-      if (!timeB) return -1;
-      return timeA.localeCompare(timeB);
-    };
-
-    upcoming.sort(sortOrdersByStartTime);
-    inProgress.sort(sortOrdersByStartTime);
-
-    setUpcomingOrders(upcoming);
-    setInProgressOrders(inProgress);
-    setCompletedOrders(completed);
+    setAllTodaysOrders(mappedOrders);
+    categorizeOrders(mappedOrders);
     setLoading(false);
-  }, [supabase]);
+  }, [supabase, categorizeOrders]);
 
   useEffect(() => {
     fetchData();
+    const interval = setInterval(fetchData, 60000); // Re-fetch every minute
+    return () => clearInterval(interval);
   }, [fetchData]);
 
   const renderOrderCard = (order: DisplayOrder) => {
