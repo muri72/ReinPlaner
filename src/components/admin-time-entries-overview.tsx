@@ -157,9 +157,6 @@ export function AdminTimeEntriesOverview({
           )}
         </TableBody>
       </Table>
-      {totalPages > 1 && (
-        <PaginationControls currentPage={currentPage} totalPages={totalPages} />
-      )}
     </div>
   );
 }

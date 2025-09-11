@@ -90,9 +90,6 @@ export function CustomerContactsTableView({
           ))}
         </TableBody>
       </Table>
-      {!query && totalPages > 1 && (
-        <PaginationControls currentPage={currentPage} totalPages={totalPages} />
-      )}
     </div>
   );
 }

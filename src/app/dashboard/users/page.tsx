@@ -138,6 +138,11 @@ export default function UsersPage() {
             filterOptions={filterOptions}
             sortOptions={sortOptions}
           />
+          {totalCount !== null && (
+            <div className="text-sm text-muted-foreground mt-2">
+              {totalCount} {totalCount === 1 ? 'Ergebnis' : 'Ergebnisse'} gefunden.
+            </div>
+          )}
         </CardHeader>
         <CardContent>
           <Tabs value={activeTab} onValueChange={handleViewModeChange} className="w-full">
