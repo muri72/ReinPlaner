@@ -2,7 +2,7 @@
 
 import React from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { X, PlusCircle, ArrowUpDown } from "lucide-react";
+import { X, PlusCircle, ArrowUpDown, ArrowLeft } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -55,7 +55,9 @@ export function DataTableToolbar({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [filterPopoversOpen, setFilterPopoversOpen] = React.useState<Record<string, boolean>>({});
+  
+  const [isFilterPopoverOpen, setIsFilterPopoverOpen] = React.useState(false);
+  const [activeFilterCategory, setActiveFilterCategory] = React.useState<FilterOption | null>(null);
 
   const activeFilters = React.useMemo(() => {
     const filters: { key: string; value: string }[] = [];
@@ -87,7 +89,7 @@ export function DataTableToolbar({
 
   const handleSetFilter = (key: string, value: string) => {
     router.push(`${pathname}?${createQueryString({ [key]: value, page: '1' })}`);
-    setFilterPopoversOpen({}); // Close all popovers
+    setIsFilterPopoverOpen(false);
   };
 
   const handleRemoveFilter = (key: string) => {
@@ -97,7 +99,7 @@ export function DataTableToolbar({
   const handleClearFilters = () => {
     const newParams = new URLSearchParams(searchParams.toString());
     activeFilters.forEach(filter => newParams.delete(filter.key));
-    newParams.delete("query"); // Also clear search query
+    newParams.delete("query");
     newParams.set('page', '1');
     router.push(`${pathname}?${newParams.toString()}`);
   };
@@ -113,11 +115,18 @@ export function DataTableToolbar({
     return `${option.label}: ${valueOption?.label || value}`;
   };
 
+  // Reset active filter category when main popover closes
+  React.useEffect(() => {
+    if (!isFilterPopoverOpen) {
+      setActiveFilterCategory(null);
+    }
+  }, [isFilterPopoverOpen]);
+
   return (
     <div className="flex flex-col gap-2">
       <div className="flex flex-col sm:flex-row items-center gap-2">
         <SearchInput placeholder={searchPlaceholder} className="w-full sm:max-w-xs" />
-        <Popover>
+        <Popover open={isFilterPopoverOpen} onOpenChange={setIsFilterPopoverOpen}>
           <PopoverTrigger asChild>
             <Button variant="outline" size="sm" className="h-9 border-dashed w-full sm:w-auto">
               <PlusCircle className="mr-2 h-4 w-4" />
@@ -126,38 +135,40 @@ export function DataTableToolbar({
           </PopoverTrigger>
           <PopoverContent className="w-[200px] p-0" align="start">
             <Command>
-              <CommandInput placeholder="Filter nach..." />
+              <CommandInput placeholder={activeFilterCategory ? "Wert auswählen..." : "Filter nach..."} />
               <CommandList>
-                <CommandEmpty>Kein Filter gefunden.</CommandEmpty>
-                <CommandGroup>
-                  {filterOptions.map((option) => (
-                    <Popover key={option.value} open={filterPopoversOpen[option.value]} onOpenChange={(isOpen) => setFilterPopoversOpen(prev => ({ ...prev, [option.value]: isOpen }))}>
-                      <PopoverTrigger asChild>
-                        <CommandItem onSelect={() => {}}>
-                          <span>{option.label}</span>
+                <CommandEmpty>Keine Ergebnisse gefunden.</CommandEmpty>
+                {activeFilterCategory ? (
+                  <>
+                    <CommandGroup>
+                      <CommandItem onSelect={() => setActiveFilterCategory(null)} className="cursor-pointer">
+                        <ArrowLeft className="mr-2 h-4 w-4" />
+                        Zurück
+                      </CommandItem>
+                    </CommandGroup>
+                    <CommandGroup heading={activeFilterCategory.label}>
+                      {activeFilterCategory.options.map((valueOption) => (
+                        <CommandItem
+                          key={valueOption.value}
+                          onSelect={() => handleSetFilter(activeFilterCategory.value, valueOption.value)}
+                        >
+                          <span>{valueOption.label}</span>
                         </CommandItem>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-[200px] p-0" align="start">
-                        <Command>
-                          <CommandInput placeholder="Wert auswählen..." />
-                          <CommandList>
-                            <CommandEmpty>Kein Wert gefunden.</CommandEmpty>
-                            <CommandGroup>
-                              {option.options.map((valueOption) => (
-                                <CommandItem
-                                  key={valueOption.value}
-                                  onSelect={() => handleSetFilter(option.value, valueOption.value)}
-                                >
-                                  <span>{valueOption.label}</span>
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
-                          </CommandList>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
-                  ))}
-                </CommandGroup>
+                      ))}
+                    </CommandGroup>
+                  </>
+                ) : (
+                  <CommandGroup>
+                    {filterOptions.map((option) => (
+                      <CommandItem
+                        key={option.value}
+                        onSelect={() => setActiveFilterCategory(option)}
+                      >
+                        <span>{option.label}</span>
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                )}
               </CommandList>
             </Command>
           </PopoverContent>
