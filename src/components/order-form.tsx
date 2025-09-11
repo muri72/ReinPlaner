@@ -755,7 +755,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess, 
         <Label>Zugewiesene Mitarbeiter (optional)</Label>
         <MultiSelectEmployees
           employees={allEmployees}
-          selectedEmployeeIds={assignedEmployeeFields.map((emp: AssignedEmployee) => emp.employeeId)}
+          selectedEmployeeIds={assignedEmployeeFields.map(field => field.employeeId)}
           onSelectionChange={handleEmployeeSelectionChange}
           disabled={!selectedObjectId}
         />
@@ -803,19 +803,19 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess, 
           <div className="mt-4 space-y-4">
             <h3 className="text-lg font-semibold">Arbeitszeiten pro Mitarbeiter</h3>
             {(form.formState.errors as any).assignedEmployees && <p className="text-red-500 text-sm mt-1">{(form.formState.errors as any).assignedEmployees.message}</p>}
-            {assignedEmployeeFields.map((assignedEmp: AssignedEmployee, assignedIndex: number) => (
-              <div key={assignedEmp.employeeId} className="border rounded-md p-4 space-y-3">
+            {assignedEmployeeFields.map((field, index) => (
+              <div key={field.id} className="border rounded-md p-4 space-y-3">
                 <div className="flex items-center justify-between gap-2">
                   <h4 className="font-semibold text-base">
-                    {allEmployees.find(emp => emp.id === assignedEmp.employeeId)?.first_name}{' '}
-                    {allEmployees.find(emp => emp.id === assignedEmp.employeeId)?.last_name}
+                    {allEmployees.find(emp => emp.id === field.employeeId)?.first_name}{' '}
+                    {allEmployees.find(emp => emp.id === field.employeeId)?.last_name}
                   </h4>
                   <Button
                     type="button"
                     variant="ghost"
                     size="icon"
                     onClick={() => {
-                      const newSelectedIds = assignedEmployeeFields.filter((emp: AssignedEmployee) => emp.employeeId !== assignedEmp.employeeId).map((emp: AssignedEmployee) => emp.employeeId);
+                      const newSelectedIds = assignedEmployeeFields.filter((emp) => emp.employeeId !== field.employeeId).map((emp) => emp.employeeId);
                       handleEmployeeSelectionChange(newSelectedIds);
                     }}
                     className="text-destructive hover:text-destructive/80"
@@ -828,30 +828,30 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess, 
                   <h3 className="text-lg font-semibold">Wiederholungsintervall für Mitarbeiter</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor={`assignedEmployees.${assignedIndex}.assigned_recurrence_interval_weeks`}>Wiederholt sich alle X Wochen</Label>
+                      <Label htmlFor={`assignedEmployees.${index}.assigned_recurrence_interval_weeks`}>Wiederholt sich alle X Wochen</Label>
                       <Input
-                        id={`assignedEmployees.${assignedIndex}.assigned_recurrence_interval_weeks`}
+                        id={`assignedEmployees.${index}.assigned_recurrence_interval_weeks`}
                         type="number"
                         step="1"
                         min="1"
                         max="52"
-                        {...form.register(`assignedEmployees.${assignedIndex}.assigned_recurrence_interval_weeks`, { valueAsNumber: true })}
+                        {...form.register(`assignedEmployees.${index}.assigned_recurrence_interval_weeks`, { valueAsNumber: true })}
                         placeholder="Z.B. 1 für jede Woche, 2 für jede zweite Woche"
                       />
-                      {(form.formState.errors.assignedEmployees?.[assignedIndex] as any)?.assigned_recurrence_interval_weeks && <p className="text-red-500 text-sm mt-1">{(form.formState.errors.assignedEmployees?.[assignedIndex] as any)?.assigned_recurrence_interval_weeks?.message}</p>}
+                      {(form.formState.errors.assignedEmployees?.[index] as any)?.assigned_recurrence_interval_weeks && <p className="text-red-500 text-sm mt-1">{(form.formState.errors.assignedEmployees?.[index] as any)?.assigned_recurrence_interval_weeks?.message}</p>}
                     </div>
                     <div>
-                      <Label htmlFor={`assignedEmployees.${assignedIndex}.assigned_start_week_offset`}>Start-Wochen-Offset (0-basierend)</Label>
+                      <Label htmlFor={`assignedEmployees.${index}.assigned_start_week_offset`}>Start-Wochen-Offset (0-basierend)</Label>
                       <Input
-                        id={`assignedEmployees.${assignedIndex}.assigned_start_week_offset`}
+                        id={`assignedEmployees.${index}.assigned_start_week_offset`}
                         type="number"
                         step="1"
                         min="0"
-                        max={form.watch(`assignedEmployees.${assignedIndex}.assigned_recurrence_interval_weeks`) - 1}
-                        {...form.register(`assignedEmployees.${assignedIndex}.assigned_start_week_offset`, { valueAsNumber: true })}
+                        max={form.watch(`assignedEmployees.${index}.assigned_recurrence_interval_weeks`) - 1}
+                        {...form.register(`assignedEmployees.${index}.assigned_start_week_offset`, { valueAsNumber: true })}
                         placeholder="Z.B. 0 für die erste Woche, 1 für die zweite Woche"
                       />
-                      {(form.formState.errors.assignedEmployees?.[assignedIndex] as any)?.assigned_start_week_offset && <p className="text-red-500 text-sm mt-1">{(form.formState.errors.assignedEmployees?.[assignedIndex] as any)?.assigned_start_week_offset?.message}</p>}
+                      {(form.formState.errors.assignedEmployees?.[index] as any)?.assigned_start_week_offset && <p className="text-red-500 text-sm mt-1">{(form.formState.errors.assignedEmployees?.[index] as any)?.assigned_start_week_offset?.message}</p>}
                     </div>
                   </div>
                   <p className="text-sm text-muted-foreground">
@@ -861,10 +861,10 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess, 
                 </div>
                 
                 {/* Daily Schedules for Employee */}
-                {assignedEmp.assigned_daily_schedules.map((weekSchedule: any, weekIndex: number) => (
+                {field.assigned_daily_schedules.map((weekSchedule: any, weekIndex: number) => (
                   <div key={weekIndex} className="border p-3 rounded-md space-y-2 bg-background/50">
                     <div className="flex items-center justify-between">
-                      <h5 className="font-medium text-sm">Woche {weekIndex + 1} (Offset {(form.watch(`assignedEmployees.${assignedIndex}.assigned_start_week_offset`) + weekIndex) % form.watch(`assignedEmployees.${assignedIndex}.assigned_recurrence_interval_weeks`)})</h5>
+                      <h5 className="font-medium text-sm">Woche {weekIndex + 1} (Offset {(form.watch(`assignedEmployees.${index}.assigned_start_week_offset`) + weekIndex) % form.watch(`assignedEmployees.${index}.assigned_recurrence_interval_weeks`)})</h5>
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -873,8 +873,8 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess, 
                               variant="ghost"
                               size="icon"
                               className="h-6 w-6 text-muted-foreground hover:text-primary"
-                              onClick={() => handleCopyWeekToAllWeeksForEmployee(assignedIndex, weekIndex)}
-                              disabled={form.watch(`assignedEmployees.${assignedIndex}.assigned_recurrence_interval_weeks`) === 1}
+                              onClick={() => handleCopyWeekToAllWeeksForEmployee(index, weekIndex)}
+                              disabled={form.watch(`assignedEmployees.${index}.assigned_recurrence_interval_weeks`) === 1}
                             >
                               <Copy className="h-4 w-4" />
                             </Button>
@@ -887,9 +887,9 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess, 
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                       {dayNames.map(day => {
-                        const hoursFieldName = `assignedEmployees.${assignedIndex}.assigned_daily_schedules.${weekIndex}.${day}.hours` as const;
-                        const startFieldName = `assignedEmployees.${assignedIndex}.assigned_daily_schedules.${weekIndex}.${day}.start` as const;
-                        const endFieldName = `assignedEmployees.${assignedIndex}.assigned_daily_schedules.${weekIndex}.${day}.end` as const;
+                        const hoursFieldName = `assignedEmployees.${index}.assigned_daily_schedules.${weekIndex}.${day}.hours` as const;
+                        const startFieldName = `assignedEmployees.${index}.assigned_daily_schedules.${weekIndex}.${day}.start` as const;
+                        const endFieldName = `assignedEmployees.${index}.assigned_daily_schedules.${weekIndex}.${day}.end` as const;
                         const objectDailyHours = getObjectDailyHours(weekIndex, day);
                         const isDayValid = isDailyHoursValid(weekIndex, day);
 
@@ -911,8 +911,8 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess, 
                                       variant="ghost"
                                       size="icon"
                                       className="h-5 w-5 text-muted-foreground hover:text-primary"
-                                      onClick={() => handleCopyDayToAllWeeksForEmployee(assignedIndex, weekIndex, day)}
-                                      disabled={form.watch(`assignedEmployees.${assignedIndex}.assigned_recurrence_interval_weeks`) === 1 || (!form.watch(hoursFieldName) && !form.watch(startFieldName) && !form.watch(endFieldName))}
+                                      onClick={() => handleCopyDayToAllWeeksForEmployee(index, weekIndex, day)}
+                                      disabled={form.watch(`assignedEmployees.${index}.assigned_recurrence_interval_weeks`) === 1 || (!form.watch(hoursFieldName) && !form.watch(startFieldName) && !form.watch(endFieldName))}
                                     >
                                       <Copy className="h-3 w-3" />
                                     </Button>
@@ -944,7 +944,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess, 
                                     value={field.value ?? ''}
                                     onChange={(e) => {
                                       field.onChange(e.target.value === '' ? null : Number(e.target.value));
-                                      handleAssignedDailyHoursChange(assignedIndex, weekIndex, day, e.target.value);
+                                      handleAssignedDailyHoursChange(index, weekIndex, day, e.target.value);
                                     }}
                                   />
                                 </div>
@@ -964,7 +964,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess, 
                                     value={field.value ?? ''}
                                     onChange={(e) => {
                                       field.onChange(e.target.value);
-                                      handleAssignedStartTimeChange(assignedIndex, weekIndex, day, e.target.value);
+                                      handleAssignedStartTimeChange(index, weekIndex, day, e.target.value);
                                     }}
                                   />
                                 </div>
@@ -984,7 +984,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess, 
                                     value={field.value ?? ''}
                                     onChange={(e) => {
                                       field.onChange(e.target.value);
-                                      handleAssignedEndTimeChange(assignedIndex, weekIndex, day, e.target.value);
+                                      handleAssignedEndTimeChange(index, weekIndex, day, e.target.value);
                                     }}
                                   />
                                 </div>
@@ -1029,7 +1029,9 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess, 
           type="number"
           step="0.01"
           {...form.register("totalEstimatedHours")}
-          placeholder="Wird automatisch berechnet oder manuell eingeben"
+          placeholder="Wird automatisch berechnet"
+          readOnly
+          className="bg-muted cursor-not-allowed"
         />
         {form.formState.errors.totalEstimatedHours && <p className="text-red-500 text-sm mt-1">{form.formState.errors.totalEstimatedHours.message}</p>}
       </div>
