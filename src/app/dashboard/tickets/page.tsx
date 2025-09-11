@@ -2,7 +2,7 @@
 
 import { createClient } from "@/lib/supabase/client";
 import { redirect, useRouter, useSearchParams } from "next/navigation";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from "@/components/ui/card";
 import { MessageSquare, PlusCircle, AlertCircle, Building, Briefcase, UserRound, Clock } from "lucide-react"; // Added missing imports
 import { TicketCreateDialog } from "@/components/ticket-create-dialog";
 import { TicketEditDialog } from "@/components/ticket-edit-dialog";
@@ -20,6 +20,8 @@ import { Badge } from "@/components/ui/badge";
 import { RecordDetailsDialog } from "@/components/record-details-dialog";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
+import { PageHeader } from "@/components/page-header";
+import { DataTableToolbar } from "@/components/data-table-toolbar";
 
 interface DisplayTicket {
   id: string;
@@ -196,134 +198,138 @@ export default function TicketsPage({
   return (
     <div className="p-4 md:p-8 space-y-8">
       {loading && <LoadingOverlay isLoading={loading} />}
-      <h1 className="text-2xl md:text-3xl font-bold">Ticket-Verwaltung</h1>
-
-      <div className="mb-4 flex flex-col sm:flex-row justify-between items-center gap-4">
-        <SearchInput placeholder="Tickets suchen..." />
+      <PageHeader title="Ticket-Verwaltung">
         <TicketCreateDialog onTicketCreated={fetchData} />
-      </div>
+      </PageHeader>
 
-      {/* Filter Section */}
-      <Suspense fallback={<div>Lade Filter...</div>}>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-8">
-          <FilterSelect
-            paramName="status"
-            label="Status"
-            options={statusOptions}
-            currentValue={statusFilter}
-          />
-          <FilterSelect
-            paramName="priority"
-            label="Priorität"
-            options={priorityOptions}
-            currentValue={priorityFilter}
-          />
-          <FilterSelect
-            paramName="assignedToUser"
-            label="Zugewiesen an"
-            options={assignedToUserOptions}
-            currentValue={assignedToUserFilter}
-          />
-          <FilterSelect
-            paramName="customerId"
-            label="Kunde"
-            options={customers.map(c => ({ value: c.id, label: c.name }))}
-            currentValue={customerIdFilter}
-          />
-        </div>
-      </Suspense>
-
-      <Tabs value={activeTab} onValueChange={handleViewModeChange} className="w-full">
-        <div className="flex justify-end mb-4">
-          <TabsList className="hidden md:grid grid-cols-2 w-fit">
-            <TabsTrigger value="grid">Kartenansicht</TabsTrigger>
-            <TabsTrigger value="table">Tabellenansicht</TabsTrigger>
-          </TabsList>
-        </div>
-        <TabsContent value="grid" className="mt-0">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-            {allTickets.length === 0 && !query && !statusFilter && !priorityFilter && !assignedToUserFilter && !customerIdFilter ? (
-              <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30 shadow-neumorphic glassmorphism-card">
-                <MessageSquare className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
-                <p className="text-base md:text-lg font-semibold">Noch keine Tickets vorhanden</p>
-                <p className="text-sm">Erstellen Sie ein neues Ticket, um Kundenanliegen zu verwalten.</p>
-                <div className="mt-4">
-                  <TicketCreateDialog onTicketCreated={fetchData} />
-                </div>
+      <Card className="shadow-neumorphic glassmorphism-card">
+        <CardHeader>
+          <DataTableToolbar>
+            <SearchInput placeholder="Tickets suchen..." className="w-full sm:w-auto sm:flex-grow" />
+            <Suspense fallback={<div>Lade Filter...</div>}>
+              <FilterSelect
+                paramName="status"
+                placeholder="Status"
+                options={statusOptions}
+                currentValue={statusFilter}
+              />
+              <FilterSelect
+                paramName="priority"
+                placeholder="Priorität"
+                options={priorityOptions}
+                currentValue={priorityFilter}
+              />
+              <FilterSelect
+                paramName="assignedToUser"
+                placeholder="Zugewiesen an"
+                options={assignedToUserOptions}
+                currentValue={assignedToUserFilter}
+              />
+              <FilterSelect
+                paramName="customerId"
+                placeholder="Kunde"
+                options={customers.map(c => ({ value: c.id, label: c.name }))}
+                currentValue={customerIdFilter}
+              />
+            </Suspense>
+          </DataTableToolbar>
+        </CardHeader>
+        <CardContent>
+          <Tabs value={activeTab} onValueChange={handleViewModeChange} className="w-full">
+            <div className="flex justify-end mb-4">
+              <TabsList className="hidden md:grid grid-cols-2 w-fit">
+                <TabsTrigger value="grid">Kartenansicht</TabsTrigger>
+                <TabsTrigger value="table">Tabellenansicht</TabsTrigger>
+              </TabsList>
+            </div>
+            <TabsContent value="grid" className="mt-0">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+                {allTickets.length === 0 && !query && !statusFilter && !priorityFilter && !assignedToUserFilter && !customerIdFilter ? (
+                  <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30 shadow-neumorphic glassmorphism-card">
+                    <MessageSquare className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
+                    <p className="text-base md:text-lg font-semibold">Noch keine Tickets vorhanden</p>
+                    <p className="text-sm">Erstellen Sie ein neues Ticket, um Kundenanliegen zu verwalten.</p>
+                    <div className="mt-4">
+                      <TicketCreateDialog onTicketCreated={fetchData} />
+                    </div>
+                  </div>
+                ) : allTickets.length === 0 && (query || statusFilter || priorityFilter || assignedToUserFilter || customerIdFilter) ? (
+                  <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30 shadow-neumorphic glassmorphism-card">
+                    <MessageSquare className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
+                    <p className="text-base md:text-lg font-semibold">Keine Tickets gefunden</p>
+                    <p className="text-sm">Ihre Suche oder Filter ergaben keine Treffer.</p>
+                  </div>
+                ) : (
+                  allTickets.map((ticket) => (
+                    <Card key={ticket.id} className="shadow-neumorphic glassmorphism-card">
+                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-base md:text-lg font-semibold">{ticket.title}</CardTitle>
+                        <div className="flex items-center space-x-2">
+                          <RecordDetailsDialog record={ticket} title={`Details zu Ticket: ${ticket.title}`} />
+                          <TicketEditDialog ticket={ticket} onTicketUpdated={fetchData} />
+                          <DeleteTicketButton ticketId={ticket.id} onDeleteSuccess={fetchData} />
+                        </div>
+                      </CardHeader>
+                      <CardContent className="space-y-2 text-sm text-muted-foreground">
+                        <div className="flex items-center">
+                          <MessageSquare className="mr-2 h-4 w-4 flex-shrink-0" />
+                          <span>Status: <Badge variant={getStatusBadgeVariant(ticket.status)}>{ticket.status}</Badge></span>
+                        </div>
+                        <div className="flex items-center">
+                          <AlertCircle className="mr-2 h-4 w-4 flex-shrink-0" />
+                          <span>Priorität: <Badge variant={getPriorityBadgeVariant(ticket.priority)}>{ticket.priority}</Badge></span>
+                        </div>
+                        {ticket.customer_name && (
+                          <div className="flex items-center">
+                            <Building className="mr-2 h-4 w-4 flex-shrink-0" />
+                            <span>Kunde: {ticket.customer_name}</span>
+                          </div>
+                        )}
+                        {ticket.object_name && (
+                          <div className="flex items-center">
+                            <Briefcase className="mr-2 h-4 w-4 flex-shrink-0" />
+                            <span>Objekt: {ticket.object_name}</span>
+                          </div>
+                        )}
+                        {ticket.assigned_to_first_name && ticket.assigned_to_last_name && (
+                          <div className="flex items-center">
+                            <UserRound className="mr-2 h-4 w-4 flex-shrink-0" />
+                            <span>Zugewiesen an: {ticket.assigned_to_first_name} {ticket.assigned_to_last_name}</span>
+                          </div>
+                        )}
+                        <div className="flex items-center">
+                          <Clock className="mr-2 h-4 w-4 flex-shrink-0" />
+                          <span>Erstellt am: {format(new Date(ticket.created_at), 'dd.MM.yyyy', { locale: de })}</span>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))
+                )}
               </div>
-            ) : allTickets.length === 0 && (query || statusFilter || priorityFilter || assignedToUserFilter || customerIdFilter) ? (
-              <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30 shadow-neumorphic glassmorphism-card">
-                <MessageSquare className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
-                <p className="text-base md:text-lg font-semibold">Keine Tickets gefunden</p>
-                <p className="text-sm">Ihre Suche oder Filter ergaben keine Treffer.</p>
-              </div>
-            ) : (
-              allTickets.map((ticket) => (
-                <Card key={ticket.id} className="shadow-neumorphic glassmorphism-card">
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-base md:text-lg font-semibold">{ticket.title}</CardTitle>
-                    <div className="flex items-center space-x-2">
-                      <RecordDetailsDialog record={ticket} title={`Details zu Ticket: ${ticket.title}`} />
-                      <TicketEditDialog ticket={ticket} onTicketUpdated={fetchData} />
-                      <DeleteTicketButton ticketId={ticket.id} onDeleteSuccess={fetchData} />
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-2 text-sm text-muted-foreground">
-                    <div className="flex items-center">
-                      <MessageSquare className="mr-2 h-4 w-4 flex-shrink-0" />
-                      <span>Status: <Badge variant={getStatusBadgeVariant(ticket.status)}>{ticket.status}</Badge></span>
-                    </div>
-                    <div className="flex items-center">
-                      <AlertCircle className="mr-2 h-4 w-4 flex-shrink-0" />
-                      <span>Priorität: <Badge variant={getPriorityBadgeVariant(ticket.priority)}>{ticket.priority}</Badge></span>
-                    </div>
-                    {ticket.customer_name && (
-                      <div className="flex items-center">
-                        <Building className="mr-2 h-4 w-4 flex-shrink-0" />
-                        <span>Kunde: {ticket.customer_name}</span>
-                      </div>
-                    )}
-                    {ticket.object_name && (
-                      <div className="flex items-center">
-                        <Briefcase className="mr-2 h-4 w-4 flex-shrink-0" />
-                        <span>Objekt: {ticket.object_name}</span>
-                      </div>
-                    )}
-                    {ticket.assigned_to_first_name && ticket.assigned_to_last_name && (
-                      <div className="flex items-center">
-                        <UserRound className="mr-2 h-4 w-4 flex-shrink-0" />
-                        <span>Zugewiesen an: {ticket.assigned_to_first_name} {ticket.assigned_to_last_name}</span>
-                      </div>
-                    )}
-                    <div className="flex items-center">
-                      <Clock className="mr-2 h-4 w-4 flex-shrink-0" />
-                      <span>Erstellt am: {format(new Date(ticket.created_at), 'dd.MM.yyyy', { locale: de })}</span>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))
-            )}
-          </div>
-        </TabsContent>
-        <TabsContent value="table" className="mt-0">
-          <TicketsTableView
-            tickets={allTickets}
-            totalPages={totalPages}
-            currentPage={currentPage}
-            query={query}
-            statusFilter={statusFilter}
-            priorityFilter={priorityFilter}
-            assignedToUserFilter={assignedToUserFilter}
-            customerIdFilter={customerIdFilter}
-            sortColumn={sortColumn}
-            sortDirection={sortDirection}
-            onTicketUpdated={fetchData}
-          />
-        </TabsContent>
-      </Tabs>
-      {!query && totalPages > 1 && (
-        <PaginationControls currentPage={currentPage} totalPages={totalPages} />
-      )}
+            </TabsContent>
+            <TabsContent value="table" className="mt-0">
+              <TicketsTableView
+                tickets={allTickets}
+                totalPages={totalPages}
+                currentPage={currentPage}
+                query={query}
+                statusFilter={statusFilter}
+                priorityFilter={priorityFilter}
+                assignedToUserFilter={assignedToUserFilter}
+                customerIdFilter={customerIdFilter}
+                sortColumn={sortColumn}
+                sortDirection={sortDirection}
+                onTicketUpdated={fetchData}
+              />
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+        <CardFooter className="flex justify-center">
+          {!query && totalPages > 1 && (
+            <PaginationControls currentPage={currentPage} totalPages={totalPages} />
+          )}
+        </CardFooter>
+      </Card>
     </div>
   );
 }

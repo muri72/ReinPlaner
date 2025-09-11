@@ -2,7 +2,7 @@
 
 import { createClient } from "@/lib/supabase/client";
 import { redirect, useRouter, useSearchParams } from "next/navigation";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { MapPin, FileText, Clock, Key, Lock, ShieldCheck, UserRound, PlusCircle, Building, FileStack } from "lucide-react";
 import { ObjectEditDialog } from "@/components/object-edit-dialog";
@@ -20,6 +20,8 @@ import { ObjectsTableView } from "@/components/objects-table-view"; // Import th
 import { useIsMobile } from "@/hooks/use-mobile"; // Import the hook
 import { RecordDetailsDialog } from "@/components/record-details-dialog"; // Import RecordDetailsDialog
 import { LoadingOverlay } from "@/components/loading-overlay"; // Import the new LoadingOverlay
+import { PageHeader } from "@/components/page-header";
+import { DataTableToolbar } from "@/components/data-table-toolbar";
 
 interface DisplayObject {
   id: string;
@@ -260,207 +262,211 @@ export default function ObjectsPage({
   return (
     <div className="p-4 md:p-8 space-y-8">
       {loading && <LoadingOverlay isLoading={loading} />}
-      <h1 className="text-2xl md:text-3xl font-bold">Ihre Objekte</h1>
-
-      <div className="mb-4 flex flex-col sm:flex-row justify-between items-center gap-4">
-        <SearchInput placeholder="Objekte suchen..." />
+      <PageHeader title="Ihre Objekte">
         <ObjectCreateDialog />
-      </div>
+      </PageHeader>
 
-      {/* Filter Section */}
-      <Suspense fallback={<div>Lade Filter...</div>}>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-8">
-          <FilterSelect
-            paramName="customerId"
-            label="Kunde"
-            options={customers.map(c => ({ value: c.id, label: c.name }))}
-            currentValue={customerIdFilter}
-          />
-          <FilterSelect
-            paramName="priority"
-            label="Priorität"
-            options={priorityOptions}
-            currentValue={priorityFilter}
-          />
-          <FilterSelect
-            paramName="timeOfDay"
-            label="Tageszeit"
-            options={timeOfDayOptions}
-            currentValue={timeOfDayFilter}
-          />
-          <FilterSelect
-            paramName="accessMethod"
-            label="Zugangsmethode"
-            options={accessMethodOptions}
-            currentValue={accessMethodFilter}
-          />
-        </div>
-      </Suspense>
-
-      <Tabs value={activeTab} onValueChange={handleViewModeChange} className="w-full">
-        <div className="flex justify-end mb-4">
-          <TabsList className="hidden md:grid grid-cols-2 w-fit">
-            <TabsTrigger value="grid">Kartenansicht</TabsTrigger>
-            <TabsTrigger value="table">Tabellenansicht</TabsTrigger>
-          </TabsList>
-        </div>
-        <TabsContent value="grid" className="mt-0">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-            {allObjects.length === 0 && !query && !customerIdFilter && !priorityFilter && !timeOfDayFilter && !accessMethodFilter ? (
-              <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30 shadow-neumorphic glassmorphism-card">
-                <Building className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
-                <p className="text-base md:text-lg font-semibold">Noch keine Objekte vorhanden</p>
-                <p className="text-sm">Fügen Sie ein neues Objekt hinzu, um es zu verwalten.</p>
-                <div className="mt-4">
-                  <ObjectCreateDialog />
-                </div>
-              </div>
-            ) : allObjects.length === 0 && (query || customerIdFilter || priorityFilter || timeOfDayFilter || accessMethodFilter) ? (
-              <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30 shadow-neumorphic glassmorphism-card">
-                <Building className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
-                <p className="text-base md:text-lg font-semibold">Keine Objekte gefunden</p>
-                <p className="text-sm">Ihre Suche oder Filter ergaben keine Treffer.</p>
-              </div>
-            ) : (
-              allObjects.map((object) => (
-                <Card key={object.id} className="shadow-neumorphic glassmorphism-card">
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-base md:text-lg font-semibold">{object.name}</CardTitle>
-                    <div className="flex items-center space-x-2">
-                      <RecordDetailsDialog record={object} title={`Details zu Objekt: ${object.name}`} />
-                      <ObjectEditDialog object={object} />
-                      <DeleteObjectButton objectId={object.id} onDeleteSuccess={fetchData} />
+      <Card className="shadow-neumorphic glassmorphism-card">
+        <CardHeader>
+          <DataTableToolbar>
+            <SearchInput placeholder="Objekte suchen..." className="w-full sm:w-auto sm:flex-grow" />
+            <Suspense fallback={<div>Lade Filter...</div>}>
+              <FilterSelect
+                paramName="customerId"
+                placeholder="Kunde"
+                options={customers.map(c => ({ value: c.id, label: c.name }))}
+                currentValue={customerIdFilter}
+              />
+              <FilterSelect
+                paramName="priority"
+                placeholder="Priorität"
+                options={priorityOptions}
+                currentValue={priorityFilter}
+              />
+              <FilterSelect
+                paramName="timeOfDay"
+                placeholder="Tageszeit"
+                options={timeOfDayOptions}
+                currentValue={timeOfDayFilter}
+              />
+              <FilterSelect
+                paramName="accessMethod"
+                placeholder="Zugangsmethode"
+                options={accessMethodOptions}
+                currentValue={accessMethodFilter}
+              />
+            </Suspense>
+          </DataTableToolbar>
+        </CardHeader>
+        <CardContent>
+          <Tabs value={activeTab} onValueChange={handleViewModeChange} className="w-full">
+            <div className="flex justify-end mb-4">
+              <TabsList className="hidden md:grid grid-cols-2 w-fit">
+                <TabsTrigger value="grid">Kartenansicht</TabsTrigger>
+                <TabsTrigger value="table">Tabellenansicht</TabsTrigger>
+              </TabsList>
+            </div>
+            <TabsContent value="grid" className="mt-0">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+                {allObjects.length === 0 && !query && !customerIdFilter && !priorityFilter && !timeOfDayFilter && !accessMethodFilter ? (
+                  <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30 shadow-neumorphic glassmorphism-card">
+                    <Building className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
+                    <p className="text-base md:text-lg font-semibold">Noch keine Objekte vorhanden</p>
+                    <p className="text-sm">Fügen Sie ein neues Objekt hinzu, um es zu verwalten.</p>
+                    <div className="mt-4">
+                      <ObjectCreateDialog />
                     </div>
-                  </CardHeader>
-                  <CardContent className="space-y-2">
-                    <Tabs defaultValue="details" className="w-full">
-                      <TabsList className="grid w-full grid-cols-2">
-                        <TabsTrigger value="details">Details</TabsTrigger>
-                        <TabsTrigger value="documents">Dokumente</TabsTrigger>
-                      </TabsList>
-                      <TabsContent value="details" className="pt-4 space-y-2 text-sm text-muted-foreground">
-                        {object.customer_name && (
-                          <p className="text-sm text-muted-foreground">
-                            Kunde: {object.customer_name}
-                          </p>
-                        )}
-                        {object.object_leader_first_name && object.object_leader_last_name && (
-                          <div className="flex items-center text-sm text-muted-foreground">
-                            <UserRound className="mr-2 h-4 w-4 flex-shrink-0" />
-                            <span>Objektleiter: {object.object_leader_first_name} {object.object_leader_last_name}</span>
-                          </div>
-                        )}
-                        {object.address && (
-                          <div className="flex items-center text-sm text-muted-foreground">
-                            <MapPin className="mr-2 h-4 w-4 flex-shrink-0" />
-                            <span>{object.address}</span>
-                          </div>
-                        )}
-                        {object.description && (
-                          <div className="flex items-center text-sm text-muted-foreground">
-                            <FileText className="mr-2 h-4 w-4 flex-shrink-0" />
-                            <span>{object.description}</span>
-                          </div>
-                        )}
-                        {object.notes && (
-                          <div className="flex items-center text-sm text-muted-foreground">
-                            <FileText className="mr-2 h-4 w-4 flex-shrink-0" />
-                            <span>Notizen: {object.notes}</span>
-                          </div>
-                        )}
-                        <div className="flex items-center text-sm text-muted-foreground">
-                          <Clock className="mr-2 h-4 w-4 flex-shrink-0" />
-                          <span>Priorität: <Badge variant="secondary">{object.priority}</Badge></span>
+                  </div>
+                ) : allObjects.length === 0 && (query || customerIdFilter || priorityFilter || timeOfDayFilter || accessMethodFilter) ? (
+                  <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30 shadow-neumorphic glassmorphism-card">
+                    <Building className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
+                    <p className="text-base md:text-lg font-semibold">Keine Objekte gefunden</p>
+                    <p className="text-sm">Ihre Suche oder Filter ergaben keine Treffer.</p>
+                  </div>
+                ) : (
+                  allObjects.map((object) => (
+                    <Card key={object.id} className="shadow-neumorphic glassmorphism-card">
+                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-base md:text-lg font-semibold">{object.name}</CardTitle>
+                        <div className="flex items-center space-x-2">
+                          <RecordDetailsDialog record={object} title={`Details zu Objekt: ${object.name}`} />
+                          <ObjectEditDialog object={object} />
+                          <DeleteObjectButton objectId={object.id} onDeleteSuccess={fetchData} />
                         </div>
-                        <div className="flex items-center text-sm text-muted-foreground">
-                          <Clock className="mr-2 h-4 w-4 flex-shrink-0" />
-                          <span>Tageszeit: <Badge variant="secondary">{object.time_of_day}</Badge></span>
-                        </div>
-                        <div className="flex items-center text-sm text-muted-foreground">
-                          <Key className="mr-2 h-4 w-4 flex-shrink-0" />
-                          <span>Zugang: <Badge variant="secondary">{object.access_method}</Badge></span>
-                        </div>
-                        {object.pin && (
-                          <div className="flex items-center text-sm text-muted-foreground">
-                            <Lock className="mr-2 h-4 w-4 flex-shrink-0" />
-                            <span>PIN: {object.pin}</span>
-                          </div>
-                        )}
-                        {object.is_alarm_secured && (
-                          <>
+                      </CardHeader>
+                      <CardContent className="space-y-2">
+                        <Tabs defaultValue="details" className="w-full">
+                          <TabsList className="grid w-full grid-cols-2">
+                            <TabsTrigger value="details">Details</TabsTrigger>
+                            <TabsTrigger value="documents">Dokumente</TabsTrigger>
+                          </TabsList>
+                          <TabsContent value="details" className="pt-4 space-y-2 text-sm text-muted-foreground">
+                            {object.customer_name && (
+                              <p className="text-sm text-muted-foreground">
+                                Kunde: {object.customer_name}
+                              </p>
+                            )}
+                            {object.object_leader_first_name && object.object_leader_last_name && (
+                              <div className="flex items-center text-sm text-muted-foreground">
+                                <UserRound className="mr-2 h-4 w-4 flex-shrink-0" />
+                                <span>Objektleiter: {object.object_leader_first_name} {object.object_leader_last_name}</span>
+                              </div>
+                            )}
+                            {object.address && (
+                              <div className="flex items-center text-sm text-muted-foreground">
+                                <MapPin className="mr-2 h-4 w-4 flex-shrink-0" />
+                                <span>{object.address}</span>
+                              </div>
+                            )}
+                            {object.description && (
+                              <div className="flex items-center text-sm text-muted-foreground">
+                                <FileText className="mr-2 h-4 w-4 flex-shrink-0" />
+                                <span>{object.description}</span>
+                              </div>
+                            )}
+                            {object.notes && (
+                              <div className="flex items-center text-sm text-muted-foreground">
+                                <FileText className="mr-2 h-4 w-4 flex-shrink-0" />
+                                <span>Notizen: {object.notes}</span>
+                              </div>
+                            )}
                             <div className="flex items-center text-sm text-muted-foreground">
-                              <ShieldCheck className="mr-2 h-4 w-4 flex-shrink-0" />
-                              <span>Alarmgesichert: Ja</span>
+                              <Clock className="mr-2 h-4 w-4 flex-shrink-0" />
+                              <span>Priorität: <Badge variant="secondary">{object.priority}</Badge></span>
                             </div>
-                            {object.alarm_password && (
+                            <div className="flex items-center text-sm text-muted-foreground">
+                              <Clock className="mr-2 h-4 w-4 flex-shrink-0" />
+                              <span>Tageszeit: <Badge variant="secondary">{object.time_of_day}</Badge></span>
+                            </div>
+                            <div className="flex items-center text-sm text-muted-foreground">
+                              <Key className="mr-2 h-4 w-4 flex-shrink-0" />
+                              <span>Zugang: <Badge variant="secondary">{object.access_method}</Badge></span>
+                            </div>
+                            {object.pin && (
                               <div className="flex items-center text-sm text-muted-foreground">
                                 <Lock className="mr-2 h-4 w-4 flex-shrink-0" />
-                                <span>Alarmkennwort: {object.alarm_password}</span>
+                                <span>PIN: {object.pin}</span>
                               </div>
                             )}
-                            {object.security_code_word && (
-                              <div className="flex items-center text-sm text-muted-foreground">
-                                <Lock className="mr-2 h-4 w-4 flex-shrink-0" />
-                                <span>Codewort: {object.security_code_word}</span>
-                              </div>
+                            {object.is_alarm_secured && (
+                              <>
+                                <div className="flex items-center text-sm text-muted-foreground">
+                                  <ShieldCheck className="mr-2 h-4 w-4 flex-shrink-0" />
+                                  <span>Alarmgesichert: Ja</span>
+                                </div>
+                                {object.alarm_password && (
+                                  <div className="flex items-center text-sm text-muted-foreground">
+                                    <Lock className="mr-2 h-4 w-4 flex-shrink-0" />
+                                    <span>Alarmkennwort: {object.alarm_password}</span>
+                                  </div>
+                                )}
+                                {object.security_code_word && (
+                                  <div className="flex items-center text-sm text-muted-foreground">
+                                    <Lock className="mr-2 h-4 w-4 flex-shrink-0" />
+                                    <span>Codewort: {object.security_code_word}</span>
+                                  </div>
+                                )}
+                              </>
                             )}
-                          </>
-                        )}
-                        <div className="mt-4 text-sm font-semibold">Arbeitszeiten pro Wochentag:</div>
-                        {object.daily_schedules.map((weekSchedule: any, weekIndex: number) => (
-                          <div key={weekIndex} className="ml-2 mb-2">
-                            <p className="text-xs font-semibold text-muted-foreground">Woche {weekIndex + 1}:</p>
-                            {dayNames.map(day => {
-                              const daySchedule = weekSchedule[day];
-                              if (daySchedule?.hours || daySchedule?.start || daySchedule?.end) {
-                                return (
-                                  <p key={day} className="text-xs text-muted-foreground ml-2">
-                                    {germanDayNames[day]}:
-                                    {daySchedule.start && daySchedule.end ? ` ${daySchedule.start} - ${daySchedule.end}` : ''}
-                                    {daySchedule.hours ? ` (${Number(daySchedule.hours).toFixed(2)} Std. Netto)` : ''}
-                                  </p>
-                                );
-                              }
-                              return null;
-                            })}
-                          </div>
-                        ))}
-                        <div className="mt-2 text-sm font-semibold">
-                          Wiederholung: Alle {object.recurrence_interval_weeks} Wochen (Offset: {object.start_week_offset})
-                        </div>
-                      </TabsContent>
-                      <TabsContent value="documents" className="pt-4 space-y-4">
-                        <h3 className="text-md font-semibold flex items-center">
-                          <FileStack className="mr-2 h-5 w-5" /> Dokumente
-                        </h3>
-                        <DocumentUploader associatedOrderId={object.id} />
-                        <DocumentList associatedOrderId={object.id} />
-                      </TabsContent>
-                    </Tabs>
-                  </CardContent>
-                </Card>
-              ))
-            )}
-          </div>
-        </TabsContent>
-        <TabsContent value="table" className="mt-0">
-          <ObjectsTableView
-            objects={allObjects}
-            totalPages={totalPages}
-            currentPage={currentPage}
-            query={query}
-            customerIdFilter={customerIdFilter}
-            priorityFilter={priorityFilter}
-            timeOfDayFilter={timeOfDayFilter}
-            accessMethodFilter={accessMethodFilter}
-            sortColumn={sortColumn}
-            sortDirection={sortDirection}
-          />
-        </TabsContent>
-      </Tabs>
-      {!query && totalPages > 1 && (
-        <PaginationControls currentPage={currentPage} totalPages={totalPages} />
-      )}
+                            <div className="mt-4 text-sm font-semibold">Arbeitszeiten pro Wochentag:</div>
+                            {object.daily_schedules.map((weekSchedule: any, weekIndex: number) => (
+                              <div key={weekIndex} className="ml-2 mb-2">
+                                <p className="text-xs font-semibold text-muted-foreground">Woche {weekIndex + 1}:</p>
+                                {dayNames.map(day => {
+                                  const daySchedule = weekSchedule[day];
+                                  if (daySchedule?.hours || daySchedule?.start || daySchedule?.end) {
+                                    return (
+                                      <p key={day} className="text-xs text-muted-foreground ml-2">
+                                        {germanDayNames[day]}:
+                                        {daySchedule.start && daySchedule.end ? ` ${daySchedule.start} - ${daySchedule.end}` : ''}
+                                        {daySchedule.hours ? ` (${Number(daySchedule.hours).toFixed(2)} Std. Netto)` : ''}
+                                      </p>
+                                    );
+                                  }
+                                  return null;
+                                })}
+                              </div>
+                            ))}
+                            <div className="mt-2 text-sm font-semibold">
+                              Wiederholung: Alle {object.recurrence_interval_weeks} Wochen (Offset: {object.start_week_offset})
+                            </div>
+                          </TabsContent>
+                          <TabsContent value="documents" className="pt-4 space-y-4">
+                            <h3 className="text-md font-semibold flex items-center">
+                              <FileStack className="mr-2 h-5 w-5" /> Dokumente
+                            </h3>
+                            <DocumentUploader associatedOrderId={object.id} />
+                            <DocumentList associatedOrderId={object.id} />
+                          </TabsContent>
+                        </Tabs>
+                      </CardContent>
+                    </Card>
+                  ))
+                )}
+              </div>
+            </TabsContent>
+            <TabsContent value="table" className="mt-0">
+              <ObjectsTableView
+                objects={allObjects}
+                totalPages={totalPages}
+                currentPage={currentPage}
+                query={query}
+                customerIdFilter={customerIdFilter}
+                priorityFilter={priorityFilter}
+                timeOfDayFilter={timeOfDayFilter}
+                accessMethodFilter={accessMethodFilter}
+                sortColumn={sortColumn}
+                sortDirection={sortDirection}
+              />
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+        <CardFooter className="flex justify-center">
+          {!query && totalPages > 1 && (
+            <PaginationControls currentPage={currentPage} totalPages={totalPages} />
+          )}
+        </CardFooter>
+      </Card>
     </div>
   );
 }

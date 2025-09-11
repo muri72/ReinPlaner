@@ -2,7 +2,7 @@
 
 import { createClient } from "@/lib/supabase/client";
 import { redirect, useRouter, useSearchParams } from "next/navigation";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Mail, Phone, Briefcase, UserRound, PlusCircle, ContactRound } from "lucide-react";
 import { CustomerContactEditDialog } from "@/components/customer-contact-edit-dialog";
@@ -17,6 +17,8 @@ import { CustomerContactsTableView } from "@/components/customer-contacts-table-
 import { useIsMobile } from "@/hooks/use-mobile"; // Import the hook
 import { RecordDetailsDialog } from "@/components/record-details-dialog"; // Import RecordDetailsDialog
 import { LoadingOverlay } from "@/components/loading-overlay"; // Import the new LoadingOverlay
+import { PageHeader } from "@/components/page-header";
+import { DataTableToolbar } from "@/components/data-table-toolbar";
 
 interface DisplayCustomerContact {
   id: string;
@@ -178,105 +180,109 @@ export default function CustomerContactsPage({
   return (
     <div className="p-4 md:p-8 space-y-8">
       {loading && <LoadingOverlay isLoading={loading} />}
-      <h1 className="text-2xl md:text-3xl font-bold">Ihre Kundenkontakte</h1>
-
-      <div className="mb-4 flex justify-between items-center">
-        <SearchInput placeholder="Kundenkontakte suchen..." />
+      <PageHeader title="Ihre Kundenkontakte">
         <CustomerContactCreateGeneralDialog />
-      </div>
+      </PageHeader>
 
-      {/* Filter Section */}
-      <Suspense fallback={<div>Lade Filter...</div>}>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-8">
-          <FilterSelect
-            paramName="customerId"
-            label="Kunde"
-            options={customers.map(c => ({ value: c.id, label: c.name }))}
-            currentValue={customerIdFilter}
-          />
-        </div>
-      </Suspense>
-
-      <Tabs value={activeTab} onValueChange={handleViewModeChange} className="w-full">
-        <div className="flex justify-end mb-4">
-          <TabsList className="hidden md:grid grid-cols-2 w-fit">
-            <TabsTrigger value="grid">Kartenansicht</TabsTrigger>
-            <TabsTrigger value="table">Tabellenansicht</TabsTrigger>
-          </TabsList>
-        </div>
-        <TabsContent value="grid" className="mt-0">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-            {allContacts.length === 0 && !query && !customerIdFilter ? (
-              <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30 shadow-neumorphic glassmorphism-card">
-                <ContactRound className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
-                <p className="text-base md:text-lg font-semibold">Noch keine Kundenkontakte vorhanden</p>
-                <p className="text-sm">Fügen Sie einen neuen Kontakt hinzu, um Ihre Kundenbeziehungen zu verwalten.</p>
-                <div className="mt-4">
-                  <CustomerContactCreateGeneralDialog />
-                </div>
-              </div>
-            ) : allContacts.length === 0 && (query || customerIdFilter) ? (
-              <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30 shadow-neumorphic glassmorphism-card">
-                <ContactRound className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
-                <p className="text-base md:text-lg font-semibold">Keine Kundenkontakte gefunden</p>
-                <p className="text-sm">Ihre Suche oder Filter ergaben keine Treffer.</p>
-              </div>
-            ) : (
-              allContacts.map((contact) => (
-                <Card key={contact.id} className="shadow-neumorphic glassmorphism-card">
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-base md:text-lg font-semibold">{contact.first_name} {contact.last_name}</CardTitle>
-                    <div className="flex items-center space-x-2">
-                      <RecordDetailsDialog record={contact} title={`Details zu Kundenkontakt: ${contact.first_name} ${contact.last_name}`} />
-                      <CustomerContactEditDialog contact={contact} />
-                      <DeleteCustomerContactButton contactId={contact.id} onDeleteSuccess={fetchData} />
+      <Card className="shadow-neumorphic glassmorphism-card">
+        <CardHeader>
+          <DataTableToolbar>
+            <SearchInput placeholder="Kontakte suchen..." className="w-full sm:w-auto sm:flex-grow" />
+            <Suspense fallback={<div>Lade Filter...</div>}>
+              <FilterSelect
+                paramName="customerId"
+                placeholder="Alle Kunden"
+                options={customers.map(c => ({ value: c.id, label: c.name }))}
+                currentValue={customerIdFilter}
+              />
+            </Suspense>
+          </DataTableToolbar>
+        </CardHeader>
+        <CardContent>
+          <Tabs value={activeTab} onValueChange={handleViewModeChange} className="w-full">
+            <div className="flex justify-end mb-4">
+              <TabsList className="hidden md:grid grid-cols-2 w-fit">
+                <TabsTrigger value="grid">Kartenansicht</TabsTrigger>
+                <TabsTrigger value="table">Tabellenansicht</TabsTrigger>
+              </TabsList>
+            </div>
+            <TabsContent value="grid" className="mt-0">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+                {allContacts.length === 0 && !query && !customerIdFilter ? (
+                  <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30 shadow-neumorphic glassmorphism-card">
+                    <ContactRound className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
+                    <p className="text-base md:text-lg font-semibold">Noch keine Kundenkontakte vorhanden</p>
+                    <p className="text-sm">Fügen Sie einen neuen Kontakt hinzu, um Ihre Kundenbeziehungen zu verwalten.</p>
+                    <div className="mt-4">
+                      <CustomerContactCreateGeneralDialog />
                     </div>
-                  </CardHeader>
-                  <CardContent className="space-y-2">
-                    {contact.customer_name && (
-                      <p className="text-sm text-muted-foreground">
-                        Kunde: {contact.customer_name}
-                      </p>
-                    )}
-                    {contact.email && (
-                      <div className="flex items-center text-sm text-muted-foreground">
-                        <Mail className="mr-2 h-4 w-4 flex-shrink-0" />
-                        <span>{contact.email}</span>
-                      </div>
-                    )}
-                    {contact.phone && (
-                      <div className="flex items-center text-sm text-muted-foreground">
-                        <Phone className="mr-2 h-4 w-4 flex-shrink-0" />
-                        <span>{contact.phone}</span>
-                      </div>
-                    )}
-                    {contact.role && (
-                      <div className="flex items-center text-sm text-muted-foreground">
-                        <Briefcase className="mr-2 h-4 w-4 flex-shrink-0" />
-                        <span>Rolle: {contact.role}</span>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              ))
-            )}
-          </div>
-        </TabsContent>
-        <TabsContent value="table" className="mt-0">
-          <CustomerContactsTableView
-            contacts={allContacts}
-            totalPages={totalPages}
-            currentPage={currentPage}
-            query={query}
-            customerIdFilter={customerIdFilter}
-            sortColumn={sortColumn}
-            sortDirection={sortDirection}
-          />
-        </TabsContent>
-      </Tabs>
-      {!query && totalPages > 1 && (
-        <PaginationControls currentPage={currentPage} totalPages={totalPages} />
-      )}
+                  </div>
+                ) : allContacts.length === 0 && (query || customerIdFilter) ? (
+                  <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30 shadow-neumorphic glassmorphism-card">
+                    <ContactRound className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
+                    <p className="text-base md:text-lg font-semibold">Keine Kundenkontakte gefunden</p>
+                    <p className="text-sm">Ihre Suche oder Filter ergaben keine Treffer.</p>
+                  </div>
+                ) : (
+                  allContacts.map((contact) => (
+                    <Card key={contact.id} className="shadow-neumorphic glassmorphism-card">
+                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-base md:text-lg font-semibold">{contact.first_name} {contact.last_name}</CardTitle>
+                        <div className="flex items-center space-x-2">
+                          <RecordDetailsDialog record={contact} title={`Details zu Kundenkontakt: ${contact.first_name} ${contact.last_name}`} />
+                          <CustomerContactEditDialog contact={contact} />
+                          <DeleteCustomerContactButton contactId={contact.id} onDeleteSuccess={fetchData} />
+                        </div>
+                      </CardHeader>
+                      <CardContent className="space-y-2">
+                        {contact.customer_name && (
+                          <p className="text-sm text-muted-foreground">
+                            Kunde: {contact.customer_name}
+                          </p>
+                        )}
+                        {contact.email && (
+                          <div className="flex items-center text-sm text-muted-foreground">
+                            <Mail className="mr-2 h-4 w-4 flex-shrink-0" />
+                            <span>{contact.email}</span>
+                          </div>
+                        )}
+                        {contact.phone && (
+                          <div className="flex items-center text-sm text-muted-foreground">
+                            <Phone className="mr-2 h-4 w-4 flex-shrink-0" />
+                            <span>{contact.phone}</span>
+                          </div>
+                        )}
+                        {contact.role && (
+                          <div className="flex items-center text-sm text-muted-foreground">
+                            <Briefcase className="mr-2 h-4 w-4 flex-shrink-0" />
+                            <span>Rolle: {contact.role}</span>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ))
+                )}
+              </div>
+            </TabsContent>
+            <TabsContent value="table" className="mt-0">
+              <CustomerContactsTableView
+                contacts={allContacts}
+                totalPages={totalPages}
+                currentPage={currentPage}
+                query={query}
+                customerIdFilter={customerIdFilter}
+                sortColumn={sortColumn}
+                sortDirection={sortDirection}
+              />
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+        <CardFooter className="flex justify-center">
+          {!query && totalPages > 1 && (
+            <PaginationControls currentPage={currentPage} totalPages={totalPages} />
+          )}
+        </CardFooter>
+      </Card>
     </div>
   );
 }

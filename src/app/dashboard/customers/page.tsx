@@ -13,6 +13,8 @@ import { CustomersTableView } from "@/components/customers-table-view";
 import { CustomersGridView } from "@/components/customers-grid-view";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { LoadingOverlay } from "@/components/loading-overlay";
+import { PageHeader } from "@/components/page-header";
+import { DataTableToolbar } from "@/components/data-table-toolbar";
 
 interface DisplayCustomer {
   id: string;
@@ -152,30 +154,23 @@ export default function CustomersPage({
   return (
     <div className="p-4 md:p-8 space-y-8">
       {loading && <LoadingOverlay isLoading={loading} />}
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl md:text-3xl font-bold">Ihre Kunden</h1>
+      <PageHeader title="Ihre Kunden">
         <CustomerCreateDialog onCustomerCreated={fetchData} />
-      </div>
+      </PageHeader>
 
       <Card className="shadow-neumorphic glassmorphism-card">
         <CardHeader>
-          <CardTitle>Kundenliste</CardTitle>
-          <CardDescription>Suchen, filtern und verwalten Sie Ihre Kunden.</CardDescription>
-          <div className="pt-4 flex flex-col sm:flex-row items-center gap-4">
-            <div className="w-full sm:w-1/2 md:w-1/3">
-              <SearchInput placeholder="Kunden suchen..." />
-            </div>
-            <div className="w-full sm:w-auto">
-              <Suspense fallback={<div>Lade Filter...</div>}>
-                <FilterSelect
-                  paramName="customerType"
-                  label="Kundentyp"
-                  options={customerTypeOptions}
-                  currentValue={customerTypeFilter}
-                />
-              </Suspense>
-            </div>
-          </div>
+          <DataTableToolbar>
+            <SearchInput placeholder="Kunden suchen..." className="w-full sm:w-auto sm:flex-grow" />
+            <Suspense fallback={<div>Lade Filter...</div>}>
+              <FilterSelect
+                paramName="customerType"
+                placeholder="Alle Kundentypen"
+                options={customerTypeOptions}
+                currentValue={customerTypeFilter}
+              />
+            </Suspense>
+          </DataTableToolbar>
         </CardHeader>
         <CardContent>
           <Tabs value={activeTab} onValueChange={handleViewModeChange} className="w-full">

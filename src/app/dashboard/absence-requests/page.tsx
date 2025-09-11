@@ -2,7 +2,7 @@
 
 import { createClient } from "@/lib/supabase/client";
 import { redirect, useRouter, useSearchParams } from "next/navigation";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CalendarOff, User, FileText, CheckCircle2, XCircle, AlertCircle, PlusCircle } from "lucide-react";
 import { AbsenceRequestEditDialog } from "@/components/absence-request-edit-dialog";
@@ -18,6 +18,9 @@ import { PaginationControls } from "@/components/pagination-controls";
 import { useIsMobile } from "@/hooks/use-mobile"; // Import the hook
 import { RecordDetailsDialog } from "@/components/record-details-dialog"; // Import RecordDetailsDialog
 import { LoadingOverlay } from "@/components/loading-overlay"; // Import the new LoadingOverlay
+import { PageHeader } from "@/components/page-header";
+import { DataTableToolbar } from "@/components/data-table-toolbar";
+import { SearchInput } from "@/components/search-input";
 
 interface DisplayAbsenceRequest {
   id: string;
@@ -231,145 +234,146 @@ export default function AbsenceRequestsPage({
   return (
     <div className="p-4 md:p-8 space-y-8">
       {loading && <LoadingOverlay isLoading={loading} />}
-      <h1 className="text-2xl md:text-3xl font-bold">Abwesenheitsverwaltung</h1>
+      <PageHeader title="Abwesenheitsverwaltung">
+        <AbsenceRequestCreateDialog
+          currentUserRole={currentUserRole as 'admin' | 'manager' | 'employee'}
+          currentUserId={currentUser.id}
+        />
+      </PageHeader>
 
       {currentUserRole === 'admin' && (
-        <div className="space-y-6">
-          <h2 className="text-xl md:text-2xl font-bold">Monatsübersicht Abwesenheiten</h2>
-          <div className="p-4 border rounded-lg shadow-neumorphic glassmorphism-card">
+        <Card className="shadow-neumorphic glassmorphism-card">
+          <CardHeader>
+            <CardTitle>Monatsübersicht Abwesenheiten</CardTitle>
+          </CardHeader>
+          <CardContent>
             <AbsenceTimelineCalendar />
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       )}
 
-      <div className="space-y-6">
-        <h2 className="text-xl md:text-2xl font-bold">Antragsübersicht</h2>
-        <div className="flex justify-end mb-4">
-          <AbsenceRequestCreateDialog
-            currentUserRole={currentUserRole as 'admin' | 'manager' | 'employee'} // <-- Typ-Assertion
-            currentUserId={currentUser.id}
-          />
-        </div>
-
-        {/* Filter Section */}
-        <Suspense fallback={<div>Lade Filter...</div>}>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-8">
-            {currentUserRole !== 'employee' && (
-              <FilterSelect
-                paramName="employeeId"
-                label="Mitarbeiter"
-                options={employees.map(e => ({ value: e.id, label: `${e.first_name} ${e.last_name}` }))}
-                currentValue={employeeIdFilter}
-              />
-            )}
-            <FilterSelect
-              paramName="type"
-              label="Typ"
-              options={typeOptions}
-              currentValue={typeFilter}
-            />
-            <FilterSelect
-              paramName="status"
-              label="Status"
-              options={statusOptions}
-              currentValue={statusFilter}
-            />
-          </div>
-        </Suspense>
-
-        <Tabs value={activeTab} onValueChange={handleViewModeChange} className="w-full">
-          <div className="flex justify-end mb-4">
-            <TabsList className="hidden md:grid grid-cols-2 w-fit">
-              <TabsTrigger value="grid">Kartenansicht</TabsTrigger>
-              <TabsTrigger value="table">Tabellenansicht</TabsTrigger>
-            </TabsList>
-          </div>
-          <TabsContent value="grid" className="mt-0">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-              {allRequests.length === 0 && !query && !employeeIdFilter && !typeFilter && !statusFilter ? (
-                <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30 shadow-neumorphic glassmorphism-card">
-                  <CalendarOff className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
-                  <p className="text-base md:text-lg font-semibold">Keine Anträge gefunden</p>
-                  <p className="text-sm">Reichen Sie einen neuen Abwesenheitsantrag ein.</p>
-                  <div className="mt-4">
-                    {/* The button to open the dialog is now part of AbsenceRequestCreateDialog */}
-                  </div>
-                </div>
-              ) : allRequests.length === 0 && (query || employeeIdFilter || typeFilter || statusFilter) ? (
-                <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30 shadow-neumorphic glassmorphism-card">
-                  <CalendarOff className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
-                  <p className="text-base md:text-lg font-semibold">Keine Anträge gefunden</p>
-                  <p className="text-sm">Ihre Suche oder Filter ergaben keine Treffer.</p>
-                </div>
-              ) : (
-                allRequests.map((request) => (
-                  <Card key={request.id} className="shadow-neumorphic glassmorphism-card">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                      <CardTitle className="text-base md:text-lg font-semibold">
-                        {typeTranslations[request.type] || 'Abwesenheit'}
-                      </CardTitle>
-                      <div className="flex items-center space-x-2">
-                        <RecordDetailsDialog record={request} title={`Details zu Abwesenheitsantrag`} />
-                        <AbsenceRequestEditDialog
-                          request={request}
-                          currentUserRole={currentUserRole as 'admin' | 'manager' | 'employee'} // <-- Typ-Assertion
-                          currentUserId={currentUser.id}
-                        />
-                        <DeleteAbsenceRequestButton requestId={request.id} onDeleteSuccess={fetchData} />
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-2 text-sm text-muted-foreground">
-                      {currentUserRole !== 'employee' && request.employees && (
-                        <div className="flex items-center">
-                          <User className="mr-2 h-4 w-4 flex-shrink-0" />
-                          <span>Mitarbeiter: {request.employees.first_name} {request.employees.last_name}</span>
-                        </div>
-                      )}
-                      <div className="flex items-center">
-                        <CalendarOff className="mr-2 h-4 w-4 flex-shrink-0" />
-                        <span>Datum: {new Date(request.start_date).toLocaleDateString()} - {new Date(request.end_date).toLocaleDateString()}</span>
-                      </div>
-                      <div className="flex items-center">
-                        {getStatusIcon(request.status)}
-                        <Badge variant={getStatusBadgeVariant(request.status)}>{request.status}</Badge>
-                      </div>
-                      {request.notes && (
-                        <div className="flex items-start">
-                          <FileText className="mr-2 h-4 w-4 mt-1 flex-shrink-0" />
-                          <p className="flex-grow">Notizen: {request.notes}</p>
-                        </div>
-                      )}
-                      {request.admin_notes && (
-                        <div className="flex items-start">
-                          <FileText className="mr-2 h-4 w-4 mt-1 flex-shrink-0" />
-                          <p className="flex-grow">Admin-Notizen: {request.admin_notes}</p>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                ))
+      <Card className="shadow-neumorphic glassmorphism-card">
+        <CardHeader>
+          <DataTableToolbar>
+            <SearchInput placeholder="Anträge suchen..." className="w-full sm:w-auto sm:flex-grow" />
+            <Suspense fallback={<div>Lade Filter...</div>}>
+              {currentUserRole !== 'employee' && (
+                <FilterSelect
+                  paramName="employeeId"
+                  placeholder="Mitarbeiter"
+                  options={employees.map(e => ({ value: e.id, label: `${e.first_name} ${e.last_name}` }))}
+                  currentValue={employeeIdFilter}
+                />
               )}
+              <FilterSelect
+                paramName="type"
+                placeholder="Typ"
+                options={typeOptions}
+                currentValue={typeFilter}
+              />
+              <FilterSelect
+                paramName="status"
+                placeholder="Status"
+                options={statusOptions}
+                currentValue={statusFilter}
+              />
+            </Suspense>
+          </DataTableToolbar>
+        </CardHeader>
+        <CardContent>
+          <Tabs value={activeTab} onValueChange={handleViewModeChange} className="w-full">
+            <div className="flex justify-end mb-4">
+              <TabsList className="hidden md:grid grid-cols-2 w-fit">
+                <TabsTrigger value="grid">Kartenansicht</TabsTrigger>
+                <TabsTrigger value="table">Tabellenansicht</TabsTrigger>
+              </TabsList>
             </div>
-          </TabsContent>
-          <TabsContent value="table" className="mt-0">
-            <AbsenceRequestsTableView
-              requests={allRequests}
-              totalPages={totalPages}
-              currentPage={currentPage}
-              query={query}
-              employeeIdFilter={employeeIdFilter}
-              typeFilter={typeFilter}
-              statusFilter={statusFilter}
-              sortColumn={sortColumn}
-              sortDirection={sortDirection}
-              currentUserRole={currentUserRole as 'admin' | 'manager' | 'employee'} // <-- Typ-Assertion
-            />
-          </TabsContent>
-        </Tabs>
-        {!query && totalPages > 1 && (
-          <PaginationControls currentPage={currentPage} totalPages={totalPages} />
-        )}
-      </div>
+            <TabsContent value="grid" className="mt-0">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+                {allRequests.length === 0 && !query && !employeeIdFilter && !typeFilter && !statusFilter ? (
+                  <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30 shadow-neumorphic glassmorphism-card">
+                    <CalendarOff className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
+                    <p className="text-base md:text-lg font-semibold">Keine Anträge gefunden</p>
+                    <p className="text-sm">Reichen Sie einen neuen Abwesenheitsantrag ein.</p>
+                  </div>
+                ) : allRequests.length === 0 && (query || employeeIdFilter || typeFilter || statusFilter) ? (
+                  <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30 shadow-neumorphic glassmorphism-card">
+                    <CalendarOff className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
+                    <p className="text-base md:text-lg font-semibold">Keine Anträge gefunden</p>
+                    <p className="text-sm">Ihre Suche oder Filter ergaben keine Treffer.</p>
+                  </div>
+                ) : (
+                  allRequests.map((request) => (
+                    <Card key={request.id} className="shadow-neumorphic glassmorphism-card">
+                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-base md:text-lg font-semibold">
+                          {typeTranslations[request.type] || 'Abwesenheit'}
+                        </CardTitle>
+                        <div className="flex items-center space-x-2">
+                          <RecordDetailsDialog record={request} title={`Details zu Abwesenheitsantrag`} />
+                          <AbsenceRequestEditDialog
+                            request={request}
+                            currentUserRole={currentUserRole as 'admin' | 'manager' | 'employee'}
+                            currentUserId={currentUser.id}
+                          />
+                          <DeleteAbsenceRequestButton requestId={request.id} onDeleteSuccess={fetchData} />
+                        </div>
+                      </CardHeader>
+                      <CardContent className="space-y-2 text-sm text-muted-foreground">
+                        {currentUserRole !== 'employee' && request.employees && (
+                          <div className="flex items-center">
+                            <User className="mr-2 h-4 w-4 flex-shrink-0" />
+                            <span>Mitarbeiter: {request.employees.first_name} {request.employees.last_name}</span>
+                          </div>
+                        )}
+                        <div className="flex items-center">
+                          <CalendarOff className="mr-2 h-4 w-4 flex-shrink-0" />
+                          <span>Datum: {new Date(request.start_date).toLocaleDateString()} - {new Date(request.end_date).toLocaleDateString()}</span>
+                        </div>
+                        <div className="flex items-center">
+                          {getStatusIcon(request.status)}
+                          <Badge variant={getStatusBadgeVariant(request.status)}>{request.status}</Badge>
+                        </div>
+                        {request.notes && (
+                          <div className="flex items-start">
+                            <FileText className="mr-2 h-4 w-4 mt-1 flex-shrink-0" />
+                            <p className="flex-grow">Notizen: {request.notes}</p>
+                          </div>
+                        )}
+                        {request.admin_notes && (
+                          <div className="flex items-start">
+                            <FileText className="mr-2 h-4 w-4 mt-1 flex-shrink-0" />
+                            <p className="flex-grow">Admin-Notizen: {request.admin_notes}</p>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ))
+                )}
+              </div>
+            </TabsContent>
+            <TabsContent value="table" className="mt-0">
+              <AbsenceRequestsTableView
+                requests={allRequests}
+                totalPages={totalPages}
+                currentPage={currentPage}
+                query={query}
+                employeeIdFilter={employeeIdFilter}
+                typeFilter={typeFilter}
+                statusFilter={statusFilter}
+                sortColumn={sortColumn}
+                sortDirection={sortDirection}
+                currentUserRole={currentUserRole as 'admin' | 'manager' | 'employee'}
+              />
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+        <CardFooter className="flex justify-center">
+          {!query && totalPages > 1 && (
+            <PaginationControls currentPage={currentPage} totalPages={totalPages} />
+          )}
+        </CardFooter>
+      </Card>
     </div>
   );
 }

@@ -1,18 +1,19 @@
 "use client";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useCallback } from "react";
+import { cn } from "@/lib/utils";
 
 interface FilterSelectProps {
   paramName: string;
-  label: string;
+  placeholder: string;
   options: { value: string; label: string }[];
   currentValue: string;
+  className?: string;
 }
 
-export function FilterSelect({ paramName, label, options, currentValue }: FilterSelectProps) {
+export function FilterSelect({ paramName, placeholder, options, currentValue, className }: FilterSelectProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -20,9 +21,9 @@ export function FilterSelect({ paramName, label, options, currentValue }: Filter
   const handleFilterChange = useCallback(
     (value: string) => {
       const params = new URLSearchParams(searchParams);
-      if (value && value !== "all") { // Wenn ein gültiger Filterwert (nicht "all") ausgewählt ist
+      if (value && value !== "all") {
         params.set(paramName, value);
-      } else { // Wenn "all" oder ein leerer Wert ausgewählt ist
+      } else {
         params.delete(paramName);
       }
       params.set('page', '1'); // Reset to first page on filter change
@@ -31,19 +32,16 @@ export function FilterSelect({ paramName, label, options, currentValue }: Filter
     [paramName, pathname, router, searchParams]
   );
 
-  // Bestimme den aktuell ausgewählten Wert für das Select-Feld.
-  // Wenn der Parameter nicht gesetzt ist (currentValue ist ""), soll "all" angezeigt werden.
   const selectedValue = currentValue || "all";
 
   return (
-    <div>
-      <Label htmlFor={paramName}>{label}</Label>
+    <div className={cn(className)}>
       <Select onValueChange={handleFilterChange} value={selectedValue}>
-        <SelectTrigger className="w-full">
-          <SelectValue placeholder={`Alle ${label.toLowerCase()}`} />
+        <SelectTrigger className="w-full sm:w-[180px]">
+          <SelectValue placeholder={placeholder} />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">Alle</SelectItem> {/* Wert auf "all" geändert */}
+          <SelectItem value="all">Alle</SelectItem>
           {options.map(option => (
             <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
           ))}
