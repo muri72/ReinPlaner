@@ -33,15 +33,18 @@ export function FilterSelect({ paramName, placeholder, options, currentValue, cl
   );
 
   const selectedValue = currentValue || "all";
+  const selectedOptionLabel = options.find(option => option.value === selectedValue)?.label;
 
   return (
     <div className={cn(className)}>
       <Select onValueChange={handleFilterChange} value={selectedValue}>
         <SelectTrigger className="w-full sm:w-[180px]">
-          <SelectValue placeholder={placeholder} />
+          <SelectValue>
+            {selectedValue !== "all" ? selectedOptionLabel : placeholder}
+          </SelectValue>
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">Alle</SelectItem>
+          <SelectItem value="all">{placeholder}</SelectItem>
           {options.map(option => (
             <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
           ))}
