@@ -590,8 +590,8 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess, 
   };
 
   const totalHoursLabel = ['recurring', 'substitution', 'permanent'].includes(orderType)
-    ? "Wochenstunden (automatisch berechnet)"
-    : "Gesamtstunden (automatisch berechnet)";
+    ? "Wochenstunden (Ø)"
+    : "Gesamtstunden";
 
   return (
     <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 w-full">
@@ -766,6 +766,38 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess, 
             <p className="text-muted-foreground text-sm mt-1">Bitte wählen Sie zuerst ein Objekt aus, um Mitarbeiter zuzuweisen.</p>
         )}
         
+        {/* Object Hours Overview */}
+        {selectedObjectId && (
+          <div className="bg-muted p-4 rounded-lg mt-4">
+            <h4 className="font-medium mb-2">Objektarbeitszeiten Übersicht</h4>
+            {objects.find(obj => obj.id === selectedObjectId)?.daily_schedules?.map((objectWeekSchedule: any, weekIndex: number) => (
+              <div key={weekIndex} className="mb-2">
+                <h5 className="font-semibold text-sm">Woche {weekIndex + 1}</h5>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
+                  {dayNames.map(day => {
+                    const objectDayHours = objectWeekSchedule?.[day]?.hours;
+                    const totalAssigned = getSumAssignedHoursForDay(weekIndex, day);
+                    
+                    if (!objectDayHours || objectDayHours === 0) return null;
+                    
+                    return (
+                      <div key={day} className="flex justify-between">
+                        <span>{germanDayNames[day]}:</span>
+                        <span className={cn(
+                          "font-medium",
+                          Math.abs(totalAssigned - objectDayHours) > 0.1 ? 'text-destructive' : 'text-success'
+                        )}>
+                          {totalAssigned.toFixed(2)}h / {objectDayHours.toFixed(2)}h
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* ENHANCED: Detailed Employee Assignment Grid */}
         {assignedEmployeeFields.length > 0 && (
           <div className="mt-4 space-y-4">
@@ -971,38 +1003,6 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess, 
                 ))}
               </div>
             ))}
-            
-            {/* Object Hours Overview */}
-            {selectedObjectId && (
-              <div className="bg-muted p-4 rounded-lg">
-                <h4 className="font-medium mb-2">Objektarbeitszeiten Übersicht</h4>
-                {objects.find(obj => obj.id === selectedObjectId)?.daily_schedules?.map((objectWeekSchedule: any, weekIndex: number) => (
-                  <div key={weekIndex} className="mb-2">
-                    <h5 className="font-semibold text-sm">Woche {weekIndex + 1}</h5>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
-                      {dayNames.map(day => {
-                        const objectDayHours = objectWeekSchedule?.[day]?.hours;
-                        const totalAssigned = getSumAssignedHoursForDay(weekIndex, day);
-                        
-                        if (!objectDayHours || objectDayHours === 0) return null;
-                        
-                        return (
-                          <div key={day} className="flex justify-between">
-                            <span>{germanDayNames[day]}:</span>
-                            <span className={cn(
-                              "font-medium",
-                              Math.abs(totalAssigned - objectDayHours) > 0.1 ? 'text-destructive' : 'text-success'
-                            )}>
-                              {totalAssigned.toFixed(2)}h / {objectDayHours.toFixed(2)}h
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
         )}
       </div>
