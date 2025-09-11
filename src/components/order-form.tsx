@@ -149,9 +149,10 @@ interface OrderFormProps {
   onSubmit: (data: OrderFormValues) => Promise<{ success: boolean; message: string }>;
   submitButtonText: string;
   onSuccess?: () => void;
+  onDirtyChange?: (isDirty: boolean) => void;
 }
 
-export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }: OrderFormProps) {
+export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess, onDirtyChange }: OrderFormProps) {
   const supabase = createClient();
   const [customers, setCustomers] = useState<{ id: string; name: string }[]>([]);
   const [objects, setObjects] = useState<any[]>([]); // Keep as any[] for now, detailed type not needed here
@@ -183,6 +184,12 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     defaultValues: resolvedDefaultValues,
     mode: "onChange",
   });
+
+  const { formState: { isDirty } } = form;
+
+  useEffect(() => {
+    onDirtyChange?.(isDirty);
+  }, [isDirty, onDirtyChange]);
 
   const { fields: assignedEmployeeFields, replace: replaceAssignedEmployees, update: updateAssignedEmployee } = useFieldArray({
     control: form.control,
@@ -1022,9 +1029,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
           type="number"
           step="0.01"
           {...form.register("totalEstimatedHours")}
-          placeholder="Wird automatisch berechnet"
-          readOnly
-          className="bg-muted cursor-not-allowed"
+          placeholder="Wird automatisch berechnet oder manuell eingeben"
         />
         {form.formState.errors.totalEstimatedHours && <p className="text-red-500 text-sm mt-1">{form.formState.errors.totalEstimatedHours.message}</p>}
       </div>
