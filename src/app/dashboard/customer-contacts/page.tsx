@@ -2,23 +2,17 @@
 
 import { createClient } from "@/lib/supabase/client";
 import { redirect, useRouter, useSearchParams } from "next/navigation";
-import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Mail, Phone, Briefcase, UserRound, PlusCircle, ContactRound } from "lucide-react";
-import { CustomerContactEditDialog } from "@/components/customer-contact-edit-dialog";
-import { DeleteCustomerContactButton } from "@/components/delete-customer-contact-button";
-import { SearchInput } from "@/components/search-input";
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { CustomerContactCreateGeneralDialog } from "@/components/customer-contact-create-general-dialog";
 import { PaginationControls } from "@/components/pagination-controls";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Suspense, useEffect, useState, useCallback } from "react";
-import { FilterSelect } from "@/components/filter-select";
-import { CustomerContactsTableView } from "@/components/customer-contacts-table-view"; // Import the new table view component
-import { useIsMobile } from "@/hooks/use-mobile"; // Import the hook
-import { RecordDetailsDialog } from "@/components/record-details-dialog"; // Import RecordDetailsDialog
-import { LoadingOverlay } from "@/components/loading-overlay"; // Import the new LoadingOverlay
+import { CustomerContactsTableView } from "@/components/customer-contacts-table-view";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { LoadingOverlay } from "@/components/loading-overlay";
 import { PageHeader } from "@/components/page-header";
-import { DataTableToolbar } from "@/components/data-table-toolbar";
+import { DataTableToolbar, FilterOption, SortOption } from "@/components/data-table-toolbar";
+import { CustomerContactsGridView } from "@/components/customer-contacts-grid-view"; // Assuming this will be created or exists
 
 interface DisplayCustomerContact {
   id: string;
@@ -32,11 +26,7 @@ interface DisplayCustomerContact {
   customer_name: string | null;
 }
 
-export default function CustomerContactsPage({
-  searchParams,
-}: {
-  searchParams?: any;
-}) {
+export default function CustomerContactsPage() {
   const supabase = createClient();
   const router = useRouter();
   const currentSearchParams = useSearchParams();
@@ -48,15 +38,13 @@ export default function CustomerContactsPage({
   const [loading, setLoading] = useState(true);
   const [totalCount, setTotalCount] = useState<number | null>(0);
 
-  const query = (currentSearchParams.get('query') || '') as string;
+  const query = currentSearchParams.get('query') || '';
   const currentPage = Number(currentSearchParams.get('page')) || 1;
-  const pageSize = 10; // Set page size to 10
-  const customerIdFilter = (currentSearchParams.get('customerId') || '') as string;
-  const viewMode = (currentSearchParams.get('viewMode') || 'grid') as string;
-
-  // Sorting parameters
-  const sortColumn = (currentSearchParams.get('sortColumn') || 'last_name') as string;
-  const sortDirection = (currentSearchParams.get('sortDirection') || 'asc') as string;
+  const pageSize = 10;
+  const customerIdFilter = currentSearchParams.get('customerId') || '';
+  const viewMode = currentSearchParams.get('viewMode') || 'grid';
+  const sortColumn = currentSearchParams.get('sortColumn') || 'last_name';
+  const sortDirection = currentSearchParams.get('sortDirection') || 'asc';
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -74,79 +62,28 @@ export default function CustomerContactsPage({
     if (customersError) console.error("Fehler beim Laden der Kunden für Filter:", customersError.message);
     setCustomers(customersData || []);
 
-    let contactsData: DisplayCustomerContact[] = [];
-    let contactsError: any = null;
-    let contactsCount: number | null = 0;
+    let selectQuery = supabase
+      .from('customer_contacts')
+      .select(`*, customers ( name )`, { count: 'exact' })
+      .order(sortColumn, { ascending: sortDirection === 'asc' });
 
     if (query) {
-      // For search, fetch all and filter in memory
-      const { data, error: fetchError } = await supabase
-        .from('customer_contacts')
-        .select(`
-          *,
-          customers ( name )
-        `);
-      
-      if (fetchError) {
-        contactsError = fetchError;
-      } else {
-        const filteredData = data.filter(c => 
-          c.first_name.toLowerCase().includes(query.toLowerCase()) ||
-          c.last_name.toLowerCase().includes(query.toLowerCase()) ||
-          c.email?.toLowerCase().includes(query.toLowerCase()) ||
-          c.phone?.toLowerCase().includes(query.toLowerCase()) ||
-          c.role?.toLowerCase().includes(query.toLowerCase()) ||
-          c.customers?.name?.toLowerCase().includes(query.toLowerCase())
-        );
-        contactsData = filteredData.map(c => ({
-          id: c.id,
-          customer_id: c.customer_id,
-          first_name: c.first_name,
-          last_name: c.last_name,
-          email: c.email,
-          phone: c.phone,
-          role: c.role,
-          created_at: c.created_at,
-          customer_name: c.customers?.name || null,
-        }));
-        contactsCount = contactsData.length;
-      }
-    } else {
-      let selectQuery = supabase
-        .from('customer_contacts')
-        .select(`
-          *,
-          customers ( name )
-        `, { count: 'exact' })
-        .order(sortColumn, { ascending: sortDirection === 'asc' });
-
-      if (customerIdFilter) {
-        selectQuery = selectQuery.eq('customer_id', customerIdFilter);
-      }
-
-      const { data, error: selectError, count: selectCount } = await selectQuery
-        .range(from, to);
-
-      contactsData = data?.map(contact => ({
-        id: contact.id,
-        customer_id: contact.customer_id,
-        first_name: contact.first_name,
-        last_name: contact.last_name,
-        email: contact.email,
-        phone: contact.phone,
-        role: contact.role,
-        created_at: contact.created_at,
-        customer_name: contact.customers?.name || null,
-      })) || [];
-      contactsError = selectError;
-      contactsCount = selectCount;
+      selectQuery = selectQuery.or(`first_name.ilike.%${query}%,last_name.ilike.%${query}%,email.ilike.%${query}%,phone.ilike.%${query}%,role.ilike.%${query}%,customers.name.ilike.%${query}%`);
+    }
+    if (customerIdFilter) {
+      selectQuery = selectQuery.eq('customer_id', customerIdFilter);
     }
 
-    if (contactsError) {
-      console.error("Fehler beim Laden der Kundenkontakte:", contactsError?.message || contactsError);
+    const { data, error, count } = await selectQuery.range(from, to);
+
+    if (error) {
+      console.error("Fehler beim Laden der Kundenkontakte:", error?.message || error);
     }
-    setAllContacts(contactsData);
-    setTotalCount(contactsCount);
+    setAllContacts(data?.map(contact => ({
+      ...contact,
+      customer_name: contact.customers?.name || null,
+    })) || []);
+    setTotalCount(count);
     setLoading(false);
   }, [
     supabase,
@@ -156,7 +93,7 @@ export default function CustomerContactsPage({
     customerIdFilter,
     sortColumn,
     sortDirection,
-    currentSearchParams // Add currentSearchParams to dependency array
+    currentSearchParams
   ]);
 
   useEffect(() => {
@@ -164,10 +101,22 @@ export default function CustomerContactsPage({
   }, [fetchData]);
 
   if (!currentUser) {
-    return null; // Render nothing or a global loading if user is not yet determined
+    return <LoadingOverlay isLoading={true} />;
   }
 
   const totalPages = totalCount ? Math.ceil(totalCount / pageSize) : 0;
+
+  const filterOptions: FilterOption[] = [
+    { value: 'customerId', label: 'Kunde', options: customers.map(c => ({ value: c.id, label: c.name })) },
+  ];
+
+  const sortOptions: SortOption[] = [
+    { value: 'last_name', label: 'Nachname' },
+    { value: 'first_name', label: 'Vorname' },
+    { value: 'customers.name', label: 'Kunde' },
+    { value: 'email', label: 'E-Mail' },
+    { value: 'role', label: 'Rolle' },
+  ];
 
   const activeTab = isMobile ? 'grid' : viewMode;
 
@@ -181,22 +130,16 @@ export default function CustomerContactsPage({
     <div className="p-4 md:p-8 space-y-8">
       {loading && <LoadingOverlay isLoading={loading} />}
       <PageHeader title="Ihre Kundenkontakte">
-        <CustomerContactCreateGeneralDialog />
+        <CustomerContactCreateGeneralDialog onContactCreated={fetchData} />
       </PageHeader>
 
       <Card className="shadow-neumorphic glassmorphism-card">
         <CardHeader>
-          <DataTableToolbar>
-            <SearchInput placeholder="Kontakte suchen..." className="w-full sm:w-auto sm:flex-grow" />
-            <Suspense fallback={<div>Lade Filter...</div>}>
-              <FilterSelect
-                paramName="customerId"
-                placeholder="Alle Kunden"
-                options={customers.map(c => ({ value: c.id, label: c.name }))}
-                currentValue={customerIdFilter}
-              />
-            </Suspense>
-          </DataTableToolbar>
+          <DataTableToolbar
+            searchPlaceholder="Kontakte suchen..."
+            filterOptions={filterOptions}
+            sortOptions={sortOptions}
+          />
         </CardHeader>
         <CardContent>
           <Tabs value={activeTab} onValueChange={handleViewModeChange} className="w-full">
@@ -207,62 +150,12 @@ export default function CustomerContactsPage({
               </TabsList>
             </div>
             <TabsContent value="grid" className="mt-0">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-                {allContacts.length === 0 && !query && !customerIdFilter ? (
-                  <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30 shadow-neumorphic glassmorphism-card">
-                    <ContactRound className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
-                    <p className="text-base md:text-lg font-semibold">Noch keine Kundenkontakte vorhanden</p>
-                    <p className="text-sm">Fügen Sie einen neuen Kontakt hinzu, um Ihre Kundenbeziehungen zu verwalten.</p>
-                    <div className="mt-4">
-                      <CustomerContactCreateGeneralDialog />
-                    </div>
-                  </div>
-                ) : allContacts.length === 0 && (query || customerIdFilter) ? (
-                  <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30 shadow-neumorphic glassmorphism-card">
-                    <ContactRound className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
-                    <p className="text-base md:text-lg font-semibold">Keine Kundenkontakte gefunden</p>
-                    <p className="text-sm">Ihre Suche oder Filter ergaben keine Treffer.</p>
-                  </div>
-                ) : (
-                  allContacts.map((contact) => (
-                    <Card key={contact.id} className="shadow-neumorphic glassmorphism-card">
-                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-base md:text-lg font-semibold">{contact.first_name} {contact.last_name}</CardTitle>
-                        <div className="flex items-center space-x-2">
-                          <RecordDetailsDialog record={contact} title={`Details zu Kundenkontakt: ${contact.first_name} ${contact.last_name}`} />
-                          <CustomerContactEditDialog contact={contact} />
-                          <DeleteCustomerContactButton contactId={contact.id} onDeleteSuccess={fetchData} />
-                        </div>
-                      </CardHeader>
-                      <CardContent className="space-y-2">
-                        {contact.customer_name && (
-                          <p className="text-sm text-muted-foreground">
-                            Kunde: {contact.customer_name}
-                          </p>
-                        )}
-                        {contact.email && (
-                          <div className="flex items-center text-sm text-muted-foreground">
-                            <Mail className="mr-2 h-4 w-4 flex-shrink-0" />
-                            <span>{contact.email}</span>
-                          </div>
-                        )}
-                        {contact.phone && (
-                          <div className="flex items-center text-sm text-muted-foreground">
-                            <Phone className="mr-2 h-4 w-4 flex-shrink-0" />
-                            <span>{contact.phone}</span>
-                          </div>
-                        )}
-                        {contact.role && (
-                          <div className="flex items-center text-sm text-muted-foreground">
-                            <Briefcase className="mr-2 h-4 w-4 flex-shrink-0" />
-                            <span>Rolle: {contact.role}</span>
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  ))
-                )}
-              </div>
+              <CustomerContactsGridView
+                contacts={allContacts}
+                query={query}
+                customerIdFilter={customerIdFilter}
+                onActionSuccess={fetchData}
+              />
             </TabsContent>
             <TabsContent value="table" className="mt-0">
               <CustomerContactsTableView
@@ -271,8 +164,6 @@ export default function CustomerContactsPage({
                 currentPage={currentPage}
                 query={query}
                 customerIdFilter={customerIdFilter}
-                sortColumn={sortColumn}
-                sortDirection={sortDirection}
               />
             </TabsContent>
           </Tabs>

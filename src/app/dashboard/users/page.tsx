@@ -1,29 +1,20 @@
 "use client"; // This page needs to be a client component to use hooks like useIsMobile
 
-import { createClient } from "@/lib/supabase/client"; // This is fine here, as it's a client component.
-
+import { createClient } from "@/lib/supabase/client";
 import { redirect, useRouter, useSearchParams } from "next/navigation";
-import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Mail, Briefcase, ShieldCheck, UserRound, UsersRound, PlusCircle } from "lucide-react";
-import { UserEditDialog } from "@/components/user-edit-dialog";
-import { DeleteUserButton } from "@/components/delete-user-button";
-import { Badge } from "@/components/ui/badge";
-import { SearchInput } from "@/components/search-input";
-import { ManagerCustomerAssignmentDialog } from "@/components/manager-customer-assignment-dialog";
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { UserCreateDialog } from "@/components/user-create-dialog";
 import { PaginationControls } from "@/components/pagination-controls";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Suspense, useEffect, useState, useCallback } from "react";
-import { FilterSelect } from "@/components/filter-select";
-import { UsersTableView } from "@/components/users-table-view"; // Import the new table view component
-import { useIsMobile } from "@/hooks/use-mobile"; // Import the hook
-import { RecordDetailsDialog } from "@/components/record-details-dialog"; // Import RecordDetailsDialog
-import { LoadingOverlay } from "@/components/loading-overlay"; // Import the new LoadingOverlay
-import { getUsers } from "./actions"; // Import the new server action
-import { toast } from "sonner"; // Import toast for error handling
+import { UsersTableView } from "@/components/users-table-view";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { LoadingOverlay } from "@/components/loading-overlay";
+import { getUsers } from "./actions";
+import { toast } from "sonner";
 import { PageHeader } from "@/components/page-header";
-import { DataTableToolbar } from "@/components/data-table-toolbar";
+import { DataTableToolbar, FilterOption, SortOption } from "@/components/data-table-toolbar";
+import { UsersGridView } from "@/components/users-grid-view"; // Assuming this will be created or exists
 
 interface DisplayUser {
   id: string;
@@ -36,13 +27,8 @@ interface DisplayUser {
   assigned_customer_name: string | null;
 }
 
-export default function UsersPage({
-  searchParams,
-}: {
-  searchParams?: any;
-}) {
-  const supabase = createClient(); // This is fine here, as it's a client component.
-
+export default function UsersPage() {
+  const supabase = createClient();
   const router = useRouter();
   const currentSearchParams = useSearchParams();
   const isMobile = useIsMobile();
@@ -52,19 +38,17 @@ export default function UsersPage({
   const [loading, setLoading] = useState(true);
   const [totalCount, setTotalCount] = useState<number | null>(0);
 
-  const query = (currentSearchParams.get('query') || '') as string;
+  const query = currentSearchParams.get('query') || '';
   const currentPage = Number(currentSearchParams.get('page')) || 1;
-  const pageSize = 10; // Set page size to 10
-  const roleFilter = (currentSearchParams.get('role') || '') as string;
-  const viewMode = (currentSearchParams.get('viewMode') || 'grid') as string;
-
-  // Sorting parameters
-  const sortColumn = (currentSearchParams.get('sortColumn') || 'last_name') as string;
-  const sortDirection = (currentSearchParams.get('sortDirection') || 'asc') as string;
+  const pageSize = 10;
+  const roleFilter = currentSearchParams.get('role') || '';
+  const viewMode = currentSearchParams.get('viewMode') || 'grid';
+  const sortColumn = currentSearchParams.get('sortColumn') || 'last_name';
+  const sortDirection = currentSearchParams.get('sortDirection') || 'asc';
 
   const fetchData = useCallback(async () => {
     setLoading(true);
-    const { data: { user } } = await supabase.auth.getUser(); // Await here
+    const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       redirect("/login");
       return;
@@ -98,7 +82,7 @@ export default function UsersPage({
     roleFilter,
     sortColumn,
     sortDirection,
-    currentSearchParams // Add currentSearchParams to dependency array
+    currentSearchParams
   ]);
 
   useEffect(() => {
@@ -106,26 +90,30 @@ export default function UsersPage({
   }, [fetchData]);
 
   if (!currentUser) {
-    return null; // Render nothing or a global loading if user is not yet determined
+    return <LoadingOverlay isLoading={true} />;
   }
 
   const totalPages = totalCount ? Math.ceil(totalCount / pageSize) : 0;
 
-  const getRoleBadgeVariant = (role: string) => {
-    switch (role) {
-      case 'admin': return 'destructive';
-      case 'manager': return 'default';
-      case 'employee': return 'secondary';
-      case 'customer': return 'outline';
-      default: return 'outline';
+  const filterOptions: FilterOption[] = [
+    {
+      value: 'role',
+      label: 'Rolle',
+      options: [
+        { value: 'admin', label: 'Admin' },
+        { value: 'manager', label: 'Manager' },
+        { value: 'employee', label: 'Mitarbeiter' },
+        { value: 'customer', label: 'Kunde' },
+      ]
     }
-  };
+  ];
 
-  const roleOptions = [
-    { value: 'admin', label: 'Admin' },
-    { value: 'manager', label: 'Manager' },
-    { value: 'employee', label: 'Mitarbeiter' },
-    { value: 'customer', label: 'Kunde' },
+  const sortOptions: SortOption[] = [
+    { value: 'last_name', label: 'Nachname' },
+    { value: 'first_name', label: 'Vorname' },
+    { value: 'email', label: 'E-Mail' },
+    { value: 'role', label: 'Rolle' },
+    { value: 'created_at', label: 'Erstellt am' },
   ];
 
   const activeTab = isMobile ? 'grid' : viewMode;
@@ -140,22 +128,16 @@ export default function UsersPage({
     <div className="p-4 md:p-8 space-y-8">
       {loading && <LoadingOverlay isLoading={loading} />}
       <PageHeader title="Benutzerverwaltung">
-        <UserCreateDialog />
+        <UserCreateDialog onUserCreated={fetchData} />
       </PageHeader>
 
       <Card className="shadow-neumorphic glassmorphism-card">
         <CardHeader>
-          <DataTableToolbar>
-            <SearchInput placeholder="Benutzer suchen..." className="w-full sm:w-auto sm:flex-grow" />
-            <Suspense fallback={<div>Lade Filter...</div>}>
-              <FilterSelect
-                paramName="role"
-                placeholder="Rolle"
-                options={roleOptions}
-                currentValue={roleFilter}
-              />
-            </Suspense>
-          </DataTableToolbar>
+          <DataTableToolbar
+            searchPlaceholder="Benutzer suchen..."
+            filterOptions={filterOptions}
+            sortOptions={sortOptions}
+          />
         </CardHeader>
         <CardContent>
           <Tabs value={activeTab} onValueChange={handleViewModeChange} className="w-full">
@@ -166,65 +148,13 @@ export default function UsersPage({
               </TabsList>
             </div>
             <TabsContent value="grid" className="mt-0">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-                {allUsers.length === 0 && !query && !roleFilter ? (
-                  <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30 shadow-neumorphic glassmorphism-card">
-                    <UsersRound className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
-                    <p className="text-base md:text-lg font-semibold">Noch keine Benutzer vorhanden</p>
-                    <p className="text-sm">Registrieren Sie einen neuen Benutzer, um Ihr Team zu erweitern.</p>
-                    <div className="mt-4">
-                      {/* The button to open the dialog is now part of UserCreateDialog */}
-                    </div>
-                  </div>
-                ) : allUsers.length === 0 && (query || roleFilter) ? (
-                  <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30 shadow-neumorphic glassmorphism-card">
-                    <UsersRound className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
-                    <p className="text-base md:text-lg font-semibold">Keine Benutzer gefunden</p>
-                    <p className="text-sm">Ihre Suche nach "{query}" ergab keine Treffer.</p>
-                  </div>
-                ) : (
-                  allUsers.map((user) => (
-                    <Card key={user.id} className="shadow-neumorphic glassmorphism-card">
-                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-base md:text-lg font-semibold">{user.first_name} {user.last_name}</CardTitle>
-                        <div className="flex items-center space-x-2">
-                          <RecordDetailsDialog record={user} title={`Details zu Benutzer: ${user.first_name} ${user.last_name}`} />
-                          {user.role === 'manager' && (
-                            <ManagerCustomerAssignmentDialog
-                              managerId={user.id}
-                              managerName={`${user.first_name || ''} ${user.last_name || ''}`.trim()}
-                            />
-                          )}
-                          <UserEditDialog user={user} />
-                          <DeleteUserButton userId={user.id} onDeleteSuccess={fetchData} />
-                        </div>
-                      </CardHeader>
-                      <CardContent className="space-y-2">
-                        <div className="flex items-center text-sm text-muted-foreground">
-                          <Mail className="mr-2 h-4 w-4 flex-shrink-0" />
-                          <span>{user.email}</span>
-                        </div>
-                        <div className="flex items-center text-sm text-muted-foreground">
-                          <Briefcase className="mr-2 h-4 w-4 flex-shrink-0" />
-                          <span>Rolle: <Badge variant={getRoleBadgeVariant(user.role)}>{user.role}</Badge></span>
-                        </div>
-                        {user.assigned_employee_name && (
-                          <div className="flex items-center text-sm text-muted-foreground">
-                            <UserRound className="mr-2 h-4 w-4 flex-shrink-0" />
-                            <span>Zugewiesener Mitarbeiter: {user.assigned_employee_name}</span>
-                          </div>
-                        )}
-                        {user.assigned_customer_name && (
-                          <div className="flex items-center text-sm text-muted-foreground">
-                            <UserRound className="mr-2 h-4 w-4 flex-shrink-0" />
-                            <span>Zugewiesener Kunde: {user.assigned_customer_name}</span>
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  ))
-                )}
-              </div>
+              <UsersGridView
+                users={allUsers}
+                query={query}
+                roleFilter={roleFilter}
+                currentUserId={currentUser.id}
+                onActionSuccess={fetchData}
+              />
             </TabsContent>
             <TabsContent value="table" className="mt-0">
               <UsersTableView
@@ -233,8 +163,6 @@ export default function UsersPage({
                 currentPage={currentPage}
                 query={query}
                 roleFilter={roleFilter}
-                sortColumn={sortColumn}
-                sortDirection={sortDirection}
                 currentUserId={currentUser.id}
               />
             </TabsContent>

@@ -3,13 +3,10 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Mail, Phone, MapPin, Users, Handshake, ArrowUp, ArrowDown } from "lucide-react";
+import { Mail, Phone, MapPin, Users, Handshake } from "lucide-react";
 import { CustomerEditDialog } from "@/components/customer-edit-dialog";
 import { DeleteCustomerButton } from "@/components/delete-customer-button";
 import { PaginationControls } from "@/components/pagination-controls";
-import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { useCallback } from "react";
-import { cn } from "@/lib/utils";
 import { RecordDetailsDialog } from "@/components/record-details-dialog"; // Import RecordDetailsDialog
 
 interface DisplayCustomer {
@@ -29,8 +26,6 @@ interface CustomersTableViewProps {
   currentPage: number;
   query: string;
   customerTypeFilter: string;
-  sortColumn: string;
-  sortDirection: string;
   onActionSuccess: () => void;
 }
 
@@ -40,32 +35,8 @@ export function CustomersTableView({
   currentPage,
   query,
   customerTypeFilter,
-  sortColumn,
-  sortDirection,
   onActionSuccess,
 }: CustomersTableViewProps) {
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-
-  const handleSort = useCallback((column: string) => {
-    const params = new URLSearchParams(searchParams);
-    let newDirection = 'asc';
-    if (sortColumn === column && sortDirection === 'asc') {
-      newDirection = 'desc';
-    }
-    params.set('sortColumn', column);
-    params.set('sortDirection', newDirection);
-    params.set('page', '1');
-    router.replace(`${pathname}?${params.toString()}`);
-  }, [sortColumn, sortDirection, pathname, router, searchParams]);
-
-  const renderSortIcon = (column: string) => {
-    if (sortColumn === column) {
-      return sortDirection === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />;
-    }
-    return null;
-  };
 
   if (customers.length === 0 && !query && !customerTypeFilter) {
     return (
@@ -92,31 +63,11 @@ export function CustomersTableView({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="min-w-[150px]">
-              <Button variant="ghost" onClick={() => handleSort('name')} className="px-0 hover:bg-transparent">
-                Name {renderSortIcon('name')}
-              </Button>
-            </TableHead>
-            <TableHead className="min-w-[100px]">
-              <Button variant="ghost" onClick={() => handleSort('customer_type')} className="px-0 hover:bg-transparent">
-                Typ {renderSortIcon('customer_type')}
-              </Button>
-            </TableHead>
-            <TableHead className="min-w-[200px]">
-              <Button variant="ghost" onClick={() => handleSort('address')} className="px-0 hover:bg-transparent">
-                Adresse {renderSortIcon('address')}
-              </Button>
-            </TableHead>
-            <TableHead className="min-w-[150px]">
-              <Button variant="ghost" onClick={() => handleSort('contact_email')} className="px-0 hover:bg-transparent">
-                E-Mail {renderSortIcon('contact_email')}
-              </Button>
-            </TableHead>
-            <TableHead className="min-w-[120px]">
-              <Button variant="ghost" onClick={() => handleSort('contact_phone')} className="px-0 hover:bg-transparent">
-                Telefon {renderSortIcon('contact_phone')}
-              </Button>
-            </TableHead>
+            <TableHead className="min-w-[150px]">Name</TableHead>
+            <TableHead className="min-w-[100px]">Typ</TableHead>
+            <TableHead className="min-w-[200px]">Adresse</TableHead>
+            <TableHead className="min-w-[150px]">E-Mail</TableHead>
+            <TableHead className="min-w-[120px]">Telefon</TableHead>
             <TableHead className="text-right min-w-[120px]">Aktionen</TableHead>
           </TableRow>
         </TableHeader>

@@ -3,13 +3,10 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MessageSquare, UserRound, Building, Briefcase, ArrowUp, ArrowDown, AlertCircle, CheckCircle2, Clock, XCircle } from "lucide-react";
+import { MessageSquare, UserRound, Building, Briefcase, AlertCircle, CheckCircle2, Clock, XCircle } from "lucide-react";
 import { TicketEditDialog } from "@/components/ticket-edit-dialog";
 import { DeleteTicketButton } from "@/components/delete-ticket-button";
 import { PaginationControls } from "@/components/pagination-controls";
-import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { useCallback } from "react";
-import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 import { RecordDetailsDialog } from "@/components/record-details-dialog";
@@ -41,12 +38,6 @@ interface TicketsTableViewProps {
   totalPages: number;
   currentPage: number;
   query: string;
-  statusFilter: string;
-  priorityFilter: string;
-  assignedToUserFilter: string;
-  customerIdFilter: string;
-  sortColumn: string;
-  sortDirection: string;
   onTicketUpdated?: () => void;
 }
 
@@ -55,36 +46,8 @@ export function TicketsTableView({
   totalPages,
   currentPage,
   query,
-  statusFilter,
-  priorityFilter,
-  assignedToUserFilter,
-  customerIdFilter,
-  sortColumn,
-  sortDirection,
   onTicketUpdated,
 }: TicketsTableViewProps) {
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-
-  const handleSort = useCallback((column: string) => {
-    const params = new URLSearchParams(searchParams);
-    let newDirection = 'asc';
-    if (sortColumn === column && sortDirection === 'asc') {
-      newDirection = 'desc';
-    }
-    params.set('sortColumn', column);
-    params.set('sortDirection', newDirection);
-    params.set('page', '1');
-    router.replace(`${pathname}?${params.toString()}`);
-  }, [sortColumn, sortDirection, pathname, router, searchParams]);
-
-  const renderSortIcon = (column: string) => {
-    if (sortColumn === column) {
-      return sortDirection === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />;
-    }
-    return null;
-  };
 
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
@@ -116,7 +79,7 @@ export function TicketsTableView({
     }
   };
 
-  if (tickets.length === 0 && !query && !statusFilter && !priorityFilter && !assignedToUserFilter && !customerIdFilter) {
+  if (tickets.length === 0 && !query) {
     return (
       <div className="text-center text-muted-foreground py-8">
         <MessageSquare className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
@@ -126,7 +89,7 @@ export function TicketsTableView({
     );
   }
 
-  if (tickets.length === 0 && (query || statusFilter || priorityFilter || assignedToUserFilter || customerIdFilter)) {
+  if (tickets.length === 0 && query) {
     return (
       <div className="text-center text-muted-foreground py-8">
         <MessageSquare className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
@@ -141,46 +104,14 @@ export function TicketsTableView({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="min-w-[150px]">
-              <Button variant="ghost" onClick={() => handleSort('title')} className="px-0 hover:bg-transparent">
-                Titel {renderSortIcon('title')}
-              </Button>
-            </TableHead>
-            <TableHead className="min-w-[120px]">
-              <Button variant="ghost" onClick={() => handleSort('status')} className="px-0 hover:bg-transparent">
-                Status {renderSortIcon('status')}
-              </Button>
-            </TableHead>
-            <TableHead className="min-w-[120px]">
-              <Button variant="ghost" onClick={() => handleSort('priority')} className="px-0 hover:bg-transparent">
-                Priorität {renderSortIcon('priority')}
-              </Button>
-            </TableHead>
-            <TableHead className="min-w-[150px]">
-              <Button variant="ghost" onClick={() => handleSort('customers.name')} className="px-0 hover:bg-transparent">
-                Kunde {renderSortIcon('customers.name')}
-              </Button>
-            </TableHead>
-            <TableHead className="min-w-[150px]">
-              <Button variant="ghost" onClick={() => handleSort('objects.name')} className="px-0 hover:bg-transparent">
-                Objekt {renderSortIcon('objects.name')}
-              </Button>
-            </TableHead>
-            <TableHead className="min-w-[150px]">
-              <Button variant="ghost" onClick={() => handleSort('profiles!tickets_assigned_to_user_id_fkey.last_name')} className="px-0 hover:bg-transparent">
-                Zugewiesen an {renderSortIcon('profiles!tickets_assigned_to_user_id_fkey.last_name')}
-              </Button>
-            </TableHead>
-            <TableHead className="min-w-[150px]">
-              <Button variant="ghost" onClick={() => handleSort('profiles!tickets_user_id_fkey.last_name')} className="px-0 hover:bg-transparent">
-                Erstellt von {renderSortIcon('profiles!tickets_user_id_fkey.last_name')}
-              </Button>
-            </TableHead>
-            <TableHead className="min-w-[120px]">
-              <Button variant="ghost" onClick={() => handleSort('created_at')} className="px-0 hover:bg-transparent">
-                Erstellt am {renderSortIcon('created_at')}
-              </Button>
-            </TableHead>
+            <TableHead className="min-w-[150px]">Titel</TableHead>
+            <TableHead className="min-w-[120px]">Status</TableHead>
+            <TableHead className="min-w-[120px]">Priorität</TableHead>
+            <TableHead className="min-w-[150px]">Kunde</TableHead>
+            <TableHead className="min-w-[150px]">Objekt</TableHead>
+            <TableHead className="min-w-[150px]">Zugewiesen an</TableHead>
+            <TableHead className="min-w-[150px]">Erstellt von</TableHead>
+            <TableHead className="min-w-[120px]">Erstellt am</TableHead>
             <TableHead className="text-right min-w-[120px]">Aktionen</TableHead>
           </TableRow>
         </TableHeader>

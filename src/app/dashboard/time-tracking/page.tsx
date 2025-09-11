@@ -1,24 +1,20 @@
-"use client"; // This page needs to be a client component to use hooks like useIsMobile
+"use client";
 
 import { createClient } from "@/lib/supabase/client";
 import { redirect, useRouter, useSearchParams } from "next/navigation";
-import { TimeEntryForm } from "@/components/time-entry-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { createTimeEntry } from "./actions";
 import { EmployeeTimeTracker } from "@/components/employee-time-tracker";
-import { DeleteTimeEntryButton } from "@/components/delete-time-entry-button";
-import { Clock, UserRound, Building, Briefcase, FileText, PlusCircle } from "lucide-react";
+import { Clock, PlusCircle } from "lucide-react";
 import { getWeek } from 'date-fns';
 import { TimeTrackingCharts } from '@/components/time-tracking-charts';
-import { Badge } from "@/components/ui/badge";
 import { AdminTimeEntriesOverview } from "@/components/admin-time-entries-overview";
-import { TimeEntryEditDialog } from "@/components/time-entry-edit-dialog";
 import { TriggerAutoTimeEntryButton } from "@/components/trigger-auto-time-entry-button";
-import { TimeEntryCreateDialog } from "@/components/time-entry-create-dialog"; // Hinzugefügt
-import { useCallback, useEffect, useState } from "react"; // Import useCallback
-import { LoadingOverlay } from "@/components/loading-overlay"; // Import the new LoadingOverlay
+import { TimeEntryCreateDialog } from "@/components/time-entry-create-dialog";
+import { useCallback, useEffect, useState } from "react";
+import { LoadingOverlay } from "@/components/loading-overlay";
+import { DataTableToolbar, FilterOption, SortOption } from "@/components/data-table-toolbar";
+import { toast } from "sonner";
 
-// Definieren Sie die Schnittstelle für die Zeiteintrag-Daten, wie sie auf dieser Seite verwendet werden
 interface DisplayTimeEntry {
   id: string;
   user_id: string;
@@ -29,21 +25,18 @@ interface DisplayTimeEntry {
   start_time: string;
   end_time: string | null;
   duration_minutes: number | null;
-  break_minutes: number | null; // Neues Feld
+  break_minutes: number | null;
   type: string;
   notes: string | null;
-  employee_first_name: string | null; // Direkte Felder für Namen
+  employee_first_name: string | null;
   employee_last_name: string | null;
   customer_name: string | null;
   object_name: string | null;
   order_title: string | null;
 }
 
-export default function TimeTrackingPage({
-  searchParams,
-}: any) {
+export default function TimeTrackingPage() {
   const supabase = createClient();
-  const router = useRouter();
   const currentSearchParams = useSearchParams();
 
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -51,6 +44,15 @@ export default function TimeTrackingPage({
   const [timeEntries, setTimeEntries] = useState<DisplayTimeEntry[]>([]);
   const [recentTimeEntries, setRecentTimeEntries] = useState<{ start_time: string; end_time: string | null; duration_minutes: number | null; break_minutes: number | null; }[]>([]);
   const [loading, setLoading] = useState(true);
+  const [employees, setEmployees] = useState<{ id: string; first_name: string; last_name: string }[]>([]);
+  const [totalCount, setTotalCount] = useState<number | null>(0);
+
+  const query = currentSearchParams.get('query') || '';
+  const currentPage = Number(currentSearchParams.get('page')) || 1;
+  const pageSize = 10;
+  const employeeIdFilter = currentSearchParams.get('employeeId') || '';
+  const sortColumn = currentSearchParams.get('sortColumn') || 'start_time';
+  const sortDirection = currentSearchParams.get('sortDirection') || 'desc';
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -62,49 +64,43 @@ export default function TimeTrackingPage({
     }
     setCurrentUser(currentUser);
 
-    // Rolle des aktuellen Benutzers abrufen
     const { data: userProfile, error: profileError } = await supabase
       .from('profiles')
       .select('role')
       .eq('id', currentUser.id)
       .single();
 
-    if (profileError) {
-      console.error("Fehler beim Laden des Benutzerprofils:", profileError?.message || profileError);
-    }
+    if (profileError) console.error("Fehler beim Laden des Benutzerprofils:", profileError?.message || profileError);
 
     const isAdminUser = userProfile?.role === 'admin';
     setIsAdmin(isAdminUser);
 
-    // Zeiteinträge zur Anzeige abrufen
+    const from = (currentPage - 1) * pageSize;
+    const to = from + pageSize - 1;
+
     let queryBuilder = supabase
       .from('time_entries')
       .select(`
-        id,
-        user_id,
-        employee_id,
-        customer_id,
-        object_id,
-        order_id,
-        start_time,
-        end_time,
-        duration_minutes,
-        break_minutes,
-        type,
-        notes,
+        id, user_id, employee_id, customer_id, object_id, order_id, start_time, end_time,
+        duration_minutes, break_minutes, type, notes,
         employees ( first_name, last_name ),
         customers ( name ),
         objects ( name ),
         orders ( title )
-      `)
-      .order('start_time', { ascending: false });
+      `, { count: 'exact' })
+      .order(sortColumn, { ascending: sortDirection === 'asc' });
 
-    // Wenn der Benutzer KEIN Admin ist, filtern Sie nach seiner eigenen user_id
     if (!isAdminUser) {
       queryBuilder = queryBuilder.eq('user_id', currentUser.id);
     }
+    if (employeeIdFilter) {
+      queryBuilder = queryBuilder.eq('employee_id', employeeIdFilter);
+    }
+    if (query) {
+      queryBuilder = queryBuilder.or(`notes.ilike.%${query}%,employees.first_name.ilike.%${query}%,employees.last_name.ilike.%${query}%,customers.name.ilike.%${query}%,objects.name.ilike.%${query}%,orders.title.ilike.%${query}%,type.ilike.%${query}%`);
+    }
 
-    const { data: entriesData, error: entriesError } = await queryBuilder;
+    const { data: entriesData, error: entriesError, count } = await queryBuilder.range(from, to);
 
     setTimeEntries(entriesData?.map(entry => {
       const employee = Array.isArray(entry.employees) ? entry.employees[0] : entry.employees;
@@ -112,80 +108,60 @@ export default function TimeTrackingPage({
       const object = Array.isArray(entry.objects) ? entry.objects[0] : entry.objects;
       const order = Array.isArray(entry.orders) ? entry.orders[0] : entry.orders;
       return {
-        id: entry.id,
-        user_id: entry.user_id,
-        employee_id: entry.employee_id,
-        customer_id: entry.customer_id,
-        object_id: entry.object_id,
-        order_id: entry.order_id,
-        start_time: entry.start_time,
-        end_time: entry.end_time,
-        duration_minutes: entry.duration_minutes,
-        break_minutes: entry.break_minutes, // Neues Feld mappen
-        type: entry.type,
-        notes: entry.notes,
-        employee_first_name: employee?.first_name || null,
-        employee_last_name: employee?.last_name || null,
-        customer_name: customer?.name || null,
-        object_name: object?.name || null,
-        order_title: order?.title || null,
+        id: entry.id, user_id: entry.user_id, employee_id: entry.employee_id, customer_id: entry.customer_id,
+        object_id: entry.object_id, order_id: entry.order_id, start_time: entry.start_time, end_time: entry.end_time,
+        duration_minutes: entry.duration_minutes, break_minutes: entry.break_minutes, type: entry.type, notes: entry.notes,
+        employee_first_name: employee?.first_name || null, employee_last_name: employee?.last_name || null,
+        customer_name: customer?.name || null, object_name: object?.name || null, order_title: order?.title || null,
       }
     }) || []);
+    setTotalCount(count);
     if (entriesError) console.error("Fehler beim Laden der Zeiteinträge:", entriesError?.message || entriesError);
 
-    // Daten für die Visualisierung (Charts) abrufen
+    const { data: employeesData, error: employeesError } = await supabase.from('employees').select('id, first_name, last_name').order('last_name', { ascending: true });
+    if (employeesError) console.error("Fehler beim Laden der Mitarbeiter für Filter:", employeesError.message);
+    setEmployees(employeesData || []);
+
     const threeMonthsAgo = new Date();
     threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
-
     let recentQueryBuilder = supabase
       .from('time_entries')
-      .select('start_time, end_time, duration_minutes, break_minutes') // break_minutes hinzugefügt
+      .select('start_time, end_time, duration_minutes, break_minutes')
       .gte('start_time', threeMonthsAgo.toISOString())
-      .lt('start_time', new Date().toISOString()) // Ensure it's up to current date
+      .lt('start_time', new Date().toISOString())
       .order('start_time', { ascending: true });
 
-    // Wenn der Benutzer KEIN Admin ist, filtern Sie auch hier nach seiner eigenen user_id
     if (!isAdminUser) {
       recentQueryBuilder = recentQueryBuilder.eq('user_id', currentUser.id);
     }
-
     const { data: recentData, error: recentError } = await recentQueryBuilder;
-
     setRecentTimeEntries(recentData || []);
     if (recentError) console.error("Fehler beim Laden der letzten Zeiteinträge für Charts:", recentError?.message || recentError);
 
     setLoading(false);
-  }, [supabase]);
+  }, [supabase, currentPage, pageSize, query, employeeIdFilter, sortColumn, sortDirection]);
 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
 
   if (!currentUser) {
-    return null; // Render nothing or a global loading if user is not yet determined
+    return <LoadingOverlay isLoading={true} />;
   }
 
-  // Daten nach Woche und Monat aggregieren
-  const weeklyData: { [key: string]: number } = {}; // key: YYYY-WW
-  const monthlyData: { [key: string]: number } = {}; // key: YYYY-MM
-
+  const weeklyData: { [key: string]: number } = {};
+  const monthlyData: { [key: string]: number } = {};
   recentTimeEntries.forEach(entry => {
     if (entry.start_time && entry.duration_minutes !== null) {
       const startDate = new Date(entry.start_time);
-      const grossDurationHours = entry.duration_minutes / 60;
-      const breakHours = (entry.break_minutes || 0) / 60; // Pausenminuten in Stunden umwandeln
-      const netDurationHours = grossDurationHours - breakHours; // Netto-Stunden berechnen
-
-      // Nach Woche aggregieren
+      const netDurationHours = (entry.duration_minutes - (entry.break_minutes || 0)) / 60;
       const year = startDate.getFullYear();
-      const week = getWeek(startDate, { weekStartsOn: 1 }); // Montag als Wochenanfang
+      const week = getWeek(startDate, { weekStartsOn: 1 });
       const weekKey = `${year}-${String(week).padStart(2, '0')}`;
-      weeklyData[weekKey] = (weeklyData[weekKey] || 0) + netDurationHours; // Netto-Stunden verwenden
-
-      // Nach Monat aggregieren
-      const month = startDate.getMonth() + 1; // 1-12
+      weeklyData[weekKey] = (weeklyData[weekKey] || 0) + netDurationHours;
+      const month = startDate.getMonth() + 1;
       const monthKey = `${year}-${String(month).padStart(2, '0')}`;
-      monthlyData[monthKey] = (monthlyData[monthKey] || 0) + netDurationHours; // Netto-Stunden verwenden
+      monthlyData[monthKey] = (monthlyData[monthKey] || 0) + netDurationHours;
     }
   });
 
@@ -193,35 +169,26 @@ export default function TimeTrackingPage({
     name: `KW ${key.substring(5)}`,
     hours: parseFloat(weeklyData[key].toFixed(2))
   }));
-
   const formattedMonthlyData = Object.keys(monthlyData).sort().map(key => ({
     name: `${new Date(parseInt(key.substring(0,4)), parseInt(key.substring(5,7)) - 1, 1).toLocaleString('de-DE', { month: 'short', year: '2-digit' })}`,
     hours: parseFloat(monthlyData[key].toFixed(2))
   }));
 
-  // Helper to format duration from minutes to HH:MM
-  const formatDuration = (minutes: number | null) => {
-    if (minutes === null) return "N/A";
-    const totalSeconds = Math.round(minutes * 60);
-    const hours = Math.floor(totalSeconds / 3600);
-    const remainingMinutes = Math.floor((totalSeconds % 3600) / 60);
-    return `${hours}h ${remainingMinutes}m`;
-  };
+  const totalPages = totalCount ? Math.ceil(totalCount / pageSize) : 0;
 
-  const getTypeBadgeVariant = (type: string) => {
-    switch (type) {
-      case 'manual':
-        return 'outline';
-      case 'clock_in_out':
-        return 'default';
-      case 'stopwatch':
-        return 'secondary';
-      case 'automatic_scheduled_order':
-        return 'success';
-      default:
-        return 'outline';
-    }
-  };
+  const filterOptions: FilterOption[] = [
+    { value: 'employeeId', label: 'Mitarbeiter', options: employees.map(e => ({ value: e.id, label: `${e.first_name} ${e.last_name}` })) },
+  ];
+
+  const sortOptions: SortOption[] = [
+    { value: 'start_time', label: 'Startzeit' },
+    { value: 'employees.last_name', label: 'Mitarbeiter' },
+    { value: 'customers.name', label: 'Kunde' },
+    { value: 'objects.name', label: 'Objekt' },
+    { value: 'orders.title', label: 'Auftrag' },
+    { value: 'duration_minutes', label: 'Dauer' },
+    { value: 'type', label: 'Typ' },
+  ];
 
   return (
     <div className="p-4 md:p-8 space-y-8">
@@ -241,24 +208,41 @@ export default function TimeTrackingPage({
               <TriggerAutoTimeEntryButton />
             </CardContent>
           </Card>
-          <AdminTimeEntriesOverview currentUserId={currentUser.id} isAdmin={isAdmin} />
-          <h2 className="text-xl md:text-2xl font-bold mt-8">Neuen Zeiteintrag hinzufügen (Admin)</h2>
+          <Card className="shadow-neumorphic glassmorphism-card">
+            <CardHeader>
+              <CardTitle className="text-lg font-semibold">Zeiteinträge verwalten</CardTitle>
+              <DataTableToolbar
+                searchPlaceholder="Zeiteinträge suchen..."
+                filterOptions={filterOptions}
+                sortOptions={sortOptions}
+              />
+            </CardHeader>
+            <CardContent>
+              <AdminTimeEntriesOverview
+                timeEntries={timeEntries}
+                loading={loading}
+                totalPages={totalPages}
+                currentPage={currentPage}
+                currentUserId={currentUser.id}
+                isAdmin={isAdmin}
+              />
+            </CardContent>
+          </Card>
           <TimeEntryCreateDialog
             currentUserId={currentUser.id}
             isAdmin={isAdmin}
-            triggerButtonText="Neuen Zeiteintrag hinzufügen"
+            triggerButtonText="Neuen Zeiteintrag manuell hinzufügen"
             triggerButtonIcon={<PlusCircle className="mr-2 h-4 w-4" />}
             triggerButtonClassName="transition-colors duration-200"
+            onEntryCreated={fetchData}
           />
         </>
       ) : (
         <>
           <h2 className="text-xl md:text-2xl font-bold mt-8">Ihre Stempeluhr</h2>
           <EmployeeTimeTracker userId={currentUser.id} />
-
           <h2 className="text-xl md:text-2xl font-bold mt-8">Ihre Stundenübersicht (letzte 3 Monate)</h2>
           <TimeTrackingCharts weeklyData={formattedWeeklyData} monthlyData={formattedMonthlyData} />
-
           <h2 className="text-xl md:text-2xl font-bold mt-8">Ihre Zeiteinträge</h2>
           <div className="flex justify-end mb-4">
             <TimeEntryCreateDialog
@@ -267,89 +251,17 @@ export default function TimeTrackingPage({
               triggerButtonText="Neuen Zeiteintrag hinzufügen"
               triggerButtonIcon={<PlusCircle className="mr-2 h-4 w-4" />}
               triggerButtonClassName="transition-colors duration-200"
+              onEntryCreated={fetchData}
             />
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-            {timeEntries.length === 0 ? (
-              <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30 shadow-neumorphic glassmorphism-card">
-                <Clock className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
-                <p className="text-base md:text-lg font-semibold">Noch keine Zeiteinträge vorhanden</p>
-                <p className="text-sm">Beginnen Sie, indem Sie Ihre Arbeitszeit erfassen oder einen Eintrag manuell hinzufügen.</p>
-                <div className="mt-4">
-                  {/* The button to open the dialog is now part of TimeEntryCreateDialog */}
-                </div>
-              </div>
-            ) : (
-              timeEntries.map((entry) => (
-                <Card key={entry.id} className="shadow-neumorphic glassmorphism-card">
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-base md:text-lg font-semibold">
-                      Zeiteintrag
-                    </CardTitle>
-                    <div className="flex items-center space-x-2">
-                      <Badge variant={getTypeBadgeVariant(entry.type)}>{entry.type === 'automatic_scheduled_order' ? 'Automatisch' : entry.type}</Badge>
-                      <TimeEntryEditDialog timeEntry={entry} currentUserId={currentUser.id} isAdmin={isAdmin} />
-                      <DeleteTimeEntryButton entryId={entry.id} onDeleteSuccess={fetchData} />
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-2 text-sm text-muted-foreground">
-                    <div className="flex items-center">
-                      <Clock className="mr-2 h-4 w-4 flex-shrink-0" />
-                      <span>Start: {new Date(entry.start_time).toLocaleString()}</span>
-                    </div>
-                    {entry.end_time && (
-                      <div className="flex items-center">
-                        <Clock className="mr-2 h-4 w-4 flex-shrink-0" />
-                        <span>Ende: {new Date(entry.end_time).toLocaleString()}</span>
-                      </div>
-                    )}
-                    {entry.duration_minutes !== null && (
-                      <div className="flex items-center">
-                        <Clock className="mr-2 h-4 w-4 flex-shrink-0" />
-                        <span>Dauer: {formatDuration(entry.duration_minutes)}</span>
-                      </div>
-                    )}
-                    {entry.break_minutes !== null && entry.break_minutes > 0 && (
-                      <div className="flex items-center">
-                        <Clock className="mr-2 h-4 w-4 flex-shrink-0" />
-                        <span>Pause: {formatDuration(entry.break_minutes)}</span>
-                      </div>
-                    )}
-                    {entry.employee_first_name && entry.employee_last_name && (
-                      <div className="flex items-center">
-                        <UserRound className="mr-2 h-4 w-4 flex-shrink-0" />
-                        <span>Mitarbeiter: {entry.employee_first_name} {entry.employee_last_name}</span>
-                      </div>
-                    )}
-                    {entry.customer_name && (
-                      <div className="flex items-center">
-                        <Building className="mr-2 h-4 w-4 flex-shrink-0" />
-                        <span>Kunde: {entry.customer_name}</span>
-                      </div>
-                    )}
-                    {entry.object_name && (
-                      <div className="flex items-center">
-                        <Building className="mr-2 h-4 w-4 flex-shrink-0" />
-                        <span>Objekt: {entry.object_name}</span>
-                      </div>
-                    )}
-                    {entry.order_title && (
-                      <div className="flex items-center">
-                        <Briefcase className="mr-2 h-4 w-4 flex-shrink-0" />
-                        <span>Auftrag: {entry.order_title}</span>
-                      </div>
-                    )}
-                    {entry.notes && (
-                      <div className="flex items-center">
-                        <FileText className="mr-2 h-4 w-4 flex-shrink-0" />
-                        <span>Notizen: {entry.notes}</span>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              ))
-            )}
-          </div>
+          <AdminTimeEntriesOverview
+            timeEntries={timeEntries}
+            loading={loading}
+            totalPages={totalPages}
+            currentPage={currentPage}
+            currentUserId={currentUser.id}
+            isAdmin={isAdmin}
+          />
         </>
       )}
     </div>

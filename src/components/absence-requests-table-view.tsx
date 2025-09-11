@@ -3,13 +3,10 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CalendarOff, User, FileText, CheckCircle2, XCircle, AlertCircle, ArrowUp, ArrowDown } from "lucide-react";
+import { CalendarOff, User, FileText, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
 import { AbsenceRequestEditDialog } from "@/components/absence-request-edit-dialog";
 import { DeleteAbsenceRequestButton } from "@/components/delete-absence-request-button";
 import { PaginationControls } from "@/components/pagination-controls";
-import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { useCallback } from "react";
-import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 import { RecordDetailsDialog } from "@/components/record-details-dialog"; // Import RecordDetailsDialog
@@ -32,11 +29,6 @@ interface AbsenceRequestsTableViewProps {
   totalPages: number;
   currentPage: number;
   query: string;
-  employeeIdFilter: string;
-  typeFilter: string;
-  statusFilter: string;
-  sortColumn: string;
-  sortDirection: string;
   currentUserRole: 'admin' | 'manager' | 'employee';
 }
 
@@ -45,35 +37,8 @@ export function AbsenceRequestsTableView({
   totalPages,
   currentPage,
   query,
-  employeeIdFilter,
-  typeFilter,
-  statusFilter,
-  sortColumn,
-  sortDirection,
   currentUserRole,
 }: AbsenceRequestsTableViewProps) {
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-
-  const handleSort = useCallback((column: string) => {
-    const params = new URLSearchParams(searchParams);
-    let newDirection = 'asc';
-    if (sortColumn === column && sortDirection === 'asc') {
-      newDirection = 'desc';
-    }
-    params.set('sortColumn', column);
-    params.set('sortDirection', newDirection);
-    params.set('page', '1');
-    router.replace(`${pathname}?${params.toString()}`);
-  }, [sortColumn, sortDirection, pathname, router, searchParams]);
-
-  const renderSortIcon = (column: string) => {
-    if (sortColumn === column) {
-      return sortDirection === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />;
-    }
-    return null;
-  };
 
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
@@ -100,7 +65,7 @@ export function AbsenceRequestsTableView({
     other: "Sonstiges",
   };
 
-  if (requests.length === 0 && !query && !employeeIdFilter && !typeFilter && !statusFilter) {
+  if (requests.length === 0 && !query) {
     return (
       <div className="text-center text-muted-foreground py-8">
         <CalendarOff className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
@@ -110,7 +75,7 @@ export function AbsenceRequestsTableView({
     );
   }
 
-  if (requests.length === 0 && (query || employeeIdFilter || typeFilter || statusFilter)) {
+  if (requests.length === 0 && query) {
     return (
       <div className="text-center text-muted-foreground py-8">
         <CalendarOff className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
@@ -126,32 +91,12 @@ export function AbsenceRequestsTableView({
         <TableHeader>
           <TableRow>
             {currentUserRole !== 'employee' && (
-              <TableHead className="min-w-[150px]">
-                <Button variant="ghost" onClick={() => handleSort('employees.last_name')} className="px-0 hover:bg-transparent">
-                  Mitarbeiter {renderSortIcon('employees.last_name')}
-                </Button>
-              </TableHead>
+              <TableHead className="min-w-[150px]">Mitarbeiter</TableHead>
             )}
-            <TableHead className="min-w-[120px]">
-              <Button variant="ghost" onClick={() => handleSort('start_date')} className="px-0 hover:bg-transparent">
-                Startdatum {renderSortIcon('start_date')}
-              </Button>
-            </TableHead>
-            <TableHead className="min-w-[120px]">
-              <Button variant="ghost" onClick={() => handleSort('end_date')} className="px-0 hover:bg-transparent">
-                Enddatum {renderSortIcon('end_date')}
-              </Button>
-            </TableHead>
-            <TableHead className="min-w-[100px]">
-              <Button variant="ghost" onClick={() => handleSort('type')} className="px-0 hover:bg-transparent">
-                Typ {renderSortIcon('type')}
-              </Button>
-            </TableHead>
-            <TableHead className="min-w-[100px]">
-              <Button variant="ghost" onClick={() => handleSort('status')} className="px-0 hover:bg-transparent">
-                Status {renderSortIcon('status')}
-              </Button>
-            </TableHead>
+            <TableHead className="min-w-[120px]">Startdatum</TableHead>
+            <TableHead className="min-w-[120px]">Enddatum</TableHead>
+            <TableHead className="min-w-[100px]">Typ</TableHead>
+            <TableHead className="min-w-[100px]">Status</TableHead>
             <TableHead className="min-w-[200px]">Notizen</TableHead>
             {currentUserRole !== 'employee' && (
               <TableHead className="min-w-[200px]">Admin-Notizen</TableHead>

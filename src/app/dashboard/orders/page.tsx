@@ -9,7 +9,6 @@ import { deleteOrder, createOrder } from "./actions";
 import { OrderEditDialog } from "@/components/order-edit-dialog";
 import { Badge } from "@/components/ui/badge";
 import { DeleteOrderButton } from "@/components/delete-order-button";
-import { SearchInput } from "@/components/search-input";
 import { OrderPlanningDialog } from "@/components/order-planning-dialog";
 import { OrderCreateDialog } from "@/components/order-create-dialog";
 import { PaginationControls } from "@/components/pagination-controls";
@@ -17,7 +16,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DocumentUploader } from "@/components/document-uploader";
 import { DocumentList } from "@/components/document-list";
 import { Suspense, useEffect, useState, useCallback } from "react";
-import { FilterSelect } from "@/components/filter-select";
 import { format, getWeek } from "date-fns";
 import { de } from "date-fns/locale";
 import { OrdersTableView } from "@/components/orders-table-view";
@@ -27,7 +25,7 @@ import { LoadingOverlay } from "@/components/loading-overlay";
 import { AssignedEmployee } from "@/components/order-form";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"; // Ensure these are imported
 import { PageHeader } from "@/components/page-header";
-import { DataTableToolbar } from "@/components/data-table-toolbar";
+import { DataTableToolbar, FilterOption, SortOption } from "@/components/data-table-toolbar";
 
 const dayNames = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const;
 const germanDayNames: { [key: string]: string } = {
@@ -366,6 +364,23 @@ export default function OrdersPage({
     { value: 'permanent', label: 'Permanent' },
   ];
 
+  const filterOptions: FilterOption[] = [
+    { value: 'status', label: 'Status', options: orderStatusOptions },
+    { value: 'orderType', label: 'Auftragstyp', options: orderTypeOptions },
+    { value: 'serviceType', label: 'Dienstleistung', options: availableServices.map(s => ({ value: s, label: s })) },
+    { value: 'customerId', label: 'Kunde', options: customers.map(c => ({ value: c.id, label: c.name })) },
+    { value: 'employeeId', label: 'Mitarbeiter', options: employees.map(e => ({ value: e.id, label: `${e.first_name} ${e.last_name}` })) },
+  ];
+
+  const sortOptions: SortOption[] = [
+    { value: 'created_at', label: 'Erstellt am' },
+    { value: 'title', label: 'Titel' },
+    { value: 'status', label: 'Status' },
+    { value: 'customers.name', label: 'Kunde' },
+    { value: 'objects.name', label: 'Objekt' },
+    { value: 'priority', label: 'Priorität' },
+  ];
+
   const activeTab = isMobile ? 'grid' : viewMode;
 
   const handleViewModeChange = (value: string) => {
@@ -383,41 +398,11 @@ export default function OrdersPage({
 
       <Card className="shadow-neumorphic glassmorphism-card">
         <CardHeader>
-          <DataTableToolbar>
-            <SearchInput placeholder="Aufträge suchen..." className="w-full sm:w-auto sm:flex-grow" />
-            <Suspense fallback={<div>Lade Filter...</div>}>
-              <FilterSelect
-                paramName="status"
-                placeholder="Status"
-                options={orderStatusOptions}
-                currentValue={statusFilter}
-              />
-              <FilterSelect
-                paramName="orderType"
-                placeholder="Auftragstyp"
-                options={orderTypeOptions}
-                currentValue={orderTypeFilter}
-              />
-              <FilterSelect
-                paramName="serviceType"
-                placeholder="Dienstleistung"
-                options={availableServices.map(s => ({ value: s, label: s }))}
-                currentValue={serviceTypeFilter}
-              />
-              <FilterSelect
-                paramName="customerId"
-                placeholder="Kunde"
-                options={customers.map(c => ({ value: c.id, label: c.name }))}
-                currentValue={customerIdFilter}
-              />
-              <FilterSelect
-                paramName="employeeId"
-                placeholder="Mitarbeiter"
-                options={employees.map(e => ({ value: e.id, label: `${e.first_name} ${e.last_name}` }))}
-                currentValue={employeeIdFilter}
-              />
-            </Suspense>
-          </DataTableToolbar>
+          <DataTableToolbar
+            searchPlaceholder="Aufträge suchen..."
+            filterOptions={filterOptions}
+            sortOptions={sortOptions}
+          />
         </CardHeader>
         <CardContent>
           <Tabs value={activeTab} onValueChange={handleViewModeChange} className="w-full">
@@ -553,16 +538,6 @@ export default function OrdersPage({
                 totalPages={totalPages}
                 currentPage={currentPage}
                 query={query}
-                statusFilter={statusFilter}
-                orderTypeFilter={orderTypeFilter}
-                serviceTypeFilter={serviceTypeFilter}
-                customerIdFilter={customerIdFilter}
-                employeeIdFilter={employeeIdFilter}
-                customers={customers}
-                employees={employees}
-                availableServices={availableServices}
-                sortColumn={sortColumn}
-                sortDirection={sortDirection}
               />
             </TabsContent>
           </Tabs>

@@ -2,19 +2,17 @@
 
 import { createClient } from "@/lib/supabase/client";
 import { redirect, useRouter, useSearchParams } from "next/navigation";
-import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from "@/components/ui/card";
-import { SearchInput } from "@/components/search-input";
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { CustomerCreateDialog } from "@/components/customer-create-dialog";
 import { PaginationControls } from "@/components/pagination-controls";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Suspense, useEffect, useState, useCallback } from "react";
-import { FilterSelect } from "@/components/filter-select";
 import { CustomersTableView } from "@/components/customers-table-view";
 import { CustomersGridView } from "@/components/customers-grid-view";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { LoadingOverlay } from "@/components/loading-overlay";
 import { PageHeader } from "@/components/page-header";
-import { DataTableToolbar } from "@/components/data-table-toolbar";
+import { DataTableToolbar, FilterOption, SortOption } from "@/components/data-table-toolbar";
 
 interface DisplayCustomer {
   id: string;
@@ -27,11 +25,7 @@ interface DisplayCustomer {
   customer_type: string;
 }
 
-export default function CustomersPage({
-  searchParams,
-}: {
-  searchParams?: any;
-}) {
+export default function CustomersPage() {
   const supabase = createClient();
   const router = useRouter();
   const currentSearchParams = useSearchParams();
@@ -46,7 +40,7 @@ export default function CustomersPage({
   const currentPage = Number(currentSearchParams.get('page')) || 1;
   const pageSize = 10;
   const customerTypeFilter = currentSearchParams.get('customerType') || '';
-  const viewMode = currentSearchParams.get('viewMode') === 'table' ? 'table' : 'grid';
+  const viewMode = currentSearchParams.get('viewMode') || 'grid';
   const sortColumn = currentSearchParams.get('sortColumn') || 'name';
   const sortDirection = currentSearchParams.get('sortDirection') || 'asc';
 
@@ -66,50 +60,23 @@ export default function CustomersPage({
     let customersError: any = null;
     let customersCount: number | null = 0;
 
+    let selectQuery = supabase
+      .from('customers')
+      .select(`*`, { count: 'exact' })
+      .order(sortColumn, { ascending: sortDirection === 'asc' });
+
     if (query) {
-      const { data, error: fetchError } = await supabase
-        .from('customers')
-        .select(`*, customer_contacts ( first_name, last_name )`);
-      
-      if (fetchError) {
-        customersError = fetchError;
-      } else {
-        const filteredData = data.filter(c => 
-          c.name.toLowerCase().includes(query.toLowerCase()) ||
-          c.address?.toLowerCase().includes(query.toLowerCase()) ||
-          c.contact_email?.toLowerCase().includes(query.toLowerCase()) ||
-          c.contact_phone?.toLowerCase().includes(query.toLowerCase()) ||
-          c.customer_type.toLowerCase().includes(query.toLowerCase())
-        );
-        customersData = filteredData.map(c => ({
-          id: c.id,
-          user_id: c.user_id,
-          name: c.name,
-          address: c.address,
-          contact_email: c.contact_email,
-          contact_phone: c.contact_phone,
-          created_at: c.created_at,
-          customer_type: c.customer_type,
-        }));
-        customersCount = customersData.length;
-      }
-    } else {
-      let selectQuery = supabase
-        .from('customers')
-        .select(`*`, { count: 'exact' })
-        .order(sortColumn, { ascending: sortDirection === 'asc' });
-
-      if (customerTypeFilter) {
-        selectQuery = selectQuery.eq('customer_type', customerTypeFilter);
-      }
-
-      const { data, error: selectError, count: selectCount } = await selectQuery
-        .range(from, to);
-
-      customersData = data || [];
-      customersError = selectError;
-      customersCount = selectCount;
+      selectQuery = selectQuery.or(`name.ilike.%${query}%,address.ilike.%${query}%,contact_email.ilike.%${query}%,contact_phone.ilike.%${query}%`);
     }
+    if (customerTypeFilter) {
+      selectQuery = selectQuery.eq('customer_type', customerTypeFilter);
+    }
+
+    const { data, error, count } = await selectQuery.range(from, to);
+
+    customersData = data || [];
+    customersError = error;
+    customersCount = count;
 
     if (customersError) {
       console.error("Fehler beim Laden der Kunden:", customersError?.message || customersError);
@@ -138,9 +105,20 @@ export default function CustomersPage({
 
   const totalPages = totalCount ? Math.ceil(totalCount / pageSize) : 0;
 
-  const customerTypeOptions = [
-    { value: 'customer', label: 'Kunde' },
-    { value: 'partner', label: 'Partner' },
+  const filterOptions: FilterOption[] = [
+    {
+      value: 'customerType',
+      label: 'Kundentyp',
+      options: [
+        { value: 'customer', label: 'Kunde' },
+        { value: 'partner', label: 'Partner' },
+      ]
+    }
+  ];
+
+  const sortOptions: SortOption[] = [
+    { value: 'name', label: 'Name' },
+    { value: 'created_at', label: 'Erstelldatum' },
   ];
 
   const activeTab = isMobile ? 'grid' : viewMode;
@@ -160,17 +138,11 @@ export default function CustomersPage({
 
       <Card className="shadow-neumorphic glassmorphism-card">
         <CardHeader>
-          <DataTableToolbar>
-            <SearchInput placeholder="Kunden suchen..." className="w-full sm:w-auto sm:flex-grow" />
-            <Suspense fallback={<div>Lade Filter...</div>}>
-              <FilterSelect
-                paramName="customerType"
-                placeholder="Alle Kundentypen"
-                options={customerTypeOptions}
-                currentValue={customerTypeFilter}
-              />
-            </Suspense>
-          </DataTableToolbar>
+          <DataTableToolbar
+            searchPlaceholder="Kunden suchen..."
+            filterOptions={filterOptions}
+            sortOptions={sortOptions}
+          />
         </CardHeader>
         <CardContent>
           <Tabs value={activeTab} onValueChange={handleViewModeChange} className="w-full">
@@ -195,8 +167,6 @@ export default function CustomersPage({
                 currentPage={currentPage}
                 query={query}
                 customerTypeFilter={customerTypeFilter}
-                sortColumn={sortColumn}
-                sortDirection={sortDirection}
                 onActionSuccess={fetchData}
               />
             </TabsContent>

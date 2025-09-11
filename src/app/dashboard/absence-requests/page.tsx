@@ -2,25 +2,18 @@
 
 import { createClient } from "@/lib/supabase/client";
 import { redirect, useRouter, useSearchParams } from "next/navigation";
-import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { CalendarOff, User, FileText, CheckCircle2, XCircle, AlertCircle, PlusCircle } from "lucide-react";
-import { AbsenceRequestEditDialog } from "@/components/absence-request-edit-dialog";
-import { DeleteAbsenceRequestButton } from "@/components/delete-absence-request-button";
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { AbsenceTimelineCalendar } from "@/components/absence-timeline-calendar";
-import { Button } from "@/components/ui/button";
 import { AbsenceRequestCreateDialog } from "@/components/absence-request-create-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Suspense, useEffect, useState, useCallback } from "react";
-import { FilterSelect } from "@/components/filter-select";
-import { AbsenceRequestsTableView } from "@/components/absence-requests-table-view"; // Import the new table view component
+import { AbsenceRequestsTableView } from "@/components/absence-requests-table-view";
 import { PaginationControls } from "@/components/pagination-controls";
-import { useIsMobile } from "@/hooks/use-mobile"; // Import the hook
-import { RecordDetailsDialog } from "@/components/record-details-dialog"; // Import RecordDetailsDialog
-import { LoadingOverlay } from "@/components/loading-overlay"; // Import the new LoadingOverlay
+import { useIsMobile } from "@/hooks/use-mobile";
+import { LoadingOverlay } from "@/components/loading-overlay";
 import { PageHeader } from "@/components/page-header";
-import { DataTableToolbar } from "@/components/data-table-toolbar";
-import { SearchInput } from "@/components/search-input";
+import { DataTableToolbar, FilterOption, SortOption } from "@/components/data-table-toolbar";
+import { AbsenceRequestsGridView } from "@/components/absence-requests-grid-view"; // Assuming this will be created or exists
 
 interface DisplayAbsenceRequest {
   id: string;
@@ -32,14 +25,10 @@ interface DisplayAbsenceRequest {
   notes: string | null;
   admin_notes: string | null;
   employees: { first_name: string | null; last_name: string | null } | null;
-  user_id: string; // Add user_id for passing to edit dialog
+  user_id: string;
 }
 
-export default function AbsenceRequestsPage({
-  searchParams,
-}: {
-  searchParams?: any;
-}) {
+export default function AbsenceRequestsPage() {
   const supabase = createClient();
   const router = useRouter();
   const currentSearchParams = useSearchParams();
@@ -52,17 +41,15 @@ export default function AbsenceRequestsPage({
   const [loading, setLoading] = useState(true);
   const [totalCount, setTotalCount] = useState<number | null>(0);
 
-  const query = (currentSearchParams.get('query') || '') as string;
+  const query = currentSearchParams.get('query') || '';
   const currentPage = Number(currentSearchParams.get('page')) || 1;
-  const pageSize = 10; // Set page size to 10
-  const employeeIdFilter = (currentSearchParams.get('employeeId') || '') as string;
-  const typeFilter = (currentSearchParams.get('type') || '') as string;
-  const statusFilter = (currentSearchParams.get('status') || '') as string;
-  const viewMode = (currentSearchParams.get('viewMode') || 'grid') as string;
-
-  // Sorting parameters
-  const sortColumn = (currentSearchParams.get('sortColumn') || 'start_date') as string;
-  const sortDirection = (currentSearchParams.get('sortDirection') || 'desc') as string;
+  const pageSize = 10;
+  const employeeIdFilter = currentSearchParams.get('employeeId') || '';
+  const typeFilter = currentSearchParams.get('type') || '';
+  const statusFilter = currentSearchParams.get('status') || '';
+  const viewMode = currentSearchParams.get('viewMode') || 'grid';
+  const sortColumn = currentSearchParams.get('sortColumn') || 'start_date';
+  const sortDirection = currentSearchParams.get('sortDirection') || 'desc';
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -79,9 +66,7 @@ export default function AbsenceRequestsPage({
       .eq('id', user.id)
       .single();
 
-    if (profileError) {
-      console.error("Fehler beim Laden des Benutzerprofils:", profileError?.message || profileError);
-    }
+    if (profileError) console.error("Fehler beim Laden des Benutzerprofils:", profileError?.message || profileError);
     const role = profile?.role as 'admin' | 'manager' | 'employee' | 'customer' || 'employee';
     setCurrentUserRole(role);
 
@@ -92,81 +77,25 @@ export default function AbsenceRequestsPage({
     if (employeesError) console.error("Fehler beim Laden der Mitarbeiter für Filter:", employeesError.message);
     setEmployees(employeesData || []);
 
-    let requestsData: DisplayAbsenceRequest[] = [];
-    let requestsError: any = null;
-    let requestsCount: number | null = 0;
+    let selectQuery = supabase
+      .from('absence_requests')
+      .select(`*, employees ( first_name, last_name )`, { count: 'exact' })
+      .order(sortColumn, { ascending: sortDirection === 'asc' });
 
-    if (query) {
-      // For search, fetch all and filter in memory
-      let fetchQuery = supabase
-        .from('absence_requests')
-        .select(`
-            *,
-            employees ( first_name, last_name )
-          `);
-      
-      if (role === 'employee') {
-        fetchQuery = fetchQuery.eq('user_id', user.id);
-      }
+    if (role === 'employee') selectQuery = selectQuery.eq('user_id', user.id);
+    if (query) selectQuery = selectQuery.or(`notes.ilike.%${query}%,admin_notes.ilike.%${query}%,employees.first_name.ilike.%${query}%,employees.last_name.ilike.%${query}%`);
+    if (employeeIdFilter) selectQuery = selectQuery.eq('employee_id', employeeIdFilter);
+    if (typeFilter) selectQuery = selectQuery.eq('type', typeFilter);
+    if (statusFilter) selectQuery = selectQuery.eq('status', statusFilter);
 
-      const { data, error: fetchError } = await fetchQuery;
-      
-      if (fetchError) {
-        requestsError = fetchError;
-      } else {
-        const filteredData = data.filter(r => 
-          r.notes?.toLowerCase().includes(query.toLowerCase()) ||
-          r.admin_notes?.toLowerCase().includes(query.toLowerCase()) ||
-          r.type.toLowerCase().includes(query.toLowerCase()) ||
-          r.status.toLowerCase().includes(query.toLowerCase()) ||
-          r.employees?.first_name?.toLowerCase().includes(query.toLowerCase()) ||
-          r.employees?.last_name?.toLowerCase().includes(query.toLowerCase())
-        );
-        requestsData = filteredData.map(r => ({
-          ...r,
-          employees: Array.isArray(r.employees) ? r.employees[0] : r.employees,
-        }));
-        requestsCount = requestsData.length;
-      }
-    } else {
-      let selectQuery = supabase
-        .from('absence_requests')
-        .select(`
-            *,
-            employees ( first_name, last_name )
-          `, { count: 'exact' })
-        .order(sortColumn, { ascending: sortDirection === 'asc' });
+    const { data, error, count } = await selectQuery.range(from, to);
 
-      if (role === 'employee') {
-        selectQuery = selectQuery.eq('user_id', user.id);
-      }
-
-      if (employeeIdFilter) {
-        selectQuery = selectQuery.eq('employee_id', employeeIdFilter);
-      }
-      if (typeFilter) {
-        selectQuery = selectQuery.eq('type', typeFilter);
-      }
-      if (statusFilter) {
-        selectQuery = selectQuery.eq('status', statusFilter);
-      }
-
-      const { data, error: selectError, count: selectCount } = await selectQuery
-        .range(from, to);
-
-      requestsData = data?.map(request => ({
-        ...request,
-        employees: Array.isArray(request.employees) ? request.employees[0] : request.employees,
-      })) || [];
-      requestsError = selectError;
-      requestsCount = selectCount;
-    }
-
-    if (requestsError) {
-      console.error("Fehler beim Laden der Abwesenheitsanträge:", requestsError?.message || requestsError);
-    }
-    setAllRequests(requestsData);
-    setTotalCount(requestsCount);
+    if (error) console.error("Fehler beim Laden der Abwesenheitsanträge:", error?.message || error);
+    setAllRequests(data?.map(request => ({
+      ...request,
+      employees: Array.isArray(request.employees) ? request.employees[0] : request.employees,
+    })) || []);
+    setTotalCount(count);
     setLoading(false);
   }, [
     supabase,
@@ -178,7 +107,7 @@ export default function AbsenceRequestsPage({
     statusFilter,
     sortColumn,
     sortDirection,
-    currentSearchParams // Add currentSearchParams to dependency array
+    currentSearchParams
   ]);
 
   useEffect(() => {
@@ -186,41 +115,32 @@ export default function AbsenceRequestsPage({
   }, [fetchData]);
 
   if (!currentUser) {
-    return null; // Render nothing or a global loading if user is not yet determined
+    return <LoadingOverlay isLoading={true} />;
+  }
+
+  if (currentUserRole === 'customer') {
+    redirect('/dashboard');
+    return null;
   }
 
   const totalPages = totalCount ? Math.ceil(totalCount / pageSize) : 0;
 
-  const getStatusBadgeVariant = (status: string) => {
-    switch (status) {
-      case 'approved': return 'success';
-      case 'rejected': return 'destructive';
-      case 'pending':
-      default: return 'warning';
-    }
-  };
+  const filterOptions: FilterOption[] = [
+    ...(currentUserRole !== 'employee' ? [{
+      value: 'employeeId',
+      label: 'Mitarbeiter',
+      options: employees.map(e => ({ value: e.id, label: `${e.first_name} ${e.last_name}` }))
+    }] : []),
+    { value: 'type', label: 'Typ', options: [{ value: 'vacation', label: 'Urlaub' }, { value: 'sick_leave', label: 'Krankheit' }, { value: 'training', label: 'Weiterbildung' }, { value: 'other', label: 'Sonstiges' }] },
+    { value: 'status', label: 'Status', options: [{ value: 'pending', label: 'Ausstehend' }, { value: 'approved', label: 'Genehmigt' }, { value: 'rejected', label: 'Abgelehnt' }] },
+  ];
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'approved': return <CheckCircle2 className="mr-2 h-4 w-4 text-success-foreground" />;
-      case 'rejected': return <XCircle className="mr-2 h-4 w-4 text-destructive-foreground" />;
-      case 'pending':
-      default: return <AlertCircle className="mr-2 h-4 w-4 text-warning-foreground" />;
-    }
-  };
-
-  const typeTranslations: { [key: string]: string } = {
-    vacation: "Urlaub",
-    sick_leave: "Krankheit",
-    training: "Weiterbildung",
-    other: "Sonstiges",
-  };
-
-  const typeOptions = Object.entries(typeTranslations).map(([value, label]) => ({ value, label }));
-  const statusOptions = [
-    { value: 'pending', label: 'Ausstehend' },
-    { value: 'approved', label: 'Genehmigt' },
-    { value: 'rejected', label: 'Abgelehnt' },
+  const sortOptions: SortOption[] = [
+    { value: 'start_date', label: 'Startdatum' },
+    { value: 'end_date', label: 'Enddatum' },
+    { value: 'employees.last_name', label: 'Mitarbeiter' },
+    { value: 'type', label: 'Typ' },
+    { value: 'status', label: 'Status' },
   ];
 
   const activeTab = isMobile ? 'grid' : viewMode;
@@ -236,8 +156,9 @@ export default function AbsenceRequestsPage({
       {loading && <LoadingOverlay isLoading={loading} />}
       <PageHeader title="Abwesenheitsverwaltung">
         <AbsenceRequestCreateDialog
-          currentUserRole={currentUserRole as 'admin' | 'manager' | 'employee'}
+          currentUserRole={currentUserRole}
           currentUserId={currentUser.id}
+          onAbsenceRequestCreated={fetchData}
         />
       </PageHeader>
 
@@ -254,31 +175,11 @@ export default function AbsenceRequestsPage({
 
       <Card className="shadow-neumorphic glassmorphism-card">
         <CardHeader>
-          <DataTableToolbar>
-            <SearchInput placeholder="Anträge suchen..." className="w-full sm:w-auto sm:flex-grow" />
-            <Suspense fallback={<div>Lade Filter...</div>}>
-              {currentUserRole !== 'employee' && (
-                <FilterSelect
-                  paramName="employeeId"
-                  placeholder="Mitarbeiter"
-                  options={employees.map(e => ({ value: e.id, label: `${e.first_name} ${e.last_name}` }))}
-                  currentValue={employeeIdFilter}
-                />
-              )}
-              <FilterSelect
-                paramName="type"
-                placeholder="Typ"
-                options={typeOptions}
-                currentValue={typeFilter}
-              />
-              <FilterSelect
-                paramName="status"
-                placeholder="Status"
-                options={statusOptions}
-                currentValue={statusFilter}
-              />
-            </Suspense>
-          </DataTableToolbar>
+          <DataTableToolbar
+            searchPlaceholder="Anträge suchen..."
+            filterOptions={filterOptions}
+            sortOptions={sortOptions}
+          />
         </CardHeader>
         <CardContent>
           <Tabs value={activeTab} onValueChange={handleViewModeChange} className="w-full">
@@ -289,68 +190,13 @@ export default function AbsenceRequestsPage({
               </TabsList>
             </div>
             <TabsContent value="grid" className="mt-0">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-                {allRequests.length === 0 && !query && !employeeIdFilter && !typeFilter && !statusFilter ? (
-                  <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30 shadow-neumorphic glassmorphism-card">
-                    <CalendarOff className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
-                    <p className="text-base md:text-lg font-semibold">Keine Anträge gefunden</p>
-                    <p className="text-sm">Reichen Sie einen neuen Abwesenheitsantrag ein.</p>
-                  </div>
-                ) : allRequests.length === 0 && (query || employeeIdFilter || typeFilter || statusFilter) ? (
-                  <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30 shadow-neumorphic glassmorphism-card">
-                    <CalendarOff className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
-                    <p className="text-base md:text-lg font-semibold">Keine Anträge gefunden</p>
-                    <p className="text-sm">Ihre Suche oder Filter ergaben keine Treffer.</p>
-                  </div>
-                ) : (
-                  allRequests.map((request) => (
-                    <Card key={request.id} className="shadow-neumorphic glassmorphism-card">
-                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-base md:text-lg font-semibold">
-                          {typeTranslations[request.type] || 'Abwesenheit'}
-                        </CardTitle>
-                        <div className="flex items-center space-x-2">
-                          <RecordDetailsDialog record={request} title={`Details zu Abwesenheitsantrag`} />
-                          <AbsenceRequestEditDialog
-                            request={request}
-                            currentUserRole={currentUserRole as 'admin' | 'manager' | 'employee'}
-                            currentUserId={currentUser.id}
-                          />
-                          <DeleteAbsenceRequestButton requestId={request.id} onDeleteSuccess={fetchData} />
-                        </div>
-                      </CardHeader>
-                      <CardContent className="space-y-2 text-sm text-muted-foreground">
-                        {currentUserRole !== 'employee' && request.employees && (
-                          <div className="flex items-center">
-                            <User className="mr-2 h-4 w-4 flex-shrink-0" />
-                            <span>Mitarbeiter: {request.employees.first_name} {request.employees.last_name}</span>
-                          </div>
-                        )}
-                        <div className="flex items-center">
-                          <CalendarOff className="mr-2 h-4 w-4 flex-shrink-0" />
-                          <span>Datum: {new Date(request.start_date).toLocaleDateString()} - {new Date(request.end_date).toLocaleDateString()}</span>
-                        </div>
-                        <div className="flex items-center">
-                          {getStatusIcon(request.status)}
-                          <Badge variant={getStatusBadgeVariant(request.status)}>{request.status}</Badge>
-                        </div>
-                        {request.notes && (
-                          <div className="flex items-start">
-                            <FileText className="mr-2 h-4 w-4 mt-1 flex-shrink-0" />
-                            <p className="flex-grow">Notizen: {request.notes}</p>
-                          </div>
-                        )}
-                        {request.admin_notes && (
-                          <div className="flex items-start">
-                            <FileText className="mr-2 h-4 w-4 mt-1 flex-shrink-0" />
-                            <p className="flex-grow">Admin-Notizen: {request.admin_notes}</p>
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  ))
-                )}
-              </div>
+              <AbsenceRequestsGridView
+                requests={allRequests}
+                query={query}
+                currentUserRole={currentUserRole}
+                currentUserId={currentUser.id}
+                onActionSuccess={fetchData}
+              />
             </TabsContent>
             <TabsContent value="table" className="mt-0">
               <AbsenceRequestsTableView
@@ -358,12 +204,7 @@ export default function AbsenceRequestsPage({
                 totalPages={totalPages}
                 currentPage={currentPage}
                 query={query}
-                employeeIdFilter={employeeIdFilter}
-                typeFilter={typeFilter}
-                statusFilter={statusFilter}
-                sortColumn={sortColumn}
-                sortDirection={sortDirection}
-                currentUserRole={currentUserRole as 'admin' | 'manager' | 'employee'}
+                currentUserRole={currentUserRole}
               />
             </TabsContent>
           </Tabs>

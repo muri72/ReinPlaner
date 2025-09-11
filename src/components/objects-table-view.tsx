@@ -3,13 +3,10 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MapPin, FileText, Clock, Key, Lock, ShieldCheck, UserRound, ArrowUp, ArrowDown, Building } from "lucide-react"; // Added Building
+import { MapPin, FileText, Clock, Key, Lock, ShieldCheck, UserRound, Building } from "lucide-react"; // Added Building
 import { ObjectEditDialog } from "@/components/object-edit-dialog";
 import { DeleteObjectButton } from "@/components/delete-object-button";
 import { PaginationControls } from "@/components/pagination-controls";
-import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { useCallback } from "react";
-import { cn } from "@/lib/utils";
 import { RecordDetailsDialog } from "@/components/record-details-dialog"; // Import RecordDetailsDialog
 
 interface DisplayObject {
@@ -46,8 +43,6 @@ interface ObjectsTableViewProps {
   priorityFilter: string;
   timeOfDayFilter: string;
   accessMethodFilter: string;
-  sortColumn: string;
-  sortDirection: string;
 }
 
 export function ObjectsTableView({
@@ -59,31 +54,7 @@ export function ObjectsTableView({
   priorityFilter,
   timeOfDayFilter,
   accessMethodFilter,
-  sortColumn,
-  sortDirection,
 }: ObjectsTableViewProps) {
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-
-  const handleSort = useCallback((column: string) => {
-    const params = new URLSearchParams(searchParams);
-    let newDirection = 'asc';
-    if (sortColumn === column && sortDirection === 'asc') {
-      newDirection = 'desc';
-    }
-    params.set('sortColumn', column);
-    params.set('sortDirection', newDirection);
-    params.set('page', '1');
-    router.replace(`${pathname}?${params.toString()}`);
-  }, [sortColumn, sortDirection, pathname, router, searchParams]);
-
-  const renderSortIcon = (column: string) => {
-    if (sortColumn === column) {
-      return sortDirection === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />;
-    }
-    return null;
-  };
 
   const getPriorityBadgeVariant = (priority: string) => {
     switch (priority) {
@@ -119,41 +90,13 @@ export function ObjectsTableView({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="min-w-[150px]">
-              <Button variant="ghost" onClick={() => handleSort('name')} className="px-0 hover:bg-transparent">
-                Name {renderSortIcon('name')}
-              </Button>
-            </TableHead>
-            <TableHead className="min-w-[120px]">
-              <Button variant="ghost" onClick={() => handleSort('customers.name')} className="px-0 hover:bg-transparent">
-                Kunde {renderSortIcon('customers.name')}
-              </Button>
-            </TableHead>
-            <TableHead className="min-w-[200px]">
-              <Button variant="ghost" onClick={() => handleSort('address')} className="px-0 hover:bg-transparent">
-                Adresse {renderSortIcon('address')}
-              </Button>
-            </TableHead>
-            <TableHead className="min-w-[120px]">
-              <Button variant="ghost" onClick={() => handleSort('priority')} className="px-0 hover:bg-transparent">
-                Priorität {renderSortIcon('priority')}
-              </Button>
-            </TableHead>
-            <TableHead className="min-w-[120px]">
-              <Button variant="ghost" onClick={() => handleSort('time_of_day')} className="px-0 hover:bg-transparent">
-                Tageszeit {renderSortIcon('time_of_day')}
-              </Button>
-            </TableHead>
-            <TableHead className="min-w-[120px]">
-              <Button variant="ghost" onClick={() => handleSort('access_method')} className="px-0 hover:bg-transparent">
-                Zugang {renderSortIcon('access_method')}
-              </Button>
-            </TableHead>
-            <TableHead className="min-w-[120px]">
-              <Button variant="ghost" onClick={() => handleSort('recurrence_interval_weeks')} className="px-0 hover:bg-transparent">
-                Wiederholung {renderSortIcon('recurrence_interval_weeks')}
-              </Button>
-            </TableHead>
+            <TableHead className="min-w-[150px]">Name</TableHead>
+            <TableHead className="min-w-[120px]">Kunde</TableHead>
+            <TableHead className="min-w-[200px]">Adresse</TableHead>
+            <TableHead className="min-w-[120px]">Priorität</TableHead>
+            <TableHead className="min-w-[120px]">Tageszeit</TableHead>
+            <TableHead className="min-w-[120px]">Zugang</TableHead>
+            <TableHead className="min-w-[120px]">Wiederholung</TableHead>
             <TableHead className="text-right min-w-[120px]">Aktionen</TableHead>
           </TableRow>
         </TableHeader>

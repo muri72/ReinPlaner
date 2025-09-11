@@ -3,15 +3,12 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CalendarDays, Clock, FileText, Wrench, UserRound, Star as StarIcon, Briefcase, ArrowUp, ArrowDown } from "lucide-react";
+import { CalendarDays, Clock, FileText, Wrench, UserRound, Star as StarIcon, Briefcase } from "lucide-react";
 import { OrderEditDialog } from "@/components/order-edit-dialog";
 import { DeleteOrderButton } from "@/components/delete-order-button";
 import { PaginationControls } from "@/components/pagination-controls";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
-import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { useCallback } from "react";
-import { cn } from "@/lib/utils";
 import { RecordDetailsDialog } from "@/components/record-details-dialog";
 import { AssignedEmployee } from "@/components/order-form";
 
@@ -57,16 +54,6 @@ interface OrdersTableViewProps {
   totalPages: number;
   currentPage: number;
   query: string;
-  statusFilter: string;
-  orderTypeFilter: string;
-  serviceTypeFilter: string;
-  customerIdFilter: string;
-  employeeIdFilter: string;
-  customers: { id: string; name: string }[];
-  employees: { id: string; first_name: string | null; last_name: string | null }[];
-  availableServices: readonly string[];
-  sortColumn: string;
-  sortDirection: string;
 }
 
 export function OrdersTableView({
@@ -74,20 +61,7 @@ export function OrdersTableView({
   totalPages,
   currentPage,
   query,
-  statusFilter,
-  orderTypeFilter,
-  serviceTypeFilter,
-  customerIdFilter,
-  employeeIdFilter,
-  customers,
-  employees,
-  availableServices,
-  sortColumn,
-  sortDirection,
 }: OrdersTableViewProps) {
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
 
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
@@ -107,46 +81,7 @@ export function OrdersTableView({
     }
   };
 
-  const getRequestStatusBadgeVariant = (requestStatus: string) => {
-    switch (requestStatus) {
-      case 'approved': return 'default';
-      case 'pending': return 'warning';
-      case 'rejected': return 'destructive';
-      default: return 'outline';
-    }
-  };
-
-  const handleSort = useCallback((column: string) => {
-    const params = new URLSearchParams(searchParams);
-    let newDirection = 'asc';
-    if (sortColumn === column && sortDirection === 'asc') {
-      newDirection = 'desc';
-    }
-    params.set('sortColumn', column);
-    params.set('sortDirection', newDirection);
-    params.set('page', '1');
-    router.replace(`${pathname}?${params.toString()}`);
-  }, [sortColumn, sortDirection, pathname, router, searchParams]);
-
-  const renderSortIcon = (column: string) => {
-    if (sortColumn === column) {
-      return sortDirection === 'asc' ? <ArrowUp className="ml-1 h-3 w-3" /> : <ArrowDown className="ml-1 h-3 w-3" />;
-    }
-    return null;
-  };
-
-  const dayNames = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const;
-  const germanDayNames: { [key: string]: string } = {
-    monday: 'Mo',
-    tuesday: 'Di',
-    wednesday: 'Mi',
-    thursday: 'Do',
-    friday: 'Fr',
-    saturday: 'Sa',
-    sunday: 'So',
-  };
-
-  if (orders.length === 0 && !query && !statusFilter && !orderTypeFilter && !serviceTypeFilter && !customerIdFilter && !employeeIdFilter) {
+  if (orders.length === 0 && !query) {
     return (
       <div className="text-center text-muted-foreground py-8">
         <Briefcase className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
@@ -156,7 +91,7 @@ export function OrdersTableView({
     );
   }
 
-  if (orders.length === 0 && (query || statusFilter || orderTypeFilter || serviceTypeFilter || customerIdFilter || employeeIdFilter)) {
+  if (orders.length === 0 && query) {
     return (
       <div className="text-center text-muted-foreground py-8">
         <Briefcase className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
@@ -171,51 +106,15 @@ export function OrdersTableView({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="min-w-[150px]">
-              <Button variant="ghost" onClick={() => handleSort('title')} className="px-0 hover:bg-transparent">
-                Auftrag {renderSortIcon('title')}
-              </Button>
-            </TableHead>
-            <TableHead className="min-w-[120px]">
-              <Button variant="ghost" onClick={() => handleSort('customers.name')} className="px-0 hover:bg-transparent">
-                Kunde {renderSortIcon('customers.name')}
-              </Button>
-            </TableHead>
-            <TableHead className="min-w-[120px]">
-              <Button variant="ghost" onClick={() => handleSort('objects.name')} className="px-0 hover:bg-transparent">
-                Objekt {renderSortIcon('objects.name')}
-              </Button>
-            </TableHead>
-            <TableHead className="min-w-[120px]">
-              <Button variant="ghost" onClick={() => handleSort('employees.last_name')} className="px-0 hover:bg-transparent">
-                Mitarbeiter {renderSortIcon('employees.last_name')}
-              </Button>
-            </TableHead>
-            <TableHead className="min-w-[100px]">
-              <Button variant="ghost" onClick={() => handleSort('service_type')} className="px-0 hover:bg-transparent">
-                Dienstleistung {renderSortIcon('service_type')}
-              </Button>
-            </TableHead>
-            <TableHead className="min-w-[100px]">
-              <Button variant="ghost" onClick={() => handleSort('order_type')} className="px-0 hover:bg-transparent">
-                Typ {renderSortIcon('order_type')}
-              </Button>
-            </TableHead>
-            <TableHead className="min-w-[100px]">
-              <Button variant="ghost" onClick={() => handleSort('priority')} className="px-0 hover:bg-transparent">
-                Priorität {renderSortIcon('priority')}
-              </Button>
-            </TableHead>
-            <TableHead className="min-w-[100px]">
-              <Button variant="ghost" onClick={() => handleSort('status')} className="px-0 hover:bg-transparent">
-                Status {renderSortIcon('status')}
-              </Button>
-            </TableHead>
-            <TableHead className="min-w-[120px]">
-              <Button variant="ghost" onClick={() => handleSort('due_date')} className="px-0 hover:bg-transparent">
-                Zeitraum {renderSortIcon('due_date')}
-              </Button>
-            </TableHead>
+            <TableHead className="min-w-[150px]">Auftrag</TableHead>
+            <TableHead className="min-w-[120px]">Kunde</TableHead>
+            <TableHead className="min-w-[120px]">Objekt</TableHead>
+            <TableHead className="min-w-[120px]">Mitarbeiter</TableHead>
+            <TableHead className="min-w-[100px]">Dienstleistung</TableHead>
+            <TableHead className="min-w-[100px]">Typ</TableHead>
+            <TableHead className="min-w-[100px]">Priorität</TableHead>
+            <TableHead className="min-w-[100px]">Status</TableHead>
+            <TableHead className="min-w-[120px]">Zeitraum</TableHead>
             <TableHead className="min-w-[120px]">Wöchentliche Std.</TableHead>
             <TableHead className="min-w-[80px]">Feedback</TableHead>
             <TableHead className="text-right min-w-[120px]">Aktionen</TableHead>
