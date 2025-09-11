@@ -4,110 +4,129 @@ import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Pencil } from "lucide-react";
-import { OrderForm, OrderFormValues } from "@/components/order-form";
+import { OrderForm, OrderFormValues, AssignedEmployee } from "@/components/order-form";
 import { updateOrder } from "@/app/dashboard/orders/actions";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { DocumentUploader } from "@/components/document-uploader";
+import { DocumentList } from "@/components/document-list";
+import { FileStack } from "lucide-react";
+
+// Definierte Liste der Dienstleistungen (muss mit order-form.tsx übereinstimmen)
+const availableServices = [
+  "Unterhaltsreinigung",
+  "Glasreinigung",
+  "Grundreinigung",
+  "Graffitientfernung",
+  "Sonderreinigung",
+] as const;
 
 interface OrderEditDialogProps {
-  order: any;
-  onSuccess?: () => void;
+  order: {
+    id: string;
+    title: string;
+    description: string | null;
+    due_date: string | null;
+    status: string;
+    customer_id: string | null;
+    object_id: string | null;
+    customer_contact_id: string | null;
+    order_type: string;
+    recurring_start_date: string | null;
+    recurring_end_date: string | null;
+    priority: string;
+    total_estimated_hours: number | null;
+    notes: string | null;
+    service_type: string | null;
+    request_status: string;
+    assignedEmployees: AssignedEmployee[]; // Use the correct, structured type
+  };
 }
 
-export function OrderEditDialog({ order, onSuccess }: OrderEditDialogProps) {
+export function OrderEditDialog({ order }: OrderEditDialogProps) {
   const [open, setOpen] = useState(false);
-  const [isDirty, setIsDirty] = useState(false);
-  const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
 
   const handleUpdate = async (data: OrderFormValues) => {
     const result = await updateOrder(order.id, data);
     if (result.success) {
-      setIsDirty(false); // Reset dirty state on successful save
       setOpen(false);
-      onSuccess?.();
     }
     return result;
   };
 
-  const handleOpenChange = (isOpen: boolean) => {
-    if (!isOpen && isDirty) {
-      setIsConfirmDialogOpen(true);
-    } else {
-      setOpen(isOpen);
-      if (!isOpen) {
-        setIsDirty(false); // Reset dirty state if closed without changes
-      }
+  const getServiceTypeForForm = (serviceType: string | null): OrderFormValues["serviceType"] => {
+    if (serviceType && availableServices.includes(serviceType as any)) {
+      return serviceType as OrderFormValues["serviceType"];
     }
-  };
-
-  const handleDiscard = () => {
-    setIsDirty(false);
-    setIsConfirmDialogOpen(false);
-    setOpen(false);
+    return null;
   };
 
   return (
-    <>
-      <Dialog open={open} onOpenChange={handleOpenChange}>
-        <TooltipProvider delayDuration={300}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <DialogTrigger asChild>
-                <Button variant="ghost" size="icon" className="text-primary hover:text-primary/80">
-                  <Pencil className="h-4 w-4" />
-                </Button>
-              </DialogTrigger>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Auftrag bearbeiten</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-        <DialogContent 
-          className="sm:max-w-5xl max-h-[90vh] flex flex-col glassmorphism-card"
-          onInteractOutside={(e) => {
-            if (isDirty) {
-              e.preventDefault();
-              setIsConfirmDialogOpen(true);
-            }
-          }}
-        >
-          <DialogHeader>
-            <DialogTitle>Auftrag bearbeiten: {order.title}</DialogTitle>
-            <DialogDescription>
-              Aktualisieren Sie die Details dieses Auftrags.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex-grow overflow-y-auto pr-4">
+    <Dialog open={open} onOpenChange={setOpen}>
+      <TooltipProvider delayDuration={300}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <DialogTrigger asChild>
+              <Button variant="ghost" size="icon" className="text-primary hover:text-primary/80">
+                <Pencil className="h-4 w-4" />
+              </Button>
+            </DialogTrigger>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Auftrag bearbeiten</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+      <DialogContent 
+        key={open ? "order-edit-open" : "order-edit-closed"} 
+        className="sm:max-w-5xl max-h-[90vh] overflow-y-auto flex flex-col glassmorphism-card"
+      >
+        <DialogHeader>
+          <DialogTitle>Auftrag bearbeiten</DialogTitle>
+          <DialogDescription>
+            Formular zum Bearbeiten der Auftragsdetails.
+          </DialogDescription>
+        </DialogHeader>
+        <Tabs defaultValue="details" className="flex-grow flex flex-col">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="details">Details</TabsTrigger>
+            <TabsTrigger value="documents">Dokumente</TabsTrigger>
+          </TabsList>
+          <TabsContent value="details" className="flex-grow overflow-y-auto pr-4">
             <OrderForm
-              initialData={order}
+              initialData={{
+                title: order.title,
+                description: order.description || undefined,
+                dueDate: order.due_date ? new Date(order.due_date) : undefined,
+                status: order.status as OrderFormValues["status"],
+                customerId: order.customer_id ?? undefined,
+                objectId: order.object_id ?? undefined,
+                customerContactId: order.customer_contact_id ?? undefined,
+                orderType: order.order_type as OrderFormValues["orderType"],
+                recurringStartDate: order.recurring_start_date ? new Date(order.recurring_start_date) : undefined,
+                recurringEndDate: order.recurring_end_date ? new Date(order.recurring_end_date) : undefined,
+                priority: order.priority as OrderFormValues["priority"],
+                totalEstimatedHours: order.total_estimated_hours,
+                notes: order.notes,
+                serviceType: getServiceTypeForForm(order.service_type),
+                requestStatus: order.request_status as OrderFormValues["requestStatus"],
+                assignedEmployees: order.assignedEmployees,
+              }}
               onSubmit={handleUpdate}
               submitButtonText="Änderungen speichern"
-              onSuccess={() => {
-                setIsDirty(false);
-                setOpen(false);
-                onSuccess?.();
-              }}
-              onDirtyChange={setIsDirty} // Pass callback to get dirty state
+              onSuccess={() => setOpen(false)}
             />
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      <AlertDialog open={isConfirmDialogOpen} onOpenChange={setIsConfirmDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Ungespeicherte Änderungen</AlertDialogTitle>
-            <AlertDialogDescription>
-              Sie haben ungespeicherte Änderungen. Möchten Sie diese verwerfen und das Fenster schließen?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDiscard}>Verwerfen</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </>
+          </TabsContent>
+          <TabsContent value="documents" className="flex-grow overflow-y-auto pr-4 space-y-4">
+            <h3 className="text-md font-semibold flex items-center">
+              <FileStack className="mr-2 h-5 w-5" /> Dokumente
+            </h3>
+            <DocumentUploader associatedOrderId={order.id} onDocumentUploaded={() => { /* Re-fetch documents if needed */ }} />
+            <DocumentList associatedOrderId={order.id} />
+          </TabsContent>
+        </Tabs>
+      </DialogContent>
+    </Dialog>
   );
 }
