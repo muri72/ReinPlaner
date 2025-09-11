@@ -26,6 +26,7 @@ import { AssignedEmployee } from "@/components/order-form";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"; // Ensure these are imported
 import { PageHeader } from "@/components/page-header";
 import { DataTableToolbar, FilterOption, SortOption } from "@/components/data-table-toolbar";
+import { OrdersGridView } from "@/components/orders-grid-view";
 
 const dayNames = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const;
 const germanDayNames: { [key: string]: string } = {
@@ -324,33 +325,6 @@ export default function OrdersPage({
   const pendingRequests = allOrders.filter(order => order.request_status === 'pending');
   const otherOrders = allOrders.filter(order => order.request_status !== 'pending');
 
-  const getStatusBadgeVariant = (status: string) => {
-    switch (status) {
-      case 'completed': return 'default';
-      case 'in_progress': return 'secondary';
-      case 'pending':
-      default: return 'outline';
-    }
-  };
-
-  const getPriorityBadgeVariant = (priority: string) => {
-    switch (priority) {
-      case 'high': return 'destructive';
-      case 'medium': return 'default';
-      case 'low':
-      default: return 'secondary';
-    }
-  };
-
-  const getRequestStatusBadgeVariant = (requestStatus: string) => {
-    switch (requestStatus) {
-      case 'approved': return 'default';
-      case 'pending': return 'warning';
-      case 'rejected': return 'destructive';
-      default: return 'outline';
-    }
-  };
-
   const orderStatusOptions = [
     { value: 'pending', label: 'Ausstehend' },
     { value: 'in_progress', label: 'In Bearbeitung' },
@@ -403,6 +377,11 @@ export default function OrdersPage({
             filterOptions={filterOptions}
             sortOptions={sortOptions}
           />
+          {totalCount !== null && (
+            <div className="text-sm text-muted-foreground mt-2">
+              {totalCount} {totalCount === 1 ? 'Ergebnis' : 'Ergebnisse'} gefunden.
+            </div>
+          )}
         </CardHeader>
         <CardContent>
           <Tabs value={activeTab} onValueChange={handleViewModeChange} className="w-full">
@@ -413,131 +392,16 @@ export default function OrdersPage({
               </TabsList>
             </div>
             <TabsContent value="grid" className="mt-0">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-                {otherOrders.length === 0 && !query && !statusFilter && !orderTypeFilter && !serviceTypeFilter && !customerIdFilter && !employeeIdFilter ? (
-                  <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30 shadow-neumorphic glassmorphism-card">
-                    <Briefcase className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
-                    <p className="text-base md:text-lg font-semibold">Noch keine Aufträge vorhanden</p>
-                    <p className="text-sm">Beginnen Sie, indem Sie einen neuen Auftrag hinzufügen.</p>
-                  </div>
-                ) : otherOrders.length === 0 && (query || statusFilter || orderTypeFilter || serviceTypeFilter || customerIdFilter || employeeIdFilter) ? (
-                  <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30 shadow-neumorphic glassmorphism-card">
-                    <Briefcase className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
-                    <p className="text-base md:text-lg font-semibold">Keine Aufträge gefunden</p>
-                    <p className="text-sm">Ihre Filter ergaben keine Treffer.</p>
-                  </div>
-                ) : (
-                  otherOrders.map((order) => {
-                    const feedback = order.order_feedback?.[0];
-                    const employeeNames = (order.employee_first_names && order.employee_last_names)
-                      ? order.employee_first_names.map((f, i) => `${f} ${order.employee_last_names?.[i] || ''}`).join(', ')
-                      : 'N/A';
-                    return (
-                      <Card key={order.id} className="shadow-neumorphic glassmorphism-card">
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                          <CardTitle className="text-base md:text-lg font-semibold">{order.title}</CardTitle>
-                          <div className="flex items-center space-x-2">
-                            <RecordDetailsDialog record={order} title={`Details zu Auftrag: ${order.title}`} />
-                            <OrderEditDialog order={order} />
-                            <DeleteOrderButton orderId={order.id} onDeleteSuccess={fetchData} />
-                          </div>
-                        </CardHeader>
-                        <CardContent>
-                          <Tabs defaultValue="details" className="w-full">
-                            <TabsList className="grid w-full grid-cols-2">
-                              <TabsTrigger value="details">Details</TabsTrigger>
-                              <TabsTrigger value="documents">Dokumente</TabsTrigger>
-                            </TabsList>
-                            <TabsContent value="details" className="pt-4 space-y-2 text-sm text-muted-foreground">
-                              <p className="text-sm text-muted-foreground">{order.description}</p>
-                              {order.customer_name && <p className="text-xs text-muted-foreground mt-1">Kunde: {order.customer_name}</p>}
-                              {order.object_name && <p className="text-xs text-muted-foreground">Objekt: {order.object_name}</p>}
-                              {order.customer_contact_first_name && order.customer_contact_last_name && (
-                                <div className="flex items-center text-xs text-muted-foreground"><UserRound className="mr-1 h-3 w-3" /><span>Auftraggeber: {order.customer_contact_first_name} {order.customer_contact_last_name}</span></div>
-                              )}
-                              {employeeNames !== 'N/A' && <p className="text-xs text-muted-foreground">Mitarbeiter: {employeeNames}</p>}
-                              {order.service_type && <div className="flex items-center text-xs text-muted-foreground mt-1"><Wrench className="mr-1 h-3 w-3" /><span>Dienstleistung: {order.service_type}</span></div>}
-                              <div className="flex items-center mt-2 space-x-2">
-                                <Badge variant={getStatusBadgeVariant(order.status)}>{order.status}</Badge>
-                                <Badge variant="outline">{order.order_type}</Badge>
-                                <Badge variant={getPriorityBadgeVariant(order.priority)}>Priorität: {order.priority}</Badge>
-                                <Badge variant={getRequestStatusBadgeVariant(order.request_status)}>Anfrage: {order.request_status}</Badge>
-                              </div>
-                              {order.total_estimated_hours && <div className="flex items-center text-xs text-muted-foreground mt-1"><Clock className="mr-1 h-3 w-3" /><span>Geschätzte Stunden: {order.total_estimated_hours}</span></div>}
-                              {order.notes && <div className="flex items-center text-xs text-muted-foreground mt-1"><FileText className="mr-1 h-3 w-3" /><span>Notizen: {order.notes}</span></div>}
-                              {order.order_type === "one_time" && order.due_date && <p className="text-xs text-muted-foreground ml-auto mt-1">Fällig: {new Date(order.due_date).toLocaleDateString()}</p>}
-                              {(order.order_type === "recurring" || order.order_type === "substitution") && order.recurring_start_date && <div className="flex items-center text-xs text-muted-foreground mt-1"><CalendarDays className="mr-1 h-3 w-3" /><span>Start: {new Date(order.recurring_start_date).toLocaleDateString()}</span></div>}
-                              {(order.order_type === "recurring" || order.order_type === "substitution") && order.recurring_end_date && <div className="flex items-center text-xs text-muted-foreground"><CalendarDays className="mr-1 h-3 w-3" /><span>Ende: {new Date(order.recurring_end_date).toLocaleDateString()}</span></div>}
-                              
-                              {['recurring', 'permanent', 'substitution'].includes(order.order_type) && (
-                                  <div className="space-y-1 mt-2">
-                                      {dayNames.map(day => {
-                                          const assignmentsForDay = order.assignedEmployees?.map(emp => {
-                                              // Show schedule for the first week of the cycle as a summary
-                                              const weekSchedule = emp.assigned_daily_schedules?.[0];
-                                              const daySchedule = (weekSchedule as any)?.[day];
-                                              
-                                              if (daySchedule && daySchedule.start && daySchedule.end) {
-                                                  const employee = employees.find(e => e.id === emp.employeeId);
-                                                  const empInitial = employee ? `${employee.first_name?.charAt(0)}.` : '??';
-                                                  return `${empInitial}: ${daySchedule.start} - ${daySchedule.end}`;
-                                              }
-                                              return null;
-                                          }).filter(Boolean);
-
-                                          if (assignmentsForDay && assignmentsForDay.length > 0) {
-                                              return (
-                                                  <div key={day} className="flex items-start text-xs text-muted-foreground">
-                                                      <Clock className="mr-1 h-3 w-3 mt-0.5 flex-shrink-0" />
-                                                      <span>{germanDayNames[day]}: {assignmentsForDay.join('; ')}</span>
-                                                  </div>
-                                              );
-                                          }
-                                          return null;
-                                      })}
-                                  </div>
-                              )}
-                              {order.object?.recurrence_interval_weeks && order.object.recurrence_interval_weeks > 1 && (
-                                <div className="flex items-center text-xs text-muted-foreground mt-1">
-                                  <CalendarDays className="mr-1 h-3 w-3" />
-                                  <span>Objekt-Wiederholung: Alle {order.object.recurrence_interval_weeks} Wochen (Offset: {order.object.start_week_offset})</span>
-                                </div>
-                              )}
-                              {order.assignedEmployees?.[0]?.assigned_recurrence_interval_weeks && order.assignedEmployees[0].assigned_recurrence_interval_weeks > 1 && (
-                                <div className="flex items-center text-xs text-muted-foreground mt-1">
-                                  <CalendarDays className="mr-1 h-3 w-3" />
-                                  <span>Mitarbeiter-Wiederholung: Alle {order.assignedEmployees[0].assigned_recurrence_interval_weeks} Wochen (Offset: {order.assignedEmployees[0].assigned_start_week_offset})</span>
-                                </div>
-                              )}
-
-                              {feedback && (
-                                <div className="flex items-center text-xs text-warning mt-2">
-                                  <StarIcon className="mr-1 h-3 w-3 fill-current" />
-                                  <span>Feedback vorhanden</span>
-                                </div>
-                              )}
-                            </TabsContent>
-                            <TabsContent value="documents" className="pt-4 space-y-4">
-                              <h3 className="text-md font-semibold flex items-center">
-                                <FileStack className="mr-2 h-5 w-5" /> Dokumente
-                              </h3>
-                              <DocumentUploader associatedOrderId={order.id} onDocumentUploaded={() => { /* Re-fetch documents if needed */ }} />
-                              <DocumentList associatedOrderId={order.id} />
-                            </TabsContent>
-                          </Tabs>
-                        </CardContent>
-                      </Card>
-                    );
-                  })
-                )}
-              </div>
+              <OrdersGridView
+                orders={otherOrders}
+                employees={employees}
+                onActionSuccess={fetchData}
+              />
             </TabsContent>
             <TabsContent value="table" className="mt-0">
               <OrdersTableView
                 orders={otherOrders}
-                totalPages={totalPages}
-                currentPage={currentPage}
-                query={query}
+                onActionSuccess={fetchData}
               />
             </TabsContent>
           </Tabs>

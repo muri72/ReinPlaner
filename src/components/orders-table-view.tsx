@@ -51,16 +51,12 @@ interface DisplayOrder {
 
 interface OrdersTableViewProps {
   orders: DisplayOrder[];
-  totalPages: number;
-  currentPage: number;
-  query: string;
+  onActionSuccess: () => void;
 }
 
 export function OrdersTableView({
   orders,
-  totalPages,
-  currentPage,
-  query,
+  onActionSuccess,
 }: OrdersTableViewProps) {
 
   const getStatusBadgeVariant = (status: string) => {
@@ -81,17 +77,7 @@ export function OrdersTableView({
     }
   };
 
-  if (orders.length === 0 && !query) {
-    return (
-      <div className="text-center text-muted-foreground py-8">
-        <Briefcase className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
-        <p className="text-base md:text-lg font-semibold">Noch keine Aufträge vorhanden</p>
-        <p className="text-sm">Beginnen Sie, indem Sie einen neuen Auftrag hinzufügen.</p>
-      </div>
-    );
-  }
-
-  if (orders.length === 0 && query) {
+  if (orders.length === 0) {
     return (
       <div className="text-center text-muted-foreground py-8">
         <Briefcase className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
@@ -165,7 +151,7 @@ export function OrdersTableView({
                   <div className="flex justify-end space-x-1">
                     <RecordDetailsDialog record={order} title={`Details zu Auftrag: ${order.title}`} />
                     <OrderEditDialog order={order} />
-                    <DeleteOrderButton orderId={order.id} />
+                    <DeleteOrderButton orderId={order.id} onDeleteSuccess={onActionSuccess} />
                   </div>
                 </TableCell>
               </TableRow>
