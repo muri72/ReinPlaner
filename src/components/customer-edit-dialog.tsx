@@ -20,15 +20,17 @@ interface CustomerEditDialogProps {
     created_at: string | null;
     customer_type: string;
   };
+  onSuccess?: () => void;
 }
 
-export function CustomerEditDialog({ customer }: CustomerEditDialogProps) {
+export function CustomerEditDialog({ customer, onSuccess }: CustomerEditDialogProps) {
   const [open, setOpen] = useState(false);
 
   const handleUpdate = async (data: CustomerFormValues) => {
     const result = await updateCustomer(customer.id, data);
     if (result.success) {
       setOpen(false); // Dialog schließen bei Erfolg
+      onSuccess?.(); // Callback für übergeordnete Komponente aufrufen
     }
     return result;
   };

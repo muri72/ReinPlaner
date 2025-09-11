@@ -31,6 +31,7 @@ interface CustomersTableViewProps {
   customerTypeFilter: string;
   sortColumn: string;
   sortDirection: string;
+  onActionSuccess: () => void;
 }
 
 export function CustomersTableView({
@@ -41,6 +42,7 @@ export function CustomersTableView({
   customerTypeFilter,
   sortColumn,
   sortDirection,
+  onActionSuccess,
 }: CustomersTableViewProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -86,7 +88,7 @@ export function CustomersTableView({
   }
 
   return (
-    <div className="overflow-x-auto p-4 rounded-lg shadow-neumorphic glassmorphism-card">
+    <div className="overflow-x-auto border rounded-lg">
       <Table>
         <TableHeader>
           <TableRow>
@@ -133,17 +135,14 @@ export function CustomersTableView({
               <TableCell className="text-right">
                 <div className="flex justify-end space-x-1">
                   <RecordDetailsDialog record={customer} title={`Details zu Kunde: ${customer.name}`} />
-                  <CustomerEditDialog customer={customer} />
-                  <DeleteCustomerButton customerId={customer.id} />
+                  <CustomerEditDialog customer={customer} onSuccess={onActionSuccess} />
+                  <DeleteCustomerButton customerId={customer.id} onDeleteSuccess={onActionSuccess} />
                 </div>
               </TableCell>
             </TableRow>
           ))}
         </TableBody>
       </Table>
-      {!query && totalPages > 1 && (
-        <PaginationControls currentPage={currentPage} totalPages={totalPages} />
-      )}
     </div>
   );
 }
