@@ -547,7 +547,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     if (result.success) {
       if (!initialData) {
         form.reset();
-        replaceAssignedEmployees([]);
+        replaceAssignedEmployees([]); // Reset schedules after successful creation
       }
       onSuccess?.();
     }
@@ -986,7 +986,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
                               "font-medium",
                               Math.abs(totalAssigned - objectDayHours) > 0.1 ? 'text-destructive' : 'text-success'
                             )}>
-                              {totalAssigned.toFixed(1)}h / {objectDayHours.toFixed(1)}h
+                              {totalAssigned.toFixed(2)}h / {objectDayHours.toFixed(2)}h
                             </span>
                           </div>
                         );

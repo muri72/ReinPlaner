@@ -141,7 +141,14 @@ export function OrdersGridView({ orders, employees, onActionSuccess }: OrdersGri
                     <Badge variant={getPriorityBadgeVariant(order.priority)}>Priorität: {order.priority}</Badge>
                     <Badge variant={getRequestStatusBadgeVariant(order.request_status)}>Anfrage: {order.request_status}</Badge>
                   </div>
-                  {order.total_estimated_hours && <div className="flex items-center text-xs text-muted-foreground mt-1"><Clock className="mr-1 h-3 w-3" /><span>Geschätzte Stunden: {order.total_estimated_hours}</span></div>}
+                  {order.total_estimated_hours && (
+                    <div className="flex items-center text-xs text-muted-foreground mt-1">
+                      <Clock className="mr-1 h-3 w-3" />
+                      <span>
+                        {['recurring', 'substitution', 'permanent'].includes(order.order_type) ? 'Wochenstunden' : 'Gesamtstunden'}: {order.total_estimated_hours.toFixed(2)}
+                      </span>
+                    </div>
+                  )}
                   {order.notes && <div className="flex items-center text-xs text-muted-foreground mt-1"><FileText className="mr-1 h-3 w-3" /><span>Notizen: {order.notes}</span></div>}
                   {order.order_type === "one_time" && order.due_date && <p className="text-xs text-muted-foreground ml-auto mt-1">Fällig: {new Date(order.due_date).toLocaleDateString()}</p>}
                   {(order.order_type === "recurring" || order.order_type === "substitution") && order.recurring_start_date && <div className="flex items-center text-xs text-muted-foreground mt-1"><CalendarDays className="mr-1 h-3 w-3" /><span>Start: {new Date(order.recurring_start_date).toLocaleDateString()}</span></div>}
@@ -151,6 +158,7 @@ export function OrdersGridView({ orders, employees, onActionSuccess }: OrdersGri
                       <div className="space-y-1 mt-2">
                           {dayNames.map(day => {
                               const assignmentsForDay = order.assignedEmployees?.map(emp => {
+                                  // Show schedule for the first week of the cycle as a summary
                                   const weekSchedule = emp.assigned_daily_schedules?.[0];
                                   const daySchedule = (weekSchedule as any)?.[day];
                                   

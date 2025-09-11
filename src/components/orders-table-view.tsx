@@ -101,7 +101,7 @@ export function OrdersTableView({
             <TableHead className="min-w-[100px]">Priorität</TableHead>
             <TableHead className="min-w-[100px]">Status</TableHead>
             <TableHead className="min-w-[120px]">Zeitraum</TableHead>
-            <TableHead className="min-w-[120px]">Wöchentliche Std.</TableHead>
+            <TableHead className="min-w-[120px]">Stunden (Ø/Gesamt)</TableHead>
             <TableHead className="min-w-[80px]">Feedback</TableHead>
             <TableHead className="text-right min-w-[120px]">Aktionen</TableHead>
           </TableRow>
