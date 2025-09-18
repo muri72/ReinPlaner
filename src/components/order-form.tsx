@@ -12,7 +12,6 @@ import { toast } from "sonner";
 import { PlusCircle, X, Clock, Copy } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { createClient } from "@/lib/supabase/client";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { CustomerContactCreateDialog } from "@/components/customer-contact-create-dialog";
 import { DatePicker } from "@/components/date-picker";
 import { handleActionResponse } from "@/lib/toast-utils";
@@ -599,7 +598,6 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
           form.setValue("customerId", value);
           form.setValue("objectId", null);
           form.setValue("customerContactId", null);
-          // Clear employee assignments when customer changes
           replaceAssignedEmployees([]);
         }} value={form.watch("customerId")}>
           <SelectTrigger className="w-full">
@@ -619,7 +617,6 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
         <Select onValueChange={(value: string) => {
           form.setValue("objectId", value);
           form.setValue("customerContactId", null);
-          // Clear employee assignments when object changes
           replaceAssignedEmployees([]);
         }} value={form.watch("objectId") || "unassigned"} disabled={!selectedCustomerId}>
           <SelectTrigger className="w-full">
@@ -698,7 +695,6 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
         />
       </div>
 
-      {/* MOVED: Order Type before Employee Assignment */}
       <div>
         <Label htmlFor="orderType">Auftragstyp</Label>
         <Select onValueChange={(value: OrderFormValues["orderType"]) => {
@@ -730,7 +726,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
       )}
       
       {(orderType === "recurring" || orderType === "substitution" || orderType === "permanent") && (
-        <>
+        <div className="space-y-4">
           <DatePicker
             label="Startdatum"
             value={form.watch("recurringStartDate")}
@@ -745,15 +741,14 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
               error={form.formState.errors.recurringEndDate?.message}
             />
           )}
-        </>
+        </div>
       )}
       
-      {/* ENHANCED: Employee Assignment Section with Object Hours Distribution */}
       <div className="space-y-4">
         <Label>Zugewiesene Mitarbeiter (optional)</Label>
         <MultiSelectEmployees
           employees={allEmployees}
-          selectedEmployeeIds={assignedEmployeeFields.map((emp: AssignedEmployee) => emp.employeeId)}
+          selectedEmployeeIds={assignedEmployeeFields.map((emp) => emp.employeeId)}
           onSelectionChange={handleEmployeeSelectionChange}
           disabled={!selectedObjectId}
         />
@@ -764,12 +759,11 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
             <p className="text-muted-foreground text-sm mt-1">Bitte wählen Sie zuerst ein Objekt aus, um Mitarbeiter zuzuweisen.</p>
         )}
         
-        {/* ENHANCED: Detailed Employee Assignment Grid */}
         {assignedEmployeeFields.length > 0 && (
           <div className="mt-4 space-y-4">
             <h3 className="text-lg font-semibold">Arbeitszeiten pro Mitarbeiter</h3>
             {(form.formState.errors as any).assignedEmployees && <p className="text-red-500 text-sm mt-1">{(form.formState.errors as any).assignedEmployees.message}</p>}
-            {assignedEmployeeFields.map((assignedEmp: AssignedEmployee, assignedIndex: number) => (
+            {assignedEmployeeFields.map((assignedEmp, assignedIndex) => (
               <div key={assignedEmp.employeeId} className="border rounded-md p-4 space-y-3">
                 <div className="flex items-center justify-between gap-2">
                   <h4 className="font-semibold text-base">
@@ -781,7 +775,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
                     variant="ghost"
                     size="icon"
                     onClick={() => {
-                      const newSelectedIds = assignedEmployeeFields.filter((emp: AssignedEmployee) => emp.employeeId !== assignedEmp.employeeId).map((emp: AssignedEmployee) => emp.employeeId);
+                      const newSelectedIds = assignedEmployeeFields.filter((emp) => emp.employeeId !== assignedEmp.employeeId).map((emp) => emp.employeeId);
                       handleEmployeeSelectionChange(newSelectedIds);
                     }}
                     className="text-destructive hover:text-destructive/80"
@@ -826,8 +820,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
                   </p>
                 </div>
                 
-                {/* Daily Schedules for Employee */}
-                {assignedEmp.assigned_daily_schedules.map((weekSchedule: any, weekIndex: number) => (
+                {assignedEmp.assigned_daily_schedules.map((weekSchedule, weekIndex) => (
                   <div key={weekIndex} className="border p-3 rounded-md space-y-2 bg-background/50">
                     <div className="flex items-center justify-between">
                       <h5 className="font-medium text-sm">Woche {weekIndex + 1} (Offset {(form.watch(`assignedEmployees.${assignedIndex}.assigned_start_week_offset`) + weekIndex) % form.watch(`assignedEmployees.${assignedIndex}.assigned_recurrence_interval_weeks`)})</h5>
@@ -859,7 +852,6 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
                         const objectDailyHours = getObjectDailyHours(weekIndex, day);
                         const isDayValid = isDailyHoursValid(weekIndex, day);
 
-                        // Only show days that have object hours
                         if (!objectDailyHours || objectDailyHours === 0) return null;
 
                         return (
@@ -901,7 +893,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
                                     type="number"
                                     step="0.01"
                                     min="0"
-                                    max={objectDailyHours ?? undefined} // Max is object's daily hours
+                                    max={objectDailyHours ?? undefined}
                                     placeholder="Std."
                                     className={cn(
                                       "w-full text-sm",
@@ -970,7 +962,6 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
               </div>
             ))}
             
-            {/* Object Hours Overview */}
             {selectedObjectId && (
               <div className="bg-muted p-4 rounded-lg">
                 <h4 className="font-medium mb-2">Objektarbeitszeiten Übersicht</h4>
@@ -1003,6 +994,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
             )}
           </div>
         )}
+      </div>
       
       <div>
         <Label htmlFor="priority">Priorität</Label>
