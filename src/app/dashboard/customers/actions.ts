@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { CustomerFormValues } from "@/components/customer-form"; // Importiere den Typ
 
 export async function createCustomer(data: CustomerFormValues) {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
@@ -36,7 +36,7 @@ export async function createCustomer(data: CustomerFormValues) {
 }
 
 export async function updateCustomer(customerId: string, data: CustomerFormValues) {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
@@ -89,7 +89,7 @@ export async function updateCustomer(customerId: string, data: CustomerFormValue
 }
 
 export async function deleteCustomer(formData: FormData): Promise<{ success: boolean; message: string }> {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {

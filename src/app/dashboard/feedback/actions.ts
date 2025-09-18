@@ -12,7 +12,7 @@ export async function generateSignedUploadUrls(
   referenceId: string,
   files: { name: string; type: string }[]
 ): Promise<{ success: boolean; message: string; uploads?: { signedUrl: string; publicUrl: string }[] }> {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
@@ -52,7 +52,7 @@ export async function createOrderFeedback(data: {
   comment: string | null;
   imageUrls: string[];
 }): Promise<{ success: boolean; message: string }> {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
@@ -100,7 +100,7 @@ export async function createOrderFeedback(data: {
 }
 
 export async function updateOrderFeedback(feedbackId: string, formData: FormData): Promise<{ success: boolean; message: string }> {
-    const supabase = createClient();
+    const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {
@@ -128,7 +128,7 @@ export async function updateOrderFeedback(feedbackId: string, formData: FormData
 }
 
 export async function replyToOrderFeedback(feedbackId: string, replyText: string): Promise<{ success: boolean; message: string }> {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
@@ -165,7 +165,7 @@ export async function replyToOrderFeedback(feedbackId: string, replyText: string
 }
 
 export async function resolveOrderFeedback(feedbackId: string): Promise<{ success: boolean; message: string }> {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
@@ -192,7 +192,7 @@ export async function resolveOrderFeedback(feedbackId: string): Promise<{ succes
 }
 
 export async function deleteOrderFeedback(feedbackId: string): Promise<{ success: boolean; message: string }> {
-    const supabase = createClient();
+    const supabase = await createClient();
     const { error } = await supabase.from('order_feedback').delete().eq('id', feedbackId);
 
     if (error) {
@@ -215,7 +215,7 @@ export async function createGeneralFeedback(data: {
   message: string;
   imageUrls: string[];
 }): Promise<{ success: boolean; message: string }> {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   const { customerId, subject, message, imageUrls, name, email } = data;
@@ -279,7 +279,7 @@ export async function createGeneralFeedback(data: {
 }
 
 export async function updateGeneralFeedback(feedbackId: string, formData: FormData): Promise<{ success: boolean; message: string }> {
-    const supabase = createClient();
+    const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {
@@ -307,7 +307,7 @@ export async function updateGeneralFeedback(feedbackId: string, formData: FormDa
 }
 
 export async function replyToGeneralFeedback(feedbackId: string, replyText: string): Promise<{ success: boolean; message: string }> {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
@@ -344,7 +344,7 @@ export async function replyToGeneralFeedback(feedbackId: string, replyText: stri
 }
 
 export async function resolveGeneralFeedback(feedbackId: string): Promise<{ success: boolean; message: string }> {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
@@ -371,7 +371,7 @@ export async function resolveGeneralFeedback(feedbackId: string): Promise<{ succ
 }
 
 export async function deleteGeneralFeedback(feedbackId: string): Promise<{ success: boolean; message: string }> {
-    const supabase = createClient();
+    const supabase = await createClient();
     const { error } = await supabase.from('general_feedback').delete().eq('id', feedbackId);
 
     if (error) {
