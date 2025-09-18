@@ -216,7 +216,8 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
       if (objectsData) setObjects(objectsData);
       if (objectsError) console.error("Fehler beim Laden der Objekte:", objectsError);
 
-      const { data: employeesData, error: employeesError } = await supabase.from('employees').select('id, first_name, last_name').order('last_name', { ascending: true });
+      // Fetch only active employees
+      const { data: employeesData, error: employeesError } = await supabase.from('employees').select('id, first_name, last_name').eq('status', 'active').order('last_name', { ascending: true });
       if (employeesData) setAllEmployees(employeesData);
       if (employeesError) console.error("Fehler beim Laden der Mitarbeiter:", employeesError);
     };
@@ -456,15 +457,19 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     }
   }, [form]);
 
-  const handleCopyDayToAllWeeksForEmployee = (employeeIndex: number, sourceWeekIndex: number, sourceDay: typeof dayNames[number]) => {
+  const handleCopyDayToAllWeeksForEmployee = useCallback((
+    employeeIndex: number,
+    sourceWeekIndex: number,
+    sourceDay: typeof dayNames[number]
+  ) => {
     const sourceSchedule = form.getValues(`assignedEmployees.${employeeIndex}.assigned_daily_schedules.${sourceWeekIndex}.${sourceDay}`);
     if (!sourceSchedule?.hours && !sourceSchedule?.start && !sourceSchedule?.end) {
       toast.info("Keine Zeiten zum Kopieren vorhanden.");
       return;
     }
 
-    const employeeRecurrenceInterval = form.getValues(`assignedEmployees.${employeeIndex}.assigned_recurrence_interval_weeks`);
     let copiedCount = 0;
+    const employeeRecurrenceInterval = form.getValues(`assignedEmployees.${employeeIndex}.assigned_recurrence_interval_weeks`);
     for (let weekIndex = 0; weekIndex < employeeRecurrenceInterval; weekIndex++) {
       if (weekIndex !== sourceWeekIndex) {
         form.setValue(`assignedEmployees.${employeeIndex}.assigned_daily_schedules.${weekIndex}.${sourceDay}`, sourceSchedule, { shouldValidate: true });
@@ -476,17 +481,20 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     } else {
       toast.info("Keine weiteren Wochen zum Kopieren gefunden.");
     }
-  };
+  }, [form]);
 
-  const handleCopyWeekToAllWeeksForEmployee = (employeeIndex: number, sourceWeekIndex: number) => {
+  const handleCopyWeekToAllWeeksForEmployee = useCallback((
+    employeeIndex: number,
+    sourceWeekIndex: number
+  ) => {
     const sourceWeekSchedule = form.getValues(`assignedEmployees.${employeeIndex}.assigned_daily_schedules.${sourceWeekIndex}`);
     if (!sourceWeekSchedule || Object.keys(sourceWeekSchedule).length === 0) {
       toast.info("Kein Wochenplan zum Kopieren vorhanden.");
       return;
     }
 
-    const employeeRecurrenceInterval = form.getValues(`assignedEmployees.${employeeIndex}.assigned_recurrence_interval_weeks`);
     let copiedCount = 0;
+    const employeeRecurrenceInterval = form.getValues(`assignedEmployees.${employeeIndex}.assigned_recurrence_interval_weeks`);
     for (let weekIndex = 0; weekIndex < employeeRecurrenceInterval; weekIndex++) {
       if (weekIndex !== sourceWeekIndex) {
         form.setValue(`assignedEmployees.${employeeIndex}.assigned_daily_schedules.${weekIndex}`, sourceWeekSchedule, { shouldValidate: true });
@@ -498,7 +506,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     } else {
       toast.info("Keine weiteren Wochen zum Kopieren gefunden.");
     }
-  };
+  }, [form]);
 
   const handleFormSubmit: SubmitHandler<OrderFormValues> = async (data) => {
     // Validate that assigned hours match object hours for each day
@@ -629,7 +637,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
         </Select>
         {form.formState.errors.objectId && <p className="text-red-500 text-sm mt-1">{form.formState.errors.objectId.message}</p>}
         {!selectedCustomerId && (
-          <p className="text-muted-foreground text-sm mt-1">Bitte wählen Sie zuerst einen Kunden aus.</p>
+            <p className="text-muted-foreground text-sm mt-1">Bitte wählen Sie zuerst einen Kunden aus.</p>
         )}
       </div>
 
@@ -998,7 +1006,6 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
             )}
           </div>
         )}
-      </div>
       
       <div>
         <Label htmlFor="priority">Priorität</Label>

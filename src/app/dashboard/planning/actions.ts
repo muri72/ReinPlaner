@@ -64,13 +64,14 @@ export async function getPlanningDataForWeek(currentDate: Date): Promise<{ succe
   const end_date_iso = formatISO(end, { representation: 'date' });
 
   try {
-    // 1. Fetch all employees
+    // 1. Fetch all active employees
     const { data: employees, error: employeesError } = await supabase
       .from('employees')
-      .select('id, first_name, last_name');
+      .select('id, first_name, last_name')
+      .eq('status', 'active'); // Filter for active employees
     if (employeesError) throw employeesError;
 
-    // 2. Fetch all approved absences for the week
+    // 2. Fetch all approved absences in the period
     const { data: absences, error: absencesError } = await supabase
       .from('absence_requests')
       .select('employee_id, start_date, end_date, type')

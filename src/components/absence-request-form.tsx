@@ -62,9 +62,17 @@ export function AbsenceRequestForm({ initialData, onSubmit, submitButtonText, on
 
   useEffect(() => {
     const fetchEmployees = async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('employees')
-        .select('id, first_name, last_name, user_id');
+        .select('id, first_name, last_name, user_id')
+        .order('last_name', { ascending: true });
+
+      // Only show active employees in dropdowns for new requests
+      if (!initialData) { // Only filter for new requests, not for editing existing ones
+        query = query.eq('status', 'active');
+      }
+
+      const { data, error } = await query;
 
       if (error) {
         console.error("Fehler beim Laden der Mitarbeiter:", error);
@@ -77,23 +85,27 @@ export function AbsenceRequestForm({ initialData, onSubmit, submitButtonText, on
 
       if (isManagerOrAdmin) {
         setEmployees(employeeList);
-        if (userEmployee) {
+        if (userEmployee && !initialData?.employeeId) { // Set default only if creating new and no initial employee is provided
           form.setValue("employeeId", userEmployee.id);
         }
       } else {
         if (userEmployee) {
           setEmployees([userEmployee]);
           form.setValue("employeeId", userEmployee.id);
+        } else {
+          setEmployees([]); // No employee linked to current user
+          form.setValue("employeeId", "");
+          toast.error("Ihr Benutzerkonto ist keinem aktiven Mitarbeiter zugewiesen.");
         }
       }
     };
     fetchEmployees();
-  }, [supabase, isManagerOrAdmin, currentUserId, form]);
+  }, [supabase, isManagerOrAdmin, currentUserId, form, initialData]);
 
   const handleFormSubmit: SubmitHandler<AbsenceRequestFormValues> = async (data) => {
     // Auto-approve if admin is creating for themselves
     const selectedEmployee = employees.find(e => e.id === data.employeeId);
-    const isSelfRequestByAdmin = currentUserRole === 'admin' && selectedEmployee?.id === employees.find(e => e.user_id === currentUserId)?.id;
+    const isSelfRequestByAdmin = currentUserRole === 'admin' && selectedEmployee?.user_id === currentUserId;
 
     if (isSelfRequestByAdmin) {
       data.status = 'approved';
@@ -124,7 +136,7 @@ export function AbsenceRequestForm({ initialData, onSubmit, submitButtonText, on
     <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 w-full max-w-md" suppressHydrationWarning>
       <div>
         <Label htmlFor="employeeId">Mitarbeiter</Label>
-        <Select onValueChange={(value) => form.setValue("employeeId", value)} value={form.watch("employeeId")} disabled={!isManagerOrAdmin}>
+        <Select onValueChange={(value) => form.setValue("employeeId", value)} value={form.watch("employeeId")} disabled={!isManagerOrAdmin && employees.length > 0}>
           <SelectTrigger className="w-full">
             <SelectValue placeholder="Mitarbeiter auswählen" />
           </SelectTrigger>
@@ -135,6 +147,9 @@ export function AbsenceRequestForm({ initialData, onSubmit, submitButtonText, on
           </SelectContent>
         </Select>
         {form.formState.errors.employeeId && <p className="text-red-500 text-sm mt-1">{form.formState.errors.employeeId.message}</p>}
+        {!isManagerOrAdmin && employees.length === 0 && (
+          <p className="text-muted-foreground text-sm mt-1">Kein aktiver Mitarbeiter für Ihr Konto gefunden.</p>
+        )}
       </div>
 
       <div className="grid grid-cols-2 gap-4">

@@ -118,7 +118,8 @@ export default function TimeTrackingPage() {
     setTotalCount(count);
     if (entriesError) console.error("Fehler beim Laden der Zeiteinträge:", entriesError?.message || entriesError);
 
-    const { data: employeesData, error: employeesError } = await supabase.from('employees').select('id, first_name, last_name').order('last_name', { ascending: true });
+    // Fetch only active employees for the filter dropdown
+    const { data: employeesData, error: employeesError } = await supabase.from('employees').select('id, first_name, last_name').eq('status', 'active').order('last_name', { ascending: true });
     if (employeesError) console.error("Fehler beim Laden der Mitarbeiter für Filter:", employeesError.message);
     setEmployees(employeesData || []);
 

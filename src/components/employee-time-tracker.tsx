@@ -138,6 +138,7 @@ const TimeProgressDisplay = ({ plannedMinutes, actualSeconds }: { plannedMinutes
 export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
   const supabase = createClient();
   const [employeeId, setEmployeeId] = useState<string | null>(null);
+  const [employeeStatus, setEmployeeStatus] = useState<string | null>(null); // New state for employee status
   const [activeEntry, setActiveEntry] = useState<ActiveTimeEntry | null>(null);
   const [loading, setLoading] = useState(true);
   const [orders, setOrders] = useState<OrderWithDetails[]>([]);
@@ -245,7 +246,7 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
 
       const { data: employeeData, error: employeeError } = await supabase
         .from('employees')
-        .select('id')
+        .select('id, status') // Fetch status
         .eq('user_id', userId)
         .single();
 
@@ -257,9 +258,11 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
       }
 
       const empId = employeeData?.id || null;
+      const empStatus = employeeData?.status || null; // Get employee status
       setEmployeeId(empId);
+      setEmployeeStatus(empStatus); // Set employee status
 
-      if (empId) {
+      if (empId && (empStatus === 'active' || empStatus === 'on_leave')) { // Only fetch orders if employee is active or on_leave
         const { data: activeEntryData, error: activeEntryError } = await supabase
           .from('time_entries')
           .select(`
@@ -311,6 +314,7 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
             )
           `)
           .eq('order_employee_assignments.employee_id', empId)
+          .eq('request_status', 'approved') // Only show approved orders
           .order('title', { ascending: true });
 
         if (ordersData) {
@@ -614,7 +618,7 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
     );
   }
 
-  if (!employeeId) {
+  if (!employeeId || (employeeStatus !== 'active' && employeeStatus !== 'on_leave')) {
     return (
       <Card className="shadow-neumorphic glassmorphism-card">
         <CardHeader>
@@ -622,7 +626,7 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">
-            Ihr Benutzerkonto ist keinem Mitarbeiter zugewiesen. Bitte kontaktieren Sie Ihren Administrator.
+            Ihr Benutzerkonto ist keinem aktiven Mitarbeiter zugewiesen oder Ihr Mitarbeiterstatus ist nicht 'aktiv' oder 'im Urlaub'. Bitte kontaktieren Sie Ihren Administrator.
           </p>
         </CardContent>
       </Card>

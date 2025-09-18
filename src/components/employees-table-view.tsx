@@ -73,7 +73,18 @@ export function EmployeesTableView({
     }
   };
 
-  if (employees.length === 0 && !query && !statusFilter && !contractTypeFilter) {
+  // Filter employees based on statusFilter
+  const filteredEmployees = employees.filter(employee => {
+    if (statusFilter && employee.status !== statusFilter) {
+      return false;
+    }
+    if (contractTypeFilter && employee.contract_type !== contractTypeFilter) {
+      return false;
+    }
+    return true;
+  });
+
+  if (filteredEmployees.length === 0 && !query && !statusFilter && !contractTypeFilter) {
     return (
       <div className="text-center text-muted-foreground py-8">
         <Users className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
@@ -83,7 +94,7 @@ export function EmployeesTableView({
     );
   }
 
-  if (employees.length === 0 && (query || statusFilter || contractTypeFilter)) {
+  if (filteredEmployees.length === 0 && (query || statusFilter || contractTypeFilter)) {
     return (
       <div className="text-center text-muted-foreground py-8">
         <Users className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
@@ -111,7 +122,7 @@ export function EmployeesTableView({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {employees.map((employee) => (
+          {filteredEmployees.map((employee) => (
             <TableRow key={employee.id}>
               <TableCell className="font-medium text-sm">{employee.first_name}</TableCell>
               <TableCell className="font-medium text-sm">{employee.last_name}</TableCell>

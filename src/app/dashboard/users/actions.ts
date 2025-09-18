@@ -17,6 +17,7 @@ interface EmployeeData {
   user_id: string | null;
   first_name: string | null;
   last_name: string | null;
+  status: string; // Added status
 }
 
 interface CustomerData {
@@ -64,7 +65,7 @@ export async function getUsers(
     ] = await Promise.all([
       supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 }), // Fetch all users
       supabaseAdmin.from('profiles').select('id, first_name, last_name, role'),
-      supabaseAdmin.from('employees').select('user_id, first_name, last_name'),
+      supabaseAdmin.from('employees').select('user_id, first_name, last_name, status'), // Fetch status
       supabaseAdmin.from('customers').select('user_id, name'),
       supabaseAdmin.from('customer_contacts').select('user_id, first_name, last_name')
     ]);
@@ -77,7 +78,7 @@ export async function getUsers(
 
     // 2. Create lookup maps for efficient data mapping
     const profilesMap = new Map(profiles?.map((p: ProfileData) => [p.id, p]));
-    const employeesMap = new Map(employees?.filter(e => e.user_id).map((e: EmployeeData) => [e.user_id, `${e.first_name} ${e.last_name}`]));
+    const employeesMap = new Map(employees?.filter(e => e.user_id).map((e: EmployeeData) => [e.user_id, { name: `${e.first_name} ${e.last_name}`, status: e.status }])); // Store name and status
     const customersMap = new Map(customers?.filter(c => c.user_id).map((c: CustomerData) => [c.user_id, c.name]));
     const customerContactsMap = new Map(customerContacts?.filter(cc => cc.user_id).map((cc: CustomerContactData) => [cc.user_id, `${cc.first_name} ${cc.last_name}`]));
 
@@ -85,6 +86,8 @@ export async function getUsers(
     let combinedUsers = (authUsersResult.users as AuthUser[]).map(authUser => {
       const profile = profilesMap.get(authUser.id);
       const role = profile?.role || 'employee';
+      const employeeInfo = employeesMap.get(authUser.id);
+
       return {
         id: authUser.id,
         email: authUser.email || 'N/A',
@@ -92,7 +95,8 @@ export async function getUsers(
         last_name: profile?.last_name || authUser.user_metadata.last_name || null,
         role: role,
         created_at: authUser.created_at,
-        assigned_employee_name: employeesMap.get(authUser.id) || null,
+        assigned_employee_name: employeeInfo?.name || null,
+        assigned_employee_status: employeeInfo?.status || null, // Added employee status
         assigned_customer_name: role === 'customer' ? (customersMap.get(authUser.id) || customerContactsMap.get(authUser.id)) : null,
       };
     });
@@ -112,6 +116,14 @@ export async function getUsers(
     if (filters.role) {
       combinedUsers = combinedUsers.filter(u => u.role === filters.role);
     }
+
+    // Filter out employees who are 'inactive' or 'on_leave' if their role is 'employee'
+    combinedUsers = combinedUsers.filter(u => {
+      if (u.role === 'employee' && (u.assigned_employee_status === 'inactive' || u.assigned_employee_status === 'on_leave')) {
+        return false; // Do not display inactive/on_leave employees in the user list
+      }
+      return true;
+    });
 
     // 5. Apply sorting
     combinedUsers.sort((a, b) => {

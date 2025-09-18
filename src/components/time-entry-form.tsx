@@ -126,11 +126,14 @@ export function TimeEntryForm({ initialData, onSubmit, submitButtonText, onSucce
       if (!isAdmin) {
         employeesQuery = employeesQuery.eq('user_id', currentUserId);
       }
+      // Filter for active employees only
+      employeesQuery = employeesQuery.eq('status', 'active');
+
       const { data: employeesData, error: employeesError } = await employeesQuery;
       if (employeesData) {
         setEmployees(employeesData);
         // If not admin and an employee is found, set it as default
-        if (!isAdmin && employeesData.length > 0) {
+        if (!isAdmin && employeesData.length > 0 && !initialData?.employeeId) {
           form.setValue("employeeId", employeesData[0].id);
         }
       }
@@ -150,7 +153,7 @@ export function TimeEntryForm({ initialData, onSubmit, submitButtonText, onSucce
       if (ordersError) console.error("Fehler beim Laden der Aufträge:", ordersError);
     };
     fetchDropdownData();
-  }, [supabase, currentUserId, isAdmin, form]); // Abhängigkeiten aktualisiert
+  }, [supabase, currentUserId, isAdmin, form, initialData]); // Abhängigkeiten aktualisiert
 
   // Filter objects and orders based on selected customer/object
   const filteredObjects = selectedCustomerId
@@ -309,7 +312,7 @@ export function TimeEntryForm({ initialData, onSubmit, submitButtonText, onSucce
           <p className="text-red-500 text-sm mt-1">{form.formState.errors.employeeId.message}</p>
         )}
         {!isAdmin && employees.length === 0 && (
-          <p className="text-muted-foreground text-sm mt-1">Kein Mitarbeiterprofil gefunden. Bitte kontaktieren Sie Ihren Administrator.</p>
+          <p className="text-muted-foreground text-sm mt-1">Kein aktiver Mitarbeiter für Ihr Konto gefunden.</p>
         )}
       </div>
 
