@@ -271,8 +271,8 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
               <SelectContent>
                 <SelectItem value="unassigned">Kein Mitarbeiter zugewiesen</SelectItem>
                 {employees.map(emp => (
-                  <SelectItem key={emp.id} value={emp.id}>
-                    {emp.first_name} {emp.last_name} {emp.email ? `(${emp.email})` : ''} {emp.user_id ? '(zugewiesen)' : ''}
+                  <SelectItem key={emp.id} value={emp.id} disabled={!!emp.user_id}>
+                    {emp.first_name} {emp.last_name} {emp.email ? `(${emp.email})` : ''} {emp.user_id ? '(Bereits zugewiesen)' : ''}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -302,7 +302,7 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
                 <SelectItem value="unassigned">Kein Kunde ausgewählt</SelectItem>
                 {customers.map(cust => (
                   <SelectItem key={cust.id} value={cust.id}>
-                    {cust.name} {cust.contact_email ? `(${cust.contact_email})` : ''} {cust.user_id ? '(zugewiesen)' : ''}
+                    {cust.name} {cust.contact_email ? `(${cust.contact_email})` : ''} {cust.user_id ? '(Bereits zugewiesen)' : ''}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -331,8 +331,8 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
               <SelectContent>
                 <SelectItem value="unassigned">Kein Kundenkontakt zugewiesen</SelectItem>
                 {customerContactsForUserAssignment.map(contact => (
-                  <SelectItem key={contact.id} value={contact.id}>
-                    {contact.first_name} {contact.last_name} {contact.email ? `(${contact.email})` : ''} {contact.user_id ? '(zugewiesen)' : ''}
+                  <SelectItem key={contact.id} value={contact.id} disabled={!!contact.user_id}>
+                    {contact.first_name} {contact.last_name} {contact.email ? `(${contact.email})` : ''} {contact.user_id ? '(Bereits zugewiesen)' : ''}
                   </SelectItem>
                 ))}
               </SelectContent>
