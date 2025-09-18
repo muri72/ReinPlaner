@@ -1,23 +1,13 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { createClient as createStandardClient } from '@supabase/supabase-js'
-import { cookies } from 'next/headers'
+import { cookies, type ReadonlyRequestCookies } from 'next/headers'
 
 export function createClient() {
-  const cookieStore = cookies()
-
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  if (!supabaseUrl) {
-    throw new Error('Environment variable NEXT_PUBLIC_SUPABASE_URL is not set.');
-  }
-  if (!supabaseAnonKey) {
-    throw new Error('Environment variable NEXT_PUBLIC_SUPABASE_ANON_KEY is not set.');
-  }
+  const cookieStore: ReadonlyRequestCookies = cookies()
 
   return createServerClient(
-    supabaseUrl,
-    supabaseAnonKey,
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
         get(name: string) {
