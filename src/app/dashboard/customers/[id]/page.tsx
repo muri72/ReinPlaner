@@ -8,7 +8,7 @@ import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 
 export default async function CustomerDetailPage({ params }: { params: { id: string } }) {
-  const supabase = await createClient();
+  const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
