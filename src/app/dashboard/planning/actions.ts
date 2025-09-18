@@ -50,7 +50,7 @@ function calculateBreakMinutesFallback(grossDurationMinutes: number): number {
 }
 
 export async function getPlanningDataForWeek(currentDate: Date): Promise<{ success: boolean; data: PlanningPageData | null; message: string }> {
-  const supabase = await createClient();
+  const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
@@ -246,7 +246,7 @@ export async function assignOrderToEmployee(
   assignedDailyHours: number | null // This parameter is now deprecated, but kept for compatibility
 ): Promise<{ success: boolean; message: string }> {
   const supabaseAdmin = createAdminClient();
-  const supabaseUserClient = await createClient();
+  const supabaseUserClient = createClient();
   const { data: { user } } = await supabaseUserClient.auth.getUser();
 
   if (!user) {

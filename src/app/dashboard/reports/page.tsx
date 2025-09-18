@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { WorkTimeReportForm } from "@/components/work-time-report-form";
 
 export default async function ReportsPage() {
-  const supabase = await createClient();
+  const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {

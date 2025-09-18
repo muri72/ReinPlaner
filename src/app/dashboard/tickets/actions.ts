@@ -13,7 +13,7 @@ interface Comment {
 }
 
 export async function createTicket(data: TicketFormValues): Promise<{ success: boolean; message: string; newTicketId?: string }> {
-  const supabase = await createClient();
+  const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
@@ -62,7 +62,7 @@ export async function createTicket(data: TicketFormValues): Promise<{ success: b
 }
 
 export async function updateTicket(ticketId: string, data: Partial<TicketFormValues>): Promise<{ success: boolean; message: string }> {
-  const supabase = await createClient();
+  const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
@@ -122,7 +122,7 @@ export async function updateTicket(ticketId: string, data: Partial<TicketFormVal
 }
 
 export async function deleteTicket(formData: FormData): Promise<{ success: boolean; message: string }> {
-  const supabase = await createClient();
+  const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
@@ -147,7 +147,7 @@ export async function deleteTicket(formData: FormData): Promise<{ success: boole
 }
 
 export async function addTicketComment(ticketId: string, commentText: string): Promise<{ success: boolean; message: string }> {
-  const supabase = await createClient();
+  const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
@@ -248,7 +248,7 @@ export async function getTickets(
     sortDirection?: string;
   }
 ): Promise<{ success: boolean; message: string; data?: any[]; totalCount?: number | null }> { // Changed totalCount type
-  const supabase = await createClient();
+  const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
@@ -374,7 +374,7 @@ export async function generateSignedUploadUrlsForTickets(
   ticketId: string,
   files: { name: string; type: string }[]
 ): Promise<{ success: boolean; message: string; uploads?: { signedUrl: string; publicUrl: string }[] }> {
-  const supabase = await createClient();
+  const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {

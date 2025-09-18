@@ -7,6 +7,7 @@ import { CustomerEditDialog } from "@/components/customer-edit-dialog";
 import { DeleteCustomerButton } from "@/components/delete-customer-button";
 import { RecordDetailsDialog } from "@/components/record-details-dialog";
 import { CustomerCreateDialog } from "@/components/customer-create-dialog";
+import Link from "next/link";
 
 interface DisplayCustomer {
   id: string;
@@ -54,50 +55,48 @@ export function CustomersGridView({ customers, query, customerTypeFilter, onActi
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
       {customers.map((customer) => (
-        <Card key={customer.id} className="shadow-neumorphic glassmorphism-card">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-base md:text-lg font-semibold">{customer.name}</CardTitle>
-            <div className="flex items-center space-x-2">
-              <RecordDetailsDialog record={customer} title={`Details zu Kunde: ${customer.name}`} />
-              <CustomerEditDialog customer={customer} onSuccess={onActionSuccess} />
+        <Link key={customer.id} href={`/dashboard/customers/${customer.id}`} className="block hover:scale-[1.02] transition-transform duration-200 ease-in-out">
+          <Card className="shadow-neumorphic glassmorphism-card h-full">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-base md:text-lg font-semibold">{customer.name}</CardTitle>
               <DeleteCustomerButton customerId={customer.id} onDeleteSuccess={onActionSuccess} />
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm text-muted-foreground">
-            <div className="flex items-center">
-              {customer.customer_type === 'partner' ? (
-                <Handshake className="mr-2 h-4 w-4 flex-shrink-0" />
-              ) : (
-                <Users className="mr-2 h-4 w-4 flex-shrink-0" />
+            </CardHeader>
+            <CardContent className="space-y-2 text-sm text-muted-foreground">
+              <div className="flex items-center">
+                {customer.customer_type === 'partner' ? (
+                  <Handshake className="mr-2 h-4 w-4 flex-shrink-0" />
+                ) : (
+                  <Users className="mr-2 h-4 w-4 flex-shrink-0" />
+                )}
+                <span>Typ: <Badge variant="secondary">{customer.customer_type === 'partner' ? 'Partner' : 'Kunde'}</Badge></span>
+              </div>
+              {customer.address && (
+                <div className="flex items-center">
+                  <MapPin className="mr-2 h-4 w-4 flex-shrink-0" />
+                  <span>{customer.address}</span>
+                </div>
               )}
-              <span>Typ: <Badge variant="secondary">{customer.customer_type === 'partner' ? 'Partner' : 'Kunde'}</Badge></span>
-            </div>
-            {customer.address && (
-              <div className="flex items-center">
-                <MapPin className="mr-2 h-4 w-4 flex-shrink-0" />
-                <span>{customer.address}</span>
-              </div>
-            )}
-            {customer.contact_email && (
-              <div className="flex items-center">
-                <Mail className="mr-2 h-4 w-4 flex-shrink-0" />
-                <span>{customer.contact_email}</span>
-              </div>
-            )}
-            {customer.contact_phone && (
-              <div className="flex items-center">
-                <Phone className="mr-2 h-4 w-4 flex-shrink-0" />
-                <span>{customer.contact_phone}</span>
-              </div>
-            )}
-            {customer.contractual_services && (
-              <div className="flex items-start">
-                <FileText className="mr-2 h-4 w-4 flex-shrink-0" />
-                <p className="flex-grow">Vertragsdaten: {customer.contractual_services}</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+              {customer.contact_email && (
+                <div className="flex items-center">
+                  <Mail className="mr-2 h-4 w-4 flex-shrink-0" />
+                  <span>{customer.contact_email}</span>
+                </div>
+              )}
+              {customer.contact_phone && (
+                <div className="flex items-center">
+                  <Phone className="mr-2 h-4 w-4 flex-shrink-0" />
+                  <span>{customer.contact_phone}</span>
+                </div>
+              )}
+              {customer.contractual_services && (
+                <div className="flex items-start">
+                  <FileText className="mr-2 h-4 w-4 flex-shrink-0" />
+                  <p className="flex-grow truncate">Vertragsdaten: {customer.contractual_services}</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </Link>
       ))}
     </div>
   );

@@ -6,7 +6,7 @@ import { OrderFormValues } from "@/components/order-form";
 import { sendNotification } from "@/lib/actions/notifications";
 
 export async function createOrder(data: OrderFormValues) {
-  const supabase = await createClient();
+  const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
@@ -101,7 +101,7 @@ export async function createOrder(data: OrderFormValues) {
 }
 
 export async function updateOrder(orderId: string, data: OrderFormValues) {
-  const supabase = await createClient();
+  const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
@@ -189,7 +189,7 @@ export async function updateOrder(orderId: string, data: OrderFormValues) {
 }
 
 export async function deleteOrder(formData: FormData): Promise<{ success: boolean; message: string }> {
-  const supabase = await createClient();
+  const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
@@ -214,7 +214,7 @@ export async function deleteOrder(formData: FormData): Promise<{ success: boolea
 }
 
 export async function processOrderRequest(formData: FormData): Promise<{ success: boolean; message: string }> {
-  const supabase = await createClient();
+  const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {

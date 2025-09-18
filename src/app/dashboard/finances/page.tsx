@@ -9,7 +9,7 @@ import { DefaultRateManager } from "@/components/default-rate-manager";
 import { PersonnelCostAnalysis } from "@/components/personnel-cost-analysis";
 
 export default async function FinancesPage() {
-  const supabase = await createClient();
+  const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {

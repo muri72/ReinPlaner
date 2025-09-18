@@ -18,7 +18,7 @@ interface DocumentUploadPayload {
 export async function generateSignedUploadUrlForDocument(
   payload: DocumentUploadPayload
 ): Promise<{ success: boolean; message: string; uploadUrl?: string; publicUrl?: string; filePath?: string }> {
-  const supabase = await createClient();
+  const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
@@ -88,7 +88,7 @@ export async function generateSignedUploadUrlForDocument(
 export async function getDocuments(
   filters: { employeeId?: string; customerId?: string; orderId?: string }
 ): Promise<{ success: boolean; message: string; data?: any[] }> {
-  const supabase = await createClient();
+  const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
@@ -127,7 +127,7 @@ export async function getDocuments(
 }
 
 export async function deleteDocument(documentId: string, filePath: string): Promise<{ success: boolean; message: string }> {
-  const supabase = await createClient();
+  const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {

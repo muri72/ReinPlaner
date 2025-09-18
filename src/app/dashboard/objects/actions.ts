@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { ObjectFormValues } from "@/components/object-form";
 
 export async function createObject(data: ObjectFormValues) {
-  const supabase = await createClient();
+  const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
@@ -69,7 +69,7 @@ export async function createObject(data: ObjectFormValues) {
 }
 
 export async function updateObject(objectId: string, data: ObjectFormValues) {
-  const supabase = await createClient();
+  const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
@@ -157,7 +157,7 @@ export async function updateObject(objectId: string, data: ObjectFormValues) {
 }
 
 export async function deleteObject(formData: FormData): Promise<{ success: boolean; message: string }> {
-  const supabase = await createClient();
+  const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {

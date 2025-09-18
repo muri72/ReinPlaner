@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { EmployeeFormValues } from "@/components/employee-form";
 
 export async function createEmployee(data: EmployeeFormValues) {
-  const supabase = await createClient();
+  const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
@@ -73,7 +73,7 @@ export async function createEmployee(data: EmployeeFormValues) {
 }
 
 export async function updateEmployee(employeeId: string, data: EmployeeFormValues) {
-  const supabase = await createClient();
+  const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
@@ -141,7 +141,7 @@ export async function updateEmployee(employeeId: string, data: EmployeeFormValue
 }
 
 export async function deleteEmployee(formData: FormData): Promise<{ success: boolean; message: string }> {
-  const supabase = await createClient();
+  const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {

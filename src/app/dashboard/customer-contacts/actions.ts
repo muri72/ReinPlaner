@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { CustomerContactFormValues } from "@/components/customer-contact-form";
 
 export async function createCustomerContact(data: CustomerContactFormValues): Promise<{ success: boolean; message: string; newContactId?: string }> {
-  const supabase = await createClient();
+  const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
@@ -39,7 +39,7 @@ export async function createCustomerContact(data: CustomerContactFormValues): Pr
 }
 
 export async function updateCustomerContact(contactId: string, data: CustomerContactFormValues) {
-  const supabase = await createClient();
+  const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
@@ -103,7 +103,7 @@ export async function updateCustomerContact(contactId: string, data: CustomerCon
 }
 
 export async function deleteCustomerContact(formData: FormData): Promise<{ success: boolean; message: string }> {
-  const supabase = await createClient();
+  const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {

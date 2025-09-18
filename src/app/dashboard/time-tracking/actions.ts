@@ -16,7 +16,7 @@ function calculateBreakMinutesFallback(grossDurationMinutes: number): number {
 }
 
 export async function createTimeEntry(data: TimeEntryFormValues): Promise<{ success: boolean; message: string; newEntryId?: string }> {
-  const supabase = await createClient();
+  const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
@@ -124,7 +124,7 @@ export async function createTimeEntry(data: TimeEntryFormValues): Promise<{ succ
 }
 
 export async function updateTimeEntry(entryId: string, data: Partial<TimeEntryFormValues>) {
-  const supabase = await createClient();
+  const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
@@ -217,7 +217,7 @@ export async function updateTimeEntry(entryId: string, data: Partial<TimeEntryFo
 }
 
 export async function deleteTimeEntry(formData: FormData): Promise<{ success: boolean; message: string }> {
-  const supabase = await createClient();
+  const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
@@ -243,7 +243,7 @@ export async function deleteTimeEntry(formData: FormData): Promise<{ success: bo
 }
 
 export async function triggerAutomaticTimeEntryCreation(): Promise<{ success: boolean; message: string; createdCount?: number }> {
-  const supabase = await createClient();
+  const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {

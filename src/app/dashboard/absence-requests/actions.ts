@@ -7,7 +7,7 @@ import { startOfMonth, endOfMonth } from "date-fns";
 import { sendNotification } from "@/lib/actions/notifications";
 
 export async function createAbsenceRequest(data: AbsenceRequestFormValues): Promise<{ success: boolean; message: string }> {
-  const supabase = await createClient();
+  const supabase = createClient();
   const { data: { user: creator } } = await supabase.auth.getUser();
 
   if (!creator) {
@@ -62,7 +62,7 @@ export async function createAbsenceRequest(data: AbsenceRequestFormValues): Prom
 }
 
 export async function updateAbsenceRequest(requestId: string, data: Partial<AbsenceRequestFormValues>): Promise<{ success: boolean; message: string }> {
-  const supabase = await createClient();
+  const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
@@ -117,7 +117,7 @@ export async function updateAbsenceRequest(requestId: string, data: Partial<Abse
 }
 
 export async function deleteAbsenceRequest(formData: FormData): Promise<{ success: boolean; message: string }> {
-  const supabase = await createClient();
+  const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
@@ -141,7 +141,7 @@ export async function deleteAbsenceRequest(formData: FormData): Promise<{ succes
 }
 
 export async function getAbsencesForMonth(date: Date) {
-  const supabase = await createClient();
+  const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {

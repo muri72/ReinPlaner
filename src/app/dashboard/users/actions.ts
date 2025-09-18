@@ -148,7 +148,7 @@ export async function getUsers(
 
 
 export async function registerUser(data: UserFormValues) {
-  const supabase = await createClient(); // Für die Überprüfung des aktuellen Benutzers
+  const supabase = createClient(); // Für die Überprüfung des aktuellen Benutzers
   const { data: { user: adminUser } } = await supabase.auth.getUser();
 
   if (!adminUser) {
@@ -332,7 +332,7 @@ export async function registerUser(data: UserFormValues) {
 }
 
 export async function updateUser(userId: string, data: Partial<UserFormValues>) {
-  const supabase = await createClient(); // Für die Überprüfung des aktuellen Benutzers
+  const supabase = createClient(); // Für die Überprüfung des aktuellen Benutzers
   const { data: { user: adminUser } } = await supabase.auth.getUser();
 
   if (!adminUser) {
@@ -369,7 +369,7 @@ export async function updateUser(userId: string, data: Partial<UserFormValues>) 
 }
 
 export async function deleteUser(formData: FormData): Promise<{ success: boolean; message: string }> {
-  const supabase = await createClient(); // Für die Überprüfung des aktuellen Benutzers
+  const supabase = createClient(); // Für die Überprüfung des aktuellen Benutzers
   const { data: { user: adminUser } } = await supabase.auth.getUser();
 
   if (!adminUser) {
@@ -435,7 +435,7 @@ export async function deleteUser(formData: FormData): Promise<{ success: boolean
 }
 
 export async function assignCustomersToManager(managerId: string, customerIds: string[]): Promise<{ success: boolean; message: string }> {
-  const supabase = await createClient(); // Für die Überprüfung des aktuellen Benutzers
+  const supabase = createClient(); // Für die Überprüfung des aktuellen Benutzers
   const { data: { user: adminUser } } = await supabase.auth.getUser();
 
   if (!adminUser) {

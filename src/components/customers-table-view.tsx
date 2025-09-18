@@ -3,11 +3,12 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Mail, Phone, MapPin, Users, Handshake, FileText } from "lucide-react";
+import { Mail, Phone, MapPin, Users, Handshake, FileText, Eye } from "lucide-react";
 import { CustomerEditDialog } from "@/components/customer-edit-dialog";
 import { DeleteCustomerButton } from "@/components/delete-customer-button";
 import { PaginationControls } from "@/components/pagination-controls";
 import { RecordDetailsDialog } from "@/components/record-details-dialog"; // Import RecordDetailsDialog
+import Link from "next/link";
 
 interface DisplayCustomer {
   id: string;
@@ -60,7 +61,7 @@ export function CustomersTableView({
   }
 
   return (
-    <div className="overflow-x-auto border rounded-lg">
+    <div className="overflow-x-auto p-4 rounded-lg shadow-neumorphic glassmorphism-card">
       <Table>
         <TableHeader>
           <TableRow>
@@ -85,11 +86,14 @@ export function CustomersTableView({
               <TableCell className="text-sm">{customer.address || 'N/A'}</TableCell>
               <TableCell className="text-sm">{customer.contact_email || 'N/A'}</TableCell>
               <TableCell className="text-sm">{customer.contact_phone || 'N/A'}</TableCell>
-              <TableCell className="text-sm">{customer.contractual_services || 'N/A'}</TableCell> {/* New cell */}
+              <TableCell className="text-sm truncate max-w-xs">{customer.contractual_services || 'N/A'}</TableCell> {/* New cell */}
               <TableCell className="text-right">
                 <div className="flex justify-end space-x-1">
-                  <RecordDetailsDialog record={customer} title={`Details zu Kunde: ${customer.name}`} />
-                  <CustomerEditDialog customer={customer} onSuccess={onActionSuccess} />
+                  <Button variant="ghost" size="icon" asChild>
+                    <Link href={`/dashboard/customers/${customer.id}`} title="Details anzeigen">
+                      <Eye className="h-4 w-4" />
+                    </Link>
+                  </Button>
                   <DeleteCustomerButton customerId={customer.id} onDeleteSuccess={onActionSuccess} />
                 </div>
               </TableCell>
