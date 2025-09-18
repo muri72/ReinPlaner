@@ -78,7 +78,7 @@ export function EmployeesTableView({
       <div className="text-center text-muted-foreground py-8">
         <Users className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
         <p className="text-base md:text-lg font-semibold">Noch keine Mitarbeiter vorhanden</p>
-        <p className="text-sm">Fügen Sie einen neuen Mitarbeiter hinzu, um Ihr Team zu erweitern.</p>
+        <p className="text-sm">Fügen Sie einen neuen Mitarbeiter hinzu, um Ihr Team zu erweiterten.</p>
       </div>
     );
   }
