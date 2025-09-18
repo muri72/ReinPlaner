@@ -20,6 +20,7 @@ export const customerSchema = z.object({
   contactEmail: z.string().email("Ungültiges E-Mail-Format").max(100, "E-Mail ist zu lang").optional().nullable(),
   contactPhone: z.string().max(50, "Telefonnummer ist zu lang").optional().nullable(),
   customerType: z.enum(["customer", "partner"]).default("customer"),
+  contractualServices: z.string().max(1000, "Vertragsdaten sind zu lang").optional().nullable(), // Neues Feld
 });
 
 export type CustomerFormInput = z.input<typeof customerSchema>;
@@ -41,6 +42,7 @@ export function CustomerForm({ initialData, onSubmit, submitButtonText, onSucces
     contactEmail: initialData?.contactEmail ?? null,
     contactPhone: initialData?.contactPhone ?? null,
     customerType: initialData?.customerType ?? "customer",
+    contractualServices: initialData?.contractualServices ?? null, // Initialwert für neues Feld
   };
 
   const form = useForm<CustomerFormValues>({
@@ -123,6 +125,18 @@ export function CustomerForm({ initialData, onSubmit, submitButtonText, onSucces
         </Select>
         {form.formState.errors.customerType && (
           <p className="text-red-500 text-sm mt-1">{form.formState.errors.customerType.message}</p>
+        )}
+      </div>
+      <div>
+        <Label htmlFor="contractualServices">Vertragsdaten (optional)</Label>
+        <Textarea
+          id="contractualServices"
+          {...form.register("contractualServices")}
+          placeholder="Z.B. Details zu Reinigungsintervallen, Sonderleistungen, Kündigungsfristen..."
+          rows={5}
+        />
+        {form.formState.errors.contractualServices && (
+          <p className="text-red-500 text-sm mt-1">{form.formState.errors.contractualServices.message}</p>
         )}
       </div>
       <Button type="submit" disabled={form.formState.isSubmitting}>

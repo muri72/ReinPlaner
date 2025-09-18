@@ -3,7 +3,7 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Mail, Phone, MapPin, Users, Handshake } from "lucide-react";
+import { Mail, Phone, MapPin, Users, Handshake, FileText } from "lucide-react";
 import { CustomerEditDialog } from "@/components/customer-edit-dialog";
 import { DeleteCustomerButton } from "@/components/delete-customer-button";
 import { PaginationControls } from "@/components/pagination-controls";
@@ -18,6 +18,7 @@ interface DisplayCustomer {
   contact_phone: string | null;
   created_at: string | null;
   customer_type: string;
+  contractual_services: string | null; // New field
 }
 
 interface CustomersTableViewProps {
@@ -68,6 +69,7 @@ export function CustomersTableView({
             <TableHead className="min-w-[200px]">Adresse</TableHead>
             <TableHead className="min-w-[150px]">E-Mail</TableHead>
             <TableHead className="min-w-[120px]">Telefon</TableHead>
+            <TableHead className="min-w-[200px]">Vertragsdaten</TableHead> {/* New column */}
             <TableHead className="text-right min-w-[120px]">Aktionen</TableHead>
           </TableRow>
         </TableHeader>
@@ -83,6 +85,7 @@ export function CustomersTableView({
               <TableCell className="text-sm">{customer.address || 'N/A'}</TableCell>
               <TableCell className="text-sm">{customer.contact_email || 'N/A'}</TableCell>
               <TableCell className="text-sm">{customer.contact_phone || 'N/A'}</TableCell>
+              <TableCell className="text-sm">{customer.contractual_services || 'N/A'}</TableCell> {/* New cell */}
               <TableCell className="text-right">
                 <div className="flex justify-end space-x-1">
                   <RecordDetailsDialog record={customer} title={`Details zu Kunde: ${customer.name}`} />

@@ -62,10 +62,14 @@ export function RecordDetailsDialog({ record, title, triggerButtonTitle = "Detai
       social_security_number: "SV-Nummer",
       tax_id_number: "Steuer-ID",
       health_insurance_provider: "Krankenkasse",
+      default_daily_schedules: "Standard-Wochenpläne", // New
+      default_recurrence_interval_weeks: "Standard-Wiederholungsintervall (Wochen)", // New
+      default_start_week_offset: "Standard-Start-Wochen-Offset", // New
       name: "Name",
       contact_email: "Kontakt-E-Mail",
       contact_phone: "Kontakt-Telefon",
       customer_type: "Kundentyp",
+      contractual_services: "Vertragsdaten", // New
       customer_id: "Kunden-ID",
       customer_name: "Kundenname",
       object_id: "Objekt-ID",
@@ -202,6 +206,26 @@ export function RecordDetailsDialog({ record, title, triggerButtonTitle = "Detai
                       <a key={idx} href={url} target="_blank" rel="noopener noreferrer" className="block text-primary hover:underline truncate">
                         {url.split('/').pop()}
                       </a>
+                    )) : 'N/A'}
+                  </div>
+                </div>
+              );
+            }
+            // Special handling for default_daily_schedules (JSONB array of weekly schedules)
+            if (key === 'default_daily_schedules' && Array.isArray(value)) {
+              return (
+                <div key={key} className="grid grid-cols-3 items-start gap-4">
+                  <div className="text-sm font-medium text-muted-foreground">{translateKey(key)}:</div>
+                  <div className="col-span-2 text-sm text-foreground break-words space-y-2">
+                    {value.length > 0 ? value.map((weekSchedule, weekIndex) => (
+                      <div key={weekIndex} className="border-l-2 pl-2">
+                        <p className="font-semibold">Woche {weekIndex + 1}</p>
+                        {Object.entries(weekSchedule).map(([day, schedule]: [string, any]) => (
+                          <p key={day} className="text-xs text-muted-foreground">
+                            {day.charAt(0).toUpperCase() + day.slice(1)}: {schedule.start || 'N/A'} - {schedule.end || 'N/A'} ({schedule.hours || 0}h)
+                          </p>
+                        ))}
+                      </div>
                     )) : 'N/A'}
                   </div>
                 </div>

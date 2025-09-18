@@ -12,7 +12,7 @@ export async function createCustomer(data: CustomerFormValues) {
     return { success: false, message: "Benutzer nicht authentifiziert." };
   }
 
-  const { name, address, contactEmail, contactPhone, customerType } = data;
+  const { name, address, contactEmail, contactPhone, customerType, contractualServices } = data;
 
   const { error } = await supabase
     .from('customers')
@@ -23,6 +23,7 @@ export async function createCustomer(data: CustomerFormValues) {
       contact_email: contactEmail,
       contact_phone: contactPhone,
       customer_type: customerType, // Neues Feld
+      contractual_services: contractualServices, // Neues Feld
     });
 
   if (error) {
@@ -62,6 +63,7 @@ export async function updateCustomer(customerId: string, data: CustomerFormValue
       contact_email: data.contactEmail,
       contact_phone: data.contactPhone,
       customer_type: data.customerType, // Neues Feld
+      contractual_services: data.contractualServices, // Neues Feld
     })
     .eq('id', customerId);
 

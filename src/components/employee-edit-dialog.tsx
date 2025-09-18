@@ -30,6 +30,9 @@ interface EmployeeEditDialogProps {
     social_security_number: string | null;
     tax_id_number: string | null;
     health_insurance_provider: string | null;
+    default_daily_schedules: any[]; // New field
+    default_recurrence_interval_weeks: number; // New field
+    default_start_week_offset: number; // New field
   };
 }
 
@@ -91,6 +94,9 @@ export function EmployeeEditDialog({ employee }: EmployeeEditDialogProps) {
             socialSecurityNumber: employee.social_security_number,
             taxIdNumber: employee.tax_id_number,
             healthInsuranceProvider: employee.health_insurance_provider,
+            default_daily_schedules: employee.default_daily_schedules, // New field
+            default_recurrence_interval_weeks: employee.default_recurrence_interval_weeks, // New field
+            default_start_week_offset: employee.default_start_week_offset, // New field
           }}
           onSubmit={handleUpdate}
           submitButtonText="Änderungen speichern"

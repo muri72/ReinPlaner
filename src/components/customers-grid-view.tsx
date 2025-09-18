@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Mail, Phone, MapPin, Users, Handshake } from "lucide-react";
+import { Mail, Phone, MapPin, Users, Handshake, FileText } from "lucide-react";
 import { CustomerEditDialog } from "@/components/customer-edit-dialog";
 import { DeleteCustomerButton } from "@/components/delete-customer-button";
 import { RecordDetailsDialog } from "@/components/record-details-dialog";
@@ -17,6 +17,7 @@ interface DisplayCustomer {
   contact_phone: string | null;
   created_at: string | null;
   customer_type: string;
+  contractual_services: string | null; // New field
 }
 
 interface CustomersGridViewProps {
@@ -87,6 +88,12 @@ export function CustomersGridView({ customers, query, customerTypeFilter, onActi
               <div className="flex items-center">
                 <Phone className="mr-2 h-4 w-4 flex-shrink-0" />
                 <span>{customer.contact_phone}</span>
+              </div>
+            )}
+            {customer.contractual_services && (
+              <div className="flex items-start">
+                <FileText className="mr-2 h-4 w-4 flex-shrink-0" />
+                <p className="flex-grow">Vertragsdaten: {customer.contractual_services}</p>
               </div>
             )}
           </CardContent>

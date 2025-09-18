@@ -31,6 +31,9 @@ export async function createEmployee(data: EmployeeFormValues) {
     socialSecurityNumber, // Neues Feld
     taxIdNumber, // Neues Feld
     healthInsuranceProvider, // Neues Feld
+    default_daily_schedules, // Neues Feld
+    default_recurrence_interval_weeks, // Neues Feld
+    default_start_week_offset, // Neues Feld
   } = data;
 
   const { error } = await supabase
@@ -55,6 +58,9 @@ export async function createEmployee(data: EmployeeFormValues) {
       social_security_number: socialSecurityNumber, // Neues Feld
       tax_id_number: taxIdNumber, // Neues Feld
       health_insurance_provider: healthInsuranceProvider, // Neues Feld
+      default_daily_schedules, // Neues Feld
+      default_recurrence_interval_weeks, // Neues Feld
+      default_start_week_offset, // Neues Feld
     });
 
   if (error) {
@@ -107,6 +113,9 @@ export async function updateEmployee(employeeId: string, data: EmployeeFormValue
       social_security_number: data.socialSecurityNumber,
       tax_id_number: data.taxIdNumber,
       health_insurance_provider: data.healthInsuranceProvider,
+      default_daily_schedules: data.default_daily_schedules, // Neues Feld
+      default_recurrence_interval_weeks: data.default_recurrence_interval_weeks, // Neues Feld
+      default_start_week_offset: data.default_start_week_offset, // Neues Feld
     })
     .eq('id', employeeId);
 

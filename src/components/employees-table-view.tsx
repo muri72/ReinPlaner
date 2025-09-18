@@ -3,7 +3,7 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Mail, Phone, CalendarDays, UserRoundCheck, UserRoundX, UserRoundMinus, Briefcase, DollarSign, Tag, Building2, Users } from "lucide-react"; // Added Users
+import { Mail, Phone, CalendarDays, UserRoundCheck, UserRoundX, UserRoundMinus, Briefcase, DollarSign, Tag, Building2, Users, Clock } from "lucide-react"; // Added Users
 import { EmployeeEditDialog } from "@/components/employee-edit-dialog";
 import { DeleteEmployeeButton } from "@/components/delete-employee-button";
 import { PaginationControls } from "@/components/pagination-controls";
@@ -30,6 +30,9 @@ interface DisplayEmployee {
   social_security_number: string | null;
   tax_id_number: string | null;
   health_insurance_provider: string | null;
+  default_daily_schedules: any[]; // New field
+  default_recurrence_interval_weeks: number; // New field
+  default_start_week_offset: number; // New field
 }
 
 interface EmployeesTableViewProps {
@@ -40,6 +43,17 @@ interface EmployeesTableViewProps {
   statusFilter: string;
   contractTypeFilter: string;
 }
+
+const dayNames = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const;
+const germanDayNames: { [key: string]: string } = {
+  monday: 'Mo',
+  tuesday: 'Di',
+  wednesday: 'Mi',
+  thursday: 'Do',
+  friday: 'Fr',
+  saturday: 'Sa',
+  sunday: 'So',
+};
 
 export function EmployeesTableView({
   employees,
@@ -92,6 +106,7 @@ export function EmployeesTableView({
             <TableHead className="min-w-[120px]">Vertragsart</TableHead>
             <TableHead className="min-w-[120px]">Stundenlohn</TableHead>
             <TableHead className="min-w-[150px]">Position</TableHead>
+            <TableHead className="min-w-[200px]">Standard-Wochenplan</TableHead> {/* New column */}
             <TableHead className="text-right min-w-[120px]">Aktionen</TableHead>
           </TableRow>
         </TableHeader>
@@ -108,6 +123,31 @@ export function EmployeesTableView({
               <TableCell className="text-sm">{employee.contract_type || 'N/A'}</TableCell>
               <TableCell className="text-sm">{employee.hourly_rate !== null ? `${employee.hourly_rate.toFixed(2)} €` : 'N/A'}</TableCell>
               <TableCell className="text-sm">{employee.job_title || 'N/A'}</TableCell>
+              <TableCell className="text-sm">
+                {employee.default_daily_schedules && employee.default_daily_schedules.length > 0 ? (
+                  <div className="space-y-0.5">
+                    {dayNames.map(day => {
+                      const weekSchedule = employee.default_daily_schedules?.[0]; // Show first week as summary
+                      const daySchedule = (weekSchedule as any)?.[day];
+                      if (daySchedule && daySchedule.hours && daySchedule.hours > 0) {
+                        return (
+                          <div key={day} className="flex items-center text-xs text-muted-foreground">
+                            <Clock className="mr-1 h-3 w-3" />
+                            <span>{germanDayNames[day]}: {daySchedule.start || 'N/A'} - {daySchedule.end || 'N/A'} ({daySchedule.hours.toFixed(2)}h)</span>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })}
+                    {employee.default_recurrence_interval_weeks > 1 && (
+                      <div className="flex items-center text-xs text-muted-foreground mt-1">
+                        <CalendarDays className="mr-1 h-3 w-3" />
+                        <span>Wiederholung: Alle {employee.default_recurrence_interval_weeks} Wochen (Offset: {employee.default_start_week_offset})</span>
+                      </div>
+                    )}
+                  </div>
+                ) : 'N/A'}
+              </TableCell>
               <TableCell className="text-right">
                 <div className="flex justify-end space-x-1">
                   <RecordDetailsDialog record={employee} title={`Details zu Mitarbeiter: ${employee.first_name} ${employee.last_name}`} />

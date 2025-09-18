@@ -23,6 +23,7 @@ interface DisplayCustomer {
   contact_phone: string | null;
   created_at: string | null;
   customer_type: string;
+  contractual_services: string | null; // New field
 }
 
 export default function CustomersPage() {

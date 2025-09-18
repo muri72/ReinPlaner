@@ -35,6 +35,9 @@ interface DisplayEmployee {
   social_security_number: string | null;
   tax_id_number: string | null;
   health_insurance_provider: string | null;
+  default_daily_schedules: any[]; // New field
+  default_recurrence_interval_weeks: number; // New field
+  default_start_week_offset: number; // New field
 }
 
 export default function EmployeesPage() {

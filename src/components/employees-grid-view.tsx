@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Mail, Phone, CalendarDays, UserRoundCheck, UserRoundX, UserRoundMinus, Briefcase, DollarSign, Tag, Building2, FileText, MapPin, Cake, CreditCard, Shield, UsersRound, FileStack } from "lucide-react";
+import { Mail, Phone, CalendarDays, UserRoundCheck, UserRoundX, UserRoundMinus, Briefcase, DollarSign, Tag, Building2, FileText, MapPin, Cake, CreditCard, Shield, UsersRound, FileStack, Clock } from "lucide-react";
 import { EmployeeEditDialog } from "@/components/employee-edit-dialog";
 import { DeleteEmployeeButton } from "@/components/delete-employee-button";
 import { RecordDetailsDialog } from "@/components/record-details-dialog";
@@ -32,6 +32,9 @@ interface DisplayEmployee {
   social_security_number: string | null;
   tax_id_number: string | null;
   health_insurance_provider: string | null;
+  default_daily_schedules: any[]; // New field
+  default_recurrence_interval_weeks: number; // New field
+  default_start_week_offset: number; // New field
 }
 
 interface EmployeesGridViewProps {
@@ -41,6 +44,17 @@ interface EmployeesGridViewProps {
   contractTypeFilter: string;
   onActionSuccess: () => void;
 }
+
+const dayNames = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const;
+const germanDayNames: { [key: string]: string } = {
+  monday: 'Mo',
+  tuesday: 'Di',
+  wednesday: 'Mi',
+  thursday: 'Do',
+  friday: 'Fr',
+  saturday: 'Sa',
+  sunday: 'So',
+};
 
 export function EmployeesGridView({
   employees,
@@ -138,6 +152,30 @@ export function EmployeesGridView({
                   {getStatusIcon(employee.status)}
                   <Badge variant={getStatusBadgeVariant(employee.status)}>{employee.status}</Badge>
                 </div>
+                {employee.default_daily_schedules && employee.default_daily_schedules.length > 0 && (
+                  <div className="space-y-1 mt-2">
+                    <p className="font-semibold text-xs">Standard-Wochenplan:</p>
+                    {dayNames.map(day => {
+                      const weekSchedule = employee.default_daily_schedules?.[0]; // Show first week as summary
+                      const daySchedule = (weekSchedule as any)?.[day];
+                      if (daySchedule && daySchedule.hours && daySchedule.hours > 0) {
+                        return (
+                          <div key={day} className="flex items-center text-xs text-muted-foreground">
+                            <Clock className="mr-1 h-3 w-3" />
+                            <span>{germanDayNames[day]}: {daySchedule.start || 'N/A'} - {daySchedule.end || 'N/A'} ({daySchedule.hours.toFixed(2)}h)</span>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })}
+                    {employee.default_recurrence_interval_weeks > 1 && (
+                      <div className="flex items-center text-xs text-muted-foreground mt-1">
+                        <CalendarDays className="mr-1 h-3 w-3" />
+                        <span>Wiederholung: Alle {employee.default_recurrence_interval_weeks} Wochen (Offset: {employee.default_start_week_offset})</span>
+                      </div>
+                    )}
+                  </div>
+                )}
               </TabsContent>
               <TabsContent value="documents" className="pt-4 space-y-4">
                 <h3 className="text-md font-semibold flex items-center">
