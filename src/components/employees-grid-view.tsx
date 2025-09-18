@@ -10,6 +10,8 @@ import { EmployeeCreateDialog } from "@/components/employee-create-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DocumentUploader } from "@/components/document-uploader";
 import { DocumentList } from "@/components/document-list";
+import Link from "next/link";
+import { cn } from "@/lib/utils";
 
 interface DisplayEmployee {
   id: string;
@@ -119,85 +121,44 @@ export function EmployeesGridView({
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
       {filteredEmployees.map((employee) => (
-        <Card key={employee.id} className="shadow-neumorphic glassmorphism-card">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-base md:text-lg font-semibold">{employee.first_name} {employee.last_name}</CardTitle>
-            <div className="flex items-center space-x-2">
-              <RecordDetailsDialog record={employee} title={`Details zu Mitarbeiter: ${employee.first_name} ${employee.last_name}`} />
-              <EmployeeEditDialog employee={employee} />
+        <Link key={employee.id} href={`/dashboard/employees/${employee.id}`} className="block hover:scale-[1.02] transition-transform duration-200 ease-in-out">
+          <Card className="shadow-neumorphic glassmorphism-card h-full">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-base md:text-lg font-semibold">{employee.first_name} {employee.last_name}</CardTitle>
               <DeleteEmployeeButton employeeId={employee.id} onDeleteSuccess={onActionSuccess} />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <Tabs defaultValue="details" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="details">Details</TabsTrigger>
-                <TabsTrigger value="documents">Dokumente</TabsTrigger>
-              </TabsList>
-              <TabsContent value="details" className="pt-4 space-y-2 text-sm text-muted-foreground">
-                {employee.email && (
-                  <div className="flex items-center">
-                    <Mail className="mr-2 h-4 w-4 flex-shrink-0" />
-                    <span>{employee.email}</span>
-                  </div>
-                )}
-                {employee.phone && (
-                  <div className="flex items-center">
-                    <Phone className="mr-2 h-4 w-4 flex-shrink-0" />
-                    <span>{employee.phone}</span>
-                  </div>
-                )}
-                {employee.job_title && (
-                  <div className="flex items-center">
-                    <Tag className="mr-2 h-4 w-4 flex-shrink-0" />
-                    <span>Position: {employee.job_title}</span>
-                  </div>
-                )}
-                {employee.contract_type && (
-                  <div className="flex items-center">
-                    <Briefcase className="mr-2 h-4 w-4 flex-shrink-0" />
-                    <span>Vertragsart: <Badge variant="secondary">{employee.contract_type}</Badge></span>
-                  </div>
-                )}
+            </CardHeader>
+            <CardContent className="space-y-2 text-sm text-muted-foreground">
+              {employee.email && (
                 <div className="flex items-center">
-                  {getStatusIcon(employee.status)}
-                  <Badge variant={getStatusBadgeVariant(employee.status)}>{employee.status}</Badge>
+                  <Mail className="mr-2 h-4 w-4 flex-shrink-0" />
+                  <span>{employee.email}</span>
                 </div>
-                {employee.default_daily_schedules && employee.default_daily_schedules.length > 0 && (
-                  <div className="space-y-1 mt-2">
-                    <p className="font-semibold text-xs">Standard-Wochenplan:</p>
-                    {dayNames.map(day => {
-                      const weekSchedule = employee.default_daily_schedules?.[0]; // Show first week as summary
-                      const daySchedule = (weekSchedule as any)?.[day];
-                      if (daySchedule && daySchedule.hours && daySchedule.hours > 0) {
-                        return (
-                          <div key={day} className="flex items-center text-xs text-muted-foreground">
-                            <Clock className="mr-1 h-3 w-3" />
-                            <span>{germanDayNames[day]}: {daySchedule.start || 'N/A'} - {daySchedule.end || 'N/A'} ({daySchedule.hours.toFixed(2)}h)</span>
-                          </div>
-                        );
-                      }
-                      return null;
-                    })}
-                    {employee.default_recurrence_interval_weeks > 1 && (
-                      <div className="flex items-center text-xs text-muted-foreground mt-1">
-                        <CalendarDays className="mr-1 h-3 w-3" />
-                        <span>Wiederholung: Alle {employee.default_recurrence_interval_weeks} Wochen (Offset: {employee.default_start_week_offset})</span>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </TabsContent>
-              <TabsContent value="documents" className="pt-4 space-y-4">
-                <h3 className="text-md font-semibold flex items-center">
-                  <FileStack className="mr-2 h-5 w-5" /> Dokumente
-                </h3>
-                <DocumentUploader associatedEmployeeId={employee.id} onDocumentUploaded={onActionSuccess} />
-                <DocumentList associatedEmployeeId={employee.id} onDocumentChange={onActionSuccess} />
-              </TabsContent>
-            </Tabs>
-          </CardContent>
-        </Card>
+              )}
+              {employee.phone && (
+                <div className="flex items-center">
+                  <Phone className="mr-2 h-4 w-4 flex-shrink-0" />
+                  <span>{employee.phone}</span>
+                </div>
+              )}
+              {employee.job_title && (
+                <div className="flex items-center">
+                  <Tag className="mr-2 h-4 w-4 flex-shrink-0" />
+                  <span>Position: {employee.job_title}</span>
+                </div>
+              )}
+              {employee.contract_type && (
+                <div className="flex items-center">
+                  <Briefcase className="mr-2 h-4 w-4 flex-shrink-0" />
+                  <span>Vertragsart: <Badge variant="secondary">{employee.contract_type}</Badge></span>
+                </div>
+              )}
+              <div className="flex items-center">
+                {getStatusIcon(employee.status)}
+                <Badge variant={getStatusBadgeVariant(employee.status)}>{employee.status}</Badge>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
       ))}
     </div>
   );

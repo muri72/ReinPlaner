@@ -3,11 +3,12 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Mail, Phone, CalendarDays, UserRoundCheck, UserRoundX, UserRoundMinus, Briefcase, DollarSign, Tag, Building2, Users, Clock } from "lucide-react"; // Added Users
+import { Mail, Phone, CalendarDays, UserRoundCheck, UserRoundX, UserRoundMinus, Briefcase, DollarSign, Tag, Building2, Users, Clock, Eye } from "lucide-react"; // Added Users and Eye
 import { EmployeeEditDialog } from "@/components/employee-edit-dialog";
 import { DeleteEmployeeButton } from "@/components/delete-employee-button";
 import { PaginationControls } from "@/components/pagination-controls";
-import { RecordDetailsDialog } from "@/components/record-details-dialog"; // Import RecordDetailsDialog
+import { RecordDetailsDialog } from "@/components/record-details-dialog";
+import Link from "next/link";
 
 interface DisplayEmployee {
   id: string;
@@ -117,7 +118,7 @@ export function EmployeesTableView({
             <TableHead className="min-w-[120px]">Vertragsart</TableHead>
             <TableHead className="min-w-[120px]">Stundenlohn</TableHead>
             <TableHead className="min-w-[150px]">Position</TableHead>
-            <TableHead className="min-w-[200px]">Standard-Wochenplan</TableHead> {/* New column */}
+            <TableHead className="min-w-[200px]">Standard-Wochenplan</TableHead>
             <TableHead className="text-right min-w-[120px]">Aktionen</TableHead>
           </TableRow>
         </TableHeader>
@@ -161,8 +162,11 @@ export function EmployeesTableView({
               </TableCell>
               <TableCell className="text-right">
                 <div className="flex justify-end space-x-1">
-                  <RecordDetailsDialog record={employee} title={`Details zu Mitarbeiter: ${employee.first_name} ${employee.last_name}`} />
-                  <EmployeeEditDialog employee={employee} />
+                  <Button variant="ghost" size="icon" asChild>
+                    <Link href={`/dashboard/employees/${employee.id}`} title="Details anzeigen">
+                      <Eye className="h-4 w-4" />
+                    </Link>
+                  </Button>
                   <DeleteEmployeeButton employeeId={employee.id} />
                 </div>
               </TableCell>
