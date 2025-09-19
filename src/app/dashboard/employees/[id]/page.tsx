@@ -6,9 +6,12 @@ import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
-import { JSX } from "react";
 
-export default async function EmployeeDetailPage({ params, searchParams }: { params: { id: string }; searchParams: { [key: string]: string | string[] | undefined } }): Promise<JSX.Element> {
+export default async function EmployeeDetailPage({
+  params,
+}: {
+  params: { id: string };
+}) {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
