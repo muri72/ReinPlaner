@@ -8,7 +8,7 @@ import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 import { JSX } from "react";
 
-export default async function EmployeeDetailPage({ params }: { params: { id: string } }): Promise<JSX.Element> {
+export default async function EmployeeDetailPage({ params, searchParams }: { params: { id: string }; searchParams: { [key: string]: string | string[] | undefined } }): Promise<JSX.Element> {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -25,9 +25,13 @@ export default async function EmployeeDetailPage({ params }: { params: { id: str
         orders ( title ),
         objects ( name )
       ),
+      order_employee_assignments (
+        orders ( *, objects(name) )
+      ),
       absence_requests ( * )
     `)
     .eq('id', params.id)
+    .order('start_date', { foreignTable: 'absence_requests', ascending: false })
     .single();
 
   if (error || !employee) {
@@ -35,14 +39,17 @@ export default async function EmployeeDetailPage({ params }: { params: { id: str
     redirect("/dashboard/employees");
   }
 
+  // Extract and flatten orders from assignments
+  if (employee.order_employee_assignments) {
+    (employee as any).orders = employee.order_employee_assignments
+      .map((assignment: any) => assignment.orders)
+      .filter(Boolean); // Filter out any null/undefined orders
+  }
+
+
   // Sort time entries by start_time descending
   if (employee.time_entries) {
     employee.time_entries.sort((a: { start_time: string }, b: { start_time: string }) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime());
-  }
-
-  // Sort absence requests by start_date descending
-  if (employee.absence_requests) {
-    employee.absence_requests.sort((a: { start_date: string }, b: { start_date: string }) => new Date(b.start_date).getTime() - new Date(a.start_date).getTime());
   }
 
   return (

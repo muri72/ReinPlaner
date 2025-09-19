@@ -8,17 +8,18 @@ import { de } from "date-fns/locale";
 import Link from "next/link";
 import { Button } from "./ui/button";
 
-interface AbsenceRequest {
+interface Absence {
   id: string;
   start_date: string;
   end_date: string;
   type: string;
   status: string;
   notes: string | null;
+  admin_notes: string | null;
 }
 
 interface EmployeeAbsencesListProps {
-  absences: AbsenceRequest[];
+  absences: Absence[];
 }
 
 export function EmployeeAbsencesList({ absences }: EmployeeAbsencesListProps) {
@@ -42,7 +43,7 @@ export function EmployeeAbsencesList({ absences }: EmployeeAbsencesListProps) {
     return (
       <div className="text-center text-muted-foreground py-8">
         <CalendarOff className="mx-auto h-10 w-10 text-muted-foreground mb-4" />
-        <p className="text-base font-semibold">Keine Abwesenheiten für diesen Mitarbeiter gefunden.</p>
+        <p className="text-base font-semibold">Keine Abwesenheiten für diesen Mitarbeiter erfasst.</p>
       </div>
     );
   }
@@ -61,16 +62,16 @@ export function EmployeeAbsencesList({ absences }: EmployeeAbsencesListProps) {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {absences.map((request) => (
-            <TableRow key={request.id}>
-              <TableCell>{typeTranslations[request.type] || request.type}</TableCell>
-              <TableCell>{format(new Date(request.start_date), 'dd.MM.yyyy', { locale: de })}</TableCell>
-              <TableCell>{format(new Date(request.end_date), 'dd.MM.yyyy', { locale: de })}</TableCell>
-              <TableCell><Badge variant={getStatusBadgeVariant(request.status)}>{request.status}</Badge></TableCell>
-              <TableCell className="truncate max-w-xs">{request.notes || 'N/A'}</TableCell>
+          {absences.map((absence) => (
+            <TableRow key={absence.id}>
+              <TableCell className="font-medium">{typeTranslations[absence.type] || absence.type}</TableCell>
+              <TableCell>{format(new Date(absence.start_date), 'dd.MM.yyyy', { locale: de })}</TableCell>
+              <TableCell>{format(new Date(absence.end_date), 'dd.MM.yyyy', { locale: de })}</TableCell>
+              <TableCell><Badge variant={getStatusBadgeVariant(absence.status)}>{absence.status}</Badge></TableCell>
+              <TableCell className="truncate max-w-xs">{absence.notes || 'N/A'}</TableCell>
               <TableCell className="text-right">
                 <Button variant="ghost" size="sm" asChild>
-                  <Link href={`/dashboard/absence-requests?query=${request.id}`}>
+                  <Link href={`/dashboard/absence-requests`}>
                     Zum Antrag
                   </Link>
                 </Button>
