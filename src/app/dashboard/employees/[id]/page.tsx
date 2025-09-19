@@ -7,11 +7,7 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 
-type Props = {
-  params: { id: string };
-};
-
-export default async function EmployeeDetailPage({ params }: Props) {
+export default async function EmployeeDetailPage({ params }: { params: { id: string } }) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
