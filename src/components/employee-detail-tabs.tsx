@@ -10,7 +10,7 @@ import { DocumentUploader } from "@/components/document-uploader";
 import { DocumentList } from "@/components/document-list";
 import { Separator } from "@/components/ui/separator";
 import { EmployeeTimeEntriesList } from "./employee-time-entries-list";
-import { EmployeeOrdersList } from "./employee-orders-list";
+import { EmployeeAbsencesList } from "./employee-absences-list";
 
 interface TimeEntry {
   id: string;
@@ -24,15 +24,13 @@ interface TimeEntry {
   objects: { name: string | null } | null;
 }
 
-interface Order {
+interface AbsenceRequest {
   id: string;
-  title: string;
+  start_date: string;
+  end_date: string;
+  type: string;
   status: string;
-  order_type: string;
-  due_date: string | null;
-  recurring_start_date: string | null;
-  recurring_end_date: string | null;
-  objects: { name: string | null } | null;
+  notes: string | null;
 }
 
 interface Employee {
@@ -59,7 +57,7 @@ interface Employee {
   default_recurrence_interval_weeks: number;
   default_start_week_offset: number;
   time_entries: TimeEntry[];
-  orders: Order[];
+  absence_requests: AbsenceRequest[];
 }
 
 interface EmployeeDetailTabsProps {
@@ -71,12 +69,11 @@ export function EmployeeDetailTabs({ employee }: EmployeeDetailTabsProps) {
 
   return (
     <Tabs defaultValue="stammdaten" className="w-full">
-      <TabsList className="grid w-full grid-cols-5">
+      <TabsList className="grid w-full grid-cols-4">
         <TabsTrigger value="stammdaten">Stammdaten</TabsTrigger>
-        <TabsTrigger value="auftraege">Aufträge</TabsTrigger>
         <TabsTrigger value="arbeitszeiten">Arbeitszeiten</TabsTrigger>
         <TabsTrigger value="dokumente">Dokumente</TabsTrigger>
-        <TabsTrigger value="abwesenheiten" disabled>Abwesenheiten</TabsTrigger>
+        <TabsTrigger value="abwesenheiten">Abwesenheiten</TabsTrigger>
       </TabsList>
       <TabsContent value="stammdaten">
         <Card className="shadow-neumorphic glassmorphism-card">
@@ -127,17 +124,6 @@ export function EmployeeDetailTabs({ employee }: EmployeeDetailTabsProps) {
           </CardContent>
         </Card>
       </TabsContent>
-      <TabsContent value="auftraege">
-        <Card className="shadow-neumorphic glassmorphism-card">
-          <CardHeader>
-            <CardTitle>Zugewiesene Aufträge</CardTitle>
-            <CardDescription>Alle Aufträge, denen dieser Mitarbeiter zugewiesen ist.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <EmployeeOrdersList orders={(employee as any).orders || []} />
-          </CardContent>
-        </Card>
-      </TabsContent>
       <TabsContent value="arbeitszeiten">
         <Card className="shadow-neumorphic glassmorphism-card">
           <CardHeader>
@@ -166,6 +152,17 @@ export function EmployeeDetailTabs({ employee }: EmployeeDetailTabsProps) {
               associatedEmployeeId={employee.id} 
               onDocumentChange={() => setDocumentUpdateKey(prev => prev + 1)}
             />
+          </CardContent>
+        </Card>
+      </TabsContent>
+      <TabsContent value="abwesenheiten">
+        <Card className="shadow-neumorphic glassmorphism-card">
+          <CardHeader>
+            <CardTitle>Abwesenheiten</CardTitle>
+            <CardDescription>Eine Liste aller Abwesenheitsanträge für diesen Mitarbeiter.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <EmployeeAbsencesList absences={employee.absence_requests || []} />
           </CardContent>
         </Card>
       </TabsContent>
