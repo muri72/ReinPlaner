@@ -18,7 +18,7 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
   // Fetch customer and their contacts in one go
   const { data: customer, error } = await supabase
     .from('customers')
-    .select('*, customer_contacts(*)') // Fetch related contacts
+    .select('*, customer_contacts(*), orders(*, objects(name))') // Fetch related contacts and orders
     .eq('id', params.id)
     .single();
 

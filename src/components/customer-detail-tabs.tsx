@@ -13,6 +13,7 @@ import { CustomerContactCreateDialog } from "@/components/customer-contact-creat
 import { CustomerContactEditDialog } from "@/components/customer-contact-edit-dialog";
 import { DeleteCustomerContactButton } from "@/components/delete-customer-contact-button";
 import { ContactRound } from "lucide-react";
+import { CustomerOrdersList } from "./customer-orders-list";
 
 interface CustomerContact {
   id: string;
@@ -22,6 +23,17 @@ interface CustomerContact {
   phone: string | null;
   role: string | null;
   customer_id: string;
+}
+
+interface Order {
+  id: string;
+  title: string;
+  status: string;
+  order_type: string;
+  due_date: string | null;
+  recurring_start_date: string | null;
+  recurring_end_date: string | null;
+  objects: { name: string | null } | null;
 }
 
 interface Customer {
@@ -35,6 +47,7 @@ interface Customer {
   customer_type: string;
   contractual_services: string | null;
   customer_contacts: CustomerContact[];
+  orders: Order[];
 }
 
 interface CustomerDetailTabsProps {
@@ -64,7 +77,7 @@ export function CustomerDetailTabs({ customer }: CustomerDetailTabsProps) {
     <Tabs defaultValue="stammdaten" className="w-full">
       <TabsList className="grid w-full grid-cols-5">
         <TabsTrigger value="stammdaten">Stammdaten</TabsTrigger>
-        <TabsTrigger value="auftraege" disabled>Aufträge</TabsTrigger>
+        <TabsTrigger value="auftraege">Aufträge</TabsTrigger>
         <TabsTrigger value="objekte" disabled>Objekte</TabsTrigger>
         <TabsTrigger value="ansprechpartner">Ansprechpartner</TabsTrigger>
         <TabsTrigger value="dokumente">Dokumente</TabsTrigger>
@@ -105,6 +118,17 @@ export function CustomerDetailTabs({ customer }: CustomerDetailTabsProps) {
                 <p className="whitespace-pre-wrap">{customer.contractual_services || 'Keine spezifischen Vertragsdetails hinterlegt.'}</p>
               </div>
             </div>
+          </CardContent>
+        </Card>
+      </TabsContent>
+      <TabsContent value="auftraege">
+        <Card className="shadow-neumorphic glassmorphism-card">
+          <CardHeader>
+            <CardTitle>Aufträge</CardTitle>
+            <CardDescription>Alle Aufträge, die diesem Kunden zugeordnet sind.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <CustomerOrdersList orders={customer.orders || []} />
           </CardContent>
         </Card>
       </TabsContent>
