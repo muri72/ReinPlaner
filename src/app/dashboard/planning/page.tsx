@@ -5,7 +5,6 @@ import { getPlanningDataForWeek, PlanningPageData } from "@/app/dashboard/planni
 import { toast } from "sonner";
 import { DndContext, DragEndEvent } from "@dnd-kit/core";
 import { PlanningToolbar } from "@/components/planning-toolbar";
-import { UnassignedOrdersPanel } from "@/components/unassigned-orders-panel";
 import { PlanningCalendar } from "@/components/planning-calendar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { assignOrderToEmployee } from "./actions";
@@ -47,7 +46,7 @@ export default function PlanningPage() {
       const orderId = active.id as string;
       const [employeeId, dateString] = (over.id as string).split('__');
 
-      if (employeeId && dateString) {
+      if (employeeId && dateString && employeeId !== 'unassigned') {
         toast.info(`Weise Auftrag "${orderId}" zu...`);
         const result = await assignOrderToEmployee(orderId, employeeId, dateString, null);
         if (result.success) {
@@ -70,24 +69,17 @@ export default function PlanningPage() {
           currentDate={currentDate}
           onDateChange={setCurrentDate}
         />
-        <div className="flex-grow grid grid-cols-1 lg:grid-cols-4 gap-4 min-h-0">
-          <div className="lg:col-span-1 h-full">
-            <UnassignedOrdersPanel
+        <div className="flex-grow min-h-0">
+          {loading ? (
+            <Skeleton className="h-full w-full" />
+          ) : (
+            <PlanningCalendar
+              planningData={planningPageData?.planningData || {}}
               unassignedOrders={planningPageData?.unassignedOrders || []}
-              isLoading={loading}
+              weekDays={weekDays}
+              activeDragId={activeDragId}
             />
-          </div>
-          <div className="lg:col-span-3 h-full">
-            {loading ? (
-              <Skeleton className="h-full w-full" />
-            ) : (
-              <PlanningCalendar
-                planningData={planningPageData?.planningData || {}}
-                weekDays={weekDays}
-                activeDragId={activeDragId}
-              />
-            )}
-          </div>
+          )}
         </div>
       </div>
     </DndContext>

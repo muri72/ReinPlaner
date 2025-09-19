@@ -40,6 +40,7 @@ export interface UnassignedOrder {
   title: string;
   total_estimated_hours: number | null;
   service_type: string | null;
+  due_date: string | null; // Hinzugefügt
 }
 
 export interface PlanningPageData {
@@ -91,7 +92,6 @@ export async function getPlanningDataForWeek(currentDate: Date): Promise<{ succe
     if (absencesError) throw absencesError;
 
     // 3. Fetch all relevant assignments for the week
-    const filterString = `and(order_type.eq.one_time,due_date.gte.${start_date_iso},due_date.lte.${end_date_iso}),and(order_type.in.("recurring","permanent","substitution"),recurring_start_date.lte.${end_date_iso},or(recurring_end_date.is.null,recurring_end_date.gte.${start_date_iso}))`;
     const { data: activeAssignments, error: assignmentsError } = await supabase
       .from('order_employee_assignments')
       .select(`
@@ -102,7 +102,7 @@ export async function getPlanningDataForWeek(currentDate: Date): Promise<{ succe
         )
       `)
       .eq('orders.request_status', 'approved')
-      .or(filterString, { referencedTable: 'orders' });
+      .or(`and(orders.order_type.eq.one_time,orders.due_date.gte.${start_date_iso},orders.due_date.lte.${end_date_iso}),and(orders.order_type.in.("recurring","permanent","substitution"),orders.recurring_start_date.lte.${end_date_iso},or(orders.recurring_end_date.is.null,orders.recurring_end_date.gte.${start_date_iso}))`);
     if (assignmentsError) throw assignmentsError;
 
     // 4. Fetch unassigned orders

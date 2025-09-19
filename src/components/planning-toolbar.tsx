@@ -4,7 +4,7 @@ import * as React from "react";
 import { format, addDays, subDays, startOfWeek, endOfWeek } from "date-fns";
 import { de } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Search, Eye } from "lucide-react";
 import { DatePicker } from "@/components/date-picker";
 import {
   DropdownMenu,
@@ -46,7 +46,12 @@ export function PlanningToolbar({ currentDate, onDateChange }: PlanningToolbarPr
         </h2>
       </div>
       <div className="flex items-center gap-2">
-        {/* Placeholder for filters */}
+        <Button variant="outline" size="icon">
+          <Search className="h-4 w-4" />
+        </Button>
+        <Button variant="outline" size="icon">
+          <Eye className="h-4 w-4" />
+        </Button>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline">{viewMode}</Button>
