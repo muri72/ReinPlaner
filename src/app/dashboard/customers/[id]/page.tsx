@@ -8,16 +8,17 @@ import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 
 export default async function CustomerDetailPage({ params }: { params: { id: string } }) {
-  const supabase = await createClient();
+  const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
     redirect("/login");
   }
 
+  // Fetch customer and their contacts in one go
   const { data: customer, error } = await supabase
     .from('customers')
-    .select('*')
+    .select('*, customer_contacts(*)') // Fetch related contacts
     .eq('id', params.id)
     .single();
 

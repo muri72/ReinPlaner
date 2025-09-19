@@ -1,12 +1,28 @@
 "use client";
 
 import { useState } from "react";
+import { createClient } from "@/lib/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CustomerEditDialog } from "@/components/customer-edit-dialog";
 import { DocumentUploader } from "@/components/document-uploader";
 import { DocumentList } from "@/components/document-list";
 import { Separator } from "@/components/ui/separator";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { CustomerContactCreateDialog } from "@/components/customer-contact-create-dialog";
+import { CustomerContactEditDialog } from "@/components/customer-contact-edit-dialog";
+import { DeleteCustomerContactButton } from "@/components/delete-customer-contact-button";
+import { ContactRound } from "lucide-react";
+
+interface CustomerContact {
+  id: string;
+  first_name: string;
+  last_name: string;
+  email: string | null;
+  phone: string | null;
+  role: string | null;
+  customer_id: string;
+}
 
 interface Customer {
   id: string;
@@ -18,6 +34,7 @@ interface Customer {
   created_at: string | null;
   customer_type: string;
   contractual_services: string | null;
+  customer_contacts: CustomerContact[];
 }
 
 interface CustomerDetailTabsProps {
@@ -26,6 +43,22 @@ interface CustomerDetailTabsProps {
 
 export function CustomerDetailTabs({ customer }: CustomerDetailTabsProps) {
   const [documentUpdateKey, setDocumentUpdateKey] = useState(0);
+  const [contacts, setContacts] = useState<CustomerContact[]>(customer.customer_contacts || []);
+  const supabase = createClient();
+
+  const refreshContacts = async () => {
+    const { data, error } = await supabase
+      .from('customer_contacts')
+      .select('*')
+      .eq('customer_id', customer.id)
+      .order('last_name', { ascending: true });
+    
+    if (error) {
+      console.error("Fehler beim Neuladen der Kontakte:", error);
+    } else {
+      setContacts(data || []);
+    }
+  };
 
   return (
     <Tabs defaultValue="stammdaten" className="w-full">
@@ -33,7 +66,7 @@ export function CustomerDetailTabs({ customer }: CustomerDetailTabsProps) {
         <TabsTrigger value="stammdaten">Stammdaten</TabsTrigger>
         <TabsTrigger value="auftraege" disabled>Aufträge</TabsTrigger>
         <TabsTrigger value="objekte" disabled>Objekte</TabsTrigger>
-        <TabsTrigger value="ansprechpartner" disabled>Ansprechpartner</TabsTrigger>
+        <TabsTrigger value="ansprechpartner">Ansprechpartner</TabsTrigger>
         <TabsTrigger value="dokumente">Dokumente</TabsTrigger>
       </TabsList>
       <TabsContent value="stammdaten">
@@ -43,7 +76,7 @@ export function CustomerDetailTabs({ customer }: CustomerDetailTabsProps) {
               <CardTitle>Stammdaten</CardTitle>
               <CardDescription>Allgemeine und vertragliche Informationen.</CardDescription>
             </div>
-            <CustomerEditDialog customer={customer} />
+            <CustomerEditDialog customer={customer} onSuccess={refreshContacts} />
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
@@ -72,6 +105,56 @@ export function CustomerDetailTabs({ customer }: CustomerDetailTabsProps) {
                 <p className="whitespace-pre-wrap">{customer.contractual_services || 'Keine spezifischen Vertragsdetails hinterlegt.'}</p>
               </div>
             </div>
+          </CardContent>
+        </Card>
+      </TabsContent>
+      <TabsContent value="ansprechpartner">
+        <Card className="shadow-neumorphic glassmorphism-card">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle>Ansprechpartner</CardTitle>
+              <CardDescription>Verwalten Sie die Kontakte für diesen Kunden.</CardDescription>
+            </div>
+            <CustomerContactCreateDialog customerId={customer.id} onContactCreated={refreshContacts} />
+          </CardHeader>
+          <CardContent>
+            {contacts.length === 0 ? (
+              <div className="text-center text-muted-foreground py-8">
+                <ContactRound className="mx-auto h-10 w-10 text-muted-foreground mb-4" />
+                <p className="text-base font-semibold">Keine Ansprechpartner gefunden</p>
+                <p className="text-sm">Fügen Sie den ersten Kontakt für diesen Kunden hinzu.</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Rolle</TableHead>
+                      <TableHead>E-Mail</TableHead>
+                      <TableHead>Telefon</TableHead>
+                      <TableHead className="text-right">Aktionen</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {contacts.map((contact) => (
+                      <TableRow key={contact.id}>
+                        <TableCell className="font-medium">{contact.first_name} {contact.last_name}</TableCell>
+                        <TableCell>{contact.role || 'N/A'}</TableCell>
+                        <TableCell>{contact.email || 'N/A'}</TableCell>
+                        <TableCell>{contact.phone || 'N/A'}</TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end space-x-1">
+                            <CustomerContactEditDialog contact={contact} />
+                            <DeleteCustomerContactButton contactId={contact.id} onDeleteSuccess={refreshContacts} />
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
           </CardContent>
         </Card>
       </TabsContent>
