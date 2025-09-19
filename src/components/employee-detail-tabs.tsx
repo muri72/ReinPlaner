@@ -9,6 +9,19 @@ import { de } from "date-fns/locale";
 import { DocumentUploader } from "@/components/document-uploader";
 import { DocumentList } from "@/components/document-list";
 import { Separator } from "@/components/ui/separator";
+import { EmployeeTimeEntriesList } from "./employee-time-entries-list";
+
+interface TimeEntry {
+  id: string;
+  start_time: string;
+  end_time: string | null;
+  duration_minutes: number | null;
+  break_minutes: number | null;
+  type: string;
+  notes: string | null;
+  orders: { title: string | null } | null;
+  objects: { name: string | null } | null;
+}
 
 interface Employee {
   id: string;
@@ -33,6 +46,7 @@ interface Employee {
   default_daily_schedules: any[];
   default_recurrence_interval_weeks: number;
   default_start_week_offset: number;
+  time_entries: TimeEntry[];
 }
 
 interface EmployeeDetailTabsProps {
@@ -46,7 +60,7 @@ export function EmployeeDetailTabs({ employee }: EmployeeDetailTabsProps) {
     <Tabs defaultValue="stammdaten" className="w-full">
       <TabsList className="grid w-full grid-cols-4">
         <TabsTrigger value="stammdaten">Stammdaten</TabsTrigger>
-        <TabsTrigger value="arbeitszeiten" disabled>Arbeitszeiten</TabsTrigger>
+        <TabsTrigger value="arbeitszeiten">Arbeitszeiten</TabsTrigger>
         <TabsTrigger value="dokumente">Dokumente</TabsTrigger>
         <TabsTrigger value="abwesenheiten" disabled>Abwesenheiten</TabsTrigger>
       </TabsList>
@@ -96,6 +110,17 @@ export function EmployeeDetailTabs({ employee }: EmployeeDetailTabsProps) {
                 <p className="whitespace-pre-wrap">{employee.notes || 'Keine Notizen vorhanden.'}</p>
               </div>
             </div>
+          </CardContent>
+        </Card>
+      </TabsContent>
+      <TabsContent value="arbeitszeiten">
+        <Card className="shadow-neumorphic glassmorphism-card">
+          <CardHeader>
+            <CardTitle>Arbeitszeiten</CardTitle>
+            <CardDescription>Eine Liste der letzten Zeiteinträge für diesen Mitarbeiter.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <EmployeeTimeEntriesList timeEntries={employee.time_entries || []} />
           </CardContent>
         </Card>
       </TabsContent>
