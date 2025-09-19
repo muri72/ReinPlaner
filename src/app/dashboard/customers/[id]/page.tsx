@@ -6,8 +6,9 @@ import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
+import { JSX } from "react";
 
-export default async function CustomerDetailPage({ params }: { params: { id: string } }) {
+export default async function CustomerDetailPage({ params, searchParams }: { params: { id: string }; searchParams: { [key: string]: string | string[] | undefined } }): Promise<JSX.Element> {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -15,10 +16,10 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
     redirect("/login");
   }
 
-  // Fetch customer and their contacts in one go
+  // Fetch customer, their contacts, orders, and objects in one go
   const { data: customer, error } = await supabase
     .from('customers')
-    .select('*, customer_contacts(*), orders(*, objects(name))') // Fetch related contacts and orders
+    .select('*, customer_contacts(*), orders(*, objects(name)), objects(*)') // Fetch related contacts, orders, and objects
     .eq('id', params.id)
     .single();
 

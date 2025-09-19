@@ -14,6 +14,7 @@ import { CustomerContactEditDialog } from "@/components/customer-contact-edit-di
 import { DeleteCustomerContactButton } from "@/components/delete-customer-contact-button";
 import { ContactRound } from "lucide-react";
 import { CustomerOrdersList } from "./customer-orders-list";
+import { CustomerObjectsList } from "./customer-objects-list"; // Import the new component
 
 interface CustomerContact {
   id: string;
@@ -36,6 +37,13 @@ interface Order {
   objects: { name: string | null } | null;
 }
 
+interface ObjectData {
+  id: string;
+  name: string;
+  address: string | null;
+  priority: string;
+}
+
 interface Customer {
   id: string;
   user_id: string;
@@ -48,6 +56,7 @@ interface Customer {
   contractual_services: string | null;
   customer_contacts: CustomerContact[];
   orders: Order[];
+  objects: ObjectData[]; // Add objects to the interface
 }
 
 interface CustomerDetailTabsProps {
@@ -78,7 +87,7 @@ export function CustomerDetailTabs({ customer }: CustomerDetailTabsProps) {
       <TabsList className="grid w-full grid-cols-5">
         <TabsTrigger value="stammdaten">Stammdaten</TabsTrigger>
         <TabsTrigger value="auftraege">Aufträge</TabsTrigger>
-        <TabsTrigger value="objekte" disabled>Objekte</TabsTrigger>
+        <TabsTrigger value="objekte">Objekte</TabsTrigger>
         <TabsTrigger value="ansprechpartner">Ansprechpartner</TabsTrigger>
         <TabsTrigger value="dokumente">Dokumente</TabsTrigger>
       </TabsList>
@@ -129,6 +138,17 @@ export function CustomerDetailTabs({ customer }: CustomerDetailTabsProps) {
           </CardHeader>
           <CardContent>
             <CustomerOrdersList orders={customer.orders || []} />
+          </CardContent>
+        </Card>
+      </TabsContent>
+      <TabsContent value="objekte">
+        <Card className="shadow-neumorphic glassmorphism-card">
+          <CardHeader>
+            <CardTitle>Objekte</CardTitle>
+            <CardDescription>Alle Objekte, die diesem Kunden zugeordnet sind.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <CustomerObjectsList objects={customer.objects || []} />
           </CardContent>
         </Card>
       </TabsContent>
