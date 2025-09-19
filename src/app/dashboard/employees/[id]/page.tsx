@@ -24,6 +24,9 @@ export default async function EmployeeDetailPage({ params }: { params: { id: str
         *,
         orders ( title ),
         objects ( name )
+      ),
+      order_employee_assignments (
+        orders ( *, objects(name) )
       )
     `)
     .eq('id', params.id)
@@ -33,6 +36,14 @@ export default async function EmployeeDetailPage({ params }: { params: { id: str
     console.error("Fehler beim Laden des Mitarbeiters:", error?.message || "Mitarbeiter nicht gefunden");
     redirect("/dashboard/employees");
   }
+
+  // Extract and flatten orders from assignments
+  if (employee.order_employee_assignments) {
+    (employee as any).orders = employee.order_employee_assignments
+      .map((assignment: any) => assignment.orders)
+      .filter(Boolean); // Filter out any null/undefined orders
+  }
+
 
   // Sort time entries by start_time descending
   if (employee.time_entries) {
