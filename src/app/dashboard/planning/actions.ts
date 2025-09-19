@@ -5,25 +5,35 @@ import { revalidatePath } from "next/cache";
 import { sendNotification } from "@/lib/actions/notifications";
 import { startOfWeek, endOfWeek, eachDayOfInterval, formatISO, parseISO, getDay, differenceInDays } from 'date-fns';
 
-export interface PlanningData {
-  [employeeId: string]: {
-    name: string;
-    schedule: {
-      [date: string]: { // YYYY-MM-DD
-        totalHours: number;
-        isAbsence: boolean;
-        absenceType: string | null;
-        assignments: {
-          title: string;
-          hours: number;
-          startTime: string | null;
-          endTime: string | null;
-          recurrence?: string; // Added for display
-        }[];
-      };
+export interface EmployeePlanningData {
+  name: string;
+  totalHoursAvailable: number;
+  totalHoursPlanned: number;
+  schedule: {
+    [date: string]: { // YYYY-MM-DD
+      isAvailable: boolean;
+      totalHours: number;
+      isAbsence: boolean;
+      absenceType: string | null;
+      assignments: {
+        id: string; // Assignment ID
+        orderId: string; // Order ID
+        title: string;
+        startTime: string | null;
+        endTime: string | null;
+        hours: number;
+        isRecurring: boolean;
+        isTeam: boolean;
+        status: 'completed' | 'pending' | 'future';
+      }[];
     };
   };
 }
+
+export interface PlanningData {
+  [employeeId: string]: EmployeePlanningData;
+}
+
 
 export interface UnassignedOrder {
   id: string;
@@ -64,11 +74,11 @@ export async function getPlanningDataForWeek(currentDate: Date): Promise<{ succe
   const end_date_iso = formatISO(end, { representation: 'date' });
 
   try {
-    // 1. Fetch all active employees
+    // 1. Fetch all active employees with their default schedules
     const { data: employees, error: employeesError } = await supabase
       .from('employees')
-      .select('id, first_name, last_name')
-      .eq('status', 'active'); // Filter for active employees
+      .select('id, first_name, last_name, default_daily_schedules, default_recurrence_interval_weeks, default_start_week_offset')
+      .eq('status', 'active');
     if (employeesError) throw employeesError;
 
     // 2. Fetch all approved absences in the period
@@ -80,63 +90,41 @@ export async function getPlanningDataForWeek(currentDate: Date): Promise<{ succe
       .gte('end_date', start_date_iso);
     if (absencesError) throw absencesError;
 
-    // 3. Fetch assignments for one-time orders in the week
-    const selectString = `
-      *,
-      orders!inner(
-          id, title, order_type, due_date, total_estimated_hours,
-          recurring_start_date, recurring_end_date
-      )
-    `;
-
-    const { data: oneTimeAssignments, error: oneTimeError } = await supabase
-      .from('order_employee_assignments')
-      .select(selectString)
-      .eq('orders.request_status', 'approved')
-      .eq('orders.order_type', 'one_time')
-      .gte('orders.due_date', start_date_iso)
-      .lte('orders.due_date', end_date_iso);
-    if (oneTimeError) throw oneTimeError;
-
-    // 4. Fetch assignments for recurring orders in the week
-    const { data: recurringAssignments, error: recurringError } = await supabase
+    // 3. Fetch all relevant assignments for the week
+    const { data: activeAssignments, error: assignmentsError } = await supabase
       .from('order_employee_assignments')
       .select(`
         *,
         orders!inner(
-            id, title, order_type, due_date, total_estimated_hours,
-            recurring_start_date, recurring_end_date,
-            objects ( recurrence_interval_weeks, start_week_offset, daily_schedules )
+            id, title, order_type, due_date, total_estimated_hours, status,
+            recurring_start_date, recurring_end_date
         )
       `)
       .eq('orders.request_status', 'approved')
-      .in('orders.order_type', ['recurring', 'permanent', 'substitution'])
-      .lte('orders.recurring_start_date', end_date_iso)
-      .or(`recurring_end_date.is.null,recurring_end_date.gte.${start_date_iso}`, { foreignTable: 'orders' });
-    if (recurringError) throw recurringError;
+      .or(`and(orders.order_type.eq.one_time,orders.due_date.gte.${start_date_iso},orders.due_date.lte.${end_date_iso}),and(orders.order_type.in.("recurring","permanent","substitution"),orders.recurring_start_date.lte.${end_date_iso},or(orders.recurring_end_date.is.null,orders.recurring_end_date.gte.${start_date_iso}))`);
+    if (assignmentsError) throw assignmentsError;
 
-    const activeAssignments = [...oneTimeAssignments, ...recurringAssignments];
-
-    // 5. Fetch unassigned orders
+    // 4. Fetch unassigned orders
     const { data: unassignedOrdersData, error: unassignedOrdersError } = await supabase.rpc('get_unassigned_orders');
     if (unassignedOrdersError) throw unassignedOrdersError;
 
-    // 6. Process data
+    // 5. Process data
     const planningData: PlanningData = {};
 
     for (const employee of employees) {
-      planningData[employee.id] = {
-        name: `${employee.first_name} ${employee.last_name}`,
-        schedule: {},
-      };
+      let totalHoursAvailable = 0;
+      let totalHoursPlanned = 0;
 
       const employeeAssignments = activeAssignments.filter(a => a.employee_id === employee.id);
+      const employeeSchedule: EmployeePlanningData['schedule'] = {};
 
       for (const day of weekDays) {
         const dateString = formatISO(day, { representation: 'date' });
         const dayOfWeek = getDay(day); // 0=So, 1=Mo, ...
+        const dayKey = dayNames[dayOfWeek];
 
-        planningData[employee.id].schedule[dateString] = {
+        employeeSchedule[dateString] = {
+          isAvailable: false,
           totalHours: 0,
           isAbsence: false,
           absenceType: null,
@@ -151,9 +139,24 @@ export async function getPlanningDataForWeek(currentDate: Date): Promise<{ succe
         );
 
         if (absence) {
-          planningData[employee.id].schedule[dateString].isAbsence = true;
-          planningData[employee.id].schedule[dateString].absenceType = absence.type;
-          continue; // Skip order processing if absent
+          employeeSchedule[dateString].isAbsence = true;
+          employeeSchedule[dateString].absenceType = absence.type;
+          continue; // Skip further processing for this day
+        }
+
+        // Determine availability and available hours from employee's default schedule
+        const defaultRecurrenceInterval = employee.default_recurrence_interval_weeks || 1;
+        const defaultStartOffset = employee.default_start_week_offset || 0;
+        const daysPassed = differenceInDays(day, startOfWeek(new Date(), { weekStartsOn: 1 }));
+        const weeksPassed = Math.floor(daysPassed / 7);
+        const effectiveWeekIndex = (weeksPassed + defaultStartOffset) % defaultRecurrenceInterval;
+        
+        const defaultWeekSchedule = employee.default_daily_schedules?.[effectiveWeekIndex];
+        const defaultDaySchedule = (defaultWeekSchedule as any)?.[dayKey];
+        
+        if (defaultDaySchedule && defaultDaySchedule.hours > 0) {
+          employeeSchedule[dateString].isAvailable = true;
+          totalHoursAvailable += defaultDaySchedule.hours;
         }
 
         // Process assignments for the current day
@@ -161,7 +164,6 @@ export async function getPlanningDataForWeek(currentDate: Date): Promise<{ succe
           const order = assignment.orders;
           if (!order) continue;
 
-          // Check if the order is active on the current day
           let isOrderActiveToday = false;
           if (order.order_type === 'one_time' && order.due_date && formatISO(parseISO(order.due_date), { representation: 'date' }) === dateString) {
             isOrderActiveToday = true;
@@ -175,55 +177,59 @@ export async function getPlanningDataForWeek(currentDate: Date): Promise<{ succe
           
           if (!isOrderActiveToday) continue;
 
-          // If active, get the hours for this specific day
           let dailyHours = 0;
           let assignedStartTime: string | null = null;
           let assignedEndTime: string | null = null;
-          let recurrenceLabel: string | undefined;
 
           if (order.order_type === 'one_time') {
             dailyHours = order.total_estimated_hours || 0;
           } else {
-            // *** KORRIGIERTE, ROBUSTERE LOGIK FÜR WIEDERHOLUNGEN ***
-            const recurrenceIntervalWeeks = assignment.assigned_recurrence_interval_weeks || order.objects?.[0]?.recurrence_interval_weeks || 1;
-            const startWeekOffset = assignment.assigned_start_week_offset || order.objects?.[0]?.start_week_offset || 0;
-            
+            const recurrenceIntervalWeeks = assignment.assigned_recurrence_interval_weeks || 1;
+            const startWeekOffset = assignment.assigned_start_week_offset || 0;
             const orderStartDate = parseISO(order.recurring_start_date!);
-            const daysPassed = differenceInDays(day, orderStartDate);
+            const daysPassedAssignment = differenceInDays(day, orderStartDate);
             
-            if (daysPassed < 0) continue;
+            if (daysPassedAssignment < 0) continue;
 
-            const weeksPassed = Math.floor(daysPassed / 7);
-            const effectiveWeekIndex = (weeksPassed + startWeekOffset) % recurrenceIntervalWeeks;
+            const weeksPassedAssignment = Math.floor(daysPassedAssignment / 7);
+            const effectiveWeekIndexAssignment = (weeksPassedAssignment + startWeekOffset) % recurrenceIntervalWeeks;
 
             const employeeDailySchedules = assignment.assigned_daily_schedules;
-            if (employeeDailySchedules && employeeDailySchedules.length > effectiveWeekIndex) {
-              const weekSchedule = employeeDailySchedules[effectiveWeekIndex];
-              const daySchedule = (weekSchedule as any)?.[dayNames[dayOfWeek === 0 ? 0 : dayOfWeek]]; // Corrected day index
+            if (employeeDailySchedules && employeeDailySchedules.length > effectiveWeekIndexAssignment) {
+              const weekSchedule = employeeDailySchedules[effectiveWeekIndexAssignment];
+              const daySchedule = (weekSchedule as any)?.[dayKey];
               if (daySchedule) {
                 dailyHours = daySchedule.hours || 0;
                 assignedStartTime = daySchedule.start;
                 assignedEndTime = daySchedule.end;
               }
             }
-            
-            if (recurrenceIntervalWeeks > 1) {
-              recurrenceLabel = `(Alle ${recurrenceIntervalWeeks} Wo.)`;
-            }
           }
 
           if (dailyHours > 0) {
-            planningData[employee.id].schedule[dateString].totalHours += dailyHours;
-            planningData[employee.id].schedule[dateString].assignments.push({
+            employeeSchedule[dateString].totalHours += dailyHours;
+            totalHoursPlanned += dailyHours;
+            employeeSchedule[dateString].assignments.push({
+              id: assignment.id,
+              orderId: order.id,
               title: order.title,
               hours: dailyHours,
               startTime: assignedStartTime,
               endTime: assignedEndTime,
-              recurrence: recurrenceLabel,
+              isRecurring: order.order_type !== 'one_time',
+              isTeam: false, // Placeholder for now
+              status: order.status === 'completed' ? 'completed' : (new Date() > day ? 'pending' : 'future'),
             });
           }
         }
       }
+
+      planningData[employee.id] = {
+        name: `${employee.first_name} ${employee.last_name}`,
+        totalHoursAvailable,
+        totalHoursPlanned,
+        schedule: employeeSchedule,
+      };
     }
 
     const pageData: PlanningPageData = {
