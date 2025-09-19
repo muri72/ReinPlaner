@@ -1,8 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CustomerEditDialog } from "@/components/customer-edit-dialog";
+import { DocumentUploader } from "@/components/document-uploader";
+import { DocumentList } from "@/components/document-list";
+import { Separator } from "@/components/ui/separator";
 
 interface Customer {
   id: string;
@@ -21,6 +25,8 @@ interface CustomerDetailTabsProps {
 }
 
 export function CustomerDetailTabs({ customer }: CustomerDetailTabsProps) {
+  const [documentUpdateKey, setDocumentUpdateKey] = useState(0);
+
   return (
     <Tabs defaultValue="stammdaten" className="w-full">
       <TabsList className="grid w-full grid-cols-5">
@@ -28,7 +34,7 @@ export function CustomerDetailTabs({ customer }: CustomerDetailTabsProps) {
         <TabsTrigger value="auftraege" disabled>Aufträge</TabsTrigger>
         <TabsTrigger value="objekte" disabled>Objekte</TabsTrigger>
         <TabsTrigger value="ansprechpartner" disabled>Ansprechpartner</TabsTrigger>
-        <TabsTrigger value="dokumente" disabled>Dokumente</TabsTrigger>
+        <TabsTrigger value="dokumente">Dokumente</TabsTrigger>
       </TabsList>
       <TabsContent value="stammdaten">
         <Card className="shadow-neumorphic glassmorphism-card">
@@ -66,6 +72,26 @@ export function CustomerDetailTabs({ customer }: CustomerDetailTabsProps) {
                 <p className="whitespace-pre-wrap">{customer.contractual_services || 'Keine spezifischen Vertragsdetails hinterlegt.'}</p>
               </div>
             </div>
+          </CardContent>
+        </Card>
+      </TabsContent>
+      <TabsContent value="dokumente">
+        <Card className="shadow-neumorphic glassmorphism-card">
+          <CardHeader>
+            <CardTitle>Dokumente</CardTitle>
+            <CardDescription>Verwalten Sie Dokumente, die mit diesem Kunden verknüpft sind.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <DocumentUploader 
+              associatedCustomerId={customer.id} 
+              onDocumentUploaded={() => setDocumentUpdateKey(prev => prev + 1)} 
+            />
+            <Separator />
+            <DocumentList 
+              key={documentUpdateKey} 
+              associatedCustomerId={customer.id} 
+              onDocumentChange={() => setDocumentUpdateKey(prev => prev + 1)}
+            />
           </CardContent>
         </Card>
       </TabsContent>

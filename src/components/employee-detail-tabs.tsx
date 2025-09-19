@@ -1,10 +1,14 @@
 "use client";
 
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmployeeEditDialog } from "@/components/employee-edit-dialog";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
+import { DocumentUploader } from "@/components/document-uploader";
+import { DocumentList } from "@/components/document-list";
+import { Separator } from "@/components/ui/separator";
 
 interface Employee {
   id: string;
@@ -36,12 +40,14 @@ interface EmployeeDetailTabsProps {
 }
 
 export function EmployeeDetailTabs({ employee }: EmployeeDetailTabsProps) {
+  const [documentUpdateKey, setDocumentUpdateKey] = useState(0);
+
   return (
     <Tabs defaultValue="stammdaten" className="w-full">
       <TabsList className="grid w-full grid-cols-4">
         <TabsTrigger value="stammdaten">Stammdaten</TabsTrigger>
         <TabsTrigger value="arbeitszeiten" disabled>Arbeitszeiten</TabsTrigger>
-        <TabsTrigger value="dokumente" disabled>Dokumente</TabsTrigger>
+        <TabsTrigger value="dokumente">Dokumente</TabsTrigger>
         <TabsTrigger value="abwesenheiten" disabled>Abwesenheiten</TabsTrigger>
       </TabsList>
       <TabsContent value="stammdaten">
@@ -90,6 +96,26 @@ export function EmployeeDetailTabs({ employee }: EmployeeDetailTabsProps) {
                 <p className="whitespace-pre-wrap">{employee.notes || 'Keine Notizen vorhanden.'}</p>
               </div>
             </div>
+          </CardContent>
+        </Card>
+      </TabsContent>
+      <TabsContent value="dokumente">
+        <Card className="shadow-neumorphic glassmorphism-card">
+          <CardHeader>
+            <CardTitle>Dokumente</CardTitle>
+            <CardDescription>Verwalten Sie Dokumente, die mit diesem Mitarbeiter verknüpft sind.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <DocumentUploader 
+              associatedEmployeeId={employee.id} 
+              onDocumentUploaded={() => setDocumentUpdateKey(prev => prev + 1)} 
+            />
+            <Separator />
+            <DocumentList 
+              key={documentUpdateKey} 
+              associatedEmployeeId={employee.id} 
+              onDocumentChange={() => setDocumentUpdateKey(prev => prev + 1)}
+            />
           </CardContent>
         </Card>
       </TabsContent>
