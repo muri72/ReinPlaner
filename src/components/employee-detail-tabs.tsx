@@ -36,7 +36,7 @@ interface Order {
   objects: { name: string | null } | null;
 }
 
-interface Absence {
+interface AbsenceRequest {
   id: string;
   start_date: string;
   end_date: string;
@@ -71,7 +71,7 @@ interface Employee {
   default_start_week_offset: number;
   time_entries: TimeEntry[];
   orders: Order[];
-  absence_requests: Absence[];
+  absence_requests: AbsenceRequest[];
 }
 
 interface EmployeeDetailTabsProps {
@@ -185,7 +185,7 @@ export function EmployeeDetailTabs({ employee }: EmployeeDetailTabsProps) {
         <Card className="shadow-neumorphic glassmorphism-card">
           <CardHeader>
             <CardTitle>Abwesenheiten</CardTitle>
-            <CardDescription>Eine Liste aller erfassten Abwesenheiten für diesen Mitarbeiter.</CardDescription>
+            <CardDescription>Eine Liste aller Abwesenheitsanträge für diesen Mitarbeiter.</CardDescription>
           </CardHeader>
           <CardContent>
             <EmployeeAbsencesList absences={employee.absence_requests || []} />
