@@ -55,10 +55,10 @@ export function PlanningCalendar({ planningData, unassignedOrders, weekDays, act
 
   return (
     <div className="border rounded-lg shadow-neumorphic glassmorphism-card h-full overflow-auto custom-scrollbar">
-      <Table className="min-w-full border-collapse">
+      <Table className="min-w-full border-collapse table-fixed">
         <TableHeader>
           <TableRow>
-            <TableHead className="sticky left-0 bg-card z-10 min-w-[200px] text-sm">Mitarbeiter</TableHead>
+            <TableHead className="sticky left-0 bg-card z-10 w-[150px] text-sm">Mitarbeiter</TableHead>
             {weekDays.map((day) => (
               <TableHead key={day.toString()} className="text-center text-sm">
                 {format(day, "E dd.", { locale: de })}
