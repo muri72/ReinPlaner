@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DocumentUploader } from "@/components/document-uploader";
 import { DocumentList } from "@/components/document-list";
 import { FileStack } from "lucide-react";
+import Link from "next/link";
 
 interface DisplayObject {
   id: string;
@@ -66,17 +67,6 @@ export function ObjectsGridView({
     }
   };
 
-  const dayNames = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const;
-  const germanDayNames: { [key: string]: string } = {
-    monday: 'Mo',
-    tuesday: 'Di',
-    wednesday: 'Mi',
-    thursday: 'Do',
-    friday: 'Fr',
-    saturday: 'Sa',
-    sunday: 'So',
-  };
-
   if (objects.length === 0 && !query && !customerIdFilter && !priorityFilter && !timeOfDayFilter && !accessMethodFilter) {
     return (
       <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30 shadow-neumorphic glassmorphism-card">
@@ -103,49 +93,47 @@ export function ObjectsGridView({
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
       {objects.map((object) => (
-        <Card key={object.id} className="shadow-neumorphic glassmorphism-card">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-base md:text-lg font-semibold">{object.name}</CardTitle>
-            <div className="flex items-center space-x-2">
-              <RecordDetailsDialog record={object} title={`Details zu Objekt: ${object.name}`} />
-              <ObjectEditDialog object={object} />
+        <Link key={object.id} href={`/dashboard/objects/${object.id}`} className="block hover:scale-[1.02] transition-transform duration-200 ease-in-out">
+          <Card className="shadow-neumorphic glassmorphism-card h-full">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-base md:text-lg font-semibold">{object.name}</CardTitle>
               <DeleteObjectButton objectId={object.id} onDeleteSuccess={onActionSuccess} />
-            </div>
-          </CardHeader>
-          <CardContent className="pt-4 space-y-2 text-sm text-muted-foreground">
-            {object.customer_name && (
-              <p className="text-sm text-muted-foreground">
-                Kunde: {object.customer_name}
-              </p>
-            )}
-            {object.object_leader_first_name && object.object_leader_last_name && (
+            </CardHeader>
+            <CardContent className="pt-4 space-y-2 text-sm text-muted-foreground">
+              {object.customer_name && (
+                <p className="text-sm text-muted-foreground">
+                  Kunde: {object.customer_name}
+                </p>
+              )}
+              {object.object_leader_first_name && object.object_leader_last_name && (
+                <div className="flex items-center text-sm text-muted-foreground">
+                  <UserRound className="mr-2 h-4 w-4 flex-shrink-0" />
+                  <span>Objektleiter: {object.object_leader_first_name} {object.object_leader_last_name}</span>
+                </div>
+              )}
+              {object.address && (
+                <div className="flex items-center text-sm text-muted-foreground">
+                  <MapPin className="mr-2 h-4 w-4 flex-shrink-0" />
+                  <span>{object.address}</span>
+                </div>
+              )}
               <div className="flex items-center text-sm text-muted-foreground">
-                <UserRound className="mr-2 h-4 w-4 flex-shrink-0" />
-                <span>Objektleiter: {object.object_leader_first_name} {object.object_leader_last_name}</span>
+                <Clock className="mr-2 h-4 w-4 flex-shrink-0" />
+                <span>Priorität: <Badge variant={getPriorityBadgeVariant(object.priority)}>{object.priority}</Badge></span>
               </div>
-            )}
-            {object.address && (
               <div className="flex items-center text-sm text-muted-foreground">
-                <MapPin className="mr-2 h-4 w-4 flex-shrink-0" />
-                <span>{object.address}</span>
+                <Key className="mr-2 h-4 w-4 flex-shrink-0" />
+                <span>Zugang: <Badge variant="secondary">{object.access_method}</Badge></span>
               </div>
-            )}
-            <div className="flex items-center text-sm text-muted-foreground">
-              <Clock className="mr-2 h-4 w-4 flex-shrink-0" />
-              <span>Priorität: <Badge variant={getPriorityBadgeVariant(object.priority)}>{object.priority}</Badge></span>
-            </div>
-            <div className="flex items-center text-sm text-muted-foreground">
-              <Key className="mr-2 h-4 w-4 flex-shrink-0" />
-              <span>Zugang: <Badge variant="secondary">{object.access_method}</Badge></span>
-            </div>
-            {object.is_alarm_secured && (
-              <div className="flex items-center text-sm text-muted-foreground">
-                <ShieldCheck className="mr-2 h-4 w-4 flex-shrink-0" />
-                <span>Alarmgesichert</span>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+              {object.is_alarm_secured && (
+                <div className="flex items-center text-sm text-muted-foreground">
+                  <ShieldCheck className="mr-2 h-4 w-4 flex-shrink-0" />
+                  <span>Alarmgesichert</span>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </Link>
       ))}
     </div>
   );

@@ -6,8 +6,9 @@ import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
+import { JSX } from "react";
 
-export default async function EmployeeDetailPage({ params }: { params: { id: string }; searchParams: { [key: string]: string | string[] | undefined } }) {
+export default async function EmployeeDetailPage({ params }: { params: { id: string } }): Promise<JSX.Element> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -30,6 +31,7 @@ export default async function EmployeeDetailPage({ params }: { params: { id: str
       absence_requests ( * )
     `)
     .eq('id', params.id)
+    .order('start_date', { foreignTable: 'absence_requests', ascending: false })
     .single();
 
   if (error || !employee) {
@@ -48,11 +50,6 @@ export default async function EmployeeDetailPage({ params }: { params: { id: str
   // Sort time entries by start_time descending
   if (employee.time_entries) {
     employee.time_entries.sort((a: { start_time: string }, b: { start_time: string }) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime());
-  }
-
-  // Sort absence requests by start_date descending
-  if (employee.absence_requests) {
-    employee.absence_requests.sort((a: { start_date: string }, b: { start_date: string }) => new Date(b.start_date).getTime() - new Date(a.start_date).getTime());
   }
 
   return (

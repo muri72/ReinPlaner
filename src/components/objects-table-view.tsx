@@ -3,11 +3,12 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MapPin, FileText, Clock, Key, Lock, ShieldCheck, UserRound, Building } from "lucide-react"; // Added Building
+import { MapPin, FileText, Clock, Key, Lock, ShieldCheck, UserRound, Building, Eye } from "lucide-react"; // Added Building and Eye
 import { ObjectEditDialog } from "@/components/object-edit-dialog";
 import { DeleteObjectButton } from "@/components/delete-object-button";
 import { PaginationControls } from "@/components/pagination-controls";
 import { RecordDetailsDialog } from "@/components/record-details-dialog"; // Import RecordDetailsDialog
+import Link from "next/link";
 
 interface DisplayObject {
   id: string;
@@ -116,8 +117,11 @@ export function ObjectsTableView({
               </TableCell>
               <TableCell className="text-right">
                 <div className="flex justify-end space-x-1">
-                  <RecordDetailsDialog record={object} title={`Details zu Objekt: ${object.name}`} />
-                  <ObjectEditDialog object={object} />
+                  <Button variant="ghost" size="icon" asChild>
+                    <Link href={`/dashboard/objects/${object.id}`} title="Details anzeigen">
+                      <Eye className="h-4 w-4" />
+                    </Link>
+                  </Button>
                   <DeleteObjectButton objectId={object.id} />
                 </div>
               </TableCell>
