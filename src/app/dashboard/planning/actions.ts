@@ -60,7 +60,7 @@ function calculateBreakMinutesFallback(grossDurationMinutes: number): number {
   return 0;
 }
 
-export async function getPlanningDataForWeek(currentDate: Date): Promise<{ success: boolean; data: PlanningPageData | null; message: string }> {
+export async function getPlanningDataForRange(startDate: Date, endDate: Date): Promise<{ success: boolean; data: PlanningPageData | null; message: string }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -68,11 +68,9 @@ export async function getPlanningDataForWeek(currentDate: Date): Promise<{ succe
     return { success: false, data: null, message: "Benutzer nicht authentifiziert." };
   }
 
-  const start = startOfWeek(currentDate, { weekStartsOn: 1 });
-  const end = endOfWeek(currentDate, { weekStartsOn: 1 });
-  const weekDays = eachDayOfInterval({ start, end });
-  const start_date_iso = formatISO(start, { representation: 'date' });
-  const end_date_iso = formatISO(end, { representation: 'date' });
+  const weekDays = eachDayOfInterval({ start: startDate, end: endDate });
+  const start_date_iso = formatISO(startDate, { representation: 'date' });
+  const end_date_iso = formatISO(endDate, { representation: 'date' });
 
   try {
     // 1. Fetch all active employees with their default schedules

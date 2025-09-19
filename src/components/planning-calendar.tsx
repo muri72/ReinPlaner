@@ -48,9 +48,10 @@ interface PlanningCalendarProps {
   unassignedOrders: UnassignedOrder[];
   weekDays: Date[];
   activeDragId: string | null;
+  showUnassigned: boolean;
 }
 
-export function PlanningCalendar({ planningData, unassignedOrders, weekDays, activeDragId }: PlanningCalendarProps) {
+export function PlanningCalendar({ planningData, unassignedOrders, weekDays, activeDragId, showUnassigned }: PlanningCalendarProps) {
   const employeeIds = Object.keys(planningData);
 
   return (
@@ -68,32 +69,34 @@ export function PlanningCalendar({ planningData, unassignedOrders, weekDays, act
         </TableHeader>
         <TableBody>
           {/* Unassigned Orders Row */}
-          <TableRow>
-            <TableCell className="font-semibold sticky left-0 bg-card z-10 align-top">
-              Unbesetzte Einsätze
-            </TableCell>
-            {weekDays.map((day) => {
-              const dateString = format(day, "yyyy-MM-dd");
-              const ordersForDay = unassignedOrders.filter(
-                (order) => order.due_date && format(parseISO(order.due_date), "yyyy-MM-dd") === dateString
-              );
-              const droppableId = `unassigned__${dateString}`;
-              return (
-                <DroppableCell
-                  key={dateString}
-                  id={droppableId}
-                  isOver={activeDragId !== null && droppableId === (activeDragId as string)}
-                  isAvailable={true}
-                >
-                  <div className="space-y-1">
-                    {ordersForDay.map((order) => (
-                      <DraggableOrderCard key={order.id} order={order} />
-                    ))}
-                  </div>
-                </DroppableCell>
-              );
-            })}
-          </TableRow>
+          {showUnassigned && (
+            <TableRow>
+              <TableCell className="font-semibold sticky left-0 bg-card z-10 align-top">
+                Unbesetzte Einsätze
+              </TableCell>
+              {weekDays.map((day) => {
+                const dateString = format(day, "yyyy-MM-dd");
+                const ordersForDay = unassignedOrders.filter(
+                  (order) => order.due_date && format(parseISO(order.due_date), "yyyy-MM-dd") === dateString
+                );
+                const droppableId = `unassigned__${dateString}`;
+                return (
+                  <DroppableCell
+                    key={dateString}
+                    id={droppableId}
+                    isOver={activeDragId !== null && droppableId === (activeDragId as string)}
+                    isAvailable={true}
+                  >
+                    <div className="space-y-1">
+                      {ordersForDay.map((order) => (
+                        <DraggableOrderCard key={order.id} order={order} />
+                      ))}
+                    </div>
+                  </DroppableCell>
+                );
+              })}
+            </TableRow>
+          )}
 
           {/* Employee Rows */}
           {employeeIds.length === 0 ? (
