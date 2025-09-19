@@ -33,6 +33,12 @@ export default function PlanningPage() {
     fetchData(currentDate);
   }, [currentDate, fetchData]);
 
+  const weekDays = React.useMemo(() => {
+    const start = startOfWeek(currentDate, { weekStartsOn: 1 });
+    const end = endOfWeek(currentDate, { weekStartsOn: 1 });
+    return eachDayOfInterval({ start, end });
+  }, [currentDate]);
+
   const handleDragEnd = async (event: DragEndEvent) => {
     setActiveDragId(null);
     const { active, over } = event;
@@ -77,11 +83,7 @@ export default function PlanningPage() {
             ) : (
               <PlanningCalendar
                 planningData={planningPageData?.planningData || {}}
-                weekDays={React.useMemo(() => {
-                  const start = startOfWeek(currentDate, { weekStartsOn: 1 });
-                  const end = endOfWeek(currentDate, { weekStartsOn: 1 });
-                  return eachDayOfInterval({ start, end });
-                }, [currentDate])}
+                weekDays={weekDays}
                 activeDragId={activeDragId}
               />
             )}
