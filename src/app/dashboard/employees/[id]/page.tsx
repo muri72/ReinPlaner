@@ -6,8 +6,9 @@ import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
+import React from "react";
 
-export default async function EmployeeDetailPage({ params }: { params: { id: string } }) {
+export default async function EmployeeDetailPage({ params }: { params: { id: string } }): Promise<React.ReactElement> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
