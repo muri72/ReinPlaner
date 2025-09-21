@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { assignOrderToEmployee } from "./actions";
 import { startOfWeek, endOfWeek, eachDayOfInterval, startOfMonth, endOfMonth, startOfDay, endOfDay } from "date-fns";
 import { createClient } from "@/lib/supabase/client"; // Import supabase client
+import { useSearchParams } from "next/navigation";
 
 export default function PlanningPage() {
   const [currentDate, setCurrentDate] = React.useState(new Date());
@@ -20,6 +21,8 @@ export default function PlanningPage() {
   const [activeDragId, setActiveDragId] = React.useState<string | null>(null);
   const [currentUser, setCurrentUser] = React.useState<any>(null);
   const [isAdmin, setIsAdmin] = React.useState(false);
+  const searchParams = useSearchParams();
+  const query = searchParams.get('query') || '';
 
   const { startDate, endDate, daysToDisplay } = React.useMemo(() => {
     let start, end;
@@ -41,7 +44,7 @@ export default function PlanningPage() {
     return { startDate: start, endDate: end, daysToDisplay: eachDayOfInterval({ start, end }) };
   }, [currentDate, viewMode]);
 
-  const fetchData = React.useCallback(async (start: Date, end: Date) => {
+  const fetchData = React.useCallback(async (start: Date, end: Date, searchQuery: string) => {
     setLoading(true);
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -51,7 +54,7 @@ export default function PlanningPage() {
       setIsAdmin(profile?.role === 'admin');
     }
 
-    const result = await getPlanningDataForRange(start, end);
+    const result = await getPlanningDataForRange(start, end, { query: searchQuery });
     if (result.success) {
       setPlanningPageData(result.data);
     } else {
@@ -62,8 +65,8 @@ export default function PlanningPage() {
   }, []);
 
   React.useEffect(() => {
-    fetchData(startDate, endDate);
-  }, [startDate, endDate, fetchData]);
+    fetchData(startDate, endDate, query);
+  }, [startDate, endDate, query, fetchData]);
 
   const handleDragEnd = async (event: DragEndEvent) => {
     setActiveDragId(null);
@@ -78,7 +81,7 @@ export default function PlanningPage() {
         const result = await assignOrderToEmployee(orderId, employeeId, dateString, null);
         if (result.success) {
           toast.success(result.message);
-          fetchData(startDate, endDate); // Re-fetch data after successful assignment
+          fetchData(startDate, endDate, query); // Re-fetch data after successful assignment
         } else {
           toast.error(result.message);
         }
@@ -101,7 +104,7 @@ export default function PlanningPage() {
           onShowUnassignedChange={setShowUnassigned}
           currentUserId={currentUser?.id}
           isAdmin={isAdmin}
-          onActionSuccess={() => fetchData(startDate, endDate)}
+          onActionSuccess={() => fetchData(startDate, endDate, query)}
         />
         <div className="flex-grow min-h-0">
           {loading ? (

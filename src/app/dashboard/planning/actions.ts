@@ -60,7 +60,7 @@ function calculateBreakMinutesFallback(grossDurationMinutes: number): number {
   return 0;
 }
 
-export async function getPlanningDataForRange(startDate: Date, endDate: Date): Promise<{ success: boolean; data: PlanningPageData | null; message: string }> {
+export async function getPlanningDataForRange(startDate: Date, endDate: Date, filters: { query?: string }): Promise<{ success: boolean; data: PlanningPageData | null; message: string }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -73,11 +73,17 @@ export async function getPlanningDataForRange(startDate: Date, endDate: Date): P
   const end_date_iso = formatISO(endDate, { representation: 'date' });
 
   try {
-    // 1. Fetch all active employees with their default schedules
-    const { data: employees, error: employeesError } = await supabase
+    // 1. Fetch all active employees with their default schedules, applying search filter
+    let employeesQuery = supabase
       .from('employees')
       .select('id, first_name, last_name, default_daily_schedules, default_recurrence_interval_weeks, default_start_week_offset')
       .eq('status', 'active');
+
+    if (filters.query) {
+      employeesQuery = employeesQuery.or(`first_name.ilike.%${filters.query}%,last_name.ilike.%${filters.query}%`);
+    }
+
+    const { data: employees, error: employeesError } = await employeesQuery;
     if (employeesError) throw employeesError;
 
     // 2. Fetch all approved absences in the period
