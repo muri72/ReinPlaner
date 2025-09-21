@@ -35,15 +35,24 @@ export function AssignmentCard({ assignment }: AssignmentCardProps) {
   const colorClass = assignment.serviceType ? serviceTypeColors[assignment.serviceType] || defaultColor : defaultColor;
 
   return (
-    <div className={cn("p-1.5 rounded-md border shadow-sm cursor-pointer hover:bg-card/80", colorClass)}>
-      <div className="ml-1">
-        <p className="font-semibold text-xs truncate">{assignment.objectName || assignment.title}</p>
-        <div className="flex items-center justify-between text-xs mt-1">
-          <div className="flex items-center gap-1">
-            <Clock className="h-3 w-3" />
-            <span>{assignment.startTime || 'N/A'} - {assignment.endTime || 'N/A'}</span>
-          </div>
-          <Badge variant="secondary" className="px-1 py-0 text-xs bg-white/50 dark:bg-black/20">{assignment.serviceType || 'Allgemein'}</Badge>
+    <div className={cn("p-2 rounded-lg border shadow-sm cursor-pointer hover:bg-card/80 flex flex-col h-full", colorClass)}>
+      {/* Top: Object Name */}
+      <p className="font-semibold text-xs truncate">{assignment.objectName || assignment.title}</p>
+      
+      {/* Bottom: Time and Service Type */}
+      <div className="flex flex-grow items-center justify-between mt-1">
+        {/* Left: Time */}
+        <div className="flex flex-col items-center text-xs text-muted-foreground">
+          <span>{assignment.startTime || '--:--'}</span>
+          <Clock className="h-3 w-3 my-0.5" />
+          <span>{assignment.endTime || '--:--'}</span>
+        </div>
+        
+        {/* Right: Service Type */}
+        <div className="flex items-center">
+          <Badge variant="secondary" className="px-2 py-1 text-xs bg-white/70 dark:bg-black/30 shadow">
+            {assignment.serviceType || 'Allgemein'}
+          </Badge>
         </div>
       </div>
     </div>
