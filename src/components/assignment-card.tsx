@@ -2,8 +2,9 @@
 
 import * as React from "react";
 import { cn } from "@/lib/utils";
-import { Clock, Repeat, Users, GripVertical } from "lucide-react";
+import { Clock, Repeat, Users } from "lucide-react";
 import { useDraggable } from "@dnd-kit/core";
+import { Badge } from "@/components/ui/badge";
 
 interface Assignment {
   id: string;
@@ -22,13 +23,22 @@ interface AssignmentCardProps {
   assignment: Assignment;
 }
 
-const serviceTypeColors: { [key: string]: string } = {
-  "Unterhaltsreinigung": "bg-blue-100 border-blue-500 text-blue-800 dark:bg-blue-900/50 dark:border-blue-700 dark:text-blue-200",
-  "Glasreinigung": "bg-cyan-100 border-cyan-500 text-cyan-800 dark:bg-cyan-900/50 dark:border-cyan-700 dark:text-cyan-200",
-  "Grundreinigung": "bg-green-100 border-green-500 text-green-800 dark:bg-green-900/50 dark:border-green-700 dark:text-green-200",
-  "Graffitientfernung": "bg-orange-100 border-orange-500 text-orange-800 dark:bg-orange-900/50 dark:border-orange-700 dark:text-orange-200",
-  "Sonderreinigung": "bg-purple-100 border-purple-500 text-purple-800 dark:bg-purple-900/50 dark:border-purple-700 dark:text-purple-200",
-  "default": "bg-gray-100 border-gray-500 text-gray-800 dark:bg-gray-900/50 dark:border-gray-700 dark:text-gray-200",
+const serviceTypeBadgeColors: { [key: string]: string } = {
+  "Unterhaltsreinigung": "bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200",
+  "Glasreinigung": "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-200",
+  "Grundreinigung": "bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200",
+  "Graffitientfernung": "bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-200",
+  "Sonderreinigung": "bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-200",
+  "default": "bg-gray-100 text-gray-800 dark:bg-gray-900/50 dark:text-gray-200",
+};
+
+const serviceTypeDotColors: { [key: string]: string } = {
+    "Unterhaltsreinigung": "bg-green-500",
+    "Glasreinigung": "bg-yellow-500",
+    "Grundreinigung": "bg-blue-500",
+    "Graffitientfernung": "bg-orange-500",
+    "Sonderreinigung": "bg-purple-500",
+    "default": "bg-gray-500",
 };
 
 export function AssignmentCard({ assignment }: AssignmentCardProps) {
@@ -51,36 +61,36 @@ export function AssignmentCard({ assignment }: AssignmentCardProps) {
     }
   };
 
-  const serviceColorClass = serviceTypeColors[assignment.service_type || 'default'] || serviceTypeColors.default;
+  const badgeColorClass = serviceTypeBadgeColors[assignment.service_type || 'default'] || serviceTypeBadgeColors.default;
+  const dotColorClass = serviceTypeDotColors[assignment.service_type || 'default'] || serviceTypeDotColors.default;
 
   return (
     <div
       ref={setNodeRef}
       style={style}
+      {...listeners}
+      {...attributes}
       className={cn(
-        "p-1 rounded-md border bg-card text-card-foreground shadow-sm relative touch-none",
-        isDragging && "shadow-lg opacity-75",
-        serviceColorClass
+        "p-2 rounded-md border bg-card text-card-foreground shadow-sm relative cursor-grab active:cursor-grabbing touch-none",
+        isDragging && "shadow-lg opacity-75"
       )}
     >
       <div className={cn("absolute left-0 top-0 bottom-0 w-1 rounded-l-md", getStatusColor())} />
-      <div className="ml-2 flex items-center">
-        <div {...listeners} {...attributes} className="p-0.5 cursor-grab active:cursor-grabbing">
-          <GripVertical className="h-4 w-4 text-muted-foreground" />
-        </div>
-        <div className="flex-grow min-w-0">
-          <p className="font-medium text-xs truncate">{assignment.title}</p>
-          <div className="flex items-center justify-between text-xs text-muted-foreground mt-0.5">
-            <div className="flex items-center gap-1 truncate">
-              <Clock className="h-3 w-3 flex-shrink-0" />
-              <span className="truncate">{assignment.startTime || 'N/A'} - {assignment.endTime || 'N/A'}</span>
-            </div>
-            <div className="flex items-center gap-1.5 flex-shrink-0">
-              {assignment.isRecurring && <Repeat className="h-3 w-3" />}
-              {assignment.isTeam && <Users className="h-3 w-3" />}
-            </div>
+      <div className="ml-2 space-y-1">
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <span>{assignment.startTime || 'N/A'} → {assignment.endTime || 'N/A'}</span>
+          <div className="flex items-center gap-1.5">
+            {assignment.isTeam && <Users className="h-3 w-3" />}
+            {assignment.isRecurring && <Repeat className="h-3 w-3" />}
           </div>
         </div>
+        <p className="font-semibold text-sm truncate">{assignment.title}</p>
+        {assignment.service_type && (
+          <Badge variant="outline" className={cn("text-xs font-normal border-none", badgeColorClass)}>
+            <span className={cn("h-2 w-2 rounded-full mr-1.5", dotColorClass)} />
+            {assignment.service_type}
+          </Badge>
+        )}
       </div>
     </div>
   );
