@@ -14,6 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+import { TimeEntryCreateDialog } from "@/components/time-entry-create-dialog";
 
 interface PlanningToolbarProps {
   currentDate: Date;
@@ -22,6 +23,9 @@ interface PlanningToolbarProps {
   onViewModeChange: (mode: 'day' | 'week' | 'month') => void;
   showUnassigned: boolean;
   onShowUnassignedChange: (show: boolean) => void;
+  currentUserId?: string;
+  isAdmin?: boolean;
+  onActionSuccess?: () => void;
 }
 
 export function PlanningToolbar({
@@ -31,6 +35,9 @@ export function PlanningToolbar({
   onViewModeChange,
   showUnassigned,
   onShowUnassignedChange,
+  currentUserId,
+  isAdmin,
+  onActionSuccess,
 }: PlanningToolbarProps) {
 
   const handlePrev = () => {
@@ -116,7 +123,14 @@ export function PlanningToolbar({
             </DropdownMenuRadioGroup>
           </DropdownMenuContent>
         </DropdownMenu>
-        <Button>Neuer Einsatz</Button>
+        {currentUserId && isAdmin !== undefined && (
+          <TimeEntryCreateDialog
+            currentUserId={currentUserId}
+            isAdmin={isAdmin}
+            onEntryCreated={onActionSuccess}
+            triggerButtonText="Neuer Einsatz"
+          />
+        )}
       </div>
     </div>
   );

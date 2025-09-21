@@ -9,6 +9,7 @@ import { PlanningCalendar } from "@/components/planning-calendar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { assignOrderToEmployee } from "./actions";
 import { startOfWeek, endOfWeek, eachDayOfInterval, startOfMonth, endOfMonth, startOfDay, endOfDay } from "date-fns";
+import { createClient } from "@/lib/supabase/client"; // Import supabase client
 
 export default function PlanningPage() {
   const [currentDate, setCurrentDate] = React.useState(new Date());
@@ -17,6 +18,8 @@ export default function PlanningPage() {
   const [planningPageData, setPlanningPageData] = React.useState<PlanningPageData | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [activeDragId, setActiveDragId] = React.useState<string | null>(null);
+  const [currentUser, setCurrentUser] = React.useState<any>(null);
+  const [isAdmin, setIsAdmin] = React.useState(false);
 
   const { startDate, endDate, daysToDisplay } = React.useMemo(() => {
     let start, end;
@@ -40,6 +43,14 @@ export default function PlanningPage() {
 
   const fetchData = React.useCallback(async (start: Date, end: Date) => {
     setLoading(true);
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      setCurrentUser(user);
+      const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
+      setIsAdmin(profile?.role === 'admin');
+    }
+
     const result = await getPlanningDataForRange(start, end);
     if (result.success) {
       setPlanningPageData(result.data);
@@ -88,6 +99,9 @@ export default function PlanningPage() {
           onViewModeChange={setViewMode}
           showUnassigned={showUnassigned}
           onShowUnassignedChange={setShowUnassigned}
+          currentUserId={currentUser?.id}
+          isAdmin={isAdmin}
+          onActionSuccess={() => fetchData(startDate, endDate)}
         />
         <div className="flex-grow min-h-0">
           {loading ? (
