@@ -25,7 +25,7 @@ interface AssignmentCardProps {
 
 const serviceTypeBadgeColors: { [key: string]: string } = {
   "Unterhaltsreinigung": "bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200",
-  "Glasreinigung": "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-200",
+  "Glasreinigung": "bg-cyan-100 text-cyan-800 dark:bg-cyan-900/50 dark:text-cyan-200",
   "Grundreinigung": "bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200",
   "Graffitientfernung": "bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-200",
   "Sonderreinigung": "bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-200",
@@ -34,7 +34,7 @@ const serviceTypeBadgeColors: { [key: string]: string } = {
 
 const serviceTypeDotColors: { [key: string]: string } = {
     "Unterhaltsreinigung": "bg-green-500",
-    "Glasreinigung": "bg-yellow-500",
+    "Glasreinigung": "bg-cyan-500",
     "Grundreinigung": "bg-blue-500",
     "Graffitientfernung": "bg-orange-500",
     "Sonderreinigung": "bg-purple-500",
@@ -54,10 +54,10 @@ export function AssignmentCard({ assignment }: AssignmentCardProps) {
 
   const getStatusColor = () => {
     switch (assignment.status) {
-      case 'completed': return 'bg-green-500';
-      case 'pending': return 'bg-red-500';
+      case 'completed': return 'border-green-500';
+      case 'pending': return 'border-red-500';
       case 'future':
-      default: return 'bg-blue-500';
+      default: return 'border-blue-500';
     }
   };
 
@@ -71,27 +71,25 @@ export function AssignmentCard({ assignment }: AssignmentCardProps) {
       {...listeners}
       {...attributes}
       className={cn(
-        "p-2 rounded-md border bg-card text-card-foreground shadow-sm relative cursor-grab active:cursor-grabbing touch-none",
+        "p-2 rounded-md border-l-4 bg-card text-card-foreground shadow-sm cursor-grab active:cursor-grabbing touch-none space-y-1",
+        getStatusColor(),
         isDragging && "shadow-lg opacity-75"
       )}
     >
-      <div className={cn("absolute left-0 top-0 bottom-0 w-1 rounded-l-md", getStatusColor())} />
-      <div className="ml-2 space-y-1">
-        <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <span>{assignment.startTime || 'N/A'} → {assignment.endTime || 'N/A'}</span>
-          <div className="flex items-center gap-1.5">
-            {assignment.isTeam && <Users className="h-3 w-3" />}
-            {assignment.isRecurring && <Repeat className="h-3 w-3" />}
-          </div>
+      <div className="flex items-center justify-between text-xs text-muted-foreground">
+        <span>{assignment.startTime || 'N/A'} → {assignment.endTime || 'N/A'}</span>
+        <div className="flex items-center gap-1.5">
+          {assignment.isTeam && <Users className="h-3 w-3" />}
+          {assignment.isRecurring && <Repeat className="h-3 w-3" />}
         </div>
-        <p className="font-semibold text-sm truncate">{assignment.title}</p>
-        {assignment.service_type && (
-          <Badge variant="outline" className={cn("text-xs font-normal border-none", badgeColorClass)}>
-            <span className={cn("h-2 w-2 rounded-full mr-1.5", dotColorClass)} />
-            {assignment.service_type}
-          </Badge>
-        )}
       </div>
+      <p className="font-bold text-sm truncate">{assignment.title}</p>
+      {assignment.service_type && (
+        <Badge variant="outline" className={cn("text-xs font-normal border-none w-full justify-start", badgeColorClass)}>
+          <span className={cn("h-2 w-2 rounded-full mr-1.5", dotColorClass)} />
+          <span className="truncate">{assignment.service_type}</span>
+        </Badge>
+      )}
     </div>
   );
 }

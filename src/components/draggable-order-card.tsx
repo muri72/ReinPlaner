@@ -12,7 +12,7 @@ interface DraggableOrderCardProps {
 
 const serviceTypeBadgeColors: { [key: string]: string } = {
   "Unterhaltsreinigung": "bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200",
-  "Glasreinigung": "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-200",
+  "Glasreinigung": "bg-cyan-100 text-cyan-800 dark:bg-cyan-900/50 dark:text-cyan-200",
   "Grundreinigung": "bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200",
   "Graffitientfernung": "bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-200",
   "Sonderreinigung": "bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-200",
@@ -21,7 +21,7 @@ const serviceTypeBadgeColors: { [key: string]: string } = {
 
 const serviceTypeDotColors: { [key: string]: string } = {
     "Unterhaltsreinigung": "bg-green-500",
-    "Glasreinigung": "bg-yellow-500",
+    "Glasreinigung": "bg-cyan-500",
     "Grundreinigung": "bg-blue-500",
     "Graffitientfernung": "bg-orange-500",
     "Sonderreinigung": "bg-purple-500",
@@ -49,22 +49,20 @@ export function DraggableOrderCard({ order }: DraggableOrderCardProps) {
       {...listeners}
       {...attributes}
       className={cn(
-        "p-2 rounded-md border bg-card text-card-foreground shadow-sm relative cursor-grab active:cursor-grabbing touch-none",
+        "p-2 rounded-md border-l-4 border-muted bg-card text-card-foreground shadow-sm cursor-grab active:cursor-grabbing touch-none space-y-1",
         isDragging && "shadow-lg opacity-75"
       )}
     >
-      <div className="space-y-1">
-        <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <span>{order.total_estimated_hours ? `${Number(order.total_estimated_hours).toFixed(2)}h` : 'N/A'}</span>
-        </div>
-        <p className="font-semibold text-sm truncate">{order.title}</p>
-        {order.service_type && (
-          <Badge variant="outline" className={cn("text-xs font-normal border-none", badgeColorClass)}>
-            <span className={cn("h-2 w-2 rounded-full mr-1.5", dotColorClass)} />
-            {order.service_type}
-          </Badge>
-        )}
+      <div className="flex items-center justify-between text-xs text-muted-foreground">
+        <span>{order.total_estimated_hours ? `${Number(order.total_estimated_hours).toFixed(2)}h` : 'N/A'}</span>
       </div>
+      <p className="font-bold text-sm truncate">{order.title}</p>
+      {order.service_type && (
+        <Badge variant="outline" className={cn("text-xs font-normal border-none w-full justify-start", badgeColorClass)}>
+          <span className={cn("h-2 w-2 rounded-full mr-1.5", dotColorClass)} />
+          <span className="truncate">{order.service_type}</span>
+        </Badge>
+      )}
     </div>
   );
 }
