@@ -107,9 +107,8 @@ export function PlanningToolbar({
       </div>
       <div className="flex items-center gap-2">
         <SearchInput placeholder="Mitarbeiter suchen..." className="w-full sm:w-auto" />
-        <Button variant="outline" size="sm" className="h-9" disabled>
-          <Filter className="mr-2 h-4 w-4" />
-          Filter
+        <Button variant="outline" size="icon" disabled>
+          <Filter className="h-4 w-4" />
         </Button>
         <Button variant="outline" size="icon" onClick={() => onShowUnassignedChange(!showUnassigned)}>
           {showUnassigned ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
@@ -131,7 +130,7 @@ export function PlanningToolbar({
             currentUserId={currentUserId}
             isAdmin={isAdmin}
             onEntryCreated={onActionSuccess}
-            triggerButtonText="Einsatz Erstellen"
+            triggerButtonText="Neuer Einsatz"
           />
         )}
       </div>

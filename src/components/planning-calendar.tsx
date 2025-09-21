@@ -12,7 +12,6 @@ import { PlanningData, UnassignedOrder } from "@/app/dashboard/planning/actions"
 import { EmployeeWorkloadBar } from "./employee-workload-bar";
 import { AssignmentCard } from "./assignment-card";
 import { DraggableOrderCard } from "./draggable-order-card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const absenceTypeTranslations: { [key: string]: string } = {
   vacation: "Urlaub",
@@ -112,16 +111,7 @@ export function PlanningCalendar({ planningData, unassignedOrders, weekDays, act
               return (
                 <TableRow key={id}>
                   <TableCell className="font-normal sticky left-0 bg-card z-10 align-top">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Avatar className="h-8 w-8">
-                        <AvatarImage src={employee.avatarUrl || undefined} />
-                        <AvatarFallback>{employee.name.charAt(0)}</AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <div className="text-sm font-semibold">{employee.name}</div>
-                        <div className="text-xs text-muted-foreground">{employee.jobTitle || 'Mitarbeiter'}</div>
-                      </div>
-                    </div>
+                    <div className="text-sm font-semibold">{employee.name}</div>
                     <EmployeeWorkloadBar
                       planned={employee.totalHoursPlanned}
                       available={employee.totalHoursAvailable}

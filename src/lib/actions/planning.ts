@@ -3,48 +3,30 @@
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { sendNotification } from "@/lib/actions/notifications";
-import { startOfWeek, endOfWeek, eachDayOfInterval, formatISO, parseISO, getDay, differenceInDays } from 'date-fns';
+import { startOfWeek, endOfWeek, eachDayOfInterval, formatISO, parseISO, getDay } from 'date-fns';
 
-export interface EmployeePlanningData {
-  name: string;
-  jobTitle: string | null;
-  avatarUrl: string | null;
-  totalHoursAvailable: number;
-  totalHoursPlanned: number;
-  schedule: {
-    [date: string]: { // YYYY-MM-DD
-      isAvailable: boolean;
-      totalHours: number;
-      isAbsence: boolean;
-      absenceType: string | null;
-      assignments: {
-        id: string; // Assignment ID
-        orderId: string; // Order ID
-        title: string;
-        startTime: string | null;
-        endTime: string | null;
-        hours: number;
-        isRecurring: boolean;
-        isTeam: boolean;
-        status: 'completed' | 'pending' | 'future';
-        objectName: string | null;
-        serviceType: string | null;
-      }[];
+export interface PlanningData {
+  [employeeId: string]: {
+    name: string;
+    schedule: {
+      [date: string]: { // YYYY-MM-DD
+        totalHours: number;
+        isAbsence: boolean;
+        absenceType: string | null;
+        assignments: {
+          title: string;
+          hours: number;
+        }[];
+      };
     };
   };
 }
 
-export interface PlanningData {
-  [employeeId: string]: EmployeePlanningData;
-}
-
-
 export interface UnassignedOrder {
   id: string;
   title: string;
-  total_estimated_hours: number | null;
+  total_estimated_hours: number | null; // Corrected column name
   service_type: string | null;
-  due_date: string | null; // Hinzugefügt
 }
 
 export interface PlanningPageData {
@@ -52,19 +34,7 @@ export interface PlanningPageData {
   unassignedOrders: UnassignedOrder[];
 }
 
-const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as const;
-
-// Helper function to calculate break minutes based on gross duration (same as in reports/actions.ts)
-function calculateBreakMinutesFallback(grossDurationMinutes: number): number {
-  if (grossDurationMinutes >= 9 * 60) { // More than 9 hours (540 minutes)
-    return 45;
-  } else if (grossDurationMinutes >= 6 * 60) { // More than 6 hours (360 minutes)
-    return 30;
-  }
-  return 0;
-}
-
-export async function getPlanningDataForRange(startDate: Date, endDate: Date, filters: { query?: string }): Promise<{ success: boolean; data: PlanningPageData | null; message: string }> {
+export async function getPlanningDataForWeek(currentDate: Date): Promise<{ success: boolean; data: PlanningPageData | null; message: string }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -72,87 +42,69 @@ export async function getPlanningDataForRange(startDate: Date, endDate: Date, fi
     return { success: false, data: null, message: "Benutzer nicht authentifiziert." };
   }
 
-  const weekDays = eachDayOfInterval({ start: startDate, end: endDate });
-  const start_date_iso = formatISO(startDate, { representation: 'date' });
-  const end_date_iso = formatISO(endDate, { representation: 'date' });
+  const start = startOfWeek(currentDate, { weekStartsOn: 1 });
+  const end = endOfWeek(currentDate, { weekStartsOn: 1 });
+  const weekDays = eachDayOfInterval({ start, end });
 
   try {
-    // 1. Fetch all active employees with their default schedules, applying search filter
-    let employeesQuery = supabase
+    // 1. Alle Mitarbeiter abrufen
+    const { data: employees, error: employeesError } = await supabase
       .from('employees')
-      .select('id, first_name, last_name, job_title, user_id, default_daily_schedules, default_recurrence_interval_weeks, default_start_week_offset')
-      .eq('status', 'active');
-
-    if (filters.query) {
-      employeesQuery = employeesQuery.or(`first_name.ilike.%${filters.query}%,last_name.ilike.%${filters.query}%`);
-    }
-
-    const { data: employees, error: employeesError } = await employeesQuery;
+      .select('id, first_name, last_name');
     if (employeesError) throw employeesError;
 
-    // Fetch profiles for these employees
-    const userIds = employees.map(e => e.user_id).filter((id): id is string => id !== null);
-    const { data: profiles, error: profilesError } = await supabase
-        .from('profiles')
-        .select('id, avatar_url')
-        .in('id', userIds);
-    if (profilesError) throw profilesError;
-    const profilesMap = new Map(profiles.map(p => [p.id, p.avatar_url]));
+    // 2. Alle relevanten Aufträge abrufen (alle Typen mit Mitarbeiter)
+    const { data: orders, error: ordersError } = await supabase
+      .from('orders')
+      .select(`
+        title,
+        order_type,
+        due_date,
+        total_estimated_hours,
+        recurring_start_date,
+        recurring_end_date,
+        objects (
+          monday_hours, tuesday_hours, wednesday_hours, thursday_hours,
+          friday_hours, saturday_hours, sunday_hours
+        ),
+        order_employee_assignments ( employee_id )
+      `)
+      .not('order_employee_assignments.employee_id', 'is', null); // Filter by assignment table
+    if (ordersError) throw ordersError;
 
-    // 2. Fetch all approved absences in the period
+    // 3. Alle genehmigten Abwesenheiten im Zeitraum abrufen
     const { data: absences, error: absencesError } = await supabase
       .from('absence_requests')
       .select('employee_id, start_date, end_date, type')
       .eq('status', 'approved')
-      .lte('start_date', end_date_iso)
-      .gte('end_date', start_date_iso);
+      .lte('start_date', formatISO(end, { representation: 'date' }))
+      .gte('end_date', formatISO(start, { representation: 'date' }));
     if (absencesError) throw absencesError;
 
-    // 3. Fetch all relevant assignments for the week
-    const filterString = `and(order_type.eq.one_time,due_date.gte.${start_date_iso},due_date.lte.${end_date_iso}),and(order_type.in.("recurring","permanent","substitution"),recurring_start_date.lte.${end_date_iso},or(recurring_end_date.is.null,recurring_end_date.gte.${start_date_iso}))`;
-    const { data: activeAssignments, error: assignmentsError } = await supabase
-      .from('order_employee_assignments')
-      .select(`
-        *,
-        orders!inner(
-            id, title, order_type, due_date, total_estimated_hours, status,
-            recurring_start_date, recurring_end_date, service_type,
-            objects ( name )
-        )
-      `)
-      .eq('orders.request_status', 'approved')
-      .or(filterString, { referencedTable: 'orders' });
-    if (assignmentsError) throw assignmentsError;
-
-    // 4. Fetch unassigned orders
+    // 4. NEU: Ungeplante Aufträge über RPC-Funktion abrufen
     const { data: unassignedOrdersData, error: unassignedOrdersError } = await supabase.rpc('get_unassigned_orders');
     if (unassignedOrdersError) throw unassignedOrdersError;
 
-    // 5. Process data
+    // 5. Daten verarbeiten
     const planningData: PlanningData = {};
 
     for (const employee of employees) {
-      let totalHoursAvailable = 0;
-      let totalHoursPlanned = 0;
-      const avatarUrl = employee.user_id ? profilesMap.get(employee.user_id) || null : null;
-
-      const employeeAssignments = activeAssignments.filter(a => a.employee_id === employee.id);
-      const employeeSchedule: EmployeePlanningData['schedule'] = {};
+      planningData[employee.id] = {
+        name: `${employee.first_name} ${employee.last_name}`,
+        schedule: {},
+      };
 
       for (const day of weekDays) {
         const dateString = formatISO(day, { representation: 'date' });
         const dayOfWeek = getDay(day); // 0=So, 1=Mo, ...
-        const dayKey = dayNames[dayOfWeek];
 
-        employeeSchedule[dateString] = {
-          isAvailable: false,
+        planningData[employee.id].schedule[dateString] = {
           totalHours: 0,
           isAbsence: false,
           absenceType: null,
           assignments: [],
         };
 
-        // Check for absence first
         const absence = absences.find(a =>
           a.employee_id === employee.id &&
           parseISO(a.start_date) <= day &&
@@ -160,102 +112,55 @@ export async function getPlanningDataForRange(startDate: Date, endDate: Date, fi
         );
 
         if (absence) {
-          employeeSchedule[dateString].isAbsence = true;
-          employeeSchedule[dateString].absenceType = absence.type;
-          continue; // Skip further processing for this day
+          planningData[employee.id].schedule[dateString].isAbsence = true;
+          planningData[employee.id].schedule[dateString].absenceType = absence.type;
+          continue;
         }
 
-        // Determine availability and available hours from employee's default schedule
-        const defaultRecurrenceInterval = employee.default_recurrence_interval_weeks || 1;
-        const defaultStartOffset = employee.default_start_week_offset || 0;
-        const daysPassed = differenceInDays(day, startOfWeek(new Date(), { weekStartsOn: 1 }));
-        const weeksPassed = Math.floor(daysPassed / 7);
-        const effectiveWeekIndex = (weeksPassed + defaultStartOffset) % defaultRecurrenceInterval;
-        
-        const defaultWeekSchedule = employee.default_daily_schedules?.[effectiveWeekIndex];
-        const defaultDaySchedule = (defaultWeekSchedule as any)?.[dayKey];
-        
-        if (defaultDaySchedule && defaultDaySchedule.hours > 0) {
-          employeeSchedule[dateString].isAvailable = true;
-          totalHoursAvailable += defaultDaySchedule.hours;
-        }
+        // Filter orders assigned to this specific employee
+        const employeeOrders = orders.filter(o => 
+          o.order_employee_assignments && 
+          o.order_employee_assignments.some((assignment: any) => assignment.employee_id === employee.id)
+        );
 
-        // Process assignments for the current day
-        for (const assignment of employeeAssignments) {
-          const order = assignment.orders;
-          if (!order) continue;
-
-          let isOrderActiveToday = false;
-          if (order.order_type === 'one_time' && order.due_date && formatISO(parseISO(order.due_date), { representation: 'date' }) === dateString) {
-            isOrderActiveToday = true;
-          } else if (['recurring', 'permanent', 'substitution'].includes(order.order_type) && order.recurring_start_date) {
-            const startDate = parseISO(order.recurring_start_date);
-            const endDate = order.recurring_end_date ? parseISO(order.recurring_end_date) : null;
-            if (startDate <= day && (!endDate || endDate >= day)) {
-              isOrderActiveToday = true;
-            }
-          }
-          
-          if (!isOrderActiveToday) continue;
-
+        for (const order of employeeOrders) {
           let dailyHours = 0;
-          let assignedStartTime: string | null = null;
-          let assignedEndTime: string | null = null;
+          let assignmentTitle = order.title;
 
-          if (order.order_type === 'one_time') {
-            dailyHours = order.total_estimated_hours || 0;
-          } else {
-            const recurrenceIntervalWeeks = assignment.assigned_recurrence_interval_weeks || 1;
-            const startWeekOffset = assignment.assigned_start_week_offset || 0;
-            const orderStartDate = parseISO(order.recurring_start_date!);
-            const daysPassedAssignment = differenceInDays(day, orderStartDate);
-            
-            if (daysPassedAssignment < 0) continue;
-
-            const weeksPassedAssignment = Math.floor(daysPassedAssignment / 7);
-            const effectiveWeekIndexAssignment = (weeksPassedAssignment + startWeekOffset) % recurrenceIntervalWeeks;
-
-            const employeeDailySchedules = assignment.assigned_daily_schedules;
-            if (employeeDailySchedules && employeeDailySchedules.length > effectiveWeekIndexAssignment) {
-              const weekSchedule = employeeDailySchedules[effectiveWeekIndexAssignment];
-              const daySchedule = (weekSchedule as any)?.[dayKey];
-              if (daySchedule) {
-                dailyHours = daySchedule.hours || 0;
-                assignedStartTime = daySchedule.start;
-                assignedEndTime = daySchedule.end;
+          if (['permanent', 'recurring', 'substitution'].includes(order.order_type)) {
+            if (order.recurring_start_date && parseISO(order.recurring_start_date) <= day && (!order.recurring_end_date || parseISO(order.recurring_end_date) >= day)) {
+              if (order.objects) {
+                const schedule = Array.isArray(order.objects) ? order.objects[0] : order.objects;
+                if (schedule) {
+                  switch (dayOfWeek) {
+                    case 1: dailyHours = schedule.monday_hours || 0; break;
+                    case 2: dailyHours = schedule.tuesday_hours || 0; break;
+                    case 3: dailyHours = schedule.wednesday_hours || 0; break;
+                    case 4: dailyHours = schedule.thursday_hours || 0; break;
+                    case 5: dailyHours = schedule.friday_hours || 0; break;
+                    case 6: dailyHours = schedule.saturday_hours || 0; break;
+                    case 0: dailyHours = schedule.sunday_hours || 0; break;
+                  }
+                  assignmentTitle = `${order.title} (Plan)`;
+                }
               }
+            }
+          } else if (order.order_type === 'one_time') {
+            if (order.due_date && formatISO(parseISO(order.due_date), { representation: 'date' }) === dateString) {
+              dailyHours = order.total_estimated_hours || 0; // Corrected column name
+              assignmentTitle = `${order.title} (Einmalig)`;
             }
           }
 
           if (dailyHours > 0) {
-            employeeSchedule[dateString].totalHours += dailyHours;
-            totalHoursPlanned += dailyHours;
-            const object = Array.isArray(order.objects) ? order.objects[0] : order.objects;
-            employeeSchedule[dateString].assignments.push({
-              id: assignment.id,
-              orderId: order.id,
-              title: order.title,
+            planningData[employee.id].schedule[dateString].totalHours += dailyHours;
+            planningData[employee.id].schedule[dateString].assignments.push({
+              title: assignmentTitle,
               hours: dailyHours,
-              startTime: assignedStartTime,
-              endTime: assignedEndTime,
-              isRecurring: order.order_type !== 'one_time',
-              isTeam: false, // Placeholder for now
-              status: order.status === 'completed' ? 'completed' : (new Date() > day ? 'pending' : 'future'),
-              objectName: object?.name || null,
-              serviceType: order.service_type,
             });
           }
         }
       }
-
-      planningData[employee.id] = {
-        name: `${employee.first_name} ${employee.last_name}`,
-        jobTitle: employee.job_title,
-        avatarUrl: avatarUrl,
-        totalHoursAvailable,
-        totalHoursPlanned,
-        schedule: employeeSchedule,
-      };
     }
 
     const pageData: PlanningPageData = {
@@ -268,99 +173,5 @@ export async function getPlanningDataForRange(startDate: Date, endDate: Date, fi
   } catch (error: any) {
     console.error("Fehler beim Laden der Plandaten:", error?.message || error);
     return { success: false, data: null, message: error.message };
-  }
-}
-
-export async function assignOrderToEmployee(
-  orderId: string,
-  employeeId: string,
-  dateString: string,
-  assignedDailyHours: number | null // This parameter is now deprecated, but kept for compatibility
-): Promise<{ success: boolean; message: string }> {
-  const supabaseAdmin = createAdminClient();
-  const supabaseUserClient = await createClient();
-  const { data: { user } } = await supabaseUserClient.auth.getUser();
-
-  if (!user) {
-    return { success: false, message: "Benutzer nicht authentifiziert." };
-  }
-
-  try {
-    // 1. Get order details
-    const { data: order, error: orderError } = await supabaseAdmin
-      .from('orders')
-      .select('title, total_estimated_hours, order_type, object_id')
-      .eq('id', orderId)
-      .single();
-
-    if (orderError || !order) {
-      throw new Error("Auftrag nicht gefunden.");
-    }
-
-    // 2. Get object recurrence details and daily schedules if object_id exists
-    let objectRecurrenceIntervalWeeks = 1;
-    let objectStartWeekOffset = 0;
-    let objectDailySchedules: any[] = [];
-
-    if (order.object_id) {
-      const { data: objectData, error: objectError } = await supabaseAdmin
-        .from('objects')
-        .select('recurrence_interval_weeks, start_week_offset, daily_schedules')
-        .eq('id', order.object_id)
-        .single();
-      if (objectError) console.warn("Fehler beim Laden der Objekt-Wiederholungsdetails:", objectError.message);
-      if (objectData) {
-        objectRecurrenceIntervalWeeks = objectData.recurrence_interval_weeks;
-        objectStartWeekOffset = objectData.start_week_offset;
-        objectDailySchedules = objectData.daily_schedules;
-      }
-    }
-
-    // 3. Update order (set due_date for one_time orders)
-    if (order.order_type === 'one_time') {
-      const { error: updateError } = await supabaseAdmin
-        .from('orders')
-        .update({ due_date: dateString, status: 'pending' })
-        .eq('id', orderId);
-      if (updateError) throw updateError;
-    }
-
-    // 4. Prepare assigned_daily_schedules for the new assignment
-    // For drag-and-drop, we'll assign the object's default schedule to the employee
-    // If multiple employees are assigned later, this will be redistributed by the form.
-    const newAssignedDailySchedules = objectDailySchedules.length > 0 ? objectDailySchedules : [{}]; // Default to one empty week if no object schedule
-
-    // 5. Create or update assignment
-    const { error: assignmentError } = await supabaseAdmin
-      .from('order_employee_assignments')
-      .upsert({
-        order_id: orderId,
-        employee_id: employeeId,
-        assigned_daily_schedules: newAssignedDailySchedules,
-        assigned_recurrence_interval_weeks: objectRecurrenceIntervalWeeks,
-        assigned_start_week_offset: objectStartWeekOffset,
-      }, { onConflict: 'order_id,employee_id' });
-
-    if (assignmentError) throw assignmentError;
-
-    // 6. Send notification
-    const { data: employee } = await supabaseAdmin.from('employees').select('user_id, first_name, last_name').eq('id', employeeId).single();
-    if (employee?.user_id) {
-      await sendNotification({
-        userId: employee.user_id,
-        title: "Neuer Auftrag zugewiesen",
-        message: `Ihnen wurde der Auftrag "${order.title}" für den ${formatISO(parseISO(dateString), { representation: 'date' })} zugewiesen.`,
-        link: "/dashboard/orders"
-      });
-    }
-
-    // 7. Revalidate paths
-    revalidatePath("/dashboard/planning");
-    revalidatePath("/dashboard/orders");
-
-    return { success: true, message: "Auftrag erfolgreich zugewiesen." };
-  } catch (error: any) {
-    console.error("Fehler bei der Zuweisung des Auftrags:", error.message);
-    return { success: false, message: `Fehler: ${error.message}` };
   }
 }
