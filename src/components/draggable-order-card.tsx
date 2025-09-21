@@ -13,7 +13,7 @@ interface DraggableOrderCardProps {
 
 export function DraggableOrderCard({ order }: DraggableOrderCardProps) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
-    id: order.id,
+    id: `unassigned__${order.id}`, // Prefix to identify as unassigned
     data: { order },
   });
 

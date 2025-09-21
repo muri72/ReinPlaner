@@ -344,3 +344,112 @@ export async function assignOrderToEmployee(
     return { success: false, message: `Fehler: ${error.message}` };
   }
 }
+
+export async function reassignRecurringOrder(
+  params: {
+    assignmentId: string;
+    originalDate: string;
+    newEmployeeId: string;
+    newDate: string;
+    updateType: 'single' | 'series';
+  }
+): Promise<{ success: boolean; message: string }> {
+  const supabaseAdmin = createAdminClient();
+  const { assignmentId, originalDate, newEmployeeId, newDate, updateType } = params;
+
+  try {
+    // 1. Fetch the original assignment and order details
+    const { data: originalAssignment, error: assignmentError } = await supabaseAdmin
+      .from('order_employee_assignments')
+      .select(`
+        *,
+        orders!inner(*)
+      `)
+      .eq('id', assignmentId)
+      .single();
+
+    if (assignmentError || !originalAssignment || !originalAssignment.orders) {
+      throw new Error("Originale Zuweisung nicht gefunden.");
+    }
+
+    const originalOrder = originalAssignment.orders;
+
+    if (updateType === 'single') {
+      // --- Handle single instance change ---
+
+      // 1. Create an exception for the original assignment on the original date
+      const { error: exceptionError } = await supabaseAdmin
+        .from('assignment_exceptions')
+        .insert({
+          assignment_id: assignmentId,
+          original_date: originalDate,
+          reason: `Verschoben zu ${newDate} für Mitarbeiter ${newEmployeeId}`,
+        });
+      if (exceptionError) throw new Error(`Ausnahme konnte nicht erstellt werden: ${exceptionError.message}`);
+
+      // 2. Create a new one-time order as a copy
+      const { data: newOneTimeOrder, error: newOrderError } = await supabaseAdmin
+        .from('orders')
+        .insert({
+          // Copy most fields, but adjust for one-time nature
+          user_id: originalOrder.user_id,
+          title: `${originalOrder.title} (Sondertermin)`,
+          description: originalOrder.description,
+          status: 'pending', // New one-time orders are pending
+          due_date: newDate,
+          customer_id: originalOrder.customer_id,
+          object_id: originalOrder.object_id,
+          customer_contact_id: originalOrder.customer_contact_id,
+          priority: originalOrder.priority,
+          total_estimated_hours: originalOrder.total_estimated_hours, // This might need adjustment
+          notes: `Verschoben von wiederkehrendem Auftrag am ${originalDate}. Original-Auftrag: ${originalOrder.id}`,
+          order_type: 'one_time',
+          request_status: 'approved',
+          service_type: originalOrder.service_type,
+          fixed_monthly_price: null, // One-time orders don't have fixed monthly price
+          recurring_start_date: null,
+          recurring_end_date: null,
+        })
+        .select('id')
+        .single();
+
+      if (newOrderError || !newOneTimeOrder) throw new Error(`Einmaliger Auftrag konnte nicht erstellt werden: ${newOrderError?.message}`);
+
+      // 3. Assign the new one-time order to the new employee
+      const { error: newAssignmentError } = await supabaseAdmin
+        .from('order_employee_assignments')
+        .insert({
+          order_id: newOneTimeOrder.id,
+          employee_id: newEmployeeId,
+          // For a one-time order, the schedule is not strictly necessary but can be copied for consistency
+          assigned_daily_schedules: originalAssignment.assigned_daily_schedules,
+          assigned_recurrence_interval_weeks: 1,
+          assigned_start_week_offset: 0,
+        });
+
+      if (newAssignmentError) throw new Error(`Neuer Auftrag konnte nicht zugewiesen werden: ${newAssignmentError.message}`);
+
+    } else { // updateType === 'series'
+      // --- Handle series change ---
+      // For now, we only support reassigning the employee for the entire series.
+      // A date change for the whole series is a more complex operation.
+      if (originalAssignment.employee_id === newEmployeeId) {
+         return { success: false, message: "Das Ändern des Datums für eine ganze Serie wird noch nicht unterstützt. Nur die Mitarbeiterzuweisung kann für die Serie geändert werden." };
+      }
+
+      const { error: updateAssignmentError } = await supabaseAdmin
+        .from('order_employee_assignments')
+        .update({ employee_id: newEmployeeId })
+        .eq('id', assignmentId);
+
+      if (updateAssignmentError) throw new Error(`Serie konnte nicht neu zugewiesen werden: ${updateAssignmentError.message}`);
+    }
+
+    revalidatePath("/dashboard/planning");
+    return { success: true, message: "Einsatz erfolgreich verschoben." };
+
+  } catch (error: any) {
+    console.error("Fehler beim Verschieben des Einsatzes:", error.message);
+    return { success: false, message: `Fehler: ${error.message}` };
+  }
+}

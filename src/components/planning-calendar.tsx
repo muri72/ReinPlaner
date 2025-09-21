@@ -149,7 +149,7 @@ export function PlanningCalendar({ planningData, unassignedOrders, weekDays, act
                         key={dateString}
                         id={droppableId}
                         isOver={activeDragId !== null && droppableId === (activeDragId as string)}
-                        isAvailable={dayData.isAvailable}
+                        isAvailable={dayData.isAvailable || dayData.assignments.length > 0}
                       >
                         <div className="space-y-1">
                           {dayData.assignments.map((assignment) => (

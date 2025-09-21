@@ -7,10 +7,18 @@ import { DndContext, DragEndEvent } from "@dnd-kit/core";
 import { PlanningToolbar } from "@/components/planning-toolbar";
 import { PlanningCalendar } from "@/components/planning-calendar";
 import { Skeleton } from "@/components/ui/skeleton";
-import { assignOrderToEmployee } from "./actions";
+import { assignOrderToEmployee, reassignRecurringOrder } from "./actions";
 import { startOfWeek, endOfWeek, eachDayOfInterval, startOfMonth, endOfMonth, startOfDay, endOfDay } from "date-fns";
 import { createClient } from "@/lib/supabase/client"; // Import supabase client
 import { useSearchParams } from "next/navigation";
+import { RecurringEditDialog } from "@/components/recurring-edit-dialog";
+
+interface PendingReassignment {
+  assignmentId: string;
+  originalDate: string;
+  newEmployeeId: string;
+  newDate: string;
+}
 
 export default function PlanningPage() {
   const [currentDate, setCurrentDate] = React.useState(new Date());
@@ -23,6 +31,9 @@ export default function PlanningPage() {
   const [isAdmin, setIsAdmin] = React.useState(false);
   const searchParams = useSearchParams();
   const query = searchParams.get('query') || '';
+
+  const [isRecurringDialogOpen, setIsRecurringDialogOpen] = React.useState(false);
+  const [pendingReassignment, setPendingReassignment] = React.useState<PendingReassignment | null>(null);
 
   const { startDate, endDate, daysToDisplay } = React.useMemo(() => {
     let start, end;
@@ -71,22 +82,60 @@ export default function PlanningPage() {
   const handleDragEnd = async (event: DragEndEvent) => {
     setActiveDragId(null);
     const { active, over } = event;
-
-    if (over && active.id !== over.id) {
-      const orderId = active.id as string;
-      const [employeeId, dateString] = (over.id as string).split('__');
-
-      if (employeeId && dateString && employeeId !== 'unassigned') {
-        toast.info(`Weise Auftrag "${orderId}" zu...`);
-        const result = await assignOrderToEmployee(orderId, employeeId, dateString, null);
-        if (result.success) {
-          toast.success(result.message);
-          fetchData(startDate, endDate, query); // Re-fetch data after successful assignment
-        } else {
-          toast.error(result.message);
-        }
+  
+    if (!over || active.id === over.id) return;
+  
+    const [newEmployeeId, newDate] = (over.id as string).split('__');
+    if (!newEmployeeId || !newDate) return;
+  
+    const [dragType, dragId] = (active.id as string).split('__');
+  
+    if (dragType === 'unassigned') {
+      // Handle dragging an unassigned order
+      const orderId = dragId;
+      toast.info(`Weise Auftrag zu...`);
+      const result = await assignOrderToEmployee(orderId, newEmployeeId, newDate, null);
+      if (result.success) {
+        toast.success(result.message);
+        fetchData(startDate, endDate, query);
+      } else {
+        toast.error(result.message);
+      }
+    } else if (dragType === 'assignment') {
+      // Handle dragging an existing assignment
+      const assignment = active.data.current?.assignment;
+      if (!assignment) return;
+  
+      const assignmentId = assignment.id;
+      const originalDate = Object.keys(planningPageData?.planningData[newEmployeeId]?.schedule || {}).find(date => 
+        planningPageData?.planningData[newEmployeeId]?.schedule[date]?.assignments.some(a => a.id === assignmentId)
+      ) || newDate; // Fallback to newDate if not found
+  
+      if (assignment.isRecurring) {
+        setPendingReassignment({ assignmentId, originalDate, newEmployeeId, newDate });
+        setIsRecurringDialogOpen(true);
+      } else {
+        // Handle non-recurring assignment move (logic to be implemented if needed)
+        toast.info("Das Verschieben von einmaligen Einsätzen wird noch nicht unterstützt.");
       }
     }
+  };
+
+  const handleRecurringUpdate = async (updateType: 'single' | 'series') => {
+    if (!pendingReassignment) return;
+    
+    toast.info(`Aktualisiere wiederkehrenden Auftrag...`);
+    const result = await reassignRecurringOrder({ ...pendingReassignment, updateType });
+    
+    if (result.success) {
+      toast.success(result.message);
+      fetchData(startDate, endDate, query);
+    } else {
+      toast.error(result.message);
+    }
+    
+    setPendingReassignment(null);
+    setIsRecurringDialogOpen(false);
   };
 
   return (
@@ -120,6 +169,12 @@ export default function PlanningPage() {
           )}
         </div>
       </div>
+      <RecurringEditDialog
+        open={isRecurringDialogOpen}
+        onOpenChange={setIsRecurringDialogOpen}
+        onConfirmSingle={() => handleRecurringUpdate('single')}
+        onConfirmSeries={() => handleRecurringUpdate('series')}
+      />
     </DndContext>
   );
 }
