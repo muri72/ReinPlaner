@@ -41,6 +41,12 @@ export function PlanningToolbar({
   onActionSuccess,
 }: PlanningToolbarProps) {
 
+  const viewModeTranslations = {
+    day: 'Tag',
+    week: 'Woche',
+    month: 'Monat',
+  };
+
   const handlePrev = () => {
     switch (viewMode) {
       case 'day':
@@ -115,7 +121,7 @@ export function PlanningToolbar({
         </Button>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline">{viewMode.charAt(0).toUpperCase() + viewMode.slice(1)}</Button>
+            <Button variant="outline">{viewModeTranslations[viewMode]}</Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent>
             <DropdownMenuRadioGroup value={viewMode} onValueChange={(value) => onViewModeChange(value as 'day' | 'week' | 'month')}>
