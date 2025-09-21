@@ -25,6 +25,7 @@ export interface EmployeePlanningData {
         isRecurring: boolean;
         isTeam: boolean;
         status: 'completed' | 'pending' | 'future';
+        service_type: string | null; // Hinzugefügt
       }[];
     };
   };
@@ -103,7 +104,7 @@ export async function getPlanningDataForRange(startDate: Date, endDate: Date, fi
         *,
         orders!inner(
             id, title, order_type, due_date, total_estimated_hours, status,
-            recurring_start_date, recurring_end_date
+            recurring_start_date, recurring_end_date, service_type
         )
       `)
       .eq('orders.request_status', 'approved')
@@ -225,6 +226,7 @@ export async function getPlanningDataForRange(startDate: Date, endDate: Date, fi
               isRecurring: order.order_type !== 'one_time',
               isTeam: false, // Placeholder for now
               status: order.status === 'completed' ? 'completed' : (new Date() > day ? 'pending' : 'future'),
+              service_type: order.service_type,
             });
           }
         }
@@ -450,6 +452,81 @@ export async function reassignRecurringOrder(
 
   } catch (error: any) {
     console.error("Fehler beim Verschieben des Einsatzes:", error.message);
+    return { success: false, message: `Fehler: ${error.message}` };
+  }
+}
+
+export async function reassignSingleOrder(
+  assignmentId: string,
+  newEmployeeId: string,
+  newDate: string
+): Promise<{ success: boolean; message: string }> {
+  const supabaseAdmin = createAdminClient();
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { success: false, message: "Benutzer nicht authentifiziert." };
+  }
+
+  try {
+    // 1. Get the original assignment to find the order ID
+    const { data: assignment, error: assignmentError } = await supabaseAdmin
+      .from('order_employee_assignments')
+      .select('order_id, employee_id')
+      .eq('id', assignmentId)
+      .single();
+
+    if (assignmentError || !assignment) {
+      throw new Error("Originale Zuweisung nicht gefunden.");
+    }
+
+    // 2. Update the order's due date
+    const { error: orderUpdateError } = await supabaseAdmin
+      .from('orders')
+      .update({ due_date: newDate })
+      .eq('id', assignment.order_id);
+
+    if (orderUpdateError) {
+      throw new Error(`Fehler beim Aktualisieren des Auftragsdatums: ${orderUpdateError.message}`);
+    }
+
+    // 3. Update the employee assignment
+    const { error: assignmentUpdateError } = await supabaseAdmin
+      .from('order_employee_assignments')
+      .update({ employee_id: newEmployeeId })
+      .eq('id', assignmentId);
+
+    if (assignmentUpdateError) {
+      throw new Error(`Fehler beim Neuzuweisen des Mitarbeiters: ${assignmentUpdateError.message}`);
+    }
+
+    // 4. Send notifications
+    const { data: order } = await supabaseAdmin.from('orders').select('title').eq('id', assignment.order_id).single();
+    const { data: newEmployee } = await supabaseAdmin.from('employees').select('user_id').eq('id', newEmployeeId).single();
+    const { data: oldEmployee } = await supabaseAdmin.from('employees').select('user_id').eq('id', assignment.employee_id).single();
+
+    if (newEmployee?.user_id) {
+      await sendNotification({
+        userId: newEmployee.user_id,
+        title: "Auftrag zugewiesen",
+        message: `Ihnen wurde der Auftrag "${order?.title}" für den ${newDate} zugewiesen.`,
+        link: "/dashboard/orders"
+      });
+    }
+    if (oldEmployee?.user_id && oldEmployee.user_id !== newEmployee?.user_id) {
+      await sendNotification({
+        userId: oldEmployee.user_id,
+        title: "Auftrag entfernt",
+        message: `Der Auftrag "${order?.title}" wurde Ihnen entzogen und neu zugewiesen.`,
+        link: "/dashboard/orders"
+      });
+    }
+
+    revalidatePath("/dashboard/planning");
+    return { success: true, message: "Einmaliger Einsatz erfolgreich verschoben." };
+  } catch (error: any) {
+    console.error("Fehler beim Verschieben des einmaligen Einsatzes:", error.message);
     return { success: false, message: `Fehler: ${error.message}` };
   }
 }

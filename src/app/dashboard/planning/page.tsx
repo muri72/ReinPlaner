@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { getPlanningDataForRange, PlanningPageData } from "@/app/dashboard/planning/actions";
+import { getPlanningDataForRange, PlanningPageData, reassignSingleOrder } from "@/app/dashboard/planning/actions";
 import { toast } from "sonner";
 import { DndContext, DragEndEvent } from "@dnd-kit/core";
 import { PlanningToolbar } from "@/components/planning-toolbar";
@@ -115,8 +115,15 @@ export default function PlanningPage() {
         setPendingReassignment({ assignmentId, originalDate, newEmployeeId, newDate });
         setIsRecurringDialogOpen(true);
       } else {
-        // Handle non-recurring assignment move (logic to be implemented if needed)
-        toast.info("Das Verschieben von einmaligen Einsätzen wird noch nicht unterstützt.");
+        // Handle non-recurring assignment move
+        toast.info("Verschiebe einmaligen Einsatz...");
+        const result = await reassignSingleOrder(assignmentId, newEmployeeId, newDate);
+        if (result.success) {
+          toast.success(result.message);
+          fetchData(startDate, endDate, query);
+        } else {
+          toast.error(result.message);
+        }
       }
     }
   };
