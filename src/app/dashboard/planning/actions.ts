@@ -104,7 +104,8 @@ export async function getPlanningDataForRange(startDate: Date, endDate: Date, fi
         *,
         orders!inner(
             id, title, order_type, due_date, total_estimated_hours, status,
-            recurring_start_date, recurring_end_date, service_type
+            recurring_start_date, recurring_end_date, service_type,
+            order_employee_assignments ( count )
         )
       `)
       .eq('orders.request_status', 'approved')
@@ -213,6 +214,9 @@ export async function getPlanningDataForRange(startDate: Date, endDate: Date, fi
           }
           
           if (isOrderActiveToday && dailyHours > 0) {
+            const totalAssignmentsForOrder = order.order_employee_assignments[0]?.count || 1;
+            const isTeam = totalAssignmentsForOrder > 1;
+
             employeeSchedule[dateString].totalHours += dailyHours;
             totalHoursPlanned += dailyHours;
             employeeSchedule[dateString].assignments.push({
@@ -223,7 +227,7 @@ export async function getPlanningDataForRange(startDate: Date, endDate: Date, fi
               startTime: assignedStartTime,
               endTime: assignedEndTime,
               isRecurring: order.order_type !== 'one_time',
-              isTeam: false, // Placeholder for now
+              isTeam: isTeam,
               status: order.status === 'completed' ? 'completed' : (new Date() > day ? 'pending' : 'future'),
               service_type: order.service_type,
             });
