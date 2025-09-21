@@ -7,6 +7,8 @@ import { startOfWeek, endOfWeek, eachDayOfInterval, formatISO, parseISO, getDay,
 
 export interface EmployeePlanningData {
   name: string;
+  jobTitle: string | null;
+  avatarUrl: string | null;
   totalHoursAvailable: number;
   totalHoursPlanned: number;
   schedule: {
@@ -25,6 +27,8 @@ export interface EmployeePlanningData {
         isRecurring: boolean;
         isTeam: boolean;
         status: 'completed' | 'pending' | 'future';
+        objectName: string | null;
+        serviceType: string | null;
       }[];
     };
   };
@@ -76,7 +80,7 @@ export async function getPlanningDataForRange(startDate: Date, endDate: Date, fi
     // 1. Fetch all active employees with their default schedules, applying search filter
     let employeesQuery = supabase
       .from('employees')
-      .select('id, first_name, last_name, default_daily_schedules, default_recurrence_interval_weeks, default_start_week_offset')
+      .select('id, first_name, last_name, job_title, user_id, default_daily_schedules, default_recurrence_interval_weeks, default_start_week_offset')
       .eq('status', 'active');
 
     if (filters.query) {
@@ -85,6 +89,15 @@ export async function getPlanningDataForRange(startDate: Date, endDate: Date, fi
 
     const { data: employees, error: employeesError } = await employeesQuery;
     if (employeesError) throw employeesError;
+
+    // Fetch profiles for these employees
+    const userIds = employees.map(e => e.user_id).filter((id): id is string => id !== null);
+    const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, avatar_url')
+        .in('id', userIds);
+    if (profilesError) throw profilesError;
+    const profilesMap = new Map(profiles.map(p => [p.id, p.avatar_url]));
 
     // 2. Fetch all approved absences in the period
     const { data: absences, error: absencesError } = await supabase
@@ -103,7 +116,8 @@ export async function getPlanningDataForRange(startDate: Date, endDate: Date, fi
         *,
         orders!inner(
             id, title, order_type, due_date, total_estimated_hours, status,
-            recurring_start_date, recurring_end_date
+            recurring_start_date, recurring_end_date, service_type,
+            objects ( name )
         )
       `)
       .eq('orders.request_status', 'approved')
@@ -120,6 +134,7 @@ export async function getPlanningDataForRange(startDate: Date, endDate: Date, fi
     for (const employee of employees) {
       let totalHoursAvailable = 0;
       let totalHoursPlanned = 0;
+      const avatarUrl = employee.user_id ? profilesMap.get(employee.user_id) || null : null;
 
       const employeeAssignments = activeAssignments.filter(a => a.employee_id === employee.id);
       const employeeSchedule: EmployeePlanningData['schedule'] = {};
@@ -215,6 +230,7 @@ export async function getPlanningDataForRange(startDate: Date, endDate: Date, fi
           if (dailyHours > 0) {
             employeeSchedule[dateString].totalHours += dailyHours;
             totalHoursPlanned += dailyHours;
+            const object = Array.isArray(order.objects) ? order.objects[0] : order.objects;
             employeeSchedule[dateString].assignments.push({
               id: assignment.id,
               orderId: order.id,
@@ -225,6 +241,8 @@ export async function getPlanningDataForRange(startDate: Date, endDate: Date, fi
               isRecurring: order.order_type !== 'one_time',
               isTeam: false, // Placeholder for now
               status: order.status === 'completed' ? 'completed' : (new Date() > day ? 'pending' : 'future'),
+              objectName: object?.name || null,
+              serviceType: order.service_type,
             });
           }
         }
@@ -232,6 +250,8 @@ export async function getPlanningDataForRange(startDate: Date, endDate: Date, fi
 
       planningData[employee.id] = {
         name: `${employee.first_name} ${employee.last_name}`,
+        jobTitle: employee.job_title,
+        avatarUrl: avatarUrl,
         totalHoursAvailable,
         totalHoursPlanned,
         schedule: employeeSchedule,
