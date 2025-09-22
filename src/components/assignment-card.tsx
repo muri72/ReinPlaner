@@ -86,6 +86,10 @@ export function AssignmentCard({ assignment, onSuccess }: AssignmentCardProps) {
             {assignment.isRecurring && <Repeat className="h-3 w-3" />}
           </div>
         </div>
+        <div className="flex items-center text-xs text-muted-foreground">
+          <Clock className="mr-1 h-3 w-3" />
+          <span>{assignment.hours.toFixed(2)}h Netto</span>
+        </div>
         <p className="font-bold text-sm truncate">{assignment.title}</p>
         {assignment.service_type && (
           <Badge variant="outline" className={cn("text-xs font-normal border-none w-full justify-start", badgeColorClass)}>

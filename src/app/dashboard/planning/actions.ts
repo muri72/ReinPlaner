@@ -3,7 +3,8 @@
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { sendNotification } from "@/lib/actions/notifications";
-import { startOfWeek, endOfWeek, eachDayOfInterval, formatISO, parseISO, getDay, differenceInDays } from 'date-fns';
+import { startOfWeek, endOfWeek, eachDayOfInterval, formatISO, parseISO, getDay, differenceInDays, format, addMinutes } from 'date-fns';
+import { de } from 'date-fns/locale';
 
 export interface EmployeePlanningData {
   name: string;
@@ -181,6 +182,12 @@ export async function getPlanningDataForRange(startDate: Date, endDate: Date, fi
               if (order.due_date && formatISO(parseISO(order.due_date), { representation: 'date' }) === dateString) {
                   isOrderActiveToday = true;
                   dailyHours = order.total_estimated_hours || 0;
+                  const dueDate = parseISO(order.due_date);
+                  assignedStartTime = format(dueDate, 'HH:mm', { locale: de });
+                  if (dailyHours > 0) {
+                      const endDate = addMinutes(dueDate, dailyHours * 60);
+                      assignedEndTime = format(endDate, 'HH:mm', { locale: de });
+                  }
               }
           } else if (['recurring', 'permanent', 'substitution'].includes(order.order_type) && order.recurring_start_date) {
               const startDate = parseISO(order.recurring_start_date);
@@ -382,14 +389,14 @@ export async function reassignRecurringOrder(
     if (updateType === 'single') {
       // --- Handle single instance change ---
 
-      // 1. Create an exception for the original assignment on the original date
+      // 1. Create or update an exception for the original assignment on the original date
       const { error: exceptionError } = await supabaseAdmin
         .from('assignment_exceptions')
-        .insert({
+        .upsert({
           assignment_id: assignmentId,
           original_date: originalDate,
           reason: `Verschoben zu ${newDate} für Mitarbeiter ${newEmployeeId}`,
-        });
+        }, { onConflict: 'assignment_id, original_date' });
       if (exceptionError) throw new Error(`Ausnahme konnte nicht erstellt werden: ${exceptionError.message}`);
 
       // 2. Create a new one-time order as a copy

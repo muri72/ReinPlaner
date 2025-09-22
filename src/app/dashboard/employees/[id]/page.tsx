@@ -7,12 +7,11 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 
-export default async function EmployeeDetailPage({
-  params,
-}: {
+export default async function EmployeeDetailPage(props: {
   params: { id: string };
   searchParams?: { [key: string]: string | string[] | undefined };
 }) {
+  const { params } = props;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
