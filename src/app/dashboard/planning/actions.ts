@@ -209,14 +209,23 @@ export async function getPlanningDataForRange(startDate: Date, endDate: Date, fi
 
               const recurrenceIntervalWeeks = assignment.assigned_recurrence_interval_weeks || 1;
               const startWeekOffset = assignment.assigned_start_week_offset || 0;
-              // For one-time orders, recurring_start_date is null, so use the due_date for calculation.
-              const startDateForLookup = order.recurring_start_date ? parseISO(order.recurring_start_date) : (order.due_date ? parseISO(order.due_date) : dateForScheduleLookup);
+              const startDateForLookup = order.recurring_start_date ? parseISO(order.recurring_start_date) : dateForScheduleLookup;
               
               const daysPassed = differenceInDays(dateForScheduleLookup, startDateForLookup);
               const weeksPassed = daysPassed >= 0 ? Math.floor(daysPassed / 7) : 0;
               const effectiveWeekIndex = (weeksPassed + startWeekOffset) % recurrenceIntervalWeeks;
 
-              const employeeDailySchedules = assignment.assigned_daily_schedules;
+              let employeeDailySchedules: any[] = [];
+              if (typeof assignment.assigned_daily_schedules === 'string') {
+                  try {
+                      employeeDailySchedules = JSON.parse(assignment.assigned_daily_schedules);
+                  } catch (e) {
+                      console.error("Failed to parse assigned_daily_schedules:", e);
+                  }
+              } else {
+                  employeeDailySchedules = assignment.assigned_daily_schedules || [];
+              }
+
               if (employeeDailySchedules && employeeDailySchedules.length > effectiveWeekIndex) {
                   const weekSchedule = employeeDailySchedules[effectiveWeekIndex];
                   const daySchedule = (weekSchedule as any)?.[dayKeyForLookup];
