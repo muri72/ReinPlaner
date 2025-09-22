@@ -533,3 +533,56 @@ export async function reassignSingleOrder(
     return { success: false, message: `Fehler: ${error.message}` };
   }
 }
+
+export async function updateOrderAssignments(
+  orderId: string,
+  data: {
+    employeeIds: string[];
+    assigned_daily_schedules: any[];
+    assigned_recurrence_interval_weeks: number;
+    assigned_start_week_offset: number;
+  }
+): Promise<{ success: boolean; message: string }> {
+  const supabaseAdmin = createAdminClient();
+  const { employeeIds, assigned_daily_schedules, assigned_recurrence_interval_weeks, assigned_start_week_offset } = data;
+
+  try {
+    // 1. Delete all existing assignments for this order
+    const { error: deleteError } = await supabaseAdmin
+      .from('order_employee_assignments')
+      .delete()
+      .eq('order_id', orderId);
+
+    if (deleteError) {
+      throw new Error(`Fehler beim Löschen alter Zuweisungen: ${deleteError.message}`);
+    }
+
+    // 2. Create new assignments for all selected employees with the new shared schedule
+    if (employeeIds.length > 0) {
+      const newAssignments = employeeIds.map(employeeId => ({
+        order_id: orderId,
+        employee_id: employeeId,
+        assigned_daily_schedules,
+        assigned_recurrence_interval_weeks,
+        assigned_start_week_offset,
+      }));
+
+      const { error: insertError } = await supabaseAdmin
+        .from('order_employee_assignments')
+        .insert(newAssignments);
+
+      if (insertError) {
+        throw new Error(`Fehler beim Erstellen neuer Zuweisungen: ${insertError.message}`);
+      }
+    }
+
+    // 3. Send notifications (optional, can be added later)
+
+    revalidatePath("/dashboard/planning");
+    revalidatePath("/dashboard/orders");
+    return { success: true, message: "Team und Zeitplan für den Auftrag erfolgreich aktualisiert." };
+  } catch (error: any) {
+    console.error("Fehler beim Aktualisieren der Auftragszuweisungen:", error.message);
+    return { success: false, message: `Fehler: ${error.message}` };
+  }
+}

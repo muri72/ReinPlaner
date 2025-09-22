@@ -49,9 +49,10 @@ interface PlanningCalendarProps {
   weekDays: Date[];
   activeDragId: string | null;
   showUnassigned: boolean;
+  onActionSuccess: () => void;
 }
 
-export function PlanningCalendar({ planningData, unassignedOrders, weekDays, activeDragId, showUnassigned }: PlanningCalendarProps) {
+export function PlanningCalendar({ planningData, unassignedOrders, weekDays, activeDragId, showUnassigned, onActionSuccess }: PlanningCalendarProps) {
   const employeeIds = Object.keys(planningData);
 
   return (
@@ -153,7 +154,7 @@ export function PlanningCalendar({ planningData, unassignedOrders, weekDays, act
                       >
                         <div className="space-y-1">
                           {dayData.assignments.map((assignment) => (
-                            <AssignmentCard key={assignment.id} assignment={assignment} />
+                            <AssignmentCard key={assignment.id} assignment={assignment} onSuccess={onActionSuccess} />
                           ))}
                         </div>
                       </DroppableCell>

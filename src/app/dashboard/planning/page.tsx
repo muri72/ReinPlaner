@@ -172,6 +172,7 @@ export default function PlanningPage() {
               weekDays={daysToDisplay}
               activeDragId={activeDragId}
               showUnassigned={showUnassigned}
+              onActionSuccess={() => fetchData(startDate, endDate, query)}
             />
           )}
         </div>

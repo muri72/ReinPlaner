@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { Clock, Repeat, Users } from "lucide-react";
 import { useDraggable } from "@dnd-kit/core";
 import { Badge } from "@/components/ui/badge";
+import { AssignmentEditDialog } from "./assignment-edit-dialog"; // Import the new dialog
 
 interface Assignment {
   id: string;
@@ -21,6 +22,7 @@ interface Assignment {
 
 interface AssignmentCardProps {
   assignment: Assignment;
+  onSuccess: () => void; // Add onSuccess callback
 }
 
 const serviceTypeBadgeColors: { [key: string]: string } = {
@@ -41,7 +43,7 @@ const serviceTypeDotColors: { [key: string]: string } = {
     "default": "bg-gray-500",
 };
 
-export function AssignmentCard({ assignment }: AssignmentCardProps) {
+export function AssignmentCard({ assignment, onSuccess }: AssignmentCardProps) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: `assignment__${assignment.id}`,
     data: { assignment },
@@ -65,31 +67,33 @@ export function AssignmentCard({ assignment }: AssignmentCardProps) {
   const dotColorClass = serviceTypeDotColors[assignment.service_type || 'default'] || serviceTypeDotColors.default;
 
   return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      {...listeners}
-      {...attributes}
-      className={cn(
-        "p-2 rounded-md border-l-4 bg-card text-card-foreground shadow-sm cursor-grab active:cursor-grabbing touch-none space-y-1",
-        getStatusColor(),
-        isDragging && "shadow-lg opacity-75"
-      )}
-    >
-      <div className="flex items-center justify-between text-xs text-muted-foreground">
-        <span>{assignment.startTime || 'N/A'} → {assignment.endTime || 'N/A'}</span>
-        <div className="flex items-center gap-1.5">
-          {assignment.isTeam && <Users className="h-3 w-3" />}
-          {assignment.isRecurring && <Repeat className="h-3 w-3" />}
+    <AssignmentEditDialog orderId={assignment.orderId} onSuccess={onSuccess}>
+      <div
+        ref={setNodeRef}
+        style={style}
+        {...listeners}
+        {...attributes}
+        className={cn(
+          "p-2 rounded-md border-l-4 bg-card text-card-foreground shadow-sm cursor-grab active:cursor-grabbing touch-none space-y-1",
+          getStatusColor(),
+          isDragging && "shadow-lg opacity-75"
+        )}
+      >
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <span>{assignment.startTime || 'N/A'} → {assignment.endTime || 'N/A'}</span>
+          <div className="flex items-center gap-1.5">
+            {assignment.isTeam && <Users className="h-3 w-3" />}
+            {assignment.isRecurring && <Repeat className="h-3 w-3" />}
+          </div>
         </div>
+        <p className="font-bold text-sm truncate">{assignment.title}</p>
+        {assignment.service_type && (
+          <Badge variant="outline" className={cn("text-xs font-normal border-none w-full justify-start", badgeColorClass)}>
+            <span className={cn("h-2 w-2 rounded-full mr-1.5", dotColorClass)} />
+            <span className="truncate">{assignment.service_type}</span>
+          </Badge>
+        )}
       </div>
-      <p className="font-bold text-sm truncate">{assignment.title}</p>
-      {assignment.service_type && (
-        <Badge variant="outline" className={cn("text-xs font-normal border-none w-full justify-start", badgeColorClass)}>
-          <span className={cn("h-2 w-2 rounded-full mr-1.5", dotColorClass)} />
-          <span className="truncate">{assignment.service_type}</span>
-        </Badge>
-      )}
-    </div>
+    </AssignmentEditDialog>
   );
 }
