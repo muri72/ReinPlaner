@@ -237,11 +237,6 @@ export async function getPlanningDataForRange(startDate: Date, endDate: Date, fi
                     assignedEndTime = daySchedule.end;
                 }
             }
-
-            // Fallback for one-time orders that might not have a schedule but have total_estimated_hours
-            if (dailyHours === 0 && order.order_type === 'one_time' && order.total_estimated_hours) {
-                dailyHours = order.total_estimated_hours;
-            }
           }
           
           if (dailyHours > 0) {
