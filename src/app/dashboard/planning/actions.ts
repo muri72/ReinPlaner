@@ -209,7 +209,8 @@ export async function getPlanningDataForRange(startDate: Date, endDate: Date, fi
 
               const recurrenceIntervalWeeks = assignment.assigned_recurrence_interval_weeks || 1;
               const startWeekOffset = assignment.assigned_start_week_offset || 0;
-              const startDateForLookup = order.recurring_start_date ? parseISO(order.recurring_start_date) : dateForScheduleLookup;
+              // For one-time orders, recurring_start_date is null, so use the due_date for calculation.
+              const startDateForLookup = order.recurring_start_date ? parseISO(order.recurring_start_date) : (order.due_date ? parseISO(order.due_date) : dateForScheduleLookup);
               
               const daysPassed = differenceInDays(dateForScheduleLookup, startDateForLookup);
               const weeksPassed = daysPassed >= 0 ? Math.floor(daysPassed / 7) : 0;
