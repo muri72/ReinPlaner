@@ -202,45 +202,38 @@ export async function getPlanningDataForRange(startDate: Date, endDate: Date, fi
           }
 
           if (isOrderActiveToday) {
-            if (order.order_type === 'one_time') {
-              dailyHours = order.total_estimated_hours || 0;
-              // For one-time orders, we don't have a specific start/end time from a schedule
-              assignedStartTime = null;
-              assignedEndTime = null;
+            // UNIFIED LOGIC: Get schedule from assignment for ALL order types
+            const dateForScheduleLookup = day;
+            const dayOfWeekForLookup = getDay(dateForScheduleLookup);
+            const dayKeyForLookup = dayNames[dayOfWeekForLookup];
+
+            const recurrenceIntervalWeeks = assignment.assigned_recurrence_interval_weeks || 1;
+            const startWeekOffset = assignment.assigned_start_week_offset || 0;
+            const startDateForLookup = order.recurring_start_date ? parseISO(order.recurring_start_date) : (order.due_date ? parseISO(order.due_date) : dateForScheduleLookup);
+            
+            const daysPassed = differenceInDays(dateForScheduleLookup, startDateForLookup);
+            const weeksPassed = daysPassed >= 0 ? Math.floor(daysPassed / 7) : 0;
+            const effectiveWeekIndex = (weeksPassed + startWeekOffset) % recurrenceIntervalWeeks;
+
+            let employeeDailySchedules: any[] = [];
+            if (typeof assignment.assigned_daily_schedules === 'string') {
+                try {
+                    employeeDailySchedules = JSON.parse(assignment.assigned_daily_schedules);
+                } catch (e) {
+                    console.error("Failed to parse assigned_daily_schedules:", e);
+                }
             } else {
-              // For recurring orders, get schedule from assignment
-              const dateForScheduleLookup = day;
-              const dayOfWeekForLookup = getDay(dateForScheduleLookup);
-              const dayKeyForLookup = dayNames[dayOfWeekForLookup];
+                employeeDailySchedules = assignment.assigned_daily_schedules || [];
+            }
 
-              const recurrenceIntervalWeeks = assignment.assigned_recurrence_interval_weeks || 1;
-              const startWeekOffset = assignment.assigned_start_week_offset || 0;
-              const startDateForLookup = order.recurring_start_date ? parseISO(order.recurring_start_date) : dateForScheduleLookup;
-              
-              const daysPassed = differenceInDays(dateForScheduleLookup, startDateForLookup);
-              const weeksPassed = daysPassed >= 0 ? Math.floor(daysPassed / 7) : 0;
-              const effectiveWeekIndex = (weeksPassed + startWeekOffset) % recurrenceIntervalWeeks;
-
-              let employeeDailySchedules: any[] = [];
-              if (typeof assignment.assigned_daily_schedules === 'string') {
-                  try {
-                      employeeDailySchedules = JSON.parse(assignment.assigned_daily_schedules);
-                  } catch (e) {
-                      console.error("Failed to parse assigned_daily_schedules:", e);
-                  }
-              } else {
-                  employeeDailySchedules = assignment.assigned_daily_schedules || [];
-              }
-
-              if (employeeDailySchedules && employeeDailySchedules.length > effectiveWeekIndex) {
-                  const weekSchedule = employeeDailySchedules[effectiveWeekIndex];
-                  const daySchedule = (weekSchedule as any)?.[dayKeyForLookup];
-                  if (daySchedule && daySchedule.hours > 0) {
-                      dailyHours = daySchedule.hours;
-                      assignedStartTime = daySchedule.start;
-                      assignedEndTime = daySchedule.end;
-                  }
-              }
+            if (employeeDailySchedules && employeeDailySchedules.length > effectiveWeekIndex) {
+                const weekSchedule = employeeDailySchedules[effectiveWeekIndex];
+                const daySchedule = (weekSchedule as any)?.[dayKeyForLookup];
+                if (daySchedule && daySchedule.hours > 0) {
+                    dailyHours = daySchedule.hours;
+                    assignedStartTime = daySchedule.start;
+                    assignedEndTime = daySchedule.end;
+                }
             }
           }
           
