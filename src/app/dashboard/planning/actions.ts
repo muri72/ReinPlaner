@@ -209,10 +209,12 @@ export async function getPlanningDataForRange(startDate: Date, endDate: Date, fi
 
             const recurrenceIntervalWeeks = assignment.assigned_recurrence_interval_weeks || 1;
             const startWeekOffset = assignment.assigned_start_week_offset || 0;
+            // For one-time orders, the due_date is the reference. For recurring, it's the start date.
             const startDateForLookup = order.recurring_start_date ? parseISO(order.recurring_start_date) : (order.due_date ? parseISO(order.due_date) : dateForScheduleLookup);
             
             const daysPassed = differenceInDays(dateForScheduleLookup, startDateForLookup);
             const weeksPassed = daysPassed >= 0 ? Math.floor(daysPassed / 7) : 0;
+            // For one-time orders, recurrenceIntervalWeeks will be 1, so effectiveWeekIndex will be 0. This is correct.
             const effectiveWeekIndex = (weeksPassed + startWeekOffset) % recurrenceIntervalWeeks;
 
             let employeeDailySchedules: any[] = [];
@@ -234,6 +236,11 @@ export async function getPlanningDataForRange(startDate: Date, endDate: Date, fi
                     assignedStartTime = daySchedule.start;
                     assignedEndTime = daySchedule.end;
                 }
+            }
+
+            // Fallback for one-time orders that might not have a schedule but have total_estimated_hours
+            if (dailyHours === 0 && order.order_type === 'one_time' && order.total_estimated_hours) {
+                dailyHours = order.total_estimated_hours;
             }
           }
           
