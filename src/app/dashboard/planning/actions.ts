@@ -178,61 +178,56 @@ export async function getPlanningDataForRange(startDate: Date, endDate: Date, fi
           let assignedEndTime: string | null = null;
           let isOrderActiveToday = false;
 
+          // Determine if the order is active on the current day
           if (order.order_type === 'one_time') {
               if (order.due_date && formatISO(parseISO(order.due_date), { representation: 'date' }) === dateString) {
                   isOrderActiveToday = true;
-                  const dueDate = parseISO(order.due_date);
-                  const dayOfWeekOneTime = getDay(dueDate);
-                  const dayKeyOneTime = dayNames[dayOfWeekOneTime];
-                  
-                  const weekSchedule = assignment.assigned_daily_schedules?.[0];
-                  const daySchedule = (weekSchedule as any)?.[dayKeyOneTime];
-
-                  if (daySchedule && daySchedule.hours > 0) {
-                      dailyHours = daySchedule.hours;
-                      assignedStartTime = daySchedule.start;
-                      assignedEndTime = daySchedule.end;
-                  } else {
-                      dailyHours = order.total_estimated_hours || 0;
-                      assignedStartTime = format(dueDate, 'HH:mm', { locale: de });
-                      if (dailyHours > 0) {
-                          const endDate = addMinutes(dueDate, dailyHours * 60);
-                          assignedEndTime = format(endDate, 'HH:mm', { locale: de });
-                      }
-                  }
               }
           } else if (['recurring', 'permanent', 'substitution'].includes(order.order_type) && order.recurring_start_date) {
               const startDate = parseISO(order.recurring_start_date);
               const endDate = order.recurring_end_date ? parseISO(order.recurring_end_date) : null;
 
               if (startDate <= day && (!endDate || endDate >= day)) {
-                  // Now, check the recurrence pattern
                   const recurrenceIntervalWeeks = assignment.assigned_recurrence_interval_weeks || 1;
                   const startWeekOffset = assignment.assigned_start_week_offset || 0;
                   const daysPassedAssignment = differenceInDays(day, startDate);
                   
                   if (daysPassedAssignment >= 0) {
                       const weeksPassedAssignment = Math.floor(daysPassedAssignment / 7);
-                      
                       if ((weeksPassedAssignment + startWeekOffset) % recurrenceIntervalWeeks === 0) {
-                          const effectiveWeekIndexAssignment = (weeksPassedAssignment + startWeekOffset) % recurrenceIntervalWeeks;
-                          const employeeDailySchedules = assignment.assigned_daily_schedules;
-                          if (employeeDailySchedules && employeeDailySchedules.length > effectiveWeekIndexAssignment) {
-                              const weekSchedule = employeeDailySchedules[effectiveWeekIndexAssignment];
-                              const daySchedule = (weekSchedule as any)?.[dayKey];
-                              if (daySchedule && daySchedule.hours > 0) {
-                                  isOrderActiveToday = true;
-                                  dailyHours = daySchedule.hours;
-                                  assignedStartTime = daySchedule.start;
-                                  assignedEndTime = daySchedule.end;
-                              }
-                          }
+                          isOrderActiveToday = true;
                       }
                   }
               }
           }
+
+          // If the order is active, get the schedule *exclusively* from the assignment
+          if (isOrderActiveToday) {
+              const dateForScheduleLookup = day;
+              const dayOfWeekForLookup = getDay(dateForScheduleLookup);
+              const dayKeyForLookup = dayNames[dayOfWeekForLookup];
+
+              const recurrenceIntervalWeeks = assignment.assigned_recurrence_interval_weeks || 1;
+              const startWeekOffset = assignment.assigned_start_week_offset || 0;
+              const startDateForLookup = order.recurring_start_date ? parseISO(order.recurring_start_date) : dateForScheduleLookup;
+              
+              const daysPassed = differenceInDays(dateForScheduleLookup, startDateForLookup);
+              const weeksPassed = daysPassed >= 0 ? Math.floor(daysPassed / 7) : 0;
+              const effectiveWeekIndex = (weeksPassed + startWeekOffset) % recurrenceIntervalWeeks;
+
+              const employeeDailySchedules = assignment.assigned_daily_schedules;
+              if (employeeDailySchedules && employeeDailySchedules.length > effectiveWeekIndex) {
+                  const weekSchedule = employeeDailySchedules[effectiveWeekIndex];
+                  const daySchedule = (weekSchedule as any)?.[dayKeyForLookup];
+                  if (daySchedule && daySchedule.hours > 0) {
+                      dailyHours = daySchedule.hours;
+                      assignedStartTime = daySchedule.start;
+                      assignedEndTime = daySchedule.end;
+                  }
+              }
+          }
           
-          if (isOrderActiveToday && dailyHours > 0) {
+          if (dailyHours > 0) {
             const totalAssignmentsForOrder = order.order_employee_assignments[0]?.count || 1;
             const isTeam = totalAssignmentsForOrder > 1;
 
