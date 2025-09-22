@@ -181,12 +181,24 @@ export async function getPlanningDataForRange(startDate: Date, endDate: Date, fi
           if (order.order_type === 'one_time') {
               if (order.due_date && formatISO(parseISO(order.due_date), { representation: 'date' }) === dateString) {
                   isOrderActiveToday = true;
-                  dailyHours = order.total_estimated_hours || 0;
                   const dueDate = parseISO(order.due_date);
-                  assignedStartTime = format(dueDate, 'HH:mm', { locale: de });
-                  if (dailyHours > 0) {
-                      const endDate = addMinutes(dueDate, dailyHours * 60);
-                      assignedEndTime = format(endDate, 'HH:mm', { locale: de });
+                  const dayOfWeekOneTime = getDay(dueDate);
+                  const dayKeyOneTime = dayNames[dayOfWeekOneTime];
+                  
+                  const weekSchedule = assignment.assigned_daily_schedules?.[0];
+                  const daySchedule = (weekSchedule as any)?.[dayKeyOneTime];
+
+                  if (daySchedule && daySchedule.hours > 0) {
+                      dailyHours = daySchedule.hours;
+                      assignedStartTime = daySchedule.start;
+                      assignedEndTime = daySchedule.end;
+                  } else {
+                      dailyHours = order.total_estimated_hours || 0;
+                      assignedStartTime = format(dueDate, 'HH:mm', { locale: de });
+                      if (dailyHours > 0) {
+                          const endDate = addMinutes(dueDate, dailyHours * 60);
+                          assignedEndTime = format(endDate, 'HH:mm', { locale: de });
+                      }
                   }
               }
           } else if (['recurring', 'permanent', 'substitution'].includes(order.order_type) && order.recurring_start_date) {
