@@ -156,9 +156,9 @@ export async function getPlanningDataForRange(startDate: Date, endDate: Date, fi
         // Determine availability and available hours from employee's default schedule
         const defaultRecurrenceInterval = employee.default_recurrence_interval_weeks || 1;
         const defaultStartOffset = employee.default_start_week_offset || 0;
-        const daysPassed = differenceInDays(day, startOfWeek(new Date(), { weekStartsOn: 1 }));
-        const weeksPassed = Math.floor(daysPassed / 7);
-        const effectiveWeekIndexDefault = (weeksPassed + defaultStartOffset) % defaultRecurrenceInterval;
+        const daysPassedDefault = differenceInDays(day, startOfWeek(new Date(), { weekStartsOn: 1 }));
+        const weeksPassedDefault = Math.floor(daysPassedDefault / 7);
+        const effectiveWeekIndexDefault = (weeksPassedDefault + defaultStartOffset) % defaultRecurrenceInterval;
         
         const defaultWeekSchedule = employee.default_daily_schedules?.[effectiveWeekIndexDefault];
         const defaultDaySchedule = (defaultWeekSchedule as any)?.[dayKey];
@@ -176,48 +176,50 @@ export async function getPlanningDataForRange(startDate: Date, endDate: Date, fi
           let dailyHours = 0;
           let assignedStartTime: string | null = null;
           let assignedEndTime: string | null = null;
-          
-          // UNIFIED LOGIC: Get schedule from assignment for ALL order types
-          const dateForScheduleLookup = day;
-          const dayOfWeekForLookup = getDay(dateForScheduleLookup);
-          const dayKeyForLookup = dayNames[dayOfWeekForLookup];
 
-          const recurrenceIntervalWeeks = assignment.assigned_recurrence_interval_weeks || 1;
-          const startWeekOffset = assignment.assigned_start_week_offset || 0;
-          // For one-time orders, the due_date is the reference. For recurring, it's the start date.
-          const startDateForLookup = order.recurring_start_date ? parseISO(order.recurring_start_date) : (order.due_date ? parseISO(order.due_date) : dateForScheduleLookup);
-          
-          const daysPassed = differenceInDays(dateForScheduleLookup, startDateForLookup);
-          if (daysPassed < 0) continue; // Skip if the assignment hasn't started yet
+          if (order.order_type === 'one_time') {
+            if (order.due_date && formatISO(parseISO(order.due_date), { representation: 'date' }) === dateString) {
+              const totalAssignmentsForOrder = order.order_employee_assignments[0]?.count || 1;
+              dailyHours = (order.total_estimated_hours || 0) / totalAssignmentsForOrder;
+            }
+          } else { // For recurring, permanent, substitution
+            const dateForScheduleLookup = day;
+            const dayOfWeekForLookup = getDay(dateForScheduleLookup);
+            const dayKeyForLookup = dayNames[dayOfWeekForLookup];
 
-          const weeksPassed = Math.floor(daysPassed / 7);
-          
-          // Check if the assignment is active for the current week based on recurrence
-          if ((weeksPassed + startWeekOffset) % recurrenceIntervalWeeks !== 0) {
-            continue;
-          }
+            const recurrenceIntervalWeeks = assignment.assigned_recurrence_interval_weeks || 1;
+            const startWeekOffset = assignment.assigned_start_week_offset || 0;
+            const startDateForLookup = order.recurring_start_date ? parseISO(order.recurring_start_date) : dateForScheduleLookup;
+            
+            const daysPassed = differenceInDays(dateForScheduleLookup, startDateForLookup);
+            if (daysPassed >= 0) {
+              const weeksPassed = Math.floor(daysPassed / 7);
+              
+              if ((weeksPassed + startWeekOffset) % recurrenceIntervalWeeks === 0) {
+                const effectiveWeekIndex = (weeksPassed + startWeekOffset) % recurrenceIntervalWeeks;
 
-          const effectiveWeekIndex = (weeksPassed + startWeekOffset) % recurrenceIntervalWeeks;
+                let employeeDailySchedules: any[] = [];
+                if (typeof assignment.assigned_daily_schedules === 'string') {
+                    try {
+                        employeeDailySchedules = JSON.parse(assignment.assigned_daily_schedules);
+                    } catch (e) {
+                        console.error("Failed to parse assigned_daily_schedules:", e);
+                    }
+                } else {
+                    employeeDailySchedules = assignment.assigned_daily_schedules || [];
+                }
 
-          let employeeDailySchedules: any[] = [];
-          if (typeof assignment.assigned_daily_schedules === 'string') {
-              try {
-                  employeeDailySchedules = JSON.parse(assignment.assigned_daily_schedules);
-              } catch (e) {
-                  console.error("Failed to parse assigned_daily_schedules:", e);
+                if (employeeDailySchedules && employeeDailySchedules.length > effectiveWeekIndex) {
+                    const weekSchedule = employeeDailySchedules[effectiveWeekIndex];
+                    const daySchedule = (weekSchedule as any)?.[dayKeyForLookup];
+                    if (daySchedule && daySchedule.hours > 0) {
+                        dailyHours = daySchedule.hours;
+                        assignedStartTime = daySchedule.start;
+                        assignedEndTime = daySchedule.end;
+                    }
+                }
               }
-          } else {
-              employeeDailySchedules = assignment.assigned_daily_schedules || [];
-          }
-
-          if (employeeDailySchedules && employeeDailySchedules.length > effectiveWeekIndex) {
-              const weekSchedule = employeeDailySchedules[effectiveWeekIndex];
-              const daySchedule = (weekSchedule as any)?.[dayKeyForLookup];
-              if (daySchedule && daySchedule.hours > 0) {
-                  dailyHours = daySchedule.hours;
-                  assignedStartTime = daySchedule.start;
-                  assignedEndTime = daySchedule.end;
-              }
+            }
           }
           
           if (dailyHours > 0) {
