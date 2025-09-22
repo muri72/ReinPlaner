@@ -158,9 +158,9 @@ export async function getPlanningDataForRange(startDate: Date, endDate: Date, fi
         const defaultStartOffset = employee.default_start_week_offset || 0;
         const daysPassed = differenceInDays(day, startOfWeek(new Date(), { weekStartsOn: 1 }));
         const weeksPassed = Math.floor(daysPassed / 7);
-        const effectiveWeekIndex = (weeksPassed + defaultStartOffset) % defaultRecurrenceInterval;
+        const effectiveWeekIndexDefault = (weeksPassed + defaultStartOffset) % defaultRecurrenceInterval;
         
-        const defaultWeekSchedule = employee.default_daily_schedules?.[effectiveWeekIndex];
+        const defaultWeekSchedule = employee.default_daily_schedules?.[effectiveWeekIndexDefault];
         const defaultDaySchedule = (defaultWeekSchedule as any)?.[dayKey];
         
         if (defaultDaySchedule && defaultDaySchedule.hours > 0) {
@@ -201,8 +201,14 @@ export async function getPlanningDataForRange(startDate: Date, endDate: Date, fi
               }
           }
 
-          // If the order is active, get the schedule *exclusively* from the assignment
           if (isOrderActiveToday) {
+            if (order.order_type === 'one_time') {
+              dailyHours = order.total_estimated_hours || 0;
+              // For one-time orders, we don't have a specific start/end time from a schedule
+              assignedStartTime = null;
+              assignedEndTime = null;
+            } else {
+              // For recurring orders, get schedule from assignment
               const dateForScheduleLookup = day;
               const dayOfWeekForLookup = getDay(dateForScheduleLookup);
               const dayKeyForLookup = dayNames[dayOfWeekForLookup];
@@ -235,6 +241,7 @@ export async function getPlanningDataForRange(startDate: Date, endDate: Date, fi
                       assignedEndTime = daySchedule.end;
                   }
               }
+            }
           }
           
           if (dailyHours > 0) {
