@@ -179,8 +179,19 @@ export async function getPlanningDataForRange(startDate: Date, endDate: Date, fi
 
           if (order.order_type === 'one_time') {
             if (order.due_date && formatISO(parseISO(order.due_date), { representation: 'date' }) === dateString) {
-              const totalAssignmentsForOrder = order.order_employee_assignments[0]?.count || 1;
-              dailyHours = (order.total_estimated_hours || 0) / totalAssignmentsForOrder;
+              const dueDate = parseISO(order.due_date);
+              const dayOfWeekForLookup = getDay(dueDate);
+              const dayKeyForLookup = dayNames[dayOfWeekForLookup];
+              
+              // For one-time orders, we assume the schedule is in the first week of the assignment's schedule array
+              const weekSchedule = assignment.assigned_daily_schedules?.[0];
+              const daySchedule = (weekSchedule as any)?.[dayKeyForLookup];
+
+              if (daySchedule && daySchedule.hours > 0) {
+                dailyHours = daySchedule.hours;
+                assignedStartTime = daySchedule.start;
+                assignedEndTime = daySchedule.end;
+              }
             }
           } else { // For recurring, permanent, substitution
             const dateForScheduleLookup = day;
