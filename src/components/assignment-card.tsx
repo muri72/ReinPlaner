@@ -88,7 +88,7 @@ export function AssignmentCard({ assignment, onSuccess }: AssignmentCardProps) {
         </div>
         <div className="flex items-center text-xs text-muted-foreground">
           <Clock className="mr-1 h-3 w-3" />
-          <span>{assignment.hours.toFixed(2)}h Netto</span>
+          <span>{assignment.hours.toFixed(2)}h</span>
         </div>
         <p className="font-bold text-sm truncate">{assignment.title}</p>
         {assignment.service_type && (
