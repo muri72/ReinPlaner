@@ -221,15 +221,16 @@ export async function getPlanningDataForRange(startDate: Date, endDate: Date, fi
               const weekSchedule = employeeDailySchedules[effectiveWeekIndex];
               const daySchedule = (weekSchedule as any)?.[dayKeyForLookup];
               
-              console.log(`[PLANNING_LOG] Check: Emp=${employee.id}, Order=${order.id}, Date=${dateString}, Day=${dayKeyForLookup}, WeekIndex=${effectiveWeekIndex}, Schedule Found:`, daySchedule);
+              console.log(`[PLANNING_DEBUG] Check: Emp=${employee.id}, Order=${order.id}, Date=${dateString}, Day=${dayKeyForLookup}, WeekIndex=${effectiveWeekIndex}, Schedule Found:`, daySchedule);
 
               if (daySchedule && daySchedule.hours > 0) {
                   dailyHours = daySchedule.hours;
                   assignedStartTime = daySchedule.start;
                   assignedEndTime = daySchedule.end;
+                  console.log(`[PLANNING_DEBUG] SUCCESS: Emp=${employee.id}, Order=${order.id}, Date=${dateString} -> Found hours: ${dailyHours}, Start: ${assignedStartTime}, End: ${assignedEndTime}`);
               }
           } else {
-            console.log(`[PLANNING_LOG] No schedule found for Emp=${employee.id}, Order=${order.id}, Date=${dateString}, WeekIndex=${effectiveWeekIndex}`);
+            console.log(`[PLANNING_DEBUG] FAIL: No schedule found for Emp=${employee.id}, Order=${order.id}, Date=${dateString}, WeekIndex=${effectiveWeekIndex}`);
           }
           
           if (dailyHours > 0) {
