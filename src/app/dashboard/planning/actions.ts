@@ -186,18 +186,10 @@ export async function getPlanningDataForRange(startDate: Date, endDate: Date, fi
           } else if (['recurring', 'permanent', 'substitution'].includes(order.order_type) && order.recurring_start_date) {
               const startDate = parseISO(order.recurring_start_date);
               const endDate = order.recurring_end_date ? parseISO(order.recurring_end_date) : null;
-
+              // The order is potentially active if the current day is within its main start/end dates.
+              // The specific recurrence is handled by the schedule lookup below.
               if (startDate <= day && (!endDate || endDate >= day)) {
-                  const recurrenceIntervalWeeks = assignment.assigned_recurrence_interval_weeks || 1;
-                  const startWeekOffset = assignment.assigned_start_week_offset || 0;
-                  const daysPassedAssignment = differenceInDays(day, startDate);
-                  
-                  if (daysPassedAssignment >= 0) {
-                      const weeksPassedAssignment = Math.floor(daysPassedAssignment / 7);
-                      if ((weeksPassedAssignment + startWeekOffset) % recurrenceIntervalWeeks === 0) {
-                          isOrderActiveToday = true;
-                      }
-                  }
+                  isOrderActiveToday = true;
               }
           }
 
