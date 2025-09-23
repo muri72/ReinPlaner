@@ -12,6 +12,7 @@ import { PlanningData, UnassignedOrder } from "@/app/dashboard/planning/actions"
 import { EmployeeWorkloadBar } from "./employee-workload-bar";
 import { AssignmentCard } from "./assignment-card";
 import { DraggableOrderCard } from "./draggable-order-card";
+import { EmployeeEditDialog } from "./employee-edit-dialog"; // Import EmployeeEditDialog
 
 const absenceTypeTranslations: { [key: string]: string } = {
   vacation: "Urlaub",
@@ -109,10 +110,13 @@ export function PlanningCalendar({ planningData, unassignedOrders, weekDays, act
           ) : (
             employeeIds.map(id => {
               const employee = planningData[id];
+              if (!employee) return null; // Add a guard clause
               return (
                 <TableRow key={id}>
                   <TableCell className="font-normal sticky left-0 bg-card z-10 align-top">
-                    <div className="text-sm font-semibold">{employee.name}</div>
+                    <EmployeeEditDialog employee={employee.raw as any}>
+                      <div className="text-sm font-semibold cursor-pointer hover:text-primary">{employee.name}</div>
+                    </EmployeeEditDialog>
                     <EmployeeWorkloadBar
                       planned={employee.totalHoursPlanned}
                       available={employee.totalHoursAvailable}

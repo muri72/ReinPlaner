@@ -34,9 +34,10 @@ interface EmployeeEditDialogProps {
     default_recurrence_interval_weeks: number; // New field
     default_start_week_offset: number; // New field
   };
+  children?: React.ReactNode; // Add children prop
 }
 
-export function EmployeeEditDialog({ employee }: EmployeeEditDialogProps) {
+export function EmployeeEditDialog({ employee, children }: EmployeeEditDialogProps) {
   const [open, setOpen] = useState(false);
   // Removed titleId and descriptionId as they are no longer needed for aria attributes
 
@@ -48,22 +49,28 @@ export function EmployeeEditDialog({ employee }: EmployeeEditDialogProps) {
     return result;
   };
 
+  const trigger = children ? (
+    <DialogTrigger asChild>{children}</DialogTrigger>
+  ) : (
+    <TooltipProvider delayDuration={300}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <DialogTrigger asChild>
+            <Button variant="ghost" size="icon" className="text-primary hover:text-primary/80">
+              <Pencil className="h-4 w-4" />
+            </Button>
+          </DialogTrigger>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>Mitarbeiter bearbeiten</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <TooltipProvider delayDuration={300}>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <DialogTrigger asChild>
-              <Button variant="ghost" size="icon" className="text-primary hover:text-primary/80">
-                <Pencil className="h-4 w-4" />
-              </Button>
-            </DialogTrigger>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Mitarbeiter bearbeiten</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+      {trigger}
       <DialogContent 
         key={open ? "employee-edit-open" : "employee-edit-closed"} 
         className="sm:max-w-3xl max-h-[90vh] overflow-y-auto glassmorphism-card"

@@ -10,6 +10,7 @@ export interface EmployeePlanningData {
   name: string;
   totalHoursAvailable: number;
   totalHoursPlanned: number;
+  raw: any; // Add raw employee data for edit dialog
   schedule: {
     [date: string]: { // YYYY-MM-DD
       isAvailable: boolean;
@@ -259,6 +260,7 @@ export async function getPlanningDataForRange(startDate: Date, endDate: Date, fi
         name: `${employee.first_name} ${employee.last_name}`,
         totalHoursAvailable,
         totalHoursPlanned,
+        raw: employee, // Pass raw data
         schedule: employeeSchedule,
       };
     }
