@@ -12,7 +12,8 @@ import { PlanningData, UnassignedOrder } from "@/app/dashboard/planning/actions"
 import { EmployeeWorkloadBar } from "./employee-workload-bar";
 import { AssignmentCard } from "./assignment-card";
 import { DraggableOrderCard } from "./draggable-order-card";
-import { EmployeeEditDialog } from "./employee-edit-dialog"; // Import EmployeeEditDialog
+import { EmployeeEditDialog } from "./employee-edit-dialog";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const absenceTypeTranslations: { [key: string]: string } = {
   vacation: "Urlaub",
@@ -51,9 +52,10 @@ interface PlanningCalendarProps {
   activeDragId: string | null;
   showUnassigned: boolean;
   onActionSuccess: () => void;
+  weekNumber: number;
 }
 
-export function PlanningCalendar({ planningData, unassignedOrders, weekDays, activeDragId, showUnassigned, onActionSuccess }: PlanningCalendarProps) {
+export function PlanningCalendar({ planningData, unassignedOrders, weekDays, activeDragId, showUnassigned, onActionSuccess, weekNumber }: PlanningCalendarProps) {
   const employeeIds = Object.keys(planningData);
 
   return (
@@ -61,9 +63,14 @@ export function PlanningCalendar({ planningData, unassignedOrders, weekDays, act
       <Table className="min-w-full border-collapse table-fixed">
         <TableHeader>
           <TableRow>
-            <TableHead className="sticky left-0 bg-card z-10 w-[150px] text-sm">Mitarbeiter</TableHead>
+            <TableHead className="sticky left-0 bg-card z-20 w-[250px] text-sm" rowSpan={2}>Mitarbeiter</TableHead>
+            <TableHead colSpan={weekDays.length} className="text-center text-sm font-semibold border-b">
+              Woche {weekNumber}
+            </TableHead>
+          </TableRow>
+          <TableRow>
             {weekDays.map((day) => (
-              <TableHead key={day.toString()} className="text-center text-sm">
+              <TableHead key={day.toString()} className="text-center text-sm w-[120px] min-w-[120px]">
                 {format(day, "E dd.", { locale: de })}
               </TableHead>
             ))}
@@ -104,23 +111,48 @@ export function PlanningCalendar({ planningData, unassignedOrders, weekDays, act
           {employeeIds.length === 0 ? (
             <TableRow>
               <TableCell colSpan={weekDays.length + 1} className="text-center text-muted-foreground h-24">
-                Keine Mitarbeiterdaten gefunden.
+                Keine Mitarbeiter gefunden.
               </TableCell>
             </TableRow>
           ) : (
             employeeIds.map(id => {
               const employee = planningData[id];
-              if (!employee) return null; // Add a guard clause
+              if (!employee) return null;
+              const available = employee.totalHoursAvailable - employee.totalHoursPlanned;
               return (
                 <TableRow key={id}>
-                  <TableCell className="font-normal sticky left-0 bg-card z-10 align-top">
-                    <EmployeeEditDialog employee={employee.raw as any}>
-                      <div className="text-sm font-semibold cursor-pointer hover:text-primary">{employee.name}</div>
-                    </EmployeeEditDialog>
-                    <EmployeeWorkloadBar
-                      planned={employee.totalHoursPlanned}
-                      available={employee.totalHoursAvailable}
-                    />
+                  <TableCell className="font-normal sticky left-0 bg-card z-10 align-top p-2 w-[250px]">
+                    <div className="flex items-start gap-2">
+                      <Avatar>
+                        <AvatarImage src={employee.raw.avatar_url} alt={employee.name} />
+                        <AvatarFallback>{employee.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1">
+                        <EmployeeEditDialog employee={employee.raw as any} onEmployeeUpdated={onActionSuccess}>
+                          <div className="text-sm font-semibold cursor-pointer hover:text-primary">{employee.name}</div>
+                        </EmployeeEditDialog>
+                        <p className="text-xs text-muted-foreground">{employee.raw.job_title || 'Mitarbeiter'}</p>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="mt-2">
+                                <EmployeeWorkloadBar
+                                  planned={employee.totalHoursPlanned}
+                                  available={employee.totalHoursAvailable}
+                                />
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <div className="text-sm space-y-1">
+                                <p>Eingeplant (Woche): {employee.totalHoursPlanned.toFixed(2)}h</p>
+                                <p>Verfügbar (Woche): {employee.totalHoursAvailable.toFixed(2)}h</p>
+                                <p>Noch verfügbar: {available.toFixed(2)}h</p>
+                              </div>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
+                    </div>
                   </TableCell>
                   {weekDays.map((day) => {
                     const dateString = format(day, "yyyy-MM-dd");

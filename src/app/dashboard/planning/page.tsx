@@ -173,6 +173,7 @@ export default function PlanningPage() {
               activeDragId={activeDragId}
               showUnassigned={showUnassigned}
               onActionSuccess={() => fetchData(startDate, endDate, query)}
+              weekNumber={planningPageData?.weekNumber || 0}
             />
           )}
         </div>

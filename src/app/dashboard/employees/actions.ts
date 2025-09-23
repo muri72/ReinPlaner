@@ -13,54 +13,54 @@ export async function createEmployee(data: EmployeeFormValues) {
   }
 
   const {
-    firstName,
-    lastName,
+    first_name,
+    last_name,
     email,
     phone,
-    hireDate,
+    hire_date,
     status,
-    contractType,
-    contractEndDate, // Neues Feld
-    hourlyRate,
-    startDate,
-    jobTitle,
+    contract_type,
+    contract_end_date,
+    hourly_rate,
+    start_date,
+    job_title,
     department,
     notes,
-    address, // Neues Feld
-    dateOfBirth, // Neues Feld
-    socialSecurityNumber, // Neues Feld
-    taxIdNumber, // Neues Feld
-    healthInsuranceProvider, // Neues Feld
-    default_daily_schedules, // Neues Feld
-    default_recurrence_interval_weeks, // Neues Feld
-    default_start_week_offset, // Neues Feld
+    address,
+    date_of_birth,
+    social_security_number,
+    tax_id_number,
+    health_insurance_provider,
+    default_daily_schedules,
+    default_recurrence_interval_weeks,
+    default_start_week_offset,
   } = data;
 
   const { error } = await supabase
     .from('employees')
     .insert({
       user_id: user.id,
-      first_name: firstName,
-      last_name: lastName,
+      first_name: first_name,
+      last_name: last_name,
       email,
       phone,
-      hire_date: hireDate ? hireDate.toISOString() : null,
+      hire_date: hire_date ? hire_date.toISOString() : null,
       status,
-      contract_type: contractType,
-      contract_end_date: contractEndDate ? contractEndDate.toISOString().split('T')[0] : null, // Neues Feld
-      hourly_rate: hourlyRate,
-      start_date: startDate ? startDate.toISOString().split('T')[0] : null,
-      job_title: jobTitle,
+      contract_type: contract_type,
+      contract_end_date: contract_end_date ? contract_end_date.toISOString().split('T')[0] : null,
+      hourly_rate: hourly_rate,
+      start_date: start_date ? start_date.toISOString().split('T')[0] : null,
+      job_title: job_title,
       department,
       notes,
-      address, // Neues Feld
-      date_of_birth: dateOfBirth ? dateOfBirth.toISOString().split('T')[0] : null, // Nur Datum speichern
-      social_security_number: socialSecurityNumber, // Neues Feld
-      tax_id_number: taxIdNumber, // Neues Feld
-      health_insurance_provider: healthInsuranceProvider, // Neues Feld
-      default_daily_schedules, // Neues Feld
-      default_recurrence_interval_weeks, // Neues Feld
-      default_start_week_offset, // Neues Feld
+      address,
+      date_of_birth: date_of_birth ? date_of_birth.toISOString().split('T')[0] : null,
+      social_security_number: social_security_number,
+      tax_id_number: tax_id_number,
+      health_insurance_provider: health_insurance_provider,
+      default_daily_schedules,
+      default_recurrence_interval_weeks,
+      default_start_week_offset,
     });
 
   if (error) {
@@ -95,27 +95,27 @@ export async function updateEmployee(employeeId: string, data: EmployeeFormValue
   let query = supabase
     .from('employees')
     .update({
-      first_name: data.firstName,
-      last_name: data.lastName,
+      first_name: data.first_name,
+      last_name: data.last_name,
       email: data.email,
       phone: data.phone,
-      hire_date: data.hireDate ? data.hireDate.toISOString() : null,
+      hire_date: data.hire_date ? data.hire_date.toISOString() : null,
       status: data.status,
-      contract_type: data.contractType,
-      contract_end_date: data.contractEndDate ? data.contractEndDate.toISOString().split('T')[0] : null, // Neues Feld
-      hourly_rate: data.hourlyRate,
-      start_date: data.startDate ? data.startDate.toISOString().split('T')[0] : null,
-      job_title: data.jobTitle,
+      contract_type: data.contract_type,
+      contract_end_date: data.contract_end_date ? data.contract_end_date.toISOString().split('T')[0] : null,
+      hourly_rate: data.hourly_rate,
+      start_date: data.start_date ? data.start_date.toISOString().split('T')[0] : null,
+      job_title: data.job_title,
       department: data.department,
       notes: data.notes,
       address: data.address,
-      date_of_birth: data.dateOfBirth ? data.dateOfBirth.toISOString().split('T')[0] : null,
-      social_security_number: data.socialSecurityNumber,
-      tax_id_number: data.taxIdNumber,
-      health_insurance_provider: data.healthInsuranceProvider,
-      default_daily_schedules: data.default_daily_schedules, // Neues Feld
-      default_recurrence_interval_weeks: data.default_recurrence_interval_weeks, // Neues Feld
-      default_start_week_offset: data.default_start_week_offset, // Neues Feld
+      date_of_birth: data.date_of_birth ? data.date_of_birth.toISOString().split('T')[0] : null,
+      social_security_number: data.social_security_number,
+      tax_id_number: data.tax_id_number,
+      health_insurance_provider: data.health_insurance_provider,
+      default_daily_schedules: data.default_daily_schedules,
+      default_recurrence_interval_weeks: data.default_recurrence_interval_weeks,
+      default_start_week_offset: data.default_start_week_offset,
     })
     .eq('id', employeeId);
 

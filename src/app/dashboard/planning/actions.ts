@@ -3,7 +3,7 @@
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { sendNotification } from "@/lib/actions/notifications";
-import { startOfWeek, endOfWeek, eachDayOfInterval, formatISO, parseISO, getDay, differenceInDays, format, addMinutes } from 'date-fns';
+import { startOfWeek, endOfWeek, eachDayOfInterval, formatISO, parseISO, getDay, differenceInDays, format, addMinutes, getWeek } from 'date-fns';
 import { de } from 'date-fns/locale';
 
 export interface EmployeePlanningData {
@@ -49,6 +49,7 @@ export interface UnassignedOrder {
 export interface PlanningPageData {
   planningData: PlanningData;
   unassignedOrders: UnassignedOrder[];
+  weekNumber: number;
 }
 
 const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as const;
@@ -71,6 +72,7 @@ export async function getPlanningDataForRange(startDate: Date, endDate: Date, fi
     return { success: false, data: null, message: "Benutzer nicht authentifiziert." };
   }
 
+  const weekNumber = getWeek(startDate, { weekStartsOn: 1, locale: de });
   const weekDays = eachDayOfInterval({ start: startDate, end: endDate });
   const start_date_iso = formatISO(startDate, { representation: 'date' });
   const end_date_iso = formatISO(endDate, { representation: 'date' });
@@ -79,7 +81,7 @@ export async function getPlanningDataForRange(startDate: Date, endDate: Date, fi
     // 1. Fetch all active employees with their default schedules, applying search filter
     let employeesQuery = supabase
       .from('employees')
-      .select('id, first_name, last_name, default_daily_schedules, default_recurrence_interval_weeks, default_start_week_offset')
+      .select('*, user_id')
       .eq('status', 'active');
 
     if (filters.query) {
@@ -88,6 +90,22 @@ export async function getPlanningDataForRange(startDate: Date, endDate: Date, fi
 
     const { data: employees, error: employeesError } = await employeesQuery;
     if (employeesError) throw employeesError;
+
+    // Get user IDs to fetch profiles with avatars
+    const userIds = employees.map(e => e.user_id).filter((id): id is string => id !== null);
+    const { data: profiles, error: profilesError } = await supabase
+      .from('profiles')
+      .select('id, avatar_url')
+      .in('id', userIds);
+    if (profilesError) throw profilesError;
+
+    const profilesMap = new Map(profiles.map(p => [p.id, p.avatar_url]));
+
+    const employeesWithAvatars = employees.map(employee => ({
+      ...employee,
+      avatar_url: employee.user_id ? profilesMap.get(employee.user_id) : null,
+    }));
+
 
     // 2. Fetch all approved absences in the period
     const { data: absences, error: absencesError } = await supabase
@@ -121,7 +139,7 @@ export async function getPlanningDataForRange(startDate: Date, endDate: Date, fi
     // 5. Process data
     const planningData: PlanningData = {};
 
-    for (const employee of employees) {
+    for (const employee of employeesWithAvatars) {
       let totalHoursAvailable = 0;
       let totalHoursPlanned = 0;
 
@@ -260,7 +278,7 @@ export async function getPlanningDataForRange(startDate: Date, endDate: Date, fi
         name: `${employee.first_name} ${employee.last_name}`,
         totalHoursAvailable,
         totalHoursPlanned,
-        raw: employee, // Pass raw data
+        raw: employee,
         schedule: employeeSchedule,
       };
     }
@@ -268,6 +286,7 @@ export async function getPlanningDataForRange(startDate: Date, endDate: Date, fi
     const pageData: PlanningPageData = {
       planningData,
       unassignedOrders: unassignedOrdersData || [],
+      weekNumber,
     };
 
     return { success: true, data: pageData, message: "Plandaten erfolgreich geladen." };

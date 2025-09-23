@@ -53,8 +53,8 @@ interface Employee {
   email: string | null;
   phone: string | null;
   hire_date: string | null;
-  status: string;
-  contract_type: string | null;
+  status: "active" | "inactive" | "on_leave";
+  contract_type: "full_time" | "part_time" | "minijob" | "freelancer" | null;
   contract_end_date: string | null;
   hourly_rate: number | null;
   start_date: string | null;

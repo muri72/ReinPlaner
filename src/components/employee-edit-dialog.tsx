@@ -17,9 +17,8 @@ interface EmployeeEditDialogProps {
     email: string | null;
     phone: string | null;
     hire_date: string | null;
-    status: string;
-    contract_type: string | null;
-    contract_end_date: string | null; // Neues Feld
+    status: "active" | "inactive" | "on_leave";
+    contract_type: "full_time" | "part_time" | "minijob" | "freelancer" | null;
     hourly_rate: number | null;
     start_date: string | null;
     job_title: string | null;
@@ -30,21 +29,23 @@ interface EmployeeEditDialogProps {
     social_security_number: string | null;
     tax_id_number: string | null;
     health_insurance_provider: string | null;
-    default_daily_schedules: any[]; // New field
-    default_recurrence_interval_weeks: number; // New field
-    default_start_week_offset: number; // New field
+    contract_end_date: string | null;
+    default_daily_schedules: any[];
+    default_recurrence_interval_weeks: number;
+    default_start_week_offset: number;
   };
-  children?: React.ReactNode; // Add children prop
+  children?: React.ReactNode;
+  onEmployeeUpdated?: () => void;
 }
 
-export function EmployeeEditDialog({ employee, children }: EmployeeEditDialogProps) {
+export function EmployeeEditDialog({ employee, children, onEmployeeUpdated }: EmployeeEditDialogProps) {
   const [open, setOpen] = useState(false);
-  // Removed titleId and descriptionId as they are no longer needed for aria attributes
 
   const handleUpdate = async (data: EmployeeFormValues) => {
     const result = await updateEmployee(employee.id, data);
     if (result.success) {
       setOpen(false);
+      onEmployeeUpdated?.();
     }
     return result;
   };
@@ -81,34 +82,17 @@ export function EmployeeEditDialog({ employee, children }: EmployeeEditDialogPro
             Formular zum Bearbeiten der Mitarbeiterdaten.
           </DialogDescription>
         </DialogHeader>
-        <EmployeeForm
-          initialData={{
-            firstName: employee.first_name,
-            lastName: employee.last_name,
-            email: employee.email,
-            phone: employee.phone,
-            hireDate: employee.hire_date ? new Date(employee.hire_date) : undefined,
-            status: employee.status as EmployeeFormValues["status"],
-            contractType: employee.contract_type as EmployeeFormValues["contractType"],
-            contractEndDate: employee.contract_end_date ? new Date(employee.contract_end_date) : undefined, // Neues Feld
-            hourlyRate: employee.hourly_rate,
-            startDate: employee.start_date ? new Date(employee.start_date) : undefined,
-            jobTitle: employee.job_title,
-            department: employee.department,
-            notes: employee.notes,
-            address: employee.address,
-            dateOfBirth: employee.date_of_birth ? new Date(employee.date_of_birth) : undefined,
-            socialSecurityNumber: employee.social_security_number,
-            taxIdNumber: employee.tax_id_number,
-            healthInsuranceProvider: employee.health_insurance_provider,
-            default_daily_schedules: employee.default_daily_schedules, // New field
-            default_recurrence_interval_weeks: employee.default_recurrence_interval_weeks, // New field
-            default_start_week_offset: employee.default_start_week_offset, // New field
-          }}
-          onSubmit={handleUpdate}
-          submitButtonText="Änderungen speichern"
-          onSuccess={() => setOpen(false)}
-        />
+        <div className="flex-grow overflow-y-auto pr-4">
+          <EmployeeForm
+            initialData={employee}
+            onSubmit={handleUpdate}
+            submitButtonText="Änderungen speichern"
+            onSuccess={() => {
+              setOpen(false);
+              onEmployeeUpdated?.();
+            }}
+          />
+        </div>
       </DialogContent>
     </Dialog>
   );
