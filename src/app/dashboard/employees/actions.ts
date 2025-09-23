@@ -80,7 +80,7 @@ export async function updateEmployee(employeeId: string, data: EmployeeFormValue
     return { success: false, message: "Benutzer nicht authentifiziert." };
   }
 
-  const { error } = await supabase
+  const { data: updatedRows, error } = await supabase
     .from('employees')
     .update({
       first_name: data.first_name,
@@ -105,11 +105,17 @@ export async function updateEmployee(employeeId: string, data: EmployeeFormValue
       default_recurrence_interval_weeks: data.default_recurrence_interval_weeks,
       default_start_week_offset: data.default_start_week_offset,
     })
-    .eq('id', employeeId);
+    .eq('id', employeeId)
+    .select();
 
   if (error) {
     console.error("Fehler beim Aktualisieren des Mitarbeiters:", error?.message || error);
     return { success: false, message: `Aktualisierung fehlgeschlagen: ${error.message}` };
+  }
+
+  if (!updatedRows || updatedRows.length === 0) {
+    console.warn(`Update-Operation für Mitarbeiter-ID ${employeeId} durch Benutzer ${user.id} führte zu keiner Aktualisierung. Dies könnte ein RLS-Problem sein.`);
+    return { success: false, message: "Mitarbeiter konnte nicht aktualisiert werden. Möglicherweise haben Sie keine Berechtigung." };
   }
 
   revalidatePath("/dashboard/employees");
@@ -126,15 +132,20 @@ export async function deleteEmployee(formData: FormData): Promise<{ success: boo
 
   const employeeId = formData.get('employeeId') as string;
 
-  // RLS will handle the permission check
-  const { error } = await supabase
+  const { data: deletedRows, error } = await supabase
     .from('employees')
     .delete()
-    .eq('id', employeeId);
+    .eq('id', employeeId)
+    .select();
 
   if (error) {
     console.error("Fehler beim Löschen des Mitarbeiters:", error?.message || error);
     return { success: false, message: error.message };
+  }
+  
+  if (!deletedRows || deletedRows.length === 0) {
+    console.warn(`Delete-Operation für Mitarbeiter-ID ${employeeId} durch Benutzer ${user.id} führte zu keiner Löschung. Dies könnte ein RLS-Problem sein.`);
+    return { success: false, message: "Mitarbeiter konnte nicht gelöscht werden. Möglicherweise haben Sie keine Berechtigung." };
   }
 
   revalidatePath("/dashboard/employees");
