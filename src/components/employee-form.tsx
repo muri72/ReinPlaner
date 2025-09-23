@@ -8,15 +8,16 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useState, useEffect, useCallback, useMemo } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { useMemo } from "react";
 import { DatePicker } from "@/components/date-picker";
 import { handleActionResponse } from "@/lib/toast-utils";
-import { cn, calculateEndTime, calculateStartTime } from "@/lib/utils";
-import { Copy } from "lucide-react";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
-const preprocessNumber = (val: unknown) => (val === "" || isNaN(Number(val)) ? null : Number(val));
+const preprocessNumber = (val: unknown) => {
+  if (val === "" || val === null || val === undefined) return null;
+  const num = Number(val);
+  return isNaN(num) ? null : num;
+};
+
 const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
 
 const dayNames = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const;
@@ -30,9 +31,8 @@ const germanDayNames: { [key: string]: string } = {
   sunday: 'So',
 };
 
-// Define daily schedule schema with explicit number type for hours
 const dailyScheduleSchema = z.object({
-  hours: z.number().nullable().optional(),
+  hours: z.preprocess(preprocessNumber, z.number().nullable().optional()),
   start: z.string().regex(timeRegex, "Ungültiges Format (HH:MM)").nullable().optional(),
   end: z.string().regex(timeRegex, "Ungültiges Format (HH:MM)").nullable().optional(),
 });
@@ -47,7 +47,6 @@ const weeklyScheduleSchema = z.object({
   sunday: dailyScheduleSchema.optional(),
 });
 
-// Define the schema with explicit types to avoid resolver conflicts
 export const employeeSchema = z.object({
   first_name: z.string().min(1, "Vorname ist erforderlich"),
   last_name: z.string().min(1, "Nachname ist erforderlich"),
@@ -60,7 +59,7 @@ export const employeeSchema = z.object({
   contract_end_date: z.date().nullable().optional(),
   status: z.enum(["active", "inactive", "on_leave"]),
   contract_type: z.enum(["full_time", "part_time", "minijob", "freelancer"]).nullable().optional(),
-  hourly_rate: z.number().min(0).nullable().optional(),
+  hourly_rate: z.preprocess(preprocessNumber, z.number().min(0).nullable().optional()),
   job_title: z.string().nullable().optional(),
   department: z.string().nullable().optional(),
   notes: z.string().nullable().optional(),
@@ -68,11 +67,10 @@ export const employeeSchema = z.object({
   tax_id_number: z.string().nullable().optional(),
   health_insurance_provider: z.string().nullable().optional(),
   default_daily_schedules: z.array(weeklyScheduleSchema),
-  default_recurrence_interval_weeks: z.number().min(1).max(52),
-  default_start_week_offset: z.number().min(0).max(51),
+  default_recurrence_interval_weeks: z.preprocess(preprocessNumber, z.number().min(1).max(52)),
+  default_start_week_offset: z.preprocess(preprocessNumber, z.number().min(0).max(51)),
 });
 
-// Export the type for use in other components
 export type EmployeeFormValues = z.infer<typeof employeeSchema>;
 
 interface EmployeeFormProps {
