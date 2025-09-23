@@ -46,7 +46,7 @@ const weeklyScheduleSchema = z.object({
   sunday: dailyScheduleSchema.optional(),
 });
 
-export const employeeSchema = z.object({
+const employeeSchema = z.object({
   first_name: z.string().min(1, "Vorname ist erforderlich"),
   last_name: z.string().min(1, "Nachname ist erforderlich"),
   email: z.string().email("Ungültige E-Mail-Adresse").optional().nullable(),
@@ -56,29 +56,24 @@ export const employeeSchema = z.object({
   hire_date: z.date().optional().nullable(),
   start_date: z.date().optional().nullable(),
   contract_end_date: z.date().optional().nullable(),
-  status: z.enum(["active", "inactive", "on_leave"]).default("active"),
+  status: z.enum(["active", "inactive", "on_leave"]),
   contract_type: z.enum(["full_time", "part_time", "minijob", "freelancer"]).optional().nullable(),
-  hourly_rate: z.preprocess(preprocessNumber, z.number().min(0).optional().nullable()),
+  hourly_rate: z.number().min(0).optional().nullable(),
   job_title: z.string().optional().nullable(),
   department: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
   social_security_number: z.string().optional().nullable(),
   tax_id_number: z.string().optional().nullable(),
   health_insurance_provider: z.string().optional().nullable(),
-  default_daily_schedules: z.array(weeklyScheduleSchema).default([{}]),
-  default_recurrence_interval_weeks: z.number().min(1).max(52).default(1),
-  default_start_week_offset: z.number().min(0).max(51).default(0),
+  default_daily_schedules: z.array(weeklyScheduleSchema),
+  default_recurrence_interval_weeks: z.number().min(1).max(52),
+  default_start_week_offset: z.number().min(0).max(51),
 });
 
-export type EmployeeFormValues = z.infer<typeof employeeSchema>;
+type EmployeeFormValues = z.infer<typeof employeeSchema>;
 
 interface EmployeeFormProps {
-  initialData?: Partial<EmployeeFormValues> & {
-    date_of_birth?: string | Date | null;
-    hire_date?: string | Date | null;
-    start_date?: string | Date | null;
-    contract_end_date?: string | Date | null;
-  };
+  initialData?: Partial<EmployeeFormValues>;
   onSubmit: (data: EmployeeFormValues) => Promise<{ success: boolean; message: string }>;
   submitButtonText: string;
   onSuccess?: () => void;
@@ -96,10 +91,6 @@ export function EmployeeForm({ initialData, onSubmit, submitButtonText, onSucces
       default_recurrence_interval_weeks: 1,
       default_start_week_offset: 0,
       ...initialData,
-      date_of_birth: initialData?.date_of_birth ? new Date(initialData.date_of_birth) : undefined,
-      hire_date: initialData?.hire_date ? new Date(initialData.hire_date) : undefined,
-      start_date: initialData?.start_date ? new Date(initialData.start_date) : undefined,
-      contract_end_date: initialData?.contract_end_date ? new Date(initialData.contract_end_date) : undefined,
     },
     mode: "onChange",
   });
@@ -250,7 +241,7 @@ export function EmployeeForm({ initialData, onSubmit, submitButtonText, onSucces
           <Label htmlFor="contract_type">Vertragsart</Label>
           <Select 
             onValueChange={(value) => form.setValue("contract_type", value as EmployeeFormValues["contract_type"])} 
-            value={form.watch("contract_type") || undefined} // Handle null value
+            value={form.watch("contract_type") || undefined}
           >
             <SelectTrigger><SelectValue placeholder="Vertragsart auswählen" /></SelectTrigger>
             <SelectContent>
