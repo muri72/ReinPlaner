@@ -80,6 +80,9 @@ export async function updateEmployee(employeeId: string, data: EmployeeFormValue
     return { success: false, message: "Benutzer nicht authentifiziert." };
   }
 
+  console.log(`[updateEmployee] User ${user.id} is attempting to update employee ${employeeId}.`);
+  console.log("[updateEmployee] Data for update:", JSON.stringify(data, null, 2));
+
   const { data: updatedRows, error } = await supabase
     .from('employees')
     .update({

@@ -36,7 +36,7 @@ const germanDayNames: { [key: string]: string } = {
 
 // Define daily schedule schema with explicit number type for hours
 const dailyScheduleSchema = z.object({
-  hours: z.coerce.number().min(0).max(24).optional().nullable(),
+  hours: z.preprocess(preprocessNumber, z.number().min(0).max(24).optional().nullable()),
   start: z.string().regex(timeRegex, "Ungültiges Format (HH:MM)").or(z.literal("")).optional().nullable(),
   end: z.string().regex(timeRegex, "Ungültiges Format (HH:MM)").or(z.literal("")).optional().nullable(),
 });
@@ -63,7 +63,7 @@ export const employeeSchema = z.object({
   contract_end_date: z.date().optional().nullable(),
   status: z.enum(["active", "inactive", "on_leave"]),
   contract_type: z.enum(["full_time", "part_time", "minijob", "freelancer"]).nullable().optional(),
-  hourly_rate: z.coerce.number().min(0).nullable().optional(),
+  hourly_rate: z.preprocess(preprocessNumber, z.number().min(0).nullable().optional()),
   job_title: z.string().nullable().optional(),
   department: z.string().nullable().optional(),
   notes: z.string().nullable().optional(),
@@ -86,7 +86,7 @@ interface EmployeeFormProps {
 
 export function EmployeeForm({ initialData, onSubmit, submitButtonText, onSuccess }: EmployeeFormProps) {
   const form = useForm<EmployeeFormValues>({
-    resolver: zodResolver(employeeSchema),
+    resolver: zodResolver(employeeSchema as z.ZodSchema<EmployeeFormValues>),
     defaultValues: {
       first_name: "",
       last_name: "",
@@ -156,7 +156,7 @@ export function EmployeeForm({ initialData, onSubmit, submitButtonText, onSucces
                 min="0"
                 max="24"
                 placeholder="Std."
-                {...form.register(`default_daily_schedules.0.${day}.hours`, { valueAsNumber: true })}
+                {...form.register(`default_daily_schedules.0.${day}.hours`)}
               />
             </div>
           ))}
@@ -261,7 +261,7 @@ export function EmployeeForm({ initialData, onSubmit, submitButtonText, onSucces
 
       <div>
         <Label htmlFor="hourly_rate">Stundensatz (€)</Label>
-        <Input id="hourly_rate" type="number" step="0.01" {...form.register("hourly_rate", { valueAsNumber: true })} />
+        <Input id="hourly_rate" type="number" step="0.01" {...form.register("hourly_rate")} />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
