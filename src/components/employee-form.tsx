@@ -8,23 +8,14 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { DatePicker } from "@/components/date-picker";
-import { handleActionResponse } from "@/lib/toast-utils";
-import { cn, calculateEndTime, calculateStartTime } from "@/lib/utils";
-import { Copy } from "lucide-react";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { toast } from "sonner";
 
 const preprocessNumber = (val: unknown) => {
-  console.log(`[preprocessNumber] Input value: ${val}, type: ${typeof val}`);
-  if (val === "" || val === null || val === undefined) {
-    console.log(`[preprocessNumber] Returning null for empty value`);
-    return null;
-  }
+  if (val === "" || val === null || val === undefined) return null;
   const num = Number(val);
-  const result = isNaN(num) ? null : num;
-  console.log(`[preprocessNumber] Processed number: ${result}`);
-  return result;
+  return isNaN(num) ? null : num;
 };
 
 const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
@@ -40,7 +31,6 @@ const germanDayNames: { [key: string]: string } = {
   sunday: 'So',
 };
 
-// Define daily schedule schema with explicit number type for hours
 const dailyScheduleSchema = z.object({
   hours: z.preprocess(preprocessNumber, z.number().min(0).max(24).optional().nullable()),
   start: z.string().regex(timeRegex, "Ungültiges Format (HH:MM)").or(z.literal("")).optional().nullable(),
@@ -90,9 +80,29 @@ interface EmployeeFormProps {
   onSuccess?: () => void;
 }
 
+// Helper function to convert string dates to Date objects
+const convertStringToDate = (dateString: string | null | undefined): Date | null => {
+  if (!dateString) return null;
+  try {
+    const date = new Date(dateString);
+    return isNaN(date.getTime()) ? null : date;
+  } catch {
+    return null;
+  }
+};
+
 export function EmployeeForm({ initialData, onSubmit, submitButtonText, onSuccess }: EmployeeFormProps) {
-  console.log("[EmployeeForm] Initializing form with initialData:", initialData);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
+  // Convert string dates to Date objects for the form
+  const processedInitialData = initialData ? {
+    ...initialData,
+    date_of_birth: convertStringToDate(initialData.date_of_birth as any),
+    hire_date: convertStringToDate(initialData.hire_date as any),
+    start_date: convertStringToDate(initialData.start_date as any),
+    contract_end_date: convertStringToDate(initialData.contract_end_date as any),
+  } : {};
+
   const form = useForm<EmployeeFormValues>({
     resolver: zodResolver(employeeSchema as z.ZodSchema<EmployeeFormValues>),
     defaultValues: {
@@ -103,32 +113,32 @@ export function EmployeeForm({ initialData, onSubmit, submitButtonText, onSucces
       default_daily_schedules: [{}],
       default_recurrence_interval_weeks: 1,
       default_start_week_offset: 0,
-      ...initialData,
+      ...processedInitialData,
     },
     mode: "onChange",
   });
 
   const handleFormSubmit: SubmitHandler<EmployeeFormValues> = async (data) => {
-    console.log("[EmployeeForm] Form submission started with data:", JSON.stringify(data, null, 2));
-    console.log("[EmployeeForm] Form errors:", form.formState.errors);
+    setIsSubmitting(true);
     
     try {
       const result = await onSubmit(data);
-      console.log("[EmployeeForm] Server response:", result);
-      handleActionResponse(result);
+      
       if (result.success) {
-        console.log("[EmployeeForm] Success callback triggered");
+        toast.success(result.message);
         onSuccess?.();
+      } else {
+        toast.error(result.message);
       }
     } catch (error) {
-      console.error("[EmployeeForm] Error during form submission:", error);
-      handleActionResponse({ success: false, message: "Ein unerwarteter Fehler ist aufgetreten." });
+      toast.error("Ein unerwarteter Fehler ist aufgetreten.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const totalWeeklyHours = useMemo(() => {
     const schedules = form.watch('default_daily_schedules');
-    console.log("[EmployeeForm] Calculating total weekly hours from schedules:", schedules);
     if (!schedules || schedules.length === 0 || !schedules[0]) {
       return "0.00";
     }
@@ -141,7 +151,6 @@ export function EmployeeForm({ initialData, onSubmit, submitButtonText, onSucces
       const hours = day?.hours;
       return acc + (typeof hours === 'number' && !isNaN(hours) ? hours : 0);
     }, 0);
-    console.log("[EmployeeForm] Calculated total weekly hours:", total.toFixed(2));
     return total.toFixed(2);
   }, [form.watch('default_daily_schedules')]);
 
@@ -305,8 +314,15 @@ export function EmployeeForm({ initialData, onSubmit, submitButtonText, onSucces
         <Textarea id="notes" {...form.register("notes")} />
       </div>
 
-      <Button type="submit" disabled={form.formState.isSubmitting}>
-        {form.formState.isSubmitting ? `${submitButtonText}...` : submitButtonText}
+      <Button type="submit" disabled={isSubmitting} className="w-full">
+        {isSubmitting ? (
+          <>
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+            {submitButtonText}...
+          </>
+        ) : (
+          submitButtonText
+        )}
       </Button>
     </form>
   );
