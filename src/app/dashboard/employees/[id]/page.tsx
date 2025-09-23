@@ -8,8 +8,8 @@ import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 
 type PageProps = {
-  params: { id: string };
-  searchParams?: { [key: string]: string | string[] | undefined };
+  params: Promise<{ id: string }>;
+  searchParams?: Promise<{ [key: string]: string | string[] | undefined }>;
 };
 
 export default async function Page({ params }: PageProps) {
@@ -19,6 +19,9 @@ export default async function Page({ params }: PageProps) {
   if (!user) {
     redirect("/login");
   }
+
+  // Await the params
+  const { id } = await params;
 
   const { data: employee, error } = await supabase
     .from('employees')
@@ -34,7 +37,7 @@ export default async function Page({ params }: PageProps) {
       ),
       absence_requests ( * )
     `)
-    .eq('id', params.id)
+    .eq('id', id)
     .order('start_date', { foreignTable: 'absence_requests', ascending: false })
     .single();
 
