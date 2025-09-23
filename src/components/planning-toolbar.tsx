@@ -16,6 +16,7 @@ import {
 import { cn } from "@/lib/utils";
 import { TimeEntryCreateDialog } from "@/components/time-entry-create-dialog";
 import { SearchInput } from "./search-input";
+import { OrderCreateDialog } from "@/components/order-create-dialog";
 
 interface PlanningToolbarProps {
   currentDate: Date;
@@ -131,14 +132,7 @@ export function PlanningToolbar({
             </DropdownMenuRadioGroup>
           </DropdownMenuContent>
         </DropdownMenu>
-        {currentUserId && isAdmin !== undefined && (
-          <TimeEntryCreateDialog
-            currentUserId={currentUserId}
-            isAdmin={isAdmin}
-            onEntryCreated={onActionSuccess}
-            triggerButtonText="Neuer Einsatz"
-          />
-        )}
+        <OrderCreateDialog onOrderCreated={onActionSuccess} />
       </div>
     </div>
   );
