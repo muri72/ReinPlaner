@@ -11,6 +11,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useMemo } from "react";
 import { DatePicker } from "@/components/date-picker";
 import { handleActionResponse } from "@/lib/toast-utils";
+import { cn, calculateEndTime, calculateStartTime } from "@/lib/utils";
+import { Copy } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 const preprocessNumber = (val: unknown) => {
   if (val === "" || val === null || val === undefined) return null;
@@ -33,9 +36,9 @@ const germanDayNames: { [key: string]: string } = {
 
 // Define daily schedule schema with explicit number type for hours
 const dailyScheduleSchema = z.object({
-  hours: z.number().nullable().optional(),
-  start: z.string().regex(timeRegex, "Ungültiges Format (HH:MM)").nullable().optional(),
-  end: z.string().regex(timeRegex, "Ungültiges Format (HH:MM)").nullable().optional(),
+  hours: z.coerce.number().min(0).max(24).optional().nullable(),
+  start: z.string().regex(timeRegex, "Ungültiges Format (HH:MM)").or(z.literal("")).optional().nullable(),
+  end: z.string().regex(timeRegex, "Ungültiges Format (HH:MM)").or(z.literal("")).optional().nullable(),
 });
 
 const weeklyScheduleSchema = z.object({
@@ -51,16 +54,16 @@ const weeklyScheduleSchema = z.object({
 export const employeeSchema = z.object({
   first_name: z.string().min(1, "Vorname ist erforderlich"),
   last_name: z.string().min(1, "Nachname ist erforderlich"),
-  email: z.string().email("Ungültige E-Mail-Adresse").nullable().optional(),
-  phone: z.string().nullable().optional(),
-  address: z.string().nullable().optional(),
-  date_of_birth: z.date().nullable().optional(),
-  hire_date: z.date().nullable().optional(),
-  start_date: z.date().nullable().optional(),
-  contract_end_date: z.date().nullable().optional(),
+  email: z.string().email("Ungültige E-Mail-Adresse").optional().nullable(),
+  phone: z.string().optional().nullable(),
+  address: z.string().optional().nullable(),
+  date_of_birth: z.date().optional().nullable(),
+  hire_date: z.date().optional().nullable(),
+  start_date: z.date().optional().nullable(),
+  contract_end_date: z.date().optional().nullable(),
   status: z.enum(["active", "inactive", "on_leave"]),
   contract_type: z.enum(["full_time", "part_time", "minijob", "freelancer"]).nullable().optional(),
-  hourly_rate: z.number().min(0).nullable().optional(),
+  hourly_rate: z.coerce.number().min(0).nullable().optional(),
   job_title: z.string().nullable().optional(),
   department: z.string().nullable().optional(),
   notes: z.string().nullable().optional(),
@@ -68,8 +71,8 @@ export const employeeSchema = z.object({
   tax_id_number: z.string().nullable().optional(),
   health_insurance_provider: z.string().nullable().optional(),
   default_daily_schedules: z.array(weeklyScheduleSchema),
-  default_recurrence_interval_weeks: z.number().min(1).max(52),
-  default_start_week_offset: z.number().min(0).max(51),
+  default_recurrence_interval_weeks: z.coerce.number().min(1).max(52),
+  default_start_week_offset: z.coerce.number().min(0).max(51),
 });
 
 export type EmployeeFormValues = z.infer<typeof employeeSchema>;
@@ -153,9 +156,7 @@ export function EmployeeForm({ initialData, onSubmit, submitButtonText, onSucces
                 min="0"
                 max="24"
                 placeholder="Std."
-                {...form.register(`default_daily_schedules.0.${day}.hours`, { 
-                  setValueAs: (v) => v === "" ? null : Number(v) 
-                })}
+                {...form.register(`default_daily_schedules.0.${day}.hours`, { valueAsNumber: true })}
               />
             </div>
           ))}
@@ -260,9 +261,7 @@ export function EmployeeForm({ initialData, onSubmit, submitButtonText, onSucces
 
       <div>
         <Label htmlFor="hourly_rate">Stundensatz (€)</Label>
-        <Input id="hourly_rate" type="number" step="0.01" {...form.register("hourly_rate", { 
-          setValueAs: (v) => v === "" ? null : Number(v) 
-        })} />
+        <Input id="hourly_rate" type="number" step="0.01" {...form.register("hourly_rate", { valueAsNumber: true })} />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
