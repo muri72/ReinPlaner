@@ -156,7 +156,7 @@ export function EmployeeForm({ initialData, onSubmit, submitButtonText, onSucces
                 min="0"
                 max="24"
                 placeholder="Std."
-                {...form.register(`default_daily_schedules.0.${day}.hours`)}
+                {...form.register(`default_daily_schedules.0.${day}.hours`, { valueAsNumber: true })}
               />
             </div>
           ))}
@@ -261,7 +261,7 @@ export function EmployeeForm({ initialData, onSubmit, submitButtonText, onSucces
 
       <div>
         <Label htmlFor="hourly_rate">Stundensatz (€)</Label>
-        <Input id="hourly_rate" type="number" step="0.01" {...form.register("hourly_rate")} />
+        <Input id="hourly_rate" type="number" step="0.01" {...form.register("hourly_rate", { valueAsNumber: true })} />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
