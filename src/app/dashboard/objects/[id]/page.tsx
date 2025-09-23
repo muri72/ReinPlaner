@@ -7,13 +7,16 @@ import { ChevronLeft } from "lucide-react";
 import { ObjectSummaryCard } from "@/components/object-summary-card";
 import { ObjectDetailTabs } from "@/components/object-detail-tabs";
 
-export default async function ObjectDetailPage({ params }: { params: { id: string } }) {
+export default async function ObjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
     redirect("/login");
   }
+
+  // Await the params
+  const { id } = await params;
 
   const { data: object, error } = await supabase
     .from('objects')
@@ -24,7 +27,7 @@ export default async function ObjectDetailPage({ params }: { params: { id: strin
       orders ( *, objects(name) ),
       documents ( * )
     `)
-    .eq('id', params.id)
+    .eq('id', id)
     .single();
 
   if (error || !object) {
