@@ -165,7 +165,6 @@ export function AssignmentEditDialog({ orderId, children, onSuccess }: Assignmen
               {form.formState.errors.employeeIds && <p className="text-red-500 text-sm mt-1">{form.formState.errors.employeeIds.message}</p>}
             </div>
             
-            {/* Schedule Editor would go here, similar to Object/Employee form */}
             {/* For brevity, we'll omit the full schedule editor UI code here, assuming it's similar to the one in employee-form */}
             <p className="text-sm text-muted-foreground">Der Zeitplan-Editor wird hier angezeigt.</p>
 

@@ -9,7 +9,7 @@ import { AssignmentEditDialog } from "./assignment-edit-dialog"; // Import the n
 
 interface Assignment {
   id: string;
-  orderId: string;
+  orderId: string; // Order ID
   title: string;
   startTime: string | null;
   endTime: string | null;
