@@ -30,10 +30,11 @@ const germanDayNames: { [key: string]: string } = {
   sunday: 'So',
 };
 
+// Define daily schedule schema with explicit number type for hours
 const dailyScheduleSchema = z.object({
-  hours: z.preprocess(preprocessNumber, z.nullable(z.number().min(0).max(24)).optional()),
-  start: z.string().regex(timeRegex, "Ungültiges Format (HH:MM)").or(z.literal("")).optional().nullable(),
-  end: z.string().regex(timeRegex, "Ungültiges Format (HH:MM)").or(z.literal("")).optional().nullable(),
+  hours: z.number().nullable().optional(),
+  start: z.string().regex(timeRegex, "Ungültiges Format (HH:MM)").nullable().optional(),
+  end: z.string().regex(timeRegex, "Ungültiges Format (HH:MM)").nullable().optional(),
 });
 
 const weeklyScheduleSchema = z.object({
@@ -46,31 +47,33 @@ const weeklyScheduleSchema = z.object({
   sunday: dailyScheduleSchema.optional(),
 });
 
-const employeeSchema = z.object({
+// Define the schema with explicit types to avoid resolver conflicts
+export const employeeSchema = z.object({
   first_name: z.string().min(1, "Vorname ist erforderlich"),
   last_name: z.string().min(1, "Nachname ist erforderlich"),
-  email: z.string().email("Ungültige E-Mail-Adresse").optional().nullable(),
-  phone: z.string().optional().nullable(),
-  address: z.string().optional().nullable(),
-  date_of_birth: z.date().optional().nullable(),
-  hire_date: z.date().optional().nullable(),
-  start_date: z.date().optional().nullable(),
-  contract_end_date: z.date().optional().nullable(),
+  email: z.string().email("Ungültige E-Mail-Adresse").nullable().optional(),
+  phone: z.string().nullable().optional(),
+  address: z.string().nullable().optional(),
+  date_of_birth: z.date().nullable().optional(),
+  hire_date: z.date().nullable().optional(),
+  start_date: z.date().nullable().optional(),
+  contract_end_date: z.date().nullable().optional(),
   status: z.enum(["active", "inactive", "on_leave"]),
-  contract_type: z.enum(["full_time", "part_time", "minijob", "freelancer"]).optional().nullable(),
-  hourly_rate: z.number().min(0).optional().nullable(),
-  job_title: z.string().optional().nullable(),
-  department: z.string().optional().nullable(),
-  notes: z.string().optional().nullable(),
-  social_security_number: z.string().optional().nullable(),
-  tax_id_number: z.string().optional().nullable(),
-  health_insurance_provider: z.string().optional().nullable(),
+  contract_type: z.enum(["full_time", "part_time", "minijob", "freelancer"]).nullable().optional(),
+  hourly_rate: z.number().min(0).nullable().optional(),
+  job_title: z.string().nullable().optional(),
+  department: z.string().nullable().optional(),
+  notes: z.string().nullable().optional(),
+  social_security_number: z.string().nullable().optional(),
+  tax_id_number: z.string().nullable().optional(),
+  health_insurance_provider: z.string().nullable().optional(),
   default_daily_schedules: z.array(weeklyScheduleSchema),
   default_recurrence_interval_weeks: z.number().min(1).max(52),
   default_start_week_offset: z.number().min(0).max(51),
 });
 
-type EmployeeFormValues = z.infer<typeof employeeSchema>;
+// Export the type for use in other components
+export type EmployeeFormValues = z.infer<typeof employeeSchema>;
 
 interface EmployeeFormProps {
   initialData?: Partial<EmployeeFormValues>;
