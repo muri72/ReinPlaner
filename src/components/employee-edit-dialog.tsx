@@ -41,7 +41,7 @@ interface EmployeeEditDialogProps {
 export function EmployeeEditDialog({ employee, children, onEmployeeUpdated }: EmployeeEditDialogProps) {
   const [open, setOpen] = useState(false);
 
-  const handleUpdate = async (data: EmployeeFormValues) => {
+  const handleUpdate = async (data: any) => {
     const result = await updateEmployee(employee.id, data);
     if (result.success) {
       setOpen(false);
@@ -84,7 +84,7 @@ export function EmployeeEditDialog({ employee, children, onEmployeeUpdated }: Em
         </DialogHeader>
         <div className="flex-grow overflow-y-auto pr-4">
           <EmployeeForm
-            initialData={employee}
+            initialData={employee as any}
             onSubmit={handleUpdate}
             submitButtonText="Änderungen speichern"
             onSuccess={() => {

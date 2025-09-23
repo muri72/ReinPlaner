@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { DatePicker } from "@/components/date-picker";
 import { handleActionResponse } from "@/lib/toast-utils";
@@ -57,7 +57,7 @@ export const employeeSchema = z.object({
   start_date: z.date().optional().nullable(),
   contract_end_date: z.date().optional().nullable(),
   status: z.enum(["active", "inactive", "on_leave"]).default("active"),
-  contract_type: z.enum(["full_time", "part_time", "minijob", "freelancer"]).default("full_time"),
+  contract_type: z.enum(["full_time", "part_time", "minijob", "freelancer"]).optional().nullable(),
   hourly_rate: z.preprocess(preprocessNumber, z.number().min(0).optional().nullable()),
   job_title: z.string().optional().nullable(),
   department: z.string().optional().nullable(),
@@ -65,9 +65,9 @@ export const employeeSchema = z.object({
   social_security_number: z.string().optional().nullable(),
   tax_id_number: z.string().optional().nullable(),
   health_insurance_provider: z.string().optional().nullable(),
-  default_daily_schedules: z.array(weeklyScheduleSchema).default([]),
-  default_recurrence_interval_weeks: z.preprocess(preprocessNumber, z.number().min(1).max(52).default(1)),
-  default_start_week_offset: z.preprocess(preprocessNumber, z.number().min(0).max(51).default(0)),
+  default_daily_schedules: z.array(weeklyScheduleSchema).default([{}]),
+  default_recurrence_interval_weeks: z.number().min(1).max(52).default(1),
+  default_start_week_offset: z.number().min(0).max(51).default(0),
 });
 
 export type EmployeeFormValues = z.infer<typeof employeeSchema>;
@@ -88,14 +88,18 @@ export function EmployeeForm({ initialData, onSubmit, submitButtonText, onSucces
   const form = useForm<EmployeeFormValues>({
     resolver: zodResolver(employeeSchema),
     defaultValues: {
+      first_name: "",
+      last_name: "",
+      status: "active",
+      contract_type: "full_time",
+      default_daily_schedules: [{}],
+      default_recurrence_interval_weeks: 1,
+      default_start_week_offset: 0,
       ...initialData,
       date_of_birth: initialData?.date_of_birth ? new Date(initialData.date_of_birth) : undefined,
       hire_date: initialData?.hire_date ? new Date(initialData.hire_date) : undefined,
       start_date: initialData?.start_date ? new Date(initialData.start_date) : undefined,
       contract_end_date: initialData?.contract_end_date ? new Date(initialData.contract_end_date) : undefined,
-      default_daily_schedules: initialData?.default_daily_schedules ?? [{}],
-      default_recurrence_interval_weeks: initialData?.default_recurrence_interval_weeks ?? 1,
-      default_start_week_offset: initialData?.default_start_week_offset ?? 0,
     },
     mode: "onChange",
   });
@@ -108,9 +112,22 @@ export function EmployeeForm({ initialData, onSubmit, submitButtonText, onSucces
     }
   };
 
-  const totalWeeklyHours = (form.watch('default_daily_schedules')[0] ? 
-    Object.values(form.watch('default_daily_schedules')[0]).reduce((acc: number, day: any) => acc + (day?.hours || 0), 0)
-    : 0).toFixed(2);
+  const totalWeeklyHours = useMemo(() => {
+    const schedules = form.watch('default_daily_schedules');
+    if (!schedules || schedules.length === 0 || !schedules[0]) {
+      return "0.00";
+    }
+    const firstWeekSchedule = schedules[0];
+    const dayValues = Object.values(firstWeekSchedule);
+    if (!dayValues || dayValues.length === 0) {
+      return "0.00";
+    }
+    const total = dayValues.reduce((acc: number, day: any) => {
+      const hours = day?.hours;
+      return acc + (typeof hours === 'number' && !isNaN(hours) ? hours : 0);
+    }, 0);
+    return total.toFixed(2);
+  }, [form.watch('default_daily_schedules')]);
 
   return (
     <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-6">
@@ -231,8 +248,11 @@ export function EmployeeForm({ initialData, onSubmit, submitButtonText, onSucces
         </div>
         <div>
           <Label htmlFor="contract_type">Vertragsart</Label>
-          <Select onValueChange={(value) => form.setValue("contract_type", value as EmployeeFormValues["contract_type"])} value={form.watch("contract_type")}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
+          <Select 
+            onValueChange={(value) => form.setValue("contract_type", value as EmployeeFormValues["contract_type"])} 
+            value={form.watch("contract_type") || undefined} // Handle null value
+          >
+            <SelectTrigger><SelectValue placeholder="Vertragsart auswählen" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="full_time">Vollzeit</SelectItem>
               <SelectItem value="part_time">Teilzeit</SelectItem>
