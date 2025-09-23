@@ -80,19 +80,7 @@ export async function updateEmployee(employeeId: string, data: EmployeeFormValue
     return { success: false, message: "Benutzer nicht authentifiziert." };
   }
 
-  // Überprüfen, ob der aktuelle Benutzer ein Admin ist
-  const { data: profile, error: profileError } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single();
-
-  if (profileError) {
-    console.error("Fehler beim Abrufen des Benutzerprofils:", profileError?.message || profileError);
-    return { success: false, message: "Fehler beim Überprüfen der Berechtigungen." };
-  }
-
-  let query = supabase
+  const { error } = await supabase
     .from('employees')
     .update({
       first_name: data.first_name,
@@ -119,21 +107,9 @@ export async function updateEmployee(employeeId: string, data: EmployeeFormValue
     })
     .eq('id', employeeId);
 
-  // Wenn der Benutzer kein Admin ist, nur eigene Mitarbeiter aktualisieren
-  if (profile?.role !== 'admin') {
-    query = query.eq('user_id', user.id);
-  }
-
-  const { data: updatedRows, error } = await query.select();
-
   if (error) {
     console.error("Fehler beim Aktualisieren des Mitarbeiters:", error?.message || error);
-    return { success: false, message: error.message };
-  }
-
-  if (!updatedRows || updatedRows.length === 0) {
-    console.warn(`Update-Operation für Mitarbeiter-ID ${employeeId} durch Benutzer ${user.id} führte zu keiner Aktualisierung. Dies könnte ein RLS-Problem sein oder der Datensatz existiert nicht/gehört nicht dem Benutzer.`);
-    return { success: false, message: "Mitarbeiter konnte nicht aktualisiert werden. Möglicherweise haben Sie keine Berechtigung oder der Mitarbeiter existiert nicht." };
+    return { success: false, message: `Aktualisierung fehlgeschlagen: ${error.message}` };
   }
 
   revalidatePath("/dashboard/employees");
@@ -148,31 +124,13 @@ export async function deleteEmployee(formData: FormData): Promise<{ success: boo
     return { success: false, message: "Benutzer nicht authentifiziert." };
   }
 
-  // Überprüfen, ob der aktuelle Benutzer ein Admin ist
-  const { data: profile, error: profileError } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single();
-
-  if (profileError) {
-    console.error("Fehler beim Abrufen des Benutzerprofils:", profileError?.message || profileError);
-    return { success: false, message: "Fehler beim Überprüfen der Berechtigungen." };
-  }
-
   const employeeId = formData.get('employeeId') as string;
 
-  let query = supabase
+  // RLS will handle the permission check
+  const { error } = await supabase
     .from('employees')
     .delete()
     .eq('id', employeeId);
-
-  // Wenn der Benutzer kein Admin ist, nur eigene Mitarbeiter löschen
-  if (profile?.role !== 'admin') {
-    query = query.eq('user_id', user.id);
-  }
-
-  const { error } = await query;
 
   if (error) {
     console.error("Fehler beim Löschen des Mitarbeiters:", error?.message || error);
