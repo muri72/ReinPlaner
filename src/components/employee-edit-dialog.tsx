@@ -40,14 +40,29 @@ interface EmployeeEditDialogProps {
 
 export function EmployeeEditDialog({ employee, children, onEmployeeUpdated }: EmployeeEditDialogProps) {
   const [open, setOpen] = useState(false);
+  console.log(`[EmployeeEditDialog] Rendering dialog for employee ${employee.id} (${employee.first_name} ${employee.last_name})`);
+  console.log(`[EmployeeEditDialog] Initial data:`, employee);
 
   const handleUpdate = async (data: any) => {
-    const result = await updateEmployee(employee.id, data);
-    if (result.success) {
-      setOpen(false);
-      onEmployeeUpdated?.();
+    console.log(`[EmployeeEditDialog] handleUpdate called with data:`, JSON.stringify(data, null, 2));
+    console.log(`[EmployeeEditDialog] Calling updateEmployee with employeeId: ${employee.id}`);
+    
+    try {
+      const result = await updateEmployee(employee.id, data);
+      console.log(`[EmployeeEditDialog] updateEmployee result:`, result);
+      
+      if (result.success) {
+        console.log(`[EmployeeEditDialog] Update successful, closing dialog`);
+        setOpen(false);
+        onEmployeeUpdated?.();
+      } else {
+        console.log(`[EmployeeEditDialog] Update failed:`, result.message);
+      }
+      return result;
+    } catch (error) {
+      console.error(`[EmployeeEditDialog] Exception in updateEmployee:`, error);
+      return { success: false, message: "Ein unerwarteter Fehler ist aufgetreten." };
     }
-    return result;
   };
 
   const trigger = children ? (
@@ -88,6 +103,7 @@ export function EmployeeEditDialog({ employee, children, onEmployeeUpdated }: Em
             onSubmit={handleUpdate}
             submitButtonText="Änderungen speichern"
             onSuccess={() => {
+              console.log(`[EmployeeEditDialog] Form onSuccess callback triggered`);
               setOpen(false);
               onEmployeeUpdated?.();
             }}

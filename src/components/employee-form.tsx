@@ -16,9 +16,15 @@ import { Copy } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 const preprocessNumber = (val: unknown) => {
-  if (val === "" || val === null || val === undefined) return null;
+  console.log(`[preprocessNumber] Input value: ${val}, type: ${typeof val}`);
+  if (val === "" || val === null || val === undefined) {
+    console.log(`[preprocessNumber] Returning null for empty value`);
+    return null;
+  }
   const num = Number(val);
-  return isNaN(num) ? null : num;
+  const result = isNaN(num) ? null : num;
+  console.log(`[preprocessNumber] Processed number: ${result}`);
+  return result;
 };
 
 const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
@@ -85,6 +91,8 @@ interface EmployeeFormProps {
 }
 
 export function EmployeeForm({ initialData, onSubmit, submitButtonText, onSuccess }: EmployeeFormProps) {
+  console.log("[EmployeeForm] Initializing form with initialData:", initialData);
+  
   const form = useForm<EmployeeFormValues>({
     resolver: zodResolver(employeeSchema as z.ZodSchema<EmployeeFormValues>),
     defaultValues: {
@@ -101,15 +109,26 @@ export function EmployeeForm({ initialData, onSubmit, submitButtonText, onSucces
   });
 
   const handleFormSubmit: SubmitHandler<EmployeeFormValues> = async (data) => {
-    const result = await onSubmit(data);
-    handleActionResponse(result);
-    if (result.success) {
-      onSuccess?.();
+    console.log("[EmployeeForm] Form submission started with data:", JSON.stringify(data, null, 2));
+    console.log("[EmployeeForm] Form errors:", form.formState.errors);
+    
+    try {
+      const result = await onSubmit(data);
+      console.log("[EmployeeForm] Server response:", result);
+      handleActionResponse(result);
+      if (result.success) {
+        console.log("[EmployeeForm] Success callback triggered");
+        onSuccess?.();
+      }
+    } catch (error) {
+      console.error("[EmployeeForm] Error during form submission:", error);
+      handleActionResponse({ success: false, message: "Ein unerwarteter Fehler ist aufgetreten." });
     }
   };
 
   const totalWeeklyHours = useMemo(() => {
     const schedules = form.watch('default_daily_schedules');
+    console.log("[EmployeeForm] Calculating total weekly hours from schedules:", schedules);
     if (!schedules || schedules.length === 0 || !schedules[0]) {
       return "0.00";
     }
@@ -122,6 +141,7 @@ export function EmployeeForm({ initialData, onSubmit, submitButtonText, onSucces
       const hours = day?.hours;
       return acc + (typeof hours === 'number' && !isNaN(hours) ? hours : 0);
     }, 0);
+    console.log("[EmployeeForm] Calculated total weekly hours:", total.toFixed(2));
     return total.toFixed(2);
   }, [form.watch('default_daily_schedules')]);
 
