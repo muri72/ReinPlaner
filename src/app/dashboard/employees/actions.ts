@@ -1,6 +1,6 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { EmployeeFormValues } from "@/components/employee-form";
 
@@ -58,9 +58,9 @@ export async function createEmployee(data: EmployeeFormValues) {
       social_security_number: social_security_number,
       tax_id_number: tax_id_number,
       health_insurance_provider: health_insurance_provider,
-      default_daily_schedules,
-      default_recurrence_interval_weeks,
-      default_start_week_offset,
+      default_daily_schedules: default_daily_schedules || [{}],
+      default_recurrence_interval_weeks: default_recurrence_interval_weeks || 1,
+      default_start_week_offset: default_start_week_offset || 0,
     });
 
   if (error) {
@@ -113,9 +113,9 @@ export async function updateEmployee(employeeId: string, data: EmployeeFormValue
       social_security_number: data.social_security_number,
       tax_id_number: data.tax_id_number,
       health_insurance_provider: data.health_insurance_provider,
-      default_daily_schedules: data.default_daily_schedules,
-      default_recurrence_interval_weeks: data.default_recurrence_interval_weeks,
-      default_start_week_offset: data.default_start_week_offset,
+      default_daily_schedules: data.default_daily_schedules || [{}],
+      default_recurrence_interval_weeks: data.default_recurrence_interval_weeks || 1,
+      default_start_week_offset: data.default_start_week_offset || 0,
     })
     .eq('id', employeeId);
 

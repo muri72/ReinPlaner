@@ -32,7 +32,7 @@ const germanDayNames: { [key: string]: string } = {
 
 // Define daily schedule schema with explicit number type for hours
 const dailyScheduleSchema = z.object({
-  hours: z.number().nullable().optional(),
+  hours: z.preprocess(preprocessNumber, z.nullable(z.number().min(0).max(24)).optional()),
   start: z.string().regex(timeRegex, "Ungültiges Format (HH:MM)").nullable().optional(),
   end: z.string().regex(timeRegex, "Ungültiges Format (HH:MM)").nullable().optional(),
 });
