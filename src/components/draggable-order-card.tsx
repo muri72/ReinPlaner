@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { useDraggable } from "@dnd-kit/core";
 import { Badge } from "@/components/ui/badge";
 import { UnassignedOrder } from "@/app/dashboard/planning/actions";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface DraggableOrderCardProps {
   order: UnassignedOrder;
@@ -29,6 +30,8 @@ const serviceTypeDotColors: { [key: string]: string } = {
 };
 
 export function DraggableOrderCard({ order }: DraggableOrderCardProps) {
+  const isMobile = useIsMobile();
+  
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: `unassigned__${order.id}`,
     data: { order },
@@ -50,18 +53,39 @@ export function DraggableOrderCard({ order }: DraggableOrderCardProps) {
       {...attributes}
       className={cn(
         "p-2 rounded-md border-l-4 border-muted bg-card text-card-foreground shadow-sm cursor-grab active:cursor-grabbing touch-none space-y-1",
-        isDragging && "shadow-lg opacity-75"
+        isDragging && "shadow-lg opacity-75",
+        isMobile ? "text-xs" : "text-sm"
       )}
     >
-      <div className="flex items-center justify-between text-xs text-muted-foreground">
-        <span>{order.total_estimated_hours ? `${Number(order.total_estimated_hours).toFixed(2)}h` : 'N/A'}</span>
-      </div>
-      <p className="font-bold text-sm truncate">{order.title}</p>
-      {order.service_type && (
-        <Badge variant="outline" className={cn("text-xs font-normal border-none w-full justify-start", badgeColorClass)}>
-          <span className={cn("h-2 w-2 rounded-full mr-1.5", dotColorClass)} />
-          <span className="truncate">{order.service_type}</span>
-        </Badge>
+      {/* Mobile Ansicht - kompakter */}
+      {isMobile ? (
+        <>
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <span className="truncate flex-1">{order.title}</span>
+            <span className="flex-shrink-0">
+              {order.total_estimated_hours ? `${Number(order.total_estimated_hours).toFixed(1)}h` : 'N/A'}
+            </span>
+          </div>
+          {order.service_type && (
+            <Badge variant="outline" className={cn("text-xs font-normal border-none", badgeColorClass)}>
+              <span className={cn("h-2 w-2 rounded-full mr-1", dotColorClass)} />
+            </Badge>
+          )}
+        </>
+      ) : (
+        /* Desktop Ansicht - detaillierter */
+        <>
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <span>{order.total_estimated_hours ? `${Number(order.total_estimated_hours).toFixed(2)}h` : 'N/A'}</span>
+          </div>
+          <p className="font-bold text-sm truncate">{order.title}</p>
+          {order.service_type && (
+            <Badge variant="outline" className={cn("text-xs font-normal border-none w-full justify-start", badgeColorClass)}>
+              <span className={cn("h-2 w-2 rounded-full mr-1.5", dotColorClass)} />
+              <span className="truncate">{order.service_type}</span>
+            </Badge>
+          )}
+        </>
       )}
     </div>
   );
