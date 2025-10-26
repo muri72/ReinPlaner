@@ -4,7 +4,7 @@ import * as React from "react";
 import { format, addDays, subDays, startOfWeek, endOfWeek, addMonths, subMonths } from "date-fns";
 import { de } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Filter, Eye, EyeOff, Menu, Calendar as CalendarIcon } from "lucide-react";
+import { ChevronLeft, ChevronRight, Filter, Eye, EyeOff, Menu, Calendar as CalendarIcon, Plus } from "lucide-react";
 import { DatePicker } from "@/components/date-picker";
 import {
   DropdownMenu,
@@ -95,43 +95,66 @@ export function PlanningToolbar({
     }
   }, [currentDate, viewMode]);
 
-  // Mobile Ansicht
+  // Moderne mobile Ansicht
   if (isMobile) {
     return (
-      <div className="flex flex-col gap-3 p-3 border rounded-lg shadow-neumorphic glassmorphism-card">
-        {/* Obere Zeile: Navigation und Datum */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1">
-            <Button variant="outline" size="sm" onClick={() => onDateChange(new Date())}>
+      <div className="p-4">
+        {/* Header mit Navigation */}
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={handlePrev}
+              className="h-10 w-10 rounded-xl"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => onDateChange(new Date())}
+              className="rounded-xl px-4"
+            >
               Heute
             </Button>
-            <Button variant="outline" size="icon" onClick={handlePrev}>
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <Button variant="outline" size="icon" onClick={handleNext}>
-              <ChevronRight className="h-4 w-4" />
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={handleNext}
+              className="h-10 w-10 rounded-xl"
+            >
+              <ChevronRight className="h-5 w-5" />
             </Button>
           </div>
           
-          <div className="flex items-center gap-1">
-            <Button variant="outline" size="sm" onClick={() => onShowUnassignedChange(!showUnassigned)}>
-              {showUnassigned ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => onShowUnassignedChange(!showUnassigned)}
+              className={cn(
+                "h-10 w-10 rounded-xl",
+                showUnassigned && "bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"
+              )}
+            >
+              <Eye className="h-5 w-5" />
             </Button>
             
             <Sheet>
               <SheetTrigger asChild>
-                <Button variant="outline" size="icon">
-                  <Menu className="h-4 w-4" />
+                <Button variant="ghost" size="sm" className="h-10 w-10 rounded-xl">
+                  <Menu className="h-5 w-5" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="right" className="w-80">
+              <SheetContent side="right" className="w-80 rounded-l-2xl">
                 <SheetHeader>
                   <SheetTitle>Optionen</SheetTitle>
                 </SheetHeader>
-                <div className="mt-6 space-y-4">
+                <div className="mt-6 space-y-6">
                   {/* Datumswahl */}
                   <div>
-                    <label className="text-sm font-medium mb-2 block">Datum wählen</label>
+                    <label className="text-sm font-semibold mb-3 block text-slate-700 dark:text-slate-300">Datum wählen</label>
                     <DatePicker
                       value={currentDate}
                       onChange={(date) => date && onDateChange(date)}
@@ -140,19 +163,19 @@ export function PlanningToolbar({
                   
                   {/* Ansichtsmodus */}
                   <div>
-                    <label className="text-sm font-medium mb-2 block">Ansicht</label>
+                    <label className="text-sm font-semibold mb-3 block text-slate-700 dark:text-slate-300">Ansicht</label>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="outline" className="w-full justify-between">
+                        <Button variant="outline" className="w-full justify-between rounded-xl h-12">
                           {viewModeTranslations[viewMode]}
                           <ChevronRight className="h-4 w-4 rotate-90" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent>
+                      <DropdownMenuContent className="rounded-xl">
                         <DropdownMenuRadioGroup value={viewMode} onValueChange={(value) => onViewModeChange(value as 'day' | 'week' | 'month')}>
-                          <DropdownMenuRadioItem value="day">Tag</DropdownMenuRadioItem>
-                          <DropdownMenuRadioItem value="week">Woche</DropdownMenuRadioItem>
-                          <DropdownMenuRadioItem value="month">Monat</DropdownMenuRadioItem>
+                          <DropdownMenuRadioItem value="day" className="rounded-lg">Tag</DropdownMenuRadioItem>
+                          <DropdownMenuRadioItem value="week" className="rounded-lg">Woche</DropdownMenuRadioItem>
+                          <DropdownMenuRadioItem value="month" className="rounded-lg">Monat</DropdownMenuRadioItem>
                         </DropdownMenuRadioGroup>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -160,17 +183,17 @@ export function PlanningToolbar({
                   
                   {/* Suche */}
                   <div>
-                    <label className="text-sm font-medium mb-2 block">Mitarbeiter suchen</label>
-                    <SearchInput placeholder="Mitarbeiter suchen..." className="w-full" />
+                    <label className="text-sm font-semibold mb-3 block text-slate-700 dark:text-slate-300">Mitarbeiter suchen</label>
+                    <SearchInput placeholder="Suchen..." className="w-full rounded-xl" />
                   </div>
                   
                   {/* Aktionen */}
-                  <div className="space-y-2 pt-4 border-t">
+                  <div className="space-y-3 pt-4 border-t border-slate-200 dark:border-slate-700">
                     <OrderCreateDialog onOrderCreated={onActionSuccess} />
                     <TimeEntryCreateDialog 
                       onEntryCreated={onActionSuccess}
-                      currentUserId={currentUserId}
-                      isAdmin={isAdmin}
+                      currentUserId={currentUserId || ''}
+                      isAdmin={isAdmin || false}
                     />
                   </div>
                 </div>
@@ -181,7 +204,12 @@ export function PlanningToolbar({
         
         {/* Datum-Anzeige */}
         <div className="text-center">
-          <h2 className="text-lg font-semibold">{dateDisplay}</h2>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+            {dateDisplay}
+          </h1>
+          <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+            {format(currentDate, "EEEE", { locale: de })}
+          </p>
         </div>
       </div>
     );
