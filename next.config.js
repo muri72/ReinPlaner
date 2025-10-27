@@ -14,7 +14,7 @@ const nextConfig = {
     if (!isServer) {
       config.optimization.splitChunks = {
         chunks: 'all',
-        cacheGroup: {
+        cacheGroups: {  // <-- HIER: cacheGroups (mit 's')
           vendor: {
             test: /[\\/]node_modules[\\/]/,
             name: 'vendors',
