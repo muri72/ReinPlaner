@@ -1,19 +1,13 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  experimental: {
-    appDir: true,
-  },
   images: {
-    domains: ['example.com'],
-    formats: {
-      image: [
-        {
-          url: '/_next/image',
-          loader: 'custom',
-          loaderFile: './lib/image-loader.js',
-        },
-      ],
-    },
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'example.com', // Ersetzen Sie dies durch Ihre tatsächliche Domain
+      },
+    ],
+    formats: ['image/webp', 'image/avif'],
   },
   webpack: (config, { isServer }) => {
     // Optimize for mobile
@@ -45,10 +39,6 @@ const nextConfig = {
   poweredByHeader: false,
   compress: true,
   generateEtags: false,
-  // Mobile-specific optimizations
-  mobile: {
-    friendly: true,
-  },
 };
 
 module.exports = nextConfig;
