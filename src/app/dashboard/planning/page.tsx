@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { DndContext, DragEndEvent } from "@dnd-kit/core";
 import { PlanningToolbar } from "@/components/planning-toolbar";
 import { PlanningCalendar } from "@/components/planning-calendar";
+import { PlanningCalendarMonth } from "@/components/planning-calendar-month";
 import { Skeleton } from "@/components/ui/skeleton";
 import { assignOrderToEmployee, reassignRecurringOrder } from "./actions";
 import { startOfWeek, endOfWeek, eachDayOfInterval, startOfMonth, endOfMonth, startOfDay, endOfDay } from "date-fns";
@@ -165,6 +166,16 @@ export default function PlanningPage() {
         <div className="flex-grow min-h-0">
           {loading ? (
             <Skeleton className="h-full w-full" />
+          ) : viewMode === 'month' ? (
+            <PlanningCalendarMonth
+              planningData={planningPageData?.planningData || {}}
+              unassignedOrders={planningPageData?.unassignedOrders || []}
+              weekDays={daysToDisplay}
+              activeDragId={activeDragId}
+              showUnassigned={showUnassigned}
+              onActionSuccess={() => fetchData(startDate, endDate, query)}
+              weekNumber={planningPageData?.weekNumber || 0}
+            />
           ) : (
             <PlanningCalendar
               planningData={planningPageData?.planningData || {}}
