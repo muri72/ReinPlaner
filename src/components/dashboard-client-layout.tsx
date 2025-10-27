@@ -49,7 +49,7 @@ export function DashboardClientLayout({
 
   return (
     <SidebarProvider>
-      <Sidebar variant="inset">
+      <Sidebar variant="inset" collapsible="icon">
         <SidebarHeader className="border-b border-sidebar-border bg-gradient-to-r from-sidebar-background to-sidebar-accent/50">
           <div className="flex items-center justify-between p-4">
             <Link href={getHomeLink()} className="flex items-center space-x-2">

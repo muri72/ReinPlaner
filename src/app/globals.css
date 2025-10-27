@@ -174,6 +174,25 @@
     @apply data-[active=true]:bg-primary data-[active=true]:text-primary-foreground;
     @apply data-[active=true]:shadow-md;
   }
+
+  /* Sidebar icon mode specific styles */
+  [data-collapsible="icon"] .sidebar-item-modern {
+    @apply justify-center;
+  }
+
+  [data-collapsible="icon"] .sidebar-item-modern span:not(.sr-only) {
+    @apply hidden;
+  }
+
+  /* Smooth transitions for sidebar collapse/expand */
+  [data-collapsible="icon"] {
+    transition: width 0.3s ease-in-out;
+  }
+
+  /* Ensure tooltips work properly in icon mode */
+  [data-collapsible="icon"] [data-sidebar="menu-button"] {
+    @apply justify-center;
+  }
 }
 
 /* Completely hide scrollbars globally */
