@@ -44,9 +44,23 @@ function MonthDayCell({ day, monthStart, employeeId, employee, activeDragId, onA
   const droppableId = `${employeeId}__${dateString}`;
   const isCurrentMonth = isSameMonth(day, monthStart);
   const isCurrentDay = isToday(day);
-  const dayStyling = getDateStyling(day);
+  const [dayStyling, setDayStyling] = React.useState<{ 
+    isWeekend: boolean; 
+    isHoliday: boolean; 
+    holidayName?: string;
+    className: string;
+  }>({ 
+    isWeekend: false, 
+    isHoliday: false, 
+    holidayName: undefined,
+    className: "" 
+  });
   
   const { setNodeRef, isOver } = useDroppable({ id: droppableId });
+
+  React.useEffect(() => {
+    getDateStyling(day).then((styling) => setDayStyling(styling));
+  }, [day]);
 
   // Get unassigned orders for this day
   const ordersForDay = unassignedOrders.filter(

@@ -1,7 +1,69 @@
 import { format, isWeekend, isSameDay } from "date-fns";
 import { de } from "date-fns/locale";
 
-// German holidays (fixed dates) - Hamburg specific
+// German states with their codes
+const GERMAN_STATES = [
+  { code: 'BW', name: 'Baden-Württemberg' },
+  { code: 'BY', name: 'Bayern' },
+  { code: 'BE', name: 'Berlin' },
+  { code: 'BB', name: 'Brandenburg' },
+  { code: 'HB', name: 'Bremen' },
+  { code: 'HH', name: 'Hamburg' },
+  { code: 'HE', name: 'Hessen' },
+  { code: 'MV', name: 'Mecklenburg-Vorpommern' },
+  { code: 'NI', name: 'Niedersachsen' },
+  { code: 'NW', name: 'Nordrhein-Westfalen' },
+  { code: 'RP', name: 'Rheinland-Pfalz' },
+  { code: 'SL', name: 'Saarland' },
+  { code: 'SN', name: 'Sachsen' },
+  { code: 'ST', name: 'Sachsen-Anhalt' },
+  { code: 'SH', name: 'Schleswig-Holstein' },
+  { code: 'TH', name: 'Thüringen' },
+];
+
+// Cache for API responses
+const holidayCache = new Map<string, any>();
+
+// Get holidays from API with caching
+async function getHolidaysFromAPI(year: number, stateCode: string = 'HH'): Promise<any[]> {
+  const cacheKey = `${year}-${stateCode}`;
+  
+  if (holidayCache.has(cacheKey)) {
+    return holidayCache.get(cacheKey);
+  }
+
+  try {
+    const response = await fetch(`https://get.api-feiertage.de/api/v1/feiertage?jahr=${year}&bundesland=${stateCode}`);
+    const data = await response.json();
+    
+    if (data.success && data.feiertage) {
+      holidayCache.set(cacheKey, data.feiertage);
+      return data.feiertage;
+    }
+    
+    return [];
+  } catch (error) {
+    console.error('Error fetching holidays:', error);
+    return [];
+  }
+}
+
+// Get current state from localStorage or default to Hamburg
+function getCurrentStateFromStorage(): string {
+  if (typeof window !== 'undefined') {
+    return localStorage.getItem('selectedState') || 'HH';
+  }
+  return 'HH';
+}
+
+// Save state to localStorage
+function saveCurrentState(stateCode: string) {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('selectedState', stateCode);
+  }
+}
+
+// German holidays (fixed dates) - fallback for API
 const FIXED_HOLIDAYS = [
   { month: 1, day: 1, name: "Neujahr" },
   { month: 5, day: 1, name: "Tag der Arbeit" },
@@ -9,18 +71,6 @@ const FIXED_HOLIDAYS = [
   { month: 12, day: 25, name: "1. Weihnachtstag" },
   { month: 12, day: 26, name: "2. Weihnachtstag" },
 ];
-
-// Hamburg specific holidays (Reformationstag since 2018)
-function getHamburgSpecificHolidays(year: number): Array<{ month: number; day: number; name: string }> {
-  const holidays: Array<{ month: number; day: number; name: string }> = [];
-  
-  // Reformationstag (31. Oktober) - nur in Hamburg seit 2018
-  if (year >= 2018) {
-    holidays.push({ month: 10, day: 31, name: "Reformationstag" });
-  }
-  
-  return holidays;
-}
 
 // Calculate Easter Sunday (Gauss algorithm)
 function getEasterSunday(year: number): Date {
@@ -76,23 +126,27 @@ function getMovableHolidays(year: number): Array<{ month: number; day: number; n
   ];
 }
 
-// Check if a date is a Hamburg holiday
-export function isGermanHoliday(date: Date): { isHoliday: boolean; name?: string } {
+// Check if a date is a German holiday
+export async function isGermanHoliday(date: Date): Promise<{ isHoliday: boolean; name?: string }> {
   const year = date.getFullYear();
   const month = date.getMonth() + 1;
   const day = date.getDate();
   
-  // Check fixed holidays
+  // Try to get holidays from API first
+  const stateCode = getCurrentStateFromStorage();
+  const apiHolidays = await getHolidaysFromAPI(year, stateCode);
+  
+  // Check API holidays
+  for (const holiday of apiHolidays) {
+    if (holiday.datum && holiday.datum.startsWith(`${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`)) {
+      return { isHoliday: true, name: holiday.fname };
+    }
+  }
+  
+  // Fallback to fixed holidays if API fails
   const fixedHoliday = FIXED_HOLIDAYS.find(h => h.month === month && h.day === day);
   if (fixedHoliday) {
     return { isHoliday: true, name: fixedHoliday.name };
-  }
-  
-  // Check Hamburg specific holidays
-  const hamburgHolidays = getHamburgSpecificHolidays(year);
-  const hamburgHoliday = hamburgHolidays.find(h => h.month === month && h.day === day);
-  if (hamburgHoliday) {
-    return { isHoliday: true, name: hamburgHoliday.name };
   }
   
   // Check movable holidays
@@ -105,15 +159,51 @@ export function isGermanHoliday(date: Date): { isHoliday: boolean; name?: string
   return { isHoliday: false };
 }
 
+// Get all holidays for a year
+export async function getAllHolidaysForYear(year: number): Promise<Array<{ date: Date; name: string }>> {
+  const stateCode = getCurrentStateFromStorage();
+  const apiHolidays = await getHolidaysFromAPI(year, stateCode);
+  const holidays: Array<{ date: Date; name: string }> = [];
+  
+  // Process API holidays
+  for (const holiday of apiHolidays) {
+    if (holiday.datum) {
+      const [year, month, day] = holiday.datum.split('-').map(Number);
+      holidays.push({
+        date: new Date(year, month - 1, day),
+        name: holiday.fname
+      });
+    }
+  }
+  
+  // Add fixed holidays as fallback
+  FIXED_HOLIDAYS.forEach(holiday => {
+    holidays.push({
+      date: new Date(year, holiday.month - 1, holiday.day),
+      name: holiday.name
+    });
+  });
+  
+  // Add movable holidays
+  getMovableHolidays(year).forEach(holiday => {
+    holidays.push({
+      date: new Date(year, holiday.month - 1, holiday.day),
+      name: holiday.name
+    });
+  });
+  
+  return holidays.sort((a, b) => a.date.getTime() - b.date.getTime());
+}
+
 // Get styling classes for a date
-export function getDateStyling(date: Date): { 
+export async function getDateStyling(date: Date): Promise<{ 
   isWeekend: boolean; 
   isHoliday: boolean; 
   holidayName?: string;
   className: string;
-} {
+}> {
   const isWeekendDay = isWeekend(date);
-  const holidayInfo = isGermanHoliday(date);
+  const holidayInfo = await isGermanHoliday(date);
   
   let className = "";
   
@@ -132,38 +222,22 @@ export function getDateStyling(date: Date): {
 }
 
 // Get holiday name for tooltip
-export function getHolidayTooltip(date: Date): string | undefined {
-  const holidayInfo = isGermanHoliday(date);
+export async function getHolidayTooltip(date: Date): Promise<string | undefined> {
+  const holidayInfo = await isGermanHoliday(date);
   return holidayInfo.isHoliday ? holidayInfo.name : undefined;
 }
 
-// Get all holidays for a year (for debugging/reference)
-export function getAllHolidaysForYear(year: number): Array<{ date: Date; name: string }> {
-  const holidays: Array<{ date: Date; name: string }> = [];
-  
-  // Fixed holidays
-  FIXED_HOLIDAYS.forEach(holiday => {
-    holidays.push({
-      date: new Date(year, holiday.month - 1, holiday.day),
-      name: holiday.name
-    });
-  });
-  
-  // Hamburg specific holidays
-  getHamburgSpecificHolidays(year).forEach(holiday => {
-    holidays.push({
-      date: new Date(year, holiday.month - 1, holiday.day),
-      name: holiday.name
-    });
-  });
-  
-  // Movable holidays
-  getMovableHolidays(year).forEach(holiday => {
-    holidays.push({
-      date: new Date(year, holiday.month - 1, holiday.day),
-      name: holiday.name
-    });
-  });
-  
-  return holidays.sort((a, b) => a.date.getTime() - b.date.getTime());
+// Get available German states
+export function getGermanStates() {
+  return GERMAN_STATES;
+}
+
+// Set current state
+export function setCurrentState(stateCode: string) {
+  saveCurrentState(stateCode);
+}
+
+// Get current state
+export function getCurrentState(): string {
+  return getCurrentStateFromStorage();
 }

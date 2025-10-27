@@ -38,7 +38,13 @@ function DroppableCell({ id, children, isOver, isAvailable, day }: {
   day?: Date;
 }) {
   const { setNodeRef } = useDroppable({ id });
-  const dayStyling = day ? getDateStyling(day) : { className: "" };
+  const [dayStyling, setDayStyling] = React.useState({ className: "" });
+  
+  React.useEffect(() => {
+    if (day) {
+      getDateStyling(day).then(setDayStyling);
+    }
+  }, [day]);
   
   return (
     <TableCell
@@ -80,7 +86,12 @@ export function PlanningCalendar({ planningData, unassignedOrders, weekDays, act
           </TableRow>
           <TableRow>
             {weekDays.map((day) => {
-              const holidayName = getHolidayTooltip(day);
+              const [holidayName, setHolidayName] = React.useState<string | undefined>();
+              
+              React.useEffect(() => {
+                getHolidayTooltip(day).then(setHolidayName);
+              }, [day]);
+              
               return (
                 <TableHead key={day.toString()} className="text-center text-sm w-[120px] min-w-[120px]">
                   <div>

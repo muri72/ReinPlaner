@@ -13,6 +13,8 @@ import { startOfWeek, endOfWeek, eachDayOfInterval, startOfMonth, endOfMonth, st
 import { createClient } from "@/lib/supabase/client"; // Import supabase client
 import { useSearchParams } from "next/navigation";
 import { RecurringEditDialog } from "@/components/recurring-edit-dialog";
+import { StateSelector } from "@/components/state-selector";
+import { getCurrentState } from "@/lib/date-utils";
 
 interface PendingReassignment {
   assignmentId: string;
@@ -35,6 +37,14 @@ export default function PlanningPage() {
 
   const [isRecurringDialogOpen, setIsRecurringDialogOpen] = React.useState(false);
   const [pendingReassignment, setPendingReassignment] = React.useState<PendingReassignment | null>(null);
+
+  const [selectedState, setSelectedState] = React.useState(getCurrentState());
+
+  const handleStateChange = React.useCallback((stateCode: string) => {
+    setSelectedState(stateCode);
+    // Clear cache when state changes
+    // Note: Cache clearing will be implemented in date-utils
+  }, []);
 
   const { startDate, endDate, daysToDisplay } = React.useMemo(() => {
     let start, end;
@@ -74,7 +84,7 @@ export default function PlanningPage() {
       console.error(result.message);
     }
     setLoading(false);
-  }, []);
+  }, [selectedState]);
 
   React.useEffect(() => {
     fetchData(startDate, endDate, query);
