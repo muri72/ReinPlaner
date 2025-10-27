@@ -273,3 +273,50 @@ export async function triggerAutomaticTimeEntryCreation(): Promise<{ success: bo
   revalidatePath("/dashboard/planning"); // Revalidiere Planungsseite
   return { success: true, message: `Überprüfung abgeschlossen. ${createdCount} neue Zeiteinträge erstellt.`, createdCount: createdCount ?? 0 };
 }
+
+interface TimeEntry {
+  id: string;
+  start_time: string;
+  end_time: string | null;
+  duration_minutes: number | null;
+  break_minutes: number | null;
+  type: string;
+  notes: string | null;
+  user_id: string;
+  employee_id: string | null;
+  customer_id: string | null;
+  object_id: string | null;
+  order_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function stopTimeEntry(entryId: string): Promise<{ success: boolean; message: string; data?: TimeEntry }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { success: false, message: "Benutzer nicht authentifiziert." };
+  }
+
+  const now = new Date();
+  
+  const { data: entry, error } = await supabase
+    .from('time_entries')
+    .update({
+      end_time: now.toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', entryId)
+    .select('*')
+    .single();
+
+  if (error) {
+    console.error("Fehler beim Beenden des Zeiteintrags:", error?.message || error);
+    return { success: false, message: error.message };
+  }
+
+  revalidatePath("/dashboard/time-tracking");
+  revalidatePath("/dashboard/planning");
+  return { success: true, message: "Zeiteintrag beendet!", data: entry };
+}

@@ -1,337 +1,287 @@
 "use client";
 
+import React, { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { redirect } from "next/navigation";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { format, getWeek } from 'date-fns';
-import { de } from 'date-fns/locale';
-import { Briefcase, CalendarDays, DollarSign, MessageSquare, Star, FileText, CheckCircle2, AlertCircle, Clock } from "lucide-react";
-import { TodaysOrdersOverview } from "@/components/todays-orders-overview";
-import { GiveOrderFeedbackDialog } from "@/components/give-order-feedback-dialog";
-import { GiveGeneralFeedbackDialog } from "@/components/give-general-feedback-dialog";
+import { MobileDashboardLayout } from "@/components/mobile-dashboard-layout";
+import { MobileOrderCard } from "@/components/mobile-order-card";
+import { MobileQuickActions } from "@/components/mobile-quick-actions";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
-import { CustomerOrderRequestDialog } from "@/components/customer-order-request-dialog";
-import { TicketCreateDialog } from "@/components/ticket-create-dialog";
-import { useState, useEffect, useCallback } from "react";
-import { toast } from "sonner";
-import { LoadingOverlay } from "@/components/loading-overlay";
+import { 
+  Briefcase, 
+  Calendar, 
+  MessageSquare, 
+  Star, 
+  FileText, 
+  Plus,
+  Filter,
+  Search
+} from "lucide-react";
+import { format, isAfter, isBefore, startOfDay, endOfDay } from "date-fns";
+import { de } from "date-fns/locale";
 
-interface RawEmployeeOrderResponse {
+interface Order {
   id: string;
   title: string;
-  description: string | null;
   status: string;
+  priority: string;
   due_date: string | null;
-  order_type: string;
   recurring_start_date: string | null;
   recurring_end_date: string | null;
-  priority: string;
-  total_estimated_hours: number | null;
-  notes: string | null;
+  order_type: string;
   service_type: string | null;
-  request_status: string;
-  objects: { name: string | null; address: string | null; notes: string | null; time_of_day: string | null; access_method: string | null; pin: string | null; is_alarm_secured: boolean | null; alarm_password: string | null; security_code_word: string | null; recurrence_interval_weeks: number; start_week_offset: number; daily_schedules: any[]; }[] | null;
-  customers: { name: string | null; }[] | null;
-  customer_contacts: { first_name: string | null; last_name: string | null; phone: string | null; }[] | null;
-  order_employee_assignments: { 
-    employee_id: string; 
-    assigned_daily_schedules: any[];
-    assigned_recurrence_interval_weeks: number;
-    assigned_start_week_offset: number;
-    employees: { first_name: string | null; last_name: string | null }[] | null;
-  }[] | null;
+  customer_name: string | null;
+  object_name: string | null;
+  employee_names: string[] | null;
+  notes: string | null;
+  customer_notes: string | null;
+  order_feedback?: {
+    rating: number;
+    comment: string;
+  } | null;
 }
 
-export default function CustomerDashboardPage() {
-  const supabase = createClient();
-  const [user, setUser] = useState<any>(null);
-  const [customerName, setCustomerName] = useState('');
-  const [customerData, setCustomerData] = useState<any>(null);
-  const [nextOrder, setNextOrder] = useState<RawEmployeeOrderResponse | null>(null);
-  const [todayOrderStatus, setTodayOrderStatus] = useState("Kein Auftrag geplant.");
+export default function CustomerDashboard() {
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [userProfile, setUserProfile] = useState<any>(null);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
   const [loading, setLoading] = useState(true);
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      redirect("/login");
-      return;
-    }
-    setUser(user);
-
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('first_name, last_name, role')
-      .eq('id', user.id)
-      .single();
-
-    if (profileError) console.error("Fehler beim Abrufen des Benutzerprofils:", profileError?.message || JSON.stringify(profileError));
-    if (profile?.role !== 'customer') redirect("/dashboard");
-
-    setCustomerName(profile?.first_name || user.email || '');
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const { data: customerData, error: customerError } = await supabase
-      .from('customers')
-      .select('id, name, contact_email, contact_phone, customer_type, contractual_services')
-      .eq('user_id', user.id)
-      .single();
-
-    if (customerError && customerError.code !== 'PGRST116') console.error("Fehler beim Laden der Kundendaten:", customerError?.message || JSON.stringify(customerError));
-    setCustomerData(customerData);
-    const customerId = customerData?.id || null;
-
-    if (customerId) {
-      const { data: upcomingOrders, error: upcomingOrdersError } = await supabase
-        .from('orders')
-        .select(`
-          id, title, due_date, recurring_start_date, recurring_end_date, status, order_type,
-          objects ( name, recurrence_interval_weeks, start_week_offset, daily_schedules ),
-          order_employee_assignments ( employee_id, assigned_daily_schedules, assigned_recurrence_interval_weeks, assigned_start_week_offset, employees ( first_name, last_name ) )
-        `)
-        .eq('customer_id', customerId)
-        .eq('request_status', 'approved')
-        .order('due_date', { ascending: true })
-        .order('recurring_start_date', { ascending: true })
-        .limit(5);
-
-      if (upcomingOrdersError) {
-        console.error("Fehler beim Laden der kommenden Aufträge:", upcomingOrdersError?.message || JSON.stringify(upcomingOrdersError));
-      } else {
-        const now = new Date();
-        now.setHours(0, 0, 0, 0);
-        const currentWeekNumber = getWeek(now, { weekStartsOn: 1 });
-
-        const relevantOrders = upcomingOrders?.filter(order => {
-          const assignedRecurrenceIntervalWeeks = order.order_employee_assignments?.[0]?.assigned_recurrence_interval_weeks || order.objects?.[0]?.recurrence_interval_weeks || 1;
-          const assignedStartWeekOffset = order.order_employee_assignments?.[0]?.assigned_start_week_offset || order.objects?.[0]?.start_week_offset || 0;
-
-          if (assignedRecurrenceIntervalWeeks > 1) {
-            const orderStartDate = order.recurring_start_date ? new Date(order.recurring_start_date) : (order.due_date ? new Date(order.due_date) : now);
-            const startWeekNumber = getWeek(orderStartDate, { weekStartsOn: 1 });
-            let weekDifference = currentWeekNumber - startWeekNumber;
-            if (weekDifference < 0) { weekDifference += 52; }
-            if (weekDifference % assignedRecurrenceIntervalWeeks !== assignedStartWeekOffset) return false;
-          }
-
-          if (order.order_type === 'one_time' && order.due_date) {
-            const dueDate = new Date(order.due_date);
-            dueDate.setHours(0, 0, 0, 0);
-            return dueDate >= now;
-          }
-          if (['recurring', 'permanent', 'substitution'].includes(order.order_type) && order.recurring_start_date) {
-            const startDate = new Date(order.recurring_start_date);
-            startDate.setHours(0, 0, 0, 0);
-            const endDate = order.recurring_end_date ? new Date(order.recurring_end_date) : null;
-            if (endDate) endDate.setHours(0, 0, 0, 0);
-            return (startDate <= now && (!endDate || endDate >= now)) || startDate > now;
-          }
-          return false;
-        });
-
-        relevantOrders?.sort((a, b) => {
-          const dateA = a.due_date ? new Date(a.due_date) : (a.recurring_start_date ? new Date(a.recurring_start_date) : new Date(0));
-          const dateB = b.due_date ? new Date(b.due_date) : (b.recurring_start_date ? new Date(b.recurring_start_date) : new Date(0));
-          return dateA.getTime() - dateB.getTime();
-        });
-
-        setNextOrder((relevantOrders?.[0] as RawEmployeeOrderResponse) || null);
-
-        const todaysOrders = upcomingOrders?.filter(order => {
-          const assignedRecurrenceIntervalWeeks = order.order_employee_assignments?.[0]?.assigned_recurrence_interval_weeks || order.objects?.[0]?.recurrence_interval_weeks || 1;
-          const assignedStartWeekOffset = order.order_employee_assignments?.[0]?.assigned_start_week_offset || order.objects?.[0]?.start_week_offset || 0;
-
-          if (assignedRecurrenceIntervalWeeks > 1) {
-            const orderStartDate = order.recurring_start_date ? new Date(order.recurring_start_date) : (order.due_date ? new Date(order.due_date) : now);
-            const startWeekNumber = getWeek(orderStartDate, { weekStartsOn: 1 });
-            let weekDifference = currentWeekNumber - startWeekNumber;
-            if (weekDifference < 0) { weekDifference += 52; }
-            if (weekDifference % assignedRecurrenceIntervalWeeks !== assignedStartWeekOffset) return false;
-          }
-
-          if (order.order_type === 'one_time' && order.due_date) {
-            const dueDate = new Date(order.due_date);
-            dueDate.setHours(0, 0, 0, 0);
-            return dueDate.getTime() === today.getTime();
-          }
-          if (['recurring', 'permanent', 'substitution'].includes(order.order_type) && order.recurring_start_date) {
-            const startDate = new Date(order.recurring_start_date);
-            startDate.setHours(0, 0, 0, 0);
-            const endDate = order.recurring_end_date ? new Date(order.recurring_end_date) : null;
-            if (endDate) endDate.setHours(0, 0, 0, 0);
-            return startDate <= today && (!endDate || endDate >= today);
-          }
-          return false;
-        });
-
-        if (todaysOrders && todaysOrders.length > 0) {
-          const allCompleted = todaysOrders.every(order => order.status === 'completed');
-          const anyInProgress = todaysOrders.some(order => order.status === 'in_progress');
-          if (allCompleted) setTodayOrderStatus("Ihr Auftrag heute ist abgeschlossen. Vielen Dank!");
-          else if (anyInProgress) setTodayOrderStatus("Ihr Auftrag heute ist in Bearbeitung.");
-          else setTodayOrderStatus("Ihr Auftrag heute ist geplant.");
-        }
-      }
-    }
-    setLoading(false);
-  }, [supabase]);
+  const supabase = createClient();
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    const fetchUserData = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        redirect("/login");
+        return;
+      }
+      setCurrentUser(user);
 
-  const getStatusBadgeVariant = (status: string) => {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('first_name, last_name, avatar_url, role')
+        .eq('id', user.id)
+        .single();
+      setUserProfile(profile);
+    };
+
+    const fetchOrders = async () => {
+      if (!currentUser) return;
+
+      const { data: orderData } = await supabase
+        .from('orders')
+        .select(`
+          id,
+          title,
+          status,
+          priority,
+          due_date,
+          recurring_start_date,
+          recurring_end_date,
+          order_type,
+          service_type,
+          customer_notes,
+          order_feedback(rating, comment)
+        `)
+        .eq('user_id', currentUser.id)
+        .order('created_at', { ascending: false });
+
+      // Transform data to match Order interface
+      const transformedOrders: Order[] = (orderData || []).map((order: any) => ({
+        ...order,
+        customer_name: null, // Customer doesn't need customer_name for their own orders
+        object_name: null,
+        employee_names: null,
+        notes: order.customer_notes,
+      }));
+
+      setOrders(transformedOrders);
+      setFilteredOrders(transformedOrders);
+      setLoading(false);
+    };
+
+    fetchUserData();
+  }, [currentUser]);
+
+  useEffect(() => {
+    let filtered = orders;
+
+    // Apply search filter
+    if (searchQuery) {
+      filtered = filtered.filter(order =>
+        order.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        order.service_type?.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+
+    // Apply status filter
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter(order => order.status === statusFilter);
+    }
+
+    setFilteredOrders(filtered);
+  }, [orders, searchQuery, statusFilter]);
+
+  const getStatusColor = (status: string) => {
     switch (status) {
-      case 'completed': return 'default';
-      case 'in_progress': return 'secondary';
-      case 'pending': default: return 'outline';
+      case 'completed': return 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200';
+      case 'in_progress': return 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200';
+      case 'pending': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-200';
+      default: return 'bg-gray-100 text-gray-800 dark:bg-gray-900/50 dark:text-gray-200';
     }
   };
 
-  const getAssignedTimeForToday = (order: RawEmployeeOrderResponse | null) => {
-    if (!order || !order.order_employee_assignments || order.order_employee_assignments.length === 0) return 'N/A';
-    const today = new Date();
-    const todayDayOfWeek = today.getDay();
-    const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-    const currentDayKey = dayNames[todayDayOfWeek];
-    const assignedData = order.order_employee_assignments[0];
-    const employeeRecurrenceInterval = assignedData.assigned_recurrence_interval_weeks || order.objects?.[0]?.recurrence_interval_weeks || 1;
-    const employeeStartWeekOffset = assignedData.assigned_start_week_offset || order.objects?.[0]?.start_week_offset || 0;
-    const orderStartDateForWeekCalc = order.recurring_start_date ? new Date(order.recurring_start_date) : (order.due_date ? new Date(order.due_date) : today);
-    const startWeekNumber = getWeek(orderStartDateForWeekCalc, { weekStartsOn: 1 });
-    const currentWeekNumber = getWeek(today, { weekStartsOn: 1 });
-    let weekDifference = currentWeekNumber - startWeekNumber;
-    if (weekDifference < 0) { weekDifference += 52; }
-    const effectiveWeekIndex = (weekDifference - employeeStartWeekOffset) % employeeRecurrenceInterval;
-    if (employeeRecurrenceInterval > 1 && (weekDifference % employeeRecurrenceInterval !== employeeStartWeekOffset)) return 'N/A (Nicht diese Woche)';
-    const weekSchedule = assignedData.assigned_daily_schedules?.[effectiveWeekIndex];
-    const daySchedule = (weekSchedule as any)?.[currentDayKey];
-    const startTime = daySchedule?.start;
-    const endTime = daySchedule?.end;
-    if (startTime && endTime) return `${startTime} - ${endTime}`;
-    return 'N/A';
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'high': return 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-200';
+      case 'medium': return 'bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-200';
+      default: return 'bg-gray-100 text-gray-800 dark:bg-gray-900/50 dark:text-gray-200';
+    }
   };
 
-  if (loading || !user) {
-    return <LoadingOverlay isLoading={true} />;
-  }
+  const handleNewBooking = () => {
+    // Navigate to new booking form
+    console.log('New booking');
+  };
+
+  const handleFeedback = (orderId: string) => {
+    // Navigate to feedback form
+    console.log('Feedback for order:', orderId);
+  };
+
+  const handleViewDetails = (order: Order) => {
+    // Navigate to order details
+    console.log('View details for order:', order);
+  };
 
   return (
-    <div className="p-4 md:p-8 space-y-8">
-      <h1 className="text-2xl md:text-3xl font-bold">Willkommen, {customerName}!</h1>
-      <p className="text-sm md:text-base text-muted-foreground">
-        {todayOrderStatus}
-      </p>
-      <Card className="shadow-neumorphic glassmorphism-card">
-        <CardHeader>
-          <CardTitle className="text-lg font-semibold">Ihr nächster Termin</CardTitle>
-          <CardDescription>Bleiben Sie über Ihre bevorstehenden Buchungen auf dem Laufenden.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {nextOrder ? (
-            <div className="space-y-2">
-              <p className="text-base font-semibold">{nextOrder.title} ({Array.isArray(nextOrder.objects) ? nextOrder.objects[0]?.name : 'N/A'})</p>
-              <div className="flex items-center text-sm text-muted-foreground">
-                <CalendarDays className="mr-2 h-4 w-4" />
-                {nextOrder.order_type === "one_time" && nextOrder.due_date && (
-                  <span>{format(new Date(nextOrder.due_date), 'dd.MM.yyyy', { locale: de })}</span>
-                )}
-                {(nextOrder.order_type === "recurring" || nextOrder.order_type === "permanent" || nextOrder.order_type === "substitution") && nextOrder.recurring_start_date && (
-                  <span>
-                    {format(new Date(nextOrder.recurring_start_date), 'dd.MM.yyyy', { locale: de })}
-                    {nextOrder.recurring_end_date && ` - ${format(new Date(nextOrder.recurring_end_date), 'dd.MM.yyyy', { locale: de })}`}
-                  </span>
-                )}
-              </div>
-              <div className="flex items-center text-sm text-muted-foreground">
-                <Clock className="mr-2 h-4 w-4" />
-                <span>Zugewiesene Zeit: {getAssignedTimeForToday(nextOrder)}</span>
-              </div>
-              {nextOrder.order_employee_assignments?.[0]?.assigned_recurrence_interval_weeks && nextOrder.order_employee_assignments[0].assigned_recurrence_interval_weeks > 1 && (
-                <div className="flex items-center text-xs text-muted-foreground mt-1">
-                  <CalendarDays className="mr-1 h-3 w-3" />
-                  <span>Wiederholung: Alle {nextOrder.order_employee_assignments[0].assigned_recurrence_interval_weeks} Wochen (Offset: {nextOrder.order_employee_assignments[0].assigned_start_week_offset})</span>
-                </div>
-              )}
-              <div className="flex items-center text-sm text-muted-foreground">
-                <Briefcase className="mr-2 h-4 w-4" />
-                <span>Status: <Badge variant={getStatusBadgeVariant(nextOrder.status)}>{nextOrder.status}</Badge></span>
-              </div>
-              <Button asChild className="mt-4">
-                <Link href="/portal/dashboard/bookings">Alle Buchungen ansehen</Link>
+    <MobileDashboardLayout
+      currentUserRole="customer"
+      onSignOut={async () => {
+        await supabase.auth.signOut();
+        redirect("/login");
+      }}
+      userProfile={userProfile}
+    >
+      <div className="space-y-4">
+        {/* Welcome Header */}
+        <Card className="glassmorphism-card">
+          <CardHeader className="text-center">
+            <CardTitle className="text-xl">
+              Willkommen, {userProfile?.first_name || 'Kunde'}!
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-center text-sm text-muted-foreground">
+            {format(new Date(), 'EEEE, dd. MMMM yyyy', { locale: de })}
+          </CardContent>
+        </Card>
+
+        {/* Quick Actions */}
+        <MobileQuickActions
+          notificationCount={0}
+          pendingTasksCount={0}
+        />
+
+        {/* Search and Filter */}
+        <Card className="glassmorphism-card">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg">Meine Buchungen</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Buchungen suchen..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-border rounded-lg bg-background text-sm"
+              />
+            </div>
+            
+            <div className="flex space-x-2 overflow-x-auto">
+              <Button
+                variant={statusFilter === 'all' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setStatusFilter('all')}
+              >
+                Alle
+              </Button>
+              <Button
+                variant={statusFilter === 'pending' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setStatusFilter('pending')}
+              >
+                Ausstehend
+              </Button>
+              <Button
+                variant={statusFilter === 'in_progress' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setStatusFilter('in_progress')}
+              >
+                Aktiv
+              </Button>
+              <Button
+                variant={statusFilter === 'completed' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setStatusFilter('completed')}
+              >
+                Abgeschlossen
               </Button>
             </div>
-          ) : (
-            <div className="text-center text-muted-foreground py-4">
-              <p>Keine zukünftigen Termine gefunden.</p>
-              <CustomerOrderRequestDialog customerId={customerData?.id} />
+          </CardContent>
+        </Card>
+
+        {/* Orders List */}
+        <div className="space-y-3">
+          {loading ? (
+            <div className="text-center py-8">
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary border-r-transparent border-t-transparent"></div>
+              <p className="mt-2 text-muted-foreground">Lade Buchungen...</p>
             </div>
-          )}
-        </CardContent>
-      </Card>
-      <Card className="shadow-neumorphic glassmorphism-card">
-        <CardHeader>
-          <CardTitle className="text-lg font-semibold flex items-center">
-            <MessageSquare className="mr-2 h-5 w-5" /> Neues Ticket erstellen
-          </CardTitle>
-          <CardDescription>Melden Sie ein Problem oder stellen Sie eine Anfrage.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {customerData?.id ? (
-            <TicketCreateDialog
-              onTicketCreated={fetchData}
-              triggerButtonText="Ticket erstellen"
-              triggerButtonClassName="w-full"
-              initialData={{ customerId: customerData.id }}
-            />
+          ) : filteredOrders.length === 0 ? (
+            <Card className="glassmorphism-card">
+              <CardContent className="text-center py-8">
+                <Briefcase className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                <p className="text-lg font-semibold">Keine Buchungen gefunden</p>
+                <p className="text-sm text-muted-foreground">
+                  {searchQuery ? 'Keine Ergebnisse für Ihre Suche' : 'Sie haben noch keine Buchungen'}
+                </p>
+              </CardContent>
+            </Card>
           ) : (
-            <p className="text-muted-foreground text-sm text-center">
-              Ihre Kunden-ID konnte nicht geladen werden. Bitte kontaktieren Sie den Support.
-            </p>
+            filteredOrders.map((order) => (
+              <MobileOrderCard
+                key={order.id}
+                order={order}
+                onStatusChange={(orderId, newStatus) => {
+                  console.log('Status change:', orderId, newStatus);
+                }}
+                onEdit={() => handleViewDetails(order)}
+                onContact={() => console.log('Contact for order:', order.id)}
+                onViewDetails={() => handleViewDetails(order)}
+              />
+            ))
           )}
-        </CardContent>
-      </Card>
-      <Card className="shadow-neumorphic glassmorphism-card">
-        <CardHeader>
-          <CardTitle className="text-lg font-semibold">Rechnungen & Zahlungen</CardTitle>
-          <CardDescription>Verwalten Sie Ihre Rechnungen und Zahlungen.</CardDescription>
-        </CardHeader>
-        <CardContent className="text-center text-muted-foreground py-4">
-          <DollarSign className="mx-auto h-10 w-10 text-muted-foreground mb-4" />
-          <p className="text-base font-semibold">Keine Rechnungen verfügbar</p>
-          <p className="text-sm">Diese Funktion wird in Kürze verfügbar sein.</p>
-        </CardContent>
-      </Card>
-      <Card className="shadow-neumorphic glassmorphism-card">
-        <CardHeader>
-          <CardTitle className="text-lg font-semibold">Feedback & Support</CardTitle>
-          <CardDescription>Teilen Sie uns Ihre Meinung mit oder erhalten Sie Unterstützung.</CardDescription>
-        </CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <GiveOrderFeedbackDialog />
-          <GiveGeneralFeedbackDialog />
-          <Button variant="outline" className="w-full md:col-span-2">
-            <MessageSquare className="mr-2 h-4 w-4" /> Support kontaktieren (Platzhalter)
+        </div>
+
+        {/* Quick Actions Footer */}
+        <div className="fixed bottom-20 left-4 right-4 z-30">
+          <Button
+            onClick={handleNewBooking}
+            className="w-full h-12 bg-primary text-primary-foreground rounded-full shadow-lg flex items-center justify-center space-x-2"
+          >
+            <Plus className="h-5 w-5" />
+            <span className="font-medium">Neue Buchung</span>
           </Button>
-        </CardContent>
-      </Card>
-      <Card className="shadow-neumorphic glassmorphism-card">
-        <CardHeader>
-          <CardTitle className="text-lg font-semibold">Ihre Vertragsdetails</CardTitle>
-          <CardDescription>Wichtige Informationen zu Ihren gebuchten Leistungen.</CardDescription>
-        </CardHeader>
-        <CardContent className="text-muted-foreground">
-          {customerData?.contractual_services ? (
-            <p className="text-sm whitespace-pre-wrap">{customerData.contractual_services}</p>
-          ) : (
-            <p className="text-center text-sm py-4">Keine spezifischen Vertragsdetails hinterlegt.</p>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+        </div>
+      </div>
+    </MobileDashboardLayout>
   );
 }
