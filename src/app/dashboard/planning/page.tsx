@@ -10,11 +10,9 @@ import { PlanningCalendarMonth } from "@/components/planning-calendar-month";
 import { Skeleton } from "@/components/ui/skeleton";
 import { assignOrderToEmployee, reassignRecurringOrder } from "./actions";
 import { startOfWeek, endOfWeek, eachDayOfInterval, startOfMonth, endOfMonth, startOfDay, endOfDay } from "date-fns";
-import { createClient } from "@/lib/supabase/client"; // Import supabase client
+import { createClient } from "@/lib/supabase/client";
 import { useSearchParams } from "next/navigation";
 import { RecurringEditDialog } from "@/components/recurring-edit-dialog";
-import { StateSelector } from "@/components/state-selector";
-import { getCurrentState } from "@/lib/date-utils";
 
 interface PendingReassignment {
   assignmentId: string;
@@ -38,32 +36,32 @@ export default function PlanningPage() {
   const [isRecurringDialogOpen, setIsRecurringDialogOpen] = React.useState(false);
   const [pendingReassignment, setPendingReassignment] = React.useState<PendingReassignment | null>(null);
 
-  const [selectedState, setSelectedState] = React.useState(getCurrentState());
+  // Calculate date range based on view mode
+  const dateRange = React.useMemo(() => {
+    let startDate: Date;
+    let endDate: Date;
+    let daysToDisplay: Date[];
 
-  const handleStateChange = React.useCallback((stateCode: string) => {
-    setSelectedState(stateCode);
-    // Clear cache when state changes
-    // Note: Cache clearing will be implemented in date-utils
-  }, []);
-
-  const { startDate, endDate, daysToDisplay } = React.useMemo(() => {
-    let start, end;
     switch (viewMode) {
       case 'day':
-        start = startOfDay(currentDate);
-        end = endOfDay(currentDate);
+        startDate = startOfDay(currentDate);
+        endDate = endOfDay(currentDate);
+        daysToDisplay = [currentDate];
         break;
       case 'month':
-        start = startOfMonth(currentDate);
-        end = endOfMonth(currentDate);
+        startDate = startOfMonth(currentDate);
+        endDate = endOfMonth(currentDate);
+        daysToDisplay = eachDayOfInterval({ start: startDate, end: endDate });
         break;
       case 'week':
       default:
-        start = startOfWeek(currentDate, { weekStartsOn: 1 });
-        end = endOfWeek(currentDate, { weekStartsOn: 1 });
+        startDate = startOfWeek(currentDate, { weekStartsOn: 1 });
+        endDate = endOfWeek(currentDate, { weekStartsOn: 1 });
+        daysToDisplay = eachDayOfInterval({ start: startDate, end: endDate });
         break;
     }
-    return { startDate: start, endDate: end, daysToDisplay: eachDayOfInterval({ start, end }) };
+
+    return { startDate, endDate, daysToDisplay };
   }, [currentDate, viewMode]);
 
   const fetchData = React.useCallback(async (start: Date, end: Date, searchQuery: string) => {
@@ -84,11 +82,11 @@ export default function PlanningPage() {
       console.error(result.message);
     }
     setLoading(false);
-  }, [selectedState]);
+  }, []);
 
   React.useEffect(() => {
-    fetchData(startDate, endDate, query);
-  }, [startDate, endDate, query, fetchData]);
+    fetchData(dateRange.startDate, dateRange.endDate, query);
+  }, [dateRange.startDate, dateRange.endDate, query, fetchData]);
 
   const handleDragEnd = async (event: DragEndEvent) => {
     setActiveDragId(null);
@@ -108,7 +106,7 @@ export default function PlanningPage() {
       const result = await assignOrderToEmployee(orderId, newEmployeeId, newDate, null);
       if (result.success) {
         toast.success(result.message);
-        fetchData(startDate, endDate, query);
+        fetchData(dateRange.startDate, dateRange.endDate, query);
       } else {
         toast.error(result.message);
       }
@@ -131,7 +129,7 @@ export default function PlanningPage() {
         const result = await reassignSingleOrder(assignmentId, newEmployeeId, newDate);
         if (result.success) {
           toast.success(result.message);
-          fetchData(startDate, endDate, query);
+          fetchData(dateRange.startDate, dateRange.endDate, query);
         } else {
           toast.error(result.message);
         }
@@ -147,7 +145,7 @@ export default function PlanningPage() {
     
     if (result.success) {
       toast.success(result.message);
-      fetchData(startDate, endDate, query);
+      fetchData(dateRange.startDate, dateRange.endDate, query);
     } else {
       toast.error(result.message);
     }
@@ -171,7 +169,7 @@ export default function PlanningPage() {
           onShowUnassignedChange={setShowUnassigned}
           currentUserId={currentUser?.id}
           isAdmin={isAdmin}
-          onActionSuccess={() => fetchData(startDate, endDate, query)}
+          onActionSuccess={() => fetchData(dateRange.startDate, dateRange.endDate, query)}
         />
         <div className="flex-grow min-h-0">
           {loading ? (
@@ -180,20 +178,20 @@ export default function PlanningPage() {
             <PlanningCalendarMonth
               planningData={planningPageData?.planningData || {}}
               unassignedOrders={planningPageData?.unassignedOrders || []}
-              weekDays={daysToDisplay}
+              weekDays={dateRange.daysToDisplay}
               activeDragId={activeDragId}
               showUnassigned={showUnassigned}
-              onActionSuccess={() => fetchData(startDate, endDate, query)}
+              onActionSuccess={() => fetchData(dateRange.startDate, dateRange.endDate, query)}
               weekNumber={planningPageData?.weekNumber || 0}
             />
           ) : (
             <PlanningCalendar
               planningData={planningPageData?.planningData || {}}
               unassignedOrders={planningPageData?.unassignedOrders || []}
-              weekDays={daysToDisplay}
+              weekDays={dateRange.daysToDisplay}
               activeDragId={activeDragId}
               showUnassigned={showUnassigned}
-              onActionSuccess={() => fetchData(startDate, endDate, query)}
+              onActionSuccess={() => fetchData(dateRange.startDate, dateRange.endDate, query)}
               weekNumber={planningPageData?.weekNumber || 0}
             />
           )}

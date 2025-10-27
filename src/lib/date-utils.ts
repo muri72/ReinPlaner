@@ -1,65 +1,30 @@
 import { format, isWeekend, isSameDay } from "date-fns";
 import { de } from "date-fns/locale";
 
-// German states with their codes
-const GERMAN_STATES = [
-  { code: 'BW', name: 'Baden-Württemberg' },
-  { code: 'BY', name: 'Bayern' },
-  { code: 'BE', name: 'Berlin' },
-  { code: 'BB', name: 'Brandenburg' },
-  { code: 'HB', name: 'Bremen' },
-  { code: 'HH', name: 'Hamburg' },
-  { code: 'HE', name: 'Hessen' },
-  { code: 'MV', name: 'Mecklenburg-Vorpommern' },
-  { code: 'NI', name: 'Niedersachsen' },
-  { code: 'NW', name: 'Nordrhein-Westfalen' },
-  { code: 'RP', name: 'Rheinland-Pfalz' },
-  { code: 'SL', name: 'Saarland' },
-  { code: 'SN', name: 'Sachsen' },
-  { code: 'ST', name: 'Sachsen-Anhalt' },
-  { code: 'SH', name: 'Schleswig-Holstein' },
-  { code: 'TH', name: 'Thüringen' },
-];
-
 // Cache for API responses
 const holidayCache = new Map<string, any>();
 
-// Get holidays from API with caching
-async function getHolidaysFromAPI(year: number, stateCode: string = 'HH'): Promise<any[]> {
-  const cacheKey = `${year}-${stateCode}`;
+// Get Hamburg holidays from API with caching
+async function getHamburgHolidaysFromAPI(year: number): Promise<any[]> {
+  const cacheKey = `${year}-HH`;
   
   if (holidayCache.has(cacheKey)) {
     return holidayCache.get(cacheKey);
   }
 
   try {
-    const response = await fetch(`https://get.api-feiertage.de/api/v1/feiertage?jahr=${year}&bundesland=${stateCode}`);
+    const response = await fetch(`https://get.api-feiertage.de?states=hh&jahr=${year}`);
     const data = await response.json();
     
-    if (data.success && data.feiertage) {
+    if (data.status === "success" && data.feiertage) {
       holidayCache.set(cacheKey, data.feiertage);
       return data.feiertage;
     }
     
     return [];
   } catch (error) {
-    console.error('Error fetching holidays:', error);
+    console.error('Error fetching Hamburg holidays:', error);
     return [];
-  }
-}
-
-// Get current state from localStorage or default to Hamburg
-function getCurrentStateFromStorage(): string {
-  if (typeof window !== 'undefined') {
-    return localStorage.getItem('selectedState') || 'HH';
-  }
-  return 'HH';
-}
-
-// Save state to localStorage
-function saveCurrentState(stateCode: string) {
-  if (typeof window !== 'undefined') {
-    localStorage.setItem('selectedState', stateCode);
   }
 }
 
@@ -126,20 +91,22 @@ function getMovableHolidays(year: number): Array<{ month: number; day: number; n
   ];
 }
 
-// Check if a date is a German holiday
+// Check if a date is a Hamburg holiday
 export async function isGermanHoliday(date: Date): Promise<{ isHoliday: boolean; name?: string }> {
   const year = date.getFullYear();
   const month = date.getMonth() + 1;
   const day = date.getDate();
   
-  // Try to get holidays from API first
-  const stateCode = getCurrentStateFromStorage();
-  const apiHolidays = await getHolidaysFromAPI(year, stateCode);
+  // Try to get Hamburg holidays from API first
+  const apiHolidays = await getHamburgHolidaysFromAPI(year);
   
-  // Check API holidays
+  // Check API holidays - the API uses "date" field, not "datum"
   for (const holiday of apiHolidays) {
-    if (holiday.datum && holiday.datum.startsWith(`${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`)) {
-      return { isHoliday: true, name: holiday.fname };
+    if (holiday.date && holiday.date.startsWith(`${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`)) {
+      // Check if this holiday is valid for Hamburg (hh field should be "1")
+      if (holiday.hh === "1") {
+        return { isHoliday: true, name: holiday.fname };
+      }
     }
   }
   
@@ -161,14 +128,13 @@ export async function isGermanHoliday(date: Date): Promise<{ isHoliday: boolean;
 
 // Get all holidays for a year
 export async function getAllHolidaysForYear(year: number): Promise<Array<{ date: Date; name: string }>> {
-  const stateCode = getCurrentStateFromStorage();
-  const apiHolidays = await getHolidaysFromAPI(year, stateCode);
+  const apiHolidays = await getHamburgHolidaysFromAPI(year);
   const holidays: Array<{ date: Date; name: string }> = [];
   
   // Process API holidays
   for (const holiday of apiHolidays) {
-    if (holiday.datum) {
-      const [year, month, day] = holiday.datum.split('-').map(Number);
+    if (holiday.date && holiday.hh === "1") {
+      const [year, month, day] = holiday.date.split('-').map(Number);
       holidays.push({
         date: new Date(year, month - 1, day),
         name: holiday.fname
@@ -225,19 +191,4 @@ export async function getDateStyling(date: Date): Promise<{
 export async function getHolidayTooltip(date: Date): Promise<string | undefined> {
   const holidayInfo = await isGermanHoliday(date);
   return holidayInfo.isHoliday ? holidayInfo.name : undefined;
-}
-
-// Get available German states
-export function getGermanStates() {
-  return GERMAN_STATES;
-}
-
-// Set current state
-export function setCurrentState(stateCode: string) {
-  saveCurrentState(stateCode);
-}
-
-// Get current state
-export function getCurrentState(): string {
-  return getCurrentStateFromStorage();
 }
