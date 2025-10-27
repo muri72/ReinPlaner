@@ -2,209 +2,76 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Mobile Optimierungen */
 @layer base {
-  :root {
-    /* Base Colors - Light Mode */
-    --background: 0 0% 100%; /* Pure White */
-    --foreground: 220 10% 15%; /* Dark Gray-Blue for high contrast */
-
-    --card: 0 0% 100%; /* White for card background */
-    --card-foreground: 220 10% 15%;
-
-    --popover: 0 0% 100%;
-    --popover-foreground: 220 10% 15%;
-
-    /* Blue-centric Accent Colors (derived from logo) */
-    --primary: 217 90% 47%; /* A solid, clean blue (#3B82F6) */
-    --primary-foreground: 0 0% 100%; /* White text on primary */
-
-    --secondary: 210 50% 85%; /* A very light blue */
-    --secondary-foreground: 220 10% 15%; /* Dark text on secondary */
-
-    --muted: 210 20% 95%; /* Light Gray-Blue */
-    --muted-foreground: 210 10% 45%; /* Medium Gray-Blue */
-
-    --accent: 217 70% 55%; /* A slightly different blue hue for accent */
-    --accent-foreground: 0 0% 100%; /* White text on accent */
-
-    --destructive: 0 80% 50%; /* Strong Red (for errors/danger) */
-    --destructive-foreground: 0 0% 100%; /* White */
-
-    --success: 120 70% 40%; /* Vibrant Green */
-    --success-foreground: 0 0% 100%; /* White */
-
-    --warning: 40 90% 50%; /* Amber/Yellow */
-    --warning-foreground: 0 0% 100%; /* White */
-
-    --border: 210 20% 90%; /* Light Gray-Blue Border */
-    --input: 210 20% 95%; /* Slightly darker input background */
-    --ring: 217 90% 47%; /* Primary color for focus ring */
-
-    /* Border Radius - Increased for smooth rounded corners */
-    --radius: 16px; /* Default for rounded-lg */
-    --radius-sm: 8px;
-    --radius-md: 12px;
-    --radius-xl: 24px;
-    --radius-2xl: 32px;
-
-    /* Glassmorphism Blur */
-    --glass-blur: 10px; /* Define blur amount */
-
-    /* Sidebar Specific Colors (adjusted to new palette) */
-    --sidebar-background: 210 20% 98%; /* Very light gray-blue */
-    --sidebar-foreground: 220 10% 20%; /* Darker text */
-    --sidebar-primary: 217 90% 40%; /* Slightly darker primary for contrast */
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 217 70% 50%; /* Slightly darker accent for hover */
-    --sidebar-accent-foreground: 220 10% 20%;
-    --sidebar-border: 210 20% 90%;
-    --sidebar-ring: 217 90% 47%;
-  }
-
-  .dark {
-    /* Dark Mode Colors - Adjusted for glassmorphism and blue-centric feel */
-    --background: 220 10% 10%; /* Dark Gray-Blue */
-    --foreground: 220 10% 90%; /* Light Gray-Blue */
-
-    --card: 220 10% 12%; /* Slightly lighter than background for depth */
-    --card-foreground: 220 10% 90%;
-
-    --popover: 220 10% 12%;
-    --popover-foreground: 220 10% 90%;
-
-    /* Blue-centric Accent Colors (Dark Mode versions) */
-    --primary: 217 90% 75%; /* Lighter blue for dark mode */
-    --primary-foreground: 220 10% 10%; /* Dark text on primary */
-
-    --secondary: 210 50% 30%; /* Darker light blue for dark mode */
-    --secondary-foreground: 220 10% 90%;
-
-    --muted: 210 15% 20%;
-    --muted-foreground: 210 10% 60%;
-
-    --accent: 217 70% 75%; /* Lighter accent blue for dark mode */
-    --accent-foreground: 220 10% 10%;
-
-    --destructive: 0 80% 60%; /* Lighter Red for dark mode */
-    --destructive-foreground: 220 10% 10%;
-
-    --success: 120 70% 60%; /* Lighter Green for dark mode */
-    --success-foreground: 220 10% 10%;
-
-    --warning: 40 90% 60%; /* Lighter Amber for dark mode */
-    --warning-foreground: 220 10% 10%;
-
-    --border: 210 15% 20%;
-    --input: 210 15% 20%;
-    --ring: 217 90% 75%;
-
-    /* Sidebar Specific Colors (adjusted to new palette) */
-    --sidebar-background: 220 10% 15%;
-    --sidebar-foreground: 220 10% 85%;
-    --sidebar-primary: 217 90% 65%;
-    --sidebar-primary-foreground: 220 10% 10%;
-    --sidebar-accent: 217 70% 70%;
-    --sidebar-accent-foreground: 220 10% 10%;
-    --sidebar-border: 210 15% 20%;
-    --sidebar-ring: 217 90% 75%;
-  }
-}
-
-@layer base {
-  * {
-    @apply border-border;
-  }
   html {
-    /* Removed border and border-radius from html */
+    /* Verhindert Zoom auf Input-Fokus in iOS */
+    -webkit-text-size-adjust: 100%;
+    /* Verbessert Scroll-Performance */
+    -webkit-overflow-scrolling: touch;
   }
+
   body {
-    @apply bg-background text-foreground;
-    /* Subtle noise pattern for texture */
-    background-image: radial-gradient(circle at center, rgba(0,0,0,0.01) 1px, transparent 1px),
-                      linear-gradient(to bottom right, hsl(var(--primary) / 0.1), hsl(var(--accent) / 0.1)); /* More prominent subtle gradient overlay */
-    background-size: 2px 2px, 100% 100%;
-    background-attachment: fixed; /* Ensure background is fixed for parallax */
+    /* Verbessert Touch-Performance */
+    touch-action: manipulation;
+    /* Verhindert Textauswahl auf Touch-Geräten */
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
   }
 
-  /* Global interactive element styles for smooth transitions */
-  a, button, input, select, textarea, [role="button"], [tabindex]:not([tabindex="-1"]) {
-    @apply transition-colors duration-200 ease-in-out;
-  }
-
-  /* Focus ring for accessibility */
-  *:focus-visible {
-    outline: 2px solid hsl(var(--ring));
-    outline-offset: 2px;
-    @apply rounded-md; /* Apply border-radius for consistency */
+  /* Erlaube Textauswahl nur für wichtige Elemente */
+  input, textarea, [contenteditable] {
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+    user-select: text;
   }
 }
 
-/* Custom utility for small caps letter spacing */
-.tracking-small-caps {
-  letter-spacing: 0.05em;
-}
-
-/* Custom class for main content background pattern */
 @layer components {
-  .bg-main-content-pattern {
-    background-image: radial-gradient(circle at center, rgba(0,0,0,0.01) 1px, transparent 1px),
-                      linear-gradient(to bottom right, hsl(var(--primary) / 0.1), hsl(var(--accent) / 0.1));
-    background-size: 2px 2px, 100% 100%;
-    background-attachment: fixed;
+  /* Touch-optimierte Buttons */
+  .touch-manipulation {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
   }
 
-  /* Glassmorphism effect for cards and other panels */
-  .glassmorphism-card {
-    background-color: hsl(var(--card) / 0.6); /* Semi-transparent background */
-    backdrop-filter: blur(var(--glass-blur)); /* Frosted glass effect */
-    border: 1px solid hsl(var(--border) / 0.3); /* Subtle border */
-    box-shadow: var(--shadow-neumorphic); /* Apply neumorphic shadow */
+  /* Mobile-optimierte Cards */
+  .mobile-card {
+    @apply bg-white rounded-lg shadow-sm border border-gray-100 p-4;
+  }
+
+  /* Mobile-optimierte Buttons */
+  .mobile-button {
+    @apply px-4 py-3 rounded-lg font-medium touch-manipulation transition-all active:scale-95;
+  }
+
+  /* Mobile-optimierte Input-Felder */
+  .mobile-input {
+    @apply w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent touch-manipulation;
   }
 }
 
-/* Completely hide scrollbars globally */
-::-webkit-scrollbar {
-  width: 0px !important;
-  height: 0px !important;
-  background: transparent !important;
+/* Custom Scrollbar für mobile Geräte */
+@layer utilities {
+  .mobile-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .mobile-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
 }
 
-::-webkit-scrollbar-thumb {
-  background-color: transparent !important;
-}
+/* Safe Area für iPhone X und neuer */
+@supports (padding: max(0px)) {
+  .safe-area-top {
+    padding-top: max(1rem, env(safe-area-inset-top));
+  }
 
-::-webkit-scrollbar-track {
-  background: transparent !important;
-}
-
-/* For Firefox */
-* {
-  scrollbar-width: none !important; /* Firefox */
-  -ms-overflow-style: none !important;  /* IE and Edge */
-}
-
-/* Custom Scrollbar for specific elements */
-.custom-scrollbar {
-  scrollbar-width: thin !important; /* For Firefox */
-  scrollbar-color: hsl(var(--border)) transparent !important; /* For Firefox */
-}
-
-.custom-scrollbar::-webkit-scrollbar {
-  width: 6px !important;
-  height: 6px !important;
-}
-
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: transparent !important;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background-color: hsl(var(--border)) !important;
-  border-radius: 10px !important;
-  border: 2px solid transparent !important;
-  background-clip: content-box !important;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background-color: hsl(var(--muted-foreground)) !important;
+  .safe-area-bottom {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
 }
