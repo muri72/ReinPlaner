@@ -1,16 +1,26 @@
 import { format, isWeekend, isSameDay } from "date-fns";
 import { de } from "date-fns/locale";
 
-// German holidays (fixed dates)
+// German holidays (fixed dates) - Hamburg specific
 const FIXED_HOLIDAYS = [
   { month: 1, day: 1, name: "Neujahr" },
-  { month: 1, day: 6, name: "Heilige Drei Könige" },
   { month: 5, day: 1, name: "Tag der Arbeit" },
   { month: 10, day: 3, name: "Tag der Deutschen Einheit" },
-  { month: 11, day: 1, name: "Allerheiligen" },
   { month: 12, day: 25, name: "1. Weihnachtstag" },
   { month: 12, day: 26, name: "2. Weihnachtstag" },
 ];
+
+// Hamburg specific holidays (Reformationstag since 2018)
+function getHamburgSpecificHolidays(year: number): Array<{ month: number; day: number; name: string }> {
+  const holidays: Array<{ month: number; day: number; name: string }> = [];
+  
+  // Reformationstag (31. Oktober) - nur in Hamburg seit 2018
+  if (year >= 2018) {
+    holidays.push({ month: 10, day: 31, name: "Reformationstag" });
+  }
+  
+  return holidays;
+}
 
 // Calculate Easter Sunday (Gauss algorithm)
 function getEasterSunday(year: number): Date {
@@ -66,7 +76,7 @@ function getMovableHolidays(year: number): Array<{ month: number; day: number; n
   ];
 }
 
-// Check if a date is a German holiday
+// Check if a date is a Hamburg holiday
 export function isGermanHoliday(date: Date): { isHoliday: boolean; name?: string } {
   const year = date.getFullYear();
   const month = date.getMonth() + 1;
@@ -76,6 +86,13 @@ export function isGermanHoliday(date: Date): { isHoliday: boolean; name?: string
   const fixedHoliday = FIXED_HOLIDAYS.find(h => h.month === month && h.day === day);
   if (fixedHoliday) {
     return { isHoliday: true, name: fixedHoliday.name };
+  }
+  
+  // Check Hamburg specific holidays
+  const hamburgHolidays = getHamburgSpecificHolidays(year);
+  const hamburgHoliday = hamburgHolidays.find(h => h.month === month && h.day === day);
+  if (hamburgHoliday) {
+    return { isHoliday: true, name: hamburgHoliday.name };
   }
   
   // Check movable holidays
@@ -118,4 +135,35 @@ export function getDateStyling(date: Date): {
 export function getHolidayTooltip(date: Date): string | undefined {
   const holidayInfo = isGermanHoliday(date);
   return holidayInfo.isHoliday ? holidayInfo.name : undefined;
+}
+
+// Get all holidays for a year (for debugging/reference)
+export function getAllHolidaysForYear(year: number): Array<{ date: Date; name: string }> {
+  const holidays: Array<{ date: Date; name: string }> = [];
+  
+  // Fixed holidays
+  FIXED_HOLIDAYS.forEach(holiday => {
+    holidays.push({
+      date: new Date(year, holiday.month - 1, holiday.day),
+      name: holiday.name
+    });
+  });
+  
+  // Hamburg specific holidays
+  getHamburgSpecificHolidays(year).forEach(holiday => {
+    holidays.push({
+      date: new Date(year, holiday.month - 1, holiday.day),
+      name: holiday.name
+    });
+  });
+  
+  // Movable holidays
+  getMovableHolidays(year).forEach(holiday => {
+    holidays.push({
+      date: new Date(year, holiday.month - 1, holiday.day),
+      name: holiday.name
+    });
+  });
+  
+  return holidays.sort((a, b) => a.date.getTime() - b.date.getTime());
 }
