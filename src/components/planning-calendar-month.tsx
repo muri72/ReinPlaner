@@ -3,6 +3,7 @@
 import * as React from "react";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, getWeek, getDay } from "date-fns";
 import { de } from "date-fns/locale";
+import { getDateStyling, getHolidayTooltip } from "@/lib/date-utils";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -43,6 +44,7 @@ function MonthDayCell({ day, monthStart, employeeId, employee, activeDragId, onA
   const droppableId = `${employeeId}__${dateString}`;
   const isCurrentMonth = isSameMonth(day, monthStart);
   const isCurrentDay = isToday(day);
+  const dayStyling = getDateStyling(day);
   
   const { setNodeRef, isOver } = useDroppable({ id: droppableId });
 
@@ -63,13 +65,16 @@ function MonthDayCell({ day, monthStart, employeeId, employee, activeDragId, onA
         isCurrentDay && "bg-primary/5 border-primary/30",
         isOver && "bg-primary/20 ring-1 ring-primary",
         dayData?.isAbsence && "bg-muted/50",
+        isCurrentMonth && dayStyling.className,
         "hover:bg-accent/50"
       )}
     >
       <div className="flex items-center justify-between mb-1">
         <span className={cn(
           "text-xs font-medium",
-          isCurrentDay && "text-primary font-bold"
+          isCurrentDay && "text-primary font-bold",
+          isCurrentMonth && dayStyling.isHoliday && "text-red-700",
+          isCurrentMonth && dayStyling.isWeekend && "text-blue-700"
         )}>
           {format(day, "d")}
         </span>
@@ -89,6 +94,22 @@ function MonthDayCell({ day, monthStart, employeeId, employee, activeDragId, onA
           </TooltipProvider>
         )}
       </div>
+
+      {/* Holiday indicator */}
+      {isCurrentMonth && dayStyling.isHoliday && (
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="text-xs text-red-600 font-medium truncate">
+                {dayStyling.holidayName}
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{dayStyling.holidayName}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      )}
 
       {/* Assignment summary */}
       {totalAssignments > 0 && (
@@ -247,11 +268,17 @@ export function PlanningCalendarMonth({
         <div className="space-y-4">
           {/* Day headers */}
           <div className="grid grid-cols-7 gap-1">
-            {dayHeaders.map((day) => (
-              <div key={day} className="text-center text-xs font-semibold text-muted-foreground p-2">
-                {day}
-              </div>
-            ))}
+            {dayHeaders.map((day, index) => {
+              const isWeekend = index >= 5; // Saturday (5) and Sunday (6)
+              return (
+                <div key={day} className={cn(
+                  "text-center text-xs font-semibold p-2",
+                  isWeekend && "text-blue-600"
+                )}>
+                  {day}
+                </div>
+              );
+            })}
           </div>
 
           {/* Employee rows */}
