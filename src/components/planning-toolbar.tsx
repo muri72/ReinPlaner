@@ -17,7 +17,6 @@ import { cn } from "@/lib/utils";
 import { TimeEntryCreateDialog } from "@/components/time-entry-create-dialog";
 import { SearchInput } from "./search-input";
 import { OrderCreateDialog } from "@/components/order-create-dialog";
-import { StateSelector } from "./state-selector";
 
 interface PlanningToolbarProps {
   currentDate: Date;
@@ -93,11 +92,6 @@ export function PlanningToolbar({
     }
   }, [currentDate, viewMode]);
 
-  const handleStateChange = React.useCallback((stateCode: string) => {
-    // Trigger data refresh when state changes
-    onActionSuccess?.();
-  }, [onActionSuccess]);
-
   return (
     <div className="flex flex-col sm:flex-row items-center justify-between gap-2 p-4 border rounded-lg shadow-neumorphic glassmorphism-card">
       <div className="flex items-center gap-2">
@@ -117,7 +111,6 @@ export function PlanningToolbar({
         <h2 className="text-lg font-semibold hidden md:block">
           {dateDisplay}
         </h2>
-        <StateSelector onStateChange={handleStateChange} />
       </div>
       <div className="flex items-center gap-2">
         <SearchInput placeholder="Mitarbeiter suchen..." className="w-full sm:w-auto" />

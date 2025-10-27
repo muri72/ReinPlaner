@@ -6,11 +6,10 @@ import { toast } from "sonner";
 import { DndContext, DragEndEvent } from "@dnd-kit/core";
 import { PlanningToolbar } from "@/components/planning-toolbar";
 import { PlanningCalendar } from "@/components/planning-calendar";
-import { PlanningCalendarMonth } from "@/components/planning-calendar-month";
 import { Skeleton } from "@/components/ui/skeleton";
 import { assignOrderToEmployee, reassignRecurringOrder } from "./actions";
 import { startOfWeek, endOfWeek, eachDayOfInterval, startOfMonth, endOfMonth, startOfDay, endOfDay } from "date-fns";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/supabase/client"; // Import supabase client
 import { useSearchParams } from "next/navigation";
 import { RecurringEditDialog } from "@/components/recurring-edit-dialog";
 
@@ -36,32 +35,24 @@ export default function PlanningPage() {
   const [isRecurringDialogOpen, setIsRecurringDialogOpen] = React.useState(false);
   const [pendingReassignment, setPendingReassignment] = React.useState<PendingReassignment | null>(null);
 
-  // Calculate date range based on view mode
-  const dateRange = React.useMemo(() => {
-    let startDate: Date;
-    let endDate: Date;
-    let daysToDisplay: Date[];
-
+  const { startDate, endDate, daysToDisplay } = React.useMemo(() => {
+    let start, end;
     switch (viewMode) {
       case 'day':
-        startDate = startOfDay(currentDate);
-        endDate = endOfDay(currentDate);
-        daysToDisplay = [currentDate];
+        start = startOfDay(currentDate);
+        end = endOfDay(currentDate);
         break;
       case 'month':
-        startDate = startOfMonth(currentDate);
-        endDate = endOfMonth(currentDate);
-        daysToDisplay = eachDayOfInterval({ start: startDate, end: endDate });
+        start = startOfMonth(currentDate);
+        end = endOfMonth(currentDate);
         break;
       case 'week':
       default:
-        startDate = startOfWeek(currentDate, { weekStartsOn: 1 });
-        endDate = endOfWeek(currentDate, { weekStartsOn: 1 });
-        daysToDisplay = eachDayOfInterval({ start: startDate, end: endDate });
+        start = startOfWeek(currentDate, { weekStartsOn: 1 });
+        end = endOfWeek(currentDate, { weekStartsOn: 1 });
         break;
     }
-
-    return { startDate, endDate, daysToDisplay };
+    return { startDate: start, endDate: end, daysToDisplay: eachDayOfInterval({ start, end }) };
   }, [currentDate, viewMode]);
 
   const fetchData = React.useCallback(async (start: Date, end: Date, searchQuery: string) => {
@@ -85,8 +76,8 @@ export default function PlanningPage() {
   }, []);
 
   React.useEffect(() => {
-    fetchData(dateRange.startDate, dateRange.endDate, query);
-  }, [dateRange.startDate, dateRange.endDate, query, fetchData]);
+    fetchData(startDate, endDate, query);
+  }, [startDate, endDate, query, fetchData]);
 
   const handleDragEnd = async (event: DragEndEvent) => {
     setActiveDragId(null);
@@ -106,7 +97,7 @@ export default function PlanningPage() {
       const result = await assignOrderToEmployee(orderId, newEmployeeId, newDate, null);
       if (result.success) {
         toast.success(result.message);
-        fetchData(dateRange.startDate, dateRange.endDate, query);
+        fetchData(startDate, endDate, query);
       } else {
         toast.error(result.message);
       }
@@ -129,7 +120,7 @@ export default function PlanningPage() {
         const result = await reassignSingleOrder(assignmentId, newEmployeeId, newDate);
         if (result.success) {
           toast.success(result.message);
-          fetchData(dateRange.startDate, dateRange.endDate, query);
+          fetchData(startDate, endDate, query);
         } else {
           toast.error(result.message);
         }
@@ -145,7 +136,7 @@ export default function PlanningPage() {
     
     if (result.success) {
       toast.success(result.message);
-      fetchData(dateRange.startDate, dateRange.endDate, query);
+      fetchData(startDate, endDate, query);
     } else {
       toast.error(result.message);
     }
@@ -169,29 +160,19 @@ export default function PlanningPage() {
           onShowUnassignedChange={setShowUnassigned}
           currentUserId={currentUser?.id}
           isAdmin={isAdmin}
-          onActionSuccess={() => fetchData(dateRange.startDate, dateRange.endDate, query)}
+          onActionSuccess={() => fetchData(startDate, endDate, query)}
         />
         <div className="flex-grow min-h-0">
           {loading ? (
             <Skeleton className="h-full w-full" />
-          ) : viewMode === 'month' ? (
-            <PlanningCalendarMonth
-              planningData={planningPageData?.planningData || {}}
-              unassignedOrders={planningPageData?.unassignedOrders || []}
-              weekDays={dateRange.daysToDisplay}
-              activeDragId={activeDragId}
-              showUnassigned={showUnassigned}
-              onActionSuccess={() => fetchData(dateRange.startDate, dateRange.endDate, query)}
-              weekNumber={planningPageData?.weekNumber || 0}
-            />
           ) : (
             <PlanningCalendar
               planningData={planningPageData?.planningData || {}}
               unassignedOrders={planningPageData?.unassignedOrders || []}
-              weekDays={dateRange.daysToDisplay}
+              weekDays={daysToDisplay}
               activeDragId={activeDragId}
               showUnassigned={showUnassigned}
-              onActionSuccess={() => fetchData(dateRange.startDate, dateRange.endDate, query)}
+              onActionSuccess={() => fetchData(startDate, endDate, query)}
               weekNumber={planningPageData?.weekNumber || 0}
             />
           )}

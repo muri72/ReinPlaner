@@ -3,7 +3,6 @@
 import * as React from "react";
 import { format, parseISO } from "date-fns";
 import { de } from "date-fns/locale";
-import { getDateStyling, getHolidayTooltip } from "@/lib/date-utils";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
@@ -30,30 +29,15 @@ const absenceTypeColors: { [key: string]: string } = {
   other: "bg-gray-500",
 };
 
-function DroppableCell({ id, children, isOver, isAvailable, day }: { 
-  id: string; 
-  children: React.ReactNode; 
-  isOver: boolean; 
-  isAvailable: boolean;
-  day?: Date;
-}) {
+function DroppableCell({ id, children, isOver, isAvailable }: { id: string; children: React.ReactNode; isOver: boolean; isAvailable: boolean }) {
   const { setNodeRef } = useDroppable({ id });
-  const [dayStyling, setDayStyling] = React.useState({ className: "" });
-  
-  React.useEffect(() => {
-    if (day) {
-      getDateStyling(day).then(setDayStyling);
-    }
-  }, [day]);
-  
   return (
     <TableCell
       ref={setNodeRef}
       className={cn(
         "p-1 border h-24 align-top",
         isOver && "bg-primary/20 ring-2 ring-primary",
-        !isAvailable && "bg-muted/50 bg-[repeating-linear-gradient(-45deg,transparent,transparent_4px,hsl(var(--border))_4px,hsl(var(--border))_5px)]",
-        dayStyling.className
+        !isAvailable && "bg-muted/50 bg-[repeating-linear-gradient(-45deg,transparent,transparent_4px,hsl(var(--border))_4px,hsl(var(--border))_5px)]"
       )}
     >
       <div className="h-full w-full">{children}</div>
@@ -85,24 +69,11 @@ export function PlanningCalendar({ planningData, unassignedOrders, weekDays, act
             </TableHead>
           </TableRow>
           <TableRow>
-            {weekDays.map((day) => {
-              const [holidayName, setHolidayName] = React.useState<string | undefined>();
-              
-              React.useEffect(() => {
-                getHolidayTooltip(day).then(setHolidayName);
-              }, [day]);
-              
-              return (
-                <TableHead key={day.toString()} className="text-center text-sm w-[120px] min-w-[120px]">
-                  <div>
-                    {format(day, "E dd.", { locale: de })}
-                    {holidayName && (
-                      <div className="text-xs text-red-600 font-medium">{holidayName}</div>
-                    )}
-                  </div>
-                </TableHead>
-              );
-            })}
+            {weekDays.map((day) => (
+              <TableHead key={day.toString()} className="text-center text-sm w-[120px] min-w-[120px]">
+                {format(day, "E dd.", { locale: de })}
+              </TableHead>
+            ))}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -124,7 +95,6 @@ export function PlanningCalendar({ planningData, unassignedOrders, weekDays, act
                     id={droppableId}
                     isOver={activeDragId !== null && droppableId === (activeDragId as string)}
                     isAvailable={true}
-                    day={day}
                   >
                     <div className="space-y-1">
                       {ordersForDay.map((order) => (
@@ -217,7 +187,6 @@ export function PlanningCalendar({ planningData, unassignedOrders, weekDays, act
                         id={droppableId}
                         isOver={activeDragId !== null && droppableId === (activeDragId as string)}
                         isAvailable={dayData.isAvailable || dayData.assignments.length > 0}
-                        day={day}
                       >
                         <div className="space-y-1">
                           {dayData.assignments.map((assignment) => (
