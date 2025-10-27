@@ -4,88 +4,122 @@ import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import {
-  Home, Briefcase, Users, ContactRound, Building, UsersRound, Clock, CalendarOff,
-  CalendarCheck, TrendingUp, FileText, Star, DollarSign, ListOrdered, MessageSquare
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
+  SidebarGroup,
+  SidebarGroupLabel,
+  SidebarGroupContent,
+} from "@/components/ui/sidebar";
+import {
+  Home,
+  Briefcase,
+  Users,
+  ContactRound,
+  Building,
+  UsersRound,
+  Clock,
+  CalendarOff,
+  CalendarCheck,
+  TrendingUp,
+  FileText,
+  Star,
+  DollarSign,
+  ListOrdered,
+  MessageSquare,
+  ChevronDown,
+  ChevronRight,
+  LayoutDashboard,
+  Settings,
+  HelpCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// Definieren der Rollen-Typen
 type UserRole = 'admin' | 'manager' | 'employee' | 'customer';
 
-// Basis-Interface für Navigationspunkte
 interface NavItemBase {
   title: string;
   roles: UserRole[];
+  badge?: string;
 }
 
-// Interface für einzelne Navigationslinks
 interface NavLinkItem extends NavItemBase {
   href: string;
-  icon: React.ElementType; // Verwenden von React.ElementType für JSX-Komponenten
-  isCategory?: false; // Explizit als Nicht-Kategorie markieren
+  icon: React.ElementType;
+  isCategory?: false;
 }
 
-// Interface für Navigationskategorien
 interface NavCategoryItem extends NavItemBase {
   isCategory: true;
   children: NavLinkItem[];
 }
 
-// Union-Typ für alle möglichen Navigationspunkte
 type NavItem = NavLinkItem | NavCategoryItem;
 
 const navItems: NavItem[] = [
   {
     title: "Dashboard",
-    href: "/dashboard", // Default dashboard for admin/manager
-    icon: Home,
+    href: "/dashboard",
+    icon: LayoutDashboard,
     roles: ['admin', 'manager'],
   },
   {
-    title: "Kunden-Dashboard",
+    title: "Kunden-Portal",
     href: "/portal/dashboard",
     icon: Home,
     roles: ['customer'],
   },
   {
-    title: "Mitarbeiter-Dashboard",
+    title: "Mitarbeiter-Portal",
     href: "/employee/dashboard",
     icon: Home,
     roles: ['employee'],
   },
   {
-    title: "Management",
+    title: "Auftragsmanagement",
     isCategory: true,
     roles: ['admin', 'manager', 'employee'],
     children: [
       { title: "Aufträge", href: "/dashboard/orders", icon: Briefcase, roles: ['admin', 'manager', 'employee'] },
       { title: "Objekte", href: "/dashboard/objects", icon: Building, roles: ['admin', 'manager', 'employee'] },
       { title: "Planung", href: "/dashboard/planning", icon: CalendarCheck, roles: ['admin', 'manager'] },
-      { title: "Berichte", href: "/dashboard/reports", icon: FileText, roles: ['admin'] },
-      { title: "Finanzen", href: "/dashboard/finances", icon: DollarSign, roles: ['admin', 'manager'] }, // Moved here
     ],
   },
   {
-    title: "Kunden",
+    title: "Kundenbeziehungen",
     isCategory: true,
     roles: ['admin', 'manager', 'employee', 'customer'],
     children: [
       { title: "Kunden", href: "/dashboard/customers", icon: Users, roles: ['admin', 'manager', 'employee'] },
       { title: "Kontakte", href: "/dashboard/customer-contacts", icon: ContactRound, roles: ['admin', 'manager', 'employee'] },
       { title: "Feedback", href: "/dashboard/feedback", icon: Star, roles: ['admin', 'manager', 'employee', 'customer'] },
-      { title: "Tickets", href: "/dashboard/tickets", icon: MessageSquare, roles: ['admin', 'manager', 'employee', 'customer'] }, // New Tickets link
+      { title: "Tickets", href: "/dashboard/tickets", icon: MessageSquare, roles: ['admin', 'manager', 'employee', 'customer'] },
     ],
   },
   {
-    title: "Personal",
+    title: "Personal & Zeit",
     isCategory: true,
     roles: ['admin', 'manager', 'employee'],
     children: [
       { title: "Mitarbeiter", href: "/dashboard/employees", icon: UsersRound, roles: ['admin', 'manager', 'employee'] },
       { title: "Abwesenheiten", href: "/dashboard/absence-requests", icon: CalendarOff, roles: ['admin', 'manager', 'employee'] },
       { title: "Zeiterfassung", href: "/dashboard/time-tracking", icon: Clock, roles: ['admin', 'manager', 'employee'] },
+    ],
+  },
+  {
+    title: "Analyse & Berichte",
+    isCategory: true,
+    roles: ['admin', 'manager'],
+    children: [
+      { title: "Berichte", href: "/dashboard/reports", icon: FileText, roles: ['admin'] },
+      { title: "Finanzen", href: "/dashboard/finances", icon: DollarSign, roles: ['admin', 'manager'] },
+      { title: "Statistiken", href: "/dashboard/analytics", icon: TrendingUp, roles: ['admin', 'manager'] },
     ],
   },
   {
@@ -97,88 +131,130 @@ const navItems: NavItem[] = [
 ];
 
 interface SidebarNavProps {
-  isCollapsed: boolean;
   currentUserRole: UserRole;
   onSignOut: () => Promise<void>;
-  onLinkClick?: () => void;
 }
 
-export function SidebarNav({ isCollapsed, currentUserRole, onSignOut, onLinkClick }: SidebarNavProps) {
+export function SidebarNav({ currentUserRole, onSignOut }: SidebarNavProps) {
   const pathname = usePathname();
 
   const filteredNavItems = navItems.filter(item => {
     if (item.isCategory) {
-      // Filter children based on roles
       item.children = item.children.filter(child => 
         child.roles.includes(currentUserRole)
       );
-      // Show category only if it has children
       return item.children.length > 0;
     }
-    // Show single link only if role matches
     return item.roles.includes(currentUserRole);
   });
 
+  const isActive = (href: string) => {
+    if (href === pathname) return true;
+    if (href !== "/" && pathname.startsWith(href)) return true;
+    return false;
+  };
+
   return (
-    <TooltipProvider delayDuration={300}>
-      <div className="flex-grow space-y-1">
-        {filteredNavItems.map((item) => (
-          item.isCategory ? (
-            <div key={item.title} className="space-y-1">
-              {!isCollapsed && (
-                <h3 className="text-sm font-semibold uppercase text-muted-foreground px-4 pt-4 pb-2">
-                  {item.title}
-                </h3>
-              )}
-              {item.children.map(child => (
-                <Tooltip key={child.href}>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant={pathname === child.href ? "secondary" : "ghost"}
-                      className={cn(
-                        "w-full",
-                        isCollapsed ? "justify-center" : "justify-start",
-                        "text-sm text-sidebar-foreground transition-colors duration-200",
-                        // Active state: stronger highlight with primary accent
-                        pathname === child.href ? "bg-primary text-primary-foreground hover:bg-primary/90" : "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                      )}
+    <SidebarMenu className="space-y-2">
+      {filteredNavItems.map((item) => (
+        item.isCategory ? (
+          <SidebarGroup key={item.title}>
+            <SidebarGroupLabel className="text-xs font-semibold text-sidebar-foreground/70 uppercase tracking-wider px-2">
+              {item.title}
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {item.children.map((child) => (
+                  <SidebarMenuItem key={child.href}>
+                    <SidebarMenuButton
                       asChild
+                      isActive={isActive(child.href)}
+                      tooltip={child.title}
+                      className={cn(
+                        "h-9 text-sm font-medium transition-all duration-200",
+                        "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                        "data-[active=true]:bg-primary data-[active=true]:text-primary-foreground",
+                        "data-[active=true]:shadow-sm"
+                      )}
                     >
-                      <Link href={child.href} passHref onClick={onLinkClick}>
-                        <child.icon className={cn(isCollapsed ? "h-8 w-8" : "h-6 w-6", !isCollapsed && "mr-2")} />
-                        {!isCollapsed && child.title}
+                      <Link href={child.href}>
+                        <child.icon className="h-4 w-4" />
+                        <span className="truncate">{child.title}</span>
+                        {child.badge && (
+                          <Badge variant="secondary" className="ml-auto text-xs">
+                            {child.badge}
+                          </Badge>
+                        )}
                       </Link>
-                    </Button>
-                  </TooltipTrigger>
-                  {isCollapsed && <TooltipContent side="right">{child.title}</TooltipContent>}
-                </Tooltip>
-              ))}
-            </div>
-          ) : (
-            <Tooltip key={item.href}>
-              <TooltipTrigger asChild>
-                <Button
-                  variant={pathname === item.href ? "secondary" : "ghost"}
-                  className={cn(
-                    "w-full",
-                    isCollapsed ? "justify-center" : "justify-start",
-                    "text-sm text-sidebar-foreground transition-colors duration-200",
-                    // Active state: stronger highlight with primary accent
-                    pathname === item.href ? "bg-primary text-primary-foreground hover:bg-primary/90" : "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                  )}
-                  asChild
-                >
-                  <Link href={item.href} passHref onClick={onLinkClick}>
-                    <item.icon className={cn(isCollapsed ? "h-8 w-8" : "h-6 w-6", !isCollapsed && "mr-2")} />
-                    {!isCollapsed && item.title}
-                  </Link>
-                </Button>
-              </TooltipTrigger>
-              {isCollapsed && <TooltipContent side="right">{item.title}</TooltipContent>}
-            </Tooltip>
-          )
-        ))}
-      </div>
-    </TooltipProvider>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ) : (
+          <SidebarMenuItem key={item.href}>
+            <SidebarMenuButton
+              asChild
+              isActive={isActive(item.href)}
+              tooltip={item.title}
+              className={cn(
+                "h-9 text-sm font-medium transition-all duration-200",
+                "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                "data-[active=true]:bg-primary data-[active=true]:text-primary-foreground",
+                "data-[active=true]:shadow-sm"
+              )}
+            >
+              <Link href={item.href}>
+                <item.icon className="h-4 w-4" />
+                <span className="truncate">{item.title}</span>
+                {item.badge && (
+                  <Badge variant="secondary" className="ml-auto text-xs">
+                    {item.badge}
+                  </Badge>
+                )}
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        )
+      ))}
+      
+      <Separator className="my-4" />
+      
+      <SidebarGroup>
+        <SidebarGroupContent>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                asChild
+                tooltip="Einstellungen"
+                className={cn(
+                  "h-9 text-sm font-medium transition-all duration-200",
+                  "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                  "data-[active=true]:bg-primary data-[active=true]:text-primary-foreground"
+                )}
+              >
+                <Link href="/dashboard/profile">
+                  <Settings className="h-4 w-4" />
+                  <span className="truncate">Einstellungen</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                tooltip="Hilfe"
+                className={cn(
+                  "h-9 text-sm font-medium transition-all duration-200",
+                  "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                )}
+              >
+                <HelpCircle className="h-4 w-4" />
+                <span className="truncate">Hilfe</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarGroupContent>
+      </SidebarGroup>
+    </SidebarMenu>
   );
 }

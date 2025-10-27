@@ -50,14 +50,14 @@
     /* Glassmorphism Blur */
     --glass-blur: 10px; /* Define blur amount */
 
-    /* Sidebar Specific Colors (adjusted to new palette) */
-    --sidebar-background: 210 20% 98%; /* Very light gray-blue */
-    --sidebar-foreground: 220 10% 20%; /* Darker text */
-    --sidebar-primary: 217 90% 40%; /* Slightly darker primary for contrast */
+    /* Sidebar Specific Colors (modernized) */
+    --sidebar-background: 0 0% 98%; /* Very light gray */
+    --sidebar-foreground: 220 10% 25%; /* Darker text */
+    --sidebar-primary: 217 90% 47%; /* Primary blue */
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 217 70% 50%; /* Slightly darker accent for hover */
-    --sidebar-accent-foreground: 220 10% 20%;
-    --sidebar-border: 210 20% 90%;
+    --sidebar-accent: 210 50% 92%; /* Light accent */
+    --sidebar-accent-foreground: 220 10% 25%;
+    --sidebar-border: 210 20% 88%;
     --sidebar-ring: 217 90% 47%;
   }
 
@@ -98,14 +98,14 @@
     --input: 210 15% 20%;
     --ring: 217 90% 75%;
 
-    /* Sidebar Specific Colors (adjusted to new palette) */
-    --sidebar-background: 220 10% 15%;
+    /* Sidebar Specific Colors (dark mode) */
+    --sidebar-background: 220 10% 8%; /* Very dark */
     --sidebar-foreground: 220 10% 85%;
-    --sidebar-primary: 217 90% 65%;
+    --sidebar-primary: 217 90% 75%;
     --sidebar-primary-foreground: 220 10% 10%;
-    --sidebar-accent: 217 70% 70%;
-    --sidebar-accent-foreground: 220 10% 10%;
-    --sidebar-border: 210 15% 20%;
+    --sidebar-accent: 210 50% 25%;
+    --sidebar-accent-foreground: 220 10% 85%;
+    --sidebar-border: 210 15% 18%;
     --sidebar-ring: 217 90% 75%;
   }
 }
@@ -159,6 +159,20 @@
     backdrop-filter: blur(var(--glass-blur)); /* Frosted glass effect */
     border: 1px solid hsl(var(--border) / 0.3); /* Subtle border */
     box-shadow: var(--shadow-neumorphic); /* Apply neumorphic shadow */
+  }
+
+  /* Modern sidebar styles */
+  .sidebar-modern {
+    background: linear-gradient(135deg, hsl(var(--sidebar-background)) 0%, hsl(var(--sidebar-accent)) 100%);
+    backdrop-filter: blur(10px);
+    border-right: 1px solid hsl(var(--sidebar-border));
+  }
+
+  .sidebar-item-modern {
+    @apply rounded-lg transition-all duration-200;
+    @apply hover:bg-sidebar-accent/50 hover:shadow-sm;
+    @apply data-[active=true]:bg-primary data-[active=true]:text-primary-foreground;
+    @apply data-[active=true]:shadow-md;
   }
 }
 

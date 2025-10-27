@@ -1,22 +1,27 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import Link from "next/link";
-import { Menu, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NotificationBell } from "@/components/notification-bell";
-import { Sheet, SheetContent, SheetHeader, SheetTrigger, SheetClose, SheetTitle, SheetDescription } from "@/components/ui/sheet";
-import { SidebarNav } from "@/components/sidebar-nav";
 import { UserMenu } from "@/components/user-menu";
 import { cn } from "@/lib/utils";
-import { usePathname } from "next/navigation"; // Import usePathname
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden"; // Import VisuallyHidden
+import { usePathname } from "next/navigation";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarHeader,
+  SidebarProvider,
+  SidebarTrigger,
+  SidebarInset,
+} from "@/components/ui/sidebar";
+import { SidebarNav } from "@/components/sidebar-nav";
 
 interface DashboardClientLayoutProps {
   children: React.ReactNode;
   currentUserRole: 'admin' | 'manager' | 'employee' | 'customer';
   onSignOut: () => Promise<void>;
-  // Add userProfile prop
   userProfile: {
     first_name: string | null;
     last_name: string | null;
@@ -25,10 +30,13 @@ interface DashboardClientLayoutProps {
   } | null;
 }
 
-export function DashboardClientLayout({ children, currentUserRole, onSignOut, userProfile }: DashboardClientLayoutProps) {
-  const [isCollapsed, setIsCollapsed] = useState(false);
-  const [isSheetOpen, setIsSheetOpen] = useState(false);
-  const pathname = usePathname(); // Get current pathname
+export function DashboardClientLayout({ 
+  children, 
+  currentUserRole, 
+  onSignOut, 
+  userProfile 
+}: DashboardClientLayoutProps) {
+  const pathname = usePathname();
 
   const getHomeLink = () => {
     if (currentUserRole === 'customer') {
@@ -36,131 +44,68 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut, us
     } else if (currentUserRole === 'employee') {
       return '/employee/dashboard';
     }
-    return '/dashboard'; // Standard für Admin/Manager
+    return '/dashboard';
   };
 
-  // Determine if the current page is the root dashboard page
-  // This variable is no longer used for scrollbar hiding, but kept for potential future use.
-  const isRootDashboardPage = pathname === '/dashboard';
-
   return (
-    <div className="min-h-screen flex flex-col md:flex-row">
-      {/* Mobiler Header und Navigation (fest) */}
-      <header className="md:hidden fixed top-0 left-0 w-full bg-sidebar text-sidebar-foreground border-b border-sidebar-border p-4 flex items-center justify-between z-50 glassmorphism-card">
-        <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-          <SheetTrigger asChild>
-            <Button variant="ghost" size="icon">
-              <Menu className="h-7 w-7" />
-            </Button>
-          </SheetTrigger>
-          <SheetContent
-            side="left"
-            className={cn(
-              "w-64 text-sidebar-foreground border-r border-sidebar-border flex flex-col",
-              "bg-sidebar/80 backdrop-blur-xl glassmorphism-card",
-              "h-full",
-              "overflow-x-hidden" // Added to prevent horizontal scrolling
-            )}
-          >
-            <SheetHeader className="flex items-center justify-between p-4 mb-4">
-              <SheetTitle>
-                <VisuallyHidden>Mobiles Navigationsmenü</VisuallyHidden>
-              </SheetTitle>
-              <SheetDescription>
-                <VisuallyHidden>Navigation und Benutzeroptionen für mobile Geräte.</VisuallyHidden>
-              </SheetDescription>
-              <Link href={getHomeLink()} passHref onClick={() => setIsSheetOpen(false)}>
-                <h2 className="text-xl font-bold text-primary tracking-tight cursor-pointer">ARIS</h2>
-              </Link>
-              {/* Removed SheetClose button */}
-            </SheetHeader>
-            <nav className="flex-grow overflow-y-auto p-4">
-              <SidebarNav
-                isCollapsed={false}
-                currentUserRole={currentUserRole}
-                onSignOut={onSignOut}
-                onLinkClick={() => setIsSheetOpen(false)}
-              />
-            </nav>
-            {/* Benachrichtigungsglocke und Benutzermenü am unteren Rand der Sidebar */}
-            <div className={cn(
-              "mt-auto flex flex-col items-center",
-              isCollapsed ? "justify-center" : "justify-between",
-              "p-4 border-t border-sidebar-border space-y-4"
-            )}>
-              <NotificationBell />
-              {/* Pass userProfile to UserMenu */}
-              <UserMenu currentUserRole={currentUserRole} onSignOut={onSignOut} userProfile={userProfile} />
+    <SidebarProvider>
+      <Sidebar variant="inset">
+        <SidebarHeader className="border-b border-sidebar-border bg-gradient-to-r from-sidebar-background to-sidebar-accent/50">
+          <div className="flex items-center justify-between p-4">
+            <Link href={getHomeLink()} className="flex items-center space-x-2">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                <span className="text-sm font-bold">A</span>
+              </div>
+              <span className="text-lg font-bold text-sidebar-foreground">ARIS</span>
+            </Link>
+            <SidebarTrigger className="text-sidebar-foreground hover:bg-sidebar-accent" />
+          </div>
+        </SidebarHeader>
+        
+        <SidebarContent className="px-2 py-4">
+          <SidebarNav currentUserRole={currentUserRole} onSignOut={onSignOut} />
+        </SidebarContent>
+        
+        <SidebarFooter className="border-t border-sidebar-border p-4">
+          <div className="flex flex-col space-y-3">
+            <NotificationBell />
+            <UserMenu 
+              currentUserRole={currentUserRole} 
+              onSignOut={onSignOut} 
+              userProfile={userProfile} 
+            />
+          </div>
+        </SidebarFooter>
+      </Sidebar>
+      
+      <SidebarInset className="bg-background">
+        <header className="flex h-16 shrink-0 items-center gap-2 border-b bg-background px-4">
+          <SidebarTrigger className="-ml-1 text-sidebar-foreground hover:bg-sidebar-accent" />
+          <div className="flex flex-1 items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <h1 className="text-lg font-semibold text-foreground">
+                {(() => {
+                  const lastSegment = pathname.split('/').pop();
+                  if (!lastSegment) return 'Dashboard';
+                  return lastSegment.charAt(0).toUpperCase() + lastSegment.slice(1);
+                })()}
+              </h1>
             </div>
-          </SheetContent>
-        </Sheet>
-        {/* ARIS Text im mobilen Haupt-Header, zentriert */}
-        <Link href={getHomeLink()} passHref>
-          <h2 className="text-xl font-bold text-primary tracking-tight absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 cursor-pointer">ARIS</h2>
-        </Link>
-        <div className="flex items-center space-x-2">
-          <NotificationBell />
-          {/* Pass userProfile to UserMenu */}
-          <UserMenu currentUserRole={currentUserRole} onSignOut={onSignOut} userProfile={userProfile} />
-        </div>
-      </header>
-
-      {/* Desktop Sidebar (fest) */}
-      <aside
-        className={cn(
-          "hidden md:flex flex-col fixed top-0 left-0 h-screen bg-sidebar text-sidebar-foreground border-r border-sidebar-border p-4 transition-all duration-150 ease-in-out z-40", // Removed overflow-hidden
-          isCollapsed ? "w-20" : "w-64",
-          "bg-gradient-to-br from-sidebar-background to-sidebar-accent glassmorphism-card"
-        )}
-      >
-        {/* ARIS Text und Toggle-Button, immer zentriert */}
-        <div className="flex flex-col items-center justify-center mb-4">
-          <Link href={getHomeLink()} passHref>
-            <h2 className="text-xl font-bold text-primary tracking-tight cursor-pointer">ARIS</h2>
-          </Link>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setIsCollapsed(!isCollapsed)}
-            className="mt-4"
-          >
-            {isCollapsed ? (
-              <ChevronRight className="h-6 w-6" />
-            ) : (
-              <ChevronLeft className="h-6 w-6" />
-            )}
-          </Button>
-        </div>
-
-        <nav className="flex-grow space-y-2 pt-4 border-t border-sidebar-border overflow-y-auto">
-          <SidebarNav
-            isCollapsed={isCollapsed}
-            currentUserRole={currentUserRole}
-            onSignOut={onSignOut}
-          />
-        </nav>
-
-        {/* Benachrichtigungsglocke und Benutzermenü am unteren Rand der Sidebar */}
-        <div className={cn(
-          "mt-auto flex flex-col items-center",
-          isCollapsed ? "justify-center" : "justify-between",
-          "pt-4 border-t border-sidebar-border space-y-4"
-        )}>
-          <NotificationBell />
-          {/* Pass userProfile to UserMenu */}
-          <UserMenu currentUserRole={currentUserRole} onSignOut={onSignOut} userProfile={userProfile} />
-        </div>
-      </aside>
-
-      {/* Hauptinhalt */}
-      <main className={cn(
-        "flex-grow p-4 md:p-8",
-        "pt-20 md:pt-8",
-        "transition-all duration-150 ease-in-out",
-        isCollapsed ? "md:ml-20" : "md:ml-64"
-      )}>
-        {children}
-      </main>
-    </div>
+            <div className="flex items-center space-x-2 md:hidden">
+              <NotificationBell />
+              <UserMenu 
+                currentUserRole={currentUserRole} 
+                onSignOut={onSignOut} 
+                userProfile={userProfile} 
+              />
+            </div>
+          </div>
+        </header>
+        
+        <main className="flex-1 p-6">
+          {children}
+        </main>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }
