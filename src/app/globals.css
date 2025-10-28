@@ -4,93 +4,107 @@
 
 @layer base {
   :root {
-    /* Enhanced color system for better mobile contrast */
-    --background: 0 0% 100%;
-    --foreground: 220 10% 15%;
-    --card: 0 0% 100%;
+    /* Base Colors - Light Mode */
+    --background: 0 0% 100%; /* Pure White */
+    --foreground: 220 10% 15%; /* Dark Gray-Blue for high contrast */
+
+    --card: 0 0% 100%; /* White for card background */
     --card-foreground: 220 10% 15%;
+
     --popover: 0 0% 100%;
     --popover-foreground: 220 10% 15%;
-    --primary: 217 90% 47%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 210 50% 85%;
-    --secondary-foreground: 220 10% 15%;
-    --muted: 210 20% 95%;
-    --muted-foreground: 210 10% 45%;
-    --accent: 217 70% 55%;
-    --accent-foreground: 220 10% 15%;
-    --destructive: 0 80% 50%;
-    --destructive-foreground: 0 0% 100%;
-    --success: 120 70% 40%;
-    --success-foreground: 0 0% 100%;
-    --warning: 40 90% 50%;
-    --warning-foreground: 0 0% 100%;
-    --border: 210 20% 90%;
-    --input: 210 20% 95%;
-    --ring: 217 90% 47%;
-    --chart-1: 'hsl(var(--chart-1))';
-    --chart-2: 'hsl(var(--chart-2))';
-    --chart-3: 'hsl(var(--chart-3))';
-    --chart-4: 'hsl(var(--chart-4))';
-    --chart-5: 'hsl(var(--chart-5))';
-    --sidebar-background: 210 20% 98%;
-    --sidebar-foreground: 220 10% 20%;
-    --sidebar-primary: 217 90% 40%;
-    --sidebar-primary-foreground: 220 10% 15%;
-    --sidebar-accent: 217 70% 50%;
+
+    /* Blue-centric Accent Colors (derived from logo) */
+    --primary: 217 90% 47%; /* A solid, clean blue (#3B82F6) */
+    --primary-foreground: 0 0% 100%; /* White text on primary */
+
+    --secondary: 210 50% 85%; /* A very light blue */
+    --secondary-foreground: 220 10% 15%; /* Dark text on secondary */
+
+    --muted: 210 20% 95%; /* Light Gray-Blue */
+    --muted-foreground: 210 10% 45%; /* Medium Gray-Blue */
+
+    --accent: 217 70% 55%; /* A slightly different blue hue for accent */
+    --accent-foreground: 0 0% 100%; /* White text on accent */
+
+    --destructive: 0 80% 50%; /* Strong Red (for errors/danger) */
+    --destructive-foreground: 0 0% 100%; /* White */
+
+    --success: 120 70% 40%; /* Vibrant Green */
+    --success-foreground: 0 0% 100%; /* White */
+
+    --warning: 40 90% 50%; /* Amber/Yellow */
+    --warning-foreground: 0 0% 100%; /* White */
+
+    --border: 210 20% 90%; /* Light Gray-Blue Border */
+    --input: 210 20% 95%; /* Slightly darker input background */
+    --ring: 217 90% 47%; /* Primary color for focus ring */
+
+    /* Border Radius - Increased for smooth rounded corners */
+    --radius: 16px; /* Default for rounded-lg */
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-xl: 24px;
+    --radius-2xl: 32px;
+
+    /* Glassmorphism Blur */
+    --glass-blur: 10px; /* Define blur amount */
+
+    /* Sidebar Specific Colors (adjusted to new palette) */
+    --sidebar-background: 210 20% 98%; /* Very light gray-blue */
+    --sidebar-foreground: 220 10% 20%; /* Darker text */
+    --sidebar-primary: 217 90% 40%; /* Slightly darker primary for contrast */
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 217 70% 50%; /* Slightly darker accent for hover */
     --sidebar-accent-foreground: 220 10% 20%;
     --sidebar-border: 210 20% 90%;
     --sidebar-ring: 217 90% 47%;
-
-    /* Mobile-specific variables */
-    --mobile-safe-area-top: env(safe-area-inset-top);
-    --mobile-safe-area-bottom: env(safe-area-inset-bottom);
-    --mobile-safe-area-left: env(safe-area-inset-left);
-    --mobile-safe-area-right: env(safe-area-inset-right);
-    
-    /* Enhanced glassmorphism */
-    --glass-blur: 12px;
-    --glass-opacity: 0.6;
-    --glass-border: rgba(255, 255, 255, 0.1);
-    
-    /* Touch interaction */
-    --mobile-tap-scale: 0.95;
-    --mobile-press-scale: 0.98;
-    --mobile-transition-fast: 150ms;
-    --mobile-transition-normal: 200ms;
-    --mobile-transition-slow: 300ms;
   }
 
   .dark {
-    --background: 220 10% 10%;
-    --foreground: 220 10% 90%;
-    --card: 220 10% 12%;
+    /* Dark Mode Colors - Adjusted for glassmorphism and blue-centric feel */
+    --background: 220 10% 10%; /* Dark Gray-Blue */
+    --foreground: 220 10% 90%; /* Light Gray-Blue */
+
+    --card: 220 10% 12%; /* Slightly lighter than background for depth */
     --card-foreground: 220 10% 90%;
+
     --popover: 220 10% 12%;
     --popover-foreground: 220 10% 90%;
-    --primary: 217 90% 75%;
-    --primary-foreground: 220 10% 90%;
-    --secondary: 210 50% 30%;
+
+    /* Blue-centric Accent Colors (Dark Mode versions) */
+    --primary: 217 90% 75%; /* Lighter blue for dark mode */
+    --primary-foreground: 220 10% 10%; /* Dark text on primary */
+
+    --secondary: 210 50% 30%; /* Darker light blue for dark mode */
     --secondary-foreground: 220 10% 90%;
+
     --muted: 210 15% 20%;
     --muted-foreground: 210 10% 60%;
-    --accent: 217 70% 75%;
-    --accent-foreground: 220 10% 90%;
-    --destructive: 0 80% 60%;
-    --destructive-foreground: 220 10% 90%;
-    --success: 120 70% 60%;
-    --success-foreground: 220 10% 90%;
-    --warning: 40 90% 60%;
-    --warning-foreground: 220 10% 90%;
+
+    --accent: 217 70% 75%; /* Lighter accent blue for dark mode */
+    --accent-foreground: 220 10% 10%;
+
+    --destructive: 0 80% 60%; /* Lighter Red for dark mode */
+    --destructive-foreground: 220 10% 10%;
+
+    --success: 120 70% 60%; /* Lighter Green for dark mode */
+    --success-foreground: 220 10% 10%;
+
+    --warning: 40 90% 60%; /* Lighter Amber for dark mode */
+    --warning-foreground: 220 10% 10%;
+
     --border: 210 15% 20%;
     --input: 210 15% 20%;
     --ring: 217 90% 75%;
+
+    /* Sidebar Specific Colors (adjusted to new palette) */
     --sidebar-background: 220 10% 15%;
-    --sidebar-foreground: 220 10% 90%;
+    --sidebar-foreground: 220 10% 85%;
     --sidebar-primary: 217 90% 65%;
-    --sidebar-primary-foreground: 220 10% 90%;
-    --sidebar-accent: 217 70% 75%;
-    --sidebar-accent-foreground: 220 10% 90%;
+    --sidebar-primary-foreground: 220 10% 10%;
+    --sidebar-accent: 217 70% 70%;
+    --sidebar-accent-foreground: 220 10% 10%;
     --sidebar-border: 210 15% 20%;
     --sidebar-ring: 217 90% 75%;
   }
@@ -100,442 +114,97 @@
   * {
     @apply border-border;
   }
-  
   html {
-    /* Prevent zoom on mobile */
-    -webkit-text-size-adjust: 100%;
-    -ms-text-size-adjust: 100%;
-    touch-action: manipulation;
+    /* Removed border and border-radius from html */
   }
-  
   body {
     @apply bg-background text-foreground;
-    /* Enhanced background pattern for mobile */
-    background-image: 
-      radial-gradient(circle at 20% 50%, rgba(217, 90, 47, 0.03) 1px, transparent 1px),
-      radial-gradient(circle at 80% 80%, rgba(217, 70, 55, 0.03) 1px, transparent 1px),
-      linear-gradient(135deg, hsl(var(--primary) / 0.1), hsl(var(--accent) / 0.1));
+    /* Subtle noise pattern for texture */
+    background-image: radial-gradient(circle at center, rgba(0,0,0,0.01) 1px, transparent 1px),
+                      linear-gradient(to bottom right, hsl(var(--primary) / 0.1), hsl(var(--accent) / 0.1)); /* More prominent subtle gradient overlay */
     background-size: 2px 2px, 100% 100%;
-    background-attachment: fixed;
-    background-position: 0 0, 0 0;
-    
-    /* Smooth scrolling */
-    scroll-behavior: smooth;
-    -webkit-overflow-scrolling: touch;
-    overscroll-behavior: contain;
+    background-attachment: fixed; /* Ensure background is fixed for parallax */
   }
 
-  /* Enhanced focus styles for mobile */
+  /* Global interactive element styles for smooth transitions */
+  a, button, input, select, textarea, [role="button"], [tabindex]:not([tabindex="-1"]) {
+    @apply transition-colors duration-200 ease-in-out;
+  }
+
+  /* Focus ring for accessibility */
   *:focus-visible {
     outline: 2px solid hsl(var(--ring));
     outline-offset: 2px;
-    @apply rounded-md;
+    @apply rounded-md; /* Apply border-radius for consistency */
+  }
+}
+
+/* Custom utility for small caps letter spacing */
+.tracking-small-caps {
+  letter-spacing: 0.05em;
+}
+
+/* Custom class for main content background pattern */
+@layer components {
+  .bg-main-content-pattern {
+    background-image: radial-gradient(circle at center, rgba(0,0,0,0.01) 1px, transparent 1px),
+                      linear-gradient(to bottom right, hsl(var(--primary) / 0.1), hsl(var(--accent) / 0.1));
+    background-size: 2px 2px, 100% 100%;
+    background-attachment: fixed;
   }
 
-  /* Mobile-specific button styles */
-  button, .btn {
-    @apply min-h-[44px] min-w-[44px];
-    @apply px-4 py-3;
-    @apply text-sm font-medium;
-    @apply rounded-lg;
-    @apply transition-all duration-200;
-    @apply focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2;
-    @apply active:scale-95;
-  }
-
-  /* Enhanced card styles */
-  .card {
-    @apply bg-card border border-border rounded-xl;
-    @apply shadow-elevation-2;
-    @apply transition-all duration-200;
-    @apply overflow-hidden;
-  }
-
-  /* Enhanced glassmorphism */
+  /* Glassmorphism effect for cards and other panels */
   .glassmorphism-card {
-    background-color: hsl(var(--card) / var(--glass-opacity));
-    backdrop-filter: blur(var(--glass-blur));
-    border: 1px solid var(--glass-border);
-    box-shadow: 6px 6px 12px rgba(0, 0, 0, 0.3), -6px -6px 12px rgba(255, 255, 255, 0.05);
-    @apply transition-all duration-200;
-  }
-
-  /* Mobile input styles */
-  input, textarea, select {
-    @apply bg-background border-border rounded-lg;
-    @apply px-4 py-3;
-    @apply text-base;
-    @apply focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2;
-    @apply transition-all duration-200;
-  }
-
-  /* Mobile navigation */
-  .mobile-nav {
-    @apply fixed bottom-0 left-0 right-0;
-    @apply bg-background/95 backdrop-blur-sm border-t border-border;
-    @apply z-40;
-    @apply safe-area-inset-bottom;
-  }
-
-  /* Mobile toolbar */
-  .mobile-toolbar {
-    @apply sticky top-0 z-40;
-    @apply bg-background/95 backdrop-blur-sm border-b border-border;
-    @apply safe-area-inset-top;
-  }
-
-  /* Mobile safe areas */
-  .mobile-safe-top {
-    padding-top: var(--mobile-safe-area-top);
-  }
-
-  .mobile-safe-bottom {
-    padding-bottom: var(--mobile-safe-area-bottom);
-  }
-
-  .mobile-safe-left {
-    padding-left: var(--mobile-safe-area-left);
-  }
-
-  .mobile-safe-right {
-    padding-right: var(--mobile-safe-area-right);
-  }
-
-  /* Mobile animations */
-  .mobile-tap {
-    transition: transform var(--mobile-transition-fast) ease-out;
-  }
-
-  .mobile-tap:active {
-    transform: scale(var(--mobile-tap-scale));
-  }
-
-  .mobile-press {
-    transition: transform var(--mobile-transition-normal) ease-out;
-  }
-
-  .mobile-press:active {
-    transform: scale(var(--mobile-press-scale));
-  }
-
-  /* Mobile scrolling */
-  .mobile-scroll {
-    -webkit-overflow-scrolling: touch;
-    overscroll-behavior: contain;
-  }
-
-  .mobile-scroll::-webkit-scrollbar {
-    display: none;
-  }
-
-  /* Mobile text truncation */
-  .mobile-truncate {
-    @apply truncate;
-  }
-
-  .mobile-truncate-2 {
-    @apply line-clamp-2;
-  }
-
-  .mobile-truncate-3 {
-    @apply line-clamp-3;
-  }
-
-  /* Mobile grid layouts */
-  .mobile-grid {
-    @apply grid gap-2;
-    @apply px-4;
-  }
-
-  .mobile-grid-2 {
-    @apply grid-cols-2;
-  }
-
-  .mobile-grid-3 {
-    @apply grid-cols-3;
-  }
-
-  /* Mobile responsive utilities */
-  .mobile-only {
-    @apply block md:hidden;
-  }
-
-  .mobile-hidden {
-    @apply hidden md:block;
-  }
-
-  .mobile-flex {
-    @apply flex flex-col md:flex-row;
-  }
-
-  .mobile-stack {
-    @apply space-y-2 md:space-y-0 md:space-x-2;
-  }
-
-  /* Mobile spacing */
-  .mobile-p-2 {
-    @apply p-2;
-  }
-
-  .mobile-p-3 {
-    @apply p-3;
-  }
-
-  .mobile-p-4 {
-    @apply p-4;
-  }
-
-  /* Mobile touch targets */
-  .mobile-touch-target {
-    @apply min-h-[44px] min-w-[44px];
-    @apply p-2;
-  }
-
-  /* Mobile status indicators */
-  .mobile-status-dot {
-    @apply w-2 h-2 rounded-full;
-  }
-
-  .mobile-status-dot.online {
-    @apply bg-success;
-  }
-
-  .mobile-status-dot.offline {
-    @apply bg-muted;
-  }
-
-  .mobile-status-dot.busy {
-    @apply bg-warning;
-  }
-
-  /* Mobile loading states */
-  .mobile-loading {
-    @apply flex items-center justify-center py-8;
-  }
-
-  .mobile-loading-spinner {
-    @apply inline-block animate-spin rounded-full h-8 w-8 border-2 border-primary border-r-transparent border-t-transparent;
-  }
-
-  /* Mobile modals */
-  .mobile-modal-overlay {
-    @apply fixed inset-0 z-50;
-    @apply bg-background/80 backdrop-blur-sm;
-  }
-
-  .mobile-modal {
-    @apply absolute top-16 left-4 right-4;
-    @apply bg-background border border-border rounded-lg shadow-elevation-4;
-    @apply w-80 max-w-[90vw];
-    @apply max-h-[80vh];
-    @apply overflow-y-auto;
-  }
-
-  /* Mobile floating action buttons */
-  .mobile-fab {
-    @apply fixed bottom-6 right-6;
-    @apply z-50;
-  }
-
-  .mobile-fab-button {
-    @apply w-14 h-14 rounded-full;
-    @apply bg-primary text-primary-foreground;
-    @apply shadow-elevation-4;
-    @apply flex items-center justify-center;
-    @apply transition-all duration-200;
-    @apply active:scale-95;
-  }
-
-  /* Mobile performance optimizations */
-  .mobile-optimized {
-    @apply will-change-transform;
-    @apply contain-layout style paint;
-  }
-
-  .mobile-optimized-scroll {
-    @apply overflow-scrolling-touch;
-    @apply overscroll-behavior: contain;
-  }
-
-  /* Mobile dark mode adjustments */
-  @media (prefers-color-scheme: dark) {
-    .glassmorphism-card {
-      background-color: hsl(var(--card) / var(--glass-opacity));
-      border-color: var(--glass-border);
-    }
-    
-    .mobile-toolbar {
-      @apply bg-background/95 backdrop-blur-sm;
-    }
-    
-    .mobile-nav {
-      @apply bg-background/95 backdrop-blur-sm;
-    }
-  }
-
-  /* Landscape orientation adjustments */
-  @media (orientation: landscape) and (max-width: 768px) {
-    .mobile-grid {
-      @apply grid-cols-4;
-    }
-    
-    .mobile-grid-2 {
-      @apply grid-cols-4;
-    }
-    
-    .mobile-grid-3 {
-      @apply grid-cols-6;
-    }
+    background-color: hsl(var(--card) / 0.6); /* Semi-transparent background */
+    backdrop-filter: blur(var(--glass-blur)); /* Frosted glass effect */
+    border: 1px solid hsl(var(--border) / 0.3); /* Subtle border */
+    box-shadow: var(--shadow-neumorphic); /* Apply neumorphic shadow */
   }
 }
 
-/* Define custom shadow utilities */
-@layer utilities {
-  .shadow-elevation-2 {
-    box-shadow: 6px 6px 12px rgba(0, 0, 0, 0.3), -6px -6px 12px rgba(255, 255, 255, 0.05);
-  }
-  
-  .shadow-elevation-4 {
-    box-shadow: 12px 12px 24px rgba(0, 0, 0, 0.4), -12px -12px 24px rgba(255, 255, 255, 0.05);
-  }
-  
-  .shadow-elevation-6 {
-    box-shadow: 18px 18px 36px rgba(0, 0, 0, 0.5), -18px -18px 36px rgba(255, 255, 255, 0.05);
-  }
-  
-  .shadow-elevation-8 {
-    box-shadow: 24px 24px 48px rgba(0, 0, 0, 0.6), -24px -24px 48px rgba(255, 255, 255, 0.05);
-  }
-  
-  .shadow-elevation-10 {
-    box-shadow: 30px 30px 60px rgba(0, 0, 0, 0.7), -30px -30px 60px rgba(255, 255, 255, 0.05);
-  }
-  
-  .shadow-elevation-12 {
-    box-shadow: 36px 36px 72px rgba(0, 0, 0, 0.8), -36px -36px 72px rgba(255, 255, 255, 0.05);
-  }
-  
-  .shadow-elevation-14 {
-    box-shadow: 42px 42px 84px rgba(0, 0, 0, 0.9), -42px -42px 84px rgba(255, 255, 255, 0.05);
-  }
-  
-  .shadow-elevation-16 {
-    box-shadow: 48px 48px 96px rgba(0, 0, 0, 1), -48px -48px 96px rgba(255, 255, 255, 0.05);
-  }
-  
-  .shadow-elevation-18 {
-    box-shadow: 54px 54px 108px rgba(0, 0, 0, 1), -54px -54px 108px rgba(255, 255, 255, 0.05);
-  }
-  
-  .shadow-elevation-20 {
-    box-shadow: 60px 60px 120px rgba(0, 0, 0, 1), -60px -60px 120px rgba(255, 255, 255, 0.05);
-  }
-
-  /* Define custom background color utilities */
-  .bg-success {
-    background-color: hsl(var(--success));
-  }
-  
-  .bg-warning {
-    background-color: hsl(var(--warning));
-  }
-  
-  .bg-muted {
-    background-color: hsl(var(--muted));
-  }
-  
-  /* Define custom text color utilities */
-  .text-success {
-    color: hsl(var(--success));
-  }
-  
-  .text-warning {
-    color: hsl(var(--warning));
-  }
-  
-  .text-muted {
-    color: hsl(var(--muted));
-  }
-  
-  /* Define custom border color utilities */
-  .border-success {
-    border-color: hsl(var(--success));
-  }
-  
-  .border-warning {
-    border-color: hsl(var(--warning));
-  }
-  
-  .border-muted {
-    border-color: hsl(var(--muted));
-  }
+/* Completely hide scrollbars globally */
+::-webkit-scrollbar {
+  width: 0px !important;
+  height: 0px !important;
+  background: transparent !important;
 }
 
-/* Custom animations */
-@keyframes mobileTap {
-  0% { transform: scale(1); }
-  50% { transform: scale(0.95); }
-  100% { transform: scale(1); }
+::-webkit-scrollbar-thumb {
+  background-color: transparent !important;
 }
 
-@keyframes mobilePress {
-  0% { transform: scale(1); }
-  50% { transform: scale(0.98); }
-  100% { transform: scale(1); }
+::-webkit-scrollbar-track {
+  background: transparent !important;
 }
 
-@keyframes mobileSwipe {
-  0% { transform: translateX(0); }
-  50% { transform: translateX(-20px); }
-  100% { transform: translateX(0); }
+/* For Firefox */
+* {
+  scrollbar-width: none !important; /* Firefox */
+  -ms-overflow-style: none !important;  /* IE and Edge */
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+/* Custom Scrollbar for specific elements */
+.custom-scrollbar {
+  scrollbar-width: thin !important; /* For Firefox */
+  scrollbar-color: hsl(var(--border)) transparent !important; /* For Firefox */
 }
 
-@keyframes slideUp {
-  from { transform: translateY(20px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px !important;
+  height: 6px !important;
 }
 
-@keyframes slideDown {
-  from { transform: translateY(-20px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent !important;
 }
 
-@keyframes scaleIn {
-  0% { transform: scale(0.95); opacity: 0; }
-  50% { transform: scale(1.02); opacity: 1; }
-   100% { transform: scale(1); opacity: 1; }
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: hsl(var(--border)) !important;
+  border-radius: 10px !important;
+  border: 2px solid transparent !important;
+  background-clip: content-box !important;
 }
 
-/* Apply animations */
-.mobile-tap {
-  animation: mobileTap var(--mobile-transition-fast) ease-out;
-}
-
-.mobile-press {
-  animation: mobilePress var(--mobile-transition-normal) ease-out;
-}
-
-.mobile-swipe {
-  animation: mobileSwipe var(--mobile-transition-normal) ease-out;
-}
-
-.mobile-fade-in {
-  animation: fadeIn var(--mobile-transition-normal) ease-out;
-}
-
-.mobile-slide-up {
-  animation: slideUp var(--mobile-transition-normal) ease-out;
-}
-
-.mobile-slide-down {
-  animation: slideDown var(--mobile-transition-normal) ease-out;
-}
-
-.mobile-scale-in {
-  animation: scaleIn var(--mobile-transition-normal) ease-out;
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: hsl(var(--muted-foreground)) !important;
 }
