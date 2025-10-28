@@ -156,7 +156,7 @@
     background-color: hsl(var(--card) / var(--glass-opacity));
     backdrop-filter: blur(var(--glass-blur));
     border: 1px solid var(--glass-border);
-    box-shadow: var(--shadow-neumorphic);
+    box-shadow: 6px 6px 12px rgba(0, 0, 0, 0.3), -6px -6px 12px rgba(255, 255, 255, 0.05);
     @apply transition-all duration-200;
   }
 
