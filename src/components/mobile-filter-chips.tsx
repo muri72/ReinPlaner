@@ -77,8 +77,7 @@ export function MobileFilterChips({
             size="sm"
             onClick={() => onFilterToggle(filter.id)}
             className={cn(
-              "mobile-tap-target whitespace-nowrap",
-              "h-8 px-3 text-xs font-medium",
+              "mobile-tap-target whitespace-nowrap h-8 px-3 text-xs font-medium",
               activeFilters.includes(filter.id) && "ring-2 ring-primary ring-offset-2"
             )}
           >

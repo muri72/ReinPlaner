@@ -43,7 +43,7 @@ interface MobilePlanningToolbarProps {
     avatar_url?: string;
     totalHours: number;
     plannedHours: number;
-    status: 'available' | 'busy' | 'off';
+    status: string;
   }>;
   selectedEmployee?: string | null;
   onEmployeeSelect?: (employeeId: string) => void;

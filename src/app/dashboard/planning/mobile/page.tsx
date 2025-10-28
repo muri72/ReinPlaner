@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { redirect } from "next/navigation";
 import { MobilePlanningCalendar } from "@/components/mobile-planning-calendar";
@@ -18,7 +18,6 @@ import {
 import { format, startOfWeek, endOfWeek, eachDayOfInterval, addDays, subDays } from "date-fns";
 import { de } from "date-fns/locale";
 import { cn } from "@/lib/utils";
-import { useCallback } from "react";
 
 interface Assignment {
   id: string;
@@ -67,27 +66,7 @@ export default function MobilePlanningPage() {
 
   const supabase = createClient();
 
-  useEffect(() => {
-    const fetchUserData = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        redirect("/login");
-        return;
-      }
-      setCurrentUser(user);
-
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('first_name, last_name, avatar_url, role')
-        .eq('id', user.id)
-        .single();
-      setUserProfile(profile);
-    };
-
-    fetchUserData();
-  }, []);
-
-  const fetchPlanningData = useCallback(async () => {
+  const fetchPlanningData = React.useCallback(async () => {
     if (!currentUser) return;
 
     setLoading(true);
@@ -193,10 +172,30 @@ export default function MobilePlanningPage() {
   }, [currentUser, currentDate, supabase]);
 
   useEffect(() => {
+    const fetchUserData = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        redirect("/login");
+        return;
+      }
+      setCurrentUser(user);
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('first_name, last_name, avatar_url, role')
+        .eq('id', user.id)
+        .single();
+      setUserProfile(profile);
+    };
+
+    fetchUserData();
+  }, [supabase]);
+
+  useEffect(() => {
     if (currentUser) {
       fetchPlanningData();
     }
-  }, [currentUser, fetchPlanningData]);
+  }, [currentUser, currentDate, fetchPlanningData]);
 
   const handleDateChange = (date: Date) => {
     setCurrentDate(date);
