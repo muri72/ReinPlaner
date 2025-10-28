@@ -430,6 +430,45 @@
   .shadow-elevation-20 {
     box-shadow: 60px 60px 120px rgba(0, 0, 0, 1), -60px -60px 120px rgba(255, 255, 255, 0.05);
   }
+
+  /* Define custom background color utilities */
+  .bg-success {
+    background-color: hsl(var(--success));
+  }
+  
+  .bg-warning {
+    background-color: hsl(var(--warning));
+  }
+  
+  .bg-muted {
+    background-color: hsl(var(--muted));
+  }
+  
+  /* Define custom text color utilities */
+  .text-success {
+    color: hsl(var(--success));
+  }
+  
+  .text-warning {
+    color: hsl(var(--warning));
+  }
+  
+  .text-muted {
+    color: hsl(var(--muted));
+  }
+  
+  /* Define custom border color utilities */
+  .border-success {
+    border-color: hsl(var(--success));
+  }
+  
+  .border-warning {
+    border-color: hsl(var(--warning));
+  }
+  
+  .border-muted {
+    border-color: hsl(var(--muted));
+  }
 }
 
 /* Custom animations */
