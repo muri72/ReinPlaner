@@ -1,0 +1,342 @@
+/* Mobile-specific optimizations and fixes */
+
+/* Fix button overlaps and spacing issues */
+.mobile-button-container {
+  @apply flex flex-wrap gap-2;
+  @apply p-2;
+}
+
+.mobile-button {
+  @apply min-h-[44px] min-w-[44px];
+  @apply px-3 py-2;
+  @apply text-sm font-medium;
+  @apply rounded-lg;
+  @apply transition-all duration-200;
+  @apply focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2;
+}
+
+.mobile-button:active {
+  @apply scale-95;
+}
+
+/* Fix tag display and spacing */
+.mobile-tag-container {
+  @apply flex flex-wrap gap-1;
+  @apply p-2;
+}
+
+.mobile-tag {
+  @apply inline-flex items-center px-2 py-1;
+  @apply text-xs font-medium;
+  @apply rounded-full;
+  @apply bg-secondary text-secondary-foreground;
+  @apply transition-colors duration-200;
+}
+
+.mobile-tag.active {
+  @apply bg-primary text-primary-foreground;
+}
+
+/* Fix card spacing and overflow */
+.mobile-card {
+  @apply bg-card border border-border rounded-lg;
+  @apply shadow-sm;
+  @apply transition-all duration-200;
+  @apply overflow-hidden;
+}
+
+.mobile-card-content {
+  @apply p-4;
+  @apply space-y-3;
+}
+
+.mobile-card-header {
+  @apply flex items-start justify-between;
+  @apply mb-3;
+}
+
+.mobile-card-title {
+  @apply font-semibold text-base;
+  @apply truncate;
+  @apply max-w-[200px];
+}
+
+/* Fix filter chips */
+.mobile-filter-chips {
+  @apply flex flex-wrap gap-2;
+  @apply p-3;
+  @apply overflow-x-auto;
+  @apply -webkit-overflow-scrolling-touch;
+}
+
+.mobile-filter-chip {
+  @apply inline-flex items-center px-3 py-1.5;
+  @apply text-sm font-medium;
+  @apply rounded-full border;
+  @apply transition-all duration-200;
+  @apply min-h-[36px];
+}
+
+.mobile-filter-chip.active {
+  @apply bg-primary text-primary-foreground border-primary;
+}
+
+/* Fix calendar grid */
+.mobile-calendar-grid {
+  @apply grid grid-cols-7 gap-1;
+  @apply p-2;
+}
+
+.mobile-calendar-day {
+  @apply min-h-[60px] p-2;
+  @apply border border-border rounded-lg;
+  @apply text-center;
+  @apply transition-colors duration-200;
+}
+
+.mobile-calendar-day.today {
+  @apply bg-primary/10 border-primary;
+}
+
+.mobile-calendar-day.selected {
+  @apply bg-primary text-primary-foreground;
+}
+
+/* Fix employee cards */
+.mobile-employee-card {
+  @apply bg-card border border-border rounded-lg;
+  @apply p-3;
+  @apply transition-all duration-200;
+}
+
+.mobile-employee-card.selected {
+  @apply ring-2 ring-primary ring-offset-2;
+}
+
+.mobile-employee-avatar {
+  @apply w-10 h-10 rounded-full;
+  @apply flex-shrink-0;
+}
+
+.mobile-employee-info {
+  @apply flex-grow min-w-0;
+  @apply ml-3;
+}
+
+/* Fix assignment cards */
+.mobile-assignment-card {
+  @apply bg-card border border-border rounded-lg;
+  @apply p-3;
+  @apply transition-all duration-200;
+  @apply relative;
+}
+
+.mobile-assignment-card.swipeable {
+  @apply cursor-grab;
+  @apply active:cursor-grabbing;
+}
+
+.mobile-assignment-status {
+  @apply inline-flex items-center px-2 py-1;
+  @apply text-xs font-medium rounded-full;
+  @apply ml-2;
+}
+
+/* Fix floating action buttons */
+.mobile-fab {
+  @apply fixed bottom-6 right-6;
+  @apply z-50;
+}
+
+.mobile-fab-button {
+  @apply w-14 h-14 rounded-full;
+  @apply bg-primary text-primary-foreground;
+  @apply shadow-lg;
+  @apply flex items-center justify-center;
+  @apply transition-all duration-200;
+}
+
+.mobile-fab-button:active {
+  @apply scale-95;
+}
+
+/* Fix toolbar */
+.mobile-toolbar {
+  @apply sticky top-0 z-40;
+  @apply bg-background/95 backdrop-blur-sm;
+  @apply border-b border-border;
+}
+
+.mobile-toolbar-content {
+  @apply px-4 py-3;
+  @apply flex items-center justify-between;
+}
+
+/* Fix search inputs */
+.mobile-search-input {
+  @apply w-full pl-10 pr-4 py-3;
+  @apply border border-border rounded-lg;
+  @apply bg-background text-sm;
+  @apply focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2;
+}
+
+/* Fix modals and overlays */
+.mobile-modal-overlay {
+  @apply fixed inset-0 z-50;
+  @apply bg-background/80 backdrop-blur-sm;
+}
+
+.mobile-modal {
+  @apply absolute top-16 right-4;
+  @apply bg-background border border-border rounded-lg shadow-lg;
+  @apply w-64 max-w-[90vw];
+}
+
+/* Fix scrolling */
+.mobile-scroll-container {
+  @apply overflow-y-auto;
+  @apply -webkit-overflow-scrolling-touch;
+  @apply max-h-[60vh];
+}
+
+.mobile-scroll-container::-webkit-scrollbar {
+  @apply display: none;
+}
+
+/* Fix text truncation */
+.mobile-text-truncate {
+  @apply truncate;
+  @apply max-w-full;
+}
+
+.mobile-text-truncate-2 {
+  @apply line-clamp-2;
+}
+
+.mobile-text-truncate-3 {
+  @apply line-clamp-3;
+}
+
+/* Fix responsive spacing */
+.mobile-spacing-tight {
+  @apply space-y-1;
+}
+
+.mobile-spacing-normal {
+  @apply space-y-2;
+}
+
+.mobile-spacing-loose {
+  @apply space-y-3;
+}
+
+/* Fix touch targets */
+.mobile-touch-target {
+  @apply min-h-[44px] min-w-[44px];
+  @apply p-2;
+}
+
+/* Fix status indicators */
+.mobile-status-indicator {
+  @apply inline-flex items-center;
+  @apply w-2 h-2 rounded-full;
+  @apply mr-2;
+}
+
+.mobile-status-indicator.online {
+  @apply bg-green-500;
+}
+
+.mobile-status-indicator.offline {
+  @apply bg-gray-400;
+}
+
+.mobile-status-indicator.busy {
+  @apply bg-orange-500;
+}
+
+/* Fix loading states */
+.mobile-loading {
+  @apply flex items-center justify-center;
+  @apply py-8;
+}
+
+.mobile-loading-spinner {
+  @apply inline-block animate-spin rounded-full h-6 w-6;
+  @apply border-b-2 border-primary border-r-transparent border-t-transparent;
+}
+
+/* Fix animations */
+.mobile-slide-up {
+  @apply animate-slide-up;
+}
+
+.mobile-slide-down {
+  @apply animate-slide-down;
+}
+
+.mobile-fade-in {
+  @apply animate-fade-in;
+}
+
+.mobile-scale-in {
+  @apply animate-scale-in;
+}
+
+/* Fix accessibility */
+.mobile-sr-only {
+  @apply sr-only;
+}
+
+.mobile-focus-visible {
+  @apply outline-2 outline-primary outline-offset-2;
+}
+
+/* Fix dark mode adjustments */
+@media (prefers-color-scheme: dark) {
+  .mobile-card {
+    @apply bg-card border-border;
+  }
+  
+  .mobile-filter-chip {
+    @apply border-border;
+  }
+  
+  .mobile-filter-chip.active {
+    @apply bg-primary text-primary-foreground border-primary;
+  }
+}
+
+/* Fix landscape orientation */
+@media (orientation: landscape) {
+  .mobile-calendar-grid {
+    @apply grid-cols-7;
+    @apply gap-1;
+    @apply p-1;
+  }
+  
+  .mobile-calendar-day {
+    @apply min-h-[40px] p-1;
+  }
+  
+  .mobile-employee-card {
+    @apply p-2;
+  }
+}
+
+/* Fix safe areas */
+.mobile-safe-area-top {
+  @apply pt-safe;
+}
+
+.mobile-safe-area-bottom {
+  @apply pb-safe;
+}
+
+.mobile-safe-area-left {
+  @apply pl-safe;
+}
+
+.mobile-safe-area-right {
+  @apply pr-safe;
+}
