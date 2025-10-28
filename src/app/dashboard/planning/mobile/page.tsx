@@ -322,8 +322,9 @@ export default function MobilePlanningPage() {
           assignments={assignments}
           unassignedOrders={unassignedOrders}
           employees={employees}
-          selectedEmployee={selectedEmployee}
-          onEmployeeSelect={handleEmployeeSelect}
+          onAssignmentClick={(assignment) => console.log('Assignment clicked:', assignment)}
+          onOrderClick={(order) => console.log('Order clicked:', order)}
+          onEmployeeClick={(employeeId) => console.log('Employee clicked:', employeeId)}
         />
       </div>
 
