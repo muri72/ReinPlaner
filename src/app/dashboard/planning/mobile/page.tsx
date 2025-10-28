@@ -18,6 +18,7 @@ import {
 import { format, startOfWeek, endOfWeek, eachDayOfInterval, addDays, subDays } from "date-fns";
 import { de } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { useCallback } from "react";
 
 interface Assignment {
   id: string;
@@ -83,119 +84,119 @@ export default function MobilePlanningPage() {
       setUserProfile(profile);
     };
 
-    const fetchPlanningData = async () => {
-      if (!currentUser) return;
-
-      setLoading(true);
-      const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
-      const weekEnd = endOfWeek(currentDate, { weekStartsOn: 1 });
-
-      try {
-        // Fetch assignments for week
-        const { data: assignmentData } = await supabase
-          .from('order_employee_assignments')
-          .select(`
-            orders(id, title, status, priority, due_date, service_type, notes),
-            employees(id, name, avatar_url),
-            objects(name)
-          `)
-          .eq('employees.user_id', currentUser.id)
-          .gte('orders.due_date', weekStart.toISOString())
-          .lte('orders.due_date', weekEnd.toISOString());
-
-        // Fetch unassigned orders
-        const { data: unassignedData } = await supabase
-          .from('orders')
-          .select('id, title, priority, due_date, service_type')
-          .is('order_employee_assignments.order_id', 'is', null)
-          .eq('request_status', 'approved')
-          .gte('due_date', weekStart.toISOString())
-          .lte('due_date', weekEnd.toISOString());
-
-        // Fetch all employees for workload calculation
-        const { data: employeeData } = await supabase
-          .from('employees')
-          .select('id, name, avatar_url, status')
-          .eq('status', 'active');
-
-        // Process assignments
-        const processedAssignments: { [date: string]: Assignment[] } = {};
-        const processedUnassignedOrders: UnassignedOrder[] = [];
-
-        assignmentData?.forEach((item: any) => {
-          const assignment: Assignment = {
-            id: item.orders.id,
-            title: item.orders.title,
-            startTime: '09:00',
-            endTime: '17:00',
-            hours: 8,
-            status: item.orders.status as any,
-            service_type: item.orders.service_type,
-            object_name: item.objects?.name || null,
-            employee_name: item.employees?.name || null,
-            priority: item.orders.priority as any,
-            notes: item.orders.notes,
-          };
-
-          const dateKey = item.orders.due_date?.split('T')[0];
-          if (dateKey) {
-            if (!processedAssignments[dateKey]) {
-              processedAssignments[dateKey] = [];
-            }
-            processedAssignments[dateKey].push(assignment);
-          }
-        });
-
-        unassignedData?.forEach((item: any) => {
-          const order: UnassignedOrder = {
-            id: item.id,
-            title: item.title,
-            priority: item.priority as any,
-            due_date: item.due_date,
-            service_type: item.service_type,
-          };
-          processedUnassignedOrders.push(order);
-        });
-
-        // Process employees with workload
-        const processedEmployees: Employee[] = employeeData?.map((emp: any) => {
-          const employeeAssignments = assignmentData?.filter(
-            (item: any) => item.employees.id === emp.id
-          ) || [];
-
-          const totalHours = 40; // Standard 40h week
-          const plannedHours = employeeAssignments.reduce((total: number, assignment: any) => {
-            return total + (assignment.hours || 8);
-          }, 0);
-
-          return {
-            id: emp.id,
-            name: emp.name,
-            avatar_url: emp.avatar_url,
-            totalHours,
-            plannedHours,
-            status: plannedHours >= totalHours ? 'busy' : plannedHours > 0 ? 'available' : 'off',
-          };
-        }) || [];
-
-        setAssignments(processedAssignments);
-        setUnassignedOrders(processedUnassignedOrders);
-        setEmployees(processedEmployees);
-      } catch (error) {
-        console.error('Error fetching planning data:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchUserData();
-  }, [currentUser]);
+  }, []);
+
+  const fetchPlanningData = useCallback(async () => {
+    if (!currentUser) return;
+
+    setLoading(true);
+    const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
+    const weekEnd = endOfWeek(currentDate, { weekStartsOn: 1 });
+
+    try {
+      // Fetch assignments for week
+      const { data: assignmentData } = await supabase
+        .from('order_employee_assignments')
+        .select(`
+          orders(id, title, status, priority, due_date, service_type, notes),
+          employees(id, name, avatar_url),
+          objects(name)
+        `)
+        .eq('employees.user_id', currentUser.id)
+        .gte('orders.due_date', weekStart.toISOString())
+        .lte('orders.due_date', weekEnd.toISOString());
+
+      // Fetch unassigned orders
+      const { data: unassignedData } = await supabase
+        .from('orders')
+        .select('id, title, priority, due_date, service_type')
+        .is('order_employee_assignments.order_id', null)
+        .eq('request_status', 'approved')
+        .gte('due_date', weekStart.toISOString())
+        .lte('due_date', weekEnd.toISOString());
+
+      // Fetch all employees for workload calculation
+      const { data: employeeData } = await supabase
+        .from('employees')
+        .select('id, name, avatar_url, status')
+        .eq('status', 'active');
+
+      // Process assignments
+      const processedAssignments: { [date: string]: Assignment[] } = {};
+      const processedUnassignedOrders: UnassignedOrder[] = [];
+
+      assignmentData?.forEach((item: any) => {
+        const assignment: Assignment = {
+          id: item.orders.id,
+          title: item.orders.title,
+          startTime: '09:00',
+          endTime: '17:00',
+          hours: 8,
+          status: item.orders.status as any,
+          service_type: item.orders.service_type,
+          object_name: item.objects?.name || null,
+          employee_name: item.employees?.name || null,
+          priority: item.orders.priority as any,
+          notes: item.orders.notes,
+        };
+
+        const dateKey = item.orders.due_date?.split('T')[0];
+        if (dateKey) {
+          if (!processedAssignments[dateKey]) {
+            processedAssignments[dateKey] = [];
+          }
+          processedAssignments[dateKey].push(assignment);
+        }
+      });
+
+      unassignedData?.forEach((item: any) => {
+        const order: UnassignedOrder = {
+          id: item.id,
+          title: item.title,
+          priority: item.priority as any,
+          due_date: item.due_date,
+          service_type: item.service_type,
+        };
+        processedUnassignedOrders.push(order);
+      });
+
+      // Process employees with workload
+      const processedEmployees: Employee[] = employeeData?.map((emp: any) => {
+        const employeeAssignments = assignmentData?.filter(
+          (item: any) => item.employees.id === emp.id
+        ) || [];
+
+        const totalHours = 40; // Standard 40h week
+        const plannedHours = employeeAssignments.reduce((total: number, assignment: any) => {
+          return total + (assignment.hours || 8);
+        }, 0);
+
+        return {
+          id: emp.id,
+          name: emp.name,
+          avatar_url: emp.avatar_url,
+          totalHours,
+          plannedHours,
+          status: plannedHours >= totalHours ? 'busy' : plannedHours > 0 ? 'available' : 'off',
+        };
+      }) || [];
+
+      setAssignments(processedAssignments);
+      setUnassignedOrders(processedUnassignedOrders);
+      setEmployees(processedEmployees);
+    } catch (error) {
+      console.error('Error fetching planning data:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [currentUser, currentDate, supabase]);
 
   useEffect(() => {
     if (currentUser) {
       fetchPlanningData();
     }
-  }, [currentUser, currentDate]);
+  }, [currentUser, fetchPlanningData]);
 
   const handleDateChange = (date: Date) => {
     setCurrentDate(date);

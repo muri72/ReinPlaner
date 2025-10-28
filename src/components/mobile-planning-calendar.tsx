@@ -28,7 +28,7 @@ interface Assignment {
   startTime: string;
   endTime: string;
   hours: number;
-  status: 'completed' | 'pending' | 'future';
+  status: 'completed' | 'in_progress' | 'pending' | 'future';
   service_type?: string;
   object_name?: string;
   employee_name?: string;
