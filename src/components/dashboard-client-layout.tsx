@@ -84,7 +84,7 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut, us
     <div className="min-h-screen flex flex-col md:flex-row">
       {/* Mobiler Header und Navigation (fest) */}
       <header className="md:hidden fixed top-0 left-0 w-full bg-sidebar text-sidebar-foreground border-b border-sidebar-border p-4 flex items-center justify-between z-50 glassmorphism-card">
-        <Sheet open={isSheetOpen} onOpenChange={setIsOpen}>
+        <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
           <SheetTrigger asChild>
             <Button variant="ghost" size="icon">
               <Menu className="h-7 w-7" />
