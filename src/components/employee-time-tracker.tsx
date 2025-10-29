@@ -65,6 +65,9 @@ interface OrderWithDetails {
     friday_end_time: string | null;
     saturday_end_time: string | null;
     sunday_end_time: string | null;
+    latitude?: number | null;
+    longitude?: number | null;
+    radius_meters?: number | null;
   } | null;
   assigned_recurrence_interval_weeks: number | null;
   assigned_start_week_offset: number | null;
@@ -448,9 +451,9 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
               selectedOrder.object.latitude,
               selectedOrder.object.longitude
             );
-            if (distance > selectedOrder.object.radius_meters) {
+            if (distance > selectedOrder.object.radius_meters!) {
               setLocationDeviation(true);
-              toast.warning(`Sie sind ${Math.round(distance - selectedOrder.object.radius_meters)}m außerhalb des Objekt-Radius.`);
+              toast.warning(`Sie sind ${Math.round(distance - selectedOrder.object.radius_meters!)}m außerhalb des Objekt-Radius.`);
             } else {
               setLocationDeviation(false);
             }
