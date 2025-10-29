@@ -6,41 +6,6 @@ export async function middleware(request: NextRequest) {
   const { data: { session } } = await supabase.auth.getSession()
   const { pathname } = request.nextUrl;
 
-  // Check for impersonation session
-  const impersonationSessionId = request.cookies.get('impersonation_session')?.value;
-  let effectiveRole = null;
-  let isImpersonating = false;
-
-  if (impersonationSessionId && session) {
-    // Verify impersonation session is valid
-    const { data: impersonationSession } = await supabase
-      .from('impersonation_sessions')
-      .select('impersonated_role, is_active')
-      .eq('id', impersonationSessionId)
-      .eq('admin_user_id', session.user.id)
-      .single();
-    
-    if (impersonationSession?.is_active) {
-      effectiveRole = impersonationSession.impersonated_role;
-      isImpersonating = true;
-    }
-  }
-
-  // If not impersonating, get user's actual role
-  if (!effectiveRole) {
-    const { data: profileData, error: profileError } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', session?.user.id)
-      .single();
-
-    if (profileError) {
-      console.error("Fehler beim Abrufen des Benutzerprofils:", profileError?.message || JSON.stringify(profileError));
-    }
-
-    effectiveRole = profileData?.role || 'employee'; // Standard auf 'employee', falls Rolle nicht gefunden
-  }
-
   // --- 1. Behandlung von nicht authentifizierten Benutzern ---
   if (!session) {
     // Erlaube Zugriff auf öffentliche Pfade (Login, Auth Callback)
@@ -52,12 +17,24 @@ export async function middleware(request: NextRequest) {
   }
 
   // --- 2. Behandlung von authentifizierten Benutzern ---
+  // Benutzerrolle abrufen
+  const { data: profileData, error: profileError } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', session.user.id)
+    .single();
+
+  if (profileError) {
+    console.error("Fehler beim Abrufen des Benutzerprofils:", profileError?.message || JSON.stringify(profileError));
+  }
+
+  const userRole = profileData?.role || 'employee'; // Standard auf 'employee', falls Rolle nicht gefunden
 
   // Den korrekten Basis-Dashboard-Pfad für die Benutzerrolle bestimmen
   let baseDashboardPath: string;
-  if (effectiveRole === 'customer') {
+  if (userRole === 'customer') {
     baseDashboardPath = '/portal/dashboard';
-  } else if (effectiveRole === 'employee') {
+  } else if (userRole === 'employee') {
     baseDashboardPath = '/employee/dashboard';
   } else { // admin oder manager
     baseDashboardPath = '/dashboard';
@@ -71,27 +48,21 @@ export async function middleware(request: NextRequest) {
   }
 
   // Spezifische Regeln für jede Rolle, um sicherzustellen, dass sie in ihren erlaubten Bereichen bleiben
-  if (effectiveRole === 'customer') {
+  if (userRole === 'customer') {
     // Kunden MÜSSEN sich in /portal/* befinden
     if (!pathname.startsWith('/portal')) {
       return NextResponse.redirect(new URL('/portal/dashboard', request.url));
     }
-  } else if (effectiveRole === 'employee') {
+  } else if (userRole === 'employee') {
     // Mitarbeiter MÜSSEN sich in /employee/* befinden
     if (!pathname.startsWith('/employee')) {
       return NextResponse.redirect(new URL('/employee/dashboard', request.url));
     }
-  } else if (effectiveRole === 'admin' || effectiveRole === 'manager') {
+  } else if (userRole === 'admin' || userRole === 'manager') {
     // Admins/Manager DÜRFEN NICHT in /portal/* oder /employee/* sein
     if (pathname.startsWith('/portal') || pathname.startsWith('/employee')) {
       return NextResponse.redirect(new URL('/dashboard', request.url));
     }
-  }
-
-  // Add impersonation info to response headers for client-side access
-  if (isImpersonating) {
-    response.headers.set('x-impersonating', 'true');
-    response.headers.set('x-impersonated-role', effectiveRole);
   }
 
   // Wenn keine der oben genannten Umleitungsregeln zutrifft, erlaube die Anfrage.

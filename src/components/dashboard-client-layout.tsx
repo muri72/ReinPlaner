@@ -18,6 +18,7 @@ interface DashboardClientLayoutProps {
   children: React.ReactNode;
   currentUserRole: 'admin' | 'manager' | 'employee' | 'customer';
   onSignOut: () => Promise<void>;
+  // Add userProfile prop
   userProfile: {
     first_name: string | null;
     last_name: string | null;
@@ -114,6 +115,8 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut, us
             <nav className="flex-grow overflow-y-auto p-4">
               <SidebarNav
                 isCollapsed={false}
+                currentUserRole={currentUserRole}
+                onSignOut={onSignOut}
                 onLinkClick={() => setIsSheetOpen(false)}
               />
             </nav>
@@ -170,6 +173,8 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut, us
         <nav className="flex-grow space-y-2 pt-4 border-t border-sidebar-border overflow-y-auto">
           <SidebarNav
             isCollapsed={isCollapsed}
+            currentUserRole={currentUserRole}
+            onSignOut={onSignOut}
           />
         </nav>
 

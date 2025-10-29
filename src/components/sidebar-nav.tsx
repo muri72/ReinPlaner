@@ -1,219 +1,184 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { cn } from '@/lib/utils';
-import { usePermissions } from '@/hooks/use-permissions';
-import { PERMISSIONS } from '@/lib/permissions';
+import React from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  Home, Briefcase, Users, ContactRound, Building, UsersRound, Clock, CalendarOff,
+  CalendarCheck, TrendingUp, FileText, Star, DollarSign, ListOrdered, MessageSquare
+} from "lucide-react";
+import { cn } from "@/lib/utils";
 
-interface NavItem {
+// Definieren der Rollen-Typen
+type UserRole = 'admin' | 'manager' | 'employee' | 'customer';
+
+// Basis-Interface für Navigationspunkte
+interface NavItemBase {
   title: string;
-  href: string;
-  icon?: React.ReactNode;
-  permission?: string;
-  permissions?: string[];
-  role?: string;
-  roles?: string[];
-  badge?: string;
-  children?: NavItem[];
+  roles: UserRole[];
 }
 
-const navigationItems: NavItem[] = [
+// Interface für einzelne Navigationslinks
+interface NavLinkItem extends NavItemBase {
+  href: string;
+  icon: React.ElementType; // Verwenden von React.ElementType für JSX-Komponenten
+  isCategory?: false; // Explizit als Nicht-Kategorie markieren
+}
+
+// Interface für Navigationskategorien
+interface NavCategoryItem extends NavItemBase {
+  isCategory: true;
+  children: NavLinkItem[];
+}
+
+// Union-Typ für alle möglichen Navigationspunkte
+type NavItem = NavLinkItem | NavCategoryItem;
+
+const navItems: NavItem[] = [
   {
-    title: 'Dashboard',
-    href: '/dashboard',
-    icon: '📊',
-    permissions: [PERMISSIONS.ORDER_READ, PERMISSIONS.CUSTOMER_READ],
-  },
-  {
-    title: 'Aufträge',
-    href: '/dashboard/orders',
-    icon: '📋',
-    permission: PERMISSIONS.ORDER_READ,
-    children: [
-      {
-        title: 'Alle Aufträge',
-        href: '/dashboard/orders',
-        permission: PERMISSIONS.ORDER_READ,
-      },
-      {
-        title: 'Neuer Auftrag',
-        href: '/dashboard/orders/new',
-        permission: PERMISSIONS.ORDER_CREATE,
-      },
-      {
-        title: 'Meine Aufträge',
-        href: '/dashboard/orders/my',
-        roles: ['employee', 'customer'],
-      },
-    ],
-  },
-  {
-    title: 'Kunden',
-    href: '/dashboard/customers',
-    icon: '👥',
-    permission: PERMISSIONS.CUSTOMER_READ,
-    children: [
-      {
-        title: 'Alle Kunden',
-        href: '/dashboard/customers',
-        permission: PERMISSIONS.CUSTOMER_READ,
-      },
-      {
-        title: 'Neuer Kunde',
-        href: '/dashboard/customers/new',
-        permission: PERMISSIONS.CUSTOMER_CREATE,
-      },
-    ],
-  },
-  {
-    title: 'Mitarbeiter',
-    href: '/dashboard/employees',
-    icon: '👤',
-    permission: PERMISSIONS.EMPLOYEE_READ,
-    children: [
-      {
-        title: 'Alle Mitarbeiter',
-        href: '/dashboard/employees',
-        permission: PERMISSIONS.EMPLOYEE_READ,
-      },
-      {
-        title: 'Neuer Mitarbeiter',
-        href: '/dashboard/employees/new',
-        permission: PERMISSIONS.EMPLOYEE_CREATE,
-      },
-    ],
-  },
-  {
-    title: 'Objekte',
-    href: '/dashboard/objects',
-    icon: '🏢',
-    permission: PERMISSIONS.OBJECT_READ,
-    children: [
-      {
-        title: 'Alle Objekte',
-        href: '/dashboard/objects',
-        permission: PERMISSIONS.OBJECT_READ,
-      },
-      {
-        title: 'Neues Objekt',
-        href: '/dashboard/objects/new',
-        permission: PERMISSIONS.OBJECT_CREATE,
-      },
-    ],
-  },
-  {
-    title: 'Benutzerverwaltung',
-    href: '/dashboard/users',
-    icon: '🔐',
-    permission: PERMISSIONS.USER_READ,
+    title: "Dashboard",
+    href: "/dashboard", // Default dashboard for admin/manager
+    icon: Home,
     roles: ['admin', 'manager'],
   },
   {
-    title: 'Systemeinstellungen',
-    href: '/dashboard/settings',
-    icon: '⚙️',
-    permission: PERMISSIONS.SYSTEM_CONFIG,
-    roles: ['admin'],
+    title: "Kunden-Dashboard",
+    href: "/portal/dashboard",
+    icon: Home,
+    roles: ['customer'],
   },
   {
-    title: 'Audit-Log',
-    href: '/dashboard/audit',
-    icon: '📝',
-    permission: PERMISSIONS.AUDIT_READ,
-    roles: ['admin'],
+    title: "Mitarbeiter-Dashboard",
+    href: "/employee/dashboard",
+    icon: Home,
+    roles: ['employee'],
+  },
+  {
+    title: "Management",
+    isCategory: true,
+    roles: ['admin', 'manager', 'employee'],
+    children: [
+      { title: "Aufträge", href: "/dashboard/orders", icon: Briefcase, roles: ['admin', 'manager', 'employee'] },
+      { title: "Objekte", href: "/dashboard/objects", icon: Building, roles: ['admin', 'manager', 'employee'] },
+      { title: "Planung", href: "/dashboard/planning", icon: CalendarCheck, roles: ['admin', 'manager'] },
+      { title: "Berichte", href: "/dashboard/reports", icon: FileText, roles: ['admin'] },
+      { title: "Finanzen", href: "/dashboard/finances", icon: DollarSign, roles: ['admin', 'manager'] }, // Moved here
+    ],
+  },
+  {
+    title: "Kunden",
+    isCategory: true,
+    roles: ['admin', 'manager', 'employee', 'customer'],
+    children: [
+      { title: "Kunden", href: "/dashboard/customers", icon: Users, roles: ['admin', 'manager', 'employee'] },
+      { title: "Kontakte", href: "/dashboard/customer-contacts", icon: ContactRound, roles: ['admin', 'manager', 'employee'] },
+      { title: "Feedback", href: "/dashboard/feedback", icon: Star, roles: ['admin', 'manager', 'employee', 'customer'] },
+      { title: "Tickets", href: "/dashboard/tickets", icon: MessageSquare, roles: ['admin', 'manager', 'employee', 'customer'] }, // New Tickets link
+    ],
+  },
+  {
+    title: "Personal",
+    isCategory: true,
+    roles: ['admin', 'manager', 'employee'],
+    children: [
+      { title: "Mitarbeiter", href: "/dashboard/employees", icon: UsersRound, roles: ['admin', 'manager', 'employee'] },
+      { title: "Abwesenheiten", href: "/dashboard/absence-requests", icon: CalendarOff, roles: ['admin', 'manager', 'employee'] },
+      { title: "Zeiterfassung", href: "/dashboard/time-tracking", icon: Clock, roles: ['admin', 'manager', 'employee'] },
+    ],
+  },
+  {
+    title: "Meine Buchungen",
+    href: "/portal/dashboard/bookings",
+    icon: Briefcase,
+    roles: ['customer'],
   },
 ];
 
-function filterNavItems(items: NavItem[], userPermissions: { hasPermission: (p: string) => boolean; hasAnyPermission: (p: string[]) => boolean; userRole: string }): NavItem[] {
-  return items.filter(item => {
-    // Check role-based access
-    if (item.role && userPermissions.userRole !== item.role) {
-      return false;
-    }
-    
-    if (item.roles && !item.roles.includes(userPermissions.userRole)) {
-      return false;
-    }
-    
-    // Check permission-based access
-    if (item.permission && !userPermissions.hasPermission(item.permission)) {
-      return false;
-    }
-    
-    if (item.permissions && !userPermissions.hasAnyPermission(item.permissions)) {
-      return false;
-    }
-    
-    // Filter children recursively
-    if (item.children) {
-      item.children = filterNavItems(item.children, userPermissions);
-      // Only show parent if it has visible children or its own href
-      return item.children.length > 0 || item.href;
-    }
-    
-    return true;
-  });
-}
-
-interface SidebarNavProps extends React.HTMLAttributes<HTMLElement> {
-  isCollapsed?: boolean;
-  currentUserRole?: string;
-  onSignOut?: () => Promise<void>;
+interface SidebarNavProps {
+  isCollapsed: boolean;
+  currentUserRole: UserRole;
+  onSignOut: () => Promise<void>;
   onLinkClick?: () => void;
 }
 
-export function SidebarNav({ className, isCollapsed = false, onLinkClick, ...props }: SidebarNavProps) {
+export function SidebarNav({ isCollapsed, currentUserRole, onSignOut, onLinkClick }: SidebarNavProps) {
   const pathname = usePathname();
-  const permissions = usePermissions();
-  
-  const filteredItems = filterNavItems(navigationItems, permissions);
+
+  const filteredNavItems = navItems.filter(item => {
+    if (item.isCategory) {
+      // Filter children based on roles
+      item.children = item.children.filter(child => 
+        child.roles.includes(currentUserRole)
+      );
+      // Show category only if it has children
+      return item.children.length > 0;
+    }
+    // Show single link only if role matches
+    return item.roles.includes(currentUserRole);
+  });
 
   return (
-    <nav className={cn('space-y-2', className)} {...props}>
-      {filteredItems.map((item) => (
-        <div key={item.href}>
-          <Link
-            href={item.href}
-            className={cn(
-              'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors',
-              pathname === item.href
-                ? 'bg-accent text-accent-foreground'
-                : 'transparent'
-            )}
-            onClick={onLinkClick}
-          >
-            {item.icon && <span className="text-lg">{item.icon}</span>}
-            {!isCollapsed && <span className="flex-1">{item.title}</span>}
-            {item.badge && !isCollapsed && (
-              <span className="ml-auto text-xs bg-primary text-primary-foreground px-2 py-1 rounded-full">
-                {item.badge}
-              </span>
-            )}
-          </Link>
-          
-          {item.children && !isCollapsed && (
-            <div className="ml-6 mt-1 space-y-1">
-              {item.children.map((child) => (
-                <Link
-                  key={child.href}
-                  href={child.href}
-                  className={cn(
-                    'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground transition-colors',
-                    pathname === child.href
-                      ? 'bg-accent text-accent-foreground'
-                      : 'transparent'
-                  )}
-                  onClick={onLinkClick}
-                >
-                  <span className="w-2 h-2 bg-muted-foreground rounded-full"></span>
-                  <span>{child.title}</span>
-                </Link>
+    <TooltipProvider delayDuration={300}>
+      <div className="flex-grow space-y-1">
+        {filteredNavItems.map((item) => (
+          item.isCategory ? (
+            <div key={item.title} className="space-y-1">
+              {!isCollapsed && (
+                <h3 className="text-sm font-semibold uppercase text-muted-foreground px-4 pt-4 pb-2">
+                  {item.title}
+                </h3>
+              )}
+              {item.children.map(child => (
+                <Tooltip key={child.href}>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant={pathname === child.href ? "secondary" : "ghost"}
+                      className={cn(
+                        "w-full",
+                        isCollapsed ? "justify-center" : "justify-start",
+                        "text-sm text-sidebar-foreground transition-colors duration-200",
+                        // Active state: stronger highlight with primary accent
+                        pathname === child.href ? "bg-primary text-primary-foreground hover:bg-primary/90" : "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                      )}
+                      asChild
+                    >
+                      <Link href={child.href} passHref onClick={onLinkClick}>
+                        <child.icon className={cn(isCollapsed ? "h-8 w-8" : "h-6 w-6", !isCollapsed && "mr-2")} />
+                        {!isCollapsed && child.title}
+                      </Link>
+                    </Button>
+                  </TooltipTrigger>
+                  {isCollapsed && <TooltipContent side="right">{child.title}</TooltipContent>}
+                </Tooltip>
               ))}
             </div>
-          )}
-        </div>
-      ))}
-    </nav>
+          ) : (
+            <Tooltip key={item.href}>
+              <TooltipTrigger asChild>
+                <Button
+                  variant={pathname === item.href ? "secondary" : "ghost"}
+                  className={cn(
+                    "w-full",
+                    isCollapsed ? "justify-center" : "justify-start",
+                    "text-sm text-sidebar-foreground transition-colors duration-200",
+                    // Active state: stronger highlight with primary accent
+                    pathname === item.href ? "bg-primary text-primary-foreground hover:bg-primary/90" : "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                  )}
+                  asChild
+                >
+                  <Link href={item.href} passHref onClick={onLinkClick}>
+                    <item.icon className={cn(isCollapsed ? "h-8 w-8" : "h-6 w-6", !isCollapsed && "mr-2")} />
+                    {!isCollapsed && item.title}
+                  </Link>
+                </Button>
+              </TooltipTrigger>
+              {isCollapsed && <TooltipContent side="right">{item.title}</TooltipContent>}
+            </Tooltip>
+          )
+        ))}
+      </div>
+    </TooltipProvider>
   );
 }

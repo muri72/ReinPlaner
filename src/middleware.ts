@@ -1,187 +1,103 @@
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
-import { UserRole, hasPermission, PERMISSIONS } from '@/lib/permissions';
+import { NextResponse, type NextRequest } from 'next/server'
+import { createClient } from '@/lib/supabase/middleware'
 
 export async function middleware(request: NextRequest) {
-  const { nextUrl } = request;
-  const supabase = await createClient();
-  const { data: { session } } = await supabase.auth.getSession();
-  
-  const isLoggedIn = !!session?.user;
-  const userRole = session?.user?.user_metadata?.role as UserRole;
-  const isImpersonating = session?.user?.user_metadata?.impersonationData;
+  const { supabase, response } = createClient(request)
+  const { data: { session } } = await supabase.auth.getSession()
+  const { pathname } = request.nextUrl;
 
-  // Define public routes that don't require authentication
-  const publicRoutes = [
-    '/',
-    '/login',
-    '/register',
-    '/forgot-password',
-    '/reset-password',
-    '/api/auth',
-    '/api/webhooks',
-  ];
-
-  // Define role-based route patterns
-  const roleRoutes = {
-    admin: [
-      '/dashboard/admin',
-      '/dashboard/users',
-      '/dashboard/settings',
-      '/dashboard/audit',
-    ],
-    manager: [
-      '/dashboard/manager',
-      '/dashboard/customers',
-      '/dashboard/employees',
-      '/dashboard/orders',
-    ],
-    employee: [
-      '/dashboard/employee',
-      '/dashboard/orders/my',
-      '/dashboard/objects',
-    ],
-    customer: [
-      '/portal',
-      '/portal/dashboard',
-      '/portal/orders',
-      '/portal/profile',
-    ],
-  };
-
-  // Check if current path is public
-  const isPublicRoute = publicRoutes.some(route => 
-    nextUrl.pathname.startsWith(route)
-  );
-
-  // Allow access to public routes
-  if (isPublicRoute) {
-    return NextResponse.next();
-  }
-
-  // Redirect to login if not authenticated
-  if (!isLoggedIn) {
-    const loginUrl = new URL('/login', nextUrl);
-    loginUrl.searchParams.set('callbackUrl', nextUrl.pathname);
-    return NextResponse.redirect(loginUrl);
-  }
-
-  // Check role-based access
-  const hasRoleAccess = (role: UserRole, path: string): boolean => {
-    // Admin can access everything
-    if (role === 'admin') return true;
-
-    // Check specific role routes
-    const allowedRoutes = roleRoutes[role] || [];
-    return allowedRoutes.some(route => path.startsWith(route));
-  };
-
-  // Special handling for impersonation
-  if (isImpersonating) {
-    const targetRole = isImpersonating.targetRole as UserRole;
-    
-    // During impersonation, check access based on target role
-    if (!hasRoleAccess(targetRole, nextUrl.pathname)) {
-      // Redirect to appropriate dashboard for impersonated role
-      const redirectPath = getRoleBasedRedirectPath(targetRole);
-      return NextResponse.redirect(new URL(redirectPath, nextUrl));
+  // --- 1. Behandlung von nicht authentifizierten Benutzern ---
+  if (!session) {
+    // Erlaube Zugriff auf öffentliche Pfade (Login, Auth Callback)
+    if (pathname === '/login' || pathname.startsWith('/auth/callback')) {
+      return response;
     }
-  } else {
-    // Normal role-based access check
-    if (!hasRoleAccess(userRole, nextUrl.pathname)) {
-      // Redirect to appropriate dashboard for user's role
-      const redirectPath = getRoleBasedRedirectPath(userRole);
-      return NextResponse.redirect(new URL(redirectPath, nextUrl));
+    // Leite alle anderen Pfade zum Login um
+    return NextResponse.redirect(new URL('/login', request.url));
+  }
+
+  // --- 2. Behandlung von authentifizierten Benutzern ---
+  // Benutzerrolle abrufen
+  const { data: profileData, error: profileError } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', session.user.id)
+    .single();
+
+  if (profileError) {
+    console.error("Fehler beim Abrufen des Benutzerprofils:", profileError?.message || JSON.stringify(profileError));
+  }
+
+  const userRole = profileData?.role || 'employee'; // Standard auf 'employee', falls Rolle nicht gefunden
+
+  // NEU: Überprüfe den Mitarbeiterstatus, wenn die Rolle 'employee' ist
+  if (userRole === 'employee') {
+    const { data: employeeData, error: employeeError } = await supabase
+      .from('employees')
+      .select('status')
+      .eq('user_id', session.user.id)
+      .single();
+
+    if (employeeError && employeeError.code !== 'PGRST116') { // PGRST116 = no rows found
+      console.error("Fehler beim Abrufen des Mitarbeiterstatus:", employeeError?.message || JSON.stringify(employeeError));
+    }
+
+    // Wenn der Mitarbeiterstatus 'inactive' oder 'on_leave' ist, leite zum Login um
+    if (employeeData?.status === 'inactive' || employeeData?.status === 'on_leave') {
+      console.log(`Mitarbeiter ${session.user.id} ist ${employeeData.status}. Umleitung zum Login.`);
+      await supabase.auth.signOut(); // Melde den Benutzer ab
+      return NextResponse.redirect(new URL('/login', request.url));
     }
   }
 
-  // Permission-based route checks for specific endpoints
-  const permissionRoutes = [
-    {
-      path: '/dashboard/orders/new',
-      permission: PERMISSIONS.ORDER_CREATE,
-    },
-    {
-      path: '/dashboard/customers/new',
-      permission: PERMISSIONS.CUSTOMER_CREATE,
-    },
-    {
-      path: '/dashboard/employees/new',
-      permission: PERMISSIONS.EMPLOYEE_CREATE,
-    },
-    {
-      path: '/dashboard/objects/new',
-      permission: PERMISSIONS.OBJECT_CREATE,
-    },
-  ];
+  // Den korrekten Basis-Dashboard-Pfad für die Benutzerrolle bestimmen
+  let baseDashboardPath: string;
+  if (userRole === 'customer') {
+    baseDashboardPath = '/portal/dashboard';
+  } else if (userRole === 'employee') {
+    baseDashboardPath = '/employee/dashboard';
+  } else { // admin oder manager
+    baseDashboardPath = '/dashboard';
+  }
 
-  for (const route of permissionRoutes) {
-    if (nextUrl.pathname.startsWith(route.path)) {
-      const effectiveRole = isImpersonating 
-        ? isImpersonating.targetRole as UserRole
-        : userRole;
-        
-      if (!hasPermission(effectiveRole, route.permission)) {
-        return NextResponse.redirect(new URL('/dashboard', nextUrl));
-      }
-      break;
+  // --- 3. Rollenbasierte Routen-Erzwingung ---
+
+  // Wenn der Benutzer auf '/login' oder '/' ist, leite ihn zu seinem korrekten Basis-Dashboard um
+  if (pathname === '/login' || pathname === '/') {
+    return NextResponse.redirect(new URL(baseDashboardPath, request.url));
+  }
+
+  // Spezifische Regeln für jede Rolle, um sicherzustellen, dass sie in ihren erlaubten Bereichen bleiben
+  if (userRole === 'customer') {
+    // Kunden MÜSSEN sich in /portal/* befinden
+    if (!pathname.startsWith('/portal')) {
+      return NextResponse.redirect(new URL('/portal/dashboard', request.url));
+    }
+  } else if (userRole === 'employee') {
+    // Mitarbeiter MÜSSEN sich in /employee/* befinden
+    if (!pathname.startsWith('/employee')) {
+      return NextResponse.redirect(new URL('/employee/dashboard', request.url));
+    }
+  } else if (userRole === 'admin' || userRole === 'manager') {
+    // Admins/Manager DÜRFEN NICHT in /portal/* oder /employee/* sein
+    if (pathname.startsWith('/portal') || pathname.startsWith('/employee')) {
+      return NextResponse.redirect(new URL('/dashboard', request.url));
     }
   }
 
-  // API route protection
-  if (nextUrl.pathname.startsWith('/api/')) {
-    // Skip auth routes
-    if (nextUrl.pathname.startsWith('/api/auth/')) {
-      return NextResponse.next();
-    }
-
-    // Check API permissions based on endpoint
-    const apiPermissions = {
-      '/api/orders': PERMISSIONS.ORDER_READ,
-      '/api/customers': PERMISSIONS.CUSTOMER_READ,
-      '/api/employees': PERMISSIONS.EMPLOYEE_READ,
-      '/api/users': PERMISSIONS.USER_READ,
-      '/api/objects': PERMISSIONS.OBJECT_READ,
-    };
-
-    for (const [apiPath, permission] of Object.entries(apiPermissions)) {
-      if (nextUrl.pathname.startsWith(apiPath)) {
-        const effectiveRole = isImpersonating 
-          ? isImpersonating.targetRole as UserRole
-          : userRole;
-          
-        if (!hasPermission(effectiveRole, permission)) {
-          return NextResponse.json(
-            { error: 'Insufficient permissions' },
-            { status: 403 }
-          );
-        }
-        break;
-      }
-    }
-  }
-
-  return NextResponse.next();
-}
-
-function getRoleBasedRedirectPath(role: UserRole): string {
-  switch (role) {
-    case 'admin':
-      return '/dashboard/admin';
-    case 'manager':
-      return '/dashboard/manager';
-    case 'employee':
-      return '/dashboard/employee';
-    case 'customer':
-      return '/portal/dashboard';
-    default:
-      return '/dashboard';
-  }
+  // Wenn keine der oben genannten Umleitungsregeln zutrifft, erlaube die Anfrage.
+  return response;
 }
 
 export const config = {
   matcher: [
-    '/((?!api|_next/static|_next/image|favicon.ico).*)',
+    /*
+     * Alle Anfragewege abgleichen, außer denen, die beginnen mit:
+     * - _next/static (statische Dateien)
+     * - _next/image (Bildoptimierungsdateien)
+     * - favicon.ico (Favicon-Datei)
+     * - beliebige Dateien im öffentlichen Ordner (z.B. /vercel.svg)
+     */
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
-};
+}
