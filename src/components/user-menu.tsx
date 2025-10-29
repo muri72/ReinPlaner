@@ -14,11 +14,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Moon, Sun, User, Settings, LogOut, UsersRound } from "lucide-react";
+import { Moon, Sun, User, Settings, LogOut, UsersRound, UserCheck } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
 import { useIsMobile } from "@/hooks/use-mobile"; // Import useIsMobile
+import { AdminImpersonationSwitcher } from "@/components/admin-impersonation-switcher"; // Import impersonation switcher
 
 interface UserMenuProps {
   currentUserRole: 'admin' | 'manager' | 'employee' | 'customer';
@@ -85,12 +86,17 @@ export function UserMenu({ currentUserRole, onSignOut, userProfile }: UserMenuPr
           </Link>
         </DropdownMenuItem>
         {currentUserRole === 'admin' && (
-          <DropdownMenuItem asChild>
-            <Link href="/dashboard/users">
-              <UsersRound className="mr-2 h-4 w-4" />
-              <span>Benutzerverwaltung</span>
-            </Link>
-          </DropdownMenuItem>
+          <>
+            <DropdownMenuItem asChild>
+              <Link href="/dashboard/users">
+                <UsersRound className="mr-2 h-4 w-4" />
+                <span>Benutzerverwaltung</span>
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem>
+              <AdminImpersonationSwitcher />
+            </DropdownMenuItem>
+          </>
         )}
         <DropdownMenuItem>
           <div className="flex items-center justify-between w-full">

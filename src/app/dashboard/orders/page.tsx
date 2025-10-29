@@ -156,28 +156,11 @@ export default function OrdersPage({
     let ordersError: any = null;
     let ordersCount: number | null = 0;
 
-    let filterUserId: string | null = null;
-    let filterCustomerId: string | null = null;
-
-    if (role === 'employee' || role === 'manager') {
-      filterUserId = user.id;
-    } else if (role === 'customer') {
-      const { data: customerData, error: customerDataError } = await supabase
-        .from('customers')
-        .select('id')
-        .eq('user_id', user.id)
-        .single();
-      if (customerDataError && customerDataError.code !== 'PGRST116') {
-        console.error("Error fetching customer ID for user:", customerDataError);
-      }
-      filterCustomerId = customerData?.id || null;
-    }
-
+    // Remove client-side filtering - RLS policies will handle data access
     if (query) {
       const { data, error: rpcError } = await supabase.rpc('search_orders', {
         search_query: query,
-        filter_user_id: filterUserId,
-        filter_customer_id: filterCustomerId
+        // Remove filter_user_id and filter_customer_id - RLS will handle this
       });
       ordersData = (data as DisplayOrder[] | null)?.map(o => ({ ...o, order_feedback: [] })) || [];
       ordersError = rpcError;

@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { signOut } from "@/app/dashboard/actions"; // Import server action
 import { DashboardClientLayout } from "@/components/dashboard-client-layout"; // Import the new client component
+import { ImpersonationBanner } from "@/components/impersonation-banner"; // Import impersonation banner
 
 export default async function DashboardLayout({
   children,
@@ -32,12 +33,15 @@ export default async function DashboardLayout({
   // If a non-admin/manager somehow lands here, they will be redirected by middleware.
 
   return (
-    <DashboardClientLayout
-      currentUserRole={currentUserRole}
-      onSignOut={signOut}
-      userProfile={userProfile} // Pass the fetched userProfile
-    >
-      {children}
-    </DashboardClientLayout>
+    <>
+      <ImpersonationBanner />
+      <DashboardClientLayout
+        currentUserRole={currentUserRole}
+        onSignOut={signOut}
+        userProfile={userProfile} // Pass the fetched userProfile
+      >
+        {children}
+      </DashboardClientLayout>
+    </>
   );
 }
