@@ -18,7 +18,6 @@ interface DashboardClientLayoutProps {
   children: React.ReactNode;
   currentUserRole: 'admin' | 'manager' | 'employee' | 'customer';
   onSignOut: () => Promise<void>;
-  // Add userProfile prop
   userProfile: {
     first_name: string | null;
     last_name: string | null;
@@ -85,7 +84,7 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut, us
     <div className="min-h-screen flex flex-col md:flex-row">
       {/* Mobiler Header und Navigation (fest) */}
       <header className="md:hidden fixed top-0 left-0 w-full bg-sidebar text-sidebar-foreground border-b border-sidebar-border p-4 flex items-center justify-between z-50 glassmorphism-card">
-        <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+        <Sheet open={isSheetOpen} onOpenChange={setIsOpen}>
           <SheetTrigger asChild>
             <Button variant="ghost" size="icon">
               <Menu className="h-7 w-7" />
@@ -115,8 +114,6 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut, us
             <nav className="flex-grow overflow-y-auto p-4">
               <SidebarNav
                 isCollapsed={false}
-                currentUserRole={currentUserRole}
-                onSignOut={onSignOut}
                 onLinkClick={() => setIsSheetOpen(false)}
               />
             </nav>
@@ -173,8 +170,6 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut, us
         <nav className="flex-grow space-y-2 pt-4 border-t border-sidebar-border overflow-y-auto">
           <SidebarNav
             isCollapsed={isCollapsed}
-            currentUserRole={currentUserRole}
-            onSignOut={onSignOut}
           />
         </nav>
 

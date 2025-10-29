@@ -1,123 +1,57 @@
-"use client";
+'use client';
 
-import React, { useEffect, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
-
-type UserRole = 'admin' | 'manager' | 'employee' | 'customer';
+import { ReactNode } from 'react';
+import { usePermissions } from '@/hooks/use-permissions';
+import { UserRole } from '@/lib/permissions';
 
 interface PermissionGateProps {
-  children: React.ReactNode;
-  requiredRole?: UserRole;
-  requiredRoles?: UserRole[];
-  fallback?: React.ReactNode;
-  requireAll?: boolean; // If true, user must have ALL required roles (for multiple roles)
+  children: ReactNode;
+  permission?: string;
+  permissions?: string[];
+  role?: UserRole;
+  roles?: UserRole[];
+  fallback?: ReactNode;
+  requireAuth?: boolean;
 }
 
-export function PermissionGate({ 
-  children, 
-  requiredRole, 
-  requiredRoles = [], 
-  fallback = null, 
-  requireAll = false 
+export function PermissionGate({
+  children,
+  permission,
+  permissions,
+  role,
+  roles,
+  fallback = null,
+  requireAuth = true,
 }: PermissionGateProps) {
-  const [userRole, setUserRole] = useState<UserRole | null>(null);
-  const [loading, setLoading] = useState(true);
+  const {
+    userRole,
+    isAuthenticated,
+    hasPermission,
+    hasAnyPermission,
+  } = usePermissions();
 
-  useEffect(() => {
-    const checkUserRole = async () => {
-      try {
-        const supabase = createClient();
-        const { data: { user } } = await supabase.auth.getUser();
-        
-        if (!user) {
-          setUserRole(null);
-          setLoading(false);
-          return;
-        }
-
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', user.id)
-          .single();
-
-        setUserRole(profile?.role as UserRole || null);
-      } catch (error) {
-        console.error("Error checking user role:", error);
-        setUserRole(null);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    checkUserRole();
-  }, []);
-
-  if (loading) {
-    return fallback;
+  // Check authentication requirement
+  if (requireAuth && !isAuthenticated) {
+    return <>{fallback}</>;
   }
 
-  if (!userRole) {
-    return fallback;
+  // Check role-based access
+  if (role && userRole !== role) {
+    return <>{fallback}</>;
   }
 
-  // Check if user has required permission
-  const hasPermission = requiredRole 
-    ? userRole === requiredRole
-    : requiredRoles.length > 0
-      ? requireAll 
-        ? requiredRoles.every(role => userRole === role)
-        : requiredRoles.some(role => userRole === role)
-      : true; // No role requirement means everyone has access
+  if (roles && !roles.includes(userRole)) {
+    return <>{fallback}</>;
+  }
 
-  return hasPermission ? <>{children}</> : <>{fallback}</>;
-}
+  // Check permission-based access
+  if (permission && !hasPermission(permission)) {
+    return <>{fallback}</>;
+  }
 
-// Convenience components for common role checks
-export function AdminOnly({ children, fallback }: { children: React.ReactNode; fallback?: React.ReactNode }) {
-  return (
-    <PermissionGate requiredRole="admin" fallback={fallback}>
-      {children}
-    </PermissionGate>
-  );
-}
+  if (permissions && !hasAnyPermission(permissions)) {
+    return <>{fallback}</>;
+  }
 
-export function ManagerOnly({ children, fallback }: { children: React.ReactNode; fallback?: React.ReactNode }) {
-  return (
-    <PermissionGate requiredRole="manager" fallback={fallback}>
-      {children}
-    </PermissionGate>
-  );
-}
-
-export function EmployeeOnly({ children, fallback }: { children: React.ReactNode; fallback?: React.ReactNode }) {
-  return (
-    <PermissionGate requiredRole="employee" fallback={fallback}>
-      {children}
-    </PermissionGate>
-  );
-}
-
-export function CustomerOnly({ children, fallback }: { children: React.ReactNode; fallback?: React.ReactNode }) {
-  return (
-    <PermissionGate requiredRole="customer" fallback={fallback}>
-      {children}
-    </PermissionGate>
-  );
-}
-
-export function AdminOrManagerOnly({ children, fallback }: { children: React.ReactNode; fallback?: React.ReactNode }) {
-  return (
-    <PermissionGate requiredRoles={['admin', 'manager']} fallback={fallback}>
-      {children}
-    </PermissionGate>
-  );
-}
-
-export function AdminOrManagerOrEmployeeOnly({ children, fallback }: { children: React.ReactNode; fallback?: React.ReactNode }) {
-  return (
-    <PermissionGate requiredRoles={['admin', 'manager', 'employee']} fallback={fallback}>
-      {children}
-    </PermissionGate>
-  );
+  return <>{children}</>;
 }

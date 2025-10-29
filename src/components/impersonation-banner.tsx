@@ -1,87 +1,88 @@
-"use client";
+'use client';
 
-import React, { useEffect, useState } from "react";
-import { AlertCircle, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { getActiveImpersonation, stopImpersonation } from "@/lib/actions/impersonation";
-import { toast } from "sonner";
-
-interface ImpersonationSession {
-  id: string;
-  impersonated_profile: {
-    first_name: string;
-    last_name: string;
-    role: string;
-  };
-  admin_profile: {
-    first_name: string;
-    last_name: string;
-  };
-  started_at: string;
-}
+import { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { StopCircle, AlertTriangle, Shield, Clock } from 'lucide-react';
+import { stopImpersonation } from '@/lib/actions/impersonation';
+import { createClient } from '@/lib/supabase/client';
 
 export function ImpersonationBanner() {
-  const [session, setSession] = useState<ImpersonationSession | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [isStopping, setIsStopping] = useState(false);
+  const [impersonationData, setImpersonationData] = useState<any>(null);
+  const [currentUser, setCurrentUser] = useState<any>(null);
 
   useEffect(() => {
-    const fetchSession = async () => {
-      try {
-        const sessionData = await getActiveImpersonation();
-        setSession(sessionData);
-      } catch (error) {
-        console.error("Error fetching impersonation session:", error);
-      } finally {
-        setLoading(false);
+    const checkImpersonationStatus = async () => {
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session?.user) {
+        setCurrentUser(session.user);
+        const data = session.user.user_metadata?.impersonationData;
+        setImpersonationData(data);
       }
     };
 
-    fetchSession();
+    checkImpersonationStatus();
   }, []);
 
-  const handleStopImpersonation = async () => {
-    try {
-      const result = await stopImpersonation();
-      if (result.success) {
-        toast.success("Impersonation beendet");
-        window.location.reload(); // Reload to clear any cached data
-      } else {
-        toast.error(result.message || "Fehler beim Beenden der Impersonation");
-      }
-    } catch (error) {
-      console.error("Error stopping impersonation:", error);
-      toast.error("Fehler beim Beenden der Impersonation");
-    }
-  };
-
-  if (loading || !session) {
+  if (!impersonationData) {
     return null;
   }
 
+  const handleStopImpersonation = async () => {
+    try {
+      setIsStopping(true);
+      await stopImpersonation();
+    } catch (error) {
+      console.error('Failed to stop impersonation:', error);
+    } finally {
+      setIsStopping(false);
+    }
+  };
+
+  const startTime = new Date(impersonationData.startedAt);
+  const duration = Date.now() - startTime.getTime();
+  const durationMinutes = Math.floor(duration / 60000);
+
   return (
-    <Alert className="bg-orange-50 border-orange-200 text-orange-800 dark:bg-orange-900/20 dark:border-orange-800 dark:text-orange-200">
-      <AlertCircle className="h-4 w-4" />
-      <AlertDescription className="flex items-center justify-between">
-        <div>
-          <span className="font-semibold">Impersonation aktiv:</span>{" "}
-          Sie agieren als{" "}
-          <span className="font-semibold">
-            {session.impersonated_profile.first_name} {session.impersonated_profile.last_name}
-          </span>{" "}
-          ({session.impersonated_profile.role}){" "}
-          <span className="text-sm text-orange-600 dark:text-orange-300">
-            (Gestartet von {session.admin_profile.first_name} {session.admin_profile.last_name})
+    <Alert className="border-orange-200 bg-orange-50 mb-6">
+      <Shield className="h-4 w-4 text-orange-600" />
+      <AlertTitle className="text-orange-800">
+        Admin Impersonation Modus Aktiv
+      </AlertTitle>
+      <AlertDescription className="space-y-2">
+        <div className="flex items-center gap-2 text-orange-700">
+          <span>Sie agieren als:</span>
+          <Badge variant="secondary" className="bg-orange-200 text-orange-800">
+            {impersonationData.targetRole}
+          </Badge>
+          <span className="text-sm">
+            ({currentUser?.user_metadata?.first_name} {currentUser?.user_metadata?.last_name})
           </span>
         </div>
+        
+        <div className="flex items-center gap-2 text-orange-600 text-sm">
+          <Clock className="h-3 w-3" />
+          <span>Aktiv seit {durationMinutes} Minute{durationMinutes !== 1 ? 'n' : ''}</span>
+        </div>
+
+        <div className="flex items-center gap-2 text-orange-600 text-sm">
+          <AlertTriangle className="h-3 w-3" />
+          <span>Alle Aktionen werden protokolliert</span>
+        </div>
+
         <Button
+          onClick={handleStopImpersonation}
+          disabled={isStopping}
           variant="outline"
           size="sm"
-          onClick={handleStopImpersonation}
-          className="ml-4 border-orange-300 hover:bg-orange-100 dark:border-orange-700 dark:hover:bg-orange-800"
+          className="mt-2 border-orange-300 text-orange-700 hover:bg-orange-100"
         >
-          <X className="h-4 w-4 mr-1" />
-          Beenden
+          <StopCircle className="h-4 w-4 mr-2" />
+          {isStopping ? 'Beende...' : 'Impersonation beenden'}
         </Button>
       </AlertDescription>
     </Alert>
