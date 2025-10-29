@@ -10,7 +10,6 @@ import { de } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { createTimeEntry, stopTimeEntry } from "@/app/dashboard/time-tracking/actions";
 import { toast } from "sonner";
-import { useGeolocation } from "@/hooks/use-geolocation";
 
 interface TimeEntry {
   id: string;
@@ -33,7 +32,6 @@ export function MobileTimeEntry({ currentUserId, isAdmin, onEntryCreated }: Mobi
   const [activeEntry, setActiveEntry] = useState<TimeEntry | null>(null);
   const [isRunning, setIsRunning] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
-  const { location, requestLocation, error: locationError } = useGeolocation();
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -62,9 +60,6 @@ export function MobileTimeEntry({ currentUserId, isAdmin, onEntryCreated }: Mobi
         startDate: now,
         startTime: now.toTimeString().slice(0, 5),
         type: 'clock_in_out' as const,
-        clockInLatitude: location?.latitude || null,
-        clockInLongitude: location?.longitude || null,
-        locationDeviationWarning: locationError ? true : false,
       };
 
       const result = await createTimeEntry(entryData);
@@ -195,16 +190,6 @@ export function MobileTimeEntry({ currentUserId, isAdmin, onEntryCreated }: Mobi
               </div>
             )}
           </div>
-
-          {/* Location Info */}
-          {(location || locationError) && (
-            <div className="flex items-center justify-center p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-              <MapPin className="h-4 w-4 mr-2 text-blue-600 dark:text-blue-400" />
-              <span className="text-sm text-blue-800 dark:text-blue-200">
-                {locationError ? "Standort nicht verfügbar" : "Standort erfasst"}
-              </span>
-            </div>
-          )}
 
           {/* Action Buttons */}
           <div className="grid grid-cols-3 gap-2">

@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Clock, Play, StopCircle, PauseCircle, RotateCcw, PlusCircle, CalendarDays, MapPin, AlertTriangle } from "lucide-react";
+import { Clock, Play, StopCircle, PauseCircle, RotateCcw, PlusCircle, CalendarDays } from "lucide-react";
 import { createTimeEntry, updateTimeEntry } from "@/app/dashboard/time-tracking/actions";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { calculateHours, calculateEndTime, formatDuration } from "@/lib/utils";
@@ -42,9 +42,6 @@ interface OrderWithDetails {
   due_date: string | null;
   object: {
     name: string;
-    latitude: number | null;
-    longitude: number | null;
-    radius_meters: number | null;
     recurrence_interval_weeks: number;
     start_week_offset: number;
     monday_hours: number | null;
@@ -162,45 +159,45 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
   const stopwatchIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const [displayTime, setDisplayTime] = useState('00:00:00');
 
-  // Haversine formula to calculate distance between two lat/lon points
-  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
-    const R = 6371e3; // metres
-    const φ1 = lat1 * Math.PI / 180; // φ, λ in radians
-    const φ2 = lat2 * Math.PI / 180;
-    const Δφ = (lat2 - lat1) * Math.PI / 180;
-    const Δλ = (lon2 - lon1) * Math.PI / 180;
-
-    const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-              Math.cos(φ1) * Math.cos(φ2) *
-              Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-    const d = R * c; // in metres
-    return d;
+  // Helper to format seconds into HH:MM:SS for live display
+  const formatLiveTime = (totalSeconds: number): string => {
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    const pad = (num: number) => String(num).padStart(2, '0');
+    return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
   };
 
-  // Get current geolocation
-  const getCurrentLocation = () => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setCurrentLocation({
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude,
-          });
-          setLocationError(null);
-        },
-        (error) => {
-          console.error("Geolocation error:", error);
-          setLocationError("Standort konnte nicht abgerufen werden. Bitte erlauben Sie den Standortzugriff.");
-          setCurrentLocation(null);
-        },
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-      );
-    } else {
-      setLocationError("Geolocation wird von Ihrem Browser nicht unterstützt.");
-      setCurrentLocation(null);
-    }
+  // New component for displaying time progress
+  const TimeProgressDisplay = ({ plannedMinutes, actualSeconds }: { plannedMinutes: number | null, actualSeconds: number }) => {
+    if (plannedMinutes === null || plannedMinutes <= 0) return null;
+
+    const plannedSeconds = plannedMinutes * 60;
+    const progressPercentage = plannedSeconds > 0 ? (actualSeconds / plannedSeconds) * 100 : 0;
+    const isOvertime = actualSeconds > plannedSeconds;
+
+    return (
+      <div className="space-y-2 pt-2 mt-2 border-t">
+        <div className="flex justify-between text-sm font-medium">
+          <span>Tatsächliche Zeit: {formatLiveTime(actualSeconds)}</span>
+          <span>Geplante Zeit: {formatDuration(plannedMinutes)}</span>
+        </div>
+        <div className="w-full bg-muted rounded-full h-4 overflow-hidden">
+          <div
+            className={cn(
+              "h-4 rounded-full transition-all duration-500",
+              isOvertime ? "bg-destructive" : "bg-success"
+            )}
+            style={{ width: `${Math.min(progressPercentage, 100)}%` }}
+          />
+        </div>
+        {isOvertime && (
+          <p className="text-xs text-destructive text-center font-semibold">
+            Überstunden: {formatLiveTime(actualSeconds - plannedSeconds)}
+          </p>
+        )}
+      </div>
+    );
   };
 
   // Helper function to calculate break minutes based on gross duration (same as in reports/actions.ts)
@@ -242,7 +239,6 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
   useEffect(() => {
     const fetchInitialData = async () => {
       setLoading(true);
-      getCurrentLocation(); // Get location on load
 
       const { data: employeeData, error: employeeError } = await supabase
         .from('employees')
@@ -302,7 +298,7 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
           .from('orders')
           .select(`
             id, title, customer_id, object_id, order_type, recurring_start_date, due_date,
-            objects ( name, latitude, longitude, radius_meters, recurrence_interval_weeks, start_week_offset, monday_hours, tuesday_hours, wednesday_hours, thursday_hours, friday_hours, saturday_hours, sunday_hours, monday_start_time, tuesday_start_time, wednesday_start_time, thursday_start_time, friday_start_time, saturday_start_time, sunday_start_time, monday_end_time, tuesday_end_time, wednesday_end_time, thursday_end_time, friday_end_time, saturday_end_time, sunday_end_time ),
+            objects ( name, recurrence_interval_weeks, start_week_offset, monday_hours, tuesday_hours, wednesday_hours, thursday_hours, friday_hours, saturday_hours, sunday_hours, monday_start_time, tuesday_start_time, wednesday_start_time, thursday_start_time, friday_start_time, saturday_start_time, sunday_start_time, monday_end_time, tuesday_end_time, wednesday_end_time, thursday_end_time, friday_end_time, saturday_end_time, sunday_end_time ),
             order_employee_assignments!inner ( 
               employee_id, assigned_recurrence_interval_weeks, assigned_start_week_offset,
               assigned_monday_hours, assigned_tuesday_hours, assigned_wednesday_hours, assigned_thursday_hours,
@@ -375,7 +371,6 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
       setSuggestedDuration(null);
       setSuggestedBreakMinutes(null);
       setRecurrenceInfo(null);
-      setLocationDeviation(false); // Reset location deviation
 
       if (selectedOrderId && employeeId) {
         const selectedOrder = orders.find(o => o.id === selectedOrderId);
@@ -451,7 +446,7 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
     };
 
     fetchAssignmentSchedule();
-  }, [selectedOrderId, employeeId, orders, supabase, currentLocation]);
+  }, [selectedOrderId, employeeId, orders, supabase]);
 
   const handleClockOut = async () => {
     if (!activeEntry || activeEntry.type !== 'clock_in_out') {
@@ -473,9 +468,6 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
       durationMinutes: durationMinutes,
       breakMinutes: calculatedBreakMinutes,
       notes: `${activeEntry.notes || ''} Ausgestempelt um ${now.toLocaleTimeString()}`,
-      clockOutLatitude: currentLocation?.latitude, // Save clock-out location
-      clockOutLongitude: currentLocation?.longitude,
-      locationDeviationWarning: locationDeviation, // Save deviation status
     });
 
     if (result.success) {
@@ -483,8 +475,6 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
       setActiveEntry(null);
       setSelectedOrderId(null);
       setRecurrenceInfo(null);
-      setLocationDeviation(false);
-      getCurrentLocation(); // Refresh location
     } else {
       toast.error(result.message);
     }
@@ -518,9 +508,6 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
       orderId: selectedOrderId,
       objectId: selectedOrder?.object_id || null,
       notes: `Stoppuhr gestartet um ${now.toLocaleTimeString()}${selectedOrder ? ` für Auftrag ${selectedOrder.title}` : ''}`,
-      clockInLatitude: currentLocation?.latitude, // Save clock-in location
-      clockInLongitude: currentLocation?.longitude,
-      locationDeviationWarning: locationDeviation, // Save deviation status
     });
 
     if (result.success && result.newEntryId) {
@@ -569,9 +556,6 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
       durationMinutes: durationMinutes,
       breakMinutes: calculatedBreakMinutes,
       notes: `${activeEntry.notes || ''} Stoppuhr gestoppt um ${now.toLocaleTimeString()}`,
-      clockOutLatitude: currentLocation?.latitude, // Save clock-out location
-      clockOutLongitude: currentLocation?.longitude,
-      locationDeviationWarning: locationDeviation, // Save deviation status
     });
 
     if (result.success) {
@@ -579,10 +563,8 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
       setActiveEntry(null);
       setSelectedOrderId(null);
       setRecurrenceInfo(null);
-      setLocationDeviation(false);
       stopwatchElapsedTime.current = 0;
       setDisplayTime('00:00:00');
-      getCurrentLocation(); // Refresh location
     } else {
       toast.error(result.message);
     }
@@ -644,9 +626,6 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
       objectId: selectedOrder?.object_id || null,
       orderId: selectedOrderId,
       notes: selectedOrder ? `Zeiteintrag für Auftrag: ${selectedOrder.title}` : '',
-      clockInLatitude: currentLocation?.latitude,
-      clockInLongitude: currentLocation?.longitude,
-      locationDeviationWarning: locationDeviation,
     };
 
     if (isScheduledOrder) {
@@ -808,8 +787,6 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
                         });
                       setSelectedOrderId(null);
                       setRecurrenceInfo(null);
-                      setLocationDeviation(false);
-                      getCurrentLocation(); // Refresh location
                     }}
                     currentUserId={userId}
                     isAdmin={false}

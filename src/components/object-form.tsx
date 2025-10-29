@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { PlusCircle, X, Clock, Copy, MapPin } from "lucide-react";
+import { PlusCircle, X, Clock, Copy } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
@@ -85,9 +85,6 @@ export const objectSchema = z.object({
   daily_schedules: z.array(weeklyScheduleSchema).default([]),
   recurrence_interval_weeks: z.preprocess(preprocessNumber, z.number().min(1).max(52).default(1)),
   start_week_offset: z.preprocess(preprocessNumber, z.number().min(0).max(51).default(0)),
-  latitude: z.preprocess(preprocessNumber, z.nullable(z.number().min(-90).max(90)).optional()), // New field
-  longitude: z.preprocess(preprocessNumber, z.nullable(z.number().min(-180).max(180)).optional()), // New field
-  radius_meters: z.preprocess(preprocessNumber, z.nullable(z.number().min(0).max(10000)).optional()), // New field
 }).superRefine((data, ctx) => {
   if (data.isAlarmSecured && !data.alarmPassword && !data.securityCodeWord) {
     ctx.addIssue({
@@ -101,20 +98,6 @@ export const objectSchema = z.object({
       code: z.ZodIssueCode.custom,
       message: `Die Anzahl der Wochenpläne muss dem Wiederholungsintervall (${data.recurrence_interval_weeks}) entsprechen.`,
       path: ["daily_schedules"],
-    });
-  }
-  if ((data.latitude !== null && data.latitude !== undefined) && (data.longitude === null || data.longitude === undefined)) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "Längengrad ist erforderlich, wenn Breitengrad angegeben ist.",
-      path: ["longitude"],
-    });
-  }
-  if ((data.longitude !== null && data.longitude !== undefined) && (data.latitude === null || data.latitude === undefined)) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "Breitengrad ist erforderlich, wenn Längengrad angegeben ist.",
-      path: ["latitude"],
     });
   }
 });
@@ -152,9 +135,6 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
     daily_schedules: (initialData?.daily_schedules as z.infer<typeof weeklyScheduleSchema>[]) ?? [],
     recurrence_interval_weeks: (initialData?.recurrence_interval_weeks as number | undefined) ?? 1,
     start_week_offset: (initialData?.start_week_offset as number | undefined) ?? 0,
-    latitude: (initialData?.latitude as number | null | undefined) ?? null, // New field
-    longitude: (initialData?.longitude as number | null | undefined) ?? null, // New field
-    radius_meters: (initialData?.radius_meters as number | null | undefined) ?? 100, // New field
   };
 
   const form = useForm<ObjectFormValues>({
@@ -512,49 +492,6 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
           </div>
         </div>
       )}
-
-      <div className="space-y-4">
-        <h3 className="text-lg font-semibold">Standortdaten (optional)</h3>
-        <p className="text-sm text-muted-foreground">
-          Hinterlegen Sie hier die GPS-Koordinaten und einen Radius für das Objekt. Dies kann für die Zeiterfassung genutzt werden, um Mitarbeiter zu warnen, wenn sie sich außerhalb des Objektbereichs befinden.
-        </p>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <Label htmlFor="latitude">Breitengrad</Label>
-            <Input
-              id="latitude"
-              type="number"
-              step="0.000001"
-              {...form.register("latitude", { valueAsNumber: true })}
-              placeholder="Z.B. 52.520008"
-            />
-            {form.formState.errors.latitude && <p className="text-red-500 text-sm mt-1">{form.formState.errors.latitude.message}</p>}
-          </div>
-          <div>
-            <Label htmlFor="longitude">Längengrad</Label>
-            <Input
-              id="longitude"
-              type="number"
-              step="0.000001"
-              {...form.register("longitude", { valueAsNumber: true })}
-              placeholder="Z.B. 13.404954"
-            />
-            {form.formState.errors.longitude && <p className="text-red-500 text-sm mt-1">{form.formState.errors.longitude.message}</p>}
-          </div>
-          <div>
-            <Label htmlFor="radius_meters">Radius (Meter)</Label>
-            <Input
-              id="radius_meters"
-              type="number"
-              step="1"
-              min="0"
-              {...form.register("radius_meters", { valueAsNumber: true })}
-              placeholder="Z.B. 100"
-            />
-            {form.formState.errors.radius_meters && <p className="text-red-500 text-sm mt-1">{form.formState.errors.radius_meters.message}</p>}
-          </div>
-        </div>
-      </div>
 
       <div className="space-y-4">
         <h3 className="text-lg font-semibold">Wiederholungsintervall</h3>

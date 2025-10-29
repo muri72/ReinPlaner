@@ -34,11 +34,6 @@ export const timeEntrySchema = z.object({
   ),
   type: z.enum(["manual", "clock_in_out", "stopwatch", "automatic_scheduled_order"]).default("manual"), // Typ umbenannt
   notes: z.string().max(500, "Notizen sind zu lang").optional().nullable(),
-  clockInLatitude: z.preprocess((val) => (val === "" ? null : Number(val)), z.nullable(z.number().min(-90).max(90)).optional()), // New field
-  clockInLongitude: z.preprocess((val) => (val === "" ? null : Number(val)), z.nullable(z.number().min(-180).max(180)).optional()), // New field
-  clockOutLatitude: z.preprocess((val) => (val === "" ? null : Number(val)), z.nullable(z.number().min(-90).max(90)).optional()), // New field
-  clockOutLongitude: z.preprocess((val) => (val === "" ? null : Number(val)), z.nullable(z.number().min(-180).max(180)).optional()), // New field
-  locationDeviationWarning: z.boolean().optional().nullable(), // New field
 }).superRefine((data, ctx) => {
   // Wenn Enddatum und Endzeit angegeben sind, müssen sie gültig sein
   if ((data.endDate && !data.endTime) || (!data.endDate && data.endTime)) {
@@ -101,11 +96,6 @@ export function TimeEntryForm({ initialData, onSubmit, submitButtonText, onSucce
     breakMinutes: typeof initialData?.breakMinutes === 'number' ? initialData.breakMinutes : null, // Initialwert für Pausenminuten
     type: initialData?.type ?? "manual",
     notes: initialData?.notes ?? null,
-    clockInLatitude: initialData?.clockInLatitude as number | null | undefined ?? null, // Explicit cast
-    clockInLongitude: initialData?.clockInLongitude as number | null | undefined ?? null, // Explicit cast
-    clockOutLatitude: initialData?.clockOutLatitude as number | null | undefined ?? null, // Explicit cast
-    clockOutLongitude: initialData?.clockOutLongitude as number | null | undefined ?? null, // Explicit cast
-    locationDeviationWarning: initialData?.locationDeviationWarning as boolean | null | undefined ?? false, // Explicit cast
   };
 
   const form = useForm<TimeEntryFormValues>({
@@ -260,11 +250,6 @@ export function TimeEntryForm({ initialData, onSubmit, submitButtonText, onSucce
           orderId: null,
           notes: null,
           type: "manual",
-          clockInLatitude: null,
-          clockInLongitude: null,
-          clockOutLatitude: null,
-          clockOutLongitude: null,
-          locationDeviationWarning: false,
         });
       }
       onSuccess?.();
@@ -463,13 +448,6 @@ export function TimeEntryForm({ initialData, onSubmit, submitButtonText, onSucce
           <p className="text-red-500 text-sm mt-1">{form.formState.errors.notes.message}</p>
         )}
       </div>
-
-      {/* Hidden fields for location data */}
-      <input type="hidden" {...form.register("clockInLatitude")} />
-      <input type="hidden" {...form.register("clockInLongitude")} />
-      <input type="hidden" {...form.register("clockOutLatitude")} />
-      <input type="hidden" {...form.register("clockOutLongitude")} />
-      <input type="hidden" {...form.register("locationDeviationWarning")} />
 
       <Button type="submit" disabled={form.formState.isSubmitting}>
         {form.formState.isSubmitting ? `${submitButtonText}...` : submitButtonText}

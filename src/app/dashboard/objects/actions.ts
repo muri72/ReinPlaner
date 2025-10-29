@@ -29,9 +29,6 @@ export async function createObject(data: ObjectFormValues) {
     securityCodeWord,
     recurrence_interval_weeks,
     start_week_offset,
-    latitude, // New field
-    longitude, // New field
-    radius_meters, // New field
   } = data;
 
   const { error } = await supabase
@@ -54,9 +51,6 @@ export async function createObject(data: ObjectFormValues) {
       security_code_word: securityCodeWord,
       recurrence_interval_weeks,
       start_week_offset,
-      latitude, // New field
-      longitude, // New field
-      radius_meters, // New field
     });
 
   if (error) {
@@ -105,9 +99,6 @@ export async function updateObject(objectId: string, data: ObjectFormValues) {
     securityCodeWord,
     recurrence_interval_weeks,
     start_week_offset,
-    latitude, // New field
-    longitude, // New field
-    radius_meters, // New field
   } = data;
 
   let query = supabase
@@ -129,9 +120,6 @@ export async function updateObject(objectId: string, data: ObjectFormValues) {
       security_code_word: data.securityCodeWord,
       recurrence_interval_weeks,
       start_week_offset,
-      latitude, // New field
-      longitude, // New field
-      radius_meters, // New field
     })
     .eq('id', objectId);
 
