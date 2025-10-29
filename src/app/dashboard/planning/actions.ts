@@ -15,6 +15,7 @@ export interface EmployeePlanningData {
     [date: string]: { // YYYY-MM-DD
       isAvailable: boolean;
       totalHours: number;
+      availableHours: number;
       isAbsence: boolean;
       absenceType: string | null;
       assignments: {
@@ -154,6 +155,7 @@ export async function getPlanningDataForRange(startDate: Date, endDate: Date, fi
         employeeSchedule[dateString] = {
           isAvailable: false,
           totalHours: 0,
+          availableHours: 0,
           isAbsence: false,
           absenceType: null,
           assignments: [],
@@ -181,10 +183,13 @@ export async function getPlanningDataForRange(startDate: Date, endDate: Date, fi
         
         const defaultWeekSchedule = employee.default_daily_schedules?.[effectiveWeekIndexDefault];
         const defaultDaySchedule = (defaultWeekSchedule as any)?.[dayKey];
-        
-        if (defaultDaySchedule && defaultDaySchedule.hours > 0) {
+        const defaultHours = Number(defaultDaySchedule?.hours ?? 0);
+
+        employeeSchedule[dateString].availableHours = defaultHours;
+
+        if (defaultHours > 0) {
           employeeSchedule[dateString].isAvailable = true;
-          totalHoursAvailable += defaultDaySchedule.hours;
+          totalHoursAvailable += defaultHours;
         }
 
         // Process assignments for the current day

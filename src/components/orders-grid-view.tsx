@@ -111,51 +111,97 @@ export function OrdersGridView({ orders, employees, onActionSuccess }: OrdersGri
           ? order.employee_first_names.map((f, i) => `${f} ${order.employee_last_names?.[i] || ''}`).join(', ')
           : 'N/A';
         return (
-          <Card key={order.id} className="shadow-neumorphic glassmorphism-card">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-base md:text-lg font-semibold">{order.title}</CardTitle>
-              <div className="flex items-center space-x-2">
+          <Card
+            key={order.id}
+            className="shadow-neumorphic glassmorphism-card h-full overflow-hidden"
+          >
+            <CardHeader className="flex flex-col gap-3 pb-3 sm:flex-row sm:items-start sm:justify-between">
+              <CardTitle className="text-base font-semibold leading-tight md:text-lg line-clamp-2">
+                {order.title}
+              </CardTitle>
+              <div className="flex flex-wrap items-center gap-2">
                 <RecordDetailsDialog record={order} title={`Details zu Auftrag: ${order.title}`} />
                 <OrderEditDialog order={order} />
                 <DeleteOrderButton orderId={order.id} onDeleteSuccess={onActionSuccess} />
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
               <Tabs defaultValue="details" className="w-full">
-                <TabsList className="grid w-full grid-cols-2">
+                <TabsList className="grid w-full grid-cols-2 text-xs sm:text-sm">
                   <TabsTrigger value="details">Details</TabsTrigger>
                   <TabsTrigger value="documents">Dokumente</TabsTrigger>
                 </TabsList>
-                <TabsContent value="details" className="pt-4 space-y-2 text-sm text-muted-foreground">
-                  <p className="text-sm text-muted-foreground">{order.description}</p>
-                  {order.customer_name && <p className="text-xs text-muted-foreground mt-1">Kunde: {order.customer_name}</p>}
-                  {order.object_name && <p className="text-xs text-muted-foreground">Objekt: {order.object_name}</p>}
-                  {order.customer_contact_first_name && order.customer_contact_last_name && (
-                    <div className="flex items-center text-xs text-muted-foreground"><UserRound className="mr-1 h-3 w-3" /><span>Auftraggeber: {order.customer_contact_first_name} {order.customer_contact_last_name}</span></div>
+                <TabsContent value="details" className="pt-4 space-y-3 text-sm text-muted-foreground">
+                  <p className="whitespace-pre-wrap break-words text-sm text-muted-foreground">
+                    {order.description}
+                  </p>
+                  {order.customer_name && (
+                    <p className="text-xs text-muted-foreground">
+                      Kunde: {order.customer_name}
+                    </p>
                   )}
-                  {employeeNames !== 'N/A' && <p className="text-xs text-muted-foreground">Mitarbeiter: {employeeNames}</p>}
-                  {order.service_type && <div className="flex items-center text-xs text-muted-foreground mt-1"><Wrench className="mr-1 h-3 w-3" /><span>Dienstleistung: {order.service_type}</span></div>}
-                  <div className="flex items-center mt-2 space-x-2">
+                  {order.object_name && (
+                    <p className="text-xs text-muted-foreground">
+                      Objekt: {order.object_name}
+                    </p>
+                  )}
+                  {order.customer_contact_first_name && order.customer_contact_last_name && (
+                    <div className="flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
+                      <UserRound className="h-3 w-3" />
+                      <span>Auftraggeber: {order.customer_contact_first_name} {order.customer_contact_last_name}</span>
+                    </div>
+                  )}
+                  {employeeNames !== 'N/A' && (
+                    <p className="break-words text-xs text-muted-foreground">
+                      Mitarbeiter: {employeeNames}
+                    </p>
+                  )}
+                  {order.service_type && (
+                    <div className="mt-1 flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
+                      <Wrench className="h-3 w-3" />
+                      <span>Dienstleistung: {order.service_type}</span>
+                    </div>
+                  )}
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
                     <Badge variant={getStatusBadgeVariant(order.status)}>{order.status}</Badge>
                     <Badge variant="outline">{order.order_type}</Badge>
                     <Badge variant={getPriorityBadgeVariant(order.priority)}>Priorität: {order.priority}</Badge>
                     <Badge variant={getRequestStatusBadgeVariant(order.request_status)}>Anfrage: {order.request_status}</Badge>
                   </div>
                   {order.total_estimated_hours && (
-                    <div className="flex items-center text-xs text-muted-foreground mt-1">
+                    <div className="flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
                       <Clock className="mr-1 h-3 w-3" />
                       <span>
                         {['recurring', 'substitution', 'permanent'].includes(order.order_type) ? 'Wochenstunden' : 'Gesamtstunden'}: {order.total_estimated_hours.toFixed(2)}
                       </span>
                     </div>
                   )}
-                  {order.notes && <div className="flex items-center text-xs text-muted-foreground mt-1"><FileText className="mr-1 h-3 w-3" /><span>Notizen: {order.notes}</span></div>}
-                  {order.order_type === "one_time" && order.due_date && <p className="text-xs text-muted-foreground ml-auto mt-1">Fällig: {new Date(order.due_date).toLocaleDateString()}</p>}
-                  {(order.order_type === "recurring" || order.order_type === "substitution") && order.recurring_start_date && <div className="flex items-center text-xs text-muted-foreground mt-1"><CalendarDays className="mr-1 h-3 w-3" /><span>Start: {new Date(order.recurring_start_date).toLocaleDateString()}</span></div>}
-                  {(order.order_type === "recurring" || order.order_type === "substitution") && order.recurring_end_date && <div className="flex items-center text-xs text-muted-foreground"><CalendarDays className="mr-1 h-3 w-3" /><span>Ende: {new Date(order.recurring_end_date).toLocaleDateString()}</span></div>}
+                  {order.notes && (
+                    <div className="flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
+                      <FileText className="h-3 w-3" />
+                      <span className="break-words">Notizen: {order.notes}</span>
+                    </div>
+                  )}
+                  {order.order_type === "one_time" && order.due_date && (
+                    <p className="text-xs text-muted-foreground">
+                      Fällig: {new Date(order.due_date).toLocaleDateString()}
+                    </p>
+                  )}
+                  {(order.order_type === "recurring" || order.order_type === "substitution") && order.recurring_start_date && (
+                    <div className="flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
+                      <CalendarDays className="h-3 w-3" />
+                      <span>Start: {new Date(order.recurring_start_date).toLocaleDateString()}</span>
+                    </div>
+                  )}
+                  {(order.order_type === "recurring" || order.order_type === "substitution") && order.recurring_end_date && (
+                    <div className="flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
+                      <CalendarDays className="h-3 w-3" />
+                      <span>Ende: {new Date(order.recurring_end_date).toLocaleDateString()}</span>
+                    </div>
+                  )}
                   
                   {['recurring', 'permanent', 'substitution'].includes(order.order_type) && (
-                      <div className="space-y-1 mt-2">
+                      <div className="space-y-1">
                           {dayNames.map(day => {
                               const assignmentsForDay = order.assignedEmployees?.map(emp => {
                                   // Show schedule for the first week of the cycle as a summary
@@ -172,8 +218,8 @@ export function OrdersGridView({ orders, employees, onActionSuccess }: OrdersGri
 
                               if (assignmentsForDay && assignmentsForDay.length > 0) {
                                   return (
-                                      <div key={day} className="flex items-start text-xs text-muted-foreground">
-                                          <Clock className="mr-1 h-3 w-3 mt-0.5 flex-shrink-0" />
+                                      <div key={day} className="flex flex-wrap items-start gap-2 text-xs text-muted-foreground">
+                                          <Clock className="h-3 w-3 flex-shrink-0" />
                                           <span>{germanDayNames[day]}: {assignmentsForDay.join('; ')}</span>
                                       </div>
                                   );
@@ -183,21 +229,21 @@ export function OrdersGridView({ orders, employees, onActionSuccess }: OrdersGri
                       </div>
                   )}
                   {order.object?.recurrence_interval_weeks && order.object.recurrence_interval_weeks > 1 && (
-                    <div className="flex items-center text-xs text-muted-foreground mt-1">
-                      <CalendarDays className="mr-1 h-3 w-3" />
+                    <div className="flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
+                      <CalendarDays className="h-3 w-3" />
                       <span>Objekt-Wiederholung: Alle {order.object.recurrence_interval_weeks} Wochen (Offset: {order.object.start_week_offset})</span>
                     </div>
                   )}
                   {order.assignedEmployees?.[0]?.assigned_recurrence_interval_weeks && order.assignedEmployees[0].assigned_recurrence_interval_weeks > 1 && (
-                    <div className="flex items-center text-xs text-muted-foreground mt-1">
-                      <CalendarDays className="mr-1 h-3 w-3" />
+                    <div className="flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
+                      <CalendarDays className="h-3 w-3" />
                       <span>Mitarbeiter-Wiederholung: Alle {order.assignedEmployees[0].assigned_recurrence_interval_weeks} Wochen (Offset: {order.assignedEmployees[0].assigned_start_week_offset})</span>
                     </div>
                   )}
 
                   {feedback && (
-                    <div className="flex items-center text-xs text-warning mt-2">
-                      <StarIcon className="mr-1 h-3 w-3 fill-current" />
+                    <div className="flex flex-wrap items-center gap-1 text-xs text-warning">
+                      <StarIcon className="h-3 w-3 fill-current" />
                       <span>Feedback vorhanden</span>
                     </div>
                   )}

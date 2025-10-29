@@ -78,12 +78,14 @@ export function MobilePullToRefresh({
     <div
       ref={containerRef}
       className={cn(
-        "relative overflow-hidden",
-        pullDistance > 0 && "mobile-pull-refresh"
+        "relative overflow-hidden transition-all duration-200",
+        pullDistance > 0 && "pt-12 -mt-12"
       )}
       style={{
-        transform: pullDistance > 0 ? `translateY(${pullDistance}px)` : 'translateY(0)',
-        transition: isPulling ? 'none' : 'transform 0.3s ease-out',
+        transform: pullDistance > 0 ? `translateY(${pullDistance}px)` : "translateY(0)",
+        transition: isPulling ? "none" : "transform 0.3s ease-out",
+        paddingTop: pullDistance > 0 ? Math.min(pullDistance, threshold) : 0,
+        marginTop: pullDistance > 0 ? -Math.min(pullDistance, threshold) : 0,
       }}
     >
       {/* Pull Indicator */}
@@ -111,7 +113,7 @@ export function MobilePullToRefresh({
       </div>
 
       {/* Content */}
-      <div className="mobile-scroll">
+      <div className="overflow-y-auto overscroll-contain touch-pan-y">
         {children}
       </div>
     </div>

@@ -141,8 +141,10 @@ export function MobileSearchBar({
             }
           }}
           className={cn(
-            "pl-10 pr-24 mobile-input",
-            isFocused && "ring-2 ring-primary ring-offset-2"
+            "h-12 md:h-10 w-full rounded-lg border border-input bg-background/60 backdrop-blur-sm px-10 pr-24 text-base md:text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50",
+            "min-h-[44px]",
+            isFocused && "ring-2 ring-primary ring-offset-2",
+            className
           )}
         />
 

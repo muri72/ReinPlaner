@@ -8,9 +8,11 @@ import { NotificationBell } from "@/components/notification-bell";
 import { Sheet, SheetContent, SheetHeader, SheetTrigger, SheetClose, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { SidebarNav } from "@/components/sidebar-nav";
 import { UserMenu } from "@/components/user-menu";
+import { MobileNavigation } from "@/components/mobile-navigation";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
-import { usePathname } from "next/navigation"; // Import usePathname
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden"; // Import VisuallyHidden
+import { usePathname } from "next/navigation";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 interface DashboardClientLayoutProps {
   children: React.ReactNode;
@@ -28,7 +30,8 @@ interface DashboardClientLayoutProps {
 export function DashboardClientLayout({ children, currentUserRole, onSignOut, userProfile }: DashboardClientLayoutProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
-  const pathname = usePathname(); // Get current pathname
+  const pathname = usePathname();
+  const isMobile = useIsMobile();
 
   const getHomeLink = () => {
     if (currentUserRole === 'customer') {
@@ -36,13 +39,48 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut, us
     } else if (currentUserRole === 'employee') {
       return '/employee/dashboard';
     }
-    return '/dashboard'; // Standard für Admin/Manager
+    return '/dashboard';
   };
 
-  // Determine if the current page is the root dashboard page
-  // This variable is no longer used for scrollbar hiding, but kept for potential future use.
-  const isRootDashboardPage = pathname === '/dashboard';
+  // Mobile Layout with Bottom Navigation
+  if (isMobile) {
+    return (
+      <div className="min-h-screen flex flex-col pb-16">
+        {/* Sticky Mobile Header */}
+        <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b px-4 py-3">
+          <div className="flex items-center justify-between">
+            <Link href={getHomeLink()} passHref>
+              <h1 className="text-xl font-bold text-primary">ARIS</h1>
+            </Link>
+            <div className="flex items-center gap-2">
+              <NotificationBell />
+              <UserMenu
+                currentUserRole={currentUserRole}
+                onSignOut={onSignOut}
+                userProfile={userProfile}
+              />
+            </div>
+          </div>
+        </header>
 
+        {/* Main Content */}
+        <main className="flex-1 overflow-y-auto">
+          <div className="p-4">
+            {children}
+          </div>
+        </main>
+
+        {/* Bottom Navigation */}
+        <MobileNavigation
+          currentUserRole={currentUserRole}
+          onSignOut={onSignOut}
+          userProfile={userProfile}
+        />
+      </div>
+    );
+  }
+
+  // Desktop Layout
   return (
     <div className="min-h-screen flex flex-col md:flex-row">
       {/* Mobiler Header und Navigation (fest) */}

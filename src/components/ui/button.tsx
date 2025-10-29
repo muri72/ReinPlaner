@@ -22,10 +22,13 @@ const buttonVariants = cva(
         warning: "bg-warning text-warning-foreground hover:bg-warning/90", // Added warning variant
       },
       size: {
-        default: "h-10 px-4 py-2",
-        sm: "h-9 rounded-md px-3",
-        lg: "h-11 rounded-md px-8",
-        icon: "h-10 w-10",
+        default: "h-10 px-4 py-2 sm:h-12",  // Larger on mobile (48px)
+        sm: "h-9 rounded-md px-3 sm:h-11",
+        lg: "h-11 rounded-md px-8 sm:h-12",
+        icon: "h-10 w-10 sm:h-12 sm:w-12", // 48x48px on mobile
+        // Mobile-optimized sizes
+        "mobile-touch": "h-12 w-12 md:h-10 md:w-10", // 48x48px touch target
+        "mobile-default": "h-12 px-6 py-3 md:h-10 md:px-4 md:py-2",
       },
     },
     defaultVariants: {

@@ -234,42 +234,63 @@ export function TodaysOrdersOverview() {
   }, [fetchData]);
 
   const renderOrderCard = (order: DisplayOrder) => {
-    const location = [order.object_name, order.customer_name].filter(Boolean).join(' - ');
+    const location = [order.object_name, order.customer_name].filter(Boolean).join(" • ");
     return (
-      <div key={order.id} className="border p-3 rounded-md space-y-2 bg-background/70 hover:bg-muted/50 transition-colors">
-        <div className="flex justify-between items-start">
-          <div>
-            <p className="font-semibold text-sm">{order.title}</p>
-            <p className="text-xs text-muted-foreground">{location}</p>
+      <div
+        key={order.id}
+        className="rounded-xl border border-border/60 bg-card/70 p-3 shadow-sm transition-colors hover:bg-accent/40"
+      >
+        <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-1">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold">{order.title}</p>
+                {location && (
+                  <p className="truncate text-xs text-muted-foreground">{location}</p>
+                )}
+              </div>
+              <Badge
+                variant={getStatusBadgeVariant(order.status)}
+                className="flex-shrink-0 capitalize"
+              >
+                {order.status.replace("_", " ")}
+              </Badge>
+            </div>
           </div>
-          <Badge variant={getStatusBadgeVariant(order.status)}>{order.status}</Badge>
-        </div>
-        
-        {order.assignedEmployees.length > 0 && (
-          <div className="pt-2 mt-2 border-t space-y-2">
-            {order.assignedEmployees.map(emp => {
-              const assignedTime = getAssignedTimeForEmployeeToday(emp, order);
-              return (
-                <div key={emp.employeeId} className="space-y-1">
-                  <div className="flex justify-between items-center text-sm">
-                    <div className="flex items-center gap-2">
-                      <UserRound className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium">{emp.name}</span>
+
+          {order.assignedEmployees.length > 0 && (
+            <div className="mt-1 space-y-2 rounded-lg border border-border/40 bg-muted/30 p-2">
+              {order.assignedEmployees.map((emp) => {
+                const assignedTime = getAssignedTimeForEmployeeToday(emp, order);
+                return (
+                  <div key={emp.employeeId} className="space-y-1">
+                    <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+                      <div className="flex items-center gap-2">
+                        <UserRound className="h-4 w-4 text-muted-foreground/80" />
+                        <span className="font-medium text-foreground">{emp.name}</span>
+                      </div>
+                      {assignedTime ? (
+                        <Badge variant="outline" className="font-mono text-[10px] uppercase">
+                          {assignedTime.start} – {assignedTime.end}
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-[10px] uppercase">
+                          N/A
+                        </Badge>
+                      )}
                     </div>
-                    {assignedTime ? (
-                      <Badge variant="outline" className="font-mono text-xs">{assignedTime.start} - {assignedTime.end}</Badge>
-                    ) : (
-                      <Badge variant="outline" className="text-xs">N/A</Badge>
+                    {assignedTime && order.status !== "completed" && (
+                      <TimeProgressBar
+                        startTime={assignedTime.start}
+                        endTime={assignedTime.end}
+                      />
                     )}
                   </div>
-                  {assignedTime && order.status !== 'completed' && (
-                    <TimeProgressBar startTime={assignedTime.start} endTime={assignedTime.end} />
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
     );
   };

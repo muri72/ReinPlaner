@@ -147,9 +147,9 @@ export function MobileFormWizard({
           {canGoPrevious && (
             <Button
               variant="outline"
+              size="mobile-touch"
               onClick={handlePrevious}
               disabled={!canGoPrevious}
-              className="mobile-tap-target"
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
@@ -158,8 +158,8 @@ export function MobileFormWizard({
           <Button
             onClick={handleNext}
             disabled={!canGoNext}
+            size="mobile-default"
             className={cn(
-              "mobile-tap-target",
               currentStep === steps.length - 1 && "bg-green-600 hover:bg-green-700"
             )}
           >

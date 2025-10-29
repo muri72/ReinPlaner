@@ -4,9 +4,8 @@ import React, { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { 
-  Briefcase, 
-  Calendar, 
+import {
+  Calendar,
   Clock, 
   MapPin, 
   Users, 
@@ -115,27 +114,29 @@ export function MobileOrderCard({
         console.log(`Action executed: ${action.label}`);
       }}
     >
-      <Card className={cn(
-        "glassmorphism-card transition-all duration-200",
-        "hover:shadow-lg active:scale-95"
-      )}>
-        <CardContent className="p-4">
+      <Card
+        className={cn(
+          "glassmorphism-card transition-all duration-200",
+          "hover:shadow-lg active:scale-95"
+        )}
+      >
+        <CardContent className="p-4 space-y-4">
           {/* Header */}
-          <div className="flex items-start justify-between mb-3">
-            <div className="flex-grow">
-              <h3 className="font-semibold text-base mb-1 line-clamp-2">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0 flex-1">
+              <h3 className="line-clamp-2 text-base font-semibold leading-snug">
                 {order.title}
               </h3>
-              <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+              <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
                 {order.customer_name && (
-                  <div className="flex items-center">
-                    <Users className="h-3 w-3 mr-1" />
-                    <span>{order.customer_name}</span>
+                  <div className="flex items-center gap-1">
+                    <Users className="h-3 w-3" />
+                    <span className="truncate">{order.customer_name}</span>
                   </div>
                 )}
                 {order.object_name && (
-                  <div className="flex items-center">
-                    <MapPin className="h-3 w-3 mr-1" />
+                  <div className="flex items-center gap-1">
+                    <MapPin className="h-3 w-3" />
                     <span className="truncate">{order.object_name}</span>
                   </div>
                 )}
@@ -143,43 +144,59 @@ export function MobileOrderCard({
             </div>
             <Button
               variant="ghost"
-              size="sm"
+              size="icon"
               onClick={() => setIsExpanded(!isExpanded)}
-              className="p-1"
+              className="h-12 w-12 rounded-full border border-border/60 bg-card/80 text-muted-foreground shadow-sm transition hover:bg-accent sm:h-10 sm:w-10"
+              aria-expanded={isExpanded}
+              aria-label={isExpanded ? "Notizen ausblenden" : "Notizen anzeigen"}
             >
               <MoreHorizontal className="h-4 w-4" />
             </Button>
           </div>
 
           {/* Status and Priority Badges */}
-          <div className="flex items-center space-x-2 mb-3">
-            <Badge variant="outline" className={cn(statusColors[order.status as keyof typeof statusColors])}>
-              <div className="flex items-center">
-                {getStatusIcon()}
-                <span className="ml-1 capitalize">{order.status.replace('_', ' ')}</span>
-              </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge
+              variant="outline"
+              className={cn(
+                "gap-1",
+                statusColors[order.status as keyof typeof statusColors]
+              )}
+            >
+              {getStatusIcon()}
+              <span className="capitalize">{order.status.replace("_", " ")}</span>
             </Badge>
-            <Badge variant="outline" className={cn(priorityColors[order.priority as keyof typeof priorityColors])}>
+            <Badge
+              variant="outline"
+              className={cn(
+                "capitalize",
+                priorityColors[order.priority as keyof typeof priorityColors]
+              )}
+            >
               {order.priority}
             </Badge>
           </div>
 
           {/* Date Information */}
-          <div className="flex items-center space-x-4 text-sm text-muted-foreground mb-3">
-            <div className="flex items-center">
-              <Calendar className="h-4 w-4 mr-1" />
+          <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+            <div className="flex items-center gap-1">
+              <Calendar className="h-4 w-4" />
               <span>
-                {order.due_date ? formatDate(order.due_date) : formatDate(order.recurring_start_date)}
+                {order.due_date
+                  ? formatDate(order.due_date)
+                  : formatDate(order.recurring_start_date)}
               </span>
             </div>
             {order.recurring_end_date && (
-              <span>bis {formatDate(order.recurring_end_date)}</span>
+              <span className="text-xs text-muted-foreground/80">
+                bis {formatDate(order.recurring_end_date)}
+              </span>
             )}
           </div>
 
           {/* Service Type */}
           {order.service_type && (
-            <div className="mb-3">
+            <div>
               <Badge variant="secondary" className="text-xs">
                 {order.service_type}
               </Badge>
@@ -188,16 +205,25 @@ export function MobileOrderCard({
 
           {/* Assigned Employees */}
           {order.employee_names && order.employee_names.length > 0 && (
-            <div className="mb-3">
-              <div className="text-sm text-muted-foreground mb-1">Zugewiesen:</div>
-              <div className="flex flex-wrap gap-1">
+            <div className="space-y-1">
+              <div className="text-sm font-medium text-muted-foreground">
+                Zugewiesen
+              </div>
+              <div className="flex flex-wrap gap-2">
                 {order.employee_names.slice(0, 3).map((name, index) => (
-                  <Badge key={index} variant="outline" className="text-xs">
+                  <Badge
+                    key={index}
+                    variant="outline"
+                    className="max-w-[160px] truncate bg-muted/40 px-2 py-1 text-xs font-medium"
+                  >
                     {name}
                   </Badge>
                 ))}
                 {order.employee_names.length > 3 && (
-                  <Badge variant="outline" className="text-xs">
+                  <Badge
+                    variant="outline"
+                    className="bg-muted/40 px-2 py-1 text-xs font-medium"
+                  >
                     +{order.employee_names.length - 3}
                   </Badge>
                 )}
@@ -207,41 +233,46 @@ export function MobileOrderCard({
 
           {/* Expandable Notes */}
           {order.notes && (
-            <div className={cn(
-              "overflow-hidden transition-all duration-200",
-              isExpanded ? "max-h-40" : "max-h-0"
-            )}>
-              <div className="text-sm text-muted-foreground p-3 bg-muted/30 rounded-lg">
-                <div className="font-medium mb-1">Notizen:</div>
-                <p className="line-clamp-3">{order.notes}</p>
+            <div
+              className={cn(
+                "overflow-hidden transition-all duration-300",
+                isExpanded ? "max-h-48" : "max-h-0"
+              )}
+              aria-hidden={!isExpanded}
+            >
+              <div className="rounded-lg bg-muted/30 p-3 text-sm text-muted-foreground shadow-sm">
+                <div className="mb-1 font-medium">Notizen</div>
+                <p className="whitespace-pre-wrap break-words leading-relaxed">{order.notes}</p>
               </div>
             </div>
           )}
 
           {/* Quick Actions */}
-          <div className="flex space-x-2 pt-2 border-t">
+          <div className="mt-3 flex flex-col gap-2 border-t pt-3 sm:flex-row sm:items-center sm:gap-3">
             <Button
               variant="outline"
-              size="sm"
+              size="mobile-default"
               onClick={() => onViewDetails?.(order)}
-              className="flex-grow"
+              className="flex-1 justify-center gap-2"
             >
               Details
             </Button>
-            {order.status === 'pending' && (
+            {order.status === "pending" && (
               <Button
                 variant="default"
-                size="sm"
-                onClick={() => onStatusChange?.(order.id, 'in_progress')}
+                size="mobile-default"
+                onClick={() => onStatusChange?.(order.id, "in_progress")}
+                className="justify-center"
               >
                 Starten
               </Button>
             )}
-            {order.status === 'in_progress' && (
+            {order.status === "in_progress" && (
               <Button
                 variant="default"
-                size="sm"
-                onClick={() => onStatusChange?.(order.id, 'completed')}
+                size="mobile-default"
+                onClick={() => onStatusChange?.(order.id, "completed")}
+                className="justify-center"
               >
                 Abschließen
               </Button>

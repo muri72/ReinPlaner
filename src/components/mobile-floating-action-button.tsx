@@ -89,7 +89,7 @@ export function MobileFloatingActionButton({
       <Button
         onClick={handleMainClick}
         className={cn(
-          "rounded-full shadow-lg transition-all duration-200 mobile-tap-target",
+          "rounded-full shadow-lg transition-all duration-200",
           sizeClasses[size],
           isExpanded && "rotate-45",
           mainAction.color || "bg-primary hover:bg-primary/90"

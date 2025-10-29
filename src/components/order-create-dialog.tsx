@@ -1,40 +1,61 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button"; // Korrigierter Import
+import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 import { OrderForm, OrderFormValues } from "@/components/order-form";
 import { createOrder } from "@/app/dashboard/orders/actions";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 interface OrderCreateDialogProps {
   onOrderCreated?: () => void;
+  trigger?: ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  hideTrigger?: boolean;
 }
 
-export function OrderCreateDialog({ onOrderCreated }: OrderCreateDialogProps) {
-  const [open, setOpen] = useState(false);
-  // Removed titleId and descriptionId as they are no longer needed for aria attributes
+export function OrderCreateDialog({
+  onOrderCreated,
+  trigger,
+  open: controlledOpen,
+  onOpenChange,
+  hideTrigger = false,
+}: OrderCreateDialogProps) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isControlled = controlledOpen !== undefined;
+  const open = isControlled ? controlledOpen : internalOpen;
+
+  const setOpenState = (next: boolean) => {
+    if (!isControlled) {
+      setInternalOpen(next);
+    }
+    onOpenChange?.(next);
+  };
 
   const handleCreate = async (data: OrderFormValues) => {
     const result = await createOrder(data);
     if (result.success) {
-      setOpen(false);
+      setOpenState(false);
       onOrderCreated?.();
     }
     return result;
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button>
-          <PlusCircle className="mr-2 h-4 w-4" />
-          Neuen Auftrag hinzufügen
-        </Button>
-      </DialogTrigger>
-      <DialogContent 
-        key={open ? "order-create-open" : "order-create-closed"} 
+    <Dialog open={open} onOpenChange={setOpenState}>
+      {!hideTrigger && (
+        <DialogTrigger asChild>
+          {trigger ?? (
+            <Button>
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Neuen Auftrag hinzufügen
+            </Button>
+          )}
+        </DialogTrigger>
+      )}
+      <DialogContent
+        key={open ? "order-create-open" : "order-create-closed"}
         className="sm:max-w-5xl max-h-[90vh] overflow-y-auto glassmorphism-card"
       >
         <DialogHeader>
@@ -46,7 +67,7 @@ export function OrderCreateDialog({ onOrderCreated }: OrderCreateDialogProps) {
         <OrderForm
           onSubmit={handleCreate}
           submitButtonText="Auftrag hinzufügen"
-          onSuccess={() => setOpen(false)}
+          onSuccess={() => setOpenState(false)}
         />
       </DialogContent>
     </Dialog>

@@ -69,15 +69,18 @@ export default {
   				ring: 'hsl(var(--sidebar-ring))'
   			},
   		},
-        /* Typographic Scale (1.25 ratio) */
+        /* Typographic Scale - Mobile-First (prevents iOS zoom) */
         fontSize: {
-          xs: ['0.75rem', { lineHeight: '1.5' }],   // 12px
-          sm: ['0.9375rem', { lineHeight: '1.5' }], // 15px
-          base: ['1.125rem', { lineHeight: '1.5' }], // 18px
-          lg: ['1.5rem', { lineHeight: '1.2' }],    // 24px
-          xl: ['1.875rem', { lineHeight: '1.2' }],   // 30px
+          xs: ['0.75rem', { lineHeight: '1.5' }],      // 12px
+          sm: ['1rem', { lineHeight: '1.5' }],         // 16px - Mobile-safe!
+          base: ['1.125rem', { lineHeight: '1.5' }],   // 18px
+          lg: ['1.5rem', { lineHeight: '1.2' }],       // 24px
+          xl: ['1.875rem', { lineHeight: '1.2' }],     // 30px
           '2xl': ['2.3125rem', { lineHeight: '1.2' }], // 37px
           '3xl': ['2.875rem', { lineHeight: '1.2' }],  // 46px
+          // Mobile-specific sizes
+          'mobile-input': ['1rem', { lineHeight: '1.5' }],    // 16px (prevents zoom)
+          'mobile-label': ['0.875rem', { lineHeight: '1.5' }], // 14px
         },
         /* Line Heights */
         lineHeight: {

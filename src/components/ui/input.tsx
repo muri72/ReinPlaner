@@ -11,7 +11,17 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
       <input
         type={type}
         className={cn(
-          "flex h-10 w-full rounded-md border border-input bg-background/60 backdrop-blur-sm px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+          // Mobile-first: 16px font prevents iOS auto-zoom, 48px height for touch
+          "flex h-12 md:h-10 w-full rounded-md border border-input",
+          "bg-background/60 backdrop-blur-sm px-3 py-2",
+          "text-base md:text-sm", // 16px mobile, 14px desktop
+          "ring-offset-background",
+          "file:border-0 file:bg-transparent file:text-sm file:font-medium",
+          "placeholder:text-muted-foreground",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+          "disabled:cursor-not-allowed disabled:opacity-50",
+          // Touch-optimized
+          "min-h-[44px]", // Apple minimum
           className
         )}
         ref={ref}

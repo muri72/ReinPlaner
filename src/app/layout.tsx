@@ -20,6 +20,26 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "ARIS Management",
   description: "Management-Plattform für Reinigungsunternehmen",
+  manifest: "/manifest.json",
+  viewport: {
+    width: "device-width",
+    initialScale: 1,
+    maximumScale: 5,
+    userScalable: true,
+    viewportFit: "cover"
+  },
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#3B82F6" },
+    { media: "(prefers-color-scheme: dark)", color: "#1E40AF" }
+  ],
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "ARIS"
+  },
+  formatDetection: {
+    telephone: false
+  }
 };
 
 export default async function RootLayout({
