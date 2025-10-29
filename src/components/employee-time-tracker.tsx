@@ -728,32 +728,15 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
                   </div>
                 )}
 
-                {locationError && (
-                  <div className="text-sm text-destructive mt-2 p-2 border rounded-md bg-destructive/10 dark:bg-destructive/20 flex items-center">
-                    <AlertTriangle className="mr-2 h-4 w-4 flex-shrink-0" />
-                    <p>{locationError}</p>
-                  </div>
-                )}
-
-                {locationDeviation && (
-                  <div className="text-sm text-warning mt-2 p-2 border rounded-md bg-warning/10 dark:bg-warning/20 flex items-center">
-                    <MapPin className="mr-2 h-4 w-4 flex-shrink-0" />
-                    <p>Sie befinden sich außerhalb des Objekt-Radius.</p>
-                  </div>
-                )}
-
                 {isScheduledOrder && suggestedDuration !== null && (
                   <div className="text-sm text-muted-foreground mt-2 p-2 border rounded-md bg-primary-foreground/10 dark:bg-primary-foreground/20">
                     <p>Vorgeschlagene Dauer für diesen Auftrag heute:</p>
                     <p className="font-semibold">{ suggestedDuration !== null && suggestedBreakMinutes !== null ? ((suggestedDuration - suggestedBreakMinutes) / 60).toFixed(2) : 'N/A'} Netto-Stunden</p>
                     {suggestedBreakMinutes !== null && suggestedBreakMinutes > 0 && (
                       <p className="text-xs mt-1">
-                        Inkl. {suggestedBreakMinutes} Minuten Pause.
+                        Die Stoppuhr verfolgt die tatsächliche Zeit, aber dies ist der erwartete Zeitrahmen.
                       </p>
                     )}
-                    <p className="text-xs mt-1">
-                      Klicken Sie auf "Einstempeln", um diese Stunden zu bestätigen.
-                    </p>
                   </div>
                 )}
 
@@ -835,20 +818,6 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
                   <div className="text-sm text-muted-foreground mt-2 p-2 border rounded-md bg-warning/10 dark:bg-warning/20 flex items-center">
                     <CalendarDays className="mr-2 h-4 w-4 flex-shrink-0" />
                     <p>{recurrenceInfo}</p>
-                  </div>
-                )}
-
-                {locationError && (
-                  <div className="text-sm text-destructive mt-2 p-2 border rounded-md bg-destructive/10 dark:bg-destructive/20 flex items-center">
-                    <AlertTriangle className="mr-2 h-4 w-4 flex-shrink-0" />
-                    <p>{locationError}</p>
-                  </div>
-                )}
-
-                {locationDeviation && (
-                  <div className="text-sm text-warning mt-2 p-2 border rounded-md bg-warning/10 dark:bg-warning/20 flex items-center">
-                    <MapPin className="mr-2 h-4 w-4 flex-shrink-0" />
-                    <p>Sie befinden sich außerhalb des Objekt-Radius.</p>
                   </div>
                 )}
 
