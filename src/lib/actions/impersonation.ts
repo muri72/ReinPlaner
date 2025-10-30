@@ -1,7 +1,8 @@
 "use server";
 
-import { createClient, createAdminClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 import { headers } from "next/headers";
+import { createClient as createSupabaseAdminClient } from '@supabase/supabase-js';
 
 interface ActionResponse<T> {
   success: boolean;
@@ -48,6 +49,25 @@ interface RevertSessionPayload {
   message: string;
 }
 
+function getSupabaseAdminClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseUrl) {
+    throw new Error('Environment variable NEXT_PUBLIC_SUPABASE_URL is not set.');
+  }
+  if (!serviceRoleKey) {
+    throw new Error('Environment variable SUPABASE_SERVICE_ROLE_KEY is not set.');
+  }
+
+  return createSupabaseAdminClient(supabaseUrl, serviceRoleKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+  });
+}
+
 export async function listImpersonationTargets(): Promise<
   ActionResponse<{
     admin: { id: string; fullName: string };
@@ -72,7 +92,7 @@ export async function listImpersonationTargets(): Promise<
   }
 
   const adminFullName = [adminProfile.first_name, adminProfile.last_name].filter(Boolean).join(" ").trim() || "Administrator";
-  const supabaseAdmin = createAdminClient();
+  const supabaseAdmin = getSupabaseAdminClient();
 
   const [
     { data: authUsersResult, error: authUsersError },
@@ -149,7 +169,7 @@ export async function startImpersonation(targetUserId: string): Promise<ActionRe
     return { success: false, message: "Sie können nicht sich selbst impersonieren." };
   }
 
-  const supabaseAdmin = createAdminClient();
+  const supabaseAdmin = getSupabaseAdminClient();
 
   const [{ data: targetProfile, error: targetProfileError }, { data: authUserResult, error: authUserError }] =
     await Promise.all([
@@ -177,6 +197,7 @@ export async function startImpersonation(targetUserId: string): Promise<ActionRe
   const adminFullName =
     [adminProfile?.first_name, adminProfile?.last_name].filter(Boolean).join(" ").trim() || "Administrator";
 
+  // Call createSession directly on supabaseAdmin.auth.admin
   const { data: impersonationSession, error: impersonationError } = await (supabaseAdmin.auth.admin as any).createSession({
     user_id: targetUserId,
   });
@@ -251,7 +272,7 @@ export async function stopImpersonation(impersonationSessionId: string): Promise
     return { success: false, message: "Nicht authentifiziert." };
   }
 
-  const supabaseAdmin = createAdminClient();
+  const supabaseAdmin = getSupabaseAdminClient();
 
   const { data: sessionRecord, error: sessionError } = await supabaseAdmin
     .from("impersonation_sessions")
@@ -271,6 +292,7 @@ export async function stopImpersonation(impersonationSessionId: string): Promise
     return { success: false, message: "Sie sind nicht berechtigt, diese Impersonation zu beenden." };
   }
 
+  // Call createSession directly on supabaseAdmin.auth.admin
   const { data: revertSession, error: revertError } = await (supabaseAdmin.auth.admin as any).createSession({
     user_id: sessionRecord.admin_user_id,
   });
