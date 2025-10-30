@@ -177,7 +177,7 @@ export async function startImpersonation(targetUserId: string): Promise<ActionRe
   const adminFullName =
     [adminProfile?.first_name, adminProfile?.last_name].filter(Boolean).join(" ").trim() || "Administrator";
 
-  const { data: impersonationSession, error: impersonationError } = await supabaseAdmin.auth.admin.createSession({
+  const { data: impersonationSession, error: impersonationError } = await (supabaseAdmin.auth as any).admin.createSession({
     user_id: targetUserId,
   });
 
@@ -271,7 +271,7 @@ export async function stopImpersonation(impersonationSessionId: string): Promise
     return { success: false, message: "Sie sind nicht berechtigt, diese Impersonation zu beenden." };
   }
 
-  const { data: revertSession, error: revertError } = await supabaseAdmin.auth.admin.createSession({
+  const { data: revertSession, error: revertError } = await (supabaseAdmin.auth as any).admin.createSession({
     user_id: sessionRecord.admin_user_id,
   });
 
