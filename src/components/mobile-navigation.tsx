@@ -368,7 +368,10 @@ export function MobileNavigation({
               )}
             </Button>
           </SheetTrigger>
-          <SheetContent side="bottom" className="h-[85vh] overflow-y-auto">
+          <SheetContent
+            side="bottom"
+            className="h-[85vh] overflow-y-auto rounded-t-3xl border-t bg-background"
+          >
             <SheetHeader className="px-4 pb-2 pt-4">
               <SheetTitle>Menü</SheetTitle>
             </SheetHeader>
