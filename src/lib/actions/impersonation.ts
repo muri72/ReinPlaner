@@ -1,8 +1,5 @@
-"use server";
-
-import { createClient } from "@/lib/supabase/server";
 import { headers } from "next/headers";
-import { createClient as createSupabaseAdminClient } from "@supabase/supabase-js";
+import { createClient, createAdminClient } from "@/lib/supabase/server";
 
 interface ActionResponse<T> {
   success: boolean;
@@ -17,7 +14,8 @@ interface ImpersonationTarget {
   role: string;
 }
 
-interface ImpersonationSessionPayload {
+interface ImpersonationStartPayload {
+  actionLink: string;
   impersonationSessionId: string;
   admin: {
     id: string;
@@ -29,74 +27,11 @@ interface ImpersonationSessionPayload {
     fullName: string;
     role: string;
   };
-  session: {
-    access_token: string;
-    refresh_token: string;
-    expires_at: number;
-    expires_in: number;
-    token_type: string;
-  };
 }
 
 interface RevertSessionPayload {
-  session: {
-    access_token: string;
-    refresh_token: string;
-    expires_at: number;
-    expires_in: number;
-    token_type: string;
-  };
+  actionLink: string;
   message: string;
-}
-
-function getSupabaseAdminClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!supabaseUrl) {
-    throw new Error("Environment variable NEXT_PUBLIC_SUPABASE_URL is not set.");
-  }
-  if (!serviceRoleKey) {
-    throw new Error("Environment variable SUPABASE_SERVICE_ROLE_KEY is not set.");
-  }
-
-  return createSupabaseAdminClient(supabaseUrl, serviceRoleKey, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-    },
-  });
-}
-
-// Hilfsfunktion: Magic-Link folgen und Tokens extrahieren
-async function getSessionTokensFromMagicLink(actionLink: string): Promise<{
-  access_token: string;
-  refresh_token: string;
-  expires_in?: number;
-  token_type?: string;
-}> {
-  // Wir rufen den Magic-Link auf und folgen Weiterleitungen
-  const res = await fetch(actionLink, {
-    method: "GET",
-    redirect: "follow",
-  });
-
-  // Die finale URL enthält die Tokens als Query-Parameter (?access_token=...&refresh_token=...)
-  const finalUrl = res.url;
-  const urlObj = new URL(finalUrl);
-
-  const access_token = urlObj.searchParams.get("access_token");
-  const refresh_token = urlObj.searchParams.get("refresh_token");
-  const expires_in = urlObj.searchParams.get("expires_in")
-    ? Number(urlObj.searchParams.get("expires_in"))
-    : undefined;
-  const token_type = urlObj.searchParams.get("token_type") || undefined;
-
-  if (!access_token || !refresh_token) {
-    throw new Error("Magic-Link hat keine Session-Tokens geliefert.");
-  }
-
-  return { access_token, refresh_token, expires_in, token_type };
 }
 
 export async function listImpersonationTargets(): Promise<
@@ -123,7 +58,8 @@ export async function listImpersonationTargets(): Promise<
   }
 
   const adminFullName = [adminProfile.first_name, adminProfile.last_name].filter(Boolean).join(" ").trim() || "Administrator";
-  const supabaseAdmin = getSupabaseAdminClient();
+
+  const supabaseAdmin = createAdminClient();
 
   const [
     { data: authUsersResult, error: authUsersError },
@@ -142,7 +78,7 @@ export async function listImpersonationTargets(): Promise<
   }
 
   const profilesMap = new Map(
-    (profiles ?? []).map(profile => [
+    (profiles ?? []).map((profile: any) => [
       profile.id,
       {
         fullName: [profile.first_name, profile.last_name].filter(Boolean).join(" ").trim(),
@@ -152,8 +88,8 @@ export async function listImpersonationTargets(): Promise<
   );
 
   const targets: ImpersonationTarget[] = (authUsersResult.users ?? [])
-    .filter(authUser => authUser.id !== user.id)
-    .map(authUser => {
+    .filter((authUser: any) => authUser.id !== user.id)
+    .map((authUser: any) => {
       const profileEntry = profilesMap.get(authUser.id);
       return {
         id: authUser.id,
@@ -174,7 +110,7 @@ export async function listImpersonationTargets(): Promise<
   };
 }
 
-export async function startImpersonation(targetUserId: string): Promise<ActionResponse<ImpersonationSessionPayload>> {
+export async function startImpersonation(targetUserId: string): Promise<ActionResponse<ImpersonationStartPayload>> {
   if (!targetUserId) {
     return { success: false, message: "Bitte einen Zielnutzer auswählen." };
   }
@@ -188,7 +124,7 @@ export async function startImpersonation(targetUserId: string): Promise<ActionRe
 
   const { data: adminProfile, error: adminProfileError } = await supabase
     .from("profiles")
-    .select("first_name, last_name, role, email_notifications_enabled")
+    .select("first_name, last_name, role")
     .eq("id", adminUser.id)
     .single();
 
@@ -200,7 +136,7 @@ export async function startImpersonation(targetUserId: string): Promise<ActionRe
     return { success: false, message: "Sie können nicht sich selbst impersonieren." };
   }
 
-  const supabaseAdmin = getSupabaseAdminClient();
+  const supabaseAdmin = createAdminClient();
 
   const [{ data: targetProfile, error: targetProfileError }, { data: authUserResult, error: authUserError }] =
     await Promise.all([
@@ -228,21 +164,23 @@ export async function startImpersonation(targetUserId: string): Promise<ActionRe
   const adminFullName =
     [adminProfile?.first_name, adminProfile?.last_name].filter(Boolean).join(" ").trim() || "Administrator";
 
-  // Magic Link für den Zielnutzer erzeugen
+  const requestHeaders = await headers();
+  const host = requestHeaders.get("host") || "";
+  const protocol = process.env.NODE_ENV === "development" ? "http" : "https";
+  const redirectUrl = `${protocol}://${host}/auth/callback/impersonate`;
+
   const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
     type: "magiclink",
     email: authUserResult.user?.email!,
+    options: {
+      redirectTo: redirectUrl,
+    },
   });
 
   if (linkError || !linkData?.properties?.action_link) {
     return { success: false, message: linkError?.message ?? "Konnte keinen Magic-Link für die Impersonation erzeugen." };
   }
 
-  // Magic-Link aufrufen und Tokens extrahieren
-  const tokens = await getSessionTokensFromMagicLink(linkData.properties.action_link);
-
-  const nowIso = new Date().toISOString();
-  const requestHeaders = await headers();
   const ipAddress = requestHeaders.get("x-forwarded-for") || requestHeaders.get("x-real-ip") || null;
   const userAgent = requestHeaders.get("user-agent") || null;
 
@@ -258,7 +196,7 @@ export async function startImpersonation(targetUserId: string): Promise<ActionRe
       },
       ip_address: ipAddress,
       user_agent: userAgent,
-      started_at: nowIso,
+      started_at: new Date().toISOString(),
     })
     .select("id")
     .single();
@@ -267,11 +205,11 @@ export async function startImpersonation(targetUserId: string): Promise<ActionRe
     return { success: false, message: insertError?.message ?? "Impersonation konnte nicht protokolliert werden." };
   }
 
-  // Session-Payload zusammenstellen
   return {
     success: true,
     message: `${targetFullName} wird nun impersoniert.`,
     data: {
+      actionLink: linkData.properties.action_link,
       impersonationSessionId: newSessionRecord.id,
       admin: {
         id: adminUser.id,
@@ -282,13 +220,6 @@ export async function startImpersonation(targetUserId: string): Promise<ActionRe
         id: targetUserId,
         fullName: targetFullName,
         role: targetProfile?.role ?? "employee",
-      },
-      session: {
-        access_token: tokens.access_token,
-        refresh_token: tokens.refresh_token,
-        expires_at: Math.floor(Date.now() / 1000) + (tokens.expires_in ?? 3600),
-        expires_in: tokens.expires_in ?? 3600,
-        token_type: tokens.token_type ?? "bearer",
       },
     },
   };
@@ -306,7 +237,7 @@ export async function stopImpersonation(impersonationSessionId: string): Promise
     return { success: false, message: "Nicht authentifiziert." };
   }
 
-  const supabaseAdmin = getSupabaseAdminClient();
+  const supabaseAdmin = createAdminClient();
 
   const { data: sessionRecord, error: sessionError } = await supabaseAdmin
     .from("impersonation_sessions")
@@ -323,17 +254,27 @@ export async function stopImpersonation(impersonationSessionId: string): Promise
   }
 
   // Magic Link für den ursprünglichen Admin erzeugen
+  const { data: adminUserResult, error: adminLoadError } = await supabaseAdmin.auth.admin.getUserById(sessionRecord.admin_user_id);
+  if (adminLoadError || !adminUserResult?.user?.email) {
+    return { success: false, message: adminLoadError?.message ?? "Admin-Benutzer konnte nicht geladen werden." };
+  }
+
+  const requestHeaders = await headers();
+  const host = requestHeaders.get("host") || "";
+  const protocol = process.env.NODE_ENV === "development" ? "http" : "https";
+  const redirectUrl = `${protocol}://${host}/auth/callback/impersonate`;
+
   const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
     type: "magiclink",
-    email: (await supabaseAdmin.auth.admin.getUserById(sessionRecord.admin_user_id)).data.user?.email!,
+    email: adminUserResult.user.email!,
+    options: {
+      redirectTo: redirectUrl,
+    },
   });
 
   if (linkError || !linkData?.properties?.action_link) {
     return { success: false, message: linkError?.message ?? "Konnte keinen Magic-Link für die Admin-Sitzung erzeugen." };
   }
-
-  // Tokens für den Admin aus dem Magic-Link extrahieren
-  const tokens = await getSessionTokensFromMagicLink(linkData.properties.action_link);
 
   const { error: updateError } = await supabaseAdmin
     .from("impersonation_sessions")
@@ -351,13 +292,7 @@ export async function stopImpersonation(impersonationSessionId: string): Promise
     success: true,
     message: "Impersonation beendet. Sie sind wieder als Administrator angemeldet.",
     data: {
-      session: {
-        access_token: tokens.access_token,
-        refresh_token: tokens.refresh_token,
-        expires_at: Math.floor(Date.now() / 1000) + (tokens.expires_in ?? 3600),
-        expires_in: tokens.expires_in ?? 3600,
-        token_type: tokens.token_type ?? "bearer",
-      },
+      actionLink: linkData.properties.action_link,
       message: "Impersonation beendet. Willkommen zurück!",
     },
   };
