@@ -2,7 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { headers } from "next/headers";
-import { createClient as createSupabaseAdminClient } from '@supabase/supabase-js';
+import { createClient as createSupabaseAdminClient } from "@supabase/supabase-js";
 
 interface ActionResponse<T> {
   success: boolean;
@@ -54,10 +54,10 @@ function getSupabaseAdminClient() {
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!supabaseUrl) {
-    throw new Error('Environment variable NEXT_PUBLIC_SUPABASE_URL is not set.');
+    throw new Error("Environment variable NEXT_PUBLIC_SUPABASE_URL is not set.");
   }
   if (!serviceRoleKey) {
-    throw new Error('Environment variable SUPABASE_SERVICE_ROLE_KEY is not set.');
+    throw new Error("Environment variable SUPABASE_SERVICE_ROLE_KEY is not set.");
   }
 
   return createSupabaseAdminClient(supabaseUrl, serviceRoleKey, {
@@ -66,6 +66,37 @@ function getSupabaseAdminClient() {
       autoRefreshToken: false,
     },
   });
+}
+
+// Hilfsfunktion: Magic-Link folgen und Tokens extrahieren
+async function getSessionTokensFromMagicLink(actionLink: string): Promise<{
+  access_token: string;
+  refresh_token: string;
+  expires_in?: number;
+  token_type?: string;
+}> {
+  // Wir rufen den Magic-Link auf und folgen Weiterleitungen
+  const res = await fetch(actionLink, {
+    method: "GET",
+    redirect: "follow",
+  });
+
+  // Die finale URL enthält die Tokens als Query-Parameter (?access_token=...&refresh_token=...)
+  const finalUrl = res.url;
+  const urlObj = new URL(finalUrl);
+
+  const access_token = urlObj.searchParams.get("access_token");
+  const refresh_token = urlObj.searchParams.get("refresh_token");
+  const expires_in = urlObj.searchParams.get("expires_in")
+    ? Number(urlObj.searchParams.get("expires_in"))
+    : undefined;
+  const token_type = urlObj.searchParams.get("token_type") || undefined;
+
+  if (!access_token || !refresh_token) {
+    throw new Error("Magic-Link hat keine Session-Tokens geliefert.");
+  }
+
+  return { access_token, refresh_token, expires_in, token_type };
 }
 
 export async function listImpersonationTargets(): Promise<
@@ -197,18 +228,20 @@ export async function startImpersonation(targetUserId: string): Promise<ActionRe
   const adminFullName =
     [adminProfile?.first_name, adminProfile?.last_name].filter(Boolean).join(" ").trim() || "Administrator";
 
-  // Call createSession directly on supabaseAdmin.auth.admin
-  const { data: impersonationSession, error: impersonationError } = await (supabaseAdmin.auth.admin as any).createSession({
-    user_id: targetUserId,
+  // Magic Link für den Zielnutzer erzeugen
+  const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
+    type: "magiclink",
+    email: authUserResult.user?.email!,
   });
 
-  if (impersonationError || !impersonationSession.session) {
-    const message = impersonationError?.message ?? "Impersonation-Session konnte nicht erstellt werden.";
-    return { success: false, message };
+  if (linkError || !linkData?.properties?.action_link) {
+    return { success: false, message: linkError?.message ?? "Konnte keinen Magic-Link für die Impersonation erzeugen." };
   }
 
-  const nowIso = new Date().toISOString();
+  // Magic-Link aufrufen und Tokens extrahieren
+  const tokens = await getSessionTokensFromMagicLink(linkData.properties.action_link);
 
+  const nowIso = new Date().toISOString();
   const requestHeaders = await headers();
   const ipAddress = requestHeaders.get("x-forwarded-for") || requestHeaders.get("x-real-ip") || null;
   const userAgent = requestHeaders.get("user-agent") || null;
@@ -234,6 +267,7 @@ export async function startImpersonation(targetUserId: string): Promise<ActionRe
     return { success: false, message: insertError?.message ?? "Impersonation konnte nicht protokolliert werden." };
   }
 
+  // Session-Payload zusammenstellen
   return {
     success: true,
     message: `${targetFullName} wird nun impersoniert.`,
@@ -250,11 +284,11 @@ export async function startImpersonation(targetUserId: string): Promise<ActionRe
         role: targetProfile?.role ?? "employee",
       },
       session: {
-        access_token: impersonationSession.session.access_token,
-        refresh_token: impersonationSession.session.refresh_token!,
-        expires_at: impersonationSession.session.expires_at!,
-        expires_in: impersonationSession.session.expires_in!,
-        token_type: impersonationSession.session.token_type,
+        access_token: tokens.access_token,
+        refresh_token: tokens.refresh_token,
+        expires_at: Math.floor(Date.now() / 1000) + (tokens.expires_in ?? 3600),
+        expires_in: tokens.expires_in ?? 3600,
+        token_type: tokens.token_type ?? "bearer",
       },
     },
   };
@@ -288,19 +322,18 @@ export async function stopImpersonation(impersonationSessionId: string): Promise
     return { success: false, message: "Diese Impersonation-Session ist bereits beendet." };
   }
 
-  if (sessionRecord.impersonated_user_id !== user.id && sessionRecord.admin_user_id !== user.id) {
-    return { success: false, message: "Sie sind nicht berechtigt, diese Impersonation zu beenden." };
-  }
-
-  // Call createSession directly on supabaseAdmin.auth.admin
-  const { data: revertSession, error: revertError } = await (supabaseAdmin.auth.admin as any).createSession({
-    user_id: sessionRecord.admin_user_id,
+  // Magic Link für den ursprünglichen Admin erzeugen
+  const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
+    type: "magiclink",
+    email: (await supabaseAdmin.auth.admin.getUserById(sessionRecord.admin_user_id)).data.user?.email!,
   });
 
-  if (revertError || !revertSession.session) {
-    const message = revertError?.message ?? "Ursprüngliche Sitzung konnte nicht wiederhergestellt werden.";
-    return { success: false, message };
+  if (linkError || !linkData?.properties?.action_link) {
+    return { success: false, message: linkError?.message ?? "Konnte keinen Magic-Link für die Admin-Sitzung erzeugen." };
   }
+
+  // Tokens für den Admin aus dem Magic-Link extrahieren
+  const tokens = await getSessionTokensFromMagicLink(linkData.properties.action_link);
 
   const { error: updateError } = await supabaseAdmin
     .from("impersonation_sessions")
@@ -319,11 +352,11 @@ export async function stopImpersonation(impersonationSessionId: string): Promise
     message: "Impersonation beendet. Sie sind wieder als Administrator angemeldet.",
     data: {
       session: {
-        access_token: revertSession.session.access_token,
-        refresh_token: revertSession.session.refresh_token!,
-        expires_at: revertSession.session.expires_at!,
-        expires_in: revertSession.session.expires_in!,
-        token_type: revertSession.session.token_type,
+        access_token: tokens.access_token,
+        refresh_token: tokens.refresh_token,
+        expires_at: Math.floor(Date.now() / 1000) + (tokens.expires_in ?? 3600),
+        expires_in: tokens.expires_in ?? 3600,
+        token_type: tokens.token_type ?? "bearer",
       },
       message: "Impersonation beendet. Willkommen zurück!",
     },
