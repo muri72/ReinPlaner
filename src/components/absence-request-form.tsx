@@ -54,7 +54,7 @@ export function AbsenceRequestForm({ initialData, onSubmit, submitButtonText, on
   };
 
   const form = useForm<AbsenceRequestFormValues>({
-    resolver: zodResolver(absenceRequestSchema as z.ZodSchema<AbsenceRequestFormValues>),
+    resolver: zodResolver(absenceRequestSchema),
     defaultValues: resolvedDefaultValues,
   });
 

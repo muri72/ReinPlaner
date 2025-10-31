@@ -99,7 +99,7 @@ export function TimeEntryForm({ initialData, onSubmit, submitButtonText, onSucce
   };
 
   const form = useForm<TimeEntryFormValues>({
-    resolver: zodResolver(timeEntrySchema as z.ZodSchema<TimeEntryFormValues>),
+    resolver: zodResolver(timeEntrySchema),
     defaultValues: resolvedDefaultValues,
   });
 

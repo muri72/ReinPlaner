@@ -47,7 +47,7 @@ export function CustomerOrderRequestForm({ customerId, onSuccess }: CustomerOrde
   const [customerContacts, setCustomerContacts] = useState<{ id: string; first_name: string; last_name: string; customer_id: string }[]>([]);
 
   const form = useForm<CustomerOrderRequestFormValues>({
-    resolver: zodResolver(customerOrderRequestSchema as z.ZodSchema<CustomerOrderRequestFormValues>), // Explizites Casting
+    resolver: zodResolver(customerOrderRequestSchema),
     defaultValues: {
       title: "",
       description: null,
@@ -55,7 +55,7 @@ export function CustomerOrderRequestForm({ customerId, onSuccess }: CustomerOrde
       orderType: "one_time",
       recurringStartDate: null,
       recurringEndDate: null,
-      serviceType: availableServices[0], // Setze einen gültigen Standardwert
+      serviceType: availableServices[0],
       notes: null,
     },
   });

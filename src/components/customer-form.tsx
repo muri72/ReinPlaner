@@ -46,7 +46,7 @@ export function CustomerForm({ initialData, onSubmit, submitButtonText, onSucces
   };
 
   const form = useForm<CustomerFormValues>({
-    resolver: zodResolver(customerSchema as z.ZodSchema<CustomerFormValues>),
+    resolver: zodResolver(customerSchema),
     defaultValues: resolvedDefaultValues,
   });
 

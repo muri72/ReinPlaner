@@ -107,9 +107,9 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
   };
 
   const form = useForm<UserFormValues>({
-    resolver: zodResolver(userSchema as z.ZodSchema<UserFormValues>),
+    resolver: zodResolver(userSchema),
     defaultValues: resolvedDefaultValues,
-    mode: "onSubmit", // Validierung auf onSubmit setzen
+    mode: "onSubmit",
   });
 
   const selectedRole = form.watch("role");

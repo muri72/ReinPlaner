@@ -138,7 +138,7 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
   };
 
   const form = useForm<ObjectFormValues>({
-    resolver: zodResolver(objectSchema as z.ZodSchema<ObjectFormValues>),
+    resolver: zodResolver(objectSchema),
     defaultValues: resolvedDefaultValues,
     mode: "onChange",
   });

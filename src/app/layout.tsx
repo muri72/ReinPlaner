@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { SessionContextProvider } from "@/components/supabase-session-provider";
@@ -21,17 +21,6 @@ export const metadata: Metadata = {
   title: "ARIS Management",
   description: "Management-Plattform für Reinigungsunternehmen",
   manifest: "/manifest.json",
-  viewport: {
-    width: "device-width",
-    initialScale: 1,
-    maximumScale: 5,
-    userScalable: true,
-    viewportFit: "cover"
-  },
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#3B82F6" },
-    { media: "(prefers-color-scheme: dark)", color: "#1E40AF" }
-  ],
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
@@ -42,20 +31,33 @@ export const metadata: Metadata = {
   }
 };
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+  userScalable: true,
+  viewportFit: "cover",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#3B82F6" },
+    { media: "(prefers-color-scheme: dark)", color: "#1E40AF" }
+  ]
+};
+
 export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   const supabase = await createClient();
-  const { data: { session } } = await supabase.auth.getSession();
+  const { data: { user } } = await supabase.auth.getUser();
 
   let userProfile = null;
-  if (session?.user) {
+  // Use getUser() to get an authenticated user object
+  if (user) {
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('first_name, last_name, avatar_url, role')
-      .eq('id', session.user.id)
+      .eq('id', user.id)
       .single();
 
     if (profileError && profileError.code !== 'PGRST116') {
@@ -75,7 +77,7 @@ export default async function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <SessionContextProvider initialSession={session}>
+          <SessionContextProvider initialSession={null}>
             {/* Der userProfile wird bereits in den spezifischen Layouts (dashboard/layout.tsx, etc.)
                 an das DashboardClientLayout übergeben. Dieser React.Children.map-Block ist unnötig
                 und verursacht Typfehler, da er versucht, eine Prop an ein unbekanntes Kind zu klonen. */}

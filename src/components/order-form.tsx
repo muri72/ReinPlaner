@@ -175,7 +175,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
   };
 
   const form = useForm<OrderFormValues>({
-    resolver: zodResolver(createOrderSchema(objects) as z.ZodSchema<OrderFormValues>),
+    resolver: zodResolver(createOrderSchema(objects)),
     defaultValues: resolvedDefaultValues,
     mode: "onChange",
   });
@@ -465,7 +465,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     }
 
     let copiedCount = 0;
-    const employeeRecurrenceInterval = form.getValues(`assignedEmployees.${employeeIndex}.assigned_recurrence_interval_weeks`);
+    const employeeRecurrenceInterval = form.getValues(`assignedEmployees.${employeeIndex}.assigned_recurrence_interval_weeks`) ?? 1;
     for (let weekIndex = 0; weekIndex < employeeRecurrenceInterval; weekIndex++) {
       if (weekIndex !== sourceWeekIndex) {
         form.setValue(`assignedEmployees.${employeeIndex}.assigned_daily_schedules.${weekIndex}.${sourceDay}`, sourceSchedule, { shouldValidate: true });
@@ -490,7 +490,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     }
 
     let copiedCount = 0;
-    const employeeRecurrenceInterval = form.getValues(`assignedEmployees.${employeeIndex}.assigned_recurrence_interval_weeks`);
+    const employeeRecurrenceInterval = form.getValues(`assignedEmployees.${employeeIndex}.assigned_recurrence_interval_weeks`) ?? 1;
     for (let weekIndex = 0; weekIndex < employeeRecurrenceInterval; weekIndex++) {
       if (weekIndex !== sourceWeekIndex) {
         form.setValue(`assignedEmployees.${employeeIndex}.assigned_daily_schedules.${weekIndex}`, sourceWeekSchedule, { shouldValidate: true });
@@ -807,7 +807,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
                         type="number"
                         step="1"
                         min="0"
-                        max={form.watch(`assignedEmployees.${assignedIndex}.assigned_recurrence_interval_weeks`) - 1}
+                        max={Math.max(0, ((form.watch(`assignedEmployees.${assignedIndex}.assigned_recurrence_interval_weeks`) ?? 1) - 1))}
                         {...form.register(`assignedEmployees.${assignedIndex}.assigned_start_week_offset`, { valueAsNumber: true })}
                         placeholder="Z.B. 0 für die erste Woche, 1 für die zweite Woche"
                       />
@@ -823,7 +823,12 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
                 {assignedEmp.assigned_daily_schedules.map((weekSchedule, weekIndex) => (
                   <div key={weekIndex} className="border p-3 rounded-md space-y-2 bg-background/50">
                     <div className="flex items-center justify-between">
-                      <h5 className="font-medium text-sm">Woche {weekIndex + 1} (Offset {(form.watch(`assignedEmployees.${assignedIndex}.assigned_start_week_offset`) + weekIndex) % form.watch(`assignedEmployees.${assignedIndex}.assigned_recurrence_interval_weeks`)})</h5>
+                      <h5 className="font-medium text-sm">
+                        Woche {weekIndex + 1} (Offset {
+                          (((form.watch(`assignedEmployees.${assignedIndex}.assigned_start_week_offset`) ?? 0) + weekIndex) %
+                            (form.watch(`assignedEmployees.${assignedIndex}.assigned_recurrence_interval_weeks`) ?? 1))
+                        })
+                      </h5>
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>

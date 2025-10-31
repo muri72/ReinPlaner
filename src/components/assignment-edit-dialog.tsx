@@ -78,7 +78,7 @@ export function AssignmentEditDialog({ orderId, children, onSuccess }: Assignmen
   const [orderTitle, setOrderTitle] = React.useState("");
 
   const form = useForm<AssignmentEditFormValues>({
-    resolver: zodResolver(assignmentEditSchema as z.ZodSchema<AssignmentEditFormValues>),
+    resolver: zodResolver(assignmentEditSchema),
     defaultValues: {
       employeeIds: [],
       assigned_daily_schedules: [],

@@ -104,7 +104,7 @@ export function EmployeeForm({ initialData, onSubmit, submitButtonText, onSucces
   } : {};
 
   const form = useForm<EmployeeFormValues>({
-    resolver: zodResolver(employeeSchema as z.ZodSchema<EmployeeFormValues>),
+    resolver: zodResolver(employeeSchema),
     defaultValues: {
       first_name: "",
       last_name: "",

@@ -64,7 +64,7 @@ export function TicketForm({ initialData, onSubmit, submitButtonText, onSuccess,
   };
 
   const form = useForm<TicketFormValues>({
-    resolver: zodResolver(ticketSchema as z.ZodSchema<TicketFormValues>),
+    resolver: zodResolver(ticketSchema),
     defaultValues: resolvedDefaultValues,
   });
 

@@ -28,7 +28,7 @@ export function ManagerCustomerAssignmentForm({ managerId, onSuccess }: ManagerC
   const [loading, setLoading] = useState(true);
 
   const form = useForm<AssignmentFormValues>({
-    resolver: zodResolver(assignmentSchema as z.ZodSchema<AssignmentFormValues>), // Korrektur hier
+    resolver: zodResolver(assignmentSchema),
     defaultValues: {
       customerIds: [],
     },
