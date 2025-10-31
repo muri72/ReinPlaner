@@ -1,9 +1,20 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 
 export function DashboardLoading() {
+  const [elapsedTime, setElapsedTime] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setElapsedTime(prev => prev + 1);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <div className="p-8 space-y-8 animate-pulse">
       {/* Header Skeleton */}
@@ -33,9 +44,14 @@ export function DashboardLoading() {
         <div className="h-6 bg-muted rounded w-1/4"></div>
         <Card>
           <CardContent className="p-8">
-            <div className="flex items-center justify-center">
+            <div className="flex flex-col items-center justify-center space-y-4">
               <Loader2 className="h-8 w-8 animate-spin text-primary mr-2" />
-              <span className="text-lg">Dashboard-Daten werden geladen...</span>
+              <div className="text-center">
+                <span className="text-lg">Dashboard-Daten werden geladen...</span>
+                <div className="text-sm text-muted-foreground mt-2">
+                  Läuft seit {elapsedTime}s
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>

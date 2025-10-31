@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from "react";
 import { useImpersonation } from "@/lib/impersonation/context";
 import { createClient } from "@/lib/supabase/client";
 
@@ -16,6 +16,7 @@ interface UserProfileContextType {
   currentUserRole: 'admin' | 'manager' | 'employee' | 'customer';
   displayName: string;
   loading: boolean;
+  authenticated: boolean;
   refresh: () => Promise<void>;
 }
 
@@ -23,84 +24,129 @@ const UserProfileContext = createContext<UserProfileContextType | undefined>(und
 
 export function UserProfileProvider({ children }: { children: React.ReactNode }) {
   const { meta, isImpersonating } = useImpersonation();
+
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [authenticated, setAuthenticated] = useState(false);
 
-  const loadProfile = async () => {
-    setLoading(true);
+  const loadProfile = useCallback(async () => {
     const supabase = createClient();
 
     try {
-      let profileToLoad: UserProfile | null = null;
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
-      if (isImpersonating && meta) {
-
-        // When impersonating, we need to load the impersonated user's profile
-        // We need to fetch it manually since RLS might prevent access
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('first_name, last_name, avatar_url, role')
-          .eq('id', meta.impersonatedUserId)
-          .single();
-
-        if (!error && data) {
-          profileToLoad = {
-            first_name: data.first_name,
-            last_name: data.last_name,
-            avatar_url: data.avatar_url,
-            // Use the impersonated role from metadata, not the database
-            role: meta.impersonatedRole,
-          };
-        } else {
-          // Fallback to metadata if database query fails
-          profileToLoad = {
-            first_name: meta.impersonatedName.split(' ')[0] || 'Unbekannt',
-            last_name: meta.impersonatedName.split(' ').slice(1).join(' ') || '',
-            avatar_url: null,
-            role: meta.impersonatedRole,
-          };
-        }
-      } else {
-        // Load current user's profile
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('first_name, last_name, avatar_url, role')
-          .single();
-
-        if (!error && data) {
-          profileToLoad = data;
-        }
+      if (sessionError || !session?.user) {
+        setAuthenticated(false);
+        setUserProfile(null);
+        setLoading(false);
+        return;
       }
 
-      setUserProfile(profileToLoad);
+      const user = session.user;
+
+      setAuthenticated(true);
+
+      // Handle impersonation
+      if (isImpersonating && meta) {
+        const profileToLoad: UserProfile = {
+          first_name: meta.impersonatedName.split(' ')[0] || 'Unbekannt',
+          last_name: meta.impersonatedName.split(' ').slice(1).join(' ') || '',
+          avatar_url: null,
+          role: meta.impersonatedRole,
+        };
+        setUserProfile(profileToLoad);
+        setLoading(false);
+        return;
+      }
+
+      // Fetch profile from database
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('first_name, last_name, avatar_url, role')
+        .eq('id', user.id)
+        .single();
+
+      if (profileError) {
+        // Create default profile on error
+        setUserProfile({
+          first_name: user.email?.split('@')[0] || 'User',
+          last_name: '',
+          avatar_url: null,
+          role: 'employee',
+        });
+      } else {
+        setUserProfile(profile);
+      }
     } catch (error) {
-      console.error("Error loading profile:", error);
-      setUserProfile(null);
+      // Set default profile to prevent infinite loading
+      setUserProfile({
+        first_name: 'User',
+        last_name: '',
+        avatar_url: null,
+        role: 'employee',
+      });
+      setAuthenticated(true);
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    loadProfile();
   }, [isImpersonating, meta]);
 
-  const currentUserRole = (userProfile?.role as any) || 'employee';
+  useEffect(() => {
+    let mounted = true;
 
-  const displayName = userProfile
-    ? [userProfile.first_name, userProfile.last_name].filter(Boolean).join(" ") || "Unbekannter Nutzer"
-    : "Lädt...";
+    loadProfile().then(() => {
+      if (!mounted) return;
+
+      const supabase = createClient();
+
+      const { data: { subscription } } = supabase.auth.onAuthStateChange(
+        async (event, session) => {
+          if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
+            await loadProfile();
+          }
+        }
+      );
+
+      return () => {
+        mounted = false;
+        subscription.unsubscribe();
+      };
+    });
+
+    // Cleanup on unmount
+    return () => {
+      mounted = false;
+    };
+  }, [loadProfile]);
+
+  const currentUserRole = useMemo(() => {
+    if (isImpersonating && meta?.impersonatedRole) {
+      return meta.impersonatedRole as 'admin' | 'manager' | 'employee' | 'customer';
+    }
+
+    return (userProfile?.role as any) || 'employee';
+  }, [userProfile?.role, isImpersonating, meta]);
+
+  const displayName = useMemo(() => {
+    if (isImpersonating && meta?.impersonatedName) {
+      return meta.impersonatedName;
+    }
+
+    if (!userProfile) return "Lädt...";
+    return [userProfile.first_name, userProfile.last_name].filter(Boolean).join(" ") || "Unbekannter Nutzer";
+  }, [userProfile, isImpersonating, meta]);
+
+  const contextValue = useMemo(() => ({
+    userProfile,
+    currentUserRole,
+    displayName,
+    loading,
+    authenticated,
+    refresh: loadProfile,
+  }), [userProfile, currentUserRole, displayName, loading, authenticated, loadProfile]);
 
   return (
-    <UserProfileContext.Provider
-      value={{
-        userProfile,
-        currentUserRole,
-        displayName,
-        loading,
-        refresh: loadProfile,
-      }}
-    >
+    <UserProfileContext.Provider value={contextValue}>
       {children}
     </UserProfileContext.Provider>
   );

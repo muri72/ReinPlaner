@@ -60,7 +60,7 @@ export function ImpersonationBanner() {
         <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
         <div className="space-y-1">
           <p className="text-sm font-semibold">
-            Impersonation aktiv – Sie handeln als {displayName}
+            Impersonation aktiv – Sie handeln als {meta.impersonatedName}
           </p>
           <p className="text-xs text-amber-800">
             Alle Aktionen werden diesem Account zugeordnet. Klicken Sie auf

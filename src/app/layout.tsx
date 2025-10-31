@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ImpersonationProviderWrapper } from "@/components/impersonation-provider-wrapper";
+import { UserProfileProvider } from "@/components/user-profile-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "next-themes";
 import React from 'react'; // Hinzugefügt: Expliziter Import von React
@@ -59,7 +60,9 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <ImpersonationProviderWrapper>
-            {children}
+            <UserProfileProvider>
+              {children}
+            </UserProfileProvider>
           </ImpersonationProviderWrapper>
           <Toaster />
         </ThemeProvider>
