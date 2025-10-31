@@ -162,12 +162,10 @@ export default function CustomerDashboard() {
 
   return (
     <MobileDashboardLayout
-      currentUserRole="customer"
       onSignOut={async () => {
         await supabase.auth.signOut();
         redirect("/login");
       }}
-      userProfile={userProfile}
     >
       <div className="space-y-4">
         {/* Welcome Header */}

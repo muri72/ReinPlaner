@@ -21,28 +21,21 @@ import { Switch } from "@/components/ui/switch";
 import { useIsMobile } from "@/hooks/use-mobile"; // Import useIsMobile
 import { ImpersonationDialog } from "@/components/impersonation-dialog";
 import { IMPERSONATION_STORAGE_KEY } from "../lib/impersonation/constants";
+import { useUserProfile } from "@/components/user-profile-provider";
 
 interface UserMenuProps {
   currentUserRole: 'admin' | 'manager' | 'employee' | 'customer';
   onSignOut: () => Promise<void>;
-  // Accept userProfile directly as a prop
-  userProfile: {
-    first_name: string | null;
-    last_name: string | null;
-    avatar_url: string | null;
-    role: string; // Include role in userProfile type
-  } | null;
 }
 
-export function UserMenu({ currentUserRole, onSignOut, userProfile }: UserMenuProps) {
+export function UserMenu({ currentUserRole, onSignOut }: UserMenuProps) {
   const router = useRouter();
   const { theme, setTheme } = useTheme();
   const isMobile = useIsMobile(); // Use the hook
   const [isImpersonationDialogOpen, setIsImpersonationDialogOpen] = useState(false);
+  const { userProfile: profile, loading, displayName } = useUserProfile();
 
-  // Use the passed userProfile directly
-  const profile = userProfile;
-  const loading = profile === null; // Determine loading based on whether profile data is available
+  console.log("[USER_MENU] Rendering menu:", { profile, currentUserRole, displayName, loading });
 
   const handleSignOut = async () => {
     if (typeof window !== "undefined") {
@@ -53,7 +46,6 @@ export function UserMenu({ currentUserRole, onSignOut, userProfile }: UserMenuPr
     router.push("/login");
   };
 
-  const displayName = profile?.first_name || profile?.last_name ? `${profile.first_name || ""} ${profile.last_name || ""}`.trim() : "Mein Profil";
   const avatarFallback = profile?.first_name?.[0] || profile?.last_name?.[0] || 'U';
 
   if (loading) {

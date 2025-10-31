@@ -31,18 +31,13 @@ import {
 } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
+import { useUserProfile } from "@/components/user-profile-provider";
 
 type UserRole = "admin" | "manager" | "employee" | "customer";
 
 interface MobileNavigationProps {
   currentUserRole: UserRole;
   onSignOut: () => Promise<void>;
-  userProfile: {
-    first_name: string | null;
-    last_name: string | null;
-    avatar_url: string | null;
-    role: string;
-  } | null;
   notificationCount?: number;
 }
 
@@ -134,6 +129,7 @@ export function MobileNavigation({
   notificationCount = 0,
 }: MobileNavigationProps) {
   const pathname = usePathname();
+  const { userProfile } = useUserProfile();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isManaging, setIsManaging] = useState(false);
   const [order, setOrder] = useState<string[]>([]);

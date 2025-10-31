@@ -26,17 +26,11 @@ export default async function DashboardLayout({
     console.error("Fehler beim Laden des Benutzerprofils:", profileError?.message || JSON.stringify(profileError));
   }
 
-  const currentUserRole = userProfile?.role as 'admin' | 'manager' | 'employee' | 'customer' || 'employee';
-
   // Middleware handles the primary redirection. This layout is for admin/manager.
   // If a non-admin/manager somehow lands here, they will be redirected by middleware.
 
   return (
-    <DashboardClientLayout
-      currentUserRole={currentUserRole}
-      onSignOut={signOut}
-      userProfile={userProfile} // Pass the fetched userProfile
-    >
+    <DashboardClientLayout onSignOut={signOut}>
       {children}
     </DashboardClientLayout>
   );

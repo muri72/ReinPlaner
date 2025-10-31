@@ -12,6 +12,8 @@ import { Button } from "@/components/ui/button";
 import { Loader2, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { IMPERSONATION_STORAGE_KEY, ImpersonationMeta } from "../lib/impersonation/constants";
+import { useImpersonation } from "@/lib/impersonation/context";
+import { useUserProfile } from "@/components/user-profile-provider";
 
 interface ImpersonationDialogProps {
   open: boolean;
@@ -35,6 +37,7 @@ export function ImpersonationDialog({ open, onOpenChange }: ImpersonationDialogP
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
   const supabase = createClient();
+  const { setImpersonationMeta } = useImpersonation(); // Get setImpersonationMeta for optimistic updates
 
   useEffect(() => {
     if (!open) return;
@@ -88,19 +91,8 @@ export function ImpersonationDialog({ open, onOpenChange }: ImpersonationDialogP
       return;
     }
 
-    const session = result.data.session;
-
-    const { error: setSessionError } = await supabase.auth.setSession({
-      access_token: session.access_token,
-      refresh_token: session.refresh_token,
-    });
-
-    if (setSessionError) {
-      toast.error(setSessionError.message || "Sitzung konnte nicht aktualisiert werden.");
-      setIsSubmitting(false);
-      return;
-    }
-
+    // Store impersonation metadata locally
+    // Note: We use "view as" pattern - admin stays logged in but views with impersonated role
     const meta: ImpersonationMeta = {
       sessionId: result.data.impersonationSessionId,
       adminUserId: result.data.admin.id,
@@ -113,13 +105,15 @@ export function ImpersonationDialog({ open, onOpenChange }: ImpersonationDialogP
     };
 
     if (typeof window !== "undefined") {
-      window.localStorage.setItem(IMPERSONATION_STORAGE_KEY, JSON.stringify(meta));
+      console.log("[IMPERSONATION] Metadata stored, triggering optimistic update...");
+      // Set metadata in context (this will trigger useEffect in UserProfileProvider automatically)
+      setImpersonationMeta(meta);
     }
 
     toast.success(result.message || "Impersonation gestartet.");
     onOpenChange(false);
     setIsSubmitting(false);
-    router.refresh();
+    // No page reload needed - optimistic update is sufficient!
   };
 
   return (
@@ -208,7 +202,7 @@ export function ImpersonationDialog({ open, onOpenChange }: ImpersonationDialogP
         </DialogFooter>
 
         <p className="text-xs text-muted-foreground">
-          Hinweis: Ihre ursprüngliche Admin-Sitzung wird gespeichert. Sie können jederzeit über den Banner im Dashboard zu {adminName} zurückkehren.
+          Hinweis: Sie bleiben als {adminName} angemeldet und sehen das Dashboard aus der Sicht des ausgewählten Benutzers. Sie können jederzeit über den gelben Banner zurückkehren.
         </p>
       </DialogContent>
     </Dialog>

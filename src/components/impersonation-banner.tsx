@@ -1,95 +1,51 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { stopImpersonation } from "@/lib/actions/impersonation";
-import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Loader2, ShieldAlert } from "lucide-react";
-import { IMPERSONATION_STORAGE_KEY, ImpersonationMeta } from "../lib/impersonation/constants";
+import { useImpersonation } from "@/lib/impersonation/context";
+import { useUserProfile } from "@/components/user-profile-provider";
+import { IMPERSONATION_STORAGE_KEY } from "@/lib/impersonation/constants";
 import { cn } from "@/lib/utils";
 
 export function ImpersonationBanner() {
-  const [meta, setMeta] = useState<ImpersonationMeta | null>(null);
-  const [initialised, setInitialised] = useState(false);
+  const { meta, isImpersonating, triggerReinit } = useImpersonation();
+  const { displayName } = useUserProfile();
   const [isStopping, setIsStopping] = useState(false);
   const router = useRouter();
-
-  useEffect(() => {
-    if (typeof window === "undefined" || initialised) {
-      return;
-    }
-
-    const raw = window.localStorage.getItem(IMPERSONATION_STORAGE_KEY);
-    if (!raw) {
-      setInitialised(true);
-      return;
-    }
-
-    try {
-      const parsed: ImpersonationMeta = JSON.parse(raw);
-      const supabase = createClient();
-
-      void supabase.auth.getUser().then(({ data, error }) => {
-        if (error) {
-          window.localStorage.removeItem(IMPERSONATION_STORAGE_KEY);
-          setInitialised(true);
-          return;
-        }
-
-        if (data.user?.id === parsed.impersonatedUserId) {
-          setMeta(parsed);
-        } else if (data.user?.id !== parsed.adminUserId) {
-          window.localStorage.removeItem(IMPERSONATION_STORAGE_KEY);
-        }
-
-        setInitialised(true);
-      });
-    } catch {
-      window.localStorage.removeItem(IMPERSONATION_STORAGE_KEY);
-      setInitialised(true);
-    }
-  }, [initialised]);
 
   const handleStop = async () => {
     if (!meta || isStopping) return;
 
     setIsStopping(true);
 
+    // Mark the impersonation as ended in the database
     const response = await stopImpersonation(meta.sessionId);
 
-    if (!response.success || !response.data) {
+    if (!response.success) {
       toast.error(response.message || "Impersonation konnte nicht beendet werden.");
       setIsStopping(false);
       return;
     }
 
-    const supabase = createClient();
-    const session = response.data.session;
-
-    const { error } = await supabase.auth.setSession({
-      access_token: session.access_token,
-      refresh_token: session.refresh_token,
-    });
-
-    if (error) {
-      toast.error(error.message || "Sitzung konnte nicht wiederhergestellt werden.");
-      setIsStopping(false);
-      return;
-    }
-
+    // Clear impersonation metadata locally
     if (typeof window !== "undefined") {
       window.localStorage.removeItem(IMPERSONATION_STORAGE_KEY);
+      console.log("[IMPERSONATION] Metadata cleared, triggering optimistic update...");
+      // Trigger immediate context re-initialization (this will trigger useEffect in UserProfileProvider automatically)
+      triggerReinit();
     }
 
-    toast.success(response.data.message || "Impersonation beendet.");
-    setMeta(null);
+    toast.success(response.data?.message || "Impersonation beendet.");
     setIsStopping(false);
-    router.refresh();
+    // No page reload needed - optimistic update is sufficient!
   };
 
-  if (!initialised || !meta) {
+  // Show banner only when impersonating
+  if (!isImpersonating || !meta) {
     return null;
   }
 
@@ -105,7 +61,7 @@ export function ImpersonationBanner() {
         <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
         <div className="space-y-1">
           <p className="text-sm font-semibold">
-            Impersonation aktiv – Sie handeln als {meta.impersonatedName}
+            Impersonation aktiv – Sie handeln als {displayName}
           </p>
           <p className="text-xs text-amber-800">
             Alle Aktionen werden diesem Account zugeordnet. Klicken Sie auf

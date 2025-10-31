@@ -1,8 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { SessionContextProvider } from "@/components/supabase-session-provider";
-import { createClient } from "@/lib/supabase/server";
+import { ImpersonationProviderWrapper } from "@/components/impersonation-provider-wrapper";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "next-themes";
 import React from 'react'; // Hinzugefügt: Expliziter Import von React
@@ -43,29 +42,11 @@ export const viewport: Viewport = {
   ]
 };
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  let userProfile = null;
-  // Use getUser() to get an authenticated user object
-  if (user) {
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('first_name, last_name, avatar_url, role')
-      .eq('id', user.id)
-      .single();
-
-    if (profileError && profileError.code !== 'PGRST116') {
-      console.error("Fehler beim Laden des Benutzerprofils im RootLayout:", profileError?.message || profileError);
-    }
-    userProfile = profile;
-  }
-
   return (
     <html lang="de" suppressHydrationWarning>
       <body
@@ -77,12 +58,9 @@ export default async function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <SessionContextProvider initialSession={null}>
-            {/* Der userProfile wird bereits in den spezifischen Layouts (dashboard/layout.tsx, etc.)
-                an das DashboardClientLayout übergeben. Dieser React.Children.map-Block ist unnötig
-                und verursacht Typfehler, da er versucht, eine Prop an ein unbekanntes Kind zu klonen. */}
+          <ImpersonationProviderWrapper>
             {children}
-          </SessionContextProvider>
+          </ImpersonationProviderWrapper>
           <Toaster />
         </ThemeProvider>
       </body>

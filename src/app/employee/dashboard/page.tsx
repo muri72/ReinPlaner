@@ -180,12 +180,10 @@ export default function EmployeeDashboard() {
 
   return (
     <MobileDashboardLayout
-      currentUserRole="employee"
       onSignOut={async () => {
         await supabase.auth.signOut();
         redirect("/login");
       }}
-      userProfile={userProfile}
       notificationCount={stats.pendingNotifications}
     >
       <div className="space-y-4">

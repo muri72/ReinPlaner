@@ -5,28 +5,30 @@ import { format } from "date-fns";
 import { MobileNavigation } from "./mobile-navigation";
 import { NotificationBell } from "./notification-bell";
 import { UserMenu } from "./user-menu";
+import { useUserProfile } from "@/components/user-profile-provider";
 import { cn } from "@/lib/utils";
 
 interface MobileDashboardLayoutProps {
   children: React.ReactNode;
-  currentUserRole: 'admin' | 'manager' | 'employee' | 'customer';
   onSignOut: () => Promise<void>;
-  userProfile: {
-    first_name: string | null;
-    last_name: string | null;
-    avatar_url: string | null;
-    role: string;
-  } | null;
   notificationCount?: number;
 }
 
-export function MobileDashboardLayout({ 
-  children, 
-  currentUserRole, 
-  onSignOut, 
-  userProfile,
-  notificationCount = 0 
+export function MobileDashboardLayout({
+  children,
+  onSignOut,
+  notificationCount = 0
 }: MobileDashboardLayoutProps) {
+  const { currentUserRole, userProfile, loading } = useUserProfile();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-pulse text-lg">Lädt...</div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex flex-col">
       {/* Mobile Header */}
@@ -40,10 +42,9 @@ export function MobileDashboardLayout({
           </div>
           <div className="flex items-center space-x-2">
             <NotificationBell />
-            <UserMenu 
-              currentUserRole={currentUserRole} 
-              onSignOut={onSignOut} 
-              userProfile={userProfile} 
+            <UserMenu
+              currentUserRole={currentUserRole}
+              onSignOut={onSignOut}
             />
           </div>
         </div>
@@ -57,10 +58,9 @@ export function MobileDashboardLayout({
       </main>
 
       {/* Mobile Bottom Navigation */}
-      <MobileNavigation 
+      <MobileNavigation
         currentUserRole={currentUserRole}
         onSignOut={onSignOut}
-        userProfile={userProfile}
         notificationCount={notificationCount}
       />
     </div>

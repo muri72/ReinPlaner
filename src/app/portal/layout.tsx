@@ -26,19 +26,16 @@ export default async function PortalLayout({
     console.error("Fehler beim Laden des Benutzerprofils:", profileError?.message || JSON.stringify(profileError));
   }
 
-  const currentUserRole = userProfile?.role as 'admin' | 'manager' | 'employee' | 'customer' || 'customer';
-
   // Ensure only customers can access this layout
-  if (currentUserRole !== 'customer') {
+  // Note: The actual role check will happen in the client component
+  // For now, we'll redirect on the server side if not a customer
+  const serverSideRole = userProfile?.role as 'admin' | 'manager' | 'employee' | 'customer' || 'customer';
+  if (serverSideRole !== 'customer') {
     redirect("/dashboard"); // Redirect to main dashboard if not a customer
   }
 
   return (
-    <DashboardClientLayout
-      currentUserRole={currentUserRole}
-      onSignOut={signOut}
-      userProfile={userProfile} // Pass the fetched userProfile
-    >
+    <DashboardClientLayout onSignOut={signOut}>
       {children}
     </DashboardClientLayout>
   );

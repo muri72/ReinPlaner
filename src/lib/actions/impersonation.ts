@@ -29,23 +29,9 @@ interface ImpersonationSessionPayload {
     fullName: string;
     role: string;
   };
-  session: {
-    access_token: string;
-    refresh_token: string;
-    expires_at: number;
-    expires_in: number;
-    token_type: string;
-  };
 }
 
 interface RevertSessionPayload {
-  session: {
-    access_token: string;
-    refresh_token: string;
-    expires_at: number;
-    expires_in: number;
-    token_type: string;
-  };
   message: string;
 }
 
@@ -197,22 +183,12 @@ export async function startImpersonation(targetUserId: string): Promise<ActionRe
   const adminFullName =
     [adminProfile?.first_name, adminProfile?.last_name].filter(Boolean).join(" ").trim() || "Administrator";
 
-  // Call createSession directly on supabaseAdmin.auth.admin
-  const { data: impersonationSession, error: impersonationError } = await (supabaseAdmin.auth.admin as any).createSession({
-    user_id: targetUserId,
-  });
-
-  if (impersonationError || !impersonationSession.session) {
-    const message = impersonationError?.message ?? "Impersonation-Session konnte nicht erstellt werden.";
-    return { success: false, message };
-  }
-
-  const nowIso = new Date().toISOString();
-
+  // Get request headers for logging
   const requestHeaders = await headers();
   const ipAddress = requestHeaders.get("x-forwarded-for") || requestHeaders.get("x-real-ip") || null;
   const userAgent = requestHeaders.get("user-agent") || null;
 
+  // Log the impersonation session for auditing purposes
   const { data: newSessionRecord, error: insertError } = await supabaseAdmin
     .from("impersonation_sessions")
     .insert({
@@ -225,14 +201,19 @@ export async function startImpersonation(targetUserId: string): Promise<ActionRe
       },
       ip_address: ipAddress,
       user_agent: userAgent,
-      started_at: nowIso,
+      started_at: new Date().toISOString(),
     })
-    .select("id")
+    .select("id, session_metadata")
     .single();
 
   if (insertError || !newSessionRecord) {
     return { success: false, message: insertError?.message ?? "Impersonation konnte nicht protokolliert werden." };
   }
+
+  // Note: We use a "view as" pattern for impersonation.
+  // The admin stays logged in as themselves, but views the system with the impersonated user's role.
+  // Metadata is stored locally to track the impersonation session.
+  // This allows admins to see how the system appears to other user roles without actually switching accounts.
 
   return {
     success: true,
@@ -248,13 +229,6 @@ export async function startImpersonation(targetUserId: string): Promise<ActionRe
         id: targetUserId,
         fullName: targetFullName,
         role: targetProfile?.role ?? "employee",
-      },
-      session: {
-        access_token: impersonationSession.session.access_token,
-        refresh_token: impersonationSession.session.refresh_token!,
-        expires_at: impersonationSession.session.expires_at!,
-        expires_in: impersonationSession.session.expires_in!,
-        token_type: impersonationSession.session.token_type,
       },
     },
   };
@@ -292,16 +266,7 @@ export async function stopImpersonation(impersonationSessionId: string): Promise
     return { success: false, message: "Sie sind nicht berechtigt, diese Impersonation zu beenden." };
   }
 
-  // Call createSession directly on supabaseAdmin.auth.admin
-  const { data: revertSession, error: revertError } = await (supabaseAdmin.auth.admin as any).createSession({
-    user_id: sessionRecord.admin_user_id,
-  });
-
-  if (revertError || !revertSession.session) {
-    const message = revertError?.message ?? "Ursprüngliche Sitzung konnte nicht wiederhergestellt werden.";
-    return { success: false, message };
-  }
-
+  // Mark the impersonation session as inactive
   const { error: updateError } = await supabaseAdmin
     .from("impersonation_sessions")
     .update({
@@ -314,18 +279,16 @@ export async function stopImpersonation(impersonationSessionId: string): Promise
     return { success: false, message: updateError.message };
   }
 
+  // The client-side context provider will handle the rest:
+  // - Sign out the impersonated user
+  // - Clear local impersonation metadata
+  // - The admin user will need to sign back in manually
+
   return {
     success: true,
-    message: "Impersonation beendet. Sie sind wieder als Administrator angemeldet.",
+    message: "Impersonation beendet.",
     data: {
-      session: {
-        access_token: revertSession.session.access_token,
-        refresh_token: revertSession.session.refresh_token!,
-        expires_at: revertSession.session.expires_at!,
-        expires_in: revertSession.session.expires_in!,
-        token_type: revertSession.session.token_type,
-      },
-      message: "Impersonation beendet. Willkommen zurück!",
+      message: "Impersonation beendet. Bitte melden Sie sich neu an.",
     },
   };
 }

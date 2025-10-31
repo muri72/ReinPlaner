@@ -15,24 +15,47 @@ import { usePathname } from "next/navigation";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { ImpersonationBanner } from "@/components/impersonation-banner";
 
+import { useUserProfile } from "@/components/user-profile-provider";
+
 interface DashboardClientLayoutProps {
   children: React.ReactNode;
-  currentUserRole: 'admin' | 'manager' | 'employee' | 'customer';
   onSignOut: () => Promise<void>;
-  // Add userProfile prop
-  userProfile: {
-    first_name: string | null;
-    last_name: string | null;
-    avatar_url: string | null;
-    role: string;
-  } | null;
 }
 
-export function DashboardClientLayout({ children, currentUserRole, onSignOut, userProfile }: DashboardClientLayoutProps) {
+export function DashboardClientLayout({ children, onSignOut }: DashboardClientLayoutProps) {
+  const { userProfile, currentUserRole, loading, displayName } = useUserProfile();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const pathname = usePathname();
   const isMobile = useIsMobile();
+
+  console.log("[LAYOUT] Rendering layout:", {
+    userProfile,
+    currentUserRole,
+    displayName,
+    loading,
+    timestamp: Date.now()
+  });
+
+  // Show loading while profile is being fetched
+  if (loading) {
+    console.log("[LAYOUT] Showing loading state");
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-pulse text-lg">Lädt...</div>
+      </div>
+    );
+  }
+
+  // Helper component for sidebar navigation
+  const SidebarContent = ({ onLinkClick }: { onLinkClick?: () => void }) => (
+    <SidebarNav
+      isCollapsed={isCollapsed}
+      currentUserRole={currentUserRole}
+      onSignOut={onSignOut}
+      onLinkClick={onLinkClick}
+    />
+  );
 
   const getHomeLink = () => {
     if (currentUserRole === 'customer') {
@@ -58,7 +81,6 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut, us
               <UserMenu
                 currentUserRole={currentUserRole}
                 onSignOut={onSignOut}
-                userProfile={userProfile}
               />
             </div>
           </div>
@@ -76,7 +98,6 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut, us
         <MobileNavigation
           currentUserRole={currentUserRole}
           onSignOut={onSignOut}
-          userProfile={userProfile}
         />
       </div>
     );
@@ -115,12 +136,7 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut, us
               {/* Removed SheetClose button */}
             </SheetHeader>
             <nav className="flex-grow overflow-y-auto p-4">
-              <SidebarNav
-                isCollapsed={false}
-                currentUserRole={currentUserRole}
-                onSignOut={onSignOut}
-                onLinkClick={() => setIsSheetOpen(false)}
-              />
+              <SidebarContent onLinkClick={() => setIsSheetOpen(false)} />
             </nav>
             {/* Benachrichtigungsglocke und Benutzermenü am unteren Rand der Sidebar */}
             <div className={cn(
@@ -129,8 +145,7 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut, us
               "p-4 border-t border-sidebar-border space-y-4"
             )}>
               <NotificationBell />
-              {/* Pass userProfile to UserMenu */}
-              <UserMenu currentUserRole={currentUserRole} onSignOut={onSignOut} userProfile={userProfile} />
+              <UserMenu currentUserRole={currentUserRole} onSignOut={onSignOut} />
             </div>
           </SheetContent>
         </Sheet>
@@ -140,8 +155,7 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut, us
         </Link>
         <div className="flex items-center space-x-2">
           <NotificationBell />
-          {/* Pass userProfile to UserMenu */}
-          <UserMenu currentUserRole={currentUserRole} onSignOut={onSignOut} userProfile={userProfile} />
+          <UserMenu currentUserRole={currentUserRole} onSignOut={onSignOut} />
         </div>
       </header>
 
@@ -173,11 +187,7 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut, us
         </div>
 
         <nav className="flex-grow space-y-2 pt-4 border-t border-sidebar-border overflow-y-auto">
-          <SidebarNav
-            isCollapsed={isCollapsed}
-            currentUserRole={currentUserRole}
-            onSignOut={onSignOut}
-          />
+          <SidebarContent />
         </nav>
 
         {/* Benachrichtigungsglocke und Benutzermenü am unteren Rand der Sidebar */}
@@ -187,8 +197,7 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut, us
           "pt-4 border-t border-sidebar-border space-y-4"
         )}>
           <NotificationBell />
-          {/* Pass userProfile to UserMenu */}
-          <UserMenu currentUserRole={currentUserRole} onSignOut={onSignOut} userProfile={userProfile} />
+          <UserMenu currentUserRole={currentUserRole} onSignOut={onSignOut} />
         </div>
       </aside>
 

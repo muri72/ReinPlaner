@@ -106,17 +106,30 @@ interface SidebarNavProps {
 export function SidebarNav({ isCollapsed, currentUserRole, onSignOut, onLinkClick }: SidebarNavProps) {
   const pathname = usePathname();
 
+  console.log("[SIDEBAR] Rendering with role:", { currentUserRole, timestamp: Date.now() });
+
   const filteredNavItems = navItems.filter(item => {
     if (item.isCategory) {
-      // Filter children based on roles
-      item.children = item.children.filter(child => 
+      // Filter children based on roles (create new array to avoid mutation)
+      const filteredChildren = item.children.filter(child =>
         child.roles.includes(currentUserRole)
       );
       // Show category only if it has children
-      return item.children.length > 0;
+      return filteredChildren.length > 0;
     }
     // Show single link only if role matches
     return item.roles.includes(currentUserRole);
+  }).map(item => {
+    // Create new objects with filtered children for categories
+    if (item.isCategory) {
+      return {
+        ...item,
+        children: item.children.filter(child =>
+          child.roles.includes(currentUserRole)
+        )
+      };
+    }
+    return item;
   });
 
   return (

@@ -26,19 +26,16 @@ export default async function EmployeeLayout({
     console.error("Fehler beim Laden des Benutzerprofils:", profileError?.message || JSON.stringify(profileError));
   }
 
-  const currentUserRole = userProfile?.role as 'admin' | 'manager' | 'employee' | 'customer' || 'employee';
-
   // Ensure only employees can access this layout
-  if (currentUserRole !== 'employee') {
+  // Note: The actual role check will happen in the client component
+  // For now, we'll redirect on the server side if not an employee
+  const serverSideRole = userProfile?.role as 'admin' | 'manager' | 'employee' | 'customer' || 'employee';
+  if (serverSideRole !== 'employee') {
     redirect("/dashboard"); // Redirect to main dashboard if not an employee
   }
 
   return (
-    <DashboardClientLayout
-      currentUserRole={currentUserRole}
-      onSignOut={signOut}
-      userProfile={userProfile} // Pass the fetched userProfile
-    >
+    <DashboardClientLayout onSignOut={signOut}>
       {children}
     </DashboardClientLayout>
   );
