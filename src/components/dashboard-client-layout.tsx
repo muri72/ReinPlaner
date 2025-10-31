@@ -13,7 +13,6 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 import { usePathname } from "next/navigation";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
-import { ImpersonationBanner } from "@/components/impersonation-banner";
 
 interface DashboardClientLayoutProps {
   children: React.ReactNode;
@@ -66,8 +65,7 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut, us
 
         {/* Main Content */}
         <main className="flex-1 overflow-y-auto">
-          <div className="p-4 space-y-4">
-            <ImpersonationBanner />
+          <div className="p-4">
             {children}
           </div>
         </main>
@@ -199,10 +197,7 @@ export function DashboardClientLayout({ children, currentUserRole, onSignOut, us
         "transition-all duration-150 ease-in-out",
         isCollapsed ? "md:ml-20" : "md:ml-64"
       )}>
-        <div className="space-y-4">
-          <ImpersonationBanner />
-          {children}
-        </div>
+        {children}
       </main>
     </div>
   );
