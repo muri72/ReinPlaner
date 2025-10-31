@@ -1,5 +1,8 @@
+"use server";
+
+import { createClient } from "@/lib/supabase/server";
 import { headers } from "next/headers";
-import { createClient, createAdminClient } from "@/lib/supabase/server";
+import { createClient as createSupabaseAdminClient } from '@supabase/supabase-js';
 
 interface ActionResponse<T> {
   success: boolean;
@@ -14,8 +17,7 @@ interface ImpersonationTarget {
   role: string;
 }
 
-interface ImpersonationStartPayload {
-  actionLink: string;
+interface ImpersonationSessionPayload {
   impersonationSessionId: string;
   admin: {
     id: string;
@@ -27,11 +29,43 @@ interface ImpersonationStartPayload {
     fullName: string;
     role: string;
   };
+  session: {
+    access_token: string;
+    refresh_token: string;
+    expires_at: number;
+    expires_in: number;
+    token_type: string;
+  };
 }
 
 interface RevertSessionPayload {
-  actionLink: string;
+  session: {
+    access_token: string;
+    refresh_token: string;
+    expires_at: number;
+    expires_in: number;
+    token_type: string;
+  };
   message: string;
+}
+
+function getSupabaseAdminClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseUrl) {
+    throw new Error('Environment variable NEXT_PUBLIC_SUPABASE_URL is not set.');
+  }
+  if (!serviceRoleKey) {
+    throw new Error('Environment variable SUPABASE_SERVICE_ROLE_KEY is not set.');
+  }
+
+  return createSupabaseAdminClient(supabaseUrl, serviceRoleKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+  });
 }
 
 export async function listImpersonationTargets(): Promise<
@@ -58,8 +92,7 @@ export async function listImpersonationTargets(): Promise<
   }
 
   const adminFullName = [adminProfile.first_name, adminProfile.last_name].filter(Boolean).join(" ").trim() || "Administrator";
-
-  const supabaseAdmin = createAdminClient();
+  const supabaseAdmin = getSupabaseAdminClient();
 
   const [
     { data: authUsersResult, error: authUsersError },
@@ -78,7 +111,7 @@ export async function listImpersonationTargets(): Promise<
   }
 
   const profilesMap = new Map(
-    (profiles ?? []).map((profile: any) => [
+    (profiles ?? []).map(profile => [
       profile.id,
       {
         fullName: [profile.first_name, profile.last_name].filter(Boolean).join(" ").trim(),
@@ -88,8 +121,8 @@ export async function listImpersonationTargets(): Promise<
   );
 
   const targets: ImpersonationTarget[] = (authUsersResult.users ?? [])
-    .filter((authUser: any) => authUser.id !== user.id)
-    .map((authUser: any) => {
+    .filter(authUser => authUser.id !== user.id)
+    .map(authUser => {
       const profileEntry = profilesMap.get(authUser.id);
       return {
         id: authUser.id,
@@ -110,7 +143,7 @@ export async function listImpersonationTargets(): Promise<
   };
 }
 
-export async function startImpersonation(targetUserId: string): Promise<ActionResponse<ImpersonationStartPayload>> {
+export async function startImpersonation(targetUserId: string): Promise<ActionResponse<ImpersonationSessionPayload>> {
   if (!targetUserId) {
     return { success: false, message: "Bitte einen Zielnutzer auswählen." };
   }
@@ -124,7 +157,7 @@ export async function startImpersonation(targetUserId: string): Promise<ActionRe
 
   const { data: adminProfile, error: adminProfileError } = await supabase
     .from("profiles")
-    .select("first_name, last_name, role")
+    .select("first_name, last_name, role, email_notifications_enabled")
     .eq("id", adminUser.id)
     .single();
 
@@ -136,7 +169,7 @@ export async function startImpersonation(targetUserId: string): Promise<ActionRe
     return { success: false, message: "Sie können nicht sich selbst impersonieren." };
   }
 
-  const supabaseAdmin = createAdminClient();
+  const supabaseAdmin = getSupabaseAdminClient();
 
   const [{ data: targetProfile, error: targetProfileError }, { data: authUserResult, error: authUserError }] =
     await Promise.all([
@@ -164,23 +197,19 @@ export async function startImpersonation(targetUserId: string): Promise<ActionRe
   const adminFullName =
     [adminProfile?.first_name, adminProfile?.last_name].filter(Boolean).join(" ").trim() || "Administrator";
 
-  const requestHeaders = await headers();
-  const host = requestHeaders.get("host") || "";
-  const protocol = process.env.NODE_ENV === "development" ? "http" : "https";
-  const redirectUrl = `${protocol}://${host}/auth/callback/impersonate`;
-
-  const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
-    type: "magiclink",
-    email: authUserResult.user?.email!,
-    options: {
-      redirectTo: redirectUrl,
-    },
+  // Call createSession directly on supabaseAdmin.auth.admin
+  const { data: impersonationSession, error: impersonationError } = await (supabaseAdmin.auth.admin as any).createSession({
+    user_id: targetUserId,
   });
 
-  if (linkError || !linkData?.properties?.action_link) {
-    return { success: false, message: linkError?.message ?? "Konnte keinen Magic-Link für die Impersonation erzeugen." };
+  if (impersonationError || !impersonationSession.session) {
+    const message = impersonationError?.message ?? "Impersonation-Session konnte nicht erstellt werden.";
+    return { success: false, message };
   }
 
+  const nowIso = new Date().toISOString();
+
+  const requestHeaders = await headers();
   const ipAddress = requestHeaders.get("x-forwarded-for") || requestHeaders.get("x-real-ip") || null;
   const userAgent = requestHeaders.get("user-agent") || null;
 
@@ -196,7 +225,7 @@ export async function startImpersonation(targetUserId: string): Promise<ActionRe
       },
       ip_address: ipAddress,
       user_agent: userAgent,
-      started_at: new Date().toISOString(),
+      started_at: nowIso,
     })
     .select("id")
     .single();
@@ -209,7 +238,6 @@ export async function startImpersonation(targetUserId: string): Promise<ActionRe
     success: true,
     message: `${targetFullName} wird nun impersoniert.`,
     data: {
-      actionLink: linkData.properties.action_link,
       impersonationSessionId: newSessionRecord.id,
       admin: {
         id: adminUser.id,
@@ -220,6 +248,13 @@ export async function startImpersonation(targetUserId: string): Promise<ActionRe
         id: targetUserId,
         fullName: targetFullName,
         role: targetProfile?.role ?? "employee",
+      },
+      session: {
+        access_token: impersonationSession.session.access_token,
+        refresh_token: impersonationSession.session.refresh_token!,
+        expires_at: impersonationSession.session.expires_at!,
+        expires_in: impersonationSession.session.expires_in!,
+        token_type: impersonationSession.session.token_type,
       },
     },
   };
@@ -237,7 +272,7 @@ export async function stopImpersonation(impersonationSessionId: string): Promise
     return { success: false, message: "Nicht authentifiziert." };
   }
 
-  const supabaseAdmin = createAdminClient();
+  const supabaseAdmin = getSupabaseAdminClient();
 
   const { data: sessionRecord, error: sessionError } = await supabaseAdmin
     .from("impersonation_sessions")
@@ -253,27 +288,18 @@ export async function stopImpersonation(impersonationSessionId: string): Promise
     return { success: false, message: "Diese Impersonation-Session ist bereits beendet." };
   }
 
-  // Magic Link für den ursprünglichen Admin erzeugen
-  const { data: adminUserResult, error: adminLoadError } = await supabaseAdmin.auth.admin.getUserById(sessionRecord.admin_user_id);
-  if (adminLoadError || !adminUserResult?.user?.email) {
-    return { success: false, message: adminLoadError?.message ?? "Admin-Benutzer konnte nicht geladen werden." };
+  if (sessionRecord.impersonated_user_id !== user.id && sessionRecord.admin_user_id !== user.id) {
+    return { success: false, message: "Sie sind nicht berechtigt, diese Impersonation zu beenden." };
   }
 
-  const requestHeaders = await headers();
-  const host = requestHeaders.get("host") || "";
-  const protocol = process.env.NODE_ENV === "development" ? "http" : "https";
-  const redirectUrl = `${protocol}://${host}/auth/callback/impersonate`;
-
-  const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
-    type: "magiclink",
-    email: adminUserResult.user.email!,
-    options: {
-      redirectTo: redirectUrl,
-    },
+  // Call createSession directly on supabaseAdmin.auth.admin
+  const { data: revertSession, error: revertError } = await (supabaseAdmin.auth.admin as any).createSession({
+    user_id: sessionRecord.admin_user_id,
   });
 
-  if (linkError || !linkData?.properties?.action_link) {
-    return { success: false, message: linkError?.message ?? "Konnte keinen Magic-Link für die Admin-Sitzung erzeugen." };
+  if (revertError || !revertSession.session) {
+    const message = revertError?.message ?? "Ursprüngliche Sitzung konnte nicht wiederhergestellt werden.";
+    return { success: false, message };
   }
 
   const { error: updateError } = await supabaseAdmin
@@ -292,7 +318,13 @@ export async function stopImpersonation(impersonationSessionId: string): Promise
     success: true,
     message: "Impersonation beendet. Sie sind wieder als Administrator angemeldet.",
     data: {
-      actionLink: linkData.properties.action_link,
+      session: {
+        access_token: revertSession.session.access_token,
+        refresh_token: revertSession.session.refresh_token!,
+        expires_at: revertSession.session.expires_at!,
+        expires_in: revertSession.session.expires_in!,
+        token_type: revertSession.session.token_type,
+      },
       message: "Impersonation beendet. Willkommen zurück!",
     },
   };

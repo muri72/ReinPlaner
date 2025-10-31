@@ -65,44 +65,25 @@ export function ImpersonationBanner() {
       return;
     }
 
-    // LocalStorage vor der Weiterleitung bereinigen
+    const supabase = createClient();
+    const session = response.data.session;
+
+    const { error } = await supabase.auth.setSession({
+      access_token: session.access_token,
+      refresh_token: session.refresh_token,
+    });
+
+    if (error) {
+      toast.error(error.message || "Sitzung konnte nicht wiederhergestellt werden.");
+      setIsStopping(false);
+      return;
+    }
+
     if (typeof window !== "undefined") {
       window.localStorage.removeItem(IMPERSONATION_STORAGE_KEY);
     }
 
-    // Wenn wir einen Redirect-Link erhalten, nutzen wir ihn
-    if ((response.data as any).actionLink) {
-      toast.success(response.data.message || "Impersonation beendet.");
-      setMeta(null);
-      setIsStopping(false);
-      window.location.href = (response.data as any).actionLink;
-      return;
-    }
-
-    // Fallback: Falls doch Session-Daten vorliegen (ältere Implementationen)
-    const session = (response.data as any).session;
-    if (session) {
-      const supabase = createClient();
-      const { error } = await supabase.auth.setSession({
-        access_token: session.access_token,
-        refresh_token: session.refresh_token,
-      });
-
-      if (error) {
-        toast.error(error.message || "Sitzung konnte nicht wiederhergestellt werden.");
-        setIsStopping(false);
-        return;
-      }
-
-      toast.success(response.data.message || "Impersonation beendet.");
-      setMeta(null);
-      setIsStopping(false);
-      router.refresh();
-      return;
-    }
-
-    // Wenn weder actionLink noch Session vorhanden ist
-    toast.success("Impersonation beendet.");
+    toast.success(response.data.message || "Impersonation beendet.");
     setMeta(null);
     setIsStopping(false);
     router.refresh();

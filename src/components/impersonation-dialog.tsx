@@ -88,27 +88,38 @@ export function ImpersonationDialog({ open, onOpenChange }: ImpersonationDialogP
       return;
     }
 
-    // Metadaten lokal speichern, damit der Banner nach der Rückkehr korrekt ist
+    const session = result.data.session;
+
+    const { error: setSessionError } = await supabase.auth.setSession({
+      access_token: session.access_token,
+      refresh_token: session.refresh_token,
+    });
+
+    if (setSessionError) {
+      toast.error(setSessionError.message || "Sitzung konnte nicht aktualisiert werden.");
+      setIsSubmitting(false);
+      return;
+    }
+
     const meta: ImpersonationMeta = {
       sessionId: result.data.impersonationSessionId,
       adminUserId: result.data.admin.id,
       adminName: result.data.admin.fullName,
       adminEmail: result.data.admin.email,
-      impersonatedUserId: selectedUserId,
-      impersonatedName: selectedTarget?.fullName || "Unbekannter Nutzer",
-      impersonatedRole: selectedTarget?.role || "employee",
+      impersonatedUserId: result.data.impersonated.id,
+      impersonatedName: result.data.impersonated.fullName,
+      impersonatedRole: result.data.impersonated.role,
       startedAt: new Date().toISOString(),
     };
 
     if (typeof window !== "undefined") {
       window.localStorage.setItem(IMPERSONATION_STORAGE_KEY, JSON.stringify(meta));
-      // Browser-Redirect zum Magic-Link; Session wird auf der Callback-Seite gesetzt
-      window.location.href = result.data.actionLink;
     }
 
-    // Der Browser verlässt diese Seite; zur Sicherheit schließen wir den Dialog
+    toast.success(result.message || "Impersonation gestartet.");
     onOpenChange(false);
     setIsSubmitting(false);
+    router.refresh();
   };
 
   return (
