@@ -36,6 +36,11 @@ export async function createTimeEntry(data: TimeEntryFormValues): Promise<{ succ
     breakMinutes,
     type,
     notes,
+    clockInLatitude, // New field
+    clockInLongitude, // New field
+    clockOutLatitude, // New field
+    clockOutLongitude, // New field
+    locationDeviationWarning, // New field
   } = data;
 
   let finalUserId = user.id;
@@ -131,9 +136,14 @@ export async function updateTimeEntry(entryId: string, data: Partial<TimeEntryFo
     endDate,
     endTime,
     durationMinutes,
-    breakMinutes,
+    breakMinutes, // Neues Feld
     type,
     notes,
+    clockInLatitude, // New field
+    clockInLongitude, // New field
+    clockOutLatitude, // New field
+    clockOutLongitude, // New field
+    locationDeviationWarning, // New field
   } = data;
 
   let startDateTime: Date | undefined;

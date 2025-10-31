@@ -65,9 +65,6 @@ interface OrderWithDetails {
     friday_end_time: string | null;
     saturday_end_time: string | null;
     sunday_end_time: string | null;
-    latitude?: number | null;
-    longitude?: number | null;
-    radius_meters?: number | null;
   } | null;
   assigned_recurrence_interval_weeks: number | null;
   assigned_start_week_offset: number | null;
@@ -133,22 +130,6 @@ const TimeProgressDisplay = ({ plannedMinutes, actualSeconds }: { plannedMinutes
       )}
     </div>
   );
-};
-
-// Helper function to calculate distance between two coordinates
-const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
-  const R = 6371e3; // Earth's radius in meters
-  const φ1 = lat1 * Math.PI / 180;
-  const φ2 = lat2 * Math.PI / 180;
-  const Δφ = (lat2 - lat1) * Math.PI / 180;
-  const Δλ = (lon2 - lon1) * Math.PI / 180;
-
-  const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
-          Math.cos(φ1) * Math.cos(φ2) *
-          Math.sin(Δλ/2) * Math.sin(Δλ/2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-
-  return R * c; // Distance in meters
 };
 
 export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
@@ -451,14 +432,14 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
               selectedOrder.object.latitude,
               selectedOrder.object.longitude
             );
-            if (distance > selectedOrder.object.radius_meters!) {
+            if (distance > selectedOrder.object.radius_meters) {
               setLocationDeviation(true);
-              toast.warning(`Sie sind ${Math.round(distance - selectedOrder.object.radius_meters!)}m außerhalb des Objekt-Radius.`);
+              toast.warning(`Sie sind ${Math.round(distance - selectedOrder.object.radius_meters)}m außerhalb des Objekt-Radius.`);
             } else {
               setLocationDeviation(false);
             }
-          } else if (selectedOrder.object?.name) {
-            setLocationError(null);
+          } else if (selectedOrder.object?.name && (!selectedOrder.object?.latitude || !selectedOrder.object?.longitude)) {
+            setLocationError(`Standortdaten für Objekt "${selectedOrder.object.name}" nicht hinterlegt.`);
           }
         }
       }
@@ -747,15 +728,32 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
                   </div>
                 )}
 
+                {locationError && (
+                  <div className="text-sm text-destructive mt-2 p-2 border rounded-md bg-destructive/10 dark:bg-destructive/20 flex items-center">
+                    <AlertTriangle className="mr-2 h-4 w-4 flex-shrink-0" />
+                    <p>{locationError}</p>
+                  </div>
+                )}
+
+                {locationDeviation && (
+                  <div className="text-sm text-warning mt-2 p-2 border rounded-md bg-warning/10 dark:bg-warning/20 flex items-center">
+                    <MapPin className="mr-2 h-4 w-4 flex-shrink-0" />
+                    <p>Sie befinden sich außerhalb des Objekt-Radius.</p>
+                  </div>
+                )}
+
                 {isScheduledOrder && suggestedDuration !== null && (
                   <div className="text-sm text-muted-foreground mt-2 p-2 border rounded-md bg-primary-foreground/10 dark:bg-primary-foreground/20">
                     <p>Vorgeschlagene Dauer für diesen Auftrag heute:</p>
                     <p className="font-semibold">{ suggestedDuration !== null && suggestedBreakMinutes !== null ? ((suggestedDuration - suggestedBreakMinutes) / 60).toFixed(2) : 'N/A'} Netto-Stunden</p>
                     {suggestedBreakMinutes !== null && suggestedBreakMinutes > 0 && (
                       <p className="text-xs mt-1">
-                        Die Stoppuhr verfolgt die tatsächliche Zeit, aber dies ist der erwartete Zeitrahmen.
+                        Inkl. {suggestedBreakMinutes} Minuten Pause.
                       </p>
                     )}
+                    <p className="text-xs mt-1">
+                      Klicken Sie auf "Einstempeln", um diese Stunden zu bestätigen.
+                    </p>
                   </div>
                 )}
 
@@ -837,6 +835,20 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
                   <div className="text-sm text-muted-foreground mt-2 p-2 border rounded-md bg-warning/10 dark:bg-warning/20 flex items-center">
                     <CalendarDays className="mr-2 h-4 w-4 flex-shrink-0" />
                     <p>{recurrenceInfo}</p>
+                  </div>
+                )}
+
+                {locationError && (
+                  <div className="text-sm text-destructive mt-2 p-2 border rounded-md bg-destructive/10 dark:bg-destructive/20 flex items-center">
+                    <AlertTriangle className="mr-2 h-4 w-4 flex-shrink-0" />
+                    <p>{locationError}</p>
+                  </div>
+                )}
+
+                {locationDeviation && (
+                  <div className="text-sm text-warning mt-2 p-2 border rounded-md bg-warning/10 dark:bg-warning/20 flex items-center">
+                    <MapPin className="mr-2 h-4 w-4 flex-shrink-0" />
+                    <p>Sie befinden sich außerhalb des Objekt-Radius.</p>
                   </div>
                 )}
 
