@@ -35,8 +35,6 @@ export function UserMenu({ currentUserRole, onSignOut }: UserMenuProps) {
   const [isImpersonationDialogOpen, setIsImpersonationDialogOpen] = useState(false);
   const { userProfile: profile, loading, displayName } = useUserProfile();
 
-  console.log("[USER_MENU] Rendering menu:", { profile, currentUserRole, displayName, loading });
-
   const handleSignOut = async () => {
     if (typeof window !== "undefined") {
       window.localStorage.removeItem(IMPERSONATION_STORAGE_KEY);

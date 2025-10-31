@@ -27,7 +27,6 @@ export default function DashboardPage() {
   useEffect(() => {
     supabase.auth.getUser().then(({ data, error }) => {
       if (error || !data.user) {
-        console.log("[DASHBOARD] Not authenticated, redirecting to login");
         router.push("/login");
       }
     });
@@ -39,12 +38,9 @@ export default function DashboardPage() {
       setDataLoading(true);
       setError(null);
       try {
-        console.log("[DASHBOARD] Loading dashboard data...");
         const data = await getSuperOptimizedDashboardData();
-        console.log("[DASHBOARD] Loaded data:", data);
         setDashboardData(data);
       } catch (err: any) {
-        console.error("[DASHBOARD] Error loading data:", err);
         setError(err.message || "Fehler beim Laden der Dashboard-Daten");
       } finally {
         setDataLoading(false);
@@ -56,13 +52,11 @@ export default function DashboardPage() {
 
   // Show loading while profile or data is loading
   if (loading || dataLoading) {
-    console.log("[DASHBOARD] Loading:", { loading, dataLoading });
     return <DashboardLoading />;
   }
 
   // Show error if no profile
   if (!userProfile) {
-    console.log("[DASHBOARD] No user profile");
     return (
       <div className="p-8 text-center">
         <p className="text-lg font-semibold">Fehler beim Laden des Profils</p>
@@ -75,13 +69,6 @@ export default function DashboardPage() {
       </div>
     );
   }
-
-  console.log("[DASHBOARD] Rendering dashboard:", {
-    userProfile,
-    currentUserRole,
-    displayName,
-    dashboardData
-  });
 
   const today = new Date();
   const formattedDate = format(today, 'EEEE, dd. MMMM yyyy', { locale: de });

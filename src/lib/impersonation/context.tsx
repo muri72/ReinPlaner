@@ -27,8 +27,6 @@ export function ImpersonationProvider({ children }: { children: React.ReactNode 
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    console.log("[IMPERSONATION_CONTEXT] useEffect triggered, initKey:", initKey);
-
     // Load impersonation metadata from localStorage
     const raw = window.localStorage.getItem(IMPERSONATION_STORAGE_KEY);
     let loadedMeta: ImpersonationMeta | null = null;
@@ -37,20 +35,15 @@ export function ImpersonationProvider({ children }: { children: React.ReactNode 
       try {
         loadedMeta = JSON.parse(raw);
         loadedMetaRef.current = loadedMeta;
-        console.log("[IMPERSONATION_CONTEXT] Loaded metadata from localStorage:", loadedMeta);
       } catch {
-        console.log("[IMPERSONATION_CONTEXT] Failed to parse metadata, clearing...");
         window.localStorage.removeItem(IMPERSONATION_STORAGE_KEY);
       }
-    } else {
-      console.log("[IMPERSONATION_CONTEXT] No metadata in localStorage");
     }
 
     // Get current Supabase user
     const supabase = createClient();
     supabase.auth.getUser().then(({ data, error }) => {
       if (!error && data.user) {
-        console.log("[IMPERSONATION_CONTEXT] Supabase user loaded:", data.user.id);
         setSupabaseUser({ id: data.user.id, email: data.user.email ?? null });
 
         // NOW validate metadata against current user
@@ -58,26 +51,22 @@ export function ImpersonationProvider({ children }: { children: React.ReactNode 
           // Current user is the admin who started impersonation
           // Check if it's valid (admin impersonating someone else)
           if (loadedMeta.adminUserId === loadedMeta.impersonatedUserId) {
-            console.log("[IMPERSONATION_CONTEXT] Invalid metadata (admin impersonating self), clearing...");
             window.localStorage.removeItem(IMPERSONATION_STORAGE_KEY);
             setMeta(null);
             loadedMetaRef.current = null;
           } else {
             // Valid impersonation - keep the metadata
-            console.log("[IMPERSONATION_CONTEXT] Valid impersonation found, maintaining...");
             setMeta(loadedMeta);
           }
         } else if (loadedMeta && data.user.id !== loadedMeta.adminUserId) {
           // Current user is not the admin who started impersonation
           // This could happen if the admin logged out and someone else logged in
           // Or if the impersonation was started by a different admin
-          console.log("[IMPERSONATION_CONTEXT] Current user is not the admin who started impersonation, clearing...");
           window.localStorage.removeItem(IMPERSONATION_STORAGE_KEY);
           setMeta(null);
           loadedMetaRef.current = null;
         } else if (!loadedMeta) {
           // No metadata - normal login
-          console.log("[IMPERSONATION_CONTEXT] No metadata found, setting meta to null...");
           setMeta(null);
         }
       }
@@ -154,7 +143,6 @@ export function ImpersonationProvider({ children }: { children: React.ReactNode 
 
   // Force re-initialization (for clearing state, e.g., when stopping impersonation)
   const triggerReinit = () => {
-    console.log("[IMPERSONATION_CONTEXT] triggerReinit called, clearing state...");
     loadedMetaRef.current = null;
     setMeta(null);
     setInitKey(prev => prev + 1);
@@ -162,7 +150,6 @@ export function ImpersonationProvider({ children }: { children: React.ReactNode 
 
   // Set impersonation metadata (for starting impersonation)
   const setImpersonationMeta = (meta: ImpersonationMeta) => {
-    console.log("[IMPERSONATION_CONTEXT] setImpersonationMeta called, setting metadata...");
     loadedMetaRef.current = meta;
     setMeta(meta);
     // Also update localStorage to persist across refreshes

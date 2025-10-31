@@ -34,7 +34,6 @@ export function UserProfileProvider({ children }: { children: React.ReactNode })
       let profileToLoad: UserProfile | null = null;
 
       if (isImpersonating && meta) {
-        console.log("[IMPERSONATION] Loading profile for impersonated user:", meta.impersonatedUserId);
 
         // When impersonating, we need to load the impersonated user's profile
         // We need to fetch it manually since RLS might prevent access
@@ -83,7 +82,6 @@ export function UserProfileProvider({ children }: { children: React.ReactNode })
   };
 
   useEffect(() => {
-    console.log("[USER_PROFILE_PROVIDER] useEffect triggered:", { isImpersonating, hasMeta: !!meta, meta });
     loadProfile();
   }, [isImpersonating, meta]);
 

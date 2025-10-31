@@ -29,17 +29,8 @@ export function DashboardClientLayout({ children, onSignOut }: DashboardClientLa
   const pathname = usePathname();
   const isMobile = useIsMobile();
 
-  console.log("[LAYOUT] Rendering layout:", {
-    userProfile,
-    currentUserRole,
-    displayName,
-    loading,
-    timestamp: Date.now()
-  });
-
   // Show loading while profile is being fetched
   if (loading) {
-    console.log("[LAYOUT] Showing loading state");
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-pulse text-lg">Lädt...</div>

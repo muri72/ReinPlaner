@@ -106,8 +106,6 @@ interface SidebarNavProps {
 export function SidebarNav({ isCollapsed, currentUserRole, onSignOut, onLinkClick }: SidebarNavProps) {
   const pathname = usePathname();
 
-  console.log("[SIDEBAR] Rendering with role:", { currentUserRole, timestamp: Date.now() });
-
   const filteredNavItems = navItems.filter(item => {
     if (item.isCategory) {
       // Filter children based on roles (create new array to avoid mutation)

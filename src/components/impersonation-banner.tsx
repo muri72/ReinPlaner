@@ -34,7 +34,6 @@ export function ImpersonationBanner() {
     // Clear impersonation metadata locally
     if (typeof window !== "undefined") {
       window.localStorage.removeItem(IMPERSONATION_STORAGE_KEY);
-      console.log("[IMPERSONATION] Metadata cleared, triggering optimistic update...");
       // Trigger immediate context re-initialization (this will trigger useEffect in UserProfileProvider automatically)
       triggerReinit();
     }

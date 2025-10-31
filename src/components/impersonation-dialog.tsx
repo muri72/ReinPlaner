@@ -105,7 +105,6 @@ export function ImpersonationDialog({ open, onOpenChange }: ImpersonationDialogP
     };
 
     if (typeof window !== "undefined") {
-      console.log("[IMPERSONATION] Metadata stored, triggering optimistic update...");
       // Set metadata in context (this will trigger useEffect in UserProfileProvider automatically)
       setImpersonationMeta(meta);
     }
