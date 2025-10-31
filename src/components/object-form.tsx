@@ -137,7 +137,7 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
     start_week_offset: (initialData?.start_week_offset as number | undefined) ?? 0,
   };
 
-  const form = useForm<ObjectFormValues>({
+  const form = useForm<ObjectFormInput>({
     resolver: zodResolver(objectSchema),
     defaultValues: resolvedDefaultValues,
     mode: "onChange",
@@ -149,19 +149,19 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
   });
 
   const selectedCustomerId = form.watch("customerId");
-  const recurrenceIntervalWeeks = form.watch("recurrence_interval_weeks");
-  const startWeekOffset = form.watch("start_week_offset");
+  const recurrenceIntervalWeeks = Number(form.watch("recurrence_interval_weeks") ?? 1);
+  const startWeekOffset = Number(form.watch("start_week_offset") ?? 0);
 
   // Ensure daily_schedules array length matches recurrence_interval_weeks
   useEffect(() => {
     const currentLength = dailySchedulesFields.length;
     if (currentLength < recurrenceIntervalWeeks) {
       for (let i = currentLength; i < recurrenceIntervalWeeks; i++) {
-        appendDailySchedule({}); // Append empty weekly schedules
+        appendDailySchedule({});
       }
     } else if (currentLength > recurrenceIntervalWeeks) {
       for (let i = currentLength - 1; i >= recurrenceIntervalWeeks; i--) {
-        removeDailySchedule(i); // Remove excess weekly schedules
+        removeDailySchedule(i);
       }
     }
   }, [recurrenceIntervalWeeks, dailySchedulesFields.length, appendDailySchedule, removeDailySchedule]);
@@ -207,8 +207,8 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
     }, 0);
   }, 0);
 
-  const handleFormSubmit: SubmitHandler<ObjectFormValues> = async (data) => {
-    const result = await onSubmit(data);
+  const handleFormSubmit: SubmitHandler<ObjectFormInput> = async (data) => {
+    const result = await onSubmit(data as ObjectFormValues);
     handleActionResponse(result);
 
     if (result.success) {
@@ -252,8 +252,9 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
     const currentSchedule = form.getValues(`daily_schedules.${weekIndex}.${day}`) || {};
     form.setValue(`daily_schedules.${weekIndex}.${day}`, { ...currentSchedule, start: value || null }, { shouldValidate: true });
 
-    const hours = currentSchedule.hours;
-    if (hours != null && hours > 0 && value && timeRegex.test(value)) {
+    const hoursRaw = (currentSchedule as any).hours;
+    const hours = typeof hoursRaw === 'number' ? hoursRaw : Number(hoursRaw ?? NaN);
+    if (hours != null && !isNaN(hours) && hours > 0 && value && timeRegex.test(value)) {
       form.setValue(`daily_schedules.${weekIndex}.${day}.end`, calculateEndTime(value, hours), { shouldValidate: true });
     } else {
       form.setValue(`daily_schedules.${weekIndex}.${day}.end`, null, { shouldValidate: true });
@@ -268,8 +269,9 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
     const currentSchedule = form.getValues(`daily_schedules.${weekIndex}.${day}`) || {};
     form.setValue(`daily_schedules.${weekIndex}.${day}`, { ...currentSchedule, end: value || null }, { shouldValidate: true });
 
-    const hours = currentSchedule.hours;
-    if (hours != null && hours > 0 && value && timeRegex.test(value)) {
+    const hoursRaw = (currentSchedule as any).hours;
+    const hours = typeof hoursRaw === 'number' ? hoursRaw : Number(hoursRaw ?? NaN);
+    if (hours != null && !isNaN(hours) && hours > 0 && value && timeRegex.test(value)) {
       form.setValue(`daily_schedules.${weekIndex}.${day}.start`, calculateStartTime(value, hours), { shouldValidate: true });
     } else {
       form.setValue(`daily_schedules.${weekIndex}.${day}.start`, null, { shouldValidate: true });
@@ -505,7 +507,7 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
               min="1"
               max="52"
               {...form.register("recurrence_interval_weeks")}
-              value={form.watch("recurrence_interval_weeks") ?? ''}
+              value={recurrenceIntervalWeeks}
               onChange={(e) => {
                 const value = e.target.value;
                 form.setValue("recurrence_interval_weeks", Number(value), { shouldValidate: true });
@@ -523,7 +525,7 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
               min="0"
               max={recurrenceIntervalWeeks - 1}
               {...form.register("start_week_offset")}
-              value={form.watch("start_week_offset") ?? ''}
+              value={startWeekOffset}
               onChange={(e) => {
                 const value = e.target.value;
                 form.setValue("start_week_offset", Number(value), { shouldValidate: true });
@@ -585,7 +587,7 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
                         max="24"
                         {...form.register(hoursFieldName)}
                         placeholder="Std."
-                        value={form.watch(hoursFieldName) ?? ''}
+                        value={(form.watch(hoursFieldName) as any) ?? ''}
                         onChange={(e) => handleDailyHoursChange(weekIndex, day, e.target.value)}
                       />
                       {(form.formState.errors as any)[hoursFieldName] && (

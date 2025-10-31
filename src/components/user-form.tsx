@@ -106,7 +106,7 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
     managerCustomerIds: initialData?.managerCustomerIds ?? [],
   };
 
-  const form = useForm<UserFormValues>({
+  const form = useForm<UserFormInput>({
     resolver: zodResolver(userSchema),
     defaultValues: resolvedDefaultValues,
     mode: "onSubmit",
@@ -229,8 +229,8 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
   }, [selectedEmployeeId, selectedCustomerId, selectedCustomerContactId, isEditMode, form, employees, customers, customerContactsForUserAssignment, initialData]);
 
 
-  const handleFormSubmit: SubmitHandler<UserFormValues> = async (data) => {
-    const result = await onSubmit(data);
+  const handleFormSubmit: SubmitHandler<UserFormInput> = async (data) => {
+    const result = await onSubmit(data as UserFormValues);
 
     handleActionResponse(result); // Nutze die neue Utility
 

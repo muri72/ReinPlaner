@@ -29,6 +29,7 @@ export const absenceRequestSchema = z.object({
 });
 
 export type AbsenceRequestFormValues = z.infer<typeof absenceRequestSchema>;
+export type AbsenceRequestFormInput = z.input<typeof absenceRequestSchema>;
 
 interface AbsenceRequestFormProps {
   initialData?: Partial<AbsenceRequestFormValues>;
@@ -53,7 +54,7 @@ export function AbsenceRequestForm({ initialData, onSubmit, submitButtonText, on
     adminNotes: initialData?.adminNotes ?? null,
   };
 
-  const form = useForm<AbsenceRequestFormValues>({
+  const form = useForm<AbsenceRequestFormInput>({
     resolver: zodResolver(absenceRequestSchema),
     defaultValues: resolvedDefaultValues,
   });
@@ -102,17 +103,14 @@ export function AbsenceRequestForm({ initialData, onSubmit, submitButtonText, on
     fetchEmployees();
   }, [supabase, isManagerOrAdmin, currentUserId, form, initialData]);
 
-  const handleFormSubmit: SubmitHandler<AbsenceRequestFormValues> = async (data) => {
-    // Auto-approve if admin is creating for themselves
+  const handleFormSubmit: SubmitHandler<AbsenceRequestFormInput> = async (data) => {
     const selectedEmployee = employees.find(e => e.id === data.employeeId);
     const isSelfRequestByAdmin = currentUserRole === 'admin' && selectedEmployee?.user_id === currentUserId;
-
     if (isSelfRequestByAdmin) {
       data.status = 'approved';
     }
-
-    const result = await onSubmit(data);
-    handleActionResponse(result); // Nutze die neue Utility
+    const result = await onSubmit(data as AbsenceRequestFormValues);
+    handleActionResponse(result);
     if (result.success) {
       if (!initialData) form.reset();
       onSuccess?.();

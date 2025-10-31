@@ -63,7 +63,7 @@ const assignmentEditSchema = z.object({
   }
 });
 
-type AssignmentEditFormValues = z.infer<typeof assignmentEditSchema>;
+type AssignmentEditFormInput = z.input<typeof assignmentEditSchema>;
 
 interface AssignmentEditDialogProps {
   orderId: string;
@@ -77,7 +77,7 @@ export function AssignmentEditDialog({ orderId, children, onSuccess }: Assignmen
   const [allEmployees, setAllEmployees] = React.useState<{ id: string; first_name: string; last_name: string }[]>([]);
   const [orderTitle, setOrderTitle] = React.useState("");
 
-  const form = useForm<AssignmentEditFormValues>({
+  const form = useForm<AssignmentEditFormInput>({
     resolver: zodResolver(assignmentEditSchema),
     defaultValues: {
       employeeIds: [],
@@ -93,15 +93,15 @@ export function AssignmentEditDialog({ orderId, children, onSuccess }: Assignmen
     name: "assigned_daily_schedules",
   });
 
-  const recurrenceInterval = form.watch("assigned_recurrence_interval_weeks");
-  const startWeekOffset = form.watch("assigned_start_week_offset");
+  const recurrenceInterval = Number(form.watch("assigned_recurrence_interval_weeks") ?? 1);
+  const startWeekOffset = Number(form.watch("assigned_start_week_offset") ?? 0);
 
   React.useEffect(() => {
     const currentLength = dailySchedulesFields.length;
-    const newLength = recurrenceInterval || 1;
+    const newLength = Number(recurrenceInterval || 1);
     if (currentLength !== newLength) {
-      const newSchedules = Array.from({ length: newLength }, (_, i) => form.getValues(`assigned_daily_schedules.${i}`) || {});
-      replaceDailySchedules(newSchedules);
+      const newSchedules = Array.from({ length: newLength }, (_, i) => form.getValues(`assigned_daily_schedules.${i}`) || {}) as any[];
+      replaceDailySchedules(newSchedules as any);
     }
   }, [recurrenceInterval, dailySchedulesFields.length, replaceDailySchedules, form]);
 
@@ -130,8 +130,14 @@ export function AssignmentEditDialog({ orderId, children, onSuccess }: Assignmen
     fetchData();
   }, [open, orderId, form]);
 
-  const handleFormSubmit: SubmitHandler<AssignmentEditFormValues> = async (data) => {
-    const result = await updateOrderAssignments(orderId, data);
+  const handleFormSubmit: SubmitHandler<AssignmentEditFormInput> = async (data) => {
+    const payload = {
+      employeeIds: data.employeeIds,
+      assigned_daily_schedules: data.assigned_daily_schedules ?? [],
+      assigned_recurrence_interval_weeks: Number(data.assigned_recurrence_interval_weeks) || 1,
+      assigned_start_week_offset: Number(data.assigned_start_week_offset) || 0,
+    };
+    const result = await updateOrderAssignments(orderId, payload);
     handleActionResponse(result);
     if (result.success) {
       setOpen(false);
@@ -152,8 +158,9 @@ export function AssignmentEditDialog({ orderId, children, onSuccess }: Assignmen
   const handleDailyStartTimeChange = React.useCallback((weekIndex: number, day: typeof dayNames[number], value: string) => {
     const currentSchedule = form.getValues(`assigned_daily_schedules.${weekIndex}.${day}`) || {};
     form.setValue(`assigned_daily_schedules.${weekIndex}.${day}`, { ...currentSchedule, start: value || null }, { shouldValidate: true });
-    const hours = currentSchedule.hours;
-    if (hours != null && hours > 0 && value && timeRegex.test(value)) {
+    const hoursRaw = (currentSchedule as any).hours;
+    const hours = typeof hoursRaw === 'number' ? hoursRaw : Number(hoursRaw ?? NaN);
+    if (hours != null && !isNaN(hours) && hours > 0 && value && timeRegex.test(value)) {
       form.setValue(`assigned_daily_schedules.${weekIndex}.${day}.end`, calculateEndTime(value, hours), { shouldValidate: true });
     }
   }, [form]);
@@ -161,8 +168,9 @@ export function AssignmentEditDialog({ orderId, children, onSuccess }: Assignmen
   const handleDailyEndTimeChange = React.useCallback((weekIndex: number, day: typeof dayNames[number], value: string) => {
     const currentSchedule = form.getValues(`assigned_daily_schedules.${weekIndex}.${day}`) || {};
     form.setValue(`assigned_daily_schedules.${weekIndex}.${day}`, { ...currentSchedule, end: value || null }, { shouldValidate: true });
-    const hours = currentSchedule.hours;
-    if (hours != null && hours > 0 && value && timeRegex.test(value)) {
+    const hoursRaw = (currentSchedule as any).hours;
+    const hours = typeof hoursRaw === 'number' ? hoursRaw : Number(hoursRaw ?? NaN);
+    if (hours != null && !isNaN(hours) && hours > 0 && value && timeRegex.test(value)) {
       form.setValue(`assigned_daily_schedules.${weekIndex}.${day}.start`, calculateStartTime(value, hours), { shouldValidate: true });
     }
   }, [form]);
@@ -245,7 +253,7 @@ export function AssignmentEditDialog({ orderId, children, onSuccess }: Assignmen
                 </div>
                 <div>
                   <Label htmlFor="assigned_start_week_offset">Start-Wochen-Offset (0-basierend)</Label>
-                  <Input id="assigned_start_week_offset" type="number" step="1" min="0" max={(recurrenceInterval || 1) - 1} {...form.register("assigned_start_week_offset")} />
+                  <Input id="assigned_start_week_offset" type="number" step="1" min="0" max={(Number(recurrenceInterval || 1) - 1)} {...form.register("assigned_start_week_offset")} />
                   {form.formState.errors.assigned_start_week_offset && <p className="text-red-500 text-sm mt-1">{form.formState.errors.assigned_start_week_offset.message}</p>}
                 </div>
               </div>

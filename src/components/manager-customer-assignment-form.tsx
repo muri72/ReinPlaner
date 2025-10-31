@@ -16,6 +16,7 @@ const assignmentSchema = z.object({
 });
 
 export type AssignmentFormValues = z.infer<typeof assignmentSchema>;
+export type AssignmentFormInput = z.input<typeof assignmentSchema>;
 
 interface ManagerCustomerAssignmentFormProps {
   managerId: string;
@@ -27,7 +28,7 @@ export function ManagerCustomerAssignmentForm({ managerId, onSuccess }: ManagerC
   const [allCustomers, setAllCustomers] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const form = useForm<AssignmentFormValues>({
+  const form = useForm<AssignmentFormInput>({
     resolver: zodResolver(assignmentSchema),
     defaultValues: {
       customerIds: [],
@@ -71,10 +72,10 @@ export function ManagerCustomerAssignmentForm({ managerId, onSuccess }: ManagerC
     fetchData();
   }, [managerId, supabase, form]);
 
-  const onSubmit: SubmitHandler<AssignmentFormValues> = async (data) => { // Expliziter Typ für onSubmit
+  const onSubmit: SubmitHandler<AssignmentFormInput> = async (data) => {
     setLoading(true);
-    const result = await assignCustomersToManager(managerId, data.customerIds);
-
+    const ids = data.customerIds ?? [];
+    const result = await assignCustomersToManager(managerId, ids);
     if (result.success) {
       toast.success(result.message);
       onSuccess?.();
@@ -98,9 +99,9 @@ export function ManagerCustomerAssignmentForm({ managerId, onSuccess }: ManagerC
             <div key={customer.id} className="flex items-center space-x-2">
               <Checkbox
                 id={`customer-${customer.id}`}
-                checked={form.watch("customerIds").includes(customer.id)}
+                checked={(form.watch("customerIds") ?? []).includes(customer.id)}
                 onCheckedChange={(checked) => {
-                  const currentCustomerIds = form.getValues("customerIds");
+                  const currentCustomerIds = form.getValues("customerIds") ?? [];
                   if (checked) {
                     form.setValue("customerIds", [...currentCustomerIds, customer.id]);
                   } else {

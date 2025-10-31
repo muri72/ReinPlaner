@@ -45,15 +45,15 @@ export function CustomerForm({ initialData, onSubmit, submitButtonText, onSucces
     contractualServices: initialData?.contractualServices ?? null, // Initialwert für neues Feld
   };
 
-  const form = useForm<CustomerFormValues>({
+  const form = useForm<CustomerFormInput>({
     resolver: zodResolver(customerSchema),
     defaultValues: resolvedDefaultValues,
   });
 
-  const handleFormSubmit: SubmitHandler<CustomerFormValues> = async (data) => {
-    const result = await onSubmit(data);
+  const handleFormSubmit: SubmitHandler<CustomerFormInput> = async (data) => {
+    const result = await onSubmit(data as CustomerFormValues);
 
-    handleActionResponse(result); // Nutze die neue Utility
+    handleActionResponse(result);
 
     if (result.success) {
       if (!initialData) {

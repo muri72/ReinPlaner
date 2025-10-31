@@ -98,7 +98,7 @@ export function TimeEntryForm({ initialData, onSubmit, submitButtonText, onSucce
     notes: initialData?.notes ?? null,
   };
 
-  const form = useForm<TimeEntryFormValues>({
+  const form = useForm<TimeEntryFormInput>({
     resolver: zodResolver(timeEntrySchema),
     defaultValues: resolvedDefaultValues,
   });
@@ -230,10 +230,10 @@ export function TimeEntryForm({ initialData, onSubmit, submitButtonText, onSucce
   }, [selectedObjectId, selectedStartDate, objects, form, initialData]);
 
 
-  const handleFormSubmit: SubmitHandler<TimeEntryFormValues> = async (data) => {
-    const result = await onSubmit(data);
+  const handleFormSubmit: SubmitHandler<TimeEntryFormInput> = async (data) => {
+    const result = await onSubmit(data as TimeEntryFormValues);
 
-    handleActionResponse(result); // Nutze die neue Utility
+    handleActionResponse(result);
 
     if (result.success) {
       if (!initialData) {
@@ -243,8 +243,8 @@ export function TimeEntryForm({ initialData, onSubmit, submitButtonText, onSucce
           endDate: null,
           endTime: null,
           durationMinutes: null,
-          breakMinutes: null, // Pausenminuten zurücksetzen
-          employeeId: isAdmin ? null : form.getValues("employeeId"), // Nur zurücksetzen, wenn nicht Admin
+          breakMinutes: null,
+          employeeId: isAdmin ? null : form.getValues("employeeId"),
           customerId: null,
           objectId: null,
           orderId: null,
@@ -384,7 +384,7 @@ export function TimeEntryForm({ initialData, onSubmit, submitButtonText, onSucce
           />
           {form.formState.errors.startTime && (
             <p className="text-red-500 text-sm mt-1">{form.formState.errors.startTime.message}</p>
-        )}
+          )}
         </div>
       </div>
 

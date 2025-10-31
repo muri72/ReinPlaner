@@ -63,7 +63,7 @@ export function TicketForm({ initialData, onSubmit, submitButtonText, onSuccess,
     imageUrls: initialData?.imageUrls ?? [],
   };
 
-  const form = useForm<TicketFormValues>({
+  const form = useForm<TicketFormInput>({
     resolver: zodResolver(ticketSchema),
     defaultValues: resolvedDefaultValues,
   });
@@ -123,7 +123,7 @@ export function TicketForm({ initialData, onSubmit, submitButtonText, onSuccess,
     setFiles((prevFiles) => prevFiles.filter((_, i) => i !== index));
   };
 
-  const handleFormSubmit: SubmitHandler<TicketFormValues> = async (data) => {
+  const handleFormSubmit: SubmitHandler<TicketFormInput> = async (data) => {
     setIsSubmitting(true);
     try {
       let uploadedImageUrls: string[] = [];
@@ -157,7 +157,7 @@ export function TicketForm({ initialData, onSubmit, submitButtonText, onSuccess,
 
       const finalImageUrls = [...(initialData?.imageUrls || []), ...uploadedImageUrls];
 
-      const result = await onSubmit({ ...data, imageUrls: finalImageUrls });
+      const result = await onSubmit({ ...(data as TicketFormValues), imageUrls: finalImageUrls });
       handleActionResponse(result);
 
       if (result.success) {

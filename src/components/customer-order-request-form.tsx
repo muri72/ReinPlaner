@@ -35,6 +35,7 @@ export const customerOrderRequestSchema = z.object({
 });
 
 export type CustomerOrderRequestFormValues = z.infer<typeof customerOrderRequestSchema>;
+export type CustomerOrderRequestFormInput = z.input<typeof customerOrderRequestSchema>;
 
 interface CustomerOrderRequestFormProps {
   customerId: string; // The customer ID will be passed from the parent
@@ -46,7 +47,7 @@ export function CustomerOrderRequestForm({ customerId, onSuccess }: CustomerOrde
   const [objects, setObjects] = useState<{ id: string; name: string; customer_id: string }[]>([]);
   const [customerContacts, setCustomerContacts] = useState<{ id: string; first_name: string; last_name: string; customer_id: string }[]>([]);
 
-  const form = useForm<CustomerOrderRequestFormValues>({
+  const form = useForm<CustomerOrderRequestFormInput>({
     resolver: zodResolver(customerOrderRequestSchema),
     defaultValues: {
       title: "",
@@ -86,18 +87,16 @@ export function CustomerOrderRequestForm({ customerId, onSuccess }: CustomerOrde
     fetchRelatedData();
   }, [customerId, supabase]);
 
-  const handleFormSubmit: SubmitHandler<CustomerOrderRequestFormValues> = async (data) => {
-    // Automatically assign the customerId and set request_status to 'pending'
+  const handleFormSubmit: SubmitHandler<CustomerOrderRequestFormInput> = async (data) => {
     const result = await createOrder({
-      ...data,
+      ...(data as CustomerOrderRequestFormValues),
       customerId: customerId,
-      objectId: objects.length > 0 ? objects[0].id : null, // objectId ist jetzt optional/nullable
+      objectId: objects.length > 0 ? objects[0].id : null,
       customerContactId: customerContacts.length > 0 ? customerContacts[0].id : null,
-      status: 'pending', // Default status for customer requests
-      requestStatus: 'pending', // Always pending for customer requests
-      // employeeId: null, // No employee assigned yet // Entfernt
-      priority: 'medium', // Default priority for customer requests
-      totalEstimatedHours: null, // No estimated hours from customer // Corrected column name
+      status: 'pending',
+      requestStatus: 'pending',
+      priority: 'medium',
+      totalEstimatedHours: null,
     });
 
     handleActionResponse(result);

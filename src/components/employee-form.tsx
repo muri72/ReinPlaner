@@ -72,6 +72,7 @@ export const employeeSchema = z.object({
 });
 
 export type EmployeeFormValues = z.infer<typeof employeeSchema>;
+export type EmployeeFormInput = z.input<typeof employeeSchema>;
 
 interface EmployeeFormProps {
   initialData?: Partial<EmployeeFormValues>;
@@ -103,7 +104,7 @@ export function EmployeeForm({ initialData, onSubmit, submitButtonText, onSucces
     contract_end_date: convertStringToDate(initialData.contract_end_date as any),
   } : {};
 
-  const form = useForm<EmployeeFormValues>({
+  const form = useForm<EmployeeFormInput>({
     resolver: zodResolver(employeeSchema),
     defaultValues: {
       first_name: "",
@@ -118,11 +119,11 @@ export function EmployeeForm({ initialData, onSubmit, submitButtonText, onSucces
     mode: "onChange",
   });
 
-  const handleFormSubmit: SubmitHandler<EmployeeFormValues> = async (data) => {
+  const handleFormSubmit: SubmitHandler<EmployeeFormInput> = async (data) => {
     setIsSubmitting(true);
     
     try {
-      const result = await onSubmit(data);
+      const result = await onSubmit(data as EmployeeFormValues);
       
       if (result.success) {
         toast.success(result.message);
