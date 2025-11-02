@@ -26,27 +26,27 @@ export default async function AuditLogsPage() {
   }
 
   return (
-    <div className="p-4 md:p-8 space-y-6">
-      <div className="flex items-center gap-3">
-        <Shield className="h-8 w-8 text-primary" />
-        <h1 className="text-3xl font-bold">Audit-Logs</h1>
+    <div className="p-3 sm:p-4 md:p-8 space-y-4 sm:space-y-6">
+      <div className="flex items-center gap-2 sm:gap-3">
+        <Shield className="h-6 w-6 sm:h-8 sm:w-8 text-primary shrink-0" />
+        <h1 className="text-2xl sm:text-3xl font-bold truncate">Audit-Logs</h1>
       </div>
-      <p className="text-muted-foreground">
+      <p className="text-sm sm:text-base text-muted-foreground">
         Protokollierung aller wichtigen Systemaktivitäten und Benutzeraktionen
       </p>
 
-      <div className="grid gap-4">
+      <div className="grid gap-3 sm:gap-4">
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Activity className="h-5 w-5" />
+          <CardHeader className="pb-3 sm:pb-4">
+            <CardTitle className="text-lg sm:text-xl flex items-center gap-2">
+              <Activity className="h-4 w-4 sm:h-5 sm:w-5" />
               Systemaktivitäten
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-sm">
               Alle kritischen Aktionen im System werden hier protokolliert
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-0">
             <AuditLogsTable />
           </CardContent>
         </Card>
