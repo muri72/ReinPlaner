@@ -6,7 +6,6 @@ import { createClient } from "@/lib/supabase/client";
 import { useUserProfile } from "@/components/user-profile-provider";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { DashboardLoading } from "@/components/dashboard-loading";
 import { getSuperOptimizedDashboardData, getUnresolvedFeedback } from "@/lib/super-optimized-dashboard";
 import { TodaysOrdersOverview } from "@/components/todays-orders-overview";
 import {
@@ -51,9 +50,21 @@ export default function DashboardPage() {
     return format(today, 'EEEE, dd. MMMy yyyy', { locale: de });
   }, [today]);
 
-  // Memoize stats
+  // Memoized data processing to prevent unnecessary re-calculations
+  const processedDashboardData = useMemo(() => {
+    if (!dashboardData) return null;
+
+    return {
+      ...dashboardData,
+      recentActivities: dashboardData.recentActivities?.slice(0, 5) || [],
+      upcomingTasks: dashboardData.upcomingTasks?.slice(0, 5) || [],
+      feedback: dashboardData.feedback?.slice(0, 3) || []
+    };
+  }, [dashboardData]);
+
+  // Memoized stats calculation
   const stats = useMemo(() => {
-    if (!dashboardData) {
+    if (!processedDashboardData) {
       return [
         {
           title: "Aktive Aufträge",
@@ -108,7 +119,7 @@ export default function DashboardPage() {
       totalScheduledToday,
       revenueLast7Days,
       totalNewComplaintsToday
-    } = dashboardData;
+    } = processedDashboardData;
 
     return [
       {
@@ -152,7 +163,7 @@ export default function DashboardPage() {
         description: "heute"
       }
     ];
-  }, [dashboardData]);
+  }, [processedDashboardData]);
 
   useEffect(() => {
     if (!loading && !authenticated) {
@@ -166,10 +177,29 @@ export default function DashboardPage() {
     }
   }, [loading, authenticated, userProfile, loadDashboardData]);
 
-  // Show loading while profile or data is loading
-  if (loading || (authenticated && dataLoading)) {
-    return <DashboardLoading />;
-  }
+  // Create loading skeletons for stats
+  const loadingStats = [
+    {
+      title: "Aktive Aufträge",
+      icon: <Activity className="h-4 w-4" />,
+    },
+    {
+      title: "Abgeschlossene Aufträge",
+      icon: <CheckCircle className="h-4 w-4" />,
+    },
+    {
+      title: "Mitarbeiter aktiv",
+      icon: <Users className="h-4 w-4" />,
+    },
+    {
+      title: "Durchschn. Bewertung",
+      icon: <TrendingUp className="h-4 w-4" />,
+    },
+    {
+      title: "Umsatz (Monat)",
+      icon: <BarChart3 className="h-4 w-4" />,
+    },
+  ];
 
   // Show error if not authenticated
   if (!loading && !authenticated) {
@@ -200,43 +230,69 @@ export default function DashboardPage() {
     <div className="flex flex-col gap-8 p-4 md:p-8">
       {/* Welcome Header */}
       <div className="space-y-2">
-        <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-          Willkommen zurück, {displayName}!
-        </h1>
-        <p className="text-sm md:text-base text-muted-foreground">
-          Heute ist der {formattedDate}.
-        </p>
+        {loading || !displayName ? (
+          <>
+            <div className="h-10 bg-muted rounded w-1/3 animate-pulse"></div>
+            <div className="h-4 bg-muted rounded w-1/2 animate-pulse"></div>
+          </>
+        ) : (
+          <>
+            <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
+              Willkommen zurück, {displayName}!
+            </h1>
+            <p className="text-sm md:text-base text-muted-foreground">
+              Heute ist der {formattedDate}.
+            </p>
+          </>
+        )}
       </div>
 
       {/* Heutige Einsätze Section */}
       <TodaysOrdersOverview />
 
       {/* Quick Stats Grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-        {stats.map((stat) => (
-          <Card key={stat.title}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                {stat.title}
-              </CardTitle>
-              {stat.icon}
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stat.value}</div>
-              <div className="flex items-center space-x-2 text-xs">
-                <span className={`font-medium ${
-                  stat.changeType === "increase" ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
-                }`}>
-                  {stat.change}
-                </span>
-                <span className="text-muted-foreground">
-                  {stat.description}
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      {dataLoading ? (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+          {loadingStats.map((stat, index) => (
+            <Card key={index}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <div className="h-4 bg-muted rounded w-24 animate-pulse"></div>
+                <div className="h-4 w-4 bg-muted rounded animate-pulse"></div>
+              </CardHeader>
+              <CardContent>
+                <div className="h-8 bg-muted rounded w-16 mb-2 animate-pulse"></div>
+                <div className="h-3 bg-muted rounded w-32 animate-pulse"></div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+          {stats.map((stat) => (
+            <Card key={stat.title}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  {stat.title}
+                </CardTitle>
+                {stat.icon}
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stat.value}</div>
+                <div className="flex items-center space-x-2 text-xs">
+                  <span className={`font-medium ${
+                    stat.changeType === "increase" ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
+                  }`}>
+                    {stat.change}
+                  </span>
+                  <span className="text-muted-foreground">
+                    {stat.description}
+                  </span>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
 
       {/* Main Content Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
@@ -249,7 +305,18 @@ export default function DashboardPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {dashboardData?.recentActivities?.length > 0 ? (
+            {dataLoading ? (
+              Array.from({ length: 5 }).map((_, index) => (
+                <div key={index} className="flex items-center space-x-4 animate-pulse">
+                  <div className="rounded-full bg-muted p-2 h-8 w-8"></div>
+                  <div className="flex-1 space-y-2">
+                    <div className="h-4 bg-muted rounded w-3/4"></div>
+                    <div className="h-3 bg-muted rounded w-1/2"></div>
+                  </div>
+                  <div className="h-4 w-4 bg-muted rounded"></div>
+                </div>
+              ))
+            ) : processedDashboardData?.recentActivities?.length > 0 ? (
               dashboardData.recentActivities.slice(0, 5).map((activity: any, index: number) => (
                 <div key={index} className="flex items-center space-x-4">
                   <div className="rounded-full bg-primary/10 p-2">
@@ -281,7 +348,20 @@ export default function DashboardPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {dashboardData?.upcomingTasks?.length > 0 ? (
+            {dataLoading ? (
+              Array.from({ length: 5 }).map((_, index) => (
+                <div key={index} className="flex items-center space-x-4 animate-pulse">
+                  <div className="rounded-full bg-muted p-2 h-8 w-8"></div>
+                  <div className="flex-1 space-y-2">
+                    <div className="h-4 bg-muted rounded w-3/4"></div>
+                    <div className="flex items-center space-x-2">
+                      <div className="h-3 bg-muted rounded w-24"></div>
+                      <div className="h-5 bg-muted rounded w-16"></div>
+                    </div>
+                  </div>
+                </div>
+              ))
+            ) : processedDashboardData?.upcomingTasks?.length > 0 ? (
               dashboardData.upcomingTasks.slice(0, 5).map((task: any, index: number) => (
                 <div key={index} className="flex items-center space-x-4">
                   <div className="rounded-full bg-blue-100 dark:bg-blue-900/50 p-2">
@@ -317,75 +397,92 @@ export default function DashboardPage() {
       </div>
 
       {/* Performance Overview */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Geplante Aufträge heute
-            </CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {dashboardData?.totalScheduledToday || 0}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Davon {dashboardData?.completedScheduledToday || 0} abgeschlossen
-            </p>
-          </CardContent>
-        </Card>
+      {dataLoading ? (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <Card key={index}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <div className="h-4 bg-muted rounded w-32 animate-pulse"></div>
+                <div className="h-4 w-4 bg-muted rounded animate-pulse"></div>
+              </CardHeader>
+              <CardContent>
+                <div className="h-8 bg-muted rounded w-16 mb-2 animate-pulse"></div>
+                <div className="h-3 bg-muted rounded w-40 animate-pulse"></div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                Geplante Aufträge heute
+              </CardTitle>
+              <Calendar className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {processedDashboardData?.totalScheduledToday || 0}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Davon {processedDashboardData?.completedScheduledToday || 0} abgeschlossen
+              </p>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Mitarbeiter gesamt
-            </CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {dashboardData?.employeeCount || 0}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {dashboardData?.activeEmployeesCount || 0} heute aktiv
-            </p>
-          </CardContent>
-        </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                Mitarbeiter gesamt
+              </CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {processedDashboardData?.employeeCount || 0}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {processedDashboardData?.activeEmployeesCount || 0} heute aktiv
+              </p>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Kunden gesamt
-            </CardTitle>
-            <CheckCircle className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {dashboardData?.customerCount || 0}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {dashboardData?.objectCount || 0} Objekte betreut
-            </p>
-          </CardContent>
-        </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                Kunden gesamt
+              </CardTitle>
+              <CheckCircle className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {processedDashboardData?.customerCount || 0}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {processedDashboardData?.objectCount || 0} Objekte betreut
+              </p>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Beschwerden heute
-            </CardTitle>
-            <AlertCircle className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                Beschwerden heute
+              </CardTitle>
+              <AlertCircle className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {dashboardData?.totalNewComplaintsToday || 0}
+              {processedDashboardData?.totalNewComplaintsToday || 0}
             </div>
             <p className="text-xs text-muted-foreground">
               Ungelöste Tickets
             </p>
           </CardContent>
         </Card>
-      </div>
+        </div>
+      )}
 
       {/* Quick Actions */}
       <div className="flex flex-wrap gap-2">

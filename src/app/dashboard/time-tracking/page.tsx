@@ -11,7 +11,6 @@ import { AdminTimeEntriesOverview } from "@/components/admin-time-entries-overvi
 import { TriggerAutoTimeEntryButton } from "@/components/trigger-auto-time-entry-button";
 import { TimeEntryCreateDialog } from "@/components/time-entry-create-dialog";
 import { useCallback, useEffect, useState } from "react";
-import { LoadingOverlay } from "@/components/loading-overlay";
 import { DataTableToolbar, FilterOption, SortOption } from "@/components/data-table-toolbar";
 import { toast } from "sonner";
 
@@ -147,7 +146,7 @@ export default function TimeTrackingPage() {
   }, [fetchData]);
 
   if (!currentUser) {
-    return <LoadingOverlay isLoading={true} />;
+    return null;;
   }
 
   const weeklyData: { [key: string]: number } = {};
@@ -193,7 +192,7 @@ export default function TimeTrackingPage() {
 
   return (
     <div className="p-4 md:p-8 space-y-8">
-      {loading && <LoadingOverlay isLoading={loading} />}
+      
       <h1 className="text-2xl md:text-3xl font-bold">Zeiterfassung</h1>
 
       {isAdmin ? (

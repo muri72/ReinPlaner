@@ -10,9 +10,10 @@ import { Suspense, useEffect, useState, useCallback } from "react";
 import { CustomersTableView } from "@/components/customers-table-view";
 import { CustomersGridView } from "@/components/customers-grid-view";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { LoadingOverlay } from "@/components/loading-overlay";
 import { PageHeader } from "@/components/page-header";
 import { DataTableToolbar, FilterOption, SortOption } from "@/components/data-table-toolbar";
+import { GenericGridSkeleton } from "@/components/generic-grid-skeleton";
+import { SimpleListSkeleton } from "@/components/simple-list-skeleton";
 
 interface DisplayCustomer {
   id: string;
@@ -101,7 +102,16 @@ export default function CustomersPage() {
   }, [fetchData]);
 
   if (!currentUser) {
-    return <LoadingOverlay isLoading={true} />;
+    return (
+      <div className="p-4 md:p-8 space-y-8">
+        <PageHeader title="Ihre Kunden" loading={true} />
+        <Card className="shadow-neumorphic glassmorphism-card">
+          <CardContent className="p-8">
+            <GenericGridSkeleton count={6} showBadges={false} />
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   const totalPages = totalCount ? Math.ceil(totalCount / pageSize) : 0;
@@ -132,8 +142,7 @@ export default function CustomersPage() {
 
   return (
     <div className="p-4 md:p-8 space-y-8">
-      {loading && <LoadingOverlay isLoading={loading} />}
-      <PageHeader title="Ihre Kunden">
+      <PageHeader title="Ihre Kunden" loading={loading}>
         <CustomerCreateDialog onCustomerCreated={fetchData} />
       </PageHeader>
 
@@ -144,7 +153,7 @@ export default function CustomersPage() {
             filterOptions={filterOptions}
             sortOptions={sortOptions}
           />
-          {totalCount !== null && (
+          {totalCount !== null && !loading && (
             <div className="text-sm text-muted-foreground mt-2">
               {totalCount} {totalCount === 1 ? 'Ergebnis' : 'Ergebnisse'} gefunden.
             </div>
@@ -159,27 +168,35 @@ export default function CustomersPage() {
               </TabsList>
             </div>
             <TabsContent value="grid" className="mt-0">
-              <CustomersGridView
-                customers={allCustomers}
-                query={query}
-                customerTypeFilter={customerTypeFilter}
-                onActionSuccess={fetchData}
-              />
+              {loading ? (
+                <GenericGridSkeleton count={6} showBadges={false} />
+              ) : (
+                <CustomersGridView
+                  customers={allCustomers}
+                  query={query}
+                  customerTypeFilter={customerTypeFilter}
+                  onActionSuccess={fetchData}
+                />
+              )}
             </TabsContent>
             <TabsContent value="table" className="mt-0">
-              <CustomersTableView
-                customers={allCustomers}
-                totalPages={totalPages}
-                currentPage={currentPage}
-                query={query}
-                customerTypeFilter={customerTypeFilter}
-                onActionSuccess={fetchData}
-              />
+              {loading ? (
+                <SimpleListSkeleton count={5} />
+              ) : (
+                <CustomersTableView
+                  customers={allCustomers}
+                  totalPages={totalPages}
+                  currentPage={currentPage}
+                  query={query}
+                  customerTypeFilter={customerTypeFilter}
+                  onActionSuccess={fetchData}
+                />
+              )}
             </TabsContent>
           </Tabs>
         </CardContent>
         <CardFooter className="flex justify-center">
-          {!query && totalPages > 1 && (
+          {!loading && !query && totalPages > 1 && (
             <PaginationControls currentPage={currentPage} totalPages={totalPages} />
           )}
         </CardFooter>

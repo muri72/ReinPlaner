@@ -10,7 +10,6 @@ import { Suspense, useEffect, useState, useCallback } from "react";
 import { AbsenceRequestsTableView } from "@/components/absence-requests-table-view";
 import { PaginationControls } from "@/components/pagination-controls";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { LoadingOverlay } from "@/components/loading-overlay";
 import { PageHeader } from "@/components/page-header";
 import { DataTableToolbar, FilterOption, SortOption } from "@/components/data-table-toolbar";
 import { AbsenceRequestsGridView } from "@/components/absence-requests-grid-view"; // Assuming this will be created or exists
@@ -115,7 +114,7 @@ export default function AbsenceRequestsPage() {
   }, [fetchData]);
 
   if (!currentUser) {
-    return <LoadingOverlay isLoading={true} />;
+    return null;;
   }
 
   if (currentUserRole === 'customer') {
@@ -153,7 +152,7 @@ export default function AbsenceRequestsPage() {
 
   return (
     <div className="p-4 md:p-8 space-y-8">
-      {loading && <LoadingOverlay isLoading={loading} />}
+      
       <PageHeader title="Abwesenheitsverwaltung">
         <AbsenceRequestCreateDialog
           currentUserRole={currentUserRole}

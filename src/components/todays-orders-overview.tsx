@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { format, getWeek, differenceInDays, parse } from "date-fns";
+import { format, getWeek, differenceInDays, parse, isToday } from "date-fns";
 import { de } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -14,6 +14,27 @@ import { AssignedEmployee } from "@/components/order-form";
 import { TimeProgressBar } from "@/components/time-progress-bar";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { dashboardCache, CACHE_KEYS } from "@/lib/performance-cache";
+import { getTodaysOrdersRPC, TodaysOrderRPCResult } from "@/lib/todays-orders-rpc";
+
+// Simple debounce utility
+function debounce<T extends (...args: any[]) => void>(
+  func: T,
+  wait: number
+): T & { cancel: () => void } {
+  let timeout: NodeJS.Timeout;
+
+  const debounced = ((...args: any[]) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func.apply(null, args), wait);
+  }) as T & { cancel: () => void };
+
+  debounced.cancel = () => {
+    clearTimeout(timeout);
+  };
+
+  return debounced;
+}
 
 interface DisplayOrder {
   id: string;
@@ -122,12 +143,51 @@ export function TodaysOrdersOverview() {
     setCompletedOrders(completed.sort(sortOrdersByStartTime));
   }, []);
 
+  // Memoized helper function for recurring order calculation
+  const isRecurringOrderToday = useCallback((
+    order: any,
+    today: Date
+  ): boolean => {
+    const recurrenceInterval = order.order_employee_assignments?.[0]?.assigned_recurrence_interval_weeks ||
+                              order.recurrence_interval_weeks || 1;
+    const startWeekOffset = order.order_employee_assignments?.[0]?.assigned_start_week_offset ||
+                            order.start_week_offset || 0;
+    const orderStartDate = order.recurring_start_date ? new Date(order.recurring_start_date) : today;
+    const daysPassed = differenceInDays(today, orderStartDate);
+    if (daysPassed < 0) return false;
+
+    const weeksPassed = Math.floor(daysPassed / 7);
+    if ((weeksPassed + startWeekOffset) % recurrenceInterval !== 0) return false;
+
+    const effectiveWeekIndex = (weeksPassed + startWeekOffset) % recurrenceInterval;
+    const todayDayOfWeek = today.getDay();
+    const currentDayKey = dayNames[todayDayOfWeek];
+
+    // Check employee assignments
+    const hasHours = order.order_employee_assignments?.some((assignment: any) => {
+      const weekSchedule = assignment.assigned_daily_schedules?.[effectiveWeekIndex];
+      const daySchedule = weekSchedule?.[currentDayKey];
+      return daySchedule && daySchedule.hours > 0;
+    });
+
+    if (hasHours) return true;
+
+    // Check object schedules
+    if (order.daily_schedules) {
+      const weekSchedule = order.daily_schedules[effectiveWeekIndex];
+      const daySchedule = weekSchedule?.[currentDayKey];
+      if (daySchedule && daySchedule.hours > 0) {
+        return true;
+      }
+    }
+
+    return false;
+  }, []);
+
   const fetchData = useCallback(async (isInitialLoad = false) => {
     if (isInitialLoad) {
       setLoading(true);
     }
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
 
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
@@ -136,102 +196,199 @@ export function TodaysOrdersOverview() {
       return;
     }
 
-    let query = supabase
-      .from('orders')
-      .select(`
-        id, title, status, due_date, customer_id, object_id, order_type, recurring_start_date, recurring_end_date,
-        objects ( name, recurrence_interval_weeks, start_week_offset, daily_schedules ),
-        customers ( name ),
-        order_employee_assignments ( 
-          employee_id, 
-          assigned_daily_schedules,
-          assigned_recurrence_interval_weeks, assigned_start_week_offset,
-          employees ( first_name, last_name ) 
-        )
-      `)
-      .eq('request_status', 'approved')
-      .or(`due_date.eq.${format(today, 'yyyy-MM-dd')},and(recurring_start_date.lte.${format(today, 'yyyy-MM-dd')},or(recurring_end_date.gte.${format(today, 'yyyy-MM-dd')},recurring_end_date.is.null))`);
+    const today = new Date();
+    const todayStr = format(today, 'yyyy-MM-dd');
+    const cacheKey = CACHE_KEYS.TODAYS_ORDERS(user.id, todayStr);
 
-    const { data, error } = await query;
-
-    if (error) {
-      console.error("Fehler beim Laden der heutigen Aufträge:", error.message);
-      if (isInitialLoad) toast.error("Fehler beim Laden der heutigen Aufträge.");
+    // Try cache first
+    const cachedData = dashboardCache.get<DisplayOrder[]>(cacheKey);
+    if (cachedData && !isInitialLoad) {
+      console.log('📦 Using cached todays orders');
+      categorizeOrders(cachedData);
       setLoading(false);
       return;
     }
 
-    const todaysOrders = data.filter(order => {
-      if (order.order_type === 'one_time') return true;
-      if (['recurring', 'permanent', 'substitution'].includes(order.order_type)) {
-        const recurrenceInterval = order.order_employee_assignments?.[0]?.assigned_recurrence_interval_weeks || order.objects?.[0]?.recurrence_interval_weeks || 1;
-        const startWeekOffset = order.order_employee_assignments?.[0]?.assigned_start_week_offset || order.objects?.[0]?.start_week_offset || 0;
-        const orderStartDate = order.recurring_start_date ? new Date(order.recurring_start_date) : today;
-        const daysPassed = differenceInDays(today, orderStartDate);
-        if (daysPassed < 0) return false;
-        const weeksPassed = Math.floor(daysPassed / 7);
-        if ((weeksPassed + startWeekOffset) % recurrenceInterval !== 0) return false;
+    try {
+      // Try optimized RPC first
+      const rpcData = await getTodaysOrdersRPC(supabase, user.id, todayStr);
 
-        const effectiveWeekIndex = (weeksPassed + startWeekOffset) % recurrenceInterval;
-        const todayDayOfWeek = today.getDay();
-        const currentDayKey = dayNames[todayDayOfWeek];
-
-        const hasHours = order.order_employee_assignments?.some(assignment => {
-          const weekSchedule = assignment.assigned_daily_schedules?.[effectiveWeekIndex];
-          const daySchedule = (weekSchedule as any)?.[currentDayKey];
-          return daySchedule && daySchedule.hours > 0;
-        });
-
-        if (hasHours) return true;
-        
-        const object = order.objects?.[0];
-        if (object) {
-            const weekSchedule = object.daily_schedules?.[effectiveWeekIndex];
-            const daySchedule = (weekSchedule as any)?.[currentDayKey];
-            if (daySchedule && daySchedule.hours > 0) {
-                return true;
-            }
-        }
-        return false;
-      }
-      return false;
-    });
-
-    const mappedOrders: DisplayOrder[] = todaysOrders.map(order => ({
-      id: order.id,
-      title: order.title,
-      status: order.status,
-      due_date: order.due_date,
-      assignedEmployees: order.order_employee_assignments?.map((a: any) => {
-        const employee = Array.isArray(a.employees) ? a.employees[0] : a.employees;
-        const name = `${employee?.first_name || ''} ${employee?.last_name || ''}`.trim();
-        return {
-          employeeId: a.employee_id,
-          name: name || 'Unbekannt',
+      const mappedOrders: DisplayOrder[] = rpcData.map(order => ({
+        id: order.order_id,
+        title: order.title,
+        status: order.status,
+        due_date: order.due_date,
+        customer_name: order.customer_name,
+        object_name: order.object_name,
+        order_type: order.order_type,
+        recurring_start_date: null,
+        object: {
+          recurrence_interval_weeks: order.recurrence_interval_weeks,
+          start_week_offset: order.start_week_offset,
+          daily_schedules: order.daily_schedules || []
+        },
+        assignedEmployees: order.employee_assignments.map(assignment => ({
+          employeeId: assignment.employee_id,
+          name: `${assignment.employee.first_name || ''} ${assignment.employee.last_name || ''}`.trim() || 'Unbekannt',
           avatarUrl: null,
-          assigned_daily_schedules: a.assigned_daily_schedules,
-          assigned_recurrence_interval_weeks: a.assigned_recurrence_interval_weeks,
-          assigned_start_week_offset: a.assigned_start_week_offset,
-        };
-      }) || [],
-      customer_name: order.customers?.[0]?.name || null,
-      object_name: order.objects?.[0]?.name || null,
-      order_type: order.order_type,
-      recurring_start_date: order.recurring_start_date,
-      object: order.objects?.[0] || null,
-    }));
+          assigned_daily_schedules: assignment.assigned_daily_schedules,
+          assigned_recurrence_interval_weeks: assignment.assigned_recurrence_interval_weeks,
+          assigned_start_week_offset: assignment.assigned_start_week_offset,
+        }))
+      }));
 
-    categorizeOrders(mappedOrders);
-    if (isInitialLoad) {
-      setLoading(false);
+      // Cache the results
+      dashboardCache.set(cacheKey, mappedOrders);
+
+      categorizeOrders(mappedOrders);
+      if (isInitialLoad) setLoading(false);
+
+    } catch (error: any) {
+      // Check if RPC function is not available
+      if (error?.message?.includes('RPC_NOT_AVAILABLE') || error?.message?.includes('Function get_todays_orders_optimized not found')) {
+        console.warn('RPC Function nicht verfügbar - verwende optimierte normale Query');
+      } else {
+        console.warn('RPC Error, verwende optimierte normale Query:', error?.message);
+      }
+
+      // Fallback to regular optimized query
+      let query = supabase
+        .from('orders')
+        .select(`
+          id, title, status, due_date, customer_id, object_id, order_type, recurring_start_date,
+          objects ( name, recurrence_interval_weeks, start_week_offset, daily_schedules ),
+          customers ( name )
+        `)
+        .eq('request_status', 'approved')
+        .or(`due_date.eq.${todayStr},and(recurring_start_date.lte.${todayStr},or(recurring_end_date.gte.${todayStr},recurring_end_date.is.null))`)
+        .limit(50); // Reduced limit for faster loading
+
+      const { data: ordersData, error: queryError } = await query;
+
+      if (queryError) {
+        console.error("Fehler beim Laden der heutigen Aufträge:", queryError.message);
+        if (isInitialLoad) toast.error("Fehler beim Laden der heutigen Aufträge.");
+        setLoading(false);
+        return;
+      }
+
+      if (!ordersData || ordersData.length === 0) {
+        categorizeOrders([]);
+        if (isInitialLoad) setLoading(false);
+        return;
+      }
+
+      // Get employee assignments
+      const orderIds = ordersData.map(o => o.id);
+      const { data: assignmentsData } = await supabase
+        .from('order_employee_assignments')
+        .select(`
+          order_id,
+          employee_id,
+          assigned_daily_schedules,
+          assigned_recurrence_interval_weeks,
+          assigned_start_week_offset,
+          employees ( first_name, last_name )
+        `)
+        .in('order_id', orderIds);
+
+      // Combine data with memoized filter
+      const data = ordersData.map(order => ({
+        ...order,
+        order_employee_assignments: assignmentsData?.filter(a => a.order_id === order.id) || []
+      }));
+
+      const todaysOrders = data.filter(order => {
+        if (order.order_type === 'one_time') return true;
+        return ['recurring', 'permanent', 'substitution'].includes(order.order_type) &&
+               isRecurringOrderToday(order, today);
+      });
+
+      const mappedOrders: DisplayOrder[] = todaysOrders.map(order => ({
+        id: order.id,
+        title: order.title,
+        status: order.status,
+        due_date: order.due_date,
+        assignedEmployees: order.order_employee_assignments?.map((a: any) => {
+          const employee = Array.isArray(a.employees) ? a.employees[0] : a.employees;
+          const name = `${employee?.first_name || ''} ${employee?.last_name || ''}`.trim();
+          return {
+            employeeId: a.employee_id,
+            name: name || 'Unbekannt',
+            avatarUrl: null,
+            assigned_daily_schedules: a.assigned_daily_schedules,
+            assigned_recurrence_interval_weeks: a.assigned_recurrence_interval_weeks,
+            assigned_start_week_offset: a.assigned_start_week_offset,
+          };
+        }) || [],
+        customer_name: order.customers?.[0]?.name || null,
+        object_name: order.objects?.[0]?.name || null,
+        order_type: order.order_type,
+        recurring_start_date: order.recurring_start_date,
+        object: order.objects?.[0] || null,
+      }));
+
+      // Cache the results
+      dashboardCache.set(cacheKey, mappedOrders);
+
+      categorizeOrders(mappedOrders);
+      if (isInitialLoad) {
+        setLoading(false);
+      }
     }
-  }, [supabase, categorizeOrders]);
+  }, [supabase, categorizeOrders, isRecurringOrderToday]);
+
+  // Memoized categorization function
+  const memoizedCategorizeOrders = useCallback((orders: DisplayOrder[]) => {
+    categorizeOrders(orders);
+  }, [categorizeOrders]);
+
+  // Memoized time range calculator
+  const getOrderTimeRange = useCallback((order: DisplayOrder) => {
+    const assignedTimes = order.assignedEmployees
+      .map(emp => getAssignedTimeForEmployeeToday(emp, order))
+      .filter((time): time is { start: string; end: string } => time !== null);
+
+    if (assignedTimes.length === 0) return null;
+
+    const now = new Date();
+    const startDates = assignedTimes.map(t => parse(t.start, 'HH:mm', now));
+    const endDates = assignedTimes.map(t => parse(t.end, 'HH:mm', now));
+
+    const earliestStart = new Date(Math.min(...startDates.map(d => d.getTime())));
+    const latestEnd = new Date(Math.max(...endDates.map(d => d.getTime())));
+
+    return { start: earliestStart, end: latestEnd };
+  }, []);
+
+  // Memoized sorting function
+  const sortOrdersByStartTime = useCallback((a: DisplayOrder, b: DisplayOrder) => {
+    const timeA = getOrderTimeRange(a)?.start.getTime() || Infinity;
+    const timeB = getOrderTimeRange(b)?.start.getTime() || Infinity;
+    return timeA - timeB;
+  }, [getOrderTimeRange]);
+
+  // Debounced fetch to prevent excessive API calls
+  const debouncedFetchData = useCallback(
+    debounce((isInitialLoad: boolean) => {
+      fetchData(isInitialLoad);
+    }, 300),
+    [fetchData]
+  );
 
   useEffect(() => {
-    fetchData(true); // Initial load with loading state
-    const interval = setInterval(() => fetchData(false), 60000); // Subsequent loads without loading state
-    return () => clearInterval(interval);
-  }, [fetchData]);
+    debouncedFetchData(true); // Initial load with loading state
+
+    // Refresh every 2 minutes instead of 1 (reduced frequency)
+    const interval = setInterval(() => {
+      debouncedFetchData(false); // Subsequent loads without loading state
+    }, 120000);
+
+    return () => {
+      clearInterval(interval);
+      debouncedFetchData.cancel?.();
+    };
+  }, [debouncedFetchData]);
 
   const renderOrderCard = (order: DisplayOrder) => {
     const location = [order.object_name, order.customer_name].filter(Boolean).join(" • ");

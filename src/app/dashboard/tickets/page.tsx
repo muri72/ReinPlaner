@@ -9,12 +9,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Suspense, useEffect, useState, useCallback } from "react";
 import { TicketsTableView } from "@/components/tickets-table-view";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { LoadingOverlay } from "@/components/loading-overlay";
 import { getTickets } from "./actions";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/page-header";
 import { DataTableToolbar, FilterOption, SortOption } from "@/components/data-table-toolbar";
-import { TicketsGridView } from "@/components/tickets-grid-view"; // Assuming this will be created or exists
+import { TicketsGridView } from "@/components/tickets-grid-view";
+import { SimpleListSkeleton } from "@/components/simple-list-skeleton";
+import { GenericGridSkeleton } from "@/components/generic-grid-skeleton";
 
 interface DisplayTicket {
   id: string;
@@ -119,7 +120,16 @@ export default function TicketsPage() {
   }, [fetchData]);
 
   if (!currentUser) {
-    return <LoadingOverlay isLoading={true} />;
+    return (
+      <div className="p-4 md:p-8 space-y-8">
+        <PageHeader title="Ticket-Verwaltung" loading={true} />
+        <Card className="shadow-neumorphic glassmorphism-card">
+          <CardContent className="p-8">
+            <GenericGridSkeleton count={6} showBadges={true} badgeCount={2} />
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   const totalPages = totalCount ? Math.ceil(totalCount / pageSize) : 0;
@@ -150,8 +160,7 @@ export default function TicketsPage() {
 
   return (
     <div className="p-4 md:p-8 space-y-8">
-      {loading && <LoadingOverlay isLoading={loading} />}
-      <PageHeader title="Ticket-Verwaltung">
+      <PageHeader title="Ticket-Verwaltung" loading={loading}>
         <TicketCreateDialog onTicketCreated={fetchData} />
       </PageHeader>
 
@@ -162,7 +171,7 @@ export default function TicketsPage() {
             filterOptions={filterOptions}
             sortOptions={sortOptions}
           />
-          {totalCount !== null && (
+          {totalCount !== null && !loading && (
             <div className="text-sm text-muted-foreground mt-2">
               {totalCount} {totalCount === 1 ? 'Ergebnis' : 'Ergebnisse'} gefunden.
             </div>
@@ -177,25 +186,33 @@ export default function TicketsPage() {
               </TabsList>
             </div>
             <TabsContent value="grid" className="mt-0">
-              <TicketsGridView
-                tickets={allTickets}
-                query={query}
-                onTicketUpdated={fetchData}
-              />
+              {loading ? (
+                <GenericGridSkeleton count={6} showBadges={true} badgeCount={2} />
+              ) : (
+                <TicketsGridView
+                  tickets={allTickets}
+                  query={query}
+                  onTicketUpdated={fetchData}
+                />
+              )}
             </TabsContent>
             <TabsContent value="table" className="mt-0">
-              <TicketsTableView
-                tickets={allTickets}
-                totalPages={totalPages}
-                currentPage={currentPage}
-                query={query}
-                onTicketUpdated={fetchData}
-              />
+              {loading ? (
+                <SimpleListSkeleton count={5} showMeta={true} />
+              ) : (
+                <TicketsTableView
+                  tickets={allTickets}
+                  totalPages={totalPages}
+                  currentPage={currentPage}
+                  query={query}
+                  onTicketUpdated={fetchData}
+                />
+              )}
             </TabsContent>
           </Tabs>
         </CardContent>
         <CardFooter className="flex justify-center">
-          {!query && totalPages > 1 && (
+          {!loading && !query && totalPages > 1 && (
             <PaginationControls currentPage={currentPage} totalPages={totalPages} />
           )}
         </CardFooter>

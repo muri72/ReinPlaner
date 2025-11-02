@@ -15,7 +15,6 @@ import { AssignedEmployee } from "@/components/order-form";
 import { TicketCreateDialog } from "@/components/ticket-create-dialog";
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
-import { LoadingOverlay } from "@/components/loading-overlay";
 
 interface DisplayOrder {
   id: string;
@@ -209,7 +208,7 @@ export default function CustomerBookingsPage() {
   };
 
   if (loading || !user) {
-    return <LoadingOverlay isLoading={true} />;
+    return null;;
   }
 
   return (

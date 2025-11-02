@@ -21,12 +21,12 @@ import { de } from "date-fns/locale";
 import { OrdersTableView } from "@/components/orders-table-view";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { RecordDetailsDialog } from "@/components/record-details-dialog";
-import { LoadingOverlay } from "@/components/loading-overlay";
 import { AssignedEmployee } from "@/components/order-form";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"; // Ensure these are imported
 import { PageHeader } from "@/components/page-header";
 import { DataTableToolbar, FilterOption, SortOption } from "@/components/data-table-toolbar";
 import { OrdersGridView } from "@/components/orders-grid-view";
+import { OrdersGridSkeleton } from "@/components/orders-grid-skeleton";
 
 const dayNames = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const;
 const germanDayNames: { [key: string]: string } = {
@@ -208,11 +208,11 @@ export default function OrdersPage({
           objects ( name, address, notes, time_of_day, access_method, pin, is_alarm_secured, alarm_password, security_code_word, recurrence_interval_weeks, start_week_offset, daily_schedules ),
           customer_contacts ( first_name, last_name, phone ),
           order_feedback ( id, rating, comment, image_urls, created_at ),
-          order_employee_assignments ( 
-            employee_id, 
+          order_employee_assignments (
+            employee_id,
             assigned_daily_schedules,
             assigned_recurrence_interval_weeks, assigned_start_week_offset,
-            employees ( first_name, last_name ) 
+            employees ( first_name, last_name )
           )
         `, { count: 'exact' })
         .order(sortColumn, { ascending: sortDirection === 'asc' });
@@ -247,7 +247,7 @@ export default function OrdersPage({
             assigned_recurrence_interval_weeks: a.assigned_recurrence_interval_weeks,
             assigned_start_week_offset: a.assigned_start_week_offset,
         })) || [];
-        
+
         return {
           id: order.id,
           user_id: order.user_id,
@@ -317,7 +317,16 @@ export default function OrdersPage({
   }, [fetchData]);
 
   if (!currentUser) {
-    return null;
+    return (
+      <div className="p-4 md:p-8 space-y-8">
+        <PageHeader title="Auftragsverwaltung" loading={true} />
+        <Card className="shadow-neumorphic glassmorphism-card">
+          <CardContent className="p-8">
+            <OrdersGridSkeleton />
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   const totalPages = totalCount ? Math.ceil(totalCount / pageSize) : 0;
@@ -365,8 +374,7 @@ export default function OrdersPage({
 
   return (
     <div className="p-4 md:p-8 space-y-8">
-      {loading && <LoadingOverlay isLoading={loading} />}
-      <PageHeader title="Auftragsverwaltung">
+      <PageHeader title="Auftragsverwaltung" loading={loading}>
         <OrderCreateDialog />
       </PageHeader>
 
@@ -377,7 +385,7 @@ export default function OrdersPage({
             filterOptions={filterOptions}
             sortOptions={sortOptions}
           />
-          {totalCount !== null && (
+          {totalCount !== null && !loading && (
             <div className="text-sm text-muted-foreground mt-2">
               {totalCount} {totalCount === 1 ? 'Ergebnis' : 'Ergebnisse'} gefunden.
             </div>
@@ -392,22 +400,40 @@ export default function OrdersPage({
               </TabsList>
             </div>
             <TabsContent value="grid" className="mt-0">
-              <OrdersGridView
-                orders={otherOrders}
-                employees={employees}
-                onActionSuccess={fetchData}
-              />
+              {loading ? (
+                <OrdersGridSkeleton />
+              ) : (
+                <OrdersGridView
+                  orders={otherOrders}
+                  employees={employees}
+                  onActionSuccess={fetchData}
+                />
+              )}
             </TabsContent>
             <TabsContent value="table" className="mt-0">
-              <OrdersTableView
-                orders={otherOrders}
-                onActionSuccess={fetchData}
-              />
+              {loading ? (
+                <div className="space-y-3">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <div key={i} className="flex items-center space-x-4 p-4 border rounded-lg">
+                      <div className="space-y-2 flex-1">
+                        <div className="h-4 w-3/4 bg-muted/60 rounded animate-pulse" />
+                        <div className="h-3 w-1/2 bg-muted/60 rounded animate-pulse" />
+                      </div>
+                      <div className="h-8 w-20 bg-muted/60 rounded animate-pulse" />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <OrdersTableView
+                  orders={otherOrders}
+                  onActionSuccess={fetchData}
+                />
+              )}
             </TabsContent>
           </Tabs>
         </CardContent>
         <CardFooter className="flex justify-center">
-          {!query && totalPages > 1 && (
+          {!loading && !query && totalPages > 1 && (
             <PaginationControls currentPage={currentPage} totalPages={totalPages} />
           )}
         </CardFooter>

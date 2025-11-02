@@ -9,10 +9,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Suspense, useEffect, useState, useCallback } from "react";
 import { EmployeesTableView } from "@/components/employees-table-view";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { LoadingOverlay } from "@/components/loading-overlay";
 import { PageHeader } from "@/components/page-header";
 import { DataTableToolbar, FilterOption, SortOption } from "@/components/data-table-toolbar";
-import { EmployeesGridView } from "@/components/employees-grid-view"; // Assuming this will be created or exists
+import { EmployeesGridView } from "@/components/employees-grid-view";
+import { GenericGridSkeleton } from "@/components/generic-grid-skeleton";
+import { SimpleListSkeleton } from "@/components/simple-list-skeleton";
 
 interface DisplayEmployee {
   id: string;
@@ -108,7 +109,16 @@ export default function EmployeesPage() {
   }, [fetchData]);
 
   if (!currentUser) {
-    return <LoadingOverlay isLoading={true} />;
+    return (
+      <div className="p-4 md:p-8 space-y-8">
+        <PageHeader title="Ihre Mitarbeiter" loading={true} />
+        <Card className="shadow-neumorphic glassmorphism-card">
+          <CardContent className="p-8">
+            <GenericGridSkeleton count={6} showAvatar={true} showBadges={true} badgeCount={2} />
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   const totalPages = totalCount ? Math.ceil(totalCount / pageSize) : 0;
@@ -137,8 +147,7 @@ export default function EmployeesPage() {
 
   return (
     <div className="p-4 md:p-8 space-y-8">
-      {loading && <LoadingOverlay isLoading={loading} />}
-      <PageHeader title="Ihre Mitarbeiter">
+      <PageHeader title="Ihre Mitarbeiter" loading={loading}>
         <EmployeeCreateDialog onEmployeeCreated={fetchData} />
       </PageHeader>
 
@@ -149,7 +158,7 @@ export default function EmployeesPage() {
             filterOptions={filterOptions}
             sortOptions={sortOptions}
           />
-          {totalCount !== null && (
+          {totalCount !== null && !loading && (
             <div className="text-sm text-muted-foreground mt-2">
               {totalCount} {totalCount === 1 ? 'Ergebnis' : 'Ergebnisse'} gefunden.
             </div>
@@ -164,28 +173,36 @@ export default function EmployeesPage() {
               </TabsList>
             </div>
             <TabsContent value="grid" className="mt-0">
-              <EmployeesGridView
-                employees={allEmployees}
-                query={query}
-                statusFilter={statusFilter}
-                contractTypeFilter={contractTypeFilter}
-                onActionSuccess={fetchData}
-              />
+              {loading ? (
+                <GenericGridSkeleton count={6} showAvatar={true} showBadges={true} badgeCount={2} />
+              ) : (
+                <EmployeesGridView
+                  employees={allEmployees}
+                  query={query}
+                  statusFilter={statusFilter}
+                  contractTypeFilter={contractTypeFilter}
+                  onActionSuccess={fetchData}
+                />
+              )}
             </TabsContent>
             <TabsContent value="table" className="mt-0">
-              <EmployeesTableView
-                employees={allEmployees}
-                totalPages={totalPages}
-                currentPage={currentPage}
-                query={query}
-                statusFilter={statusFilter}
-                contractTypeFilter={contractTypeFilter}
-              />
+              {loading ? (
+                <SimpleListSkeleton count={5} showMeta={true} />
+              ) : (
+                <EmployeesTableView
+                  employees={allEmployees}
+                  totalPages={totalPages}
+                  currentPage={currentPage}
+                  query={query}
+                  statusFilter={statusFilter}
+                  contractTypeFilter={contractTypeFilter}
+                />
+              )}
             </TabsContent>
           </Tabs>
         </CardContent>
         <CardFooter className="flex justify-center">
-          {!query && totalPages > 1 && (
+          {!loading && !query && totalPages > 1 && (
             <PaginationControls currentPage={currentPage} totalPages={totalPages} />
           )}
         </CardFooter>

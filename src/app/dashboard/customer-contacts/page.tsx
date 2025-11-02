@@ -9,7 +9,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Suspense, useEffect, useState, useCallback } from "react";
 import { CustomerContactsTableView } from "@/components/customer-contacts-table-view";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { LoadingOverlay } from "@/components/loading-overlay";
 import { PageHeader } from "@/components/page-header";
 import { DataTableToolbar, FilterOption, SortOption } from "@/components/data-table-toolbar";
 import { CustomerContactsGridView } from "@/components/customer-contacts-grid-view"; // Assuming this will be created or exists
@@ -101,7 +100,7 @@ export default function CustomerContactsPage() {
   }, [fetchData]);
 
   if (!currentUser) {
-    return <LoadingOverlay isLoading={true} />;
+    return null;;
   }
 
   const totalPages = totalCount ? Math.ceil(totalCount / pageSize) : 0;
@@ -128,7 +127,7 @@ export default function CustomerContactsPage() {
 
   return (
     <div className="p-4 md:p-8 space-y-8">
-      {loading && <LoadingOverlay isLoading={loading} />}
+      
       <PageHeader title="Ihre Kundenkontakte">
         <CustomerContactCreateGeneralDialog onContactCreated={fetchData} />
       </PageHeader>

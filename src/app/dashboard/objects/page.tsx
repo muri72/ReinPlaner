@@ -10,10 +10,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Suspense, useEffect, useState, useCallback } from "react";
 import { ObjectsTableView } from "@/components/objects-table-view";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { LoadingOverlay } from "@/components/loading-overlay";
 import { PageHeader } from "@/components/page-header";
 import { DataTableToolbar, FilterOption, SortOption } from "@/components/data-table-toolbar";
-import { ObjectsGridView } from "@/components/objects-grid-view"; // Assuming this will be created or exists
+import { ObjectsGridView } from "@/components/objects-grid-view";
+import { ObjectsGridSkeleton } from "@/components/objects-grid-skeleton";
 
 interface DisplayObject {
   id: string;
@@ -128,7 +128,16 @@ export default function ObjectsPage() {
   }, [fetchData]);
 
   if (!currentUser) {
-    return <LoadingOverlay isLoading={true} />;
+    return (
+      <div className="p-4 md:p-8 space-y-8">
+        <PageHeader title="Ihre Objekte" loading={true} />
+        <Card className="shadow-neumorphic glassmorphism-card">
+          <CardContent className="p-8">
+            <ObjectsGridSkeleton />
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   const totalPages = totalCount ? Math.ceil(totalCount / pageSize) : 0;
@@ -160,8 +169,7 @@ export default function ObjectsPage() {
 
   return (
     <div className="p-4 md:p-8 space-y-8">
-      {loading && <LoadingOverlay isLoading={loading} />}
-      <PageHeader title="Ihre Objekte">
+      <PageHeader title="Ihre Objekte" loading={loading}>
         <ObjectCreateDialog onObjectCreated={fetchData} />
       </PageHeader>
 
@@ -172,7 +180,7 @@ export default function ObjectsPage() {
             filterOptions={filterOptions}
             sortOptions={sortOptions}
           />
-          {totalCount !== null && (
+          {totalCount !== null && !loading && (
             <div className="text-sm text-muted-foreground mt-2">
               {totalCount} {totalCount === 1 ? 'Ergebnis' : 'Ergebnisse'} gefunden.
             </div>
@@ -187,32 +195,50 @@ export default function ObjectsPage() {
               </TabsList>
             </div>
             <TabsContent value="grid" className="mt-0">
-              <ObjectsGridView
-                objects={allObjects}
-                query={query}
-                customerIdFilter={customerIdFilter}
-                priorityFilter={priorityFilter}
-                timeOfDayFilter={timeOfDayFilter}
-                accessMethodFilter={accessMethodFilter}
-                onActionSuccess={fetchData}
-              />
+              {loading ? (
+                <ObjectsGridSkeleton />
+              ) : (
+                <ObjectsGridView
+                  objects={allObjects}
+                  query={query}
+                  customerIdFilter={customerIdFilter}
+                  priorityFilter={priorityFilter}
+                  timeOfDayFilter={timeOfDayFilter}
+                  accessMethodFilter={accessMethodFilter}
+                  onActionSuccess={fetchData}
+                />
+              )}
             </TabsContent>
             <TabsContent value="table" className="mt-0">
-              <ObjectsTableView
-                objects={allObjects}
-                totalPages={totalPages}
-                currentPage={currentPage}
-                query={query}
-                customerIdFilter={customerIdFilter}
-                priorityFilter={priorityFilter}
-                timeOfDayFilter={timeOfDayFilter}
-                accessMethodFilter={accessMethodFilter}
-              />
+              {loading ? (
+                <div className="space-y-3">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <div key={i} className="flex items-center space-x-4 p-4 border rounded-lg">
+                      <div className="space-y-2 flex-1">
+                        <div className="h-4 w-3/4 bg-muted/60 rounded animate-pulse" />
+                        <div className="h-3 w-1/2 bg-muted/60 rounded animate-pulse" />
+                      </div>
+                      <div className="h-8 w-20 bg-muted/60 rounded animate-pulse" />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <ObjectsTableView
+                  objects={allObjects}
+                  totalPages={totalPages}
+                  currentPage={currentPage}
+                  query={query}
+                  customerIdFilter={customerIdFilter}
+                  priorityFilter={priorityFilter}
+                  timeOfDayFilter={timeOfDayFilter}
+                  accessMethodFilter={accessMethodFilter}
+                />
+              )}
             </TabsContent>
           </Tabs>
         </CardContent>
         <CardFooter className="flex justify-center">
-          {!query && totalPages > 1 && (
+          {!loading && !query && totalPages > 1 && (
             <PaginationControls currentPage={currentPage} totalPages={totalPages} />
           )}
         </CardFooter>
