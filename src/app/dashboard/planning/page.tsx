@@ -273,7 +273,7 @@ export default function PlanningPage() {
 
   return (
     <DndContext onDragStart={({ active }) => setActiveDragId(active.id as string)} onDragEnd={handleDragEnd}>
-      <div className="p-4 md:p-8 h-full flex flex-col space-y-4">
+      <div className="flex flex-col gap-8 p-4 md:p-8 h-full">
         {isMobile ? (
           <>
             <MobilePlanningToolbar

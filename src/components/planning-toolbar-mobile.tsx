@@ -12,6 +12,7 @@ import {
   startOfWeek,
   endOfWeek,
   startOfMonth,
+  startOfDay,
 } from "date-fns";
 import { de } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,7 @@ import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { Calendar, ChevronLeft, ChevronRight, Filter, MoreHorizontal, Plus } from "lucide-react";
+import { SearchInput } from "./search-input";
 
 interface MobilePlanningToolbarProps {
   currentDate: Date;
@@ -33,7 +35,7 @@ interface MobilePlanningToolbarProps {
 }
 
 const MODE_OPTIONS: Array<{ mode: "day" | "week" | "month"; label: string }> = [
-  { mode: "day", label: "Tag" },
+  { mode: "day", label: "Heute" },
   { mode: "week", label: "Woche" },
   { mode: "month", label: "Monat" },
 ];
@@ -115,6 +117,21 @@ export function MobilePlanningToolbar({
     return format(monthStart, "MMMM yyyy", { locale: de });
   }, [currentDate, viewMode]);
 
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const nextWeek = new Date(today);
+  nextWeek.setDate(nextWeek.getDate() + 7);
+
+  const quickActions = [
+    { label: 'Gestern', date: yesterday },
+    { label: 'Heute', date: today },
+    { label: 'Morgen', date: tomorrow },
+    { label: 'N. Woche', date: nextWeek },
+  ];
+
   return (
     <div className="space-y-3 rounded-xl border border-border/70 bg-background/80 p-4 shadow-sm backdrop-blur">
       <div className="flex items-center justify-between gap-3">
@@ -147,6 +164,8 @@ export function MobilePlanningToolbar({
           <ChevronRight className="h-5 w-5" />
         </Button>
       </div>
+
+      <SearchInput placeholder="Mitarbeiter suchen..." className="w-full" />
 
       <div className="flex items-center justify-between gap-2">
         <div className="flex flex-1 items-center gap-1 rounded-lg border border-border/70 p-1">
@@ -197,47 +216,80 @@ export function MobilePlanningToolbar({
               <MoreHorizontal className="h-5 w-5" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="bottom" className="h-[60vh] rounded-t-3xl">
+          <SheetContent side="bottom" className="h-[75vh] rounded-t-3xl bg-background">
             <SheetHeader className="px-2 text-left">
               <SheetTitle className="font-semibold">Planungsoptionen</SheetTitle>
             </SheetHeader>
-            <div className="mt-6 space-y-3 px-2">
-              <Button
-                variant="outline"
-                size="lg"
-                className="justify-start gap-3"
-                onClick={() => {
-                  setIsSheetOpen(false);
-                  handleToday();
-                }}
-              >
-                <Calendar className="h-5 w-5" />
-                Datum zurücksetzen
-              </Button>
-              <Button
-                variant="outline"
-                size="lg"
-                className="justify-start gap-3"
-                onClick={() => {
-                  setIsSheetOpen(false);
-                  onOpenFilters?.();
-                }}
-              >
-                <Filter className="h-5 w-5" />
-                Filter und Suche
-              </Button>
-              <Button
-                variant="default"
-                size="lg"
-                className="justify-start gap-3"
-                onClick={() => {
-                  setIsSheetOpen(false);
-                  onCreateOrder?.();
-                }}
-              >
-                <Plus className="h-5 w-5" />
-                Neuer Auftrag
-              </Button>
+            <div className="mt-6 space-y-4 px-2">
+              <div className="space-y-2">
+                <h3 className="text-sm font-medium text-muted-foreground">Schnellzugriff</h3>
+                <div className="bg-muted/30 rounded-lg p-3 border border-border/50">
+                  <div className="grid grid-cols-4 gap-2">
+                    {quickActions.map((action) => (
+                      <Button
+                        key={action.label}
+                        variant="secondary"
+                        size="lg"
+                        className="justify-start gap-2 h-auto py-3 flex-col bg-background/80 hover:bg-background shadow-sm"
+                        onClick={() => {
+                          setIsSheetOpen(false);
+                          if (viewMode === "month") {
+                            onDateChange(startOfMonth(action.date));
+                          } else if (viewMode === "week") {
+                            onDateChange(startOfWeek(action.date, { weekStartsOn: 1 }));
+                          } else {
+                            onDateChange(startOfDay(action.date));
+                          }
+                        }}
+                      >
+                        <span className="text-xs font-medium">{action.label}</span>
+                        <span className="text-[10px] text-muted-foreground">
+                          {format(action.date, "dd.MM.", { locale: de })}
+                        </span>
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="border-t pt-4 space-y-3">
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="justify-start gap-3 w-full"
+                  onClick={() => {
+                    setIsSheetOpen(false);
+                    handleToday();
+                  }}
+                >
+                  <Calendar className="h-5 w-5" />
+                  Datum zurücksetzen
+                </Button>
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="justify-start gap-3 w-full"
+                  onClick={() => {
+                    setIsSheetOpen(false);
+                    onOpenFilters?.();
+                  }}
+                >
+                  <Filter className="h-5 w-5" />
+                  Filter und Suche
+                </Button>
+                <Button
+                  variant="default"
+                  size="lg"
+                  className="justify-start gap-3 w-full"
+                  onClick={() => {
+                    setIsSheetOpen(false);
+                    onCreateOrder?.();
+                  }}
+                >
+                  <Plus className="h-5 w-5" />
+                  Neuer Auftrag
+                </Button>
+              </div>
             </div>
           </SheetContent>
         </Sheet>
