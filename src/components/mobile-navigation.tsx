@@ -17,6 +17,7 @@ import {
   GripVertical,
   ChevronUp,
   ChevronDown,
+  Shield,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -89,6 +90,8 @@ const getNavItems = (role: UserRole): NavItem[] => {
         createNavItem("/dashboard/reports", "Berichte", FileText),
         createNavItem("/dashboard/time-tracking", "Zeiterfassung", Clock),
         createNavItem("/dashboard/feedback", "Feedback", MessageSquare),
+        createNavItem("/dashboard/audit-logs", "Audit-Logs", Shield),
+        createNavItem("/dashboard/users", "Benutzer", Users),
       );
       break;
     case "manager":

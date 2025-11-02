@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Home, Briefcase, Users, ContactRound, Building, UsersRound, Clock, CalendarOff,
-  CalendarCheck, TrendingUp, FileText, Star, DollarSign, ListOrdered, MessageSquare
+  CalendarCheck, TrendingUp, FileText, Star, DollarSign, ListOrdered, MessageSquare, Shield
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -93,6 +93,15 @@ const navItems: NavItem[] = [
     href: "/portal/dashboard/bookings",
     icon: Briefcase,
     roles: ['customer'],
+  },
+  {
+    title: "Administration",
+    isCategory: true,
+    roles: ['admin'],
+    children: [
+      { title: "Audit-Logs", href: "/dashboard/audit-logs", icon: Shield, roles: ['admin'] },
+      { title: "Benutzer", href: "/dashboard/users", icon: Users, roles: ['admin'] },
+    ],
   },
 ];
 
