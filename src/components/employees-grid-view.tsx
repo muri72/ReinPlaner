@@ -2,16 +2,9 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Mail, Phone, CalendarDays, UserRoundCheck, UserRoundX, UserRoundMinus, Briefcase, DollarSign, Tag, Building2, FileText, MapPin, Cake, CreditCard, Shield, UsersRound, FileStack, Clock } from "lucide-react";
-import { EmployeeEditDialog } from "@/components/employee-edit-dialog";
-import { DeleteEmployeeButton } from "@/components/delete-employee-button";
-import { RecordDetailsDialog } from "@/components/record-details-dialog";
+import { Users, UsersRound, UserRoundCheck, UserRoundX, UserRoundMinus } from "lucide-react";
 import { EmployeeCreateDialog } from "@/components/employee-create-dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { DocumentUploader } from "@/components/document-uploader";
-import { DocumentList } from "@/components/document-list";
 import Link from "next/link";
-import { cn } from "@/lib/utils";
 
 interface DisplayEmployee {
   id: string;
@@ -124,37 +117,22 @@ export function EmployeesGridView({
         <Link key={employee.id} href={`/dashboard/employees/${employee.id}`} className="block hover:scale-[1.02] transition-transform duration-200 ease-in-out">
           <Card className="shadow-neumorphic glassmorphism-card h-full">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-base md:text-lg font-semibold">{employee.first_name} {employee.last_name}</CardTitle>
-              <DeleteEmployeeButton employeeId={employee.id} onDeleteSuccess={onActionSuccess} />
+              <CardTitle className="text-base md:text-lg font-semibold line-clamp-2">{employee.first_name} {employee.last_name}</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2 text-sm text-muted-foreground">
-              {employee.email && (
-                <div className="flex items-center">
-                  <Mail className="mr-2 h-4 w-4 flex-shrink-0" />
-                  <span>{employee.email}</span>
-                </div>
-              )}
-              {employee.phone && (
-                <div className="flex items-center">
-                  <Phone className="mr-2 h-4 w-4 flex-shrink-0" />
-                  <span>{employee.phone}</span>
-                </div>
-              )}
+            <CardContent className="pt-4 space-y-2 text-sm text-muted-foreground">
               {employee.job_title && (
-                <div className="flex items-center">
-                  <Tag className="mr-2 h-4 w-4 flex-shrink-0" />
-                  <span>Position: {employee.job_title}</span>
-                </div>
+                <p className="text-sm text-muted-foreground">
+                  <span className="font-medium">Position:</span> {employee.job_title}
+                </p>
               )}
-              {employee.contract_type && (
-                <div className="flex items-center">
-                  <Briefcase className="mr-2 h-4 w-4 flex-shrink-0" />
-                  <span>Vertragsart: <Badge variant="secondary">{employee.contract_type}</Badge></span>
-                </div>
+              {employee.email && (
+                <p className="text-sm text-muted-foreground truncate">
+                  <span className="font-medium">E-Mail:</span> {employee.email}
+                </p>
               )}
-              <div className="flex items-center">
-                {getStatusIcon(employee.status)}
+              <div className="flex flex-wrap items-center gap-2 pt-2">
                 <Badge variant={getStatusBadgeVariant(employee.status)}>{employee.status}</Badge>
+                {employee.contract_type && <Badge variant="secondary">{employee.contract_type}</Badge>}
               </div>
             </CardContent>
           </Card>

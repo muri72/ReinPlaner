@@ -28,6 +28,7 @@ interface DocumentUploaderProps {
   associatedEmployeeId?: string;
   associatedCustomerId?: string;
   associatedOrderId?: string;
+  associatedObjectId?: string;
   onDocumentUploaded?: () => void;
   className?: string;
 }
@@ -36,6 +37,7 @@ export function DocumentUploader({
   associatedEmployeeId,
   associatedCustomerId,
   associatedOrderId,
+  associatedObjectId,
   onDocumentUploaded,
   className,
 }: DocumentUploaderProps) {
@@ -87,6 +89,7 @@ export function DocumentUploader({
         associatedEmployeeId: associatedEmployeeId || null,
         associatedCustomerId: associatedCustomerId || null,
         associatedOrderId: associatedOrderId || null,
+        associatedObjectId: associatedObjectId || null,
         description: data.description || null,
       };
 

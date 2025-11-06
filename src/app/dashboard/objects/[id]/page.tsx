@@ -22,9 +22,9 @@ export default async function ObjectDetailPage({ params }: { params: Promise<{ i
     .from('objects')
     .select(`
       *,
-      customers ( name ),
-      customer_contacts ( first_name, last_name ),
-      orders ( *, objects(name) ),
+      customers!objects_customer_id_fkey ( name ),
+      customer_contacts!objects_customer_contact_id_fkey ( first_name, last_name ),
+      orders ( * ),
       documents ( * )
     `)
     .eq('id', id)

@@ -4,10 +4,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Mail, Phone, MapPin, Users, Handshake, FileText, Eye } from "lucide-react";
-import { CustomerEditDialog } from "@/components/customer-edit-dialog";
-import { DeleteCustomerButton } from "@/components/delete-customer-button";
 import { PaginationControls } from "@/components/pagination-controls";
-import { RecordDetailsDialog } from "@/components/record-details-dialog"; // Import RecordDetailsDialog
 import Link from "next/link";
 
 interface DisplayCustomer {
@@ -94,7 +91,6 @@ export function CustomersTableView({
                       <Eye className="h-4 w-4" />
                     </Link>
                   </Button>
-                  <DeleteCustomerButton customerId={customer.id} onDeleteSuccess={onActionSuccess} />
                 </div>
               </TableCell>
             </TableRow>

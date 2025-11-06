@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ObjectEditDialog } from "@/components/object-edit-dialog";
+import { DeleteObjectButton } from "@/components/delete-object-button";
 import { DocumentUploader } from "@/components/document-uploader";
 import { DocumentList } from "@/components/document-list";
 import { Separator } from "@/components/ui/separator";
@@ -64,7 +65,10 @@ export function ObjectDetailTabs({ object }: ObjectDetailTabsProps) {
               <CardTitle>Stammdaten</CardTitle>
               <CardDescription>Allgemeine und sicherheitsrelevante Informationen.</CardDescription>
             </div>
-            <ObjectEditDialog object={object} />
+            <div className="flex space-x-2">
+              <ObjectEditDialog object={object} />
+              <DeleteObjectButton objectId={object.id} />
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
@@ -125,14 +129,14 @@ export function ObjectDetailTabs({ object }: ObjectDetailTabsProps) {
             <CardDescription>Verwalten Sie Dokumente, die mit diesem Objekt verknüpft sind.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <DocumentUploader 
-              associatedOrderId={object.id} 
-              onDocumentUploaded={() => setDocumentUpdateKey(prev => prev + 1)} 
+            <DocumentUploader
+              associatedObjectId={object.id}
+              onDocumentUploaded={() => setDocumentUpdateKey(prev => prev + 1)}
             />
             <Separator />
-            <DocumentList 
-              key={documentUpdateKey} 
-              associatedOrderId={object.id} 
+            <DocumentList
+              key={documentUpdateKey}
+              associatedObjectId={object.id}
               onDocumentChange={() => setDocumentUpdateKey(prev => prev + 1)}
             />
           </CardContent>

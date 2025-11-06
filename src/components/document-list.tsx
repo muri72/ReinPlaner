@@ -39,6 +39,7 @@ interface DocumentListProps {
   associatedEmployeeId?: string;
   associatedCustomerId?: string;
   associatedOrderId?: string;
+  associatedObjectId?: string;
   onDocumentChange?: () => void; // Callback for when documents are added/deleted
 }
 
@@ -46,6 +47,7 @@ export function DocumentList({
   associatedEmployeeId,
   associatedCustomerId,
   associatedOrderId,
+  associatedObjectId,
   onDocumentChange,
 }: DocumentListProps) {
   const [documents, setDocuments] = useState<Document[]>([]);
@@ -58,6 +60,7 @@ export function DocumentList({
       employeeId: associatedEmployeeId,
       customerId: associatedCustomerId,
       orderId: associatedOrderId,
+      objectId: associatedObjectId,
     };
     const result = await getDocuments(filters);
     if (result.success && result.data) {
@@ -71,7 +74,7 @@ export function DocumentList({
 
   useEffect(() => {
     fetchDocuments();
-  }, [associatedEmployeeId, associatedCustomerId, associatedOrderId]);
+  }, [associatedEmployeeId, associatedCustomerId, associatedOrderId, associatedObjectId]);
 
   const handleDelete = async (documentId: string, filePath: string) => {
     setDeletingId(documentId);

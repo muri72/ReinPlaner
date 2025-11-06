@@ -12,6 +12,7 @@ interface DocumentUploadPayload {
   associatedEmployeeId?: string | null;
   associatedCustomerId?: string | null;
   associatedOrderId?: string | null;
+  associatedObjectId?: string | null;
   description?: string | null;
 }
 
@@ -44,6 +45,7 @@ export async function generateSignedUploadUrlForDocument(
         associated_employee_id: payload.associatedEmployeeId || null,
         associated_customer_id: payload.associatedCustomerId || null,
         associated_order_id: payload.associatedOrderId || null,
+        associated_object_id: payload.associatedObjectId || null,
         description: payload.description || null,
       })
       .select('id')
@@ -67,9 +69,10 @@ export async function generateSignedUploadUrlForDocument(
     }
 
     const { data: publicUrlData } = supabaseAdmin.storage.from("documents").getPublicUrl(filePath);
-    
+
     revalidatePath("/dashboard/employees"); // Revalidate relevant pages
     revalidatePath("/dashboard/orders");
+    revalidatePath("/dashboard/objects");
     revalidatePath("/dashboard/customers"); // If customer documents are ever displayed directly
 
     return {
@@ -86,7 +89,7 @@ export async function generateSignedUploadUrlForDocument(
 }
 
 export async function getDocuments(
-  filters: { employeeId?: string; customerId?: string; orderId?: string }
+  filters: { employeeId?: string; customerId?: string; orderId?: string; objectId?: string }
 ): Promise<{ success: boolean; message: string; data?: any[] }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -105,6 +108,9 @@ export async function getDocuments(
   }
   if (filters.orderId) {
     query = query.eq('associated_order_id', filters.orderId);
+  }
+  if (filters.objectId) {
+    query = query.eq('associated_object_id', filters.objectId);
   }
 
   const { data, error } = await query;

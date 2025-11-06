@@ -72,42 +72,55 @@ export default function ObjectsPage() {
     }
     setCurrentUser(user);
 
-    const from = (currentPage - 1) * pageSize;
-    const to = from + pageSize - 1;
-
     const { data: customersData, error: customersError } = await supabase.from('customers').select('id, name').order('name', { ascending: true });
     if (customersError) console.error("Fehler beim Laden der Kunden für Filter:", customersError.message);
     setCustomers(customersData || []);
 
-    let selectQuery = supabase
-      .from('objects')
-      .select(`
-        *,
-        customers ( name ),
-        customer_contacts ( first_name, last_name )
-      `, { count: 'exact' })
-      .order(sortColumn, { ascending: sortDirection === 'asc' });
+    let objectsData: DisplayObject[] = [];
+    let objectsError: any = null;
+    let objectsCount: number | null = 0;
 
     if (query) {
-      selectQuery = selectQuery.or(`name.ilike.%${query}%,address.ilike.%${query}%,description.ilike.%${query}%,customers.name.ilike.%${query}%`);
-    }
-    if (customerIdFilter) selectQuery = selectQuery.eq('customer_id', customerIdFilter);
-    if (priorityFilter) selectQuery = selectQuery.eq('priority', priorityFilter);
-    if (timeOfDayFilter) selectQuery = selectQuery.eq('time_of_day', timeOfDayFilter);
-    if (accessMethodFilter) selectQuery = selectQuery.eq('access_method', accessMethodFilter);
+      const { data, error: rpcError } = await supabase.rpc('search_objects', {
+        search_query: query,
+        filter_user_id: null,
+        filter_customer_id: customerIdFilter || null
+      });
+      objectsData = (data as DisplayObject[] | null) || [];
+      objectsError = rpcError;
+      objectsCount = objectsData.length;
+    } else {
+      let selectQuery = supabase
+        .from('objects')
+        .select(`
+          *,
+          customers ( name ),
+          customer_contacts ( first_name, last_name )
+        `, { count: 'exact' })
+        .order(sortColumn, { ascending: sortDirection === 'asc' });
 
-    const { data, error, count } = await selectQuery.range(from, to);
+      if (customerIdFilter) selectQuery = selectQuery.eq('customer_id', customerIdFilter);
+      if (priorityFilter) selectQuery = selectQuery.eq('priority', priorityFilter);
+      if (timeOfDayFilter) selectQuery = selectQuery.eq('time_of_day', timeOfDayFilter);
+      if (accessMethodFilter) selectQuery = selectQuery.eq('access_method', accessMethodFilter);
 
-    if (error) {
-      console.error("Fehler beim Laden der Objekte:", error?.message || error);
+      const { data, error, count } = await selectQuery.range((currentPage - 1) * pageSize, (currentPage - 1) * pageSize + pageSize - 1);
+
+      objectsData = data?.map(obj => ({
+        ...obj,
+        customer_name: obj.customers?.[0]?.name || null,
+        object_leader_first_name: obj.customer_contacts?.[0]?.first_name || null,
+        object_leader_last_name: obj.customer_contacts?.[0]?.last_name || null,
+      })) || [];
+      objectsError = error;
+      objectsCount = count;
     }
-    setAllObjects(data?.map(obj => ({
-      ...obj,
-      customer_name: obj.customers?.[0]?.name || null,
-      object_leader_first_name: obj.customer_contacts?.[0]?.first_name || null,
-      object_leader_last_name: obj.customer_contacts?.[0]?.last_name || null,
-    })) || []);
-    setTotalCount(count);
+
+    if (objectsError) {
+      console.error("Fehler beim Laden der Objekte:", objectsError?.message || objectsError);
+    }
+    setAllObjects(objectsData);
+    setTotalCount(objectsCount);
     setLoading(false);
   }, [
     supabase,

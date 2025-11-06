@@ -3,11 +3,8 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MapPin, FileText, Clock, Key, Lock, ShieldCheck, UserRound, Building, Eye } from "lucide-react"; // Added Building and Eye
-import { ObjectEditDialog } from "@/components/object-edit-dialog";
-import { DeleteObjectButton } from "@/components/delete-object-button";
+import { MapPin, FileText, Clock, Key, Lock, ShieldCheck, UserRound, Building, Eye } from "lucide-react";
 import { PaginationControls } from "@/components/pagination-controls";
-import { RecordDetailsDialog } from "@/components/record-details-dialog"; // Import RecordDetailsDialog
 import Link from "next/link";
 
 interface DisplayObject {
@@ -122,7 +119,6 @@ export function ObjectsTableView({
                       <Eye className="h-4 w-4" />
                     </Link>
                   </Button>
-                  <DeleteObjectButton objectId={object.id} />
                 </div>
               </TableCell>
             </TableRow>

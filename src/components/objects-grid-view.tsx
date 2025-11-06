@@ -2,15 +2,8 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, FileText, Clock, Key, Lock, ShieldCheck, UserRound, Building } from "lucide-react";
-import { ObjectEditDialog } from "@/components/object-edit-dialog";
-import { DeleteObjectButton } from "@/components/delete-object-button";
-import { RecordDetailsDialog } from "@/components/record-details-dialog";
+import { Building } from "lucide-react";
 import { ObjectCreateDialog } from "@/components/object-create-dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { DocumentUploader } from "@/components/document-uploader";
-import { DocumentList } from "@/components/document-list";
-import { FileStack } from "lucide-react";
 import Link from "next/link";
 
 interface DisplayObject {
@@ -96,41 +89,23 @@ export function ObjectsGridView({
         <Link key={object.id} href={`/dashboard/objects/${object.id}`} className="block hover:scale-[1.02] transition-transform duration-200 ease-in-out">
           <Card className="shadow-neumorphic glassmorphism-card h-full">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-base md:text-lg font-semibold">{object.name}</CardTitle>
-              <DeleteObjectButton objectId={object.id} onDeleteSuccess={onActionSuccess} />
+              <CardTitle className="text-base md:text-lg font-semibold line-clamp-2">{object.name}</CardTitle>
             </CardHeader>
             <CardContent className="pt-4 space-y-2 text-sm text-muted-foreground">
               {object.customer_name && (
                 <p className="text-sm text-muted-foreground">
-                  Kunde: {object.customer_name}
+                  <span className="font-medium">Kunde:</span> {object.customer_name}
                 </p>
               )}
-              {object.object_leader_first_name && object.object_leader_last_name && (
-                <div className="flex items-center text-sm text-muted-foreground">
-                  <UserRound className="mr-2 h-4 w-4 flex-shrink-0" />
-                  <span>Objektleiter: {object.object_leader_first_name} {object.object_leader_last_name}</span>
-                </div>
-              )}
               {object.address && (
-                <div className="flex items-center text-sm text-muted-foreground">
-                  <MapPin className="mr-2 h-4 w-4 flex-shrink-0" />
-                  <span>{object.address}</span>
-                </div>
+                <p className="text-sm text-muted-foreground">
+                  <span className="font-medium">Adresse:</span> {object.address}
+                </p>
               )}
-              <div className="flex items-center text-sm text-muted-foreground">
-                <Clock className="mr-2 h-4 w-4 flex-shrink-0" />
-                <span>Priorität: <Badge variant={getPriorityBadgeVariant(object.priority)}>{object.priority}</Badge></span>
+              <div className="flex flex-wrap items-center gap-2 pt-2">
+                <Badge variant={getPriorityBadgeVariant(object.priority)}>{object.priority}</Badge>
+                <Badge variant="secondary">{object.access_method}</Badge>
               </div>
-              <div className="flex items-center text-sm text-muted-foreground">
-                <Key className="mr-2 h-4 w-4 flex-shrink-0" />
-                <span>Zugang: <Badge variant="secondary">{object.access_method}</Badge></span>
-              </div>
-              {object.is_alarm_secured && (
-                <div className="flex items-center text-sm text-muted-foreground">
-                  <ShieldCheck className="mr-2 h-4 w-4 flex-shrink-0" />
-                  <span>Alarmgesichert</span>
-                </div>
-              )}
             </CardContent>
           </Card>
         </Link>

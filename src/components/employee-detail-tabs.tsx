@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmployeeEditDialog } from "@/components/employee-edit-dialog";
+import { DeleteEmployeeButton } from "@/components/delete-employee-button";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 import { DocumentUploader } from "@/components/document-uploader";
@@ -97,7 +98,10 @@ export function EmployeeDetailTabs({ employee }: EmployeeDetailTabsProps) {
               <CardTitle>Stammdaten</CardTitle>
               <CardDescription>Persönliche und vertragliche Informationen.</CardDescription>
             </div>
-            <EmployeeEditDialog employee={employee} />
+            <div className="flex space-x-2">
+              <EmployeeEditDialog employee={employee} />
+              <DeleteEmployeeButton employeeId={employee.id} />
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">

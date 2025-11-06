@@ -2,13 +2,11 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { MessageSquare, UserRound, Building, Briefcase, AlertCircle, CheckCircle2, Clock, XCircle } from "lucide-react";
-import { TicketEditDialog } from "@/components/ticket-edit-dialog";
-import { DeleteTicketButton } from "@/components/delete-ticket-button";
-import { RecordDetailsDialog } from "@/components/record-details-dialog";
+import { MessageSquare, AlertCircle, UserRound, Building, Clock, Briefcase } from "lucide-react";
 import { TicketCreateDialog } from "@/components/ticket-create-dialog";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
+import Link from "next/link";
 
 interface DisplayTicket {
   id: string;
@@ -90,48 +88,45 @@ export function TicketsGridView({
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
       {tickets.map((ticket) => (
-        <Card key={ticket.id} className="shadow-neumorphic glassmorphism-card">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-base md:text-lg font-semibold">{ticket.title}</CardTitle>
-            <div className="flex items-center space-x-2">
-              <RecordDetailsDialog record={ticket} title={`Details zu Ticket: ${ticket.title}`} />
-              <TicketEditDialog ticket={ticket} onTicketUpdated={onTicketUpdated} />
-              <DeleteTicketButton ticketId={ticket.id} onDeleteSuccess={onTicketUpdated} />
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm text-muted-foreground">
-            <div className="flex items-center">
-              <MessageSquare className="mr-2 h-4 w-4 flex-shrink-0" />
-              <span>Status: <Badge variant={getStatusBadgeVariant(ticket.status)}>{ticket.status}</Badge></span>
-            </div>
-            <div className="flex items-center">
-              <AlertCircle className="mr-2 h-4 w-4 flex-shrink-0" />
-              <span>Priorität: <Badge variant={getPriorityBadgeVariant(ticket.priority)}>{ticket.priority}</Badge></span>
-            </div>
-            {ticket.customer_name && (
+        <Link key={ticket.id} href={`/dashboard/tickets/${ticket.id}`} className="block hover:scale-[1.02] transition-transform duration-200 ease-in-out">
+          <Card className="shadow-neumorphic glassmorphism-card h-full">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-base md:text-lg font-semibold">{ticket.title}</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2 text-sm text-muted-foreground">
               <div className="flex items-center">
-                <Building className="mr-2 h-4 w-4 flex-shrink-0" />
-                <span>Kunde: {ticket.customer_name}</span>
+                <MessageSquare className="mr-2 h-4 w-4 flex-shrink-0" />
+                <span>Status: <Badge variant={getStatusBadgeVariant(ticket.status)}>{ticket.status}</Badge></span>
               </div>
-            )}
-            {ticket.object_name && (
               <div className="flex items-center">
-                <Briefcase className="mr-2 h-4 w-4 flex-shrink-0" />
-                <span>Objekt: {ticket.object_name}</span>
+                <AlertCircle className="mr-2 h-4 w-4 flex-shrink-0" />
+                <span>Priorität: <Badge variant={getPriorityBadgeVariant(ticket.priority)}>{ticket.priority}</Badge></span>
               </div>
-            )}
-            {ticket.assigned_to_first_name && ticket.assigned_to_last_name && (
+              {ticket.customer_name && (
+                <div className="flex items-center">
+                  <Building className="mr-2 h-4 w-4 flex-shrink-0" />
+                  <span>Kunde: {ticket.customer_name}</span>
+                </div>
+              )}
+              {ticket.object_name && (
+                <div className="flex items-center">
+                  <Briefcase className="mr-2 h-4 w-4 flex-shrink-0" />
+                  <span>Objekt: {ticket.object_name}</span>
+                </div>
+              )}
+              {ticket.assigned_to_first_name && ticket.assigned_to_last_name && (
+                <div className="flex items-center">
+                  <UserRound className="mr-2 h-4 w-4 flex-shrink-0" />
+                  <span>Zugewiesen an: {ticket.assigned_to_first_name} {ticket.assigned_to_last_name}</span>
+                </div>
+              )}
               <div className="flex items-center">
-                <UserRound className="mr-2 h-4 w-4 flex-shrink-0" />
-                <span>Zugewiesen an: {ticket.assigned_to_first_name} {ticket.assigned_to_last_name}</span>
+                <Clock className="mr-2 h-4 w-4 flex-shrink-0" />
+                <span>Erstellt am: {format(new Date(ticket.created_at), 'dd.MM.yyyy', { locale: de })}</span>
               </div>
-            )}
-            <div className="flex items-center">
-              <Clock className="mr-2 h-4 w-4 flex-shrink-0" />
-              <span>Erstellt am: {format(new Date(ticket.created_at), 'dd.MM.yyyy', { locale: de })}</span>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </Link>
       ))}
     </div>
   );

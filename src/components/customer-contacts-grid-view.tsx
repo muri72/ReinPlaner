@@ -1,11 +1,9 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Mail, Phone, Briefcase, ContactRound } from "lucide-react";
-import { CustomerContactEditDialog } from "@/components/customer-contact-edit-dialog";
-import { DeleteCustomerContactButton } from "@/components/delete-customer-contact-button";
-import { RecordDetailsDialog } from "@/components/record-details-dialog";
+import { ContactRound, Mail, Phone, Briefcase } from "lucide-react";
 import { CustomerContactCreateGeneralDialog } from "@/components/customer-contact-create-general-dialog";
+import Link from "next/link";
 
 interface DisplayCustomerContact {
   id: string;
@@ -59,41 +57,38 @@ export function CustomerContactsGridView({
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
       {contacts.map((contact) => (
-        <Card key={contact.id} className="shadow-neumorphic glassmorphism-card">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-base md:text-lg font-semibold">{contact.first_name} {contact.last_name}</CardTitle>
-            <div className="flex items-center space-x-2">
-              <RecordDetailsDialog record={contact} title={`Details zu Kundenkontakt: ${contact.first_name} ${contact.last_name}`} />
-              <CustomerContactEditDialog contact={contact} />
-              <DeleteCustomerContactButton contactId={contact.id} onDeleteSuccess={onActionSuccess} />
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm text-muted-foreground">
-            {contact.customer_name && (
-              <p className="text-sm text-muted-foreground">
-                Kunde: {contact.customer_name}
-              </p>
-            )}
-            {contact.email && (
-              <div className="flex items-center">
-                <Mail className="mr-2 h-4 w-4 flex-shrink-0" />
-                <span>{contact.email}</span>
-              </div>
-            )}
-            {contact.phone && (
-              <div className="flex items-center">
-                <Phone className="mr-2 h-4 w-4 flex-shrink-0" />
-                <span>{contact.phone}</span>
-              </div>
-            )}
-            {contact.role && (
-              <div className="flex items-center">
-                <Briefcase className="mr-2 h-4 w-4 flex-shrink-0" />
-                <span>Rolle: {contact.role}</span>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        <Link key={contact.id} href={`/dashboard/customer-contacts/${contact.id}`} className="block hover:scale-[1.02] transition-transform duration-200 ease-in-out">
+          <Card className="shadow-neumorphic glassmorphism-card h-full">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-base md:text-lg font-semibold">{contact.first_name} {contact.last_name}</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2 text-sm text-muted-foreground">
+              {contact.customer_name && (
+                <p className="text-sm text-muted-foreground">
+                  Kunde: {contact.customer_name}
+                </p>
+              )}
+              {contact.email && (
+                <div className="flex items-center">
+                  <Mail className="mr-2 h-4 w-4 flex-shrink-0" />
+                  <span>{contact.email}</span>
+                </div>
+              )}
+              {contact.phone && (
+                <div className="flex items-center">
+                  <Phone className="mr-2 h-4 w-4 flex-shrink-0" />
+                  <span>{contact.phone}</span>
+                </div>
+              )}
+              {contact.role && (
+                <div className="flex items-center">
+                  <Briefcase className="mr-2 h-4 w-4 flex-shrink-0" />
+                  <span>Rolle: {contact.role}</span>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </Link>
       ))}
     </div>
   );

@@ -2,11 +2,10 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CalendarOff, User, FileText, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
+import { CalendarOff, CheckCircle2, XCircle, AlertCircle, User, FileText } from "lucide-react";
+import { AbsenceRequestCreateDialog } from "@/components/absence-request-create-dialog";
 import { AbsenceRequestEditDialog } from "@/components/absence-request-edit-dialog";
 import { DeleteAbsenceRequestButton } from "@/components/delete-absence-request-button";
-import { RecordDetailsDialog } from "@/components/record-details-dialog";
-import { AbsenceRequestCreateDialog } from "@/components/absence-request-create-dialog";
 
 interface DisplayAbsenceRequest {
   id: string;
@@ -92,50 +91,48 @@ export function AbsenceRequestsGridView({
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
       {requests.map((request) => (
-        <Card key={request.id} className="shadow-neumorphic glassmorphism-card">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-base md:text-lg font-semibold">
-              {typeTranslations[request.type] || 'Abwesenheit'}
-            </CardTitle>
-            <div className="flex items-center space-x-2">
-              <RecordDetailsDialog record={request} title={`Details zu Abwesenheitsantrag`} />
-              <AbsenceRequestEditDialog
-                request={request}
-                currentUserRole={currentUserRole}
-                currentUserId={currentUserId}
-              />
-              <DeleteAbsenceRequestButton requestId={request.id} onDeleteSuccess={onActionSuccess} />
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm text-muted-foreground">
-            {currentUserRole !== 'employee' && request.employees && (
+        <div key={request.id} className="hover:scale-[1.02] transition-transform duration-200 ease-in-out">
+          <Card className="shadow-neumorphic glassmorphism-card h-full">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-base md:text-lg font-semibold">
+                {typeTranslations[request.type] || 'Abwesenheit'}
+              </CardTitle>
+              <div className="flex items-center space-x-2">
+                <AbsenceRequestEditDialog
+                  request={request}
+                  currentUserRole={currentUserRole}
+                  currentUserId={currentUserId}
+                />
+                <DeleteAbsenceRequestButton
+                  requestId={request.id}
+                  onDeleteSuccess={onActionSuccess}
+                />
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-2 text-sm text-muted-foreground">
+              {currentUserRole !== 'employee' && request.employees && (
+                <div className="flex items-center">
+                  <User className="mr-2 h-4 w-4 flex-shrink-0" />
+                  <span>Mitarbeiter: {request.employees.first_name} {request.employees.last_name}</span>
+                </div>
+              )}
               <div className="flex items-center">
-                <User className="mr-2 h-4 w-4 flex-shrink-0" />
-                <span>Mitarbeiter: {request.employees.first_name} {request.employees.last_name}</span>
+                <CalendarOff className="mr-2 h-4 w-4 flex-shrink-0" />
+                <span>Datum: {new Date(request.start_date).toLocaleDateString()} - {new Date(request.end_date).toLocaleDateString()}</span>
               </div>
-            )}
-            <div className="flex items-center">
-              <CalendarOff className="mr-2 h-4 w-4 flex-shrink-0" />
-              <span>Datum: {new Date(request.start_date).toLocaleDateString()} - {new Date(request.end_date).toLocaleDateString()}</span>
-            </div>
-            <div className="flex items-center">
-              {getStatusIcon(request.status)}
-              <Badge variant={getStatusBadgeVariant(request.status)}>{request.status}</Badge>
-            </div>
-            {request.notes && (
-              <div className="flex items-start">
-                <FileText className="mr-2 h-4 w-4 mt-1 flex-shrink-0" />
-                <p className="flex-grow">Notizen: {request.notes}</p>
+              <div className="flex items-center">
+                {getStatusIcon(request.status)}
+                <Badge variant={getStatusBadgeVariant(request.status)}>{request.status}</Badge>
               </div>
-            )}
-            {request.admin_notes && (
-              <div className="flex items-start">
-                <FileText className="mr-2 h-4 w-4 mt-1 flex-shrink-0" />
-                <p className="flex-grow">Admin-Notizen: {request.admin_notes}</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+              {request.notes && (
+                <div className="flex items-start">
+                  <FileText className="mr-2 h-4 w-4 mt-1 flex-shrink-0" />
+                  <p className="flex-grow">Notizen: {request.notes}</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       ))}
     </div>
   );

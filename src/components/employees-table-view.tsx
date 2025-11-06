@@ -3,11 +3,8 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Mail, Phone, CalendarDays, UserRoundCheck, UserRoundX, UserRoundMinus, Briefcase, DollarSign, Tag, Building2, Users, Clock, Eye } from "lucide-react"; // Added Users and Eye
-import { EmployeeEditDialog } from "@/components/employee-edit-dialog";
-import { DeleteEmployeeButton } from "@/components/delete-employee-button";
+import { Mail, Phone, CalendarDays, UserRoundCheck, UserRoundX, UserRoundMinus, Briefcase, DollarSign, Tag, Building2, Users, Clock, Eye } from "lucide-react";
 import { PaginationControls } from "@/components/pagination-controls";
-import { RecordDetailsDialog } from "@/components/record-details-dialog";
 import Link from "next/link";
 
 interface DisplayEmployee {
@@ -167,7 +164,6 @@ export function EmployeesTableView({
                       <Eye className="h-4 w-4" />
                     </Link>
                   </Button>
-                  <DeleteEmployeeButton employeeId={employee.id} />
                 </div>
               </TableCell>
             </TableRow>

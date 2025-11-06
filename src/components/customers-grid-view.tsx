@@ -2,10 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Mail, Phone, MapPin, Users, Handshake, FileText } from "lucide-react";
-import { CustomerEditDialog } from "@/components/customer-edit-dialog";
-import { DeleteCustomerButton } from "@/components/delete-customer-button";
-import { RecordDetailsDialog } from "@/components/record-details-dialog";
+import { Users } from "lucide-react";
 import { CustomerCreateDialog } from "@/components/customer-create-dialog";
 import Link from "next/link";
 
@@ -58,41 +55,26 @@ export function CustomersGridView({ customers, query, customerTypeFilter, onActi
         <Link key={customer.id} href={`/dashboard/customers/${customer.id}`} className="block hover:scale-[1.02] transition-transform duration-200 ease-in-out">
           <Card className="shadow-neumorphic glassmorphism-card h-full">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-base md:text-lg font-semibold">{customer.name}</CardTitle>
-              <DeleteCustomerButton customerId={customer.id} onDeleteSuccess={onActionSuccess} />
+              <CardTitle className="text-base md:text-lg font-semibold line-clamp-2">{customer.name}</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2 text-sm text-muted-foreground">
-              <div className="flex items-center">
-                {customer.customer_type === 'partner' ? (
-                  <Handshake className="mr-2 h-4 w-4 flex-shrink-0" />
-                ) : (
-                  <Users className="mr-2 h-4 w-4 flex-shrink-0" />
-                )}
-                <span>Typ: <Badge variant="secondary">{customer.customer_type === 'partner' ? 'Partner' : 'Kunde'}</Badge></span>
-              </div>
+            <CardContent className="pt-4 space-y-2 text-sm text-muted-foreground">
+              <p className="text-sm text-muted-foreground">
+                <span className="font-medium">Typ:</span> {customer.customer_type === 'partner' ? 'Partner' : 'Kunde'}
+              </p>
               {customer.address && (
-                <div className="flex items-center">
-                  <MapPin className="mr-2 h-4 w-4 flex-shrink-0" />
-                  <span>{customer.address}</span>
-                </div>
+                <p className="text-sm text-muted-foreground">
+                  <span className="font-medium">Adresse:</span> {customer.address}
+                </p>
               )}
               {customer.contact_email && (
-                <div className="flex items-center">
-                  <Mail className="mr-2 h-4 w-4 flex-shrink-0" />
-                  <span>{customer.contact_email}</span>
-                </div>
+                <p className="text-sm text-muted-foreground truncate">
+                  <span className="font-medium">E-Mail:</span> {customer.contact_email}
+                </p>
               )}
               {customer.contact_phone && (
-                <div className="flex items-center">
-                  <Phone className="mr-2 h-4 w-4 flex-shrink-0" />
-                  <span>{customer.contact_phone}</span>
-                </div>
-              )}
-              {customer.contractual_services && (
-                <div className="flex items-start">
-                  <FileText className="mr-2 h-4 w-4 flex-shrink-0" />
-                  <p className="flex-grow truncate">Vertragsdaten: {customer.contractual_services}</p>
-                </div>
+                <p className="text-sm text-muted-foreground">
+                  <span className="font-medium">Telefon:</span> {customer.contact_phone}
+                </p>
               )}
             </CardContent>
           </Card>

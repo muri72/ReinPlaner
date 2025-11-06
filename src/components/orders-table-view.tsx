@@ -3,14 +3,12 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CalendarDays, Clock, FileText, Wrench, UserRound, Star as StarIcon, Briefcase } from "lucide-react";
-import { OrderEditDialog } from "@/components/order-edit-dialog";
-import { DeleteOrderButton } from "@/components/delete-order-button";
+import { CalendarDays, Clock, FileText, Wrench, UserRound, Star as StarIcon, Briefcase, Eye } from "lucide-react";
 import { PaginationControls } from "@/components/pagination-controls";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
-import { RecordDetailsDialog } from "@/components/record-details-dialog";
 import { AssignedEmployee } from "@/components/order-form";
+import Link from "next/link";
 
 interface DisplayOrder {
   id: string;
@@ -149,9 +147,11 @@ export function OrdersTableView({
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end space-x-1">
-                    <RecordDetailsDialog record={order} title={`Details zu Auftrag: ${order.title}`} />
-                    <OrderEditDialog order={order} />
-                    <DeleteOrderButton orderId={order.id} onDeleteSuccess={onActionSuccess} />
+                    <Button variant="ghost" size="icon" asChild>
+                      <Link href={`/dashboard/orders/${order.id}`} title="Details anzeigen">
+                        <Eye className="h-4 w-4" />
+                      </Link>
+                    </Button>
                   </div>
                 </TableCell>
               </TableRow>

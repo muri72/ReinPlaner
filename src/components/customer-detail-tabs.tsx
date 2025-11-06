@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CustomerEditDialog } from "@/components/customer-edit-dialog";
+import { DeleteCustomerButton } from "@/components/delete-customer-button";
 import { DocumentUploader } from "@/components/document-uploader";
 import { DocumentList } from "@/components/document-list";
 import { Separator } from "@/components/ui/separator";
@@ -98,7 +99,10 @@ export function CustomerDetailTabs({ customer }: CustomerDetailTabsProps) {
               <CardTitle>Stammdaten</CardTitle>
               <CardDescription>Allgemeine und vertragliche Informationen.</CardDescription>
             </div>
-            <CustomerEditDialog customer={customer} onSuccess={refreshContacts} />
+            <div className="flex space-x-2">
+              <CustomerEditDialog customer={customer} onSuccess={refreshContacts} />
+              <DeleteCustomerButton customerId={customer.id} />
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
