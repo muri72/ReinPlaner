@@ -166,6 +166,13 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
     }
   }, [recurrenceIntervalWeeks, dailySchedulesFields.length, appendDailySchedule, removeDailySchedule]);
 
+  // Ensure startWeekOffset is within valid range
+  useEffect(() => {
+    if (startWeekOffset >= recurrenceIntervalWeeks) {
+      form.setValue("start_week_offset", 0);
+    }
+  }, [recurrenceIntervalWeeks, startWeekOffset, form]);
+
   const fetchCustomerContacts = async (customerId: string) => {
     const { data: contactsData, error: contactsError } = await supabase
       .from('customer_contacts')
@@ -499,40 +506,71 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
         <h3 className="text-lg font-semibold">Wiederholungsintervall</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <Label htmlFor="recurrence_interval_weeks">Wiederholt sich alle X Wochen</Label>
-            <Input
-              id="recurrence_interval_weeks"
-              type="number"
-              step="1"
-              min="1"
-              max="52"
-              {...form.register("recurrence_interval_weeks")}
-              value={recurrenceIntervalWeeks}
-              onChange={(e) => {
-                const value = e.target.value;
-                form.setValue("recurrence_interval_weeks", Number(value), { shouldValidate: true });
+            <Label htmlFor="recurrence_interval_weeks">Zyklus</Label>
+            <Select
+              onValueChange={(value: string) => {
+                form.setValue("recurrence_interval_weeks", parseInt(value), { shouldValidate: true });
               }}
-              placeholder="Z.B. 1 für jede Woche, 2 für jede zweite Woche"
-            />
+              value={String(form.watch("recurrence_interval_weeks") ?? 1)}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Zyklus auswählen" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="1">1 Woche (wöchentlich)</SelectItem>
+                <SelectItem value="2">2 Wochen (alle 2 Wochen)</SelectItem>
+                <SelectItem value="4">4 Wochen (monatlich)</SelectItem>
+                <SelectItem value="8">8 Wochen (alle 2 Monate)</SelectItem>
+                <SelectItem value="12">12 Wochen (quartalsweise)</SelectItem>
+                <SelectItem value="26">26 Wochen (halbjährlich)</SelectItem>
+                <SelectItem value="52">52 Wochen (jährlich)</SelectItem>
+              </SelectContent>
+            </Select>
             {form.formState.errors.recurrence_interval_weeks && <p className="text-red-500 text-sm mt-1">{form.formState.errors.recurrence_interval_weeks.message}</p>}
+            <p className="text-xs text-muted-foreground mt-1">
+              Wie oft soll gereinigt werden?
+            </p>
           </div>
           <div>
-            <Label htmlFor="start_week_offset">Start-Wochen-Offset (0-basierend)</Label>
-            <Input
-              id="start_week_offset"
-              type="number"
-              step="1"
-              min="0"
-              max={recurrenceIntervalWeeks - 1}
-              {...form.register("start_week_offset")}
-              value={startWeekOffset}
-              onChange={(e) => {
-                const value = e.target.value;
-                form.setValue("start_week_offset", Number(value), { shouldValidate: true });
-              }}
-              placeholder="Z.B. 0 für die erste Woche, 1 für die zweite Woche"
+            <Label htmlFor="start_week_offset">Start in</Label>
+            <Controller
+              name="start_week_offset"
+              control={form.control}
+              defaultValue={0}
+              render={({ field }) => (
+                <Select
+                  onValueChange={(value: string) => field.onChange(parseInt(value))}
+                  value={String(field.value ?? 0)}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Start auswählen" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: recurrenceIntervalWeeks }, (_, i) => {
+                      const weekNum = i + 1;
+                      const label = weekNum === 1
+                        ? "Erste Woche"
+                        : weekNum === 2
+                          ? "Zweite Woche"
+                          : weekNum === 3
+                            ? "Dritte Woche"
+                            : weekNum === 4
+                              ? "Vierte Woche"
+                              : `Woche ${weekNum}`;
+                      return (
+                        <SelectItem key={i} value={String(i)}>
+                          {label}
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+              )}
             />
             {form.formState.errors.start_week_offset && <p className="text-red-500 text-sm mt-1">{form.formState.errors.start_week_offset.message}</p>}
+            <p className="text-xs text-muted-foreground mt-1">
+              Zyklus startet in dieser Woche
+            </p>
           </div>
         </div>
         <p className="text-sm text-muted-foreground">
@@ -544,10 +582,12 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
       <div className="space-y-4">
         <h3 className="text-lg font-semibold">Regelmäßige Arbeitszeiten pro Wochentag</h3>
         {form.formState.errors.daily_schedules && <p className="text-red-500 text-sm mt-1">{form.formState.errors.daily_schedules.message}</p>}
-        {dailySchedulesFields.map((weekSchedule, weekIndex: number) => (
-          <div key={weekSchedule.id} className="border p-4 rounded-md space-y-4 bg-muted/20">
+
+        {/* Only show the week that matches the startWeekOffset */}
+        {dailySchedulesFields.length > 0 && (
+          <div className="border p-4 rounded-md space-y-4 bg-muted/20">
             <div className="flex items-center justify-between">
-              <h4 className="font-semibold text-base">Woche {weekIndex + 1} (Offset {(startWeekOffset + weekIndex) % recurrenceIntervalWeeks})</h4>
+              <h4 className="font-semibold text-base">Woche {startWeekOffset + 1} (Offset {startWeekOffset})</h4>
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -556,7 +596,7 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
                       variant="ghost"
                       size="icon"
                       className="h-6 w-6 text-muted-foreground hover:text-primary"
-                      onClick={() => handleCopyWeekToAllWeeks(weekIndex)}
+                      onClick={() => handleCopyWeekToAllWeeks(startWeekOffset)}
                       disabled={recurrenceIntervalWeeks === 1}
                     >
                       <Copy className="h-4 w-4" />
@@ -570,6 +610,7 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
               {dayNames.map(day => {
+                const weekIndex = startWeekOffset;
                 const hoursFieldName = `daily_schedules.${weekIndex}.${day}.hours` as const;
                 const startFieldName = `daily_schedules.${weekIndex}.${day}.start` as const;
                 const endFieldName = `daily_schedules.${weekIndex}.${day}.end` as const;
@@ -635,7 +676,7 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p>Zeiten für diesen Tag in alle anderen Wochen für diesen Mitarbeiter kopieren</p>
+                          <p>Zeiten für diesen Tag in alle anderen Wochen kopieren</p>
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
@@ -644,7 +685,7 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
               })}
             </div>
           </div>
-        ))}
+        )}
         <div className="mt-4 text-base font-semibold">
           Geschätzte Wochenstunden (Netto, über alle Wochen): {totalWeeklyHours.toFixed(2)}
         </div>

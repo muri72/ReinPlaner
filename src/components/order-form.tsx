@@ -18,6 +18,7 @@ import { handleActionResponse } from "@/lib/toast-utils";
 import { cn, calculateEndTime, calculateStartTime } from "@/lib/utils";
 import { MultiSelectEmployees } from "@/components/multi-select-employees";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { ObjectCreateDialog } from "@/components/object-create-dialog";
 import { getWeek } from 'date-fns';
 
 const availableServices = [
@@ -154,7 +155,6 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
   const [objects, setObjects] = useState<any[]>([]); // Keep as any[] for now, detailed type not needed here
   const [allEmployees, setAllEmployees] = useState<{ id: string; first_name: string; last_name: string }[]>([]);
   const [customerContacts, setCustomerContacts] = useState<{ id: string; first_name: string; last_name: string; customer_id: string }[]>([]);
-  const [isNewObjectDialogOpen, setIsNewObjectDialogOpen] = useState(false);
 
   const resolvedDefaultValues: OrderFormValues = {
     title: initialData?.title ?? "",
@@ -287,7 +287,8 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
           return cycleSum + weekHours;
         }, 0);
       }
-      newTotalEstimatedHours = recurrenceInterval > 0 ? totalHoursInCycle / recurrenceInterval : 0;
+      // Store total hours per cycle, not per week
+      newTotalEstimatedHours = totalHoursInCycle;
     } else if (orderTypeSafe === 'one_time' && dueDate) {
       let totalHoursForDay = 0;
       if (assignedEmployees && assignedEmployees.length > 0) {
@@ -345,7 +346,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
             employeeId,
             assigned_daily_schedules: [],
             assigned_recurrence_interval_weeks: selectedObject.recurrence_interval_weeks,
-            assigned_start_week_offset: selectedObject.start_week_offset,
+            assigned_start_week_offset: 0, // Starten immer in Woche 1
         };
 
         // Initialize assigned_daily_schedules based on object's recurrence interval
@@ -557,6 +558,17 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     }
   };
 
+  const handleObjectCreated = async (newObjectId: string) => {
+    if (selectedCustomerId) {
+      // Refresh the objects list
+      const { data: objectsData, error: objectsError } = await supabase.from('objects').select('id, name, customer_id').eq('customer_id', selectedCustomerId);
+      if (objectsData) setObjects(objectsData);
+      if (objectsError) console.error("Fehler beim Laden der Objekte:", objectsError);
+      // Set the newly created object as selected
+      form.setValue("objectId", newObjectId);
+    }
+  };
+
   const getObjectDailyHours = (weekIndex: number, day: typeof dayNames[number]): number | null => {
     const selectedObject = objects.find(obj => obj.id === selectedObjectId);
     return (selectedObject?.daily_schedules?.[weekIndex] as any)?.[day]?.hours || null;
@@ -606,27 +618,36 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
         {form.formState.errors.customerId && <p className="text-red-500 text-sm mt-1">{form.formState.errors.customerId.message}</p>}
       </div>
 
-      <div>
+      <div className="space-y-2">
         <Label htmlFor="objectId">Objekt</Label>
-        <Select onValueChange={(value: string) => {
-          form.setValue("objectId", value);
-          form.setValue("customerContactId", null);
-          replaceAssignedEmployees([]);
-        }} value={form.watch("objectId") || "unassigned"} disabled={!selectedCustomerId}>
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Objekt auswählen" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="unassigned">Kein Objekt zugewiesen</SelectItem>
-            {filteredObjects.map(obj => (
-              <SelectItem key={obj.id} value={obj.id}>{obj.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {form.formState.errors.objectId && <p className="text-red-500 text-sm mt-1">{form.formState.errors.objectId.message}</p>}
-        {!selectedCustomerId && (
-            <p className="text-muted-foreground text-sm mt-1">Bitte wählen Sie zuerst einen Kunden aus.</p>
-        )}
+        <div className="flex items-end gap-2">
+          <div className="flex-grow">
+            <Select onValueChange={(value: string) => {
+              form.setValue("objectId", value === "unassigned" ? null : value);
+              form.setValue("customerContactId", null);
+              replaceAssignedEmployees([]);
+            }} value={form.watch("objectId") || "unassigned"} disabled={!selectedCustomerId}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Objekt auswählen" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="unassigned">Kein Objekt zugewiesen</SelectItem>
+                {filteredObjects.map(obj => (
+                  <SelectItem key={obj.id} value={obj.id}>{obj.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {form.formState.errors.objectId && <p className="text-red-500 text-sm">{form.formState.errors.objectId.message}</p>}
+            {!selectedCustomerId && (
+                <p className="text-muted-foreground text-sm">Bitte wählen Sie zuerst einen Kunden aus.</p>
+            )}
+          </div>
+          <ObjectCreateDialog
+            customerId={selectedCustomerId}
+            onObjectCreated={handleObjectCreated}
+            disabled={!selectedCustomerId}
+          />
+        </div>
       </div>
 
       <div>
@@ -782,30 +803,75 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
                   <h3 className="text-lg font-semibold">Wiederholungsintervall für Mitarbeiter</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor={`assignedEmployees.${assignedIndex}.assigned_recurrence_interval_weeks`}>Wiederholt sich alle X Wochen</Label>
-                      <Input
-                        id={`assignedEmployees.${assignedIndex}.assigned_recurrence_interval_weeks`}
-                        type="number"
-                        step="1"
-                        min="1"
-                        max="52"
-                        {...form.register(`assignedEmployees.${assignedIndex}.assigned_recurrence_interval_weeks`, { valueAsNumber: true })}
-                        placeholder="Z.B. 1 für jede Woche, 2 für jede zweite Woche"
-                      />
+                      <Label htmlFor={`assignedEmployees.${assignedIndex}.assigned_recurrence_interval_weeks`}>Zyklus</Label>
+                      <Select
+                        onValueChange={(value: string) => {
+                          form.setValue(`assignedEmployees.${assignedIndex}.assigned_recurrence_interval_weeks`, parseInt(value), { shouldValidate: true });
+                          // Reset start offset if it exceeds the new interval
+                          const currentOffset = form.getValue(`assignedEmployees.${assignedIndex}.assigned_start_week_offset`) || 0;
+                          if (currentOffset >= parseInt(value)) {
+                            form.setValue(`assignedEmployees.${assignedIndex}.assigned_start_week_offset`, 0, { shouldValidate: true });
+                          }
+                        }}
+                        value={String(form.watch(`assignedEmployees.${assignedIndex}.assigned_recurrence_interval_weeks`) ?? 1)}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Zyklus auswählen" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="1">1 Woche (wöchentlich)</SelectItem>
+                          <SelectItem value="2">2 Wochen (alle 2 Wochen)</SelectItem>
+                          <SelectItem value="4">4 Wochen (monatlich)</SelectItem>
+                          <SelectItem value="8">8 Wochen (alle 2 Monate)</SelectItem>
+                          <SelectItem value="12">12 Wochen (quartalsweise)</SelectItem>
+                          <SelectItem value="26">26 Wochen (halbjährlich)</SelectItem>
+                          <SelectItem value="52">52 Wochen (jährlich)</SelectItem>
+                        </SelectContent>
+                      </Select>
                       {(form.formState.errors.assignedEmployees?.[assignedIndex] as any)?.assigned_recurrence_interval_weeks && <p className="text-red-500 text-sm mt-1">{(form.formState.errors.assignedEmployees?.[assignedIndex] as any)?.assigned_recurrence_interval_weeks?.message}</p>}
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Wie oft arbeitet dieser Mitarbeiter hier?
+                      </p>
                     </div>
                     <div>
-                      <Label htmlFor={`assignedEmployees.${assignedIndex}.assigned_start_week_offset`}>Start-Wochen-Offset (0-basierend)</Label>
-                      <Input
-                        id={`assignedEmployees.${assignedIndex}.assigned_start_week_offset`}
-                        type="number"
-                        step="1"
-                        min="0"
-                        max={Math.max(0, (Number(form.watch(`assignedEmployees.${assignedIndex}.assigned_recurrence_interval_weeks`) ?? 1) - 1))}
-                        {...form.register(`assignedEmployees.${assignedIndex}.assigned_start_week_offset`, { valueAsNumber: true })}
-                        placeholder="Z.B. 0 für die erste Woche, 1 für die zweite Woche"
+                      <Label htmlFor={`assignedEmployees.${assignedIndex}.assigned_start_week_offset`}>Start in</Label>
+                      <Controller
+                        name={`assignedEmployees.${assignedIndex}.assigned_start_week_offset`}
+                        control={form.control}
+                        defaultValue={0}
+                        render={({ field }) => (
+                          <Select
+                            onValueChange={(value: string) => field.onChange(parseInt(value))}
+                            value={String(field.value ?? 0)}
+                          >
+                            <SelectTrigger className="w-full">
+                              <SelectValue placeholder="Start auswählen" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {Array.from({ length: Number(form.watch(`assignedEmployees.${assignedIndex}.assigned_recurrence_interval_weeks`) ?? 1) }, (_, i) => {
+                                const weekNum = i + 1;
+                                const label = weekNum === 1
+                                  ? "Erste Woche"
+                                  : weekNum === 2
+                                    ? "Zweite Woche"
+                                    : weekNum === 3
+                                      ? "Dritte Woche"
+                                      : weekNum === 4
+                                        ? "Vierte Woche"
+                                        : `Woche ${weekNum}`;
+                                return (
+                                  <SelectItem key={i} value={String(i)}>
+                                    {label}
+                                  </SelectItem>
+                                );
+                              })}
+                            </SelectContent>
+                          </Select>
+                        )}
                       />
-                      {(form.formState.errors.assignedEmployees?.[assignedIndex] as any)?.assigned_start_week_offset && <p className="text-red-500 text-sm mt-1">{(form.formState.errors.assignedEmployees?.[assignedIndex] as any)?.assigned_start_week_offset?.message}</p>}
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Zyklus startet in dieser Woche
+                      </p>
                     </div>
                   </div>
                   <p className="text-sm text-muted-foreground">

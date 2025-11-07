@@ -31,7 +31,7 @@ export async function createObject(data: ObjectFormValues) {
     start_week_offset,
   } = data;
 
-  const { error } = await supabase
+  const { data: newObject, error } = await supabase
     .from('objects')
     .insert({
       user_id: user.id,
@@ -51,7 +51,9 @@ export async function createObject(data: ObjectFormValues) {
       security_code_word: securityCodeWord,
       recurrence_interval_weeks,
       start_week_offset,
-    });
+    })
+    .select('id')
+    .single();
 
   if (error) {
     console.error("Fehler beim Erstellen des Objekts:", error?.message || error);
@@ -59,7 +61,7 @@ export async function createObject(data: ObjectFormValues) {
   }
 
   revalidatePath("/dashboard/objects");
-  return { success: true, message: "Objekt erfolgreich hinzugefügt!" };
+  return { success: true, message: "Objekt erfolgreich hinzugefügt!", newObjectId: newObject?.id };
 }
 
 export async function updateObject(objectId: string, data: ObjectFormValues) {

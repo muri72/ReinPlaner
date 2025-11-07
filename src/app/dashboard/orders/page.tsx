@@ -61,6 +61,7 @@ export interface DisplayOrder {
   // Derived for display
   customer_name: string | null;
   object_name: string | null;
+  object_address: string | null;
   customer_contact_first_name: string | null;
   customer_contact_last_name: string | null;
   employee_ids: string[] | null;
@@ -270,6 +271,7 @@ export default function OrdersPage({
           order_feedback: order.order_feedback,
           customer_name: customerData?.name || null,
           object_name: objectData?.name || null,
+          object_address: objectData?.address || null,
           customer_contact_first_name: customerContactData?.first_name || null,
           customer_contact_last_name: customerContactData?.last_name || null,
           employee_ids: order.order_employee_assignments?.map((a: any) => a.employee_id) || null,

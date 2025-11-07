@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Briefcase, UserRound, Clock } from "lucide-react";
 import Link from "next/link";
+import { OrderHoursSummary } from "@/components/order-hours-summary";
 
 interface DisplayOrder {
   id: string;
@@ -15,9 +16,17 @@ interface DisplayOrder {
   service_type: string | null;
   customer_name: string | null;
   object_name: string | null;
+  object_address: string | null;
+  order_type: string;
   total_estimated_hours: number | null;
   employee_first_names: string[] | null;
   employee_last_names: string[] | null;
+  // For better hour display
+  object?: { recurrence_interval_weeks: number } | null;
+  assignedEmployees?: Array<{
+    employeeId: string;
+    assigned_daily_schedules: any[];
+  }>;
 }
 
 interface OrdersGridViewProps {
@@ -72,9 +81,9 @@ export function OrdersGridView({ orders, employees, onActionSuccess }: OrdersGri
                   <span className="font-medium">Objekt:</span> {order.object_name}
                 </p>
               )}
-              {order.service_type && (
+              {order.object_address && (
                 <p className="text-sm text-muted-foreground">
-                  <span className="font-medium">Dienst:</span> {order.service_type}
+                  <span className="font-medium">Adresse:</span> {order.object_address}
                 </p>
               )}
               {order.employee_first_names && order.employee_last_names && order.employee_first_names.length > 0 && (
@@ -86,10 +95,20 @@ export function OrdersGridView({ orders, employees, onActionSuccess }: OrdersGri
                 </div>
               )}
               {order.total_estimated_hours && (
-                <div className="flex items-center">
-                  <Clock className="mr-2 h-4 w-4 flex-shrink-0" />
-                  <span className="text-sm">{order.total_estimated_hours.toFixed(2)}h geschätzt</span>
-                </div>
+                <OrderHoursSummary
+                  totalHours={order.total_estimated_hours}
+                  employees={
+                    order.employee_first_names && order.employee_last_names
+                      ? order.employee_first_names.map((first, i) => ({
+                          first_name: first,
+                          last_name: order.employee_last_names?.[i] || "",
+                          hours_per_week: 0, // Will be calculated
+                        }))
+                      : []
+                  }
+                  orderType={order.order_type}
+                  recurrenceIntervalWeeks={order.object?.recurrence_interval_weeks || 1}
+                />
               )}
               <div className="flex flex-wrap items-center gap-2 pt-2">
                 <Badge variant={getStatusBadgeVariant(order.status)}>{order.status}</Badge>

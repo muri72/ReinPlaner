@@ -23,9 +23,13 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
     .select(`
       *,
       customers ( name ),
-      objects ( name, address ),
+      objects ( name, address, recurrence_interval_weeks ),
       customer_contacts ( first_name, last_name ),
       order_employee_assignments (
+        employee_id,
+        assigned_daily_schedules,
+        assigned_recurrence_interval_weeks,
+        assigned_start_week_offset,
         employees ( first_name, last_name )
       )
     `)
@@ -42,6 +46,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
     ...order,
     customer_name: Array.isArray(order.customers) ? order.customers[0]?.name : order.customers?.name,
     object_name: Array.isArray(order.objects) ? order.objects[0]?.name : order.objects?.name,
+    object_address: Array.isArray(order.objects) ? order.objects[0]?.address : order.objects?.address,
     customer_contact_first_name: Array.isArray(order.customer_contacts) ? order.customer_contacts[0]?.first_name : order.customer_contacts?.first_name,
     customer_contact_last_name: Array.isArray(order.customer_contacts) ? order.customer_contacts[0]?.last_name : order.customer_contacts?.last_name,
     employee_first_names: order.order_employee_assignments?.map((a: any) => {
@@ -52,6 +57,13 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
       const employee = Array.isArray(a.employees) ? a.employees[0] : a.employees;
       return employee?.last_name || '';
     }) || null,
+    assignedEmployees: order.order_employee_assignments?.map((a: any) => ({
+      employeeId: a.employee_id,
+      assigned_daily_schedules: a.assigned_daily_schedules || [],
+      assigned_recurrence_interval_weeks: a.assigned_recurrence_interval_weeks || 1,
+      assigned_start_week_offset: a.assigned_start_week_offset || 0,
+    })) || [],
+    object: Array.isArray(order.objects) ? order.objects[0] : order.objects,
   };
 
   return (

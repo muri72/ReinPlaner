@@ -183,7 +183,7 @@ export default function ObjectsPage() {
   return (
     <div className="p-4 md:p-8 space-y-8">
       <PageHeader title="Ihre Objekte" loading={loading}>
-        <ObjectCreateDialog onObjectCreated={fetchData} />
+        <ObjectCreateDialog onObjectCreated={fetchData} variant="button" />
       </PageHeader>
 
       <Card className="shadow-neumorphic glassmorphism-card">

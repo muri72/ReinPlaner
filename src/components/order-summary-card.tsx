@@ -3,6 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { UserRound, Building, Clock, Wrench, Star, MapPin } from "lucide-react";
+import { OrderHoursSummary } from "@/components/order-hours-summary";
 
 interface OrderData {
   id: string;
@@ -13,6 +14,7 @@ interface OrderData {
   service_type: string | null;
   customer_name: string | null;
   object_name: string | null;
+  object_address: string | null;
   customer_contact_first_name: string | null;
   customer_contact_last_name: string | null;
   employee_first_names: string[] | null;
@@ -22,6 +24,12 @@ interface OrderData {
   recurring_start_date: string | null;
   recurring_end_date: string | null;
   total_estimated_hours: number | null;
+  // For better hour display
+  object?: { recurrence_interval_weeks: number } | null;
+  assignedEmployees?: Array<{
+    employeeId: string;
+    assigned_daily_schedules: any[];
+  }>;
 }
 
 interface OrderSummaryCardProps {
@@ -71,6 +79,14 @@ export function OrderSummaryCard({ order }: OrderSummaryCardProps) {
           </div>
         )}
 
+        {order.object_address && (
+          <div className="flex items-center">
+            <MapPin className="mr-2 h-4 w-4 flex-shrink-0 text-muted-foreground" />
+            <span className="font-medium mr-2">Adresse:</span>
+            <span>{order.object_address}</span>
+          </div>
+        )}
+
         {order.customer_contact_first_name && order.customer_contact_last_name && (
           <div className="flex items-center">
             <UserRound className="mr-2 h-4 w-4 flex-shrink-0 text-muted-foreground" />
@@ -101,11 +117,21 @@ export function OrderSummaryCard({ order }: OrderSummaryCardProps) {
         </div>
 
         {order.total_estimated_hours && (
-          <div className="flex items-center">
-            <Clock className="mr-2 h-4 w-4 flex-shrink-0 text-muted-foreground" />
-            <span className="font-medium mr-2">Geschätzte Stunden:</span>
-            <span>{order.total_estimated_hours.toFixed(2)}h</span>
-          </div>
+          <OrderHoursSummary
+            totalHours={order.total_estimated_hours}
+            employees={
+              order.employee_first_names && order.employee_last_names
+                ? order.employee_first_names.map((first, i) => ({
+                    first_name: first,
+                    last_name: order.employee_last_names?.[i] || "",
+                    hours_per_week: 0, // Will be calculated
+                  }))
+                : []
+            }
+            orderType={order.order_type}
+            recurrenceIntervalWeeks={order.object?.recurrence_interval_weeks || 1}
+            className="mt-2"
+          />
         )}
       </CardContent>
     </Card>
