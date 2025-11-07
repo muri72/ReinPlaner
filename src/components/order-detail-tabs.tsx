@@ -159,9 +159,10 @@ export function OrderDetailTabs({ order }: OrderDetailTabsProps) {
         </Card>
       </TabsContent>
       <TabsContent value="zeitplanung">
-        <div className="space-y-6">
+        <div className="max-h-[70vh] overflow-y-auto pr-2">
           {order.assignedEmployees.length > 0 ? (
-            order.assignedEmployees.map((assignment, index) => (
+            <div className="space-y-4">
+              {order.assignedEmployees.map((assignment, index) => (
               <Card key={index} className="shadow-neumorphic glassmorphism-card border-l-4 border-l-primary/50">
                 <CardHeader className="bg-gradient-to-r from-primary/5 to-primary/10">
                   <div className="flex items-center gap-3">
@@ -292,7 +293,8 @@ export function OrderDetailTabs({ order }: OrderDetailTabsProps) {
                   )}
                 </CardContent>
               </Card>
-            ))
+              ))}
+            </div>
           ) : (
             <Card className="shadow-neumorphic glassmorphism-card">
               <CardContent className="py-12 text-center">

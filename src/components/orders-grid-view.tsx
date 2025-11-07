@@ -87,12 +87,65 @@ export function OrdersGridView({ orders, employees, onActionSuccess }: OrdersGri
                 </p>
               )}
               {order.employee_first_names && order.employee_last_names && order.employee_first_names.length > 0 && (
-                <div className="flex items-center">
-                  <UserRound className="mr-2 h-4 w-4 flex-shrink-0" />
-                  <span className="text-sm">
-                    {order.employee_first_names.map((f, i) => `${f} ${order.employee_last_names?.[i] || ''}`).join(', ')}
-                  </span>
-                </div>
+                <>
+                  <div className="flex items-center">
+                    <UserRound className="mr-2 h-4 w-4 flex-shrink-0" />
+                    <span className="text-sm">
+                      {order.employee_first_names.map((f, i) => `${f} ${order.employee_last_names?.[i] || ''}`).join(', ')}
+                    </span>
+                  </div>
+                  {/* Employee Schedule Display */}
+                  {order.assignedEmployees && order.assignedEmployees.length > 0 && (
+                    <div className="mt-2 pt-2 border-t border-border/30">
+                      <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        Zeitplan
+                      </p>
+                      <div className="space-y-2">
+                        {order.assignedEmployees.map((emp, empIndex) => {
+                          if (!emp.assigned_daily_schedules || emp.assigned_daily_schedules.length === 0) {
+                            return null;
+                          }
+                          const firstSchedule = emp.assigned_daily_schedules[0] || {};
+                          const dayNames: { [key: string]: string } = {
+                            monday: 'Mo', tuesday: 'Di', wednesday: 'Mi', thursday: 'Do',
+                            friday: 'Fr', saturday: 'Sa', sunday: 'So'
+                          };
+                          const activeDays = Object.keys(firstSchedule).filter(day =>
+                            day !== 'total_hours' && firstSchedule[day]?.hours > 0
+                          );
+
+                          if (activeDays.length === 0) return null;
+
+                          const employeeName = order.employee_first_names?.[empIndex] && order.employee_last_names?.[empIndex]
+                            ? `${order.employee_first_names[empIndex]} ${order.employee_last_names[empIndex]}`
+                            : `Mitarbeiter ${empIndex + 1}`;
+
+                          return (
+                            <div key={empIndex} className="w-full">
+                              <p className="text-xs font-medium text-foreground mb-1">
+                                {employeeName}
+                              </p>
+                              <div className="flex flex-wrap gap-1">
+                                {activeDays.map(day => {
+                                  const hours = firstSchedule[day]?.hours || 0;
+                                  return (
+                                    <div key={day} className="flex items-center gap-1 bg-primary/5 px-2 py-1 rounded-md border border-primary/10">
+                                      <span className="text-xs font-medium">{dayNames[day]}</span>
+                                      <span className="text-xs text-muted-foreground">
+                                        {hours.toFixed(1)}h
+                                      </span>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
               {order.total_estimated_hours && (
                 <OrderHoursSummary
