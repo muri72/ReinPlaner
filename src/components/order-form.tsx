@@ -808,7 +808,8 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
                         onValueChange={(value: string) => {
                           form.setValue(`assignedEmployees.${assignedIndex}.assigned_recurrence_interval_weeks`, parseInt(value), { shouldValidate: true });
                           // Reset start offset if it exceeds the new interval
-                          const currentOffset = form.getValues(`assignedEmployees.${assignedIndex}.assigned_start_week_offset`) || 0;
+                          const currentOffsetRaw = form.getValues(`assignedEmployees.${assignedIndex}.assigned_start_week_offset`);
+                          const currentOffset = typeof currentOffsetRaw === 'number' ? currentOffsetRaw : 0;
                           if (currentOffset >= parseInt(value)) {
                             form.setValue(`assignedEmployees.${assignedIndex}.assigned_start_week_offset`, 0, { shouldValidate: true });
                           }
