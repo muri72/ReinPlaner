@@ -351,7 +351,7 @@ export async function updateUser(userId: string, data: Partial<UserFormValues>) 
     return { success: false, message: "Nicht autorisiert. Nur Admins können Benutzer aktualisieren." };
   }
 
-  const { firstName, lastName, role } = data;
+  const { firstName, lastName, role, employeeId, customerId, customerContactId } = data;
 
   // Aktualisiere das Profil in der profiles-Tabelle
   const { error: profileUpdateError } = await supabase
@@ -364,7 +364,82 @@ export async function updateUser(userId: string, data: Partial<UserFormValues>) 
     return { success: false, message: profileUpdateError.message };
   }
 
+  // Aktualisiere Mitarbeiterzuweisung
+  if (typeof employeeId !== 'undefined') {
+    const { error: employeeUpdateError } = await supabase
+      .from('employees')
+      .update({ user_id: employeeId === null ? null : userId })
+      .eq('user_id', userId); // Erst alle aktuellen Zuweisungen aufheben
+
+    if (employeeUpdateError) {
+      console.error("Fehler beim Aktualisieren der Mitarbeiterzuweisung:", employeeUpdateError.message);
+    }
+
+    // Wenn ein employeeId angegeben ist, verknüpfe den Benutzer mit diesem Mitarbeiter
+    if (employeeId) {
+      const { error: linkEmployeeError } = await supabase
+        .from('employees')
+        .update({ user_id: userId })
+        .eq('id', employeeId);
+
+      if (linkEmployeeError) {
+        console.error("Fehler beim Verknüpfen des Benutzers mit Mitarbeiter:", linkEmployeeError.message);
+      }
+    }
+  }
+
+  // Aktualisiere Kundenzuweisung
+  if (typeof customerId !== 'undefined') {
+    const { error: customerUnlinkError } = await supabase
+      .from('customers')
+      .update({ user_id: null })
+      .eq('user_id', userId); // Erst alle aktuellen Kunden-Zuweisungen aufheben
+
+    if (customerUnlinkError) {
+      console.error("Fehler beim Aufheben von Kunden-Zuweisungen:", customerUnlinkError.message);
+    }
+
+    // Wenn ein customerId angegeben ist, verknüpfe den Benutzer mit diesem Kunden
+    if (customerId) {
+      const { error: linkCustomerError } = await supabase
+        .from('customers')
+        .update({ user_id: userId })
+        .eq('id', customerId);
+
+      if (linkCustomerError) {
+        console.error("Fehler beim Verknüpfen des Benutzers mit Kunden:", linkCustomerError.message);
+      }
+    }
+  }
+
+  // Aktualisiere Kundenkontakt-Zuweisung
+  if (typeof customerContactId !== 'undefined') {
+    const { error: contactUnlinkError } = await supabase
+      .from('customer_contacts')
+      .update({ user_id: null })
+      .eq('user_id', userId); // Erst alle aktuellen Kundenkontakt-Zuweisungen aufheben
+
+    if (contactUnlinkError) {
+      console.error("Fehler beim Aufheben von Kundenkontakt-Zuweisungen:", contactUnlinkError.message);
+    }
+
+    // Wenn ein customerContactId angegeben ist, verknüpfe den Benutzer mit diesem Kundenkontakt
+    if (customerContactId) {
+      const { error: linkContactError } = await supabase
+        .from('customer_contacts')
+        .update({ user_id: userId })
+        .eq('id', customerContactId);
+
+      if (linkContactError) {
+        console.error("Fehler beim Verknüpfen des Benutzers mit Kundenkontakt:", linkContactError.message);
+      }
+    }
+  }
+
   revalidatePath("/dashboard/users");
+  revalidatePath("/dashboard/employees");
+  revalidatePath("/dashboard/customers");
+  revalidatePath("/dashboard/customer-contacts");
   return { success: true, message: "Benutzerprofil erfolgreich aktualisiert!" };
 }
 

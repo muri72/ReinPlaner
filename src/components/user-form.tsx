@@ -65,8 +65,8 @@ export const userSchema = baseUserSchema
       return false;
     }
 
-    // No specific role restriction for employeeId anymore, as per user request.
-    // A user linked to an employee can be admin, manager, or employee.
+    // No specific role restriction for employeeId anymore.
+    // A user can be linked to an employee (any role: admin, manager, employee, customer).
     // A user linked to a customer contact must be 'customer'.
     // A user not linked to anything can be admin, manager, employee, customer.
   }
@@ -78,7 +78,10 @@ export const userSchema = baseUserSchema
 
 
 interface UserFormProps {
-  initialData?: Partial<UserFormInput>;
+  initialData?: Partial<UserFormInput> & {
+    employee?: { id: string; first_name: string; last_name: string } | null;
+    customerContact?: { id: string; first_name: string; last_name: string; customer_id: string } | null;
+  };
   onSubmit: (data: UserFormValues) => Promise<{ success: boolean; message: string }>;
   submitButtonText: string;
   onSuccess?: () => void;
@@ -99,10 +102,10 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
     firstName: initialData?.firstName ?? "",
     lastName: initialData?.lastName ?? "",
     role: initialData?.role ?? "employee",
-    // These initialData values are only relevant for new user creation, not for editing
-    employeeId: initialData?.employeeId ?? null,
-    customerId: initialData?.customerId ?? null,
-    customerContactId: initialData?.customerContactId ?? null, // Neues Feld für Kundenkontakt
+    // These initialData values are used for both new user creation and editing
+    employeeId: initialData?.employeeId ?? initialData?.employee?.id ?? null,
+    customerId: initialData?.customerId ?? initialData?.customerContact?.customer_id ?? null,
+    customerContactId: initialData?.customerContactId ?? initialData?.customerContact?.id ?? null, // Neues Feld für Kundenkontakt
     managerCustomerIds: initialData?.managerCustomerIds ?? [],
   };
 
@@ -248,7 +251,7 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
   const isRoleFieldDisabled = isEditMode || !!selectedCustomerContactId; // Deaktiviert, wenn im Bearbeitungsmodus oder wenn Kundenkontakt ausgewählt (muss 'Kunde' sein)
 
   return (
-    <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 w-full max-w-md mx-auto">
+    <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 w-full">
       {!isEditMode && ( // Diese Felder nur im Erstellungsmodus anzeigen
         <div className="border-b pb-4 mb-4">
           <h3 className="text-md font-semibold mb-2">Bestehendem Profil zuweisen:</h3>
@@ -425,6 +428,162 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
           <p className="text-red-500 text-sm mt-1">{form.formState.errors.role.message}</p>
         )}
       </div>
+
+      {isEditMode && (
+        <div className="border-t pt-4 mt-4">
+          <h3 className="text-md font-semibold mb-2">Profil-Zuweisungen bearbeiten:</h3>
+          <p className="text-sm text-muted-foreground mb-4">
+            Sie können die Zuweisung zu einem Mitarbeiter oder Kundenkontakt ändern oder aufheben.
+          </p>
+
+          {/* Bestehende Zuweisung anzeigen */}
+          {(initialData?.employee || selectedEmployeeId) && !selectedCustomerContactId ? (
+            <div className="p-4 border rounded-lg bg-muted/20 mb-4">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="font-medium">Aktuell zugewiesen an Mitarbeiter:</p>
+                  <p className="text-sm text-muted-foreground">
+                    {initialData?.employee
+                      ? `${initialData.employee.first_name} ${initialData.employee.last_name}`
+                      : employees.find(emp => emp.id === selectedEmployeeId)?.first_name + ' ' + employees.find(emp => emp.id === selectedEmployeeId)?.last_name
+                    }
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    form.setValue("employeeId", null);
+                  }}
+                >
+                  Zuweisung aufheben
+                </Button>
+              </div>
+            </div>
+          ) : null}
+
+          {selectedCustomerContactId && !selectedEmployeeId ? (
+            <div className="p-4 border rounded-lg bg-muted/20 mb-4">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="font-medium">Aktuell zugewiesen an Kundenkontakt:</p>
+                  <p className="text-sm text-muted-foreground">
+                    {initialData?.customerContact
+                      ? `${initialData.customerContact.first_name} ${initialData.customerContact.last_name}`
+                      : customerContactsForUserAssignment.find(contact => contact.id === selectedCustomerContactId)?.first_name + ' ' + customerContactsForUserAssignment.find(contact => contact.id === selectedCustomerContactId)?.last_name
+                    }
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    form.setValue("customerContactId", null);
+                    form.setValue("customerId", null);
+                  }}
+                >
+                  Zuweisung aufheben
+                </Button>
+              </div>
+            </div>
+          ) : null}
+
+          {/* Keine Zuweisung */}
+          {!selectedEmployeeId && !selectedCustomerContactId ? (
+            <div className="p-4 border rounded-lg bg-muted/20 mb-4">
+              <p className="text-sm text-muted-foreground">Dieser Benutzer ist aktuell keinem Mitarbeiter oder Kundenkontakt zugewiesen.</p>
+            </div>
+          ) : null}
+
+          {/* Bereich zum Ändern der Zuweisung */}
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="employeeId">Mitarbeiter zuweisen (optional)</Label>
+              <Select
+                onValueChange={(value) => {
+                  form.setValue("employeeId", value === "unassigned" ? null : value);
+                  if (value !== "unassigned") {
+                    form.setValue("customerId", null);
+                    form.setValue("customerContactId", null);
+                  }
+                }}
+                value={selectedEmployeeId || "unassigned"}
+                disabled={loadingDropdowns}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Mitarbeiter auswählen" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unassigned">Kein Mitarbeiter zugewiesen</SelectItem>
+                  {employees.map(emp => (
+                    <SelectItem key={emp.id} value={emp.id} disabled={!!emp.user_id && emp.user_id !== (initialData as any)?.id}>
+                      {emp.first_name} {emp.last_name} {emp.email ? `(${emp.email})` : ''} {emp.user_id && emp.user_id !== (initialData as any)?.id ? '(Bereits zugewiesen)' : ''}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="customerId">Kunde für Kundenkontakt (optional)</Label>
+              <Select
+                onValueChange={(value) => {
+                  form.setValue("customerId", value === "unassigned" ? null : value);
+                  if (value !== "unassigned") {
+                    form.setValue("employeeId", null);
+                  }
+                  form.setValue("customerContactId", null);
+                }}
+                value={selectedCustomerId || "unassigned"}
+                disabled={loadingDropdowns || !!selectedEmployeeId}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Kunden auswählen" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unassigned">Kein Kunde ausgewählt</SelectItem>
+                  {customers.map(cust => (
+                    <SelectItem key={cust.id} value={cust.id}>
+                      {cust.name} {cust.contact_email ? `(${cust.contact_email})` : ''}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="customerContactId">Kundenkontakt zuweisen (optional)</Label>
+              <Select
+                onValueChange={(value) => {
+                  form.setValue("customerContactId", value === "unassigned" ? null : value);
+                  if (value !== "unassigned") {
+                    form.setValue("employeeId", null);
+                  }
+                }}
+                value={selectedCustomerContactId || "unassigned"}
+                disabled={loadingDropdowns || !!selectedEmployeeId || !selectedCustomerId || customerContactsForUserAssignment.length === 0}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Kundenkontakt auswählen" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unassigned">Kein Kundenkontakt zugewiesen</SelectItem>
+                  {customerContactsForUserAssignment.map(contact => (
+                    <SelectItem key={contact.id} value={contact.id} disabled={!!contact.user_id && contact.user_id !== (initialData as any)?.id}>
+                      {contact.first_name} {contact.last_name} {contact.email ? `(${contact.email})` : ''} {contact.user_id && contact.user_id !== (initialData as any)?.id ? '(Bereits zugewiesen)' : ''}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {selectedCustomerId && customerContactsForUserAssignment.length === 0 && (
+                <p className="text-muted-foreground text-sm mt-1">Keine Kontakte für diesen Kunden gefunden.</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {selectedRole === "manager" && !isEditMode && (
         <div className="border-t pt-4 mt-4">

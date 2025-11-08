@@ -18,6 +18,7 @@ interface DisplayUser {
   role: string;
   created_at: string | null;
   assigned_employee_name: string | null;
+  assigned_employee_status: string | null;
   assigned_customer_name: string | null;
 }
 

@@ -156,7 +156,7 @@ export function EmployeeForm({ initialData, onSubmit, submitButtonText, onSucces
   }, [form.watch('default_daily_schedules')]);
 
   return (
-    <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-6">
+    <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <Label htmlFor="first_name">Vorname</Label>

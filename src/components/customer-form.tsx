@@ -64,7 +64,7 @@ export function CustomerForm({ initialData, onSubmit, submitButtonText, onSucces
   };
 
   return (
-    <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 w-full max-w-md mx-auto">
+    <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 w-full">
       <div>
         <Label htmlFor="name">Kundenname</Label>
         <Input

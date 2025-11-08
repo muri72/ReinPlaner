@@ -44,7 +44,7 @@ export function FeedbackReplyForm({ feedbackId, feedbackType, onSuccess }: Feedb
   };
 
   return (
-    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-2 mt-4">
+    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 mt-4">
       <div>
         <Label htmlFor={`reply-${feedbackId}`}>Ihre Antwort</Label>
         <Textarea

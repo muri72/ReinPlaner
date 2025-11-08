@@ -17,6 +17,7 @@ interface DisplayUser {
   role: string;
   created_at: string | null;
   assigned_employee_name: string | null;
+  assigned_employee_status: string | null;
   assigned_customer_name: string | null;
 }
 
@@ -99,7 +100,14 @@ export function UsersGridView({
             {user.assigned_employee_name && (
               <div className="flex items-center">
                 <UserRound className="mr-2 h-4 w-4 flex-shrink-0" />
-                <span>Zugewiesener Mitarbeiter: {user.assigned_employee_name}</span>
+                <span>
+                  Zugewiesener Mitarbeiter: {user.assigned_employee_name}
+                  {user.assigned_employee_status && (
+                    <Badge variant="outline" className="ml-2 text-xs">
+                      {user.assigned_employee_status}
+                    </Badge>
+                  )}
+                </span>
               </div>
             )}
             {user.assigned_customer_name && (

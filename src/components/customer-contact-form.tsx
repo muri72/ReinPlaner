@@ -74,7 +74,7 @@ export function CustomerContactForm({ initialData, onSubmit, submitButtonText, o
   };
 
   return (
-    <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 w-full max-w-md mx-auto">
+    <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 w-full">
       <div>
         <Label htmlFor="customerId">Zugehöriger Kunde</Label>
         <Select onValueChange={(value) => form.setValue("customerId", value)} value={form.watch("customerId")} disabled={!!initialData?.customerId}>
