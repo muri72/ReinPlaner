@@ -181,6 +181,7 @@ export default async function DashboardPage() {
       recurring_end_date,
       priority,
       total_estimated_hours,
+      fixed_monthly_price,
       notes,
       request_status,
       service_type,
@@ -188,21 +189,31 @@ export default async function DashboardPage() {
       objects ( name, address, notes, recurrence_interval_weeks, start_week_offset, daily_schedules ),
       customer_contacts ( first_name, last_name, phone ),
       order_feedback ( id, rating, comment, image_urls, created_at ),
-      order_employee_assignments ( 
-        employee_id, 
+      order_employee_assignments (
+        employee_id,
         assigned_daily_schedules,
         assigned_recurrence_interval_weeks, assigned_start_week_offset,
-        employees ( first_name, last_name ) 
+        employees ( first_name, last_name )
       )
     `)
     .eq('request_status', 'pending')
     .order('created_at', { ascending: true });
+
+  // Load service rates
+  const { data: serviceRatesData, error: serviceRatesError } = await supabase
+    .from('service_rates')
+    .select('service_type, hourly_rate');
 
   const pendingRequestsCount = pendingCustomerRequestsList?.length || 0;
 
   if (pendingRequestsError) console.error("Fehler beim Laden der offenen Kundenanfragen:", pendingRequestsError?.message || pendingRequestsError);
 
   // Map pending requests to DisplayOrder type
+  const serviceRatesMap: Record<string, number> = {};
+  (serviceRatesData || []).forEach(rate => {
+    serviceRatesMap[rate.service_type] = rate.hourly_rate;
+  });
+
   const mappedPendingRequests: DisplayOrder[] = pendingCustomerRequestsList?.map(order => {
     const customerData = Array.isArray(order.customers) ? order.customers[0] : order.customers;
     const objectData = Array.isArray(order.objects) ? order.objects[0] : order.objects;
@@ -214,7 +225,9 @@ export default async function DashboardPage() {
         assigned_recurrence_interval_weeks: a.assigned_recurrence_interval_weeks,
         assigned_start_week_offset: a.assigned_start_week_offset,
     })) || [];
-    
+
+    const hourlyRate = order.service_type ? serviceRatesMap[order.service_type] || null : null;
+
     return {
       id: order.id,
       user_id: order.user_id,
@@ -231,6 +244,7 @@ export default async function DashboardPage() {
       recurring_end_date: order.recurring_end_date,
       priority: order.priority,
       total_estimated_hours: order.total_estimated_hours,
+      fixed_monthly_price: order.fixed_monthly_price,
       notes: order.notes,
       request_status: order.request_status,
       service_type: order.service_type,
@@ -243,6 +257,7 @@ export default async function DashboardPage() {
       employee_ids: order.order_employee_assignments?.map((a: any) => a.employee_id) || null,
       employee_first_names: order.order_employee_assignments?.map((a: any) => a.employees?.[0]?.first_name || '') || null,
       employee_last_names: order.order_employee_assignments?.map((a: any) => a.employees?.[0]?.last_name || '') || null,
+      hourly_rate: hourlyRate,
       assignedEmployees: mappedAssignments,
       object: objectData,
       customer: customerData,

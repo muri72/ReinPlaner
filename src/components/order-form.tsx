@@ -84,6 +84,10 @@ export const baseOrderSchema = z.object({
     (val) => (val === "" || isNaN(Number(val)) ? null : Number(val)),
     z.nullable(z.number().min(0, "Stunden müssen positiv sein").max(999, "Stunden sind zu hoch")).optional()
   ),
+  fixedMonthlyPrice: z.preprocess(
+    (val) => (val === "" || isNaN(Number(val)) ? null : Number(val)),
+    z.nullable(z.number().min(0, "Preis muss positiv sein").max(999999, "Preis ist zu hoch")).optional()
+  ),
   notes: z.string().max(500, "Notizen sind zu lang").optional().nullable(),
   serviceType: z.enum(availableServices).optional().nullable(),
   requestStatus: z.enum(["pending", "approved", "rejected"]).default("approved"),
@@ -155,6 +159,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
   const [objects, setObjects] = useState<any[]>([]); // Keep as any[] for now, detailed type not needed here
   const [allEmployees, setAllEmployees] = useState<{ id: string; first_name: string; last_name: string }[]>([]);
   const [customerContacts, setCustomerContacts] = useState<{ id: string; first_name: string; last_name: string; customer_id: string }[]>([]);
+  const [serviceRates, setServiceRates] = useState<{ service_type: string; hourly_rate: number }[]>([]);
 
   const resolvedDefaultValues: OrderFormValues = {
     title: initialData?.title ?? "",
@@ -169,6 +174,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     recurringEndDate: initialData?.recurringEndDate ? new Date(initialData.recurringEndDate) : null,
     priority: initialData?.priority ?? "low",
     totalEstimatedHours: (initialData?.totalEstimatedHours as number | null | undefined) ?? null,
+    fixedMonthlyPrice: (initialData?.fixedMonthlyPrice as number | null | undefined) ?? null,
     notes: initialData?.notes ?? null,
     serviceType: initialData?.serviceType ?? null,
     requestStatus: initialData?.requestStatus ?? "approved",
@@ -217,6 +223,11 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
       const { data: employeesData, error: employeesError } = await supabase.from('employees').select('id, first_name, last_name').eq('status', 'active').order('last_name', { ascending: true });
       if (employeesData) setAllEmployees(employeesData);
       if (employeesError) console.error("Fehler beim Laden der Mitarbeiter:", employeesError);
+
+      // Fetch service rates
+      const { data: ratesData, error: ratesError } = await supabase.from('service_rates').select('service_type, hourly_rate');
+      if (ratesData) setServiceRates(ratesData);
+      if (ratesError) console.error("Fehler beim Laden der Stundensätze:", ratesError);
     };
     fetchDropdownData();
   }, [supabase]);
@@ -1089,8 +1100,47 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
           className="bg-muted cursor-not-allowed"
         />
         {form.formState.errors.totalEstimatedHours && <p className="text-red-500 text-sm mt-1">{form.formState.errors.totalEstimatedHours.message}</p>}
+        {(() => {
+          const totalHours = form.watch("totalEstimatedHours") as number | null | undefined;
+          const serviceType = form.watch("serviceType");
+          const fixedPrice = form.watch("fixedMonthlyPrice") as number | null | undefined;
+
+          if (totalHours && totalHours > 0 && serviceType && !fixedPrice) {
+            const rate = serviceRates.find(r => r.service_type === serviceType);
+            if (rate) {
+              const total = (totalHours || 0) * rate.hourly_rate;
+              return (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Zeitaufwand: {totalHours.toFixed(2)} Stunden × {rate.hourly_rate.toFixed(2)} €/Stunde = <span className="font-semibold">{total.toFixed(2)} €</span>
+                </p>
+              );
+            }
+          }
+          return null;
+        })()}
       </div>
-      
+
+      <div>
+        <Label htmlFor="fixedMonthlyPrice">Pauschaler Preis (€, optional)</Label>
+        <Input
+          id="fixedMonthlyPrice"
+          type="number"
+          step="0.01"
+          min="0"
+          {...form.register("fixedMonthlyPrice")}
+          placeholder="z.B. 150.00"
+        />
+        {form.formState.errors.fixedMonthlyPrice && <p className="text-red-500 text-sm mt-1">{form.formState.errors.fixedMonthlyPrice.message}</p>}
+        <p className="text-xs text-muted-foreground mt-1">Festpreis für diesen Auftrag (gilt für alle Auftragstypen)</p>
+        {(() => {
+          const fixedPrice = form.watch("fixedMonthlyPrice") as number | null | undefined;
+          if (fixedPrice && fixedPrice > 0) {
+            return <p className="text-xs text-green-600 mt-1">✓ Pauschale ausgewählt (Zeitaufwand wird nicht berechnet)</p>;
+          }
+          return null;
+        })()}
+      </div>
+
       <div>
         <Label htmlFor="notes">Notizen (optional)</Label>
         <Textarea

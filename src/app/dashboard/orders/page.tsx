@@ -55,6 +55,7 @@ export interface DisplayOrder {
   recurring_end_date: string | null;
   priority: string;
   total_estimated_hours: number | null;
+  fixed_monthly_price: number | null;
   notes: string | null;
   request_status: string;
   service_type: string | null;
@@ -67,6 +68,7 @@ export interface DisplayOrder {
   employee_ids: string[] | null;
   employee_first_names: string[] | null;
   employee_last_names: string[] | null;
+  hourly_rate: number | null;
   // Full assignment data
   assignedEmployees: AssignedEmployee[];
   order_feedback: {
@@ -146,9 +148,11 @@ export default function OrdersPage({
 
     const { data: customersData, error: customersError } = await supabase.from('customers').select('id, name').order('name', { ascending: true });
     const { data: employeesData, error: employeesError } = await supabase.from('employees').select('id, first_name, last_name').order('last_name', { ascending: true });
+    const { data: serviceRatesData, error: serviceRatesError } = await supabase.from('service_rates').select('service_type, hourly_rate');
 
     if (customersError) console.error("Fehler beim Laden der Kunden für Filter:", customersError.message);
     if (employeesError) console.error("Fehler beim Laden der Mitarbeiter für Filter:", employeesError.message);
+    if (serviceRatesError) console.error("Fehler beim Laden der Stundensätze:", serviceRatesError.message);
 
     setCustomers(customersData || []);
     setEmployees(employeesData || []);
@@ -156,6 +160,7 @@ export default function OrdersPage({
     let ordersData: DisplayOrder[] = [];
     let ordersError: any = null;
     let ordersCount: number | null = 0;
+    const ordersServiceRates = serviceRatesData || [];
 
     let filterUserId: string | null = null;
     let filterCustomerId: string | null = null;
@@ -202,6 +207,7 @@ export default function OrdersPage({
           recurring_end_date,
           priority,
           total_estimated_hours,
+          fixed_monthly_price,
           notes,
           request_status,
           service_type,
@@ -249,6 +255,11 @@ export default function OrdersPage({
             assigned_start_week_offset: a.assigned_start_week_offset,
         })) || [];
 
+        // Get hourly rate for this order's service type
+        const hourlyRate = order.service_type
+          ? ordersServiceRates.find((r: any) => r.service_type === order.service_type)?.hourly_rate || null
+          : null;
+
         return {
           id: order.id,
           user_id: order.user_id,
@@ -265,6 +276,7 @@ export default function OrdersPage({
           recurring_end_date: order.recurring_end_date,
           priority: order.priority,
           total_estimated_hours: order.total_estimated_hours,
+          fixed_monthly_price: order.fixed_monthly_price,
           notes: order.notes,
           request_status: order.request_status,
           service_type: order.service_type,
@@ -283,6 +295,7 @@ export default function OrdersPage({
             const employee = Array.isArray(a.employees) ? a.employees[0] : a.employees;
             return employee?.last_name || '';
           }) || null,
+          hourly_rate: hourlyRate,
           assignedEmployees: mappedAssignments,
           object: objectData,
           customer: customerData,

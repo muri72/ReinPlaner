@@ -41,6 +41,20 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
     redirect("/dashboard/orders");
   }
 
+  // Fetch service rates for hourly rate calculation
+  const { data: serviceRatesData, error: serviceRatesError } = await supabase
+    .from('service_rates')
+    .select('service_type, hourly_rate');
+
+  if (serviceRatesError) {
+    console.error("Fehler beim Laden der Stundensätze:", serviceRatesError.message);
+  }
+
+  // Calculate hourly rate based on service type
+  const hourlyRate = order.service_type
+    ? serviceRatesData?.find((r: any) => r.service_type === order.service_type)?.hourly_rate || null
+    : null;
+
   // Flatten nested data for easier prop passing
   const flattenedOrder = {
     ...order,
@@ -64,6 +78,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
       assigned_start_week_offset: a.assigned_start_week_offset || 0,
     })) || [],
     object: Array.isArray(order.objects) ? order.objects[0] : order.objects,
+    hourly_rate: hourlyRate,
   };
 
   return (

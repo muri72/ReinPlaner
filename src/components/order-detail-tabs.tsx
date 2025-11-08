@@ -27,6 +27,8 @@ interface OrderData {
   recurring_start_date: string | null;
   recurring_end_date: string | null;
   total_estimated_hours: number | null;
+  fixed_monthly_price: number | null;
+  hourly_rate: number | null;
   request_status: string;
   customer_id: string | null;
   object_id: string | null;
@@ -130,6 +132,75 @@ export function OrderDetailTabs({ order }: OrderDetailTabsProps) {
                   />
                 </div>
               )}
+              {/* Price Display */}
+              {(() => {
+                // For recurring, substitution, and permanent orders with flat rate, show only monthly cost
+                if (['recurring', 'substitution', 'permanent'].includes(order.order_type) && order.fixed_monthly_price && order.fixed_monthly_price > 0) {
+                  return (
+                    <div className="space-y-1">
+                      <p className="font-medium text-muted-foreground">Monatliche Kosten</p>
+                      <p className="text-2xl font-bold text-green-600">{order.fixed_monthly_price.toFixed(2)} €</p>
+                      <p className="text-sm text-muted-foreground">pro Monat</p>
+                    </div>
+                  );
+                }
+
+                // For one-time orders with flat rate, or hourly rates
+                if (order.fixed_monthly_price && order.fixed_monthly_price > 0) {
+                  return (
+                    <div className="space-y-1">
+                      <p className="font-medium text-muted-foreground">Pauschale</p>
+                      <p className="text-2xl font-bold text-primary">{order.fixed_monthly_price.toFixed(2)} €</p>
+                      <p className="text-sm text-muted-foreground">pro Auftrag</p>
+                    </div>
+                  );
+                } else if (order.total_estimated_hours && order.total_estimated_hours > 0 && order.service_type) {
+                  return (
+                    <div className="space-y-2">
+                      <p className="font-medium text-muted-foreground">Zeitaufwand</p>
+                      <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                        <p className="text-lg font-semibold">
+                          {order.total_estimated_hours.toFixed(2)} Std. {order.hourly_rate ? `× ${order.hourly_rate.toFixed(2)} €/h` : ''}
+                        </p>
+                        {order.hourly_rate && (
+                          <p className="text-xl font-bold text-primary">
+                            = {(order.total_estimated_hours * order.hourly_rate).toFixed(2)} € pro Einsatz
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  );
+                }
+
+                // Monthly cost for hourly rates on recurring orders
+                if (['recurring', 'substitution', 'permanent'].includes(order.order_type) && order.total_estimated_hours && order.total_estimated_hours > 0 && order.hourly_rate) {
+                  const weeksPerMonth = 4.33; // Average weeks per month
+                  const recurrenceInterval = order.object?.recurrence_interval_weeks || 1;
+                  const occurrencesPerMonth = weeksPerMonth / recurrenceInterval;
+                  const monthlyTotal = order.total_estimated_hours * order.hourly_rate * occurrencesPerMonth;
+
+                  return (
+                    <div className="space-y-1">
+                      <p className="font-medium text-muted-foreground">Monatliche Hochrechnung</p>
+                      <div className="p-3 bg-green-50 rounded-lg border border-green-200">
+                        <p className="text-sm text-muted-foreground">
+                          {occurrencesPerMonth.toFixed(2)}x pro Monat
+                          {recurrenceInterval > 1 && ` (alle ${recurrenceInterval} Wochen)`}
+                        </p>
+                        <p className="text-2xl font-bold text-green-600">
+                          {monthlyTotal.toFixed(2)} €
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {order.total_estimated_hours.toFixed(2)}h × {order.hourly_rate.toFixed(2)} €/h × {occurrencesPerMonth.toFixed(2)}x
+                        </p>
+                      </div>
+                    </div>
+                  );
+                }
+
+                return null;
+              })()}
+
               <div className="space-y-1 md:col-span-2">
                 <p className="font-medium text-muted-foreground">Notizen</p>
                 <p className="whitespace-pre-wrap">{order.notes || 'Keine Notizen vorhanden.'}</p>

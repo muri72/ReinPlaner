@@ -19,6 +19,8 @@ interface DisplayOrder {
   object_address: string | null;
   order_type: string;
   total_estimated_hours: number | null;
+  fixed_monthly_price: number | null;
+  hourly_rate: number | null;
   employee_first_names: string[] | null;
   employee_last_names: string[] | null;
   // For better hour display
@@ -163,6 +165,83 @@ export function OrdersGridView({ orders, employees, onActionSuccess }: OrdersGri
                   recurrenceIntervalWeeks={order.object?.recurrence_interval_weeks || 1}
                 />
               )}
+
+              {(() => {
+                // For recurring, substitution, and permanent orders with flat rate, show only monthly cost
+                if (['recurring', 'substitution', 'permanent'].includes(order.order_type) && order.fixed_monthly_price && order.fixed_monthly_price > 0) {
+                  return (
+                    <div className="mt-2 p-2 bg-green-50 rounded-md border border-green-200">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-medium text-muted-foreground">Monatliche Kosten:</span>
+                        <span className="text-sm font-semibold text-green-600">{order.fixed_monthly_price.toFixed(2)} €</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">pro Monat</p>
+                    </div>
+                  );
+                }
+
+                // For one-time orders with flat rate
+                if (order.fixed_monthly_price && order.fixed_monthly_price > 0) {
+                  return (
+                    <div className="mt-2 p-2 bg-primary/5 rounded-md border border-primary/10">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-medium text-muted-foreground">Pauschale:</span>
+                        <span className="text-sm font-semibold">{order.fixed_monthly_price.toFixed(2)} €</span>
+                      </div>
+                    </div>
+                  );
+                }
+
+                // For hourly rates
+                if (order.total_estimated_hours && order.total_estimated_hours > 0 && order.service_type) {
+                  return (
+                    <div className="mt-2 p-2 bg-blue-5 rounded-md border border-blue-200">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-medium text-muted-foreground">Zeitaufwand:</span>
+                        <span className="text-sm font-semibold">
+                          {order.total_estimated_hours.toFixed(2)} Std.
+                          {order.hourly_rate && (
+                            <span className="text-xs text-muted-foreground ml-2">
+                              × {order.hourly_rate.toFixed(2)} €/h
+                            </span>
+                          )}
+                        </span>
+                      </div>
+                      {order.hourly_rate && (
+                        <div className="mt-1 text-right">
+                          <span className="text-xs font-medium">Gesamt: {(order.total_estimated_hours * order.hourly_rate).toFixed(2)} €</span>
+                        </div>
+                      )}
+
+                      {/* Monthly Extrapolation for hourly rates - only for recurring, substitution, and permanent */}
+                      {['recurring', 'substitution', 'permanent'].includes(order.order_type) && (() => {
+                        if (order.hourly_rate && order.total_estimated_hours > 0 && order.service_type) {
+                          const weeksPerMonth = 4.33; // Average weeks per month
+                          const recurrenceInterval = order.object?.recurrence_interval_weeks || 1;
+                          const occurrencesPerMonth = weeksPerMonth / recurrenceInterval;
+                          const monthlyTotal = order.total_estimated_hours * order.hourly_rate * occurrencesPerMonth;
+
+                          return (
+                            <div className="mt-2 p-2 bg-green-50 rounded-md border border-green-200">
+                              <p className="text-xs text-muted-foreground">
+                                {occurrencesPerMonth.toFixed(2)}x pro Monat
+                                {recurrenceInterval > 1 && ` (alle ${recurrenceInterval} Wochen)`}
+                              </p>
+                              <p className="text-sm font-bold text-green-600">
+                                {monthlyTotal.toFixed(2)} €
+                              </p>
+                            </div>
+                          );
+                        }
+                        return null;
+                      })()}
+                    </div>
+                  );
+                }
+
+                return null;
+              })()}
+
               <div className="flex flex-wrap items-center gap-2 pt-2">
                 <Badge variant={getStatusBadgeVariant(order.status)}>{order.status}</Badge>
                 <Badge variant={getPriorityBadgeVariant(order.priority)}>{order.priority}</Badge>
