@@ -131,7 +131,7 @@ function MonthDayCell({ day, monthStart, employeeId, employee, activeDragId, onA
                   {dayData.assignments.map((assignment: any) => (
                     <div key={assignment.id} className="flex items-center gap-1">
                       <span className="font-medium truncate">{assignment.title}</span>
-                      <span className="text-muted-foreground">({assignment.hours.toFixed(1)}h)</span>
+                      <span className="text-muted-foreground">({assignment.hours.toFixed(2)}h)</span>
                     </div>
                   ))}
                 </div>

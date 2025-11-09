@@ -135,7 +135,7 @@ export function OrdersGridView({ orders, employees, onActionSuccess }: OrdersGri
                                     <div key={day} className="flex items-center gap-1 bg-primary/5 px-2 py-1 rounded-md border border-primary/10">
                                       <span className="text-xs font-medium">{dayNames[day]}</span>
                                       <span className="text-xs text-muted-foreground">
-                                        {hours.toFixed(1)}h
+                                        {hours.toFixed(2)}h
                                       </span>
                                     </div>
                                   );

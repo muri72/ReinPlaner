@@ -524,7 +524,7 @@ export function MobilePlanningCalendar({
                                         (assignment.endTime ?? "17:00")}
                                     </span>
                                     <span>•</span>
-                                    <span>{assignment.hours.toFixed(1)}h</span>
+                                    <span>{assignment.hours.toFixed(2)}h</span>
                                   </div>
                                   {assignment.service_type && (
                                     <div className="flex items-center gap-2 text-xs text-muted-foreground">

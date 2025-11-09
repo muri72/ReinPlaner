@@ -248,30 +248,20 @@ export function WorkTimeReportForm() {
 
       {(objectReportData || employeeReportData) && (
         <div className="space-y-4">
-          <div ref={reportTableRef} className="p-4 bg-white dark:bg-gray-900 rounded-md shadow-neumorphic glassmorphism-card">
+          <div ref={reportTableRef} className="p-6 bg-card border rounded-lg shadow-sm dark:border-border">
             {objectReportData && (
               <>
                 <h3 className="text-lg font-bold mb-4">Bericht für {objects.find(obj => obj.id === form.getValues("objectId"))?.name} - {months.find(m => m.value === form.getValues("month"))?.label} {form.getValues("year")}</h3>
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Datum</TableHead>
-                      <TableHead>Mitarbeiter</TableHead>
-                      <TableHead>Start</TableHead>
-                      <TableHead>Ende</TableHead>
-                      <TableHead>Pause</TableHead> {/* Moved Pause column */}
-                      <TableHead>Arbeitsstunden (Netto)</TableHead> {/* Renamed Duration to Arbeitsstunden */}
+                      <TableHead>Datum</TableHead><TableHead>Mitarbeiter</TableHead><TableHead>Start</TableHead><TableHead>Ende</TableHead><TableHead>Pause</TableHead><TableHead>Arbeitsstunden (Netto)</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {objectReportData.entries.map(entry => (
                       <TableRow key={entry.id}>
-                        <TableCell>{entry.date}</TableCell>
-                        <TableCell>{entry.employeeName}</TableCell>
-                        <TableCell>{entry.startTime}</TableCell>
-                        <TableCell>{entry.endTime}</TableCell>
-                        <TableCell>{formatDuration(entry.breakMinutes)}</TableCell> {/* Pause column */}
-                        <TableCell>{formatDuration(entry.duration - entry.breakMinutes)}</TableCell> {/* Arbeitsstunden (Netto) */}
+                        <TableCell>{entry.date}</TableCell><TableCell>{entry.employeeName}</TableCell><TableCell>{entry.startTime}</TableCell><TableCell>{entry.endTime}</TableCell><TableCell>{formatDuration(entry.breakMinutes)}</TableCell><TableCell>{formatDuration(entry.duration - entry.breakMinutes)}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -285,25 +275,13 @@ export function WorkTimeReportForm() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Datum</TableHead>
-                      <TableHead>Objekt</TableHead>
-                      <TableHead>Kunde</TableHead>
-                      <TableHead>Start</TableHead>
-                      <TableHead>Ende</TableHead>
-                      <TableHead>Pause</TableHead> {/* Moved Pause column */}
-                      <TableHead>Arbeitsstunden (Netto)</TableHead> {/* Renamed Duration to Arbeitsstunden */}
+                      <TableHead>Datum</TableHead><TableHead>Objekt</TableHead><TableHead>Kunde</TableHead><TableHead>Start</TableHead><TableHead>Ende</TableHead><TableHead>Pause</TableHead><TableHead>Arbeitsstunden (Netto)</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {employeeReportData.entries.map(entry => (
                       <TableRow key={entry.id}>
-                        <TableCell>{entry.date}</TableCell>
-                        <TableCell>{entry.objectName}</TableCell>
-                        <TableCell>{entry.customerName}</TableCell>
-                        <TableCell>{entry.startTime}</TableCell>
-                        <TableCell>{entry.endTime}</TableCell>
-                        <TableCell>{formatDuration(entry.breakMinutes)}</TableCell> {/* Pause column */}
-                        <TableCell>{formatDuration(entry.duration - entry.breakMinutes)}</TableCell> {/* Arbeitsstunden (Netto) */}
+                        <TableCell>{entry.date}</TableCell><TableCell>{entry.objectName}</TableCell><TableCell>{entry.customerName}</TableCell><TableCell>{entry.startTime}</TableCell><TableCell>{entry.endTime}</TableCell><TableCell>{formatDuration(entry.breakMinutes)}</TableCell><TableCell>{formatDuration(entry.duration - entry.breakMinutes)}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
