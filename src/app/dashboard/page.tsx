@@ -47,7 +47,7 @@ export default function DashboardPage() {
 
   const today = useMemo(() => new Date(), []);
   const formattedDate = useMemo(() => {
-    return format(today, 'EEEE, dd. MMMy yyyy', { locale: de });
+    return format(today, 'EEEE, dd. MMMM yyyy', { locale: de });
   }, [today]);
 
   // Memoized data processing to prevent unnecessary re-calculations

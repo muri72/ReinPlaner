@@ -1,8 +1,8 @@
-"use server";
+// This file contains client-side functions for fetching report data
+// Server Actions are not used here to avoid 404 errors
 
-import { createClient, createAdminClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/client";
 import { endOfMonth, startOfMonth } from "date-fns";
-import { sendNotification } from "@/lib/actions/notifications";
 
 // Definieren Sie die Schnittstellen hier, damit sie importiert und importiert werden können
 export interface ReportEntry {
@@ -51,7 +51,7 @@ function calculateBreakMinutesFallback(grossDurationMinutes: number): number {
 }
 
 export async function getWorkTimeReport(objectId: string, month: number, year: number): Promise<{ success: boolean; message: string; data: WorkTimeReportData | null }> {
-  const supabase = createAdminClient(); // HIER: createAdminClient() verwenden
+  const supabase = createClient();
 
   const startDate = startOfMonth(new Date(year, month - 1, 1)); // month is 1-indexed from form
   const endDate = endOfMonth(new Date(year, month - 1, 1));
@@ -115,7 +115,7 @@ export async function getWorkTimeReport(objectId: string, month: number, year: n
 
 // Neue Funktion für den Mitarbeiter-Arbeitszeitnachweis
 export async function getEmployeeWorkTimeReport(employeeId: string, month: number, year: number): Promise<{ success: boolean; message: string; data: EmployeeWorkTimeReportData | null }> {
-  const supabase = createAdminClient();
+  const supabase = createClient();
   const startDate = startOfMonth(new Date(year, month - 1, 1));
   const endDate = endOfMonth(new Date(year, month - 1, 1));
 
@@ -195,7 +195,7 @@ export async function sendWorkTimeReportToCustomer(
   customerName: string,
   reportTitle: string,
 ): Promise<{ success: boolean; message: string }> {
-  const supabase = createAdminClient(); // Use admin client for sending emails
+  const supabase = createClient();
 
   let reportData: WorkTimeReportData | EmployeeWorkTimeReportData | null = null;
   let reportResult;

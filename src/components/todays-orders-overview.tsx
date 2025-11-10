@@ -66,23 +66,34 @@ export function TodaysOrdersOverview() {
     const today = new Date();
     const todayDayOfWeek = today.getDay();
     const currentDayKey = dayNames[todayDayOfWeek];
-  
+
     const recurrenceInterval = assignment.assigned_recurrence_interval_weeks || order.object?.recurrence_interval_weeks || 1;
     const startWeekOffset = assignment.assigned_start_week_offset || order.object?.start_week_offset || 0;
     const orderStartDate = order.recurring_start_date ? new Date(order.recurring_start_date) : today;
-    
+
     const daysPassed = differenceInDays(today, orderStartDate);
     if (daysPassed < 0) return null;
-  
+
     const weeksPassed = Math.floor(daysPassed / 7);
     const effectiveWeekIndex = (weeksPassed + startWeekOffset) % recurrenceInterval;
-  
-    const weekSchedule = assignment.assigned_daily_schedules?.[effectiveWeekIndex];
-    const daySchedule = (weekSchedule as any)?.[currentDayKey];
-  
+
+    // Try employee-specific schedule first, fallback to object schedule
+    let daySchedule = null;
+
+    if (assignment.assigned_daily_schedules && assignment.assigned_daily_schedules.length > 0) {
+      const weekSchedule = assignment.assigned_daily_schedules[effectiveWeekIndex];
+      daySchedule = (weekSchedule as any)?.[currentDayKey];
+    }
+
+    // Fallback to object schedule if no employee-specific schedule
+    if (!daySchedule && order.object?.daily_schedules && order.object.daily_schedules.length > 0) {
+      const weekSchedule = order.object.daily_schedules[effectiveWeekIndex];
+      daySchedule = (weekSchedule as any)?.[currentDayKey];
+    }
+
     const startTime = daySchedule?.start;
     const endTime = daySchedule?.end;
-  
+
     if (startTime && endTime) {
       return { start: startTime, end: endTime };
     }
@@ -90,15 +101,41 @@ export function TodaysOrdersOverview() {
   };
 
   const getOrderTimeRangeForToday = (order: DisplayOrder): { start: Date; end: Date } | null => {
+    // Get all valid assigned times for today
     const assignedTimes = order.assignedEmployees
       .map(emp => getAssignedTimeForEmployeeToday(emp, order))
-      .filter((time): time is { start: string; end: string } => time !== null);
+      .filter((time): time is { start: string; end: string } => time !== null && time.start && time.end);
 
-    if (assignedTimes.length === 0) return null;
+    // If no valid times found, return null
+    if (assignedTimes.length === 0) {
+      return null;
+    }
 
     const now = new Date();
-    const startDates = assignedTimes.map(t => parse(t.start, 'HH:mm', now));
-    const endDates = assignedTimes.map(t => parse(t.end, 'HH:mm', now));
+
+    // Parse all start and end times
+    const startDates: Date[] = [];
+    const endDates: Date[] = [];
+
+    for (const time of assignedTimes) {
+      try {
+        const startDate = parse(time.start, 'HH:mm', now);
+        const endDate = parse(time.end, 'HH:mm', now);
+
+        // Only add if parsing was successful
+        if (!isNaN(startDate.getTime()) && !isNaN(endDate.getTime())) {
+          startDates.push(startDate);
+          endDates.push(endDate);
+        }
+      } catch (error) {
+        console.warn(`Failed to parse time for order ${order.id}:`, error);
+      }
+    }
+
+    // If no valid dates after parsing, return null
+    if (startDates.length === 0 || endDates.length === 0) {
+      return null;
+    }
 
     const earliestStart = new Date(Math.min(...startDates.map(d => d.getTime())));
     const latestEnd = new Date(Math.max(...endDates.map(d => d.getTime())));
@@ -113,29 +150,50 @@ export function TodaysOrdersOverview() {
     const now = new Date();
 
     orders.forEach(order => {
+      // If order is marked as completed in database, always show as completed
       if (order.status === 'completed') {
         completed.push(order);
         return;
       }
 
       const timeRange = getOrderTimeRangeForToday(order);
-      if (timeRange) {
-        if (now < timeRange.start) {
-          upcoming.push(order);
-        } else if (now > timeRange.end) {
-          completed.push(order);
-        } else {
-          inProgress.push(order);
-        }
-      } else {
+
+      // Skip orders that don't have a valid time range for today
+      // (they're not actually scheduled for today)
+      if (!timeRange || !timeRange.start || !timeRange.end) {
+        return;
+      }
+
+      const nowTime = now.getTime();
+      const startTime = timeRange.start.getTime();
+      const endTime = timeRange.end.getTime();
+
+      // Add a 10-minute buffer for status transitions
+      const inProgressBuffer = 10 * 60 * 1000; // 10 minutes in ms
+
+      // Upcoming: More than 10 minutes before start time
+      if (nowTime < (startTime - inProgressBuffer)) {
         upcoming.push(order);
+      }
+      // In Progress: Between 10 min before start and 10 min after end
+      else if (nowTime >= (startTime - inProgressBuffer) && nowTime <= (endTime + inProgressBuffer)) {
+        inProgress.push(order);
+      }
+      // Completed: More than 10 minutes after end time
+      else {
+        completed.push(order);
       }
     });
 
     const sortOrdersByStartTime = (a: DisplayOrder, b: DisplayOrder) => {
-      const timeA = getOrderTimeRangeForToday(a)?.start.getTime() || Infinity;
-      const timeB = getOrderTimeRangeForToday(b)?.start.getTime() || Infinity;
-      return timeA - timeB;
+      const timeRangeA = getOrderTimeRangeForToday(a);
+      const timeRangeB = getOrderTimeRangeForToday(b);
+
+      // Handle null values - put them at the end
+      if (!timeRangeA || !timeRangeA.start) return 1;
+      if (!timeRangeB || !timeRangeB.start) return -1;
+
+      return timeRangeA.start.getTime() - timeRangeB.start.getTime();
     };
 
     setUpcomingOrders(upcoming.sort(sortOrdersByStartTime));
