@@ -46,7 +46,7 @@ interface DisplayOrder {
   object_name: string | null;
   order_type: string;
   recurring_start_date: string | null;
-  object: { recurrence_interval_weeks: number; start_week_offset: number; } | null;
+  object: { recurrence_interval_weeks: number; start_week_offset: number; daily_schedules: any[] } | null;
 }
 
 const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as const;
@@ -104,7 +104,7 @@ export function TodaysOrdersOverview() {
     // Get all valid assigned times for today
     const assignedTimes = order.assignedEmployees
       .map(emp => getAssignedTimeForEmployeeToday(emp, order))
-      .filter((time): time is { start: string; end: string } => time !== null && time.start && time.end);
+      .filter((time): time is { start: string; end: string } => time !== null && !!time.start && !!time.end);
 
     // If no valid times found, return null
     if (assignedTimes.length === 0) {
