@@ -50,7 +50,7 @@ const weeklyScheduleSchema = z.object({
 export const employeeSchema = z.object({
   first_name: z.string().min(1, "Vorname ist erforderlich"),
   last_name: z.string().min(1, "Nachname ist erforderlich"),
-  email: z.string().email("Ungültige E-Mail-Adresse").optional().nullable(),
+  email: z.string().optional().nullable().email("Ungültige E-Mail-Adresse"),
   phone: z.string().optional().nullable(),
   address: z.string().optional().nullable(),
   date_of_birth: z.date().optional().nullable(),
