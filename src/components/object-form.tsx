@@ -619,7 +619,7 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
                   <div key={day} className="border p-3 rounded-md space-y-2">
                     <h5 className="font-medium text-sm">{germanDayNames[day]}</h5>
                     <div>
-                      <Label htmlFor={hoursFieldName} className="text-xs">Stunden (Netto)</Label>
+                      <Label htmlFor={hoursFieldName} className="text-xs">Stunden</Label>
                       <Input
                         id={hoursFieldName}
                         type="number"

@@ -53,7 +53,7 @@ export function EmployeeTimeEntriesList({ timeEntries }: EmployeeTimeEntriesList
             <TableHead>Datum</TableHead>
             <TableHead>Start</TableHead>
             <TableHead>Ende</TableHead>
-            <TableHead>Dauer (Netto)</TableHead>
+            <TableHead>Dauer</TableHead>
             <TableHead>Auftrag/Objekt</TableHead>
             <TableHead>Typ</TableHead>
             <TableHead className="text-right">Aktionen</TableHead>

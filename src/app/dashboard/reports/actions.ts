@@ -215,7 +215,7 @@ export async function sendWorkTimeReportToCustomer(
   let emailHtml = `
     <p>Sehr geehrte/r ${customerName},</p>
     <p>anbei erhalten Sie Ihren Arbeitszeitnachweis für ${reportTitle} im Monat ${new Date(year, month - 1).toLocaleString('de-DE', { month: 'long', year: 'numeric' })}.</p>
-    <p><strong>Gesamtstunden (Netto):</strong> ${reportData.totalHours} Stunden</p>
+    <p><strong>Gesamtstunden:</strong> ${reportData.totalHours} Stunden</p>
     <p>Sie können den vollständigen Bericht jederzeit in Ihrem Kundenportal einsehen:</p>
     <p><a href="${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/portal/reports?reportType=${reportType}&id=${id}&month=${month}&year=${year}">Bericht im Portal ansehen</a></p>
     <p>Mit freundlichen Grüßen,</p>

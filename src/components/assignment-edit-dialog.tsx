@@ -282,7 +282,7 @@ export function AssignmentEditDialog({ orderId, children, onSuccess }: Assignmen
                         <div key={day} className="border p-3 rounded-md space-y-2">
                           <h5 className="font-medium text-sm">{germanDayNames[day]}</h5>
                           <div>
-                            <Label htmlFor={hoursFieldName} className="text-xs">Stunden (Netto)</Label>
+                            <Label htmlFor={hoursFieldName} className="text-xs">Stunden</Label>
                             <Input id={hoursFieldName} type="number" step="0.01" min="0" max="24" {...form.register(hoursFieldName)} onChange={(e) => handleDailyHoursChange(weekIndex, day, e.target.value)} />
                           </div>
                           <div>

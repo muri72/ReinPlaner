@@ -51,7 +51,7 @@ export function ObjectScheduleView({ object }: ObjectScheduleViewProps) {
               <TableHeader>
                 <TableRow>
                   <TableHead>Wochentag</TableHead>
-                  <TableHead>Stunden (Netto)</TableHead>
+                  <TableHead>Stunden</TableHead>
                   <TableHead>Startzeit</TableHead>
                   <TableHead>Endzeit</TableHead>
                 </TableRow>

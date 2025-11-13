@@ -12,8 +12,7 @@ import { createClient } from "@/lib/supabase/client";
 import { getWorkTimeReport, WorkTimeReportData, getEmployeeWorkTimeReport, EmployeeWorkTimeReportData, sendWorkTimeReportToCustomer } from "@/app/dashboard/reports/actions";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatDuration } from "@/lib/utils";
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
+import { generateProfessionalPDF } from "@/components/pdf-generator";
 import { Download, Send } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "./ui/input";
@@ -98,38 +97,39 @@ export function WorkTimeReportForm() {
   };
 
   const handleExportPdf = async () => {
-    if (!reportTableRef.current) {
+    if (!objectReportData && !employeeReportData) {
       toast.error("Keine Berichtsdaten zum Exportieren gefunden.");
       return;
     }
+
     setLoadingReport(true);
     try {
-      const canvas = await html2canvas(reportTableRef.current, { scale: 2 });
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const imgWidth = 210;
-      const pageHeight = 297;
-      const imgHeight = canvas.height * imgWidth / canvas.width;
-      let heightLeft = imgHeight;
-      let position = 0;
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
-      while (heightLeft >= 0) {
-        position = heightLeft - imgHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight;
-      }
-      
-      const monthLabel = months.find(m => m.value === form.getValues("month"))?.label;
-      let fileName = "Arbeitszeitnachweis.pdf";
+      const monthLabel = months.find(m => m.value === form.getValues("month"))?.label || form.getValues("month");
+      const currentYear = form.getValues("year");
+
       if (objectReportData) {
         const selectedObject = objects.find(obj => obj.id === form.getValues("objectId"));
-        fileName = `Arbeitszeitnachweis_${selectedObject?.name}_${monthLabel}_${form.getValues("year")}.pdf`;
+        await generateProfessionalPDF({
+          data: objectReportData,
+          reportType: 'object',
+          title: `Arbeitszeitnachweis ${selectedObject?.name || ''}`,
+          objectName: selectedObject?.name,
+          month: monthLabel,
+          year: currentYear,
+          objects,
+          objectId: form.getValues("objectId") || undefined,
+        });
       } else if (employeeReportData) {
-        fileName = `Arbeitszeitnachweis_${employeeReportData.employeeName.replace(' ', '_')}_${monthLabel}_${form.getValues("year")}.pdf`;
+        await generateProfessionalPDF({
+          data: employeeReportData,
+          reportType: 'employee',
+          title: `Arbeitszeitnachweis ${employeeReportData.employeeName}`,
+          employeeName: employeeReportData.employeeName,
+          month: monthLabel,
+          year: currentYear,
+        });
       }
-      pdf.save(fileName);
+
       toast.success("PDF erfolgreich exportiert!");
     } catch (error) {
       console.error("Fehler beim PDF-Export:", error);
@@ -255,7 +255,7 @@ export function WorkTimeReportForm() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Datum</TableHead><TableHead>Mitarbeiter</TableHead><TableHead>Start</TableHead><TableHead>Ende</TableHead><TableHead>Pause</TableHead><TableHead>Arbeitsstunden (Netto)</TableHead>
+                      <TableHead>Datum</TableHead><TableHead>Mitarbeiter</TableHead><TableHead>Start</TableHead><TableHead>Ende</TableHead><TableHead>Pause</TableHead><TableHead>Arbeitsstunden</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -266,7 +266,34 @@ export function WorkTimeReportForm() {
                     ))}
                   </TableBody>
                 </Table>
-                <div className="text-right font-bold text-lg mt-4">Gesamtstunden: {objectReportData.totalHours}</div>
+                <div className="text-right font-bold text-lg mt-4">
+                  {/* Employee breakdown for multiple employees */}
+                  {(() => {
+                    const employeeHours: { [key: string]: number } = {};
+                    objectReportData.entries.forEach(entry => {
+                      const employeeName = entry.employeeName;
+                      const netHours = (entry.duration - entry.breakMinutes) / 60;
+                      if (employeeHours[employeeName]) {
+                        employeeHours[employeeName] += netHours;
+                      } else {
+                        employeeHours[employeeName] = netHours;
+                      }
+                    });
+
+                    if (Object.keys(employeeHours).length > 1) {
+                      return (
+                        <div className="text-[#1a365d]">
+                          <div className="font-semibold mb-1">Gesamtarbeitsstunden pro Mitarbeiter:</div>
+                          {Object.entries(employeeHours).map(([name, hours]) => (
+                            <div key={name} className="ml-4 font-medium">{name}: {hours.toFixed(2)} Stunden</div>
+                          ))}
+                          <div className="mt-2 text-lg font-bold">Gesamtarbeitsstunden: {objectReportData.totalHours} Stunden</div>
+                        </div>
+                      );
+                    }
+                    return <div className="text-[#1a365d]">Gesamtarbeitsstunden: {objectReportData.totalHours} Stunden</div>;
+                  })()}
+                </div>
               </>
             )}
             {employeeReportData && (
@@ -275,7 +302,7 @@ export function WorkTimeReportForm() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Datum</TableHead><TableHead>Objekt</TableHead><TableHead>Kunde</TableHead><TableHead>Start</TableHead><TableHead>Ende</TableHead><TableHead>Pause</TableHead><TableHead>Arbeitsstunden (Netto)</TableHead>
+                      <TableHead>Datum</TableHead><TableHead>Objekt</TableHead><TableHead>Kunde</TableHead><TableHead>Start</TableHead><TableHead>Ende</TableHead><TableHead>Pause</TableHead><TableHead>Arbeitsstunden</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -286,7 +313,7 @@ export function WorkTimeReportForm() {
                     ))}
                   </TableBody>
                 </Table>
-                <div className="text-right font-bold text-lg mt-4">Gesamtstunden: {employeeReportData.totalHours}</div>
+                <div className="text-right font-bold text-lg mt-4 text-[#1a365d]">Gesamtarbeitsstunden: {employeeReportData.totalHours} Stunden</div>
               </>
             )}
           </div>
