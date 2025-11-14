@@ -56,6 +56,15 @@ export async function getWorkTimeReport(objectId: string, month: number, year: n
   const startDate = startOfMonth(new Date(year, month - 1, 1)); // month is 1-indexed from form
   const endDate = endOfMonth(new Date(year, month - 1, 1));
 
+  console.log(`[ACTIONS] Querying time entries for object ${objectId}, month ${month}/${year}`);
+  console.log(`[ACTIONS] Date range: ${startDate.toISOString()} to ${endDate.toISOString()}`);
+  console.log(`[ACTIONS] Start date (local): ${startDate.toLocaleDateString('de-DE')}`);
+  console.log(`[ACTIONS] End date (local): ${endDate.toLocaleDateString('de-DE')}`);
+
+  // Debug: Check what dates exist for this object in October
+  const debugStart = new Date(year, month - 1, 1);
+  const debugEnd = new Date(year, month, 0); // Last day of month
+
   const { data: timeEntries, error } = await supabase
     .from('time_entries')
     .select(`
@@ -72,6 +81,32 @@ export async function getWorkTimeReport(objectId: string, month: number, year: n
     .gte('start_time', startDate.toISOString())
     .lte('start_time', endDate.toISOString())
     .order('start_time', { ascending: true });
+
+  if (timeEntries && timeEntries.length > 0) {
+    console.log(`[ACTIONS] Found ${timeEntries.length} time entries`);
+    console.log(`[ACTIONS] Entry dates (raw):`, timeEntries.map(e => e.start_time).slice(0, 10));
+    console.log(`[ACTIONS] Entry dates (formatted):`, timeEntries.map(e => e.start_time.split('T')[0]).slice(0, 10));
+    console.log(`[ACTIONS] Unique dates:`, [...new Set(timeEntries.map(e => e.start_time.split('T')[0]))]);
+    const object = Array.isArray(timeEntries[0]?.objects) ? timeEntries[0].objects[0] : timeEntries[0]?.objects;
+    console.log(`[ACTIONS] Object name:`, object?.name || 'Unknown');
+  } else {
+    console.log(`[ACTIONS] ❌ No time entries found!`);
+    console.log(`[ACTIONS] Debug: Checking if Oct 3 entries exist for this object...`);
+
+    const { data: oct3Check } = await supabase
+      .from('time_entries')
+      .select('id, start_time, objects(name)')
+      .eq('object_id', objectId)
+      .gte('start_time', `${year}-10-03T00:00:00`)
+      .lt('start_time', `${year}-10-04T00:00:00`);
+
+    if (oct3Check && oct3Check.length > 0) {
+      console.log(`[ACTIONS] ⚠️ Found ${oct3Check.length} Oct 3 entries for this object but they weren't returned by main query!`);
+      console.log(`[ACTIONS] Oct 3 entries:`, oct3Check);
+    } else {
+      console.log(`[ACTIONS] Confirmed: No Oct 3 entries for this object`);
+    }
+  }
 
   if (error) {
     console.error("Fehler beim Laden des Arbeitszeitnachweises:", error?.message || error);

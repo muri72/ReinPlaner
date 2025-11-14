@@ -67,6 +67,7 @@ interface Employee {
   social_security_number: string | null;
   tax_id_number: string | null;
   health_insurance_provider: string | null;
+  can_work_holidays: boolean;
   default_daily_schedules: any[];
   default_recurrence_interval_weeks: number;
   default_start_week_offset: number;
@@ -124,6 +125,10 @@ export function EmployeeDetailTabs({ employee }: EmployeeDetailTabsProps) {
               <div className="space-y-1">
                 <p className="font-medium text-muted-foreground">Krankenkasse</p>
                 <p>{employee.health_insurance_provider || 'N/A'}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="font-medium text-muted-foreground">Bereit für Feiertagsarbeit</p>
+                <p>{employee.can_work_holidays ? 'Ja' : 'Nein'}</p>
               </div>
               <div className="space-y-1">
                 <p className="font-medium text-muted-foreground">Vertragsstart</p>

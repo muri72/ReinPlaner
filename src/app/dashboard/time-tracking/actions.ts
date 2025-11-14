@@ -242,16 +242,55 @@ export async function triggerAutomaticTimeEntryCreation(): Promise<{ success: bo
     return { success: false, message: "Nur Admins können diese Aktion ausführen." };
   }
 
-  const { data: createdCount, error: rpcError } = await supabase.rpc('create_missing_scheduled_time_entries');
+  // Check for existing entries in the last 30 days to avoid duplicates
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-  if (rpcError) {
-    console.error("Fehler beim Ausführen der DB-Funktion:", rpcError?.message || rpcError);
-    return { success: false, message: `Fehler bei der Erstellung: ${rpcError.message}` };
+  const { data: recentEntries, error: checkError } = await supabase
+    .from('time_entries')
+    .select('id, start_time, employee_id, customer_id, object_id, order_id')
+    .gte('created_at', thirtyDaysAgo.toISOString());
+
+  if (checkError) {
+    console.error("Fehler beim Überprüfen vorhandener Einträge:", checkError?.message || checkError);
+    return { success: false, message: "Fehler beim Überprüfen vorhandener Zeiteinträge." };
   }
 
-  revalidatePath("/dashboard/time-tracking");
-  revalidatePath("/dashboard/planning"); // Revalidiere Planungsseite
-  return { success: true, message: `Überprüfung abgeschlossen. ${createdCount} neue Zeiteinträge erstellt.`, createdCount: createdCount ?? 0 };
+  console.log(`Gefundene vorhandene Einträge in den letzten 30 Tagen: ${recentEntries?.length ?? 0}`);
+
+  // Create a map of existing entries to avoid duplicates
+  const existingEntryMap = new Map();
+  if (recentEntries) {
+    recentEntries.forEach(entry => {
+      const key = `${entry.employee_id || 'null'}_${entry.customer_id || 'null'}_${entry.object_id || 'null'}_${entry.order_id || 'null'}_${entry.start_time.split('T')[0]}`;
+      existingEntryMap.set(key, true);
+    });
+  }
+
+  console.log(`Karte für Duplikatprüfung erstellt: ${existingEntryMap.size} Einträge`);
+
+  // Call the database function to create missing entries with duplicate prevention
+  try {
+    // Call the updated function that now properly handles NULL user_id
+    const { data: createdCount, error: rpcError } = await supabase.rpc('create_missing_scheduled_time_entries');
+
+    if (rpcError) {
+      console.error("Fehler beim Ausführen der DB-Funktion:", rpcError);
+      return {
+        success: false,
+        message: `Die automatische Erstellung konnte nicht durchgeführt werden. Fehler: ${rpcError.message}`,
+        createdCount: 0
+      };
+    }
+
+    console.log(`Erstelle ${createdCount ?? 0} Einträge mit RPC-Funktion`);
+    revalidatePath("/dashboard/time-tracking");
+    revalidatePath("/dashboard/planning");
+    return { success: true, message: `Überprüfung abgeschlossen. ${createdCount ?? 0} neue Zeiteinträge erstellt.`, createdCount: createdCount ?? 0 };
+  } catch (err: any) {
+    console.error("Unerwarteter Fehler:", err);
+    return { success: false, message: `Unerwarteter Fehler: ${err.message}` };
+  }
 }
 
 interface TimeEntry {

@@ -11,8 +11,9 @@ import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { getWorkTimeReport, WorkTimeReportData, getEmployeeWorkTimeReport, EmployeeWorkTimeReportData, sendWorkTimeReportToCustomer } from "@/app/dashboard/reports/actions";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { formatDuration } from "@/lib/utils";
+import { formatDuration, formatDateWithWeekday } from "@/lib/utils";
 import { generateProfessionalPDF } from "@/components/pdf-generator";
+import { settingsService } from "@/lib/services/settings-service";
 import { Download, Send } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "./ui/input";
@@ -60,6 +61,8 @@ export function WorkTimeReportForm() {
   const selectedReportType = form.watch("reportType");
   const selectedObjectId = form.watch("objectId");
   const selectedEmployeeId = form.watch("employeeId");
+  const [bundeslandCode, setBundeslandCode] = useState<string>('HH'); // Standard: Hamburg
+  const [workTypes, setWorkTypes] = useState<{ [key: string]: { type: 'normal' | 'holiday' | 'weekend'; label: string; color: string; holidayName?: string } }>({});
 
   useEffect(() => {
     const fetchDropdownData = async () => {
@@ -67,6 +70,10 @@ export function WorkTimeReportForm() {
       if (objectsData) setObjects(objectsData);
       const { data: employeesData } = await supabase.from('employees').select('id, first_name, last_name').order('last_name', { ascending: true });
       if (employeesData) setEmployees(employeesData);
+
+      // Load bundesland from settings (default to HH if not found)
+      const code = await settingsService.getSetting('default_bundesland') || 'HH';
+      setBundeslandCode(code);
     };
     fetchDropdownData();
   }, [supabase]);
@@ -75,11 +82,72 @@ export function WorkTimeReportForm() {
     setLoadingReport(true);
     setObjectReportData(null);
     setEmployeeReportData(null);
+    setWorkTypes({});
 
     if (data.reportType === 'object' && data.objectId) {
       const result = await getWorkTimeReport(data.objectId, parseInt(data.month), parseInt(data.year));
       if (result.success && result.data) {
         setObjectReportData(result.data);
+
+        // BATCH PROCESSING: Get all unique dates and check holidays in ONE query
+        const uniqueDates = [...new Set(result.data.entries.map(e => {
+          const [day, month, year] = e.date.split('.');
+          return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+        }))];
+
+        console.log(`[REPORTS] Batch processing ${result.data.entries.length} entries with ${uniqueDates.length} unique dates`);
+        console.log(`[REPORTS] Unique dates:`, uniqueDates);
+
+        // Get all holidays for these dates in ONE database call
+        const holidayResults = await settingsService.checkMultipleHolidays(uniqueDates, bundeslandCode);
+
+        // Build work types map
+        const workTypesMap: { [key: string]: { type: 'normal' | 'holiday' | 'weekend'; label: string; color: string; holidayName?: string } } = {};
+        let holidayCount = 0;
+        let weekendCount = 0;
+
+        result.data.entries.forEach(entry => {
+          const [day, month, year] = entry.date.split('.');
+          const isoDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+
+          // Check if it's a holiday
+          const holiday = holidayResults[isoDate];
+
+          if (holiday) {
+            workTypesMap[entry.id] = {
+              type: 'holiday',
+              label: 'Feiertag',
+              color: '#dc2626',
+              holidayName: holiday.name,
+            };
+            holidayCount++;
+            console.log(`[REPORTS] ✓ Holiday detected: ${entry.date} (${entry.employeeName}) - ${holiday.name}`);
+          } else {
+            // Check if it's a weekend
+            const date = new Date(isoDate);
+            const dayOfWeek = date.getDay();
+
+            if (dayOfWeek === 0 || dayOfWeek === 6) {
+              workTypesMap[entry.id] = {
+                type: 'weekend',
+                label: 'Wochenende',
+                color: '#7c3aed',
+              };
+              weekendCount++;
+              console.log(`[REPORTS] Weekend detected: ${entry.date} (${entry.employeeName})`);
+            } else {
+              workTypesMap[entry.id] = {
+                type: 'normal',
+                label: 'Normal',
+                color: '#16a34a',
+              };
+            }
+          }
+        });
+
+        console.log(`[REPORTS] Summary: ${holidayCount} holidays, ${weekendCount} weekends detected out of ${result.data.entries.length} entries`);
+        setWorkTypes(workTypesMap);
+
         toast.success(result.message);
       } else {
         toast.error(result.message);
@@ -88,6 +156,65 @@ export function WorkTimeReportForm() {
       const result = await getEmployeeWorkTimeReport(data.employeeId, parseInt(data.month), parseInt(data.year));
       if (result.success && result.data) {
         setEmployeeReportData(result.data);
+
+        // BATCH PROCESSING: Get all unique dates and check holidays in ONE query
+        const uniqueDates = [...new Set(result.data.entries.map(e => {
+          const [day, month, year] = e.date.split('.');
+          return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+        }))];
+
+        console.log(`[REPORTS] Batch processing ${result.data.entries.length} entries with ${uniqueDates.length} unique dates`);
+
+        // Get all holidays for these dates in ONE database call
+        const holidayResults = await settingsService.checkMultipleHolidays(uniqueDates, bundeslandCode);
+
+        // Build work types map
+        const workTypesMap: { [key: string]: { type: 'normal' | 'holiday' | 'weekend'; label: string; color: string; holidayName?: string } } = {};
+        let holidayCount = 0;
+        let weekendCount = 0;
+
+        result.data.entries.forEach(entry => {
+          const [day, month, year] = entry.date.split('.');
+          const isoDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+
+          // Check if it's a holiday
+          const holiday = holidayResults[isoDate];
+
+          if (holiday) {
+            workTypesMap[entry.id] = {
+              type: 'holiday',
+              label: 'Feiertag',
+              color: '#dc2626',
+              holidayName: holiday.name,
+            };
+            holidayCount++;
+            console.log(`[REPORTS] ✓ Holiday detected: ${entry.date} (${entry.objectName}) - ${holiday.name}`);
+          } else {
+            // Check if it's a weekend
+            const date = new Date(isoDate);
+            const dayOfWeek = date.getDay();
+
+            if (dayOfWeek === 0 || dayOfWeek === 6) {
+              workTypesMap[entry.id] = {
+                type: 'weekend',
+                label: 'Wochenende',
+                color: '#7c3aed',
+              };
+              weekendCount++;
+              console.log(`[REPORTS] Weekend detected: ${entry.date} (${entry.objectName})`);
+            } else {
+              workTypesMap[entry.id] = {
+                type: 'normal',
+                label: 'Normal',
+                color: '#16a34a',
+              };
+            }
+          }
+        });
+
+        console.log(`[REPORTS] Summary: ${holidayCount} holidays, ${weekendCount} weekends detected out of ${result.data.entries.length} entries`);
+        setWorkTypes(workTypesMap);
+
         toast.success(result.message);
       } else {
         toast.error(result.message);
@@ -107,6 +234,9 @@ export function WorkTimeReportForm() {
       const monthLabel = months.find(m => m.value === form.getValues("month"))?.label || form.getValues("month");
       const currentYear = form.getValues("year");
 
+      // Get bundesland setting
+      const bundeslandCode = await settingsService.getSetting('default_bundesland') || 'HH';
+
       if (objectReportData) {
         const selectedObject = objects.find(obj => obj.id === form.getValues("objectId"));
         await generateProfessionalPDF({
@@ -114,10 +244,11 @@ export function WorkTimeReportForm() {
           reportType: 'object',
           title: `Arbeitszeitnachweis ${selectedObject?.name || ''}`,
           objectName: selectedObject?.name,
-          month: monthLabel,
+          month: form.getValues("month"), // Use numeric month value, not label
           year: currentYear,
           objects,
           objectId: form.getValues("objectId") || undefined,
+          bundeslandCode,
         });
       } else if (employeeReportData) {
         await generateProfessionalPDF({
@@ -125,8 +256,9 @@ export function WorkTimeReportForm() {
           reportType: 'employee',
           title: `Arbeitszeitnachweis ${employeeReportData.employeeName}`,
           employeeName: employeeReportData.employeeName,
-          month: monthLabel,
+          month: form.getValues("month"), // Use numeric month value, not label
           year: currentYear,
+          bundeslandCode,
         });
       }
 
@@ -259,39 +391,110 @@ export function WorkTimeReportForm() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {objectReportData.entries.map(entry => (
-                      <TableRow key={entry.id}>
-                        <TableCell>{entry.date}</TableCell><TableCell>{entry.employeeName}</TableCell><TableCell>{entry.startTime}</TableCell><TableCell>{entry.endTime}</TableCell><TableCell>{formatDuration(entry.breakMinutes)}</TableCell><TableCell>{formatDuration(entry.duration - entry.breakMinutes)}</TableCell>
-                      </TableRow>
-                    ))}
+                    {objectReportData.entries.map(entry => {
+                      const workType = workTypes[entry.id];
+                      const isHolidayRow = workType?.type === 'holiday';
+                      const isWeekendRow = workType?.type === 'weekend';
+
+                      return (
+                        <TableRow key={entry.id} className={
+                          isHolidayRow ? 'bg-red-50 dark:bg-red-950/20' :
+                          isWeekendRow ? 'bg-purple-50 dark:bg-purple-950/20' : ''
+                        }>
+                          <TableCell>
+                            <div className="font-medium">
+                              {formatDateWithWeekday(entry.date)}
+                              {isHolidayRow && (
+                                <div className="text-xs font-semibold" style={{ color: workType.color }}>
+                                  {workType.holidayName || 'Feiertag'}
+                                </div>
+                              )}
+                              {isWeekendRow && (
+                                <div className="text-xs font-semibold" style={{ color: workType.color }}>
+                                  Wochenende
+                                </div>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>{entry.employeeName}</TableCell>
+                          <TableCell>{entry.startTime}</TableCell>
+                          <TableCell>{entry.endTime}</TableCell>
+                          <TableCell>{formatDuration(entry.breakMinutes)}</TableCell>
+                          <TableCell>{formatDuration(entry.duration - entry.breakMinutes)}</TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
-                <div className="text-right font-bold text-lg mt-4">
-                  {/* Employee breakdown for multiple employees */}
+                <div className="mt-4 space-y-3">
+                  {/* Calculate holiday and weekend hours */}
                   {(() => {
-                    const employeeHours: { [key: string]: number } = {};
+                    let holidayHours = 0;
+                    let regularHours = 0;
+                    let weekendHours = 0;
+
                     objectReportData.entries.forEach(entry => {
-                      const employeeName = entry.employeeName;
                       const netHours = (entry.duration - entry.breakMinutes) / 60;
-                      if (employeeHours[employeeName]) {
-                        employeeHours[employeeName] += netHours;
+                      const workType = workTypes[entry.id];
+
+                      if (workType?.type === 'holiday') {
+                        holidayHours += netHours;
+                      } else if (workType?.type === 'weekend') {
+                        weekendHours += netHours;
                       } else {
-                        employeeHours[employeeName] = netHours;
+                        regularHours += netHours;
                       }
                     });
 
-                    if (Object.keys(employeeHours).length > 1) {
-                      return (
-                        <div className="text-[#1a365d]">
-                          <div className="font-semibold mb-1">Gesamtarbeitsstunden pro Mitarbeiter:</div>
-                          {Object.entries(employeeHours).map(([name, hours]) => (
-                            <div key={name} className="ml-4 font-medium">{name}: {hours.toFixed(2)} Stunden</div>
-                          ))}
-                          <div className="mt-2 text-lg font-bold">Gesamtarbeitsstunden: {objectReportData.totalHours} Stunden</div>
-                        </div>
-                      );
-                    }
-                    return <div className="text-[#1a365d]">Gesamtarbeitsstunden: {objectReportData.totalHours} Stunden</div>;
+                    const hoursWithoutHolidays = regularHours + weekendHours;
+
+                    return (
+                      <div className="text-[#1a365d] space-y-2">
+                        <div className="text-lg font-bold">Gesamtarbeitsstunden: {objectReportData.totalHours} Stunden</div>
+
+                        {/* Conditional breakdown - only show if holidays or weekends exist */}
+                        {(holidayHours > 0 || weekendHours > 0) && (
+                          <div className="text-sm space-y-1">
+                            <div>• Normale Arbeitszeit: {hoursWithoutHolidays.toFixed(2)} Stunden</div>
+                            {holidayHours > 0 && (
+                              <div className="text-red-600 font-medium">• Feiertage: {holidayHours.toFixed(2)} Stunden</div>
+                            )}
+                            {weekendHours > 0 && (
+                              <div className="text-purple-600 font-medium">• Am Wochenende: {weekendHours.toFixed(2)} Stunden</div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Holiday details - REMOVED detailed list per user request */}
+                        {/* Weekend details - REMOVED detailed list per user request */}
+
+                        {/* Employee breakdown for multiple employees */}
+                        {(() => {
+                          const employeeHours: { [key: string]: number } = {};
+                          objectReportData.entries.forEach(entry => {
+                            const employeeName = entry.employeeName;
+                            const netHours = (entry.duration - entry.breakMinutes) / 60;
+                            if (employeeHours[employeeName]) {
+                              employeeHours[employeeName] += netHours;
+                            } else {
+                              employeeHours[employeeName] = netHours;
+                            }
+                          });
+
+                          if (Object.keys(employeeHours).length > 1) {
+                            return (
+                              <div className="mt-3">
+                                <div className="font-semibold mb-1">Gesamtarbeitsstunden pro Mitarbeiter:</div>
+                                {Object.entries(employeeHours).map(([name, hours]) => (
+                                  <div key={name} className="ml-4 font-medium">{name}: {hours.toFixed(2)} Stunden</div>
+                                ))}
+                              </div>
+                            );
+                          }
+                          return null;
+                        })()}
+                      </div>
+                    );
                   })()}
                 </div>
               </>
@@ -306,14 +509,87 @@ export function WorkTimeReportForm() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {employeeReportData.entries.map(entry => (
-                      <TableRow key={entry.id}>
-                        <TableCell>{entry.date}</TableCell><TableCell>{entry.objectName}</TableCell><TableCell>{entry.customerName}</TableCell><TableCell>{entry.startTime}</TableCell><TableCell>{entry.endTime}</TableCell><TableCell>{formatDuration(entry.breakMinutes)}</TableCell><TableCell>{formatDuration(entry.duration - entry.breakMinutes)}</TableCell>
-                      </TableRow>
-                    ))}
+                    {employeeReportData.entries.map(entry => {
+                      const workType = workTypes[entry.id];
+                      const isHolidayRow = workType?.type === 'holiday';
+                      const isWeekendRow = workType?.type === 'weekend';
+
+                      return (
+                        <TableRow key={entry.id} className={
+                          isHolidayRow ? 'bg-red-50 dark:bg-red-950/20' :
+                          isWeekendRow ? 'bg-purple-50 dark:bg-purple-950/20' : ''
+                        }>
+                          <TableCell>
+                            <div className="font-medium">
+                              {formatDateWithWeekday(entry.date)}
+                              {isHolidayRow && (
+                                <div className="text-xs font-semibold" style={{ color: workType.color }}>
+                                  {workType.holidayName || 'Feiertag'}
+                                </div>
+                              )}
+                              {isWeekendRow && (
+                                <div className="text-xs font-semibold" style={{ color: workType.color }}>
+                                  Wochenende
+                                </div>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>{entry.objectName}</TableCell>
+                          <TableCell>{entry.customerName}</TableCell>
+                          <TableCell>{entry.startTime}</TableCell>
+                          <TableCell>{entry.endTime}</TableCell>
+                          <TableCell>{formatDuration(entry.breakMinutes)}</TableCell>
+                          <TableCell>{formatDuration(entry.duration - entry.breakMinutes)}</TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
-                <div className="text-right font-bold text-lg mt-4 text-[#1a365d]">Gesamtarbeitsstunden: {employeeReportData.totalHours} Stunden</div>
+                <div className="mt-4 space-y-3">
+                  {/* Calculate holiday and weekend hours */}
+                  {(() => {
+                    let holidayHours = 0;
+                    let regularHours = 0;
+                    let weekendHours = 0;
+
+                    employeeReportData.entries.forEach(entry => {
+                      const netHours = (entry.duration - entry.breakMinutes) / 60;
+                      const workType = workTypes[entry.id];
+
+                      if (workType?.type === 'holiday') {
+                        holidayHours += netHours;
+                      } else if (workType?.type === 'weekend') {
+                        weekendHours += netHours;
+                      } else {
+                        regularHours += netHours;
+                      }
+                    });
+
+                    const hoursWithoutHolidays = regularHours + weekendHours;
+
+                    return (
+                      <div className="text-[#1a365d] space-y-2">
+                        <div className="text-lg font-bold">Gesamtarbeitsstunden: {employeeReportData.totalHours} Stunden</div>
+
+                        {/* Conditional breakdown - only show if holidays or weekends exist */}
+                        {(holidayHours > 0 || weekendHours > 0) && (
+                          <div className="text-sm space-y-1">
+                            <div>• Normale Arbeitszeit: {hoursWithoutHolidays.toFixed(2)} Stunden</div>
+                            {holidayHours > 0 && (
+                              <div className="text-red-600 font-medium">• Feiertage: {holidayHours.toFixed(2)} Stunden</div>
+                            )}
+                            {weekendHours > 0 && (
+                              <div className="text-purple-600 font-medium">• Am Wochenende: {weekendHours.toFixed(2)} Stunden</div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Holiday details - REMOVED detailed list per user request */}
+                        {/* Weekend details - REMOVED detailed list per user request */}
+                      </div>
+                    );
+                  })()}
+                </div>
               </>
             )}
           </div>

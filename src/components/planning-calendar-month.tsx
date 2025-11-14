@@ -36,15 +36,26 @@ interface MonthDayCellProps {
   activeDragId: string | null;
   onActionSuccess: () => void;
   unassignedOrders: UnassignedOrder[];
+  holidaysMap: { [key: string]: { name: string } | null };
 }
 
-function MonthDayCell({ day, monthStart, employeeId, employee, activeDragId, onActionSuccess, unassignedOrders }: MonthDayCellProps) {
+function MonthDayCell({ day, monthStart, employeeId, employee, activeDragId, onActionSuccess, unassignedOrders, holidaysMap }: MonthDayCellProps) {
   const dateString = format(day, "yyyy-MM-dd");
   const dayData = employee.schedule[dateString];
   const droppableId = `${employeeId}__${dateString}`;
   const isCurrentMonth = isSameMonth(day, monthStart);
   const isCurrentDay = isToday(day);
-  const dayStyling = getDateStyling(day);
+
+  // Use holidaysMap instead of getDateStyling
+  const holidayInfo = holidaysMap[dateString];
+  const isWeekendDay = getDay(day) === 0 || getDay(day) === 6;
+
+  let className = "";
+  if (holidayInfo) {
+    className = "bg-red-50 border-red-200 text-red-700";
+  } else if (isWeekendDay) {
+    className = "bg-blue-50 border-blue-200 text-blue-700";
+  }
   
   const { setNodeRef, isOver } = useDroppable({ id: droppableId });
 
@@ -65,7 +76,7 @@ function MonthDayCell({ day, monthStart, employeeId, employee, activeDragId, onA
         isCurrentDay && "bg-primary/5 border-primary/30",
         isOver && "bg-primary/20 ring-1 ring-primary",
         dayData?.isAbsence && "bg-muted/50",
-        isCurrentMonth && dayStyling.className,
+        isCurrentMonth && className,
         "hover:bg-accent/50"
       )}
     >
@@ -73,8 +84,8 @@ function MonthDayCell({ day, monthStart, employeeId, employee, activeDragId, onA
         <span className={cn(
           "text-xs font-medium",
           isCurrentDay && "text-primary font-bold",
-          isCurrentMonth && dayStyling.isHoliday && "text-red-700",
-          isCurrentMonth && dayStyling.isWeekend && "text-blue-700"
+          isCurrentMonth && holidayInfo && "text-red-700",
+          isCurrentMonth && isWeekendDay && "text-blue-700"
         )}>
           {format(day, "d")}
         </span>
@@ -96,16 +107,16 @@ function MonthDayCell({ day, monthStart, employeeId, employee, activeDragId, onA
       </div>
 
       {/* Holiday indicator */}
-      {isCurrentMonth && dayStyling.isHoliday && (
+      {isCurrentMonth && holidayInfo && (
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
               <div className="text-xs text-red-600 font-medium truncate">
-                {dayStyling.holidayName}
+                {holidayInfo.name}
               </div>
             </TooltipTrigger>
             <TooltipContent>
-              <p>{dayStyling.holidayName}</p>
+              <p>{holidayInfo.name}</p>
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
@@ -176,16 +187,18 @@ interface PlanningCalendarMonthProps {
   showUnassigned: boolean;
   onActionSuccess: () => void;
   weekNumber: number;
+  holidaysMap: { [key: string]: { name: string } | null };
 }
 
-export function PlanningCalendarMonth({ 
-  planningData, 
-  unassignedOrders, 
-  weekDays, 
-  activeDragId, 
-  showUnassigned, 
-  onActionSuccess, 
-  weekNumber 
+export function PlanningCalendarMonth({
+  planningData,
+  unassignedOrders,
+  weekDays,
+  activeDragId,
+  showUnassigned,
+  onActionSuccess,
+  weekNumber,
+  holidaysMap
 }: PlanningCalendarMonthProps) {
   const employeeIds = Object.keys(planningData);
   const monthStart = startOfMonth(weekDays[0]);
@@ -329,6 +342,7 @@ export function PlanningCalendarMonth({
                                 activeDragId={activeDragId}
                                 onActionSuccess={onActionSuccess}
                                 unassignedOrders={unassignedOrders}
+                                holidaysMap={holidaysMap}
                               />
                             ) : (
                               <div className="min-h-[80px] border border-transparent" />

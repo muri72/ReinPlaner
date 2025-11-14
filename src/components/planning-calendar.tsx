@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { format, parseISO } from "date-fns";
+import { format, parseISO, isWeekend } from "date-fns";
 import { de } from "date-fns/locale";
 import { getDateStyling, getHolidayTooltip } from "@/lib/date-utils";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -30,16 +30,31 @@ const absenceTypeColors: { [key: string]: string } = {
   other: "bg-gray-500",
 };
 
-function DroppableCell({ id, children, isOver, isAvailable, day }: { 
-  id: string; 
-  children: React.ReactNode; 
-  isOver: boolean; 
+function DroppableCell({ id, children, isOver, isAvailable, day, holidaysMap }: {
+  id: string;
+  children: React.ReactNode;
+  isOver: boolean;
   isAvailable: boolean;
   day?: Date;
+  holidaysMap: { [key: string]: { name: string } | null };
 }) {
   const { setNodeRef } = useDroppable({ id });
-  const dayStyling = day ? getDateStyling(day) : { className: "" };
-  
+
+  // Get styling based on holidaysMap and weekend check
+  let className = "";
+  if (day) {
+    const dayKey = format(day, "yyyy-MM-dd");
+    const holidayInfo = holidaysMap[dayKey];
+
+    if (holidayInfo) {
+      // Holiday styling
+      className = "bg-red-50 border-red-200 text-red-700";
+    } else if (isWeekend(day)) {
+      // Weekend styling
+      className = "bg-blue-50 border-blue-200 text-blue-700";
+    }
+  }
+
   return (
     <TableCell
       ref={setNodeRef}
@@ -47,7 +62,7 @@ function DroppableCell({ id, children, isOver, isAvailable, day }: {
         "p-1 border h-24 align-top",
         isOver && "bg-primary/20 ring-2 ring-primary",
         !isAvailable && "bg-muted/50 bg-[repeating-linear-gradient(-45deg,transparent,transparent_4px,hsl(var(--border))_4px,hsl(var(--border))_5px)]",
-        dayStyling.className
+        className
       )}
     >
       <div className="h-full w-full">{children}</div>
@@ -63,9 +78,10 @@ interface PlanningCalendarProps {
   showUnassigned: boolean;
   onActionSuccess: () => void;
   weekNumber: number;
+  holidaysMap: { [key: string]: { name: string } | null };
 }
 
-export function PlanningCalendar({ planningData, unassignedOrders, weekDays, activeDragId, showUnassigned, onActionSuccess, weekNumber }: PlanningCalendarProps) {
+export function PlanningCalendar({ planningData, unassignedOrders, weekDays, activeDragId, showUnassigned, onActionSuccess, weekNumber, holidaysMap }: PlanningCalendarProps) {
   const employeeIds = Object.keys(planningData);
 
   return (
@@ -80,13 +96,14 @@ export function PlanningCalendar({ planningData, unassignedOrders, weekDays, act
           </TableRow>
           <TableRow>
             {weekDays.map((day) => {
-              const holidayName = getHolidayTooltip(day);
+              const dayKey = format(day, "yyyy-MM-dd");
+              const holidayInfo = holidaysMap[dayKey];
               return (
                 <TableHead key={day.toString()} className="text-center text-sm w-[120px] min-w-[120px]">
                   <div>
                     {format(day, "E dd.", { locale: de })}
-                    {holidayName && (
-                      <div className="text-xs text-red-600 font-medium">{holidayName}</div>
+                    {holidayInfo && (
+                      <div className="text-xs text-red-600 font-medium">{holidayInfo.name}</div>
                     )}
                   </div>
                 </TableHead>
@@ -114,6 +131,7 @@ export function PlanningCalendar({ planningData, unassignedOrders, weekDays, act
                     isOver={activeDragId !== null && droppableId === (activeDragId as string)}
                     isAvailable={true}
                     day={day}
+                    holidaysMap={holidaysMap}
                   >
                     <div className="space-y-1">
                       {ordersForDay.map((order) => (
@@ -207,6 +225,7 @@ export function PlanningCalendar({ planningData, unassignedOrders, weekDays, act
                         isOver={activeDragId !== null && droppableId === (activeDragId as string)}
                         isAvailable={dayData.isAvailable || dayData.assignments.length > 0}
                         day={day}
+                        holidaysMap={holidaysMap}
                       >
                         <div className="space-y-1">
                           {dayData.assignments.map((assignment) => (

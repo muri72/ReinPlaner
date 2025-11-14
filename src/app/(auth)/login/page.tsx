@@ -123,7 +123,7 @@ export default function LoginPage() {
         {/* Right Side: Logo and Description */}
         <div className="hidden md:flex w-full md:w-1/2 bg-primary/90 text-primary-foreground p-8 flex-col items-center justify-center text-center">
           <Image
-            src="/home.svg" // Pfad zum Logo
+            src="/logo.svg" // Pfad zum Logo - Updated to use new logo
             alt="ARIS Management Logo"
             width={200} // Angepasste Größe
             height={200} // Angepasste Größe

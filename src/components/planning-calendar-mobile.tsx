@@ -50,6 +50,7 @@ interface MobilePlanningCalendarProps {
   onActionSuccess: () => void;
   onSelectedDateChange: (date: Date) => void;
   viewMode: "day" | "week" | "month";
+  holidaysMap: { [key: string]: { name: string } | null };
 }
 
 export function MobilePlanningCalendar({
@@ -61,6 +62,7 @@ export function MobilePlanningCalendar({
   onActionSuccess,
   onSelectedDateChange,
   viewMode,
+  holidaysMap,
 }: MobilePlanningCalendarProps) {
   const sortedDays = React.useMemo(
     () => [...weekDays].sort((a, b) => a.getTime() - b.getTime()),

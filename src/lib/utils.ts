@@ -62,3 +62,14 @@ export const calculateStartTime = (endTime: string, durationHours: number): stri
 
   return `${String(startH).padStart(2, '0')}:${String(startM).padStart(2, '0')}`;
 };
+
+// Helper to format date with weekday (DD.MM.YYYY -> "Fr 03.10.2025")
+export const formatDateWithWeekday = (dateStr: string): string => {
+  // dateStr is in format DD.MM.YYYY
+  const [day, month, year] = dateStr.split('.');
+  const isoDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+  const date = new Date(isoDate);
+
+  const weekday = date.toLocaleDateString('de-DE', { weekday: 'short' });
+  return `${weekday} ${day}.${month}.${year}`;
+};

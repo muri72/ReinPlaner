@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { useMemo, useState } from "react";
 import { DatePicker } from "@/components/date-picker";
 import { toast } from "sonner";
@@ -69,6 +70,7 @@ export const employeeSchema = z.object({
   social_security_number: z.string().nullable().optional(),
   tax_id_number: z.string().nullable().optional(),
   health_insurance_provider: z.string().nullable().optional(),
+  can_work_holidays: z.boolean(),
   default_daily_schedules: z.array(weeklyScheduleSchema),
   default_recurrence_interval_weeks: z.coerce.number().min(1).max(52),
   default_start_week_offset: z.coerce.number().min(0).max(51),
@@ -311,6 +313,23 @@ export function EmployeeForm({ initialData, onSubmit, submitButtonText, onSucces
       <div>
         <Label htmlFor="health_insurance_provider">Krankenkasse</Label>
         <Input id="health_insurance_provider" {...form.register("health_insurance_provider")} />
+      </div>
+
+      <div className="flex items-center justify-between space-x-2">
+        <Label htmlFor="can_work_holidays" className="text-sm font-medium">
+          Bereit für Feiertagsarbeit
+        </Label>
+        <Controller
+          name="can_work_holidays"
+          control={form.control}
+          render={({ field }) => (
+            <Switch
+              id="can_work_holidays"
+              checked={field.value}
+              onCheckedChange={field.onChange}
+            />
+          )}
+        />
       </div>
 
       <div>

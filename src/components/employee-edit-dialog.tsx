@@ -29,6 +29,7 @@ interface EmployeeEditDialogProps {
     tax_id_number: string | null;
     health_insurance_provider: string | null;
     contract_end_date: string | null;
+    can_work_holidays: boolean;
     default_daily_schedules: any[];
     default_recurrence_interval_weeks: number;
     default_start_week_offset: number;

@@ -27,6 +27,8 @@ import { createClient } from "@/lib/supabase/client";
 import { useSearchParams } from "next/navigation";
 import { RecurringEditDialog } from "@/components/recurring-edit-dialog";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { settingsService } from "@/lib/services/settings-service";
+import { format as formatDateFns } from "date-fns";
 
 interface PendingReassignment {
   assignmentId: string;
@@ -46,6 +48,8 @@ export default function PlanningPage() {
   const [isAdmin, setIsAdmin] = React.useState(false);
   const [isOrderDialogOpen, setIsOrderDialogOpen] = React.useState(false);
   const [mobileSelectedDate, setMobileSelectedDate] = React.useState(() => startOfDay(new Date()));
+  const [bundeslandCode, setBundeslandCode] = React.useState<string>('HH'); // Default to Hamburg
+  const [holidaysMap, setHolidaysMap] = React.useState<{ [key: string]: { name: string } | null }>({});
 
   const isMobile = useIsMobile();
   const searchParams = useSearchParams();
@@ -75,7 +79,7 @@ export default function PlanningPage() {
     return { startDate: start, endDate: end, daysToDisplay: eachDayOfInterval({ start, end }) };
   }, [currentDate, viewMode]);
 
-  const fetchData = React.useCallback(async (start: Date, end: Date, searchQuery: string) => {
+  const fetchData = React.useCallback(async (start: Date, end: Date, searchQuery: string, displayDays: Date[]) => {
     setLoading(true);
     const supabase = createClient();
     const {
@@ -86,6 +90,16 @@ export default function PlanningPage() {
       const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
       setIsAdmin(profile?.role === "admin");
     }
+
+    // Load bundesland from settings (default to HH if not found)
+    const code = await settingsService.getSetting('default_bundesland') || 'HH';
+    setBundeslandCode(code);
+
+    // Get holidays using batch processing
+    const uniqueDates = [...new Set(displayDays.map(day => formatDateFns(day, 'yyyy-MM-dd')))];
+    console.log(`[PLANNING] Batch processing ${uniqueDates.length} dates for holidays (Bundesland: ${code})`);
+    const holidayResults = await settingsService.checkMultipleHolidays(uniqueDates, code);
+    setHolidaysMap(holidayResults);
 
     const result = await getPlanningDataForRange(start, end, { query: searchQuery });
     if (result.success) {
@@ -98,12 +112,12 @@ export default function PlanningPage() {
   }, []);
 
   const refreshData = React.useCallback(() => {
-    void fetchData(startDate, endDate, query);
-  }, [fetchData, startDate, endDate, query]);
+    void fetchData(startDate, endDate, query, daysToDisplay);
+  }, [fetchData, startDate, endDate, query, daysToDisplay]);
 
   React.useEffect(() => {
-    fetchData(startDate, endDate, query);
-  }, [startDate, endDate, query, fetchData]);
+    fetchData(startDate, endDate, query, daysToDisplay);
+  }, [startDate, endDate, query, fetchData, daysToDisplay]);
 
   React.useEffect(() => {
     setMobileSelectedDate((previous) => {
@@ -306,6 +320,7 @@ export default function PlanningPage() {
                   onActionSuccess={refreshData}
                   onSelectedDateChange={handleMobileDateChange}
                   viewMode={viewMode}
+                  holidaysMap={holidaysMap}
                 />
               )}
             </div>
@@ -342,6 +357,7 @@ export default function PlanningPage() {
                   showUnassigned={showUnassigned}
                   onActionSuccess={refreshData}
                   weekNumber={weekNumber}
+                  holidaysMap={holidaysMap}
                 />
               ) : (
                 <PlanningCalendar
@@ -352,6 +368,7 @@ export default function PlanningPage() {
                   showUnassigned={showUnassigned}
                   onActionSuccess={refreshData}
                   weekNumber={weekNumber}
+                  holidaysMap={holidaysMap}
                 />
               )}
             </div>
