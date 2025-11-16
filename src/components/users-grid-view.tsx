@@ -84,7 +84,7 @@ export function UsersGridView({
                   managerName={`${user.first_name || ''} ${user.last_name || ''}`.trim()}
                 />
               )}
-              <UserEditDialog user={user} />
+              <UserEditDialog user={user} onActionSuccess={onActionSuccess} />
               <DeleteUserButton userId={user.id} onDeleteSuccess={onActionSuccess} />
             </div>
           </CardHeader>

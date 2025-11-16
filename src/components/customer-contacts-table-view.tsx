@@ -26,6 +26,7 @@ interface CustomerContactsTableViewProps {
   currentPage: number;
   query: string;
   customerIdFilter: string;
+  onActionSuccess?: () => void;
 }
 
 export function CustomerContactsTableView({
@@ -34,6 +35,7 @@ export function CustomerContactsTableView({
   currentPage,
   query,
   customerIdFilter,
+  onActionSuccess,
 }: CustomerContactsTableViewProps) {
 
   if (contacts.length === 0 && !query && !customerIdFilter) {
@@ -82,8 +84,8 @@ export function CustomerContactsTableView({
               <TableCell className="text-right">
                 <div className="flex justify-end space-x-1">
                   <RecordDetailsDialog record={contact} title={`Details zu Kundenkontakt: ${contact.first_name} ${contact.last_name}`} />
-                  <CustomerContactEditDialog contact={contact} />
-                  <DeleteCustomerContactButton contactId={contact.id} />
+                  <CustomerContactEditDialog contact={contact} onSuccess={onActionSuccess} />
+                  <DeleteCustomerContactButton contactId={contact.id} onDeleteSuccess={onActionSuccess} />
                 </div>
               </TableCell>
             </TableRow>

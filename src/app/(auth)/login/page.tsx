@@ -19,9 +19,19 @@ export default function LoginPage() {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        if (event === "SIGNED_IN") {
+        if (event === "SIGNED_IN" && session?.user) {
+          // Log successful login to audit logs
+          try {
+            await fetch('/api/log-login', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+            });
+          } catch (error) {
+            console.error('Failed to log login:', error);
+          }
+
           // On sign-in, push to the root and let the middleware handle the redirect.
-          router.push("/"); 
+          router.push("/");
           router.refresh(); // Ensure the page reloads to trigger middleware correctly.
         } else if (event === "SIGNED_OUT") {
           toast.info("Sie wurden abgemeldet.");

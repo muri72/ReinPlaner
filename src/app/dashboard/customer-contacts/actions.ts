@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { CustomerContactFormValues } from "@/components/customer-contact-form";
+import { logDataChange } from "@/lib/audit-log";
 
 export async function createCustomerContact(data: CustomerContactFormValues): Promise<{ success: boolean; message: string; newContactId?: string }> {
   const supabase = await createClient();
@@ -35,6 +36,19 @@ export async function createCustomerContact(data: CustomerContactFormValues): Pr
   revalidatePath("/dashboard/customer-contacts");
   revalidatePath("/dashboard/objects"); // Revalidiere auch Objekte, da Kontakte dort verwendet werden
   revalidatePath("/dashboard/orders"); // Revalidiere auch Aufträge, da Kontakte dort verwendet werden
+
+  // Create audit log
+  if (newContact) {
+    await logDataChange(
+      user.id,
+      "INSERT",
+      "customer_contacts",
+      newContact.id,
+      null,
+      { customerId, firstName, lastName, email }
+    );
+  }
+
   return { success: true, message: "Kundenkontakt erfolgreich hinzugefügt!", newContactId: newContact?.id };
 }
 
@@ -57,6 +71,13 @@ export async function updateCustomerContact(contactId: string, data: CustomerCon
     console.error("Fehler beim Abrufen des Benutzerprofils:", profileError?.message || profileError);
     return { success: false, message: "Fehler beim Überprüfen der Berechtigungen." };
   }
+
+  // Get old contact data for audit log
+  const { data: oldContact } = await supabase
+    .from('customer_contacts')
+    .select('*')
+    .eq('id', contactId)
+    .single();
 
   let query = supabase
     .from('customer_contacts')
@@ -99,6 +120,17 @@ export async function updateCustomerContact(contactId: string, data: CustomerCon
   revalidatePath("/dashboard/customer-contacts");
   revalidatePath("/dashboard/objects");
   revalidatePath("/dashboard/orders");
+
+  // Create audit log
+  await logDataChange(
+    user.id,
+    "UPDATE",
+    "customer_contacts",
+    contactId,
+    oldContact,
+    { firstName: data.firstName, lastName: data.lastName, email: data.email }
+  );
+
   return { success: true, message: "Kundenkontakt erfolgreich aktualisiert!" };
 }
 
@@ -123,6 +155,13 @@ export async function deleteCustomerContact(formData: FormData): Promise<{ succe
   }
 
   const contactId = formData.get('contactId') as string;
+
+  // Get contact data before deletion for audit log
+  const { data: contactToDelete } = await supabase
+    .from('customer_contacts')
+    .select('*')
+    .eq('id', contactId)
+    .single();
 
   let query = supabase
     .from('customer_contacts')
@@ -154,5 +193,18 @@ export async function deleteCustomerContact(formData: FormData): Promise<{ succe
   revalidatePath("/dashboard/customer-contacts");
   revalidatePath("/dashboard/objects");
   revalidatePath("/dashboard/orders");
+
+  // Create audit log
+  if (contactToDelete) {
+    await logDataChange(
+      user.id,
+      "DELETE",
+      "customer_contacts",
+      contactId,
+      contactToDelete,
+      null
+    );
+  }
+
   return { success: true, message: "Kundenkontakt erfolgreich gelöscht!" };
 }

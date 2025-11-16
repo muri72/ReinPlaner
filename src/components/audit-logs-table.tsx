@@ -38,12 +38,10 @@ interface AuditLog {
   action: string;
   table_name: string | null;
   record_id: string | null;
-  old_values: any;
-  new_values: any;
+  old_data: any;
+  new_data: any;
   ip_address: string | null;
   user_agent: string | null;
-  status: string;
-  error_message: string | null;
 }
 
 interface AuditLogsTableProps {
@@ -57,7 +55,6 @@ export function AuditLogsTable({ limit = 100 }: AuditLogsTableProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionFilter, setActionFilter] = useState<string>("all");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
 
   const fetchLogs = async () => {
     try {
@@ -65,17 +62,13 @@ export function AuditLogsTable({ limit = 100 }: AuditLogsTableProps) {
       setError(null);
 
       let query = supabase
-        .from("audit_logs")
+        .from("audit_logs_with_users")
         .select("*")
         .order("created_at", { ascending: false })
         .limit(limit);
 
       if (actionFilter !== "all") {
         query = query.eq("action", actionFilter);
-      }
-
-      if (statusFilter !== "all") {
-        query = query.eq("status", statusFilter);
       }
 
       const { data, error } = await query;
@@ -93,7 +86,7 @@ export function AuditLogsTable({ limit = 100 }: AuditLogsTableProps) {
 
   useEffect(() => {
     fetchLogs();
-  }, [actionFilter, statusFilter]);
+  }, [actionFilter]);
 
   const getActionIcon = (action: string) => {
     switch (action.toLowerCase()) {
@@ -111,52 +104,25 @@ export function AuditLogsTable({ limit = 100 }: AuditLogsTableProps) {
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status.toLowerCase()) {
-      case "success":
-        return <Badge className="bg-green-100 text-green-800">Erfolgreich</Badge>;
-      case "error":
-        return <Badge className="bg-red-100 text-red-800">Fehler</Badge>;
-      case "warning":
-        return <Badge className="bg-yellow-100 text-yellow-800">Warnung</Badge>;
-      default:
-        return <Badge variant="secondary">{status}</Badge>;
-    }
-  };
-
   // Mobile Card View
   if (isMobile) {
     return (
       <div className="space-y-4">
         {/* Filter Controls - Mobile */}
         <div className="space-y-2">
-          <div className="flex gap-2">
-            <Select value={actionFilter} onValueChange={setActionFilter}>
-              <SelectTrigger className="flex-1">
-                <SelectValue placeholder="Aktion filtern" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Alle Aktionen</SelectItem>
-                <SelectItem value="INSERT">Erstellen</SelectItem>
-                <SelectItem value="UPDATE">Bearbeiten</SelectItem>
-                <SelectItem value="DELETE">Löschen</SelectItem>
-                <SelectItem value="LOGIN">Login</SelectItem>
-                <SelectItem value="LOGOUT">Logout</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="flex-1">
-                <SelectValue placeholder="Status filtern" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Alle Status</SelectItem>
-                <SelectItem value="success">Erfolgreich</SelectItem>
-                <SelectItem value="error">Fehler</SelectItem>
-                <SelectItem value="warning">Warnung</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          <Select value={actionFilter} onValueChange={setActionFilter}>
+            <SelectTrigger>
+              <SelectValue placeholder="Aktion filtern" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Alle Aktionen</SelectItem>
+              <SelectItem value="INSERT">Erstellen</SelectItem>
+              <SelectItem value="UPDATE">Bearbeiten</SelectItem>
+              <SelectItem value="DELETE">Löschen</SelectItem>
+              <SelectItem value="LOGIN">Login</SelectItem>
+              <SelectItem value="LOGOUT">Logout</SelectItem>
+            </SelectContent>
+          </Select>
 
           <Button onClick={fetchLogs} variant="outline" size="sm" className="w-full">
             <RefreshCw className="h-4 w-4 mr-2" />
@@ -226,10 +192,7 @@ export function AuditLogsTable({ limit = 100 }: AuditLogsTableProps) {
                               </div>
                             </CardDescription>
                           </div>
-                          <div className="flex flex-col items-end gap-2 shrink-0">
-                            {getStatusBadge(log.status)}
-                            <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                          </div>
+                          <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
                         </div>
                       </CardHeader>
                     </CollapsibleTrigger>
@@ -261,15 +224,6 @@ export function AuditLogsTable({ limit = 100 }: AuditLogsTableProps) {
                               </p>
                             </div>
                           )}
-
-                          {log.error_message && (
-                            <div className="space-y-1">
-                              <p className="text-muted-foreground text-xs">Fehlermeldung</p>
-                              <p className="text-xs text-red-600 break-words">
-                                {log.error_message}
-                              </p>
-                            </div>
-                          )}
                         </div>
                       </CardContent>
                     </CollapsibleContent>
@@ -294,33 +248,19 @@ export function AuditLogsTable({ limit = 100 }: AuditLogsTableProps) {
     <div className="space-y-4">
       {/* Filter Controls - Desktop */}
       <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-        <div className="flex gap-2">
-          <Select value={actionFilter} onValueChange={setActionFilter}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Aktion filtern" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Alle Aktionen</SelectItem>
-              <SelectItem value="INSERT">Erstellen</SelectItem>
-              <SelectItem value="UPDATE">Bearbeiten</SelectItem>
-              <SelectItem value="DELETE">Löschen</SelectItem>
-              <SelectItem value="LOGIN">Login</SelectItem>
-              <SelectItem value="LOGOUT">Logout</SelectItem>
-            </SelectContent>
-          </Select>
-
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Status filtern" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Alle Status</SelectItem>
-              <SelectItem value="success">Erfolgreich</SelectItem>
-              <SelectItem value="error">Fehler</SelectItem>
-              <SelectItem value="warning">Warnung</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+        <Select value={actionFilter} onValueChange={setActionFilter}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Aktion filtern" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Alle Aktionen</SelectItem>
+            <SelectItem value="INSERT">Erstellen</SelectItem>
+            <SelectItem value="UPDATE">Bearbeiten</SelectItem>
+            <SelectItem value="DELETE">Löschen</SelectItem>
+            <SelectItem value="LOGIN">Login</SelectItem>
+            <SelectItem value="LOGOUT">Logout</SelectItem>
+          </SelectContent>
+        </Select>
 
         <Button onClick={fetchLogs} variant="outline" size="sm">
           <RefreshCw className="h-4 w-4 mr-2" />
@@ -359,14 +299,13 @@ export function AuditLogsTable({ limit = 100 }: AuditLogsTableProps) {
                   <TableHead>Benutzer</TableHead>
                   <TableHead>Aktion</TableHead>
                   <TableHead>Tabelle</TableHead>
-                  <TableHead>Status</TableHead>
                   <TableHead>Details</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {logs.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center text-muted-foreground">
+                    <TableCell colSpan={5} className="text-center text-muted-foreground">
                       Keine Audit-Logs gefunden
                     </TableCell>
                   </TableRow>
@@ -397,14 +336,8 @@ export function AuditLogsTable({ limit = 100 }: AuditLogsTableProps) {
                       <TableCell>
                         <Badge variant="outline">{log.table_name || "-"}</Badge>
                       </TableCell>
-                      <TableCell>{getStatusBadge(log.status)}</TableCell>
                       <TableCell>
                         <div className="max-w-xs">
-                          {log.error_message && (
-                            <p className="text-xs text-red-600 truncate" title={log.error_message}>
-                              {log.error_message}
-                            </p>
-                          )}
                           {log.record_id && (
                             <p className="text-xs text-muted-foreground">
                               ID: {log.record_id.substring(0, 8)}...

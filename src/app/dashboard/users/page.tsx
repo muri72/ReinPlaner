@@ -14,6 +14,8 @@ import { toast } from "sonner";
 import { PageHeader } from "@/components/page-header";
 import { DataTableToolbar, FilterOption, SortOption } from "@/components/data-table-toolbar";
 import { UsersGridView } from "@/components/users-grid-view"; // Assuming this will be created or exists
+import { GenericGridSkeleton } from "@/components/generic-grid-skeleton";
+import { SimpleListSkeleton } from "@/components/simple-list-skeleton";
 
 interface DisplayUser {
   id: string;
@@ -126,8 +128,8 @@ export default function UsersPage() {
 
   return (
     <div className="p-4 md:p-8 space-y-8">
-      
-      <PageHeader title="Benutzerverwaltung">
+
+      <PageHeader title="Benutzerverwaltung" loading={loading}>
         <UserCreateDialog onUserCreated={fetchData} />
       </PageHeader>
 
@@ -138,7 +140,7 @@ export default function UsersPage() {
             filterOptions={filterOptions}
             sortOptions={sortOptions}
           />
-          {totalCount !== null && (
+          {totalCount !== null && !loading && (
             <div className="text-sm text-muted-foreground mt-2">
               {totalCount} {totalCount === 1 ? 'Ergebnis' : 'Ergebnisse'} gefunden.
             </div>
@@ -153,28 +155,37 @@ export default function UsersPage() {
               </TabsList>
             </div>
             <TabsContent value="grid" className="mt-0">
-              <UsersGridView
-                users={allUsers}
-                query={query}
-                roleFilter={roleFilter}
-                currentUserId={currentUser.id}
-                onActionSuccess={fetchData}
-              />
+              {loading ? (
+                <GenericGridSkeleton count={6} showAvatar={true} showBadges={true} badgeCount={1} />
+              ) : (
+                <UsersGridView
+                  users={allUsers}
+                  query={query}
+                  roleFilter={roleFilter}
+                  currentUserId={currentUser.id}
+                  onActionSuccess={fetchData}
+                />
+              )}
             </TabsContent>
             <TabsContent value="table" className="mt-0">
-              <UsersTableView
-                users={allUsers}
-                totalPages={totalPages}
-                currentPage={currentPage}
-                query={query}
-                roleFilter={roleFilter}
-                currentUserId={currentUser.id}
-              />
+              {loading ? (
+                <SimpleListSkeleton count={5} showMeta={true} />
+              ) : (
+                <UsersTableView
+                  users={allUsers}
+                  totalPages={totalPages}
+                  currentPage={currentPage}
+                  query={query}
+                  roleFilter={roleFilter}
+                  currentUserId={currentUser.id}
+                  onActionSuccess={fetchData}
+                />
+              )}
             </TabsContent>
           </Tabs>
         </CardContent>
         <CardFooter className="flex justify-center">
-          {!query && totalPages > 1 && (
+          {!loading && !query && totalPages > 1 && (
             <PaginationControls currentPage={currentPage} totalPages={totalPages} />
           )}
         </CardFooter>

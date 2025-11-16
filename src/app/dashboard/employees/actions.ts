@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { EmployeeFormValues } from "@/components/employee-form";
+import { logDataChange } from "@/lib/audit-log";
 
 // Helper function to format date for database
 const formatDateForDB = (date: Date | null | undefined): string | null => {
@@ -23,7 +24,7 @@ export async function createEmployee(data: EmployeeFormValues) {
     return { success: false, message: "Benutzer nicht authentifiziert." };
   }
 
-  const { error } = await supabase
+  const { data: newEmployee, error } = await supabase
     .from('employees')
     .insert({
       user_id: user.id,
@@ -49,11 +50,23 @@ export async function createEmployee(data: EmployeeFormValues) {
       default_daily_schedules: data.default_daily_schedules,
       default_recurrence_interval_weeks: data.default_recurrence_interval_weeks,
       default_start_week_offset: data.default_start_week_offset,
-    });
+    })
+    .select()
+    .single();
 
   if (error) {
     return { success: false, message: error.message };
   }
+
+  // Create audit log
+  await logDataChange(
+    user.id,
+    "INSERT",
+    "employees",
+    newEmployee.id,
+    null,
+    newEmployee
+  );
 
   revalidatePath("/dashboard/employees");
   return { success: true, message: "Mitarbeiter erfolgreich hinzugefügt!" };
@@ -70,6 +83,13 @@ export async function updateEmployee(employeeId: string, data: EmployeeFormValue
   if (!data.first_name || !data.last_name) {
     return { success: false, message: "Vorname und Nachname sind erforderlich." };
   }
+
+  // Get old employee data for audit log
+  const { data: oldEmployee } = await supabase
+    .from('employees')
+    .select('*')
+    .eq('id', employeeId)
+    .single();
 
   const updateData = {
     first_name: data.first_name,
@@ -110,6 +130,16 @@ export async function updateEmployee(employeeId: string, data: EmployeeFormValue
     return { success: false, message: "Mitarbeiter konnte nicht aktualisiert werden. Möglicherweise haben Sie keine Berechtigung." };
   }
 
+  // Create audit log
+  await logDataChange(
+    user.id,
+    "UPDATE",
+    "employees",
+    employeeId,
+    oldEmployee,
+    updatedRows[0]
+  );
+
   revalidatePath("/dashboard/employees");
   return { success: true, message: "Mitarbeiter erfolgreich aktualisiert!" };
 }
@@ -124,6 +154,13 @@ export async function deleteEmployee(formData: FormData): Promise<{ success: boo
 
   const employeeId = formData.get('employeeId') as string;
 
+  // Get employee data before deletion for audit log
+  const { data: employeeToDelete } = await supabase
+    .from('employees')
+    .select('*')
+    .eq('id', employeeId)
+    .single();
+
   const { data: deletedRows, error } = await supabase
     .from('employees')
     .delete()
@@ -133,9 +170,21 @@ export async function deleteEmployee(formData: FormData): Promise<{ success: boo
   if (error) {
     return { success: false, message: error.message };
   }
-  
+
   if (!deletedRows || deletedRows.length === 0) {
     return { success: false, message: "Mitarbeiter konnte nicht gelöscht werden. Möglicherweise haben Sie keine Berechtigung." };
+  }
+
+  // Create audit log
+  if (employeeToDelete) {
+    await logDataChange(
+      user.id,
+      "DELETE",
+      "employees",
+      employeeId,
+      employeeToDelete,
+      null
+    );
   }
 
   revalidatePath("/dashboard/employees");

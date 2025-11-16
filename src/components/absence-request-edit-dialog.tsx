@@ -22,9 +22,10 @@ interface AbsenceRequestEditDialogProps {
   };
   currentUserRole: 'admin' | 'manager' | 'employee';
   currentUserId: string;
+  onSuccess?: () => void;
 }
 
-export function AbsenceRequestEditDialog({ request, currentUserRole, currentUserId }: AbsenceRequestEditDialogProps) {
+export function AbsenceRequestEditDialog({ request, currentUserRole, currentUserId, onSuccess }: AbsenceRequestEditDialogProps) {
   const [open, setOpen] = useState(false);
   // Removed titleId and descriptionId as they are no longer needed for aria attributes
 
@@ -32,6 +33,7 @@ export function AbsenceRequestEditDialog({ request, currentUserRole, currentUser
     const result = await updateAbsenceRequest(request.id, data);
     if (result.success) {
       setOpen(false);
+      onSuccess?.(); // Triggere Neuladen der Daten
     }
     return result;
   };

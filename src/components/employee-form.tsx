@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { DatePicker } from "@/components/date-picker";
 import { toast } from "sonner";
 
@@ -119,10 +119,21 @@ export function EmployeeForm({ initialData, onSubmit, submitButtonText, onSucces
       default_daily_schedules: [{}],
       default_recurrence_interval_weeks: 1,
       default_start_week_offset: 0,
-      ...processedInitialData,
+      can_work_holidays: false,
     },
     mode: "onChange",
   });
+
+  // Reset form when initialData changes
+  useEffect(() => {
+    if (initialData) {
+      const initialDataWithDefaults = {
+        ...processedInitialData,
+        can_work_holidays: (processedInitialData as any)?.can_work_holidays ?? false,
+      };
+      form.reset(initialDataWithDefaults);
+    }
+  }, [initialData, form]);
 
   const handleFormSubmit: SubmitHandler<EmployeeFormInput> = async (data) => {
     setIsSubmitting(true);

@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { ObjectFormValues } from "@/components/object-form";
+import { logDataChange } from "@/lib/audit-log";
 
 export async function createObject(data: ObjectFormValues) {
   const supabase = await createClient();
@@ -61,6 +62,19 @@ export async function createObject(data: ObjectFormValues) {
   }
 
   revalidatePath("/dashboard/objects");
+
+  // Create audit log
+  if (newObject) {
+    await logDataChange(
+      user.id,
+      "INSERT",
+      "objects",
+      newObject.id,
+      null,
+      { name, customerId, address }
+    );
+  }
+
   return { success: true, message: "Objekt erfolgreich hinzugefügt!", newObjectId: newObject?.id };
 }
 
@@ -103,6 +117,13 @@ export async function updateObject(objectId: string, data: ObjectFormValues) {
     start_week_offset,
   } = data;
 
+  // Get old object data for audit log
+  const { data: oldObject } = await supabase
+    .from('objects')
+    .select('*')
+    .eq('id', objectId)
+    .single();
+
   let query = supabase
     .from('objects')
     .update({
@@ -143,6 +164,17 @@ export async function updateObject(objectId: string, data: ObjectFormValues) {
   }
 
   revalidatePath("/dashboard/objects");
+
+  // Create audit log
+  await logDataChange(
+    user.id,
+    "UPDATE",
+    "objects",
+    objectId,
+    oldObject,
+    { name, customerId, address }
+  );
+
   return { success: true, message: "Objekt erfolgreich aktualisiert!" };
 }
 
@@ -168,6 +200,13 @@ export async function deleteObject(formData: FormData): Promise<{ success: boole
 
   const objectId = formData.get('objectId') as string;
 
+  // Get object data before deletion for audit log
+  const { data: objectToDelete } = await supabase
+    .from('objects')
+    .select('*')
+    .eq('id', objectId)
+    .single();
+
   let query = supabase
     .from('objects')
     .delete()
@@ -186,5 +225,18 @@ export async function deleteObject(formData: FormData): Promise<{ success: boole
   }
 
   revalidatePath("/dashboard/objects");
+
+  // Create audit log
+  if (objectToDelete) {
+    await logDataChange(
+      user.id,
+      "DELETE",
+      "objects",
+      objectId,
+      objectToDelete,
+      null
+    );
+  }
+
   return { success: true, message: "Objekt erfolgreich gelöscht!" };
 }

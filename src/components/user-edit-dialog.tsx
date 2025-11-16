@@ -18,9 +18,10 @@ interface UserEditDialogProps {
     last_name: string | null;
     role: string;
   };
+  onActionSuccess?: () => void;
 }
 
-export function UserEditDialog({ user }: UserEditDialogProps) {
+export function UserEditDialog({ user, onActionSuccess }: UserEditDialogProps) {
   const [open, setOpen] = useState(false);
   const [employeeData, setEmployeeData] = useState<{ id: string; first_name: string; last_name: string } | null>(null);
   const [customerContactData, setCustomerContactData] = useState<{ id: string; first_name: string; last_name: string; customer_id: string } | null>(null);
@@ -73,6 +74,7 @@ export function UserEditDialog({ user }: UserEditDialogProps) {
     const result = await updateUser(user.id, data);
     if (result.success) {
       setOpen(false);
+      onActionSuccess?.();  // Triggere Neuladen der Daten
     }
     return result;
   };
@@ -109,13 +111,13 @@ export function UserEditDialog({ user }: UserEditDialogProps) {
             firstName: user.first_name ?? undefined,
             lastName: user.last_name ?? undefined,
             role: user.role as UserFormValues["role"],
-            employee: employeeData,
-            customerContact: customerContactData,
           }}
           onSubmit={handleUpdate}
           submitButtonText={loading ? "Lädt..." : "Änderungen speichern"}
           onSuccess={() => setOpen(false)}
           isEditMode={true}
+          employee={employeeData}
+          customerContact={customerContactData}
         />
       </DialogContent>
     </Dialog>

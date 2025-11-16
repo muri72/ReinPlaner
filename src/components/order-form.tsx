@@ -219,8 +219,8 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
       if (objectsData) setObjects(objectsData);
       if (objectsError) console.error("Fehler beim Laden der Objekte:", objectsError);
 
-      // Fetch only active employees
-      const { data: employeesData, error: employeesError } = await supabase.from('employees').select('id, first_name, last_name').eq('status', 'active').order('last_name', { ascending: true });
+      // Fetch all employees (including inactive) to show currently assigned employees even if inactive
+      const { data: employeesData, error: employeesError } = await supabase.from('employees').select('id, first_name, last_name, status').order('last_name', { ascending: true });
       if (employeesData) setAllEmployees(employeesData);
       if (employeesError) console.error("Fehler beim Laden der Mitarbeiter:", employeesError);
 

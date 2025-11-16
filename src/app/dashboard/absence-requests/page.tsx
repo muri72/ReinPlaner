@@ -13,6 +13,8 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { PageHeader } from "@/components/page-header";
 import { DataTableToolbar, FilterOption, SortOption } from "@/components/data-table-toolbar";
 import { AbsenceRequestsGridView } from "@/components/absence-requests-grid-view"; // Assuming this will be created or exists
+import { GenericGridSkeleton } from "@/components/generic-grid-skeleton";
+import { SimpleListSkeleton } from "@/components/simple-list-skeleton";
 
 interface DisplayAbsenceRequest {
   id: string;
@@ -152,8 +154,8 @@ export default function AbsenceRequestsPage() {
 
   return (
     <div className="p-4 md:p-8 space-y-8">
-      
-      <PageHeader title="Abwesenheitsverwaltung">
+
+      <PageHeader title="Abwesenheitsverwaltung" loading={loading}>
         <AbsenceRequestCreateDialog
           currentUserRole={currentUserRole}
           currentUserId={currentUser.id}
@@ -179,7 +181,7 @@ export default function AbsenceRequestsPage() {
             filterOptions={filterOptions}
             sortOptions={sortOptions}
           />
-          {totalCount !== null && (
+          {totalCount !== null && !loading && (
             <div className="text-sm text-muted-foreground mt-2">
               {totalCount} {totalCount === 1 ? 'Ergebnis' : 'Ergebnisse'} gefunden.
             </div>
@@ -194,27 +196,36 @@ export default function AbsenceRequestsPage() {
               </TabsList>
             </div>
             <TabsContent value="grid" className="mt-0">
-              <AbsenceRequestsGridView
-                requests={allRequests}
-                query={query}
-                currentUserRole={currentUserRole}
-                currentUserId={currentUser.id}
-                onActionSuccess={fetchData}
-              />
+              {loading ? (
+                <GenericGridSkeleton count={6} showAvatar={false} showBadges={true} badgeCount={2} />
+              ) : (
+                <AbsenceRequestsGridView
+                  requests={allRequests}
+                  query={query}
+                  currentUserRole={currentUserRole}
+                  currentUserId={currentUser.id}
+                  onActionSuccess={fetchData}
+                />
+              )}
             </TabsContent>
             <TabsContent value="table" className="mt-0">
-              <AbsenceRequestsTableView
-                requests={allRequests}
-                totalPages={totalPages}
-                currentPage={currentPage}
-                query={query}
-                currentUserRole={currentUserRole}
-              />
+              {loading ? (
+                <SimpleListSkeleton count={5} showMeta={true} />
+              ) : (
+                <AbsenceRequestsTableView
+                  requests={allRequests}
+                  totalPages={totalPages}
+                  currentPage={currentPage}
+                  query={query}
+                  currentUserRole={currentUserRole}
+                  onActionSuccess={fetchData}
+                />
+              )}
             </TabsContent>
           </Tabs>
         </CardContent>
         <CardFooter className="flex justify-center">
-          {!query && totalPages > 1 && (
+          {!loading && !query && totalPages > 1 && (
             <PaginationControls currentPage={currentPage} totalPages={totalPages} />
           )}
         </CardFooter>

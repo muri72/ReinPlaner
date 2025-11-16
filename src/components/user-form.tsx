@@ -12,6 +12,7 @@ import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Checkbox } from "@/components/ui/checkbox"; // For multi-select
 import { handleActionResponse } from "@/lib/toast-utils"; // Importiere die neue Utility
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 // Define the base schema first to avoid circular dependency
 const baseUserSchema = z.object({
@@ -86,15 +87,21 @@ interface UserFormProps {
   submitButtonText: string;
   onSuccess?: () => void;
   isEditMode?: boolean;
+  employee?: { id: string; first_name: string; last_name: string } | null;
+  customerContact?: { id: string; first_name: string; last_name: string; customer_id: string } | null;
 }
 
-export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, isEditMode = false }: UserFormProps) {
+export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, isEditMode = false, employee, customerContact }: UserFormProps) {
   const supabase = createClient();
   const [employees, setEmployees] = useState<{ id: string; first_name: string; last_name: string; user_id: string | null; email: string | null }[]>([]);
   const [customers, setCustomers] = useState<{ id: string; name: string; user_id: string | null; contact_email: string | null }[]>([]);
   const [customerContactsForUserAssignment, setCustomerContactsForUserAssignment] = useState<{ id: string; first_name: string; last_name: string; email: string | null; customer_id: string; user_id: string | null }[]>([]); // State für Kundenkontakte zur Zuweisung
   const [allCustomersForManager, setAllCustomersForManager] = useState<{ id: string; name: string }[]>([]); // For manager assignment
   const [loadingDropdowns, setLoadingDropdowns] = useState(true);
+  const [showReassignmentDialog, setShowReassignmentDialog] = useState(false);
+  const [pendingReassignment, setPendingReassignment] = useState<{ type: 'employee' | 'customerContact', id: string, name: string } | null>(null);
+  const [showUnassignDialog, setShowUnassignDialog] = useState(false);
+  const [pendingUnassign, setPendingUnassign] = useState<{ type: 'employee' | 'customerContact' | 'customer', id: string, name: string } | null>(null);
 
   const resolvedDefaultValues: UserFormValues = {
     email: initialData?.email ?? null, // Set to null if undefined
@@ -103,9 +110,10 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
     lastName: initialData?.lastName ?? "",
     role: initialData?.role ?? "employee",
     // These initialData values are used for both new user creation and editing
-    employeeId: initialData?.employeeId ?? initialData?.employee?.id ?? null,
-    customerId: initialData?.customerId ?? initialData?.customerContact?.customer_id ?? null,
-    customerContactId: initialData?.customerContactId ?? initialData?.customerContact?.id ?? null, // Neues Feld für Kundenkontakt
+    // Use prop values if provided (for edit mode), otherwise use initialData
+    employeeId: initialData?.employeeId ?? employee?.id ?? null,
+    customerId: initialData?.customerId ?? customerContact?.customer_id ?? null,
+    customerContactId: initialData?.customerContactId ?? customerContact?.id ?? null, // Neues Feld für Kundenkontakt
     managerCustomerIds: initialData?.managerCustomerIds ?? [],
   };
 
@@ -231,6 +239,51 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
     }
   }, [selectedEmployeeId, selectedCustomerId, selectedCustomerContactId, isEditMode, form, employees, customers, customerContactsForUserAssignment, initialData]);
 
+  // Update form values when employee or customerContact props change (for edit mode)
+  useEffect(() => {
+    if (isEditMode && employee) {
+      form.setValue("employeeId", employee.id, { shouldValidate: false });
+    }
+  }, [employee, isEditMode, form]);
+
+  useEffect(() => {
+    if (isEditMode && customerContact) {
+      form.setValue("customerContactId", customerContact.id, { shouldValidate: false });
+      form.setValue("customerId", customerContact.customer_id, { shouldValidate: false });
+    }
+  }, [customerContact, isEditMode, form]);
+
+  // Handler für Bestätigungsdialoge
+  const handleReassignmentConfirm = (type: 'employee' | 'customerContact', id: string, name: string) => {
+    setPendingReassignment({ type, id, name });
+    setShowReassignmentDialog(true);
+  };
+
+  const confirmReassignment = () => {
+    if (pendingReassignment) {
+      form.setValue(pendingReassignment.type === 'employee' ? 'employeeId' : 'customerContactId', pendingReassignment.id);
+      setShowReassignmentDialog(false);
+      setPendingReassignment(null);
+      toast.success(`Zuweisung wird geändert: ${pendingReassignment.name} wird diesem Benutzer zugewiesen.`);
+    }
+  };
+
+  const handleUnassignConfirm = (type: 'employee' | 'customerContact' | 'customer', id: string, name: string) => {
+    setPendingUnassign({ type, id, name });
+    setShowUnassignDialog(true);
+  };
+
+  const confirmUnassign = () => {
+    if (pendingUnassign) {
+      const fieldName = pendingUnassign.type === 'employee' ? 'employeeId' :
+                       pendingUnassign.type === 'customerContact' ? 'customerContactId' :
+                       'customerId';
+      form.setValue(fieldName as any, null);
+      setShowUnassignDialog(false);
+      setPendingUnassign(null);
+      toast.success(`Zuweisung aufgehoben: ${pendingUnassign.name} ist jetzt ohne Benutzer-Zuweisung.`);
+    }
+  };
 
   const handleFormSubmit: SubmitHandler<UserFormInput> = async (data) => {
     const result = await onSubmit(data as UserFormValues);
@@ -255,15 +308,27 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
       {!isEditMode && ( // Diese Felder nur im Erstellungsmodus anzeigen
         <div className="border-b pb-4 mb-4">
           <h3 className="text-md font-semibold mb-2">Bestehendem Profil zuweisen:</h3>
+          <p className="text-sm text-muted-foreground mb-3">
+            💡 <strong>Tipp:</strong> Sie können jetzt auch <strong>System-User</strong> ohne Mitarbeiter-Zuweisung erstellen (z.B. für Admins).
+            Bereits zugewiesene Mitarbeiter können neu zugewiesen werden - der alte Benutzer wird automatisch entkoppelt.
+          </p>
           <div>
             <Label htmlFor="employeeId">Mitarbeiter zuweisen (optional)</Label>
             <Select
               onValueChange={(value) => {
-                form.setValue("employeeId", value === "unassigned" ? null : value);
-                if (value !== "unassigned") {
-                  form.setValue("customerId", null); // Wenn Mitarbeiter zugewiesen, Kunde entzuweisen
-                  form.setValue("customerContactId", null); // Kundenkontakt entzuweisen
+                if (value === "unassigned") {
+                  handleUnassignConfirm('employee', 'Mitarbeiter-Zuweisung', 'Mitarbeiter-Zuweisung');
+                } else {
+                  // Prüfe, ob bereits zugewiesen
+                  const employee = employees.find(emp => emp.id === value);
+                  if (employee?.user_id && employee.user_id !== (initialData as any)?.id) {
+                    handleReassignmentConfirm('employee', value, `${employee.first_name} ${employee.last_name}`);
+                  } else {
+                    form.setValue("employeeId", value);
+                  }
                 }
+                form.setValue("customerId", null);
+                form.setValue("customerContactId", null);
               }}
               value={selectedEmployeeId || "unassigned"}
               disabled={loadingDropdowns || !!selectedCustomerId || !!selectedCustomerContactId} // Deaktivieren, wenn Kunde oder Kundenkontakt ausgewählt
@@ -272,10 +337,10 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
                 <SelectValue placeholder="Mitarbeiter auswählen" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="unassigned">Kein Mitarbeiter zugewiesen</SelectItem>
+                <SelectItem value="unassigned">Kein Mitarbeiter zugewiesen (System-User)</SelectItem>
                 {employees.map(emp => (
-                  <SelectItem key={emp.id} value={emp.id} disabled={!!emp.user_id}>
-                    {emp.first_name} {emp.last_name} {emp.email ? `(${emp.email})` : ''} {emp.user_id ? '(Bereits zugewiesen)' : ''}
+                  <SelectItem key={emp.id} value={emp.id}>
+                    {emp.first_name} {emp.last_name} {emp.email ? `(${emp.email})` : ''} {emp.user_id ? '⚠️ (Bereits zugewiesen - wird entkoppelt)' : ''}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -319,11 +384,18 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
             <Label htmlFor="customerContactId">Kundenkontakt zuweisen (optional)</Label>
             <Select
               onValueChange={(value) => {
-                form.setValue("customerContactId", value === "unassigned" ? null : value);
-                if (value !== "unassigned") {
-                  form.setValue("employeeId", null); // Wenn Kundenkontakt zugewiesen, Mitarbeiter entzuweisen
-                  // customerId bleibt bestehen, da es der Filter ist
+                if (value === "unassigned") {
+                  handleUnassignConfirm('customerContact', 'Kundenkontakt-Zuweisung', 'Kundenkontakt-Zuweisung');
+                } else {
+                  // Prüfe, ob bereits zugewiesen
+                  const contact = customerContactsForUserAssignment.find(c => c.id === value);
+                  if (contact?.user_id && contact.user_id !== (initialData as any)?.id) {
+                    handleReassignmentConfirm('customerContact', value, `${contact.first_name} ${contact.last_name}`);
+                  } else {
+                    form.setValue("customerContactId", value);
+                  }
                 }
+                form.setValue("employeeId", null);
               }}
               value={selectedCustomerContactId || "unassigned"}
               disabled={loadingDropdowns || !!selectedEmployeeId || !selectedCustomerId || customerContactsForUserAssignment.length === 0} // Deaktivieren, wenn Mitarbeiter ausgewählt, kein Kunde ausgewählt oder keine Kontakte verfügbar
@@ -334,8 +406,8 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
               <SelectContent>
                 <SelectItem value="unassigned">Kein Kundenkontakt zugewiesen</SelectItem>
                 {customerContactsForUserAssignment.map(contact => (
-                  <SelectItem key={contact.id} value={contact.id} disabled={!!contact.user_id}>
-                    {contact.first_name} {contact.last_name} {contact.email ? `(${contact.email})` : ''} {contact.user_id ? '(Bereits zugewiesen)' : ''}
+                  <SelectItem key={contact.id} value={contact.id}>
+                    {contact.first_name} {contact.last_name} {contact.email ? `(${contact.email})` : ''} {contact.user_id ? '⚠️ (Bereits zugewiesen - wird entkoppelt)' : ''}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -503,11 +575,18 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
               <Label htmlFor="employeeId">Mitarbeiter zuweisen (optional)</Label>
               <Select
                 onValueChange={(value) => {
-                  form.setValue("employeeId", value === "unassigned" ? null : value);
-                  if (value !== "unassigned") {
-                    form.setValue("customerId", null);
-                    form.setValue("customerContactId", null);
+                  if (value === "unassigned") {
+                    handleUnassignConfirm('employee', 'Mitarbeiter-Zuweisung', 'Mitarbeiter-Zuweisung');
+                  } else {
+                    const employee = employees.find(emp => emp.id === value);
+                    if (employee?.user_id && employee.user_id !== (initialData as any)?.id) {
+                      handleReassignmentConfirm('employee', value, `${employee.first_name} ${employee.last_name}`);
+                    } else {
+                      form.setValue("employeeId", value);
+                    }
                   }
+                  form.setValue("customerId", null);
+                  form.setValue("customerContactId", null);
                 }}
                 value={selectedEmployeeId || "unassigned"}
                 disabled={loadingDropdowns}
@@ -516,10 +595,10 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
                   <SelectValue placeholder="Mitarbeiter auswählen" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="unassigned">Kein Mitarbeiter zugewiesen</SelectItem>
+                  <SelectItem value="unassigned">Kein Mitarbeiter zugewiesen (System-User)</SelectItem>
                   {employees.map(emp => (
-                    <SelectItem key={emp.id} value={emp.id} disabled={!!emp.user_id && emp.user_id !== (initialData as any)?.id}>
-                      {emp.first_name} {emp.last_name} {emp.email ? `(${emp.email})` : ''} {emp.user_id && emp.user_id !== (initialData as any)?.id ? '(Bereits zugewiesen)' : ''}
+                    <SelectItem key={emp.id} value={emp.id}>
+                      {emp.first_name} {emp.last_name} {emp.email ? `(${emp.email})` : ''} {emp.user_id && emp.user_id !== (initialData as any)?.id ? '⚠️ (Bereits zugewiesen - wird entkoppelt)' : ''}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -557,10 +636,17 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
               <Label htmlFor="customerContactId">Kundenkontakt zuweisen (optional)</Label>
               <Select
                 onValueChange={(value) => {
-                  form.setValue("customerContactId", value === "unassigned" ? null : value);
-                  if (value !== "unassigned") {
-                    form.setValue("employeeId", null);
+                  if (value === "unassigned") {
+                    handleUnassignConfirm('customerContact', 'Kundenkontakt-Zuweisung', 'Kundenkontakt-Zuweisung');
+                  } else {
+                    const contact = customerContactsForUserAssignment.find(c => c.id === value);
+                    if (contact?.user_id && contact.user_id !== (initialData as any)?.id) {
+                      handleReassignmentConfirm('customerContact', value, `${contact.first_name} ${contact.last_name}`);
+                    } else {
+                      form.setValue("customerContactId", value);
+                    }
                   }
+                  form.setValue("employeeId", null);
                 }}
                 value={selectedCustomerContactId || "unassigned"}
                 disabled={loadingDropdowns || !!selectedEmployeeId || !selectedCustomerId || customerContactsForUserAssignment.length === 0}
@@ -571,8 +657,8 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
                 <SelectContent>
                   <SelectItem value="unassigned">Kein Kundenkontakt zugewiesen</SelectItem>
                   {customerContactsForUserAssignment.map(contact => (
-                    <SelectItem key={contact.id} value={contact.id} disabled={!!contact.user_id && contact.user_id !== (initialData as any)?.id}>
-                      {contact.first_name} {contact.last_name} {contact.email ? `(${contact.email})` : ''} {contact.user_id && contact.user_id !== (initialData as any)?.id ? '(Bereits zugewiesen)' : ''}
+                    <SelectItem key={contact.id} value={contact.id}>
+                      {contact.first_name} {contact.last_name} {contact.email ? `(${contact.email})` : ''} {contact.user_id && contact.user_id !== (initialData as any)?.id ? '⚠️ (Bereits zugewiesen - wird entkoppelt)' : ''}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -620,6 +706,58 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
       <Button type="submit" disabled={form.formState.isSubmitting}>
         {form.formState.isSubmitting ? `${submitButtonText}...` : submitButtonText}
       </Button>
+
+      {/* Bestätigungsdialog für Neuzuweisungen */}
+      <AlertDialog open={showReassignmentDialog} onOpenChange={setShowReassignmentDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>⚠️ Neuzuweisung bestätigen</AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingReassignment && (
+                <>
+                  Sie möchten <strong>{pendingReassignment.name}</strong> einem anderen Benutzer zuweisen.
+                  <br /><br />
+                  Der aktuell zugewiesene Benutzer wird automatisch entkoppelt und dieser Benutzer wird die neue Zuweisung erhalten.
+                  <br /><br />
+                  Möchten Sie fortfahren?
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmReassignment} className="bg-destructive hover:bg-destructive/90">
+              Ja, Zuweisung ändern
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Bestätigungsdialog für Aufhebung */}
+      <AlertDialog open={showUnassignDialog} onOpenChange={setShowUnassignDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>🗑️ Zuweisung aufheben</AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingUnassign && (
+                <>
+                  Möchten Sie die Zuweisung von <strong>{pendingUnassign.name}</strong> wirklich aufheben?
+                  <br /><br />
+                  Der Kunde/Mitarbeiter wird dann keinen Benutzer-Account mehr zugewiesen haben.
+                  <br /><br />
+                  Diese Aktion kann rückgängig gemacht werden, indem Sie später eine neue Zuweisung vornehmen.
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmUnassign} className="bg-destructive hover:bg-destructive/90">
+              Ja, Zuweisung aufheben
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </form>
   );
 }

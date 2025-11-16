@@ -12,6 +12,8 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { PageHeader } from "@/components/page-header";
 import { DataTableToolbar, FilterOption, SortOption } from "@/components/data-table-toolbar";
 import { CustomerContactsGridView } from "@/components/customer-contacts-grid-view"; // Assuming this will be created or exists
+import { GenericGridSkeleton } from "@/components/generic-grid-skeleton";
+import { SimpleListSkeleton } from "@/components/simple-list-skeleton";
 
 interface DisplayCustomerContact {
   id: string;
@@ -127,8 +129,8 @@ export default function CustomerContactsPage() {
 
   return (
     <div className="p-4 md:p-8 space-y-8">
-      
-      <PageHeader title="Ihre Kundenkontakte">
+
+      <PageHeader title="Ihre Kundenkontakte" loading={loading}>
         <CustomerContactCreateGeneralDialog onContactCreated={fetchData} />
       </PageHeader>
 
@@ -139,7 +141,7 @@ export default function CustomerContactsPage() {
             filterOptions={filterOptions}
             sortOptions={sortOptions}
           />
-          {totalCount !== null && (
+          {totalCount !== null && !loading && (
             <div className="text-sm text-muted-foreground mt-2">
               {totalCount} {totalCount === 1 ? 'Ergebnis' : 'Ergebnisse'} gefunden.
             </div>
@@ -154,26 +156,35 @@ export default function CustomerContactsPage() {
               </TabsList>
             </div>
             <TabsContent value="grid" className="mt-0">
-              <CustomerContactsGridView
-                contacts={allContacts}
-                query={query}
-                customerIdFilter={customerIdFilter}
-                onActionSuccess={fetchData}
-              />
+              {loading ? (
+                <GenericGridSkeleton count={6} showAvatar={true} showBadges={false} badgeCount={0} />
+              ) : (
+                <CustomerContactsGridView
+                  contacts={allContacts}
+                  query={query}
+                  customerIdFilter={customerIdFilter}
+                  onActionSuccess={fetchData}
+                />
+              )}
             </TabsContent>
             <TabsContent value="table" className="mt-0">
-              <CustomerContactsTableView
-                contacts={allContacts}
-                totalPages={totalPages}
-                currentPage={currentPage}
-                query={query}
-                customerIdFilter={customerIdFilter}
-              />
+              {loading ? (
+                <SimpleListSkeleton count={5} showMeta={true} />
+              ) : (
+                <CustomerContactsTableView
+                  contacts={allContacts}
+                  totalPages={totalPages}
+                  currentPage={currentPage}
+                  query={query}
+                  customerIdFilter={customerIdFilter}
+                  onActionSuccess={fetchData}
+                />
+              )}
             </TabsContent>
           </Tabs>
         </CardContent>
         <CardFooter className="flex justify-center">
-          {!query && totalPages > 1 && (
+          {!loading && !query && totalPages > 1 && (
             <PaginationControls currentPage={currentPage} totalPages={totalPages} />
           )}
         </CardFooter>

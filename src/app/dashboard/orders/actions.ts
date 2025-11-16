@@ -4,6 +4,7 @@ import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { OrderFormValues } from "@/components/order-form";
 import { sendNotification } from "@/lib/actions/notifications";
+import { logDataChange } from "@/lib/audit-log";
 
 export async function createOrder(data: OrderFormValues) {
   const supabase = await createClient();
@@ -99,6 +100,19 @@ export async function createOrder(data: OrderFormValues) {
 
   revalidatePath("/dashboard/orders");
   revalidatePath("/dashboard/planning");
+
+  // Create audit log
+  if (newOrder) {
+    await logDataChange(
+      user.id,
+      "INSERT",
+      "orders",
+      newOrder.id,
+      null,
+      { title, customerId, objectId, orderType, status }
+    );
+  }
+
   return { success: true, message: "Auftrag erfolgreich hinzugefügt!" };
 }
 
@@ -129,6 +143,13 @@ export async function updateOrder(orderId: string, data: OrderFormValues) {
     requestStatus,
     assignedEmployees,
   } = data;
+
+  // Get old order data for audit log
+  const { data: oldOrder } = await supabase
+    .from('orders')
+    .select('*')
+    .eq('id', orderId)
+    .single();
 
   const { error } = await supabase
     .from('orders')
@@ -183,12 +204,23 @@ export async function updateOrder(orderId: string, data: OrderFormValues) {
 
     if (insertAssignError) {
       console.error("Fehler beim Einfügen neuer Mitarbeiterzuweisungen:", insertAssignError?.message || insertAssignError);
-      return { success: false, message: `Fehler beim Aktualisieren der Zuweisungen: ${insertAssignError.message}` };
+      return { success: false, message: `Fehler beim Aktualisieren der Zuweisungen: ${insertAssignError.message }` };
     }
   }
 
   revalidatePath("/dashboard/orders");
   revalidatePath("/dashboard/planning");
+
+  // Create audit log
+  await logDataChange(
+    user.id,
+    "UPDATE",
+    "orders",
+    orderId,
+    oldOrder,
+    { title, customerId, objectId, orderType, status }
+  );
+
   return { success: true, message: "Auftrag erfolgreich aktualisiert!" };
 }
 
@@ -202,6 +234,13 @@ export async function deleteOrder(formData: FormData): Promise<{ success: boolea
 
   const orderId = formData.get('orderId') as string;
 
+  // Get order data before deletion for audit log
+  const { data: orderToDelete } = await supabase
+    .from('orders')
+    .select('*')
+    .eq('id', orderId)
+    .single();
+
   const { error } = await supabase
     .from('orders')
     .delete()
@@ -214,6 +253,19 @@ export async function deleteOrder(formData: FormData): Promise<{ success: boolea
 
   revalidatePath("/dashboard/orders");
   revalidatePath("/dashboard/planning");
+
+  // Create audit log
+  if (orderToDelete) {
+    await logDataChange(
+      user.id,
+      "DELETE",
+      "orders",
+      orderId,
+      orderToDelete,
+      null
+    );
+  }
+
   return { success: true, message: "Auftrag erfolgreich gelöscht!" };
 }
 

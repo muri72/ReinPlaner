@@ -34,10 +34,15 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
     `)
     .eq('id', id)
     .order('start_date', { foreignTable: 'absence_requests', ascending: false })
-    .single();
+    .maybeSingle();
 
-  if (error || !employee) {
-    console.error("Fehler beim Laden des Mitarbeiters:", error?.message || "Mitarbeiter nicht gefunden");
+  if (error) {
+    console.error("Fehler beim Laden des Mitarbeiters:", error?.message || error);
+    redirect("/dashboard/employees");
+  }
+
+  if (!employee) {
+    console.log("Mitarbeiter nicht gefunden");
     redirect("/dashboard/employees");
   }
 

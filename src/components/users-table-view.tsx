@@ -29,6 +29,7 @@ interface UsersTableViewProps {
   query: string;
   roleFilter: string;
   currentUserId: string;
+  onActionSuccess?: () => void;
 }
 
 export function UsersTableView({
@@ -38,6 +39,7 @@ export function UsersTableView({
   query,
   roleFilter,
   currentUserId,
+  onActionSuccess,
 }: UsersTableViewProps) {
 
   const getRoleBadgeVariant = (role: string) => {
@@ -104,8 +106,8 @@ export function UsersTableView({
                       managerName={`${user.first_name || ''} ${user.last_name || ''}`.trim()}
                     />
                   )}
-                  <UserEditDialog user={user} />
-                  <DeleteUserButton userId={user.id} />
+                  <UserEditDialog user={user} onActionSuccess={onActionSuccess} />
+                  <DeleteUserButton userId={user.id} onDeleteSuccess={onActionSuccess} />
                 </div>
               </TableCell>
             </TableRow>

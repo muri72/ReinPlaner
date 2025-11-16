@@ -4,6 +4,7 @@ import { createClient, createAdminClient } from "@/lib/supabase/server"; // Impo
 import { revalidatePath } from "next/cache";
 import { UserFormValues } from "@/components/user-form";
 import { sendNotification } from "@/lib/actions/notifications";
+import { logCriticalAction, logDataChange } from "@/lib/audit-log";
 
 // Define interfaces for the data to avoid using 'any'
 interface ProfileData {
@@ -214,7 +215,26 @@ export async function registerUser(data: UserFormValues) {
   // Explizite Logik zur Erstellung/Verknüpfung von Mitarbeiterdatensätzen
   if (role !== 'customer') {
     if (employeeId) {
-      // Verknüpfe den neuen Benutzer mit einem BESTEHENDEN Mitarbeiterdatensatz
+      // Zuerst prüfen, ob der Mitarbeiter bereits einem anderen Benutzer zugewiesen ist
+      const { data: existingEmployee, error: fetchEmployeeError } = await supabaseAdmin
+        .from('employees')
+        .select('user_id')
+        .eq('id', employeeId)
+        .single();
+
+      if (fetchEmployeeError && fetchEmployeeError.code !== 'PGRST116') {
+        console.error("Fehler beim Abrufen des Mitarbeiters für Zuweisung:", fetchEmployeeError?.message || fetchEmployeeError);
+      } else if (existingEmployee && existingEmployee.user_id && existingEmployee.user_id !== newUserId) {
+        // Wenn der Mitarbeiter bereits einem ANDEREN Benutzer zugewiesen ist, diesen entknüpfen
+        const { error: unlinkOtherUserError } = await supabaseAdmin
+          .from('employees')
+          .update({ user_id: null })
+          .eq('user_id', existingEmployee.user_id)
+          .eq('id', employeeId);
+        if (unlinkOtherUserError) console.error("Fehler beim Entknüpfen des Mitarbeiters von anderem Benutzer:", unlinkOtherUserError?.message || unlinkOtherUserError);
+      }
+
+      // Verknüpfe den neuen Benutzer mit dem Mitarbeiterdatensatz
       const { error: assignEmployeeError } = await supabaseAdmin
         .from('employees')
         .update({ user_id: newUserId })
@@ -324,6 +344,16 @@ export async function registerUser(data: UserFormValues) {
     link: "/dashboard"
   });
 
+  // Create audit log for user creation
+  await logCriticalAction(
+    adminUser.id,
+    "CREATE_USER",
+    "success",
+    `Created new user with email: ${userEmail}, role: ${role}`,
+    null,
+    { email: userEmail, firstName, lastName, role }
+  );
+
   revalidatePath("/dashboard/users");
   revalidatePath("/dashboard/employees"); // Revalidiere Mitarbeiterseite, falls Zuweisung geändert
   revalidatePath("/dashboard/customers"); // Revalidiere Kundenseite, falls Zuweisung geändert
@@ -350,6 +380,13 @@ export async function updateUser(userId: string, data: Partial<UserFormValues>) 
     console.error("Berechtigungsfehler:", profileError?.message || profileError);
     return { success: false, message: "Nicht autorisiert. Nur Admins können Benutzer aktualisieren." };
   }
+
+  // Get old profile data for audit log
+  const { data: oldProfile } = await supabase
+    .from('profiles')
+    .select('first_name, last_name, role')
+    .eq('id', userId)
+    .single();
 
   const { firstName, lastName, role, employeeId, customerId, customerContactId } = data;
 
@@ -440,6 +477,17 @@ export async function updateUser(userId: string, data: Partial<UserFormValues>) 
   revalidatePath("/dashboard/employees");
   revalidatePath("/dashboard/customers");
   revalidatePath("/dashboard/customer-contacts");
+
+  // Create audit log for user update
+  await logCriticalAction(
+    adminUser.id,
+    "UPDATE_USER",
+    "success",
+    `Updated user profile for user: ${userId}`,
+    oldProfile,
+    { firstName, lastName, role }
+  );
+
   return { success: true, message: "Benutzerprofil erfolgreich aktualisiert!" };
 }
 
@@ -506,6 +554,17 @@ export async function deleteUser(formData: FormData): Promise<{ success: boolean
   revalidatePath("/dashboard/employees"); // Revalidiere Mitarbeiterseite, falls Zuweisung geändert
   revalidatePath("/dashboard/customers"); // Revalidiere Kundenseite, falls Zuweisung geändert
   revalidatePath("/dashboard/customer-contacts"); // Revalidiere Kundenkontakte-Seite
+
+  // Create audit log for user deletion
+  await logCriticalAction(
+    adminUser.id,
+    "DELETE_USER",
+    "success",
+    `Deleted user: ${userId}`,
+    { userId },
+    null
+  );
+
   return { success: true, message: "Benutzer erfolgreich gelöscht!" };
 }
 

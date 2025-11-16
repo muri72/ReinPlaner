@@ -30,6 +30,7 @@ interface AbsenceRequestsTableViewProps {
   currentPage: number;
   query: string;
   currentUserRole: 'admin' | 'manager' | 'employee';
+  onActionSuccess?: () => void;
 }
 
 export function AbsenceRequestsTableView({
@@ -38,6 +39,7 @@ export function AbsenceRequestsTableView({
   currentPage,
   query,
   currentUserRole,
+  onActionSuccess,
 }: AbsenceRequestsTableViewProps) {
 
   const getStatusBadgeVariant = (status: string) => {
@@ -125,8 +127,8 @@ export function AbsenceRequestsTableView({
               <TableCell className="text-right">
                 <div className="flex justify-end space-x-1">
                   <RecordDetailsDialog record={request} title={`Details zu Abwesenheitsantrag`} />
-                  <AbsenceRequestEditDialog request={request} currentUserRole={currentUserRole} currentUserId={request.user_id} />
-                  <DeleteAbsenceRequestButton requestId={request.id} />
+                  <AbsenceRequestEditDialog request={request} currentUserRole={currentUserRole} currentUserId={request.user_id} onSuccess={onActionSuccess} />
+                  <DeleteAbsenceRequestButton requestId={request.id} onDeleteSuccess={onActionSuccess} />
                 </div>
               </TableCell>
             </TableRow>

@@ -5,9 +5,11 @@ export interface AuditLogData {
   action: string;
   tableName?: string;
   recordId?: string;
-  oldValues?: any;
-  newValues?: any;
-  status: "success" | "error" | "warning";
+  oldData?: any;
+  newData?: any;
+  ipAddress?: string;
+  userAgent?: string;
+  status?: "success" | "error" | "warning";
   errorMessage?: string;
 }
 
@@ -23,10 +25,10 @@ export async function createAuditLog(data: AuditLogData) {
       action: data.action,
       table_name: data.tableName,
       record_id: data.recordId,
-      old_values: data.oldValues,
-      new_values: data.newValues,
-      status: data.status,
-      error_message: data.errorMessage,
+      old_data: data.oldData,
+      new_data: data.newData,
+      ip_address: data.ipAddress,
+      user_agent: data.userAgent,
       created_at: new Date().toISOString(),
     };
 
@@ -34,7 +36,8 @@ export async function createAuditLog(data: AuditLogData) {
 
     if (error) {
       console.error("Fehler beim Erstellen des Audit-Logs:", error);
-      throw error;
+      // Don't throw error to avoid breaking the main operation
+      return { success: false, error };
     }
 
     return { success: true };
@@ -69,16 +72,20 @@ export async function logDataChange(
   action: "INSERT" | "UPDATE" | "DELETE",
   tableName: string,
   recordId: string,
-  oldValues?: any,
-  newValues?: any
+  oldData?: any,
+  newData?: any,
+  ipAddress?: string,
+  userAgent?: string
 ) {
   return createAuditLog({
     userId,
     action,
     tableName,
     recordId,
-    oldValues,
-    newValues,
+    oldData,
+    newData,
+    ipAddress,
+    userAgent,
     status: "success",
   });
 }
@@ -91,8 +98,10 @@ export async function logCriticalAction(
   action: string,
   status: "success" | "error" | "warning",
   details?: string,
-  oldValues?: any,
-  newValues?: any
+  oldData?: any,
+  newData?: any,
+  ipAddress?: string,
+  userAgent?: string
 ) {
   return createAuditLog({
     userId,
@@ -100,7 +109,9 @@ export async function logCriticalAction(
     tableName: "users",
     status,
     errorMessage: details,
-    oldValues,
-    newValues,
+    oldData,
+    newData,
+    ipAddress,
+    userAgent,
   });
 }

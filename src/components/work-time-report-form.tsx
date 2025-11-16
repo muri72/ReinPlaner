@@ -13,7 +13,6 @@ import { getWorkTimeReport, WorkTimeReportData, getEmployeeWorkTimeReport, Emplo
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatDuration, formatDateWithWeekday } from "@/lib/utils";
 import { generateProfessionalPDF } from "@/components/pdf-generator";
-import { settingsService } from "@/lib/services/settings-service";
 import { Download, Send } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "./ui/input";
@@ -72,6 +71,7 @@ export function WorkTimeReportForm() {
       if (employeesData) setEmployees(employeesData);
 
       // Load bundesland from settings (default to HH if not found)
+      const { settingsService } = await import('@/lib/services/settings-service');
       const code = await settingsService.getSetting('default_bundesland') || 'HH';
       setBundeslandCode(code);
     };
@@ -99,6 +99,7 @@ export function WorkTimeReportForm() {
         console.log(`[REPORTS] Unique dates:`, uniqueDates);
 
         // Get all holidays for these dates in ONE database call
+        const { settingsService } = await import('@/lib/services/settings-service');
         const holidayResults = await settingsService.checkMultipleHolidays(uniqueDates, bundeslandCode);
 
         // Build work types map
@@ -166,6 +167,7 @@ export function WorkTimeReportForm() {
         console.log(`[REPORTS] Batch processing ${result.data.entries.length} entries with ${uniqueDates.length} unique dates`);
 
         // Get all holidays for these dates in ONE database call
+        const { settingsService } = await import('@/lib/services/settings-service');
         const holidayResults = await settingsService.checkMultipleHolidays(uniqueDates, bundeslandCode);
 
         // Build work types map
@@ -235,6 +237,7 @@ export function WorkTimeReportForm() {
       const currentYear = form.getValues("year");
 
       // Get bundesland setting
+      const { settingsService } = await import('@/lib/services/settings-service');
       const bundeslandCode = await settingsService.getSetting('default_bundesland') || 'HH';
 
       if (objectReportData) {

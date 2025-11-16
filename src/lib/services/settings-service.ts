@@ -127,9 +127,10 @@ class SettingsService {
       const existingId = current?.id;
 
       let error;
+      let result;
       if (existingId) {
         // Update existing setting
-        const result = await supabase
+        result = await supabase
           .from('app_settings')
           .update({
             value,
@@ -145,7 +146,7 @@ class SettingsService {
         error = result.error;
       } else {
         // Insert new setting
-        const result = await supabase
+        result = await supabase
           .from('app_settings')
           .insert({
             key,

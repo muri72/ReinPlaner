@@ -27,7 +27,6 @@ import { createClient } from "@/lib/supabase/client";
 import { useSearchParams } from "next/navigation";
 import { RecurringEditDialog } from "@/components/recurring-edit-dialog";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { settingsService } from "@/lib/services/settings-service";
 import { format as formatDateFns } from "date-fns";
 
 interface PendingReassignment {
@@ -92,6 +91,7 @@ export default function PlanningPage() {
     }
 
     // Load bundesland from settings (default to HH if not found)
+    const { settingsService } = await import('@/lib/services/settings-service');
     const code = await settingsService.getSetting('default_bundesland') || 'HH';
     setBundeslandCode(code);
 

@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { AbsenceRequestFormValues } from "@/components/absence-request-form";
 import { startOfMonth, endOfMonth } from "date-fns";
 import { sendNotification } from "@/lib/actions/notifications";
+import { logDataChange } from "@/lib/audit-log";
 
 export async function createAbsenceRequest(data: AbsenceRequestFormValues): Promise<{ success: boolean; message: string }> {
   const supabase = await createClient();
@@ -58,6 +59,17 @@ export async function createAbsenceRequest(data: AbsenceRequestFormValues): Prom
   }
 
   revalidatePath("/dashboard/absence-requests");
+
+  // Create audit log
+  await logDataChange(
+    creator.id,
+    "INSERT",
+    "absence_requests",
+    data.employeeId,
+    null,
+    { employeeId: data.employeeId, type: data.type, startDate: data.startDate, endDate: data.endDate }
+  );
+
   return { success: true, message: "Abwesenheitsantrag erfolgreich hinzugefügt!" };
 }
 
@@ -70,6 +82,13 @@ export async function updateAbsenceRequest(requestId: string, data: Partial<Abse
   }
 
   const { data: originalRequest } = await supabase.from('absence_requests').select('user_id, status').eq('id', requestId).single();
+
+  // Get old request data for audit log
+  const { data: oldRequest } = await supabase
+    .from('absence_requests')
+    .select('*')
+    .eq('id', requestId)
+    .single();
 
   const updateData: any = {
     updated_at: new Date().toISOString(),
@@ -113,6 +132,17 @@ export async function updateAbsenceRequest(requestId: string, data: Partial<Abse
   }
 
   revalidatePath("/dashboard/absence-requests");
+
+  // Create audit log
+  await logDataChange(
+    user.id,
+    "UPDATE",
+    "absence_requests",
+    requestId,
+    oldRequest,
+    { status: data.status, type: data.type }
+  );
+
   return { success: true, message: "Abwesenheitsantrag erfolgreich aktualisiert!" };
 }
 
@@ -126,6 +156,13 @@ export async function deleteAbsenceRequest(formData: FormData): Promise<{ succes
 
   const requestId = formData.get('requestId') as string;
 
+  // Get request data before deletion for audit log
+  const { data: requestToDelete } = await supabase
+    .from('absence_requests')
+    .select('*')
+    .eq('id', requestId)
+    .single();
+
   const { error } = await supabase
     .from('absence_requests')
     .delete()
@@ -137,6 +174,19 @@ export async function deleteAbsenceRequest(formData: FormData): Promise<{ succes
   }
 
   revalidatePath("/dashboard/absence-requests");
+
+  // Create audit log
+  if (requestToDelete) {
+    await logDataChange(
+      user.id,
+      "DELETE",
+      "absence_requests",
+      requestId,
+      requestToDelete,
+      null
+    );
+  }
+
   return { success: true, message: "Abwesenheitsantrag erfolgreich gelöscht!" };
 }
 

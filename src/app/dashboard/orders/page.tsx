@@ -179,132 +179,128 @@ export default function OrdersPage({
       filterCustomerId = customerData?.id || null;
     }
 
-    if (query) {
-      const { data, error: rpcError } = await supabase.rpc('search_orders', {
-        search_query: query,
-        filter_user_id: filterUserId,
-        filter_customer_id: filterCustomerId
-      });
-      ordersData = (data as DisplayOrder[] | null)?.map(o => ({ ...o, order_feedback: [] })) || [];
-      ordersError = rpcError;
-      ordersCount = ordersData.length;
-    } else {
-      let selectQuery = supabase
-        .from('orders')
-        .select(`
-          id,
-          user_id,
-          title,
-          description,
-          status,
-          due_date,
-          created_at,
-          customer_id,
-          object_id,
-          customer_contact_id,
-          order_type,
-          recurring_start_date,
-          recurring_end_date,
-          priority,
-          total_estimated_hours,
-          fixed_monthly_price,
-          notes,
-          request_status,
-          service_type,
-          customers ( name ),
-          objects ( name, address, notes, time_of_day, access_method, pin, is_alarm_secured, alarm_password, security_code_word, recurrence_interval_weeks, start_week_offset, daily_schedules ),
-          customer_contacts ( first_name, last_name, phone ),
-          order_feedback ( id, rating, comment, image_urls, created_at ),
-          order_employee_assignments (
-            employee_id,
-            assigned_daily_schedules,
-            assigned_recurrence_interval_weeks, assigned_start_week_offset,
-            employees ( first_name, last_name )
-          )
-        `, { count: 'exact' })
-        .order(sortColumn, { ascending: sortDirection === 'asc' });
+    // Use the same comprehensive query for both search and non-search cases
+    let selectQuery = supabase
+      .from('orders')
+      .select(`
+        id,
+        user_id,
+        title,
+        description,
+        status,
+        due_date,
+        created_at,
+        customer_id,
+        object_id,
+        customer_contact_id,
+        order_type,
+        recurring_start_date,
+        recurring_end_date,
+        priority,
+        total_estimated_hours,
+        fixed_monthly_price,
+        notes,
+        request_status,
+        service_type,
+        customers ( name ),
+        objects ( name, address, notes, time_of_day, access_method, pin, is_alarm_secured, alarm_password, security_code_word, recurrence_interval_weeks, start_week_offset, daily_schedules ),
+        customer_contacts ( first_name, last_name, phone ),
+        order_feedback ( id, rating, comment, image_urls, created_at ),
+        order_employee_assignments (
+          employee_id,
+          assigned_daily_schedules,
+          assigned_recurrence_interval_weeks, assigned_start_week_offset,
+          employees ( first_name, last_name )
+        )
+      `, { count: 'exact' })
+      .order(sortColumn, { ascending: sortDirection === 'asc' });
 
-      if (statusFilter) {
-        selectQuery = selectQuery.eq('status', statusFilter);
-      }
-      if (orderTypeFilter) {
-        selectQuery = selectQuery.eq('order_type', orderTypeFilter);
-      }
-      if (serviceTypeFilter) {
-        selectQuery = selectQuery.eq('service_type', serviceTypeFilter);
-      }
-      if (customerIdFilter) {
-        selectQuery = selectQuery.eq('customer_id', customerIdFilter);
-      }
-      if (employeeIdFilter) {
-        selectQuery = selectQuery.eq('order_employee_assignments.employee_id', employeeIdFilter);
-      }
-
-      const { data, error: selectError, count: selectCount } = await selectQuery
-        .range(from, to);
-
-      ordersData = data?.map(order => {
-        const customerData = Array.isArray(order.customers) ? order.customers[0] : order.customers;
-        const objectData = Array.isArray(order.objects) ? order.objects[0] : order.objects;
-        const customerContactData = Array.isArray(order.customer_contacts) ? order.customer_contacts[0] : order.customer_contacts;
-
-        const mappedAssignments = order.order_employee_assignments?.map((a: any) => ({
-            employeeId: a.employee_id,
-            assigned_daily_schedules: a.assigned_daily_schedules,
-            assigned_recurrence_interval_weeks: a.assigned_recurrence_interval_weeks,
-            assigned_start_week_offset: a.assigned_start_week_offset,
-        })) || [];
-
-        // Get hourly rate for this order's service type
-        const hourlyRate = order.service_type
-          ? ordersServiceRates.find((r: any) => r.service_type === order.service_type)?.hourly_rate || null
-          : null;
-
-        return {
-          id: order.id,
-          user_id: order.user_id,
-          title: order.title,
-          description: order.description,
-          status: order.status,
-          due_date: order.due_date,
-          created_at: order.created_at,
-          customer_id: order.customer_id,
-          object_id: order.object_id,
-          customer_contact_id: order.customer_contact_id,
-          order_type: order.order_type,
-          recurring_start_date: order.recurring_start_date,
-          recurring_end_date: order.recurring_end_date,
-          priority: order.priority,
-          total_estimated_hours: order.total_estimated_hours,
-          fixed_monthly_price: order.fixed_monthly_price,
-          notes: order.notes,
-          request_status: order.request_status,
-          service_type: order.service_type,
-          order_feedback: order.order_feedback,
-          customer_name: customerData?.name || null,
-          object_name: objectData?.name || null,
-          object_address: objectData?.address || null,
-          customer_contact_first_name: customerContactData?.first_name || null,
-          customer_contact_last_name: customerContactData?.last_name || null,
-          employee_ids: order.order_employee_assignments?.map((a: any) => a.employee_id) || null,
-          employee_first_names: order.order_employee_assignments?.map((a: any) => {
-            const employee = Array.isArray(a.employees) ? a.employees[0] : a.employees;
-            return employee?.first_name || '';
-          }) || null,
-          employee_last_names: order.order_employee_assignments?.map((a: any) => {
-            const employee = Array.isArray(a.employees) ? a.employees[0] : a.employees;
-            return employee?.last_name || '';
-          }) || null,
-          hourly_rate: hourlyRate,
-          assignedEmployees: mappedAssignments,
-          object: objectData,
-          customer: customerData,
-          customer_contact: customerContactData,
-        };
-      }) || [];
-      ordersError = selectError;
-      ordersCount = selectCount;
+    // Apply base filters
+    if (statusFilter) {
+      selectQuery = selectQuery.eq('status', statusFilter);
     }
+    if (orderTypeFilter) {
+      selectQuery = selectQuery.eq('order_type', orderTypeFilter);
+    }
+    if (serviceTypeFilter) {
+      selectQuery = selectQuery.eq('service_type', serviceTypeFilter);
+    }
+    if (customerIdFilter) {
+      selectQuery = selectQuery.eq('customer_id', customerIdFilter);
+    }
+    if (employeeIdFilter) {
+      selectQuery = selectQuery.eq('order_employee_assignments.employee_id', employeeIdFilter);
+    }
+
+    // Apply search filter if query exists - search in main table first
+    if (query) {
+      selectQuery = selectQuery.or(`title.ilike.%${query}%,description.ilike.%${query}%`);
+    }
+
+    const { data, error: selectError, count: selectCount } = await selectQuery
+      .range(from, to);
+
+    ordersData = data?.map(order => {
+      const customerData = Array.isArray(order.customers) ? order.customers[0] : order.customers;
+      const objectData = Array.isArray(order.objects) ? order.objects[0] : order.objects;
+      const customerContactData = Array.isArray(order.customer_contacts) ? order.customer_contacts[0] : order.customer_contacts;
+
+      const mappedAssignments = order.order_employee_assignments?.map((a: any) => ({
+          employeeId: a.employee_id,
+          assigned_daily_schedules: a.assigned_daily_schedules,
+          assigned_recurrence_interval_weeks: a.assigned_recurrence_interval_weeks,
+          assigned_start_week_offset: a.assigned_start_week_offset,
+      })) || [];
+
+      // Get hourly rate for this order's service type
+      const hourlyRate = order.service_type
+        ? ordersServiceRates.find((r: any) => r.service_type === order.service_type)?.hourly_rate || null
+        : null;
+
+      return {
+        id: order.id,
+        user_id: order.user_id,
+        title: order.title,
+        description: order.description,
+        status: order.status,
+        due_date: order.due_date,
+        created_at: order.created_at,
+        customer_id: order.customer_id,
+        object_id: order.object_id,
+        customer_contact_id: order.customer_contact_id,
+        order_type: order.order_type,
+        recurring_start_date: order.recurring_start_date,
+        recurring_end_date: order.recurring_end_date,
+        priority: order.priority,
+        total_estimated_hours: order.total_estimated_hours,
+        fixed_monthly_price: order.fixed_monthly_price,
+        notes: order.notes,
+        request_status: order.request_status,
+        service_type: order.service_type,
+        order_feedback: order.order_feedback,
+        customer_name: customerData?.name || null,
+        object_name: objectData?.name || null,
+        object_address: objectData?.address || null,
+        customer_contact_first_name: customerContactData?.first_name || null,
+        customer_contact_last_name: customerContactData?.last_name || null,
+        employee_ids: order.order_employee_assignments?.map((a: any) => a.employee_id) || null,
+        employee_first_names: order.order_employee_assignments?.map((a: any) => {
+          const employee = Array.isArray(a.employees) ? a.employees[0] : a.employees;
+          return employee?.first_name || '';
+        }) || null,
+        employee_last_names: order.order_employee_assignments?.map((a: any) => {
+          const employee = Array.isArray(a.employees) ? a.employees[0] : a.employees;
+          return employee?.last_name || '';
+        }) || null,
+        hourly_rate: hourlyRate,
+        assignedEmployees: mappedAssignments,
+        object: objectData,
+        customer: customerData,
+        customer_contact: customerContactData,
+      };
+    }) || [];
+    ordersError = selectError;
+    ordersCount = selectCount;
 
     if (ordersError) {
       console.error("Fehler beim Laden der Aufträge:", ordersError?.message || ordersError);

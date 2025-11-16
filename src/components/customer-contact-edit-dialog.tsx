@@ -18,9 +18,10 @@ interface CustomerContactEditDialogProps {
     phone: string | null;
     role: string | null;
   };
+  onSuccess?: () => void;
 }
 
-export function CustomerContactEditDialog({ contact }: CustomerContactEditDialogProps) {
+export function CustomerContactEditDialog({ contact, onSuccess }: CustomerContactEditDialogProps) {
   const [open, setOpen] = useState(false);
   // Removed titleId and descriptionId as they are no longer needed for aria attributes
 
@@ -28,6 +29,7 @@ export function CustomerContactEditDialog({ contact }: CustomerContactEditDialog
     const result = await updateCustomerContact(contact.id, data);
     if (result.success) {
       setOpen(false);
+      onSuccess?.(); // Triggere Neuladen der Daten
     }
     return result;
   };
