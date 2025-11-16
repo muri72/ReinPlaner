@@ -24,6 +24,7 @@ interface Employee {
   id: string;
   first_name: string;
   last_name: string;
+  status?: string; // 'active' or 'inactive'
 }
 
 interface MultiSelectEmployeesProps {
@@ -58,6 +59,15 @@ export function MultiSelectEmployees({
     return employee ? `${employee.first_name} ${employee.last_name}` : "Unbekannt";
   };
 
+  const getEmployeeStatus = (id: string) => {
+    const employee = employees.find((emp) => emp.id === id);
+    return employee?.status || 'active';
+  };
+
+  // Separate active employees (selectable) from already selected inactive employees (read-only)
+  const selectableEmployees = employees.filter(emp => emp.status === 'active');
+  const selectedInactiveEmployees = selectedEmployeeIds.filter(id => getEmployeeStatus(id) !== 'active');
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -70,15 +80,26 @@ export function MultiSelectEmployees({
         >
           {selectedEmployeeIds.length > 0 ? (
             <div className="flex flex-wrap gap-1">
-              {selectedEmployeeIds.map((id) => (
-                <Badge key={id} variant="secondary" className="flex items-center gap-1">
-                  {getEmployeeName(id)}
-                  <X className="h-3 w-3 cursor-pointer" onClick={(e: React.MouseEvent) => {
-                    e.stopPropagation(); // Prevent popover from closing
-                    handleSelect(id);
-                  }} />
-                </Badge>
-              ))}
+              {selectedEmployeeIds.map((id) => {
+                const isInactive = getEmployeeStatus(id) !== 'active';
+                return (
+                  <Badge
+                    key={id}
+                    variant={isInactive ? "destructive" : "secondary"}
+                    className="flex items-center gap-1"
+                  >
+                    {getEmployeeName(id)}
+                    {isInactive && " (inaktiv)"}
+                    <X
+                      className="h-3 w-3 cursor-pointer"
+                      onClick={(e: React.MouseEvent) => {
+                        e.stopPropagation(); // Prevent popover from closing
+                        handleSelect(id); // Allow removal of all employees (including inactive)
+                      }}
+                    />
+                  </Badge>
+                );
+              })}
             </div>
           ) : (
             "Mitarbeiter auswählen..."
@@ -91,8 +112,8 @@ export function MultiSelectEmployees({
           <CommandInput placeholder="Mitarbeiter suchen..." />
           <CommandList>
             <CommandEmpty>Keine Mitarbeiter gefunden.</CommandEmpty>
-            <CommandGroup>
-              {employees.map((employee) => (
+            <CommandGroup heading="Aktive Mitarbeiter">
+              {selectableEmployees.map((employee) => (
                 <CommandItem
                   key={employee.id}
                   value={`${employee.first_name} ${employee.last_name}`}
@@ -112,6 +133,29 @@ export function MultiSelectEmployees({
                 </CommandItem>
               ))}
             </CommandGroup>
+            {selectedInactiveEmployees.length > 0 && (
+              <CommandGroup heading="Bereits zugewiesene inaktive Mitarbeiter (entfernbar)">
+                {selectedInactiveEmployees.map((id) => (
+                  <CommandItem
+                    key={id}
+                    value={`${getEmployeeName(id)} (inaktiv)`}
+                    onSelect={() => {
+                      handleSelect(id);
+                    }}
+                  >
+                    <Check
+                      className={cn(
+                        "mr-2 h-4 w-4",
+                        selectedEmployeeIds.includes(id)
+                          ? "opacity-100"
+                          : "opacity-0"
+                      )}
+                    />
+                    {getEmployeeName(id)} (inaktiv)
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            )}
           </CommandList>
         </Command>
       </PopoverContent>

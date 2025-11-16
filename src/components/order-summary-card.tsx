@@ -59,6 +59,42 @@ export function OrderSummaryCard({ order }: OrderSummaryCardProps) {
     ? order.employee_first_names.map((f, i) => `${f} ${order.employee_last_names?.[i] || ''}`).join(', ')
     : null;
 
+  // Calculate hours per employee from assigned_daily_schedules
+  const calculateEmployeeHours = () => {
+    if (!order.assignedEmployees || order.assignedEmployees.length === 0) {
+      return [];
+    }
+
+    return order.assignedEmployees.map((assignment, index) => {
+      const firstName = order.employee_first_names?.[index] || "";
+      const lastName = order.employee_last_names?.[index] || "";
+
+      // Calculate total hours for this employee across all weeks
+      let totalHours = 0;
+      if (assignment.assigned_daily_schedules && assignment.assigned_daily_schedules.length > 0) {
+        assignment.assigned_daily_schedules.forEach((weekSchedule: any) => {
+          if (weekSchedule) {
+            // Sum up hours for all days in this week
+            ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].forEach(day => {
+              const dayHours = weekSchedule[day]?.hours;
+              if (typeof dayHours === 'number' && dayHours > 0) {
+                totalHours += dayHours;
+              }
+            });
+          }
+        });
+      }
+
+      return {
+        first_name: firstName,
+        last_name: lastName,
+        hours_per_week: totalHours,
+      };
+    });
+  };
+
+  const employeeHoursList = calculateEmployeeHours();
+
   return (
     <Card className="shadow-neumorphic glassmorphism-card">
       <CardHeader>
@@ -121,15 +157,7 @@ export function OrderSummaryCard({ order }: OrderSummaryCardProps) {
         {order.total_estimated_hours && (
           <OrderHoursSummary
             totalHours={order.total_estimated_hours}
-            employees={
-              order.employee_first_names && order.employee_last_names
-                ? order.employee_first_names.map((first, i) => ({
-                    first_name: first,
-                    last_name: order.employee_last_names?.[i] || "",
-                    hours_per_week: 0, // Will be calculated
-                  }))
-                : []
-            }
+            employees={employeeHoursList}
             orderType={order.order_type}
             recurrenceIntervalWeeks={order.object?.recurrence_interval_weeks || 1}
             className="mt-2"

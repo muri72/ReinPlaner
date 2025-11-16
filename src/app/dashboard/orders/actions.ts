@@ -100,6 +100,9 @@ export async function createOrder(data: OrderFormValues) {
 
   revalidatePath("/dashboard/orders");
   revalidatePath("/dashboard/planning");
+  if (newOrder?.id) {
+    revalidatePath(`/dashboard/orders/${newOrder.id}`);
+  }
 
   // Create audit log
   if (newOrder) {
@@ -210,6 +213,7 @@ export async function updateOrder(orderId: string, data: OrderFormValues) {
 
   revalidatePath("/dashboard/orders");
   revalidatePath("/dashboard/planning");
+  revalidatePath(`/dashboard/orders/${orderId}`);
 
   // Create audit log
   await logDataChange(
@@ -253,6 +257,7 @@ export async function deleteOrder(formData: FormData): Promise<{ success: boolea
 
   revalidatePath("/dashboard/orders");
   revalidatePath("/dashboard/planning");
+  revalidatePath(`/dashboard/orders/${orderId}`);
 
   // Create audit log
   if (orderToDelete) {
@@ -378,5 +383,6 @@ export async function processOrderRequest(formData: FormData): Promise<{ success
 
   revalidatePath("/dashboard/orders");
   revalidatePath("/dashboard/planning");
+  revalidatePath(`/dashboard/orders/${orderId}`);
   return { success: true, message: `Anfrage erfolgreich ${decision === 'approved' ? 'genehmigt' : 'abgelehnt'}!` };
 }

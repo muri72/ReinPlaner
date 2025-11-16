@@ -293,6 +293,7 @@ export function MobilePlanningCalendar({
                     const today = isToday(day);
                     const assignmentCount = assignmentCountByDate.get(dayKey) ?? 0;
                     const unassignedCount = unassignedCountByDate.get(dayKey) ?? 0;
+                    const holidayInfo = holidaysMap[dayKey];
 
                     return (
                       <button
@@ -305,14 +306,26 @@ export function MobilePlanningCalendar({
                             ? "border-primary bg-primary text-primary-foreground shadow-lg"
                             : "border-border bg-card hover:border-primary/40",
                           today && !isSelected && "border-primary/30",
+                          holidayInfo && !isSelected && "border-red-200 bg-red-50",
                           !isCurrentMonth && "opacity-50",
                         )}
                         aria-pressed={isSelected}
                       >
-                        <span className="text-sm font-semibold">
+                        <span className={cn(
+                          "text-sm font-semibold",
+                          holidayInfo && !isSelected && "text-red-700"
+                        )}>
                           {format(day, "d")}
                         </span>
-                        {today && (
+                        {holidayInfo && (
+                          <span className={cn(
+                            "max-w-[80%] truncate text-[8px] font-medium",
+                            isSelected ? "text-primary-foreground/90" : "text-red-600"
+                          )}>
+                            {holidayInfo.name}
+                          </span>
+                        )}
+                        {today && !holidayInfo && (
                           <span className="text-[10px] font-medium text-primary">
                             Heute
                           </span>
@@ -341,6 +354,7 @@ export function MobilePlanningCalendar({
                 const isSelected = dayKey === selectedDateKey;
                 const assignmentCount = assignmentCountByDate.get(dayKey) ?? 0;
                 const unassignedCount = unassignedCountByDate.get(dayKey) ?? 0;
+                const holidayInfo = holidaysMap[dayKey];
 
                 return (
                   <button
@@ -353,16 +367,31 @@ export function MobilePlanningCalendar({
                         ? "border-primary bg-primary text-primary-foreground shadow"
                         : "border-border bg-card hover:border-primary/40",
                       today && !isSelected && "border-primary/30",
+                      holidayInfo && !isSelected && "border-red-200 bg-red-50",
                     )}
                     aria-pressed={isSelected}
                   >
-                    <span className="font-semibold uppercase tracking-wide">
+                    <span className={cn(
+                      "font-semibold uppercase tracking-wide",
+                      holidayInfo && !isSelected && "text-red-700"
+                    )}>
                       {sanitizeWeekday(day)}
                     </span>
-                    <span className="text-base font-bold">
+                    <span className={cn(
+                      "text-base font-bold",
+                      holidayInfo && !isSelected && "text-red-700"
+                    )}>
                       {format(day, "d")}
                     </span>
-                    {today && (
+                    {holidayInfo && (
+                      <span className={cn(
+                        "mt-0.5 max-w-[80%] truncate text-[8px] font-medium",
+                        isSelected ? "text-primary-foreground/90" : "text-red-600"
+                      )}>
+                        {holidayInfo.name}
+                      </span>
+                    )}
+                    {today && !holidayInfo && (
                       <Badge variant="secondary" className="mt-0.5 h-3.5 px-1 text-[9px] leading-none">
                         Heute
                       </Badge>

@@ -331,9 +331,16 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     const currentTotal = form.getValues("totalEstimatedHours");
     const safeNewTotal = (typeof newTotalEstimatedHours === 'number' && isFinite(newTotalEstimatedHours)) ? parseFloat(newTotalEstimatedHours.toFixed(2)) : null;
     if (currentTotal !== safeNewTotal) {
-      form.setValue("totalEstimatedHours", safeNewTotal, { shouldValidate: false });
+      form.setValue("totalEstimatedHours", safeNewTotal, { shouldValidate: false, shouldDirty: false });
     }
-  }, [form.watch("assignedEmployees"), form.watch("orderType"), form.watch("dueDate"), selectedObjectId, objects, form]);
+  }, [watchedAssignedEmployees, form.watch("orderType"), form.watch("dueDate"), selectedObjectId, objects, form]);
+
+  // Separate effect to trigger recalculation when assignedEmployees actually change (deep watch)
+  useEffect(() => {
+    // Force recalculation by triggering the main effect through a dummy state
+    // This ensures totalEstimatedHours is recalculated when assignments change in edit mode
+    form.trigger("totalEstimatedHours");
+  }, [JSON.stringify(watchedAssignedEmployees), form]);
 
   const handleEmployeeSelectionChange = useCallback((selectedIds: string[]) => {
     const currentObjectId = form.getValues("objectId") ?? null;
@@ -457,56 +464,63 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     }
   }, [form]);
 
-  const handleCopyDayToAllWeeksForEmployee = useCallback((
+  const handleCopyDayToOtherDaysInSameWeek = useCallback((
     employeeIndex: number,
-    sourceWeekIndex: number,
+    weekIndex: number,
     sourceDay: typeof dayNames[number]
   ) => {
-    const sourceSchedule = form.getValues(`assignedEmployees.${employeeIndex}.assigned_daily_schedules.${sourceWeekIndex}.${sourceDay}`);
+    const sourceSchedule = form.getValues(`assignedEmployees.${employeeIndex}.assigned_daily_schedules.${weekIndex}.${sourceDay}`);
     if (!sourceSchedule?.hours && !sourceSchedule?.start && !sourceSchedule?.end) {
-      toast.info("Keine Zeiten zum Kopieren vorhanden.");
+      toast.info("Keine Zeiten zum Kopieren vorhanden.", {
+        description: `Bitte geben Sie zuerst Arbeitszeiten für ${germanDayNames[sourceDay]} ein.`
+      });
       return;
     }
 
     let copiedCount = 0;
-    const employeeRecurrenceInterval = Number(form.getValues(`assignedEmployees.${employeeIndex}.assigned_recurrence_interval_weeks`)) || 1;
-    for (let weekIndex = 0; weekIndex < employeeRecurrenceInterval; weekIndex++) {
-      if (weekIndex !== sourceWeekIndex) {
-        form.setValue(`assignedEmployees.${employeeIndex}.assigned_daily_schedules.${weekIndex}.${sourceDay}`, sourceSchedule, { shouldValidate: true });
-        copiedCount++;
-      }
-    }
-    if (copiedCount > 0) {
-      toast.success(`Zeiten für ${germanDayNames[sourceDay]} wurden in ${copiedCount} weitere Wochen für diesen Mitarbeiter kopiert.`);
-    } else {
-      toast.info("Keine weiteren Wochen zum Kopieren gefunden.");
-    }
-  }, [form]);
+    let skippedCount = 0;
 
-  const handleCopyWeekToAllWeeksForEmployee = useCallback((
-    employeeIndex: number,
-    sourceWeekIndex: number
-  ) => {
-    const sourceWeekSchedule = form.getValues(`assignedEmployees.${employeeIndex}.assigned_daily_schedules.${sourceWeekIndex}`);
-    if (!sourceWeekSchedule || Object.keys(sourceWeekSchedule).length === 0) {
-      toast.info("Kein Wochenplan zum Kopieren vorhanden.");
-      return;
+    // Get selected object to validate against object hours
+    const currentObjectId = form.getValues("objectId");
+    const selectedObject = objects.find(obj => obj.id === currentObjectId);
+
+    for (const targetDay of dayNames) {
+      if (targetDay === sourceDay) continue; // Skip source day
+
+      // Check if target day already has hours
+      const targetSchedule = form.getValues(`assignedEmployees.${employeeIndex}.assigned_daily_schedules.${weekIndex}.${targetDay}`) as any;
+      const targetHasHours = (targetSchedule?.hours ?? 0) > 0 || targetSchedule?.start || targetSchedule?.end;
+
+      if (targetHasHours) {
+        skippedCount++;
+        continue;
+      }
+
+      // Validate against object hours if object is selected
+      if (selectedObject && sourceSchedule?.hours) {
+        const objectDayHours = (selectedObject.daily_schedules?.[weekIndex] as any)?.[targetDay]?.hours;
+        if (objectDayHours && sourceSchedule.hours > objectDayHours + 0.1) {
+          toast.error(`Kopieren nicht möglich: ${germanDayNames[targetDay]}`,
+            { description: `Arbeitszeiten (${sourceSchedule.hours}h) überschreiten Objektstunden (${objectDayHours}h)` }
+          );
+          continue;
+        }
+      }
+
+      form.setValue(`assignedEmployees.${employeeIndex}.assigned_daily_schedules.${weekIndex}.${targetDay}`, sourceSchedule, { shouldValidate: true });
+      copiedCount++;
     }
 
-    let copiedCount = 0;
-    const employeeRecurrenceInterval = Number(form.getValues(`assignedEmployees.${employeeIndex}.assigned_recurrence_interval_weeks`)) || 1;
-    for (let weekIndex = 0; weekIndex < employeeRecurrenceInterval; weekIndex++) {
-      if (weekIndex !== sourceWeekIndex) {
-        form.setValue(`assignedEmployees.${employeeIndex}.assigned_daily_schedules.${weekIndex}`, sourceWeekSchedule, { shouldValidate: true });
-        copiedCount++;
-      }
-    }
     if (copiedCount > 0) {
-      toast.success(`Wochenplan von Woche ${sourceWeekIndex + 1} wurde in ${copiedCount} weitere Wochen für diesen Mitarbeiter kopiert.`);
-    } else {
-      toast.info("Keine weiteren Wochen zum Kopieren gefunden.");
+      toast.success(`Zeiten von ${germanDayNames[sourceDay]} wurden in ${copiedCount} ${copiedCount === 1 ? 'weiteren Tag' : 'weitere Tage'} kopiert.`);
     }
-  }, [form]);
+    if (skippedCount > 0) {
+      toast.info(`${skippedCount} ${skippedCount === 1 ? 'Tag wurde übersprungen' : 'Tage wurden übersprungen'} - bereits Zeiten vorhanden.`);
+    }
+    if (copiedCount === 0 && skippedCount === 0) {
+      toast.info("Keine weiteren Tage zum Kopieren gefunden.");
+    }
+  }, [form, objects]);
 
   const handleFormSubmit: SubmitHandler<OrderFormInput> = async (data) => {
     // Validate that assigned hours match object hours for each day
@@ -901,25 +915,6 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
                             (Number(form.watch(`assignedEmployees.${assignedIndex}.assigned_recurrence_interval_weeks`) ?? 1)))
                         })
                       </h5>
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6 text-muted-foreground hover:text-primary"
-                              onClick={() => handleCopyWeekToAllWeeksForEmployee(assignedIndex, weekIndex)}
-                              disabled={form.watch(`assignedEmployees.${assignedIndex}.assigned_recurrence_interval_weeks`) === 1}
-                            >
-                              <Copy className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Diesen Wochenplan in alle anderen Wochen für diesen Mitarbeiter kopieren</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                       {dayNames.map(day => {
@@ -946,14 +941,15 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
                                       variant="ghost"
                                       size="icon"
                                       className="h-5 w-5 text-muted-foreground hover:text-primary"
-                                      onClick={() => handleCopyDayToAllWeeksForEmployee(assignedIndex, weekIndex, day)}
-                                      disabled={form.watch(`assignedEmployees.${assignedIndex}.assigned_recurrence_interval_weeks`) === 1 || (!form.watch(hoursFieldName) && !form.watch(startFieldName) && !form.watch(endFieldName))}
+                                      onClick={() => handleCopyDayToOtherDaysInSameWeek(assignedIndex, weekIndex, day)}
+                                      disabled={(!form.watch(hoursFieldName) && !form.watch(startFieldName) && !form.watch(endFieldName))}
+                                      title="Auf andere Tage in dieser Woche kopieren"
                                     >
                                       <Copy className="h-3 w-3" />
                                     </Button>
                                   </TooltipTrigger>
                                   <TooltipContent>
-                                    <p>Zeiten für diesen Tag in alle anderen Wochen für diesen Mitarbeiter kopieren</p>
+                                    <p>Zeiten für diesen Tag auf andere Tage in derselben Woche kopieren</p>
                                   </TooltipContent>
                                 </Tooltip>
                               </TooltipProvider>

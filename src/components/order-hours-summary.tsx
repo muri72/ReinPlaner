@@ -15,6 +15,11 @@ interface OrderHoursSummaryProps {
   orderType: string;
   recurrenceIntervalWeeks?: number;
   className?: string;
+  // Optionally pass assignedEmployees to calculate hours
+  assignedEmployees?: Array<{
+    employeeId: string;
+    assigned_daily_schedules: any[];
+  }>;
 }
 
 export function OrderHoursSummary({
@@ -23,6 +28,7 @@ export function OrderHoursSummary({
   orderType,
   recurrenceIntervalWeeks = 1,
   className = "",
+  assignedEmployees,
 }: OrderHoursSummaryProps) {
   // Don't render if no hours data
   if (!totalHours || totalHours === 0) {
@@ -38,6 +44,41 @@ export function OrderHoursSummary({
       ? "alle 2 Wochen"
       : `alle ${recurrenceIntervalWeeks} Wochen`
     : "einmalig";
+
+  // Calculate hours per employee from assigned_daily_schedules if provided
+  const calculateEmployeeHours = (): EmployeeHours[] => {
+    if (!assignedEmployees || assignedEmployees.length === 0) {
+      return employees;
+    }
+
+    return assignedEmployees.map((assignment, index) => {
+      const employeeName = employees[index] || { first_name: "", last_name: "", hours_per_week: 0 };
+
+      // Calculate total hours for this employee across all weeks
+      let totalHours = 0;
+      if (assignment.assigned_daily_schedules && assignment.assigned_daily_schedules.length > 0) {
+        assignment.assigned_daily_schedules.forEach((weekSchedule: any) => {
+          if (weekSchedule) {
+            // Sum up hours for all days in this week
+            ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].forEach(day => {
+              const dayHours = weekSchedule[day]?.hours;
+              if (typeof dayHours === 'number' && dayHours > 0) {
+                totalHours += dayHours;
+              }
+            });
+          }
+        });
+      }
+
+      return {
+        first_name: employeeName.first_name,
+        last_name: employeeName.last_name,
+        hours_per_week: totalHours,
+      };
+    });
+  };
+
+  const employeeHoursList = calculateEmployeeHours();
 
   return (
     <div className={`space-y-2 ${className}`}>
@@ -56,12 +97,12 @@ export function OrderHoursSummary({
 
 
       {/* Employee Hours Breakdown - Only show if more than 1 employee */}
-      {employees.length > 1 && (
+      {employeeHoursList.length > 1 && (
         <div className="ml-6 space-y-1">
           <p className="text-xs font-medium text-muted-foreground mb-1">
             Aufgeteilt auf Mitarbeiter:
           </p>
-          {employees.map((emp, index) => (
+          {employeeHoursList.map((emp, index) => (
             <div key={index} className="flex items-center text-xs text-muted-foreground">
               <UserRound className="mr-1 h-3 w-3 flex-shrink-0" />
               <span className="flex-1">

@@ -147,7 +147,7 @@ export default function OrdersPage({
     const to = from + pageSize - 1;
 
     const { data: customersData, error: customersError } = await supabase.from('customers').select('id, name').order('name', { ascending: true });
-    const { data: employeesData, error: employeesError } = await supabase.from('employees').select('id, first_name, last_name').order('last_name', { ascending: true });
+    const { data: employeesData, error: employeesError } = await supabase.from('employees').select('id, first_name, last_name, status').eq('status', 'active').order('last_name', { ascending: true });
     const { data: serviceRatesData, error: serviceRatesError } = await supabase.from('service_rates').select('service_type, hourly_rate');
 
     if (customersError) console.error("Fehler beim Laden der Kunden für Filter:", customersError.message);

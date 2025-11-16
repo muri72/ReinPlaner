@@ -129,6 +129,7 @@ export function OrderDetailTabs({ order }: OrderDetailTabsProps) {
                     }
                     orderType={order.order_type}
                     recurrenceIntervalWeeks={order.object?.recurrence_interval_weeks || 1}
+                    assignedEmployees={order.assignedEmployees}
                   />
                 </div>
               )}

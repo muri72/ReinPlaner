@@ -54,6 +54,40 @@ export function OrdersGridView({ orders, employees, onActionSuccess }: OrdersGri
     }
   };
 
+  // Calculate hours per employee from assigned_daily_schedules
+  const calculateEmployeeHours = (order: DisplayOrder) => {
+    if (!order.assignedEmployees || order.assignedEmployees.length === 0) {
+      return [];
+    }
+
+    return order.assignedEmployees.map((assignment, index) => {
+      const firstName = order.employee_first_names?.[index] || "";
+      const lastName = order.employee_last_names?.[index] || "";
+
+      // Calculate total hours for this employee across all weeks
+      let totalHours = 0;
+      if (assignment.assigned_daily_schedules && assignment.assigned_daily_schedules.length > 0) {
+        assignment.assigned_daily_schedules.forEach((weekSchedule: any) => {
+          if (weekSchedule) {
+            // Sum up hours for all days in this week
+            ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].forEach(day => {
+              const dayHours = weekSchedule[day]?.hours;
+              if (typeof dayHours === 'number' && dayHours > 0) {
+                totalHours += dayHours;
+              }
+            });
+          }
+        });
+      }
+
+      return {
+        first_name: firstName,
+        last_name: lastName,
+        hours_per_week: totalHours,
+      };
+    });
+  };
+
   if (orders.length === 0) {
     return (
       <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30 shadow-neumorphic glassmorphism-card">
@@ -113,7 +147,10 @@ export function OrdersGridView({ orders, employees, onActionSuccess }: OrdersGri
                             monday: 'Mo', tuesday: 'Di', wednesday: 'Mi', thursday: 'Do',
                             friday: 'Fr', saturday: 'Sa', sunday: 'So'
                           };
-                          const activeDays = Object.keys(firstSchedule).filter(day =>
+                          // Define the correct order of days (Monday to Sunday)
+                          const dayOrder = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+                          // Filter days that have hours in the correct order
+                          const activeDays = dayOrder.filter(day =>
                             day !== 'total_hours' && firstSchedule[day]?.hours > 0
                           );
 
@@ -152,15 +189,7 @@ export function OrdersGridView({ orders, employees, onActionSuccess }: OrdersGri
               {order.total_estimated_hours && (
                 <OrderHoursSummary
                   totalHours={order.total_estimated_hours}
-                  employees={
-                    order.employee_first_names && order.employee_last_names
-                      ? order.employee_first_names.map((first, i) => ({
-                          first_name: first,
-                          last_name: order.employee_last_names?.[i] || "",
-                          hours_per_week: 0, // Will be calculated
-                        }))
-                      : []
-                  }
+                  employees={calculateEmployeeHours(order)}
                   orderType={order.order_type}
                   recurrenceIntervalWeeks={order.object?.recurrence_interval_weeks || 1}
                 />

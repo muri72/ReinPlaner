@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Pencil } from "lucide-react";
@@ -47,11 +48,18 @@ interface OrderEditDialogProps {
 
 export function OrderEditDialog({ order }: OrderEditDialogProps) {
   const [open, setOpen] = useState(false);
+  const router = useRouter();
 
   const handleUpdate = async (data: OrderFormValues) => {
     const result = await updateOrder(order.id, data);
     if (result.success) {
+      // Store current path before refresh to maintain pagination
+      const currentPath = window.location.pathname + window.location.search;
       setOpen(false);
+      // Refresh to show updated data and restore pagination state
+      router.refresh();
+      // Restore the original URL with all parameters (like page=2)
+      router.replace(currentPath);
     }
     return result;
   };
