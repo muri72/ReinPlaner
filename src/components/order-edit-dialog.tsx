@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -48,10 +48,16 @@ interface OrderEditDialogProps {
 
 export function OrderEditDialog({ order }: OrderEditDialogProps) {
   const [open, setOpen] = useState(false);
+  const [currentOrder, setCurrentOrder] = useState(order);
   const router = useRouter();
 
+  // Update currentOrder when the prop changes (e.g., when dialog reopens with new data)
+  useEffect(() => {
+    setCurrentOrder(order);
+  }, [order]);
+
   const handleUpdate = async (data: OrderFormValues) => {
-    const result = await updateOrder(order.id, data);
+    const result = await updateOrder(currentOrder.id, data);
     if (result.success) {
       // Store current path before refresh to maintain pagination
       const currentPath = window.location.pathname + window.location.search;
@@ -104,24 +110,25 @@ export function OrderEditDialog({ order }: OrderEditDialogProps) {
           </TabsList>
           <TabsContent value="details" className="flex-grow overflow-y-auto pr-4">
             <OrderForm
+              key={`order-form-${currentOrder.id}-${open}`} // Force remount when dialog opens/closes or order changes
               initialData={{
-                title: order.title,
-                description: order.description || undefined,
-                dueDate: order.due_date ? new Date(order.due_date) : undefined,
-                status: order.status as OrderFormValues["status"],
-                customerId: order.customer_id ?? undefined,
-                objectId: order.object_id ?? undefined,
-                customerContactId: order.customer_contact_id ?? undefined,
-                orderType: order.order_type as OrderFormValues["orderType"],
-                recurringStartDate: order.recurring_start_date ? new Date(order.recurring_start_date) : undefined,
-                recurringEndDate: order.recurring_end_date ? new Date(order.recurring_end_date) : undefined,
-                priority: order.priority as OrderFormValues["priority"],
-                totalEstimatedHours: order.total_estimated_hours,
-                fixedMonthlyPrice: order.fixed_monthly_price,
-                notes: order.notes,
-                serviceType: getServiceTypeForForm(order.service_type),
-                requestStatus: order.request_status as OrderFormValues["requestStatus"],
-                assignedEmployees: order.assignedEmployees,
+                title: currentOrder.title,
+                description: currentOrder.description || undefined,
+                dueDate: currentOrder.due_date ? new Date(currentOrder.due_date) : undefined,
+                status: currentOrder.status as OrderFormValues["status"],
+                customerId: currentOrder.customer_id ?? undefined,
+                objectId: currentOrder.object_id ?? undefined,
+                customerContactId: currentOrder.customer_contact_id ?? undefined,
+                orderType: currentOrder.order_type as OrderFormValues["orderType"],
+                recurringStartDate: currentOrder.recurring_start_date ? new Date(currentOrder.recurring_start_date) : undefined,
+                recurringEndDate: currentOrder.recurring_end_date ? new Date(currentOrder.recurring_end_date) : undefined,
+                priority: currentOrder.priority as OrderFormValues["priority"],
+                totalEstimatedHours: currentOrder.total_estimated_hours,
+                fixedMonthlyPrice: currentOrder.fixed_monthly_price,
+                notes: currentOrder.notes,
+                serviceType: getServiceTypeForForm(currentOrder.service_type),
+                requestStatus: currentOrder.request_status as OrderFormValues["requestStatus"],
+                assignedEmployees: currentOrder.assignedEmployees,
               }}
               onSubmit={handleUpdate}
               submitButtonText="Änderungen speichern"
@@ -132,8 +139,8 @@ export function OrderEditDialog({ order }: OrderEditDialogProps) {
             <h3 className="text-md font-semibold flex items-center">
               <FileStack className="mr-2 h-5 w-5" /> Dokumente
             </h3>
-            <DocumentUploader associatedOrderId={order.id} onDocumentUploaded={() => { /* Re-fetch documents if needed */ }} />
-            <DocumentList associatedOrderId={order.id} />
+            <DocumentUploader associatedOrderId={currentOrder.id} onDocumentUploaded={() => { /* Re-fetch documents if needed */ }} />
+            <DocumentList associatedOrderId={currentOrder.id} />
           </TabsContent>
         </Tabs>
       </DialogContent>

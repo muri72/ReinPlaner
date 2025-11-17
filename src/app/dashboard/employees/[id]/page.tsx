@@ -3,9 +3,7 @@ import { redirect } from "next/navigation";
 import { EmployeeSummaryCard } from "@/components/employee-summary-card";
 import { EmployeeDetailTabs } from "@/components/employee-detail-tabs";
 import { PageHeader } from "@/components/page-header";
-import { Button } from "@/components/ui/button";
-import Link from "next/link";
-import { ChevronLeft } from "lucide-react";
+import { BackButtonWithParams } from "@/components/back-button-with-params";
 
 export default async function Page({ params }: { params: Promise<{ id: string }> }) {
   const supabase = await createClient();
@@ -62,12 +60,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
   return (
     <div className="p-4 md:p-8 space-y-8">
       <PageHeader title={`${employee.first_name} ${employee.last_name}`}>
-        <Button variant="outline" asChild>
-          <Link href="/dashboard/employees">
-            <ChevronLeft className="mr-2 h-4 w-4" />
-            Zurück zur Übersicht
-          </Link>
-        </Button>
+        <BackButtonWithParams backUrl="/dashboard/employees" />
       </PageHeader>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

@@ -1,11 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { PageHeader } from "@/components/page-header";
-import { Button } from "@/components/ui/button";
-import Link from "next/link";
-import { ChevronLeft } from "lucide-react";
 import { OrderSummaryCard } from "@/components/order-summary-card";
 import { OrderDetailTabs } from "@/components/order-detail-tabs";
+import { BackButtonWithParams } from "@/components/back-button-with-params";
 
 export default async function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const supabase = await createClient();
@@ -84,12 +82,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
   return (
     <div className="p-4 md:p-8 space-y-8">
       <PageHeader title={flattenedOrder.title}>
-        <Button variant="outline" asChild>
-          <Link href="/dashboard/orders">
-            <ChevronLeft className="mr-2 h-4 w-4" />
-            Zurück zur Übersicht
-          </Link>
-        </Button>
+        <BackButtonWithParams backUrl="/dashboard/orders" />
       </PageHeader>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

@@ -195,9 +195,119 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
   const orderType = form.watch("orderType") as OrderFormValues["orderType"] | undefined;
   const selectedCustomerId = form.watch("customerId");
   const selectedObjectId = form.watch("objectId");
-  
+
   // Watch assignedEmployees for real-time validation
   const watchedAssignedEmployees = form.watch("assignedEmployees");
+
+  // Robustly handle initialData changes (e.g., when dialog reopens)
+  useEffect(() => {
+    if (!initialData) return;
+
+    // Helper function to safely set form values
+    const populateForm = () => {
+      // Set basic fields with proper null checks
+      form.setValue("title", initialData?.title ?? "", { shouldValidate: false });
+      form.setValue("description", initialData?.description ?? null, { shouldValidate: false });
+      form.setValue("status", (initialData?.status as OrderFormValues["status"]) ?? "pending", { shouldValidate: false });
+      form.setValue("orderType", (initialData?.orderType as OrderFormValues["orderType"]) ?? "one_time", { shouldValidate: false });
+      form.setValue("priority", (initialData?.priority as OrderFormValues["priority"]) ?? "low", { shouldValidate: false });
+      form.setValue("requestStatus", (initialData?.requestStatus as OrderFormValues["requestStatus"]) ?? "approved", { shouldValidate: false });
+
+      // Set dates with null checks
+      if (initialData?.dueDate) {
+        const dueDate = initialData.dueDate instanceof Date ? initialData.dueDate : new Date(initialData.dueDate);
+        if (!isNaN(dueDate.getTime())) {
+          form.setValue("dueDate", dueDate, { shouldValidate: false });
+        }
+      } else {
+        form.setValue("dueDate", null, { shouldValidate: false });
+      }
+
+      if (initialData?.recurringStartDate) {
+        const startDate = initialData.recurringStartDate instanceof Date ? initialData.recurringStartDate : new Date(initialData.recurringStartDate);
+        if (!isNaN(startDate.getTime())) {
+          form.setValue("recurringStartDate", startDate, { shouldValidate: false });
+        }
+      } else {
+        form.setValue("recurringStartDate", null, { shouldValidate: false });
+      }
+
+      if (initialData?.recurringEndDate) {
+        const endDate = initialData.recurringEndDate instanceof Date ? initialData.recurringEndDate : new Date(initialData.recurringEndDate);
+        if (!isNaN(endDate.getTime())) {
+          form.setValue("recurringEndDate", endDate, { shouldValidate: false });
+        }
+      } else {
+        form.setValue("recurringEndDate", null, { shouldValidate: false });
+      }
+
+      // Set IDs with proper null/undefined handling
+      if (initialData?.customerId) {
+        form.setValue("customerId", initialData.customerId, { shouldValidate: false });
+      }
+      if (initialData?.objectId !== undefined && initialData?.objectId !== null) {
+        form.setValue("objectId", initialData.objectId, { shouldValidate: false });
+      }
+      if (initialData?.customerContactId !== undefined && initialData?.customerContactId !== null) {
+        form.setValue("customerContactId", initialData.customerContactId, { shouldValidate: false });
+      }
+
+      // Set numeric fields
+      if (initialData?.totalEstimatedHours !== undefined) {
+        const hours = typeof initialData.totalEstimatedHours === 'number' ? initialData.totalEstimatedHours : null;
+        form.setValue("totalEstimatedHours", hours, { shouldValidate: false });
+      }
+      if (initialData?.fixedMonthlyPrice !== undefined) {
+        const price = typeof initialData.fixedMonthlyPrice === 'number' ? initialData.fixedMonthlyPrice : null;
+        form.setValue("fixedMonthlyPrice", price, { shouldValidate: false });
+      }
+
+      // Set text fields
+      form.setValue("notes", initialData?.notes ?? null, { shouldValidate: false });
+
+      // Set service type with validation
+      if (initialData?.serviceType && availableServices.includes(initialData.serviceType as any)) {
+        form.setValue("serviceType", initialData.serviceType as OrderFormValues["serviceType"], { shouldValidate: false });
+      } else {
+        form.setValue("serviceType", null, { shouldValidate: false });
+      }
+
+      // Set assigned employees with deep validation
+      if (initialData?.assignedEmployees && Array.isArray(initialData.assignedEmployees)) {
+        // Validate and clean up assigned employees
+        const validEmployees = initialData.assignedEmployees
+          .filter((emp: any) => emp && typeof emp === 'object')
+          .map((emp: any) => ({
+            employeeId: emp.employeeId || "",
+            assigned_daily_schedules: Array.isArray(emp.assigned_daily_schedules) ? emp.assigned_daily_schedules : [],
+            assigned_recurrence_interval_weeks: Number(emp.assigned_recurrence_interval_weeks ?? 1),
+            assigned_start_week_offset: Number(emp.assigned_start_week_offset ?? 0),
+          }))
+          .filter(emp => emp.employeeId); // Remove invalid entries
+
+        form.setValue("assignedEmployees", validEmployees, { shouldValidate: false });
+      } else {
+        form.setValue("assignedEmployees", [], { shouldValidate: false });
+      }
+    };
+
+    // Small delay to ensure dropdown data is loaded
+    const timeoutId = setTimeout(() => {
+      populateForm();
+    }, 0);
+
+    return () => clearTimeout(timeoutId);
+  }, [initialData, form]);
+
+  // Effect to handle customer contacts when customer changes
+  useEffect(() => {
+    if (selectedCustomerId) {
+      fetchCustomerContacts(selectedCustomerId);
+    } else {
+      setCustomerContacts([]);
+      form.setValue("customerContactId", null);
+    }
+  }, [selectedCustomerId, supabase, form]);
 
   const fetchCustomerContacts = async (customerId: string) => {
     const { data: contactsData, error: contactsError } = await supabase
