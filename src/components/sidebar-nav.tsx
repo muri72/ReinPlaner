@@ -73,7 +73,6 @@ const navItems: NavItem[] = [
     roles: ['admin', 'manager', 'employee', 'customer'],
     children: [
       { title: "Kunden", href: "/dashboard/customers", icon: Users, roles: ['admin', 'manager', 'employee'] },
-      { title: "Kontakte", href: "/dashboard/customer-contacts", icon: ContactRound, roles: ['admin', 'manager', 'employee'] },
       { title: "Feedback", href: "/dashboard/feedback", icon: Star, roles: ['admin', 'manager', 'employee', 'customer'] },
       { title: "Tickets", href: "/dashboard/tickets", icon: MessageSquare, roles: ['admin', 'manager', 'employee', 'customer'] }, // New Tickets link
     ],

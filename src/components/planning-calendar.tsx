@@ -165,9 +165,10 @@ export function PlanningCalendar({ planningData, unassignedOrders, weekDays, act
                         <AvatarFallback>{employee.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
                       </Avatar>
                       <div className="flex-1">
-                        <EmployeeEditDialog employee={employee.raw as any} onEmployeeUpdated={onActionSuccess}>
-                          <div className="text-sm font-semibold cursor-pointer hover:text-primary">{employee.name}</div>
-                        </EmployeeEditDialog>
+                        <div className="text-sm font-semibold cursor-pointer hover:text-primary">
+                          <EmployeeEditDialog employee={employee.raw as any} />
+                          {employee.name}
+                        </div>
                         <p className="text-xs text-muted-foreground">{employee.raw.job_title || 'Mitarbeiter'}</p>
                         <TooltipProvider>
                           <Tooltip>

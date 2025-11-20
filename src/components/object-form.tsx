@@ -8,18 +8,20 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { useFormUnsavedChanges, useFormUnsavedChangesForCreate } from "@/components/ui/unsaved-changes-context";
 import { PlusCircle, X, Clock, Copy } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { CustomerContactCreateDialog } from "@/components/customer-contact-create-dialog";
+import { CustomerContactCreateGeneralDialog } from "@/components/customer-contact-create-general-dialog";
 import { DatePicker } from "@/components/date-picker";
 import { handleActionResponse } from "@/lib/toast-utils";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn, calculateEndTime, calculateStartTime } from "@/lib/utils";
 import { MultiSelectEmployees } from "@/components/multi-select-employees";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { FormActions } from "@/components/ui/form-actions";
 
 const availableServices = [
   "Unterhaltsreinigung",
@@ -110,9 +112,11 @@ interface ObjectFormProps {
   onSubmit: (data: ObjectFormValues) => Promise<{ success: boolean; message: string }>;
   submitButtonText: string;
   onSuccess?: () => void;
+  isInDialog?: boolean;
+  isCreateMode?: boolean;
 }
 
-export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess }: ObjectFormProps) {
+export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess, isInDialog = false, isCreateMode = false }: ObjectFormProps) {
   const supabase = createClient();
   const [customers, setCustomers] = useState<{ id: string; name: string }[]>([]);
   const [objects, setObjects] = useState<any[]>([]); // Keep as any[] for now, detailed type not needed here
@@ -142,6 +146,20 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
     defaultValues: resolvedDefaultValues,
     mode: "onChange",
   });
+
+  // Register with unsaved changes context - Use special hook to avoid false positives from prefills
+  useFormUnsavedChangesForCreate("object-form", form.formState.isDirty, isCreateMode);
+
+  // Reset form dirty state after initial setup for create mode
+  useEffect(() => {
+    if (isCreateMode) {
+      // Wait for all initial manipulations (especially useFieldArray operations) to complete
+      const timer = setTimeout(() => {
+        form.reset(form.getValues(), { keepValues: true });
+      }, 200);
+      return () => clearTimeout(timer);
+    }
+  }, [isCreateMode, form]);
 
   const { fields: dailySchedulesFields, append: appendDailySchedule, remove: removeDailySchedule, replace: replaceDailySchedules } = useFieldArray({
     control: form.control,
@@ -223,6 +241,15 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
         form.reset();
         replaceDailySchedules([]); // Reset schedules after successful creation
       }
+      onSuccess?.();
+    }
+  };
+
+  const handleCancel = () => {
+    if (form.formState.isDirty && !form.formState.isSubmitting) {
+      // Show confirmation - dialog protection will handle this
+      onSuccess?.();
+    } else {
       onSuccess?.();
     }
   };
@@ -391,10 +418,9 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
           </Select>
           {form.formState.errors.customerContactId && <p className="text-red-500 text-sm mt-1">{form.formState.errors.customerContactId.message}</p>}
         </div>
-        <CustomerContactCreateDialog
+        <CustomerContactCreateGeneralDialog
           customerId={selectedCustomerId}
           onContactCreated={handleCustomerContactCreated}
-          disabled={!selectedCustomerId}
         />
       </div>
 
@@ -690,10 +716,15 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess 
           Geschätzte Wochenstunden (Netto, über alle Wochen): {totalWeeklyHours.toFixed(2)}
         </div>
       </div>
-      
-      <Button type="submit" disabled={form.formState.isSubmitting}>
-        {form.formState.isSubmitting ? `${submitButtonText}...` : submitButtonText}
-      </Button>
+      <FormActions
+        isSubmitting={form.formState.isSubmitting}
+        onCancel={handleCancel}
+        submitLabel={submitButtonText}
+        cancelLabel="Abbrechen"
+        showCancel={!isInDialog}
+        submitVariant="default"
+        loadingText={`${submitButtonText}...`}
+      />
     </form>
   );
 }

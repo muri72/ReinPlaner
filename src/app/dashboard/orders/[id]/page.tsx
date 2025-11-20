@@ -80,19 +80,21 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
   };
 
   return (
-    <div className="p-4 md:p-8 space-y-8">
-      <PageHeader title={flattenedOrder.title}>
-        <BackButtonWithParams backUrl="/dashboard/orders" />
-      </PageHeader>
+    <>
+      <div className="p-4 md:p-8 space-y-8">
+        <PageHeader title={flattenedOrder.title}>
+          <BackButtonWithParams backUrl="/dashboard/orders" />
+        </PageHeader>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-1">
-          <OrderSummaryCard order={flattenedOrder} />
-        </div>
-        <div className="lg:col-span-2">
-          <OrderDetailTabs order={flattenedOrder} />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="lg:col-span-1">
+            <OrderSummaryCard order={flattenedOrder} />
+          </div>
+          <div className="lg:col-span-2">
+            <OrderDetailTabs order={flattenedOrder} />
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }

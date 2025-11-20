@@ -116,7 +116,11 @@ export async function createOrder(data: OrderFormValues) {
     );
   }
 
-  return { success: true, message: "Auftrag erfolgreich hinzugefügt!" };
+  return {
+    success: true,
+    message: "Auftrag erfolgreich hinzugefügt!",
+    data: { id: newOrder?.id }
+  };
 }
 
 export async function updateOrder(orderId: string, data: OrderFormValues) {

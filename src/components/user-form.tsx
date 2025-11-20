@@ -13,6 +13,9 @@ import { createClient } from "@/lib/supabase/client";
 import { Checkbox } from "@/components/ui/checkbox"; // For multi-select
 import { handleActionResponse } from "@/lib/toast-utils"; // Importiere die neue Utility
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Card, CardContent } from "@/components/ui/card";
+import { FormActions } from "@/components/ui/form-actions";
+import { useFormUnsavedChanges } from "@/components/ui/unsaved-changes-context";
 
 // Define the base schema first to avoid circular dependency
 const baseUserSchema = z.object({
@@ -89,9 +92,10 @@ interface UserFormProps {
   isEditMode?: boolean;
   employee?: { id: string; first_name: string; last_name: string } | null;
   customerContact?: { id: string; first_name: string; last_name: string; customer_id: string } | null;
+  isInDialog?: boolean;
 }
 
-export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, isEditMode = false, employee, customerContact }: UserFormProps) {
+export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, isEditMode = false, employee, customerContact, isInDialog = false }: UserFormProps) {
   const supabase = createClient();
   const [employees, setEmployees] = useState<{ id: string; first_name: string; last_name: string; user_id: string | null; email: string | null }[]>([]);
   const [customers, setCustomers] = useState<{ id: string; name: string; user_id: string | null; contact_email: string | null }[]>([]);
@@ -122,6 +126,9 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
     defaultValues: resolvedDefaultValues,
     mode: "onSubmit",
   });
+
+  // Register with unsaved changes context
+  useFormUnsavedChanges("user-form", form.formState.isDirty);
 
   const selectedRole = form.watch("role");
   const selectedEmployeeId = form.watch("employeeId");
@@ -298,13 +305,31 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
     }
   };
 
+  const handleCancel = () => {
+    if (form.formState.isDirty && !form.formState.isSubmitting) {
+      // Show confirmation - dialog protection will handle this
+      onSuccess?.();
+    } else {
+      onSuccess?.();
+    }
+  };
+
   // Bestimmt, ob die Felder für Vorname, Nachname, E-Mail deaktiviert sein sollen
   const areNameEmailFieldsDisabled = isEditMode || !!selectedEmployeeId || !!selectedCustomerContactId;
   // Bestimmt, ob das Rollenfeld deaktiviert sein soll
   const isRoleFieldDisabled = isEditMode || !!selectedCustomerContactId; // Deaktiviert, wenn im Bearbeitungsmodus oder wenn Kundenkontakt ausgewählt (muss 'Kunde' sein)
 
   return (
-    <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 w-full">
+    <>
+      {!isInDialog && (
+        <div className="space-y-1 mb-6">
+          <h2 className="text-2xl font-bold tracking-tight">Benutzer {isEditMode ? "bearbeiten" : "erstellen"}</h2>
+          <p className="text-sm text-muted-foreground">
+            {isEditMode ? "Bearbeiten Sie die Benutzerinformationen." : "Erstellen Sie einen neuen Benutzer."}
+          </p>
+        </div>
+      )}
+      <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-6 w-full">
       {!isEditMode && ( // Diese Felder nur im Erstellungsmodus anzeigen
         <div className="border-b pb-4 mb-4">
           <h3 className="text-md font-semibold mb-2">Bestehendem Profil zuweisen:</h3>
@@ -703,9 +728,16 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
         </div>
       )}
 
-      <Button type="submit" disabled={form.formState.isSubmitting}>
-        {form.formState.isSubmitting ? `${submitButtonText}...` : submitButtonText}
-      </Button>
+        <FormActions
+          isSubmitting={form.formState.isSubmitting}
+          onCancel={handleCancel}
+          submitLabel={submitButtonText}
+          cancelLabel="Abbrechen"
+          showCancel={!isInDialog}
+          submitVariant="default"
+          loadingText={`${submitButtonText}...`}
+        />
+      </form>
 
       {/* Bestätigungsdialog für Neuzuweisungen */}
       <AlertDialog open={showReassignmentDialog} onOpenChange={setShowReassignmentDialog}>
@@ -758,6 +790,6 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </form>
+    </>
   );
 }

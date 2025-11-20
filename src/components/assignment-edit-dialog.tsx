@@ -17,6 +17,8 @@ import { Skeleton } from "./ui/skeleton";
 import { cn, calculateEndTime, calculateStartTime } from "@/lib/utils";
 import { Copy } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useDialogUnsavedChanges } from "@/components/ui/unsaved-changes-context";
+import { UnsavedChangesAlert } from "@/components/ui/unsaved-changes-alert";
 
 const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
 const preprocessNumber = (val: unknown) => (val === "" || isNaN(Number(val)) ? null : Number(val));
@@ -73,9 +75,19 @@ interface AssignmentEditDialogProps {
 
 export function AssignmentEditDialog({ orderId, children, onSuccess }: AssignmentEditDialogProps) {
   const [open, setOpen] = React.useState(false);
+  const [showConfirmClose, setShowConfirmClose] = React.useState(false);
   const [loading, setLoading] = React.useState(true);
   const [allEmployees, setAllEmployees] = React.useState<{ id: string; first_name: string; last_name: string }[]>([]);
   const [orderTitle, setOrderTitle] = React.useState("");
+  const { isDirty } = useDialogUnsavedChanges();
+
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen && open && isDirty) {
+      setShowConfirmClose(true);
+    } else {
+      setOpen(nextOpen);
+    }
+  };
 
   const form = useForm<AssignmentEditFormInput>({
     resolver: zodResolver(assignmentEditSchema),
@@ -320,6 +332,17 @@ export function AssignmentEditDialog({ orderId, children, onSuccess }: Assignmen
           </form>
         )}
       </DialogContent>
+
+      <UnsavedChangesAlert
+        open={showConfirmClose}
+        onConfirm={() => {
+          setShowConfirmClose(false);
+          setOpen(false);
+        }}
+        onCancel={() => setShowConfirmClose(false)}
+        title="Ungespeicherte Änderungen verwerfen?"
+        description="Wenn Sie das Dialog jetzt schließen, gehen Ihre Eingaben verloren."
+      />
     </Dialog>
   );
 }

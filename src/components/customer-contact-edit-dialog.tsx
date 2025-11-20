@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
+import { DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Pencil } from "lucide-react";
+import { Pencil, Users } from "lucide-react";
 import { CustomerContactForm, CustomerContactFormValues } from "@/components/customer-contact-form";
 import { updateCustomerContact } from "@/app/dashboard/customer-contacts/actions";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { RecordDialog } from "@/components/ui/record-dialog";
 
 interface CustomerContactEditDialogProps {
   contact: {
@@ -23,19 +24,25 @@ interface CustomerContactEditDialogProps {
 
 export function CustomerContactEditDialog({ contact, onSuccess }: CustomerContactEditDialogProps) {
   const [open, setOpen] = useState(false);
-  // Removed titleId and descriptionId as they are no longer needed for aria attributes
 
   const handleUpdate = async (data: CustomerContactFormValues) => {
     const result = await updateCustomerContact(contact.id, data);
     if (result.success) {
       setOpen(false);
-      onSuccess?.(); // Triggere Neuladen der Daten
+      onSuccess?.();
     }
     return result;
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <RecordDialog
+      open={open}
+      onOpenChange={setOpen}
+      title="Kontakt bearbeiten"
+      description={`Bearbeiten Sie die Daten für ${contact.first_name} ${contact.last_name}.`}
+      icon={<Users className="h-5 w-5 text-primary" />}
+      size="lg"
+    >
       <TooltipProvider delayDuration={300}>
         <Tooltip>
           <TooltipTrigger asChild>
@@ -46,34 +53,25 @@ export function CustomerContactEditDialog({ contact, onSuccess }: CustomerContac
             </DialogTrigger>
           </TooltipTrigger>
           <TooltipContent>
-            <p>Kundenkontakt bearbeiten</p>
+            <p>Kontakt bearbeiten</p>
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
-      <DialogContent 
-        key={open ? "customer-contact-edit-open" : "customer-contact-edit-closed"} 
-        className="sm:max-w-3xl max-h-[90vh] overflow-y-auto glassmorphism-card"
-      >
-        <DialogHeader>
-          <DialogTitle>Kundenkontakt bearbeiten</DialogTitle>
-          <DialogDescription>
-            Formular zum Bearbeiten des Kundenkontakts.
-          </DialogDescription>
-        </DialogHeader>
-        <CustomerContactForm
-          initialData={{
-            customerId: contact.customer_id,
-            firstName: contact.first_name,
-            lastName: contact.last_name,
-            email: contact.email,
-            phone: contact.phone,
-            role: contact.role,
-          }}
-          onSubmit={handleUpdate}
-          submitButtonText="Änderungen speichern"
-          onSuccess={() => setOpen(false)}
-        />
-      </DialogContent>
-    </Dialog>
+
+      <CustomerContactForm
+        initialData={{
+          customerId: contact.customer_id,
+          firstName: contact.first_name,
+          lastName: contact.last_name,
+          email: contact.email || undefined,
+          phone: contact.phone || undefined,
+          role: contact.role || undefined,
+        }}
+        onSubmit={handleUpdate}
+        submitButtonText="Änderungen speichern"
+        onSuccess={() => setOpen(false)}
+        isInDialog={true}
+      />
+    </RecordDialog>
   );
 }

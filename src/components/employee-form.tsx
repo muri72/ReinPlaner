@@ -12,6 +12,9 @@ import { Switch } from "@/components/ui/switch";
 import { useMemo, useState, useEffect } from "react";
 import { DatePicker } from "@/components/date-picker";
 import { toast } from "sonner";
+import { Card, CardContent } from "@/components/ui/card";
+import { FormActions } from "@/components/ui/form-actions";
+import { useFormUnsavedChanges, useFormUnsavedChangesForCreate } from "@/components/ui/unsaved-changes-context";
 
 const preprocessNumber = (val: unknown) => {
   if (val === "" || val === null || val === undefined) return null;
@@ -84,6 +87,8 @@ interface EmployeeFormProps {
   onSubmit: (data: EmployeeFormValues) => Promise<{ success: boolean; message: string }>;
   submitButtonText: string;
   onSuccess?: () => void;
+  isInDialog?: boolean;
+  isCreateMode?: boolean;
 }
 
 // Helper function to convert string dates to Date objects
@@ -97,7 +102,7 @@ const convertStringToDate = (dateString: string | null | undefined): Date | null
   }
 };
 
-export function EmployeeForm({ initialData, onSubmit, submitButtonText, onSuccess }: EmployeeFormProps) {
+export function EmployeeForm({ initialData, onSubmit, submitButtonText, onSuccess, isInDialog = false, isCreateMode = false }: EmployeeFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   // Convert string dates to Date objects for the form
@@ -124,6 +129,21 @@ export function EmployeeForm({ initialData, onSubmit, submitButtonText, onSucces
     mode: "onChange",
   });
 
+  // Register with unsaved changes context
+  // Use special hook for create forms to avoid false positives from prefills
+  useFormUnsavedChangesForCreate("employee-form", form.formState.isDirty, isCreateMode);
+
+  // Reset form dirty state after initial setup for create mode
+  useEffect(() => {
+    if (isCreateMode) {
+      // Wait for all initial manipulations to complete, then reset dirty state
+      const timer = setTimeout(() => {
+        form.reset(form.getValues(), { keepValues: true });
+      }, 150);
+      return () => clearTimeout(timer);
+    }
+  }, [isCreateMode, form]);
+
   // Reset form when initialData changes
   useEffect(() => {
     if (initialData) {
@@ -137,10 +157,10 @@ export function EmployeeForm({ initialData, onSubmit, submitButtonText, onSucces
 
   const handleFormSubmit: SubmitHandler<EmployeeFormInput> = async (data) => {
     setIsSubmitting(true);
-    
+
     try {
       const result = await onSubmit(data as EmployeeFormValues);
-      
+
       if (result.success) {
         toast.success(result.message);
         onSuccess?.();
@@ -151,6 +171,15 @@ export function EmployeeForm({ initialData, onSubmit, submitButtonText, onSucces
       toast.error("Ein unerwarteter Fehler ist aufgetreten.");
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleCancel = () => {
+    if (form.formState.isDirty && !isSubmitting) {
+      // Show confirmation - dialog protection will handle this
+      onSuccess?.();
+    } else {
+      onSuccess?.();
     }
   };
 
@@ -172,7 +201,8 @@ export function EmployeeForm({ initialData, onSubmit, submitButtonText, onSucces
   }, [form.watch('default_daily_schedules')]);
 
   return (
-    <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4">
+    <>
+      <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <Label htmlFor="first_name">Vorname</Label>
@@ -348,16 +378,16 @@ export function EmployeeForm({ initialData, onSubmit, submitButtonText, onSucces
         <Textarea id="notes" {...form.register("notes")} />
       </div>
 
-      <Button type="submit" disabled={isSubmitting} className="w-full">
-        {isSubmitting ? (
-          <>
-            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-            {submitButtonText}...
-          </>
-        ) : (
-          submitButtonText
-        )}
-      </Button>
-    </form>
+        <FormActions
+          isSubmitting={isSubmitting}
+          onCancel={handleCancel}
+          submitLabel={submitButtonText}
+          cancelLabel="Abbrechen"
+          showCancel={!isInDialog}
+          submitVariant="default"
+          loadingText={`${submitButtonText}...`}
+        />
+      </form>
+    </>
   );
 }

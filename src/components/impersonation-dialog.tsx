@@ -125,85 +125,85 @@ export function ImpersonationDialog({ open, onOpenChange }: ImpersonationDialogP
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Nach Namen, E-Mail oder Rolle suchen..."
-              value={searchTerm}
-              onChange={(event) => setSearchTerm(event.target.value)}
-              className="pl-10"
-              autoFocus
-            />
-          </div>
+      <div className="space-y-4">
+        <div className="relative">
+          <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Nach Namen, E-Mail oder Rolle suchen..."
+            value={searchTerm}
+            onChange={(event) => setSearchTerm(event.target.value)}
+            className="pl-10"
+            autoFocus
+          />
+        </div>
 
-          <div className="rounded-md border bg-muted/40">
-            {isLoadingTargets || isPending ? (
-              <div className="flex items-center justify-center py-6 text-sm text-muted-foreground">
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Lade Benutzer...
-              </div>
-            ) : filteredTargets.length === 0 ? (
-              <div className="py-6 text-center text-sm text-muted-foreground">
-                Keine Benutzer gefunden. Versuchen Sie einen anderen Suchbegriff.
-              </div>
-            ) : (
-              <ScrollArea className="h-64">
-                <div className="p-2 space-y-1">
-                  {filteredTargets.map(target => (
-                    <button
-                      key={target.id}
-                      type="button"
-                      onClick={() => setSelectedUserId(target.id)}
-                      className={cn(
-                        "w-full rounded-md px-3 py-2 text-left transition-colors",
-                        "hover:bg-muted",
-                        selectedUserId === target.id ? "bg-primary/10 text-primary" : "bg-background"
-                      )}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="font-medium">{target.fullName}</span>
-                        <span className="text-xs uppercase tracking-wide text-muted-foreground">
-                          {target.role}
-                        </span>
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        {target.email ?? "Keine E-Mail hinterlegt"}
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </ScrollArea>
-            )}
-          </div>
-
-          {selectedTarget && (
-            <div className="rounded-md border bg-background px-4 py-3">
-              <p className="text-sm font-medium">Ausgewählter Account</p>
-              <p className="text-sm text-muted-foreground">
-                {selectedTarget.fullName} ({selectedTarget.email ?? "Keine E-Mail"}) – Rolle: {selectedTarget.role}
-              </p>
+        <div className="rounded-md border bg-muted/40">
+          {isLoadingTargets || isPending ? (
+            <div className="flex items-center justify-center py-6 text-sm text-muted-foreground">
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Lade Benutzer...
             </div>
+          ) : filteredTargets.length === 0 ? (
+            <div className="py-6 text-center text-sm text-muted-foreground">
+              Keine Benutzer gefunden. Versuchen Sie einen anderen Suchbegriff.
+            </div>
+          ) : (
+            <ScrollArea className="h-64">
+              <div className="p-2 space-y-1">
+                {filteredTargets.map(target => (
+                  <button
+                    key={target.id}
+                    type="button"
+                    onClick={() => setSelectedUserId(target.id)}
+                    className={cn(
+                      "w-full rounded-md px-3 py-2 text-left transition-colors",
+                      "hover:bg-muted",
+                      selectedUserId === target.id ? "bg-primary/10 text-primary" : "bg-background"
+                    )}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium">{target.fullName}</span>
+                      <span className="text-xs uppercase tracking-wide text-muted-foreground">
+                        {target.role}
+                      </span>
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {target.email ?? "Keine E-Mail hinterlegt"}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </ScrollArea>
           )}
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Abbrechen
-          </Button>
-          <Button
-            onClick={handleImpersonation}
-            disabled={!selectedUserId || isSubmitting}
-          >
-            {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-            Impersonation starten
-          </Button>
-        </DialogFooter>
+        {selectedTarget && (
+          <div className="rounded-md border bg-background px-4 py-3">
+            <p className="text-sm font-medium">Ausgewählter Account</p>
+            <p className="text-sm text-muted-foreground">
+              {selectedTarget.fullName} ({selectedTarget.email ?? "Keine E-Mail"}) – Rolle: {selectedTarget.role}
+            </p>
+          </div>
+        )}
+      </div>
 
-        <p className="text-xs text-muted-foreground">
-          Hinweis: Sie bleiben als {adminName} angemeldet und sehen das Dashboard aus der Sicht des ausgewählten Benutzers. Sie können jederzeit über den gelben Banner zurückkehren.
-        </p>
-      </DialogContent>
+      <DialogFooter>
+        <Button variant="outline" onClick={() => onOpenChange(false)}>
+          Abbrechen
+        </Button>
+        <Button
+          onClick={handleImpersonation}
+          disabled={!selectedUserId || isSubmitting}
+        >
+          {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+          Impersonation starten
+        </Button>
+      </DialogFooter>
+
+      <p className="text-xs text-muted-foreground">
+        Hinweis: Sie bleiben als {adminName} angemeldet und sehen das Dashboard aus der Sicht des ausgewählten Benutzers. Sie können jederzeit über den gelben Banner zurückkehren.
+      </p>
+    </DialogContent>
     </Dialog>
   );
 }

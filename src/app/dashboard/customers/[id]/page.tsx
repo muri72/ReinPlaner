@@ -33,19 +33,21 @@ export default async function CustomerDetailPage({
   }
 
   return (
-    <div className="p-4 md:p-8 space-y-8">
-      <PageHeader title={customer.name}>
-        <BackButtonWithParams backUrl="/dashboard/customers" />
-      </PageHeader>
+    <>
+      <div className="p-4 md:p-8 space-y-8">
+        <PageHeader title={customer.name}>
+          <BackButtonWithParams backUrl="/dashboard/customers" />
+        </PageHeader>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-1">
-          <CustomerSummaryCard customer={customer} />
-        </div>
-        <div className="lg:col-span-2">
-          <CustomerDetailTabs customer={customer} />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="lg:col-span-1">
+            <CustomerSummaryCard customer={customer} />
+          </div>
+          <div className="lg:col-span-2">
+            <CustomerDetailTabs customer={customer} />
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }

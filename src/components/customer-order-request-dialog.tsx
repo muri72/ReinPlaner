@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 import { CustomerOrderRequestForm, CustomerOrderRequestFormValues } from "@/components/customer-order-request-form";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+import { useDialogUnsavedChanges } from "@/components/ui/unsaved-changes-context";
+import { UnsavedChangesAlert } from "@/components/ui/unsaved-changes-alert";
 
 interface CustomerOrderRequestDialogProps {
   customerId: string;
@@ -14,9 +16,20 @@ interface CustomerOrderRequestDialogProps {
 
 export function CustomerOrderRequestDialog({ customerId, onOrderRequested }: CustomerOrderRequestDialogProps) {
   const [open, setOpen] = useState(false);
+  const [showConfirmClose, setShowConfirmClose] = useState(false);
+  const { isDirty } = useDialogUnsavedChanges();
+
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen && open && isDirty) {
+      setShowConfirmClose(true);
+    } else {
+      setOpen(nextOpen);
+    }
+  };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <>
+      <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <Button className="w-full">
           <PlusCircle className="mr-2 h-4 w-4" /> Neue Buchung anfragen
@@ -40,6 +53,18 @@ export function CustomerOrderRequestDialog({ customerId, onOrderRequested }: Cus
           }}
         />
       </DialogContent>
-    </Dialog>
+      </Dialog>
+
+      <UnsavedChangesAlert
+        open={showConfirmClose}
+        onConfirm={() => {
+          setShowConfirmClose(false);
+          setOpen(false);
+        }}
+        onCancel={() => setShowConfirmClose(false)}
+        title="Ungespeicherte Änderungen verwerfen?"
+        description="Wenn Sie das Dialog jetzt schließen, gehen Ihre Eingaben verloren."
+      />
+    </>
   );
 }

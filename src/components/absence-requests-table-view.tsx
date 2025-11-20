@@ -127,7 +127,7 @@ export function AbsenceRequestsTableView({
               <TableCell className="text-right">
                 <div className="flex justify-end space-x-1">
                   <RecordDetailsDialog record={request} title={`Details zu Abwesenheitsantrag`} />
-                  <AbsenceRequestEditDialog request={request} currentUserRole={currentUserRole} currentUserId={request.user_id} onSuccess={onActionSuccess} />
+                  <AbsenceRequestEditDialog request={request} currentUserRole={currentUserRole} currentUserId={request.user_id} onRequestUpdated={onActionSuccess} />
                   <DeleteAbsenceRequestButton requestId={request.id} onDeleteSuccess={onActionSuccess} />
                 </div>
               </TableCell>

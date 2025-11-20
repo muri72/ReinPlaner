@@ -58,19 +58,21 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
   }
 
   return (
-    <div className="p-4 md:p-8 space-y-8">
-      <PageHeader title={`${employee.first_name} ${employee.last_name}`}>
-        <BackButtonWithParams backUrl="/dashboard/employees" />
-      </PageHeader>
+    <>
+      <div className="p-4 md:p-8 space-y-8">
+        <PageHeader title={`${employee.first_name} ${employee.last_name}`}>
+          <BackButtonWithParams backUrl="/dashboard/employees" />
+        </PageHeader>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-1">
-          <EmployeeSummaryCard employee={employee} />
-        </div>
-        <div className="lg:col-span-2">
-          <EmployeeDetailTabs employee={employee} />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="lg:col-span-1">
+            <EmployeeSummaryCard employee={employee} />
+          </div>
+          <div className="lg:col-span-2">
+            <EmployeeDetailTabs employee={employee} />
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }

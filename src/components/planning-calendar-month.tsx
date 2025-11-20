@@ -314,14 +314,13 @@ export function PlanningCalendarMonth({
                         {employee.name.split(' ').map(n => n[0]).join('')}
                       </AvatarFallback>
                     </Avatar>
-                    <EmployeeEditDialog employee={employee.raw as any} onEmployeeUpdated={onActionSuccess}>
-                      <div className="cursor-pointer hover:text-primary">
-                        <span className="text-sm font-medium">{employee.name}</span>
-                        <span className="text-xs text-muted-foreground ml-2">
-                          {employee.raw.job_title || 'Mitarbeiter'}
-                        </span>
-                      </div>
-                    </EmployeeEditDialog>
+                    <div className="cursor-pointer hover:text-primary">
+                      <EmployeeEditDialog employee={employee.raw as any} />
+                      <span className="text-sm font-medium">{employee.name}</span>
+                      <span className="text-xs text-muted-foreground ml-2">
+                        {employee.raw.job_title || 'Mitarbeiter'}
+                      </span>
+                    </div>
                     <div className="ml-auto text-xs text-muted-foreground">
                       {employee.totalHoursPlanned.toFixed(1)}h / {employee.totalHoursAvailable.toFixed(1)}h
                     </div>

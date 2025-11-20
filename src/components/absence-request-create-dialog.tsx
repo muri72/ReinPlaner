@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
+import { DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { PlusCircle } from "lucide-react";
+import { PlusCircle, Calendar } from "lucide-react";
 import { AbsenceRequestForm, AbsenceRequestFormValues } from "@/components/absence-request-form";
 import { createAbsenceRequest } from "@/app/dashboard/absence-requests/actions";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+import { RecordDialog } from "@/components/ui/record-dialog";
 
 interface AbsenceRequestCreateDialogProps {
   onAbsenceRequestCreated?: () => void;
@@ -16,7 +16,6 @@ interface AbsenceRequestCreateDialogProps {
 
 export function AbsenceRequestCreateDialog({ onAbsenceRequestCreated, currentUserRole, currentUserId }: AbsenceRequestCreateDialogProps) {
   const [open, setOpen] = useState(false);
-  // Removed titleId and descriptionId as they are no longer needed for aria attributes
 
   const handleCreate = async (data: AbsenceRequestFormValues) => {
     const result = await createAbsenceRequest(data);
@@ -28,31 +27,29 @@ export function AbsenceRequestCreateDialog({ onAbsenceRequestCreated, currentUse
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <RecordDialog
+      open={open}
+      onOpenChange={setOpen}
+      title="Neuen Antrag einreichen"
+      description="Reichen Sie einen neuen Abwesenheitsantrag ein."
+      icon={<Calendar className="h-5 w-5 text-primary" />}
+      size="lg"
+    >
       <DialogTrigger asChild>
         <Button>
           <PlusCircle className="mr-2 h-4 w-4" />
           Neuen Antrag einreichen
         </Button>
       </DialogTrigger>
-      <DialogContent 
-        key={open ? "absence-request-create-open" : "absence-request-create-closed"} 
-        className="sm:max-w-3xl max-h-[90vh] overflow-y-auto glassmorphism-card"
-      >
-        <DialogHeader>
-          <DialogTitle>Neuen Abwesenheitsantrag einreichen</DialogTitle>
-          <DialogDescription>
-            Formular zum Einreichen eines neuen Abwesenheitsantrags.
-          </DialogDescription>
-        </DialogHeader>
-        <AbsenceRequestForm
-          onSubmit={handleCreate}
-          submitButtonText="Antrag einreichen"
-          onSuccess={() => setOpen(false)}
-          currentUserRole={currentUserRole}
-          currentUserId={currentUserId}
-        />
-      </DialogContent>
-    </Dialog>
+
+      <AbsenceRequestForm
+        onSubmit={handleCreate}
+        submitButtonText="Antrag einreichen"
+        onSuccess={() => setOpen(false)}
+        currentUserRole={currentUserRole}
+        currentUserId={currentUserId}
+        isInDialog={true}
+      />
+    </RecordDialog>
   );
 }

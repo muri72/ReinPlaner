@@ -357,7 +357,6 @@ export async function registerUser(data: UserFormValues) {
   revalidatePath("/dashboard/users");
   revalidatePath("/dashboard/employees"); // Revalidiere Mitarbeiterseite, falls Zuweisung geändert
   revalidatePath("/dashboard/customers"); // Revalidiere Kundenseite, falls Zuweisung geändert
-  revalidatePath("/dashboard/customer-contacts"); // Revalidiere Kundenkontakte-Seite
   return { success: true, message: "Benutzer erfolgreich registriert und zugewiesen!" };
 }
 
@@ -476,7 +475,6 @@ export async function updateUser(userId: string, data: Partial<UserFormValues>) 
   revalidatePath("/dashboard/users");
   revalidatePath("/dashboard/employees");
   revalidatePath("/dashboard/customers");
-  revalidatePath("/dashboard/customer-contacts");
 
   // Create audit log for user update
   await logCriticalAction(
@@ -553,7 +551,6 @@ export async function deleteUser(formData: FormData): Promise<{ success: boolean
   revalidatePath("/dashboard/users");
   revalidatePath("/dashboard/employees"); // Revalidiere Mitarbeiterseite, falls Zuweisung geändert
   revalidatePath("/dashboard/customers"); // Revalidiere Kundenseite, falls Zuweisung geändert
-  revalidatePath("/dashboard/customer-contacts"); // Revalidiere Kundenkontakte-Seite
 
   // Create audit log for user deletion
   await logCriticalAction(
@@ -629,7 +626,6 @@ export async function assignCustomersToManager(managerId: string, customerIds: s
   revalidatePath("/dashboard/customers"); // Revalidiere auch Kunden, da sich deren Sichtbarkeit ändern könnte
   revalidatePath("/dashboard/objects");   // Revalidiere auch Objekte
   revalidatePath("/dashboard/orders");    // Revalidiere auch Aufträge
-  revalidatePath("/dashboard/customer-contacts"); // Revalidiere auch Kundenkontakte
 
   return { success: true, message: "Kundenzuweisungen erfolgreich aktualisiert!" };
 }

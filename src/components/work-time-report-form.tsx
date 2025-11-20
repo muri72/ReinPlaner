@@ -8,16 +8,20 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
+import { useFormUnsavedChanges } from "@/components/ui/unsaved-changes-context";
 import { createClient } from "@/lib/supabase/client";
 import { getWorkTimeReport, WorkTimeReportData, getEmployeeWorkTimeReport, EmployeeWorkTimeReportData, sendWorkTimeReportToCustomer } from "@/app/dashboard/reports/actions";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatDuration, formatDateWithWeekday } from "@/lib/utils";
 import { generateProfessionalPDF } from "@/components/pdf-generator";
-import { Download, Send } from "lucide-react";
+import { Download, Send, Calendar, FileText } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "./ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog";
 import { handleActionResponse } from "@/lib/toast-utils";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { FormSection } from "@/components/ui/form-section";
+import { FormActions } from "@/components/ui/form-actions";
 
 const reportSchema = z.object({
   reportType: z.enum(['object', 'employee']),
@@ -56,6 +60,9 @@ export function WorkTimeReportForm() {
       year: String(new Date().getFullYear()),
     },
   });
+
+  // Register with unsaved changes context
+  useFormUnsavedChanges("work-time-report-form", form.formState.isDirty);
 
   const selectedReportType = form.watch("reportType");
   const selectedObjectId = form.watch("objectId");
@@ -336,50 +343,81 @@ export function WorkTimeReportForm() {
 
   return (
     <div className="space-y-6">
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 p-4 border rounded-md bg-card shadow-neumorphic glassmorphism-card">
-        <Tabs value={reportType} onValueChange={(value) => form.setValue('reportType', value as 'object' | 'employee')} className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="object">Nach Objekt</TabsTrigger>
-            <TabsTrigger value="employee">Nach Mitarbeiter</TabsTrigger>
-          </TabsList>
-          <TabsContent value="object" className="pt-4">
-            <Label htmlFor="objectId">Objekt</Label>
-            <Select onValueChange={(value) => form.setValue("objectId", value)} value={form.watch("objectId") || ""}>
-              <SelectTrigger><SelectValue placeholder="Objekt auswählen" /></SelectTrigger>
-              <SelectContent>{objects.map(obj => <SelectItem key={obj.id} value={obj.id}>{obj.name}</SelectItem>)}</SelectContent>
-            </Select>
-            {form.formState.errors.objectId && <p className="text-red-500 text-sm mt-1">{form.formState.errors.objectId.message}</p>}
-          </TabsContent>
-          <TabsContent value="employee" className="pt-4">
-            <Label htmlFor="employeeId">Mitarbeiter</Label>
-            <Select onValueChange={(value) => form.setValue("employeeId", value)} value={form.watch("employeeId") || ""}>
-              <SelectTrigger><SelectValue placeholder="Mitarbeiter auswählen" /></SelectTrigger>
-              <SelectContent>{employees.map(emp => <SelectItem key={emp.id} value={emp.id}>{emp.first_name} {emp.last_name}</SelectItem>)}</SelectContent>
-            </Select>
-            {form.formState.errors.employeeId && <p className="text-red-500 text-sm mt-1">{form.formState.errors.employeeId.message}</p>}
-          </TabsContent>
-        </Tabs>
-        
-        <div className="grid grid-cols-2 gap-4 pt-4">
-          <div>
-            <Label htmlFor="month">Monat</Label>
-            <Select onValueChange={(value) => form.setValue("month", value)} value={form.watch("month")}>
-              <SelectTrigger><SelectValue placeholder="Monat auswählen" /></SelectTrigger>
-              <SelectContent>{months.map(m => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}</SelectContent>
-            </Select>
-            {form.formState.errors.month && <p className="text-red-500 text-sm mt-1">{form.formState.errors.month.message}</p>}
-          </div>
-          <div>
-            <Label htmlFor="year">Jahr</Label>
-            <Select onValueChange={(value) => form.setValue("year", value)} value={form.watch("year")}>
-              <SelectTrigger><SelectValue placeholder="Jahr auswählen" /></SelectTrigger>
-              <SelectContent>{years.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}</SelectContent>
-            </Select>
-            {form.formState.errors.year && <p className="text-red-500 text-sm mt-1">{form.formState.errors.year.message}</p>}
-          </div>
-        </div>
-        <Button type="submit" disabled={loadingReport}>{loadingReport ? "Bericht wird geladen..." : "Bericht generieren"}</Button>
-      </form>
+      <Card className="shadow-neumorphic glassmorphism-card">
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold flex items-center gap-2">
+            <FileText className="h-5 w-5 text-primary" />
+            Arbeitszeitnachweis erstellen
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <FormSection
+              title="Berichtstyp"
+              description="Wählen Sie, ob Sie einen Bericht nach Objekt oder Mitarbeiter erstellen möchten"
+              icon={<FileText className="h-5 w-5 text-primary" />}
+            >
+              <Tabs value={reportType} onValueChange={(value) => form.setValue('reportType', value as 'object' | 'employee')} className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="object">Nach Objekt</TabsTrigger>
+                  <TabsTrigger value="employee">Nach Mitarbeiter</TabsTrigger>
+                </TabsList>
+                <TabsContent value="object" className="pt-4">
+                  <Label htmlFor="objectId">Objekt</Label>
+                  <Select onValueChange={(value) => form.setValue("objectId", value)} value={form.watch("objectId") || ""}>
+                    <SelectTrigger><SelectValue placeholder="Objekt auswählen" /></SelectTrigger>
+                    <SelectContent>{objects.map(obj => <SelectItem key={obj.id} value={obj.id}>{obj.name}</SelectItem>)}</SelectContent>
+                  </Select>
+                  {form.formState.errors.objectId && <p className="text-red-500 text-sm mt-1">{form.formState.errors.objectId.message}</p>}
+                </TabsContent>
+                <TabsContent value="employee" className="pt-4">
+                  <Label htmlFor="employeeId">Mitarbeiter</Label>
+                  <Select onValueChange={(value) => form.setValue("employeeId", value)} value={form.watch("employeeId") || ""}>
+                    <SelectTrigger><SelectValue placeholder="Mitarbeiter auswählen" /></SelectTrigger>
+                    <SelectContent>{employees.map(emp => <SelectItem key={emp.id} value={emp.id}>{emp.first_name} {emp.last_name}</SelectItem>)}</SelectContent>
+                  </Select>
+                  {form.formState.errors.employeeId && <p className="text-red-500 text-sm mt-1">{form.formState.errors.employeeId.message}</p>}
+                </TabsContent>
+              </Tabs>
+            </FormSection>
+
+            <FormSection
+              title="Zeitraum"
+              description="Wählen Sie den Zeitraum für den Bericht"
+              icon={<Calendar className="h-5 w-5 text-primary" />}
+            >
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="month">Monat</Label>
+                  <Select onValueChange={(value) => form.setValue("month", value)} value={form.watch("month")}>
+                    <SelectTrigger><SelectValue placeholder="Monat auswählen" /></SelectTrigger>
+                    <SelectContent>{months.map(m => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}</SelectContent>
+                  </Select>
+                  {form.formState.errors.month && <p className="text-red-500 text-sm mt-1">{form.formState.errors.month.message}</p>}
+                </div>
+                <div>
+                  <Label htmlFor="year">Jahr</Label>
+                  <Select onValueChange={(value) => form.setValue("year", value)} value={form.watch("year")}>
+                    <SelectTrigger><SelectValue placeholder="Jahr auswählen" /></SelectTrigger>
+                    <SelectContent>{years.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}</SelectContent>
+                  </Select>
+                  {form.formState.errors.year && <p className="text-red-500 text-sm mt-1">{form.formState.errors.year.message}</p>}
+                </div>
+              </div>
+            </FormSection>
+
+            <FormActions
+              isSubmitting={loadingReport}
+              onCancel={() => {}}
+              submitLabel="Bericht generieren"
+              showCancel={false}
+              submitVariant="default"
+              loadingText="Bericht wird geladen..."
+              align="left"
+            />
+          </form>
+        </CardContent>
+      </Card>
 
       {(objectReportData || employeeReportData) && (
         <div className="space-y-4">

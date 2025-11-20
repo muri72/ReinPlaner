@@ -1,13 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
+import { DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Pencil } from "lucide-react";
+import { Pencil, Clock } from "lucide-react";
 import { TimeEntryForm, TimeEntryFormValues } from "@/components/time-entry-form";
 import { updateTimeEntry } from "@/app/dashboard/time-tracking/actions";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+import { RecordDialog } from "@/components/ui/record-dialog";
 
 interface TimeEntryEditDialogProps {
   timeEntry: {
@@ -29,7 +29,6 @@ interface TimeEntryEditDialogProps {
 
 export function TimeEntryEditDialog({ timeEntry, currentUserId, isAdmin }: TimeEntryEditDialogProps) {
   const [open, setOpen] = useState(false);
-  // Removed titleId and descriptionId as they are no longer needed for aria attributes
 
   const handleUpdate = async (data: TimeEntryFormValues) => {
     const result = await updateTimeEntry(timeEntry.id, data);
@@ -40,7 +39,14 @@ export function TimeEntryEditDialog({ timeEntry, currentUserId, isAdmin }: TimeE
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <RecordDialog
+      open={open}
+      onOpenChange={setOpen}
+      title="Zeiteintrag bearbeiten"
+      description="Bearbeiten Sie die Details des Zeiteintrags."
+      icon={<Clock className="h-5 w-5 text-primary" />}
+      size="lg"
+    >
       <TooltipProvider delayDuration={300}>
         <Tooltip>
           <TooltipTrigger asChild>
@@ -55,38 +61,26 @@ export function TimeEntryEditDialog({ timeEntry, currentUserId, isAdmin }: TimeE
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
-      <DialogContent 
-        key={open ? "time-entry-edit-open" : "time-entry-edit-closed"} 
-        className="sm:max-w-3xl max-h-[90vh] overflow-y-auto glassmorphism-card"
-      >
-        <DialogHeader>
-          <DialogTitle>Zeiteintrag bearbeiten</DialogTitle>
-          <DialogDescription>
-            Formular zum Bearbeiten des Zeiteintrags.
-          </DialogDescription>
-        </DialogHeader>
-        <TimeEntryForm
-          initialData={{
-            employeeId: timeEntry.employee_id,
-            customerId: timeEntry.customer_id,
-            objectId: timeEntry.object_id,
-            orderId: timeEntry.order_id,
-            startDate: new Date(timeEntry.start_time),
-            startTime: new Date(timeEntry.start_time).toTimeString().slice(0, 5),
-            endDate: timeEntry.end_time ? new Date(timeEntry.end_time) : null,
-            endTime: timeEntry.end_time ? new Date(timeEntry.end_time).toTimeString().slice(0, 5) : null,
-            durationMinutes: timeEntry.duration_minutes,
-            breakMinutes: timeEntry.break_minutes,
-            type: timeEntry.type as TimeEntryFormValues["type"],
-            notes: timeEntry.notes,
-          }}
-          onSubmit={handleUpdate}
-          submitButtonText="Änderungen speichern"
-          onSuccess={() => setOpen(false)}
-          currentUserId={currentUserId}
-          isAdmin={isAdmin}
-        />
-      </DialogContent>
-    </Dialog>
+
+      <TimeEntryForm
+        initialData={{
+          employeeId: timeEntry.employee_id || undefined,
+          customerId: timeEntry.customer_id || undefined,
+          objectId: timeEntry.object_id || undefined,
+          orderId: timeEntry.order_id || undefined,
+          startDate: new Date(timeEntry.start_time),
+          endDate: timeEntry.end_time ? new Date(timeEntry.end_time) : undefined,
+          breakMinutes: timeEntry.break_minutes || undefined,
+          type: timeEntry.type as TimeEntryFormValues["type"],
+          notes: timeEntry.notes || undefined,
+        }}
+        onSubmit={handleUpdate}
+        submitButtonText="Änderungen speichern"
+        onSuccess={() => setOpen(false)}
+        currentUserId={currentUserId}
+        isAdmin={isAdmin}
+        isInDialog={true}
+      />
+    </RecordDialog>
   );
 }

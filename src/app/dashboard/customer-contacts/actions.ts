@@ -33,9 +33,9 @@ export async function createCustomerContact(data: CustomerContactFormValues): Pr
     return { success: false, message: error.message };
   }
 
-  revalidatePath("/dashboard/customer-contacts");
   revalidatePath("/dashboard/objects"); // Revalidiere auch Objekte, da Kontakte dort verwendet werden
   revalidatePath("/dashboard/orders"); // Revalidiere auch Aufträge, da Kontakte dort verwendet werden
+  revalidatePath("/dashboard/customers");
 
   // Create audit log
   if (newContact) {
@@ -117,9 +117,9 @@ export async function updateCustomerContact(contactId: string, data: CustomerCon
     return { success: false, message: "Kundenkontakt konnte nicht aktualisiert werden. Möglicherweise haben Sie keine Berechtigung oder der Kontakt existiert nicht." };
   }
 
-  revalidatePath("/dashboard/customer-contacts");
   revalidatePath("/dashboard/objects");
   revalidatePath("/dashboard/orders");
+  revalidatePath("/dashboard/customers");
 
   // Create audit log
   await logDataChange(
@@ -190,9 +190,9 @@ export async function deleteCustomerContact(formData: FormData): Promise<{ succe
     return { success: false, message: error.message };
   }
 
-  revalidatePath("/dashboard/customer-contacts");
   revalidatePath("/dashboard/objects");
   revalidatePath("/dashboard/orders");
+  revalidatePath("/dashboard/customers");
 
   // Create audit log
   if (contactToDelete) {

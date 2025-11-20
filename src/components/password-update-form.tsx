@@ -10,7 +10,13 @@ import { toast } from "sonner";
 import { updatePassword, sendPasswordResetEmail } from "@/app/dashboard/actions";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useRouter } from "next/navigation";
-import { handleActionResponse } from "@/lib/toast-utils"; // Importiere die neue Utility
+import { handleActionResponse } from "@/lib/toast-utils";
+import { FormSection } from "@/components/ui/form-section";
+import { FormActions } from "@/components/ui/form-actions";
+import { UnsavedChangesProtection } from "@/components/ui/unsaved-changes-dialog";
+import { UnsavedChangesAlert } from "@/components/ui/unsaved-changes-alert";
+import { Shield, Key, Mail } from "lucide-react";
+import { useState } from "react";
 
 const passwordSchema = z.object({
   newPassword: z.string().min(6, "Das neue Passwort muss mindestens 6 Zeichen lang sein."),
@@ -22,8 +28,13 @@ const passwordSchema = z.object({
 
 type PasswordFormValues = z.infer<typeof passwordSchema>;
 
-export function PasswordUpdateForm() {
+interface PasswordUpdateFormProps {
+  isInDialog?: boolean;
+}
+
+export function PasswordUpdateForm({ isInDialog = false }: PasswordUpdateFormProps) {
   const router = useRouter();
+  const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
   const form = useForm<PasswordFormValues>({
     resolver: zodResolver(passwordSchema),
     defaultValues: {
@@ -51,63 +62,175 @@ export function PasswordUpdateForm() {
     handleActionResponse(result); // Nutze die neue Utility
   };
 
-  return (
-    <Card className="shadow-neumorphic glassmorphism-card">
-      <CardHeader>
-        <CardTitle className="text-lg font-semibold">Passwort ändern</CardTitle>
-        <CardDescription className="text-sm">
-          Hier können Sie Ihr Passwort ändern oder einen Link zum Zurücksetzen anfordern.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-          <div>
-            <Label htmlFor="newPassword">Neues Passwort</Label>
-            <Input
-              id="newPassword"
-              type="password"
-              {...form.register("newPassword")}
-              placeholder="••••••••"
-            />
-            {form.formState.errors.newPassword && (
-              <p className="text-red-500 text-xs mt-1">{form.formState.errors.newPassword.message}</p>
-            )}
-          </div>
-          <div>
-            <Label htmlFor="confirmPassword">Neues Passwort bestätigen</Label>
-            <Input
-              id="confirmPassword"
-              type="password"
-              {...form.register("confirmPassword")}
-              placeholder="••••••••"
-            />
-            {form.formState.errors.confirmPassword && (
-              <p className="text-red-500 text-xs mt-1">{form.formState.errors.confirmPassword.message}</p>
-            )}
-          </div>
-          <Button type="submit" disabled={form.formState.isSubmitting}>
-            {form.formState.isSubmitting ? "Speichern..." : "Neues Passwort speichern"}
-          </Button>
+  const handleCancel = () => {
+    if (form.formState.isDirty && !form.formState.isSubmitting) {
+      setShowUnsavedDialog(true);
+    } else {
+      router.push('/dashboard');
+    }
+  };
+
+  if (isInDialog) {
+    return (
+      <>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <FormSection
+            title="Passwort-Sicherheit"
+            description="Ändern Sie Ihr Passwort oder fordern Sie einen Zurücksetzungs-Link an"
+            icon={<Shield className="h-5 w-5 text-primary" />}
+          >
+            <div>
+              <Label htmlFor="newPassword">Neues Passwort</Label>
+              <Input
+                id="newPassword"
+                type="password"
+                {...form.register("newPassword")}
+                placeholder="••••••••"
+              />
+              {form.formState.errors.newPassword && (
+                <p className="text-red-500 text-xs mt-1">{form.formState.errors.newPassword.message}</p>
+              )}
+            </div>
+            <div>
+              <Label htmlFor="confirmPassword">Neues Passwort bestätigen</Label>
+              <Input
+                id="confirmPassword"
+                type="password"
+                {...form.register("confirmPassword")}
+                placeholder="••••••••"
+              />
+              {form.formState.errors.confirmPassword && (
+                <p className="text-red-500 text-xs mt-1">{form.formState.errors.confirmPassword.message}</p>
+              )}
+            </div>
+          </FormSection>
+
+          <FormActions
+            isSubmitting={form.formState.isSubmitting}
+            onCancel={handleCancel}
+            submitLabel="Passwort ändern"
+            cancelLabel="Abbrechen"
+            showCancel={true}
+            submitVariant="default"
+            loadingText="Wird gespeichert..."
+            align="right"
+          />
         </form>
+
         <div className="relative my-4">
           <div className="absolute inset-0 flex items-center">
             <span className="w-full border-t" />
           </div>
           <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-card px-2 text-muted-foreground">
+            <span className="bg-background px-2 text-muted-foreground">
               Oder
             </span>
           </div>
         </div>
+
         <Button
           variant="outline"
           className="w-full"
           onClick={handleSendResetEmail}
           type="button"
         >
+          <Mail className="mr-2 h-4 w-4" />
           Link zum Zurücksetzen des Passworts senden
         </Button>
-      </CardContent>
-    </Card>
+
+        <UnsavedChangesAlert
+          open={showUnsavedDialog}
+          onConfirm={() => {
+            setShowUnsavedDialog(false);
+            router.push('/dashboard');
+          }}
+          onCancel={() => setShowUnsavedDialog(false)}
+          title="Ungespeicherte Änderungen verwerfen?"
+          description="Wenn Sie das Passwort-Formular jetzt verlassen, gehen Ihre Eingaben verloren."
+        />
+      </>
+    );
+  }
+
+  return (
+    <UnsavedChangesProtection formId="password-update-form">
+      <Card className="shadow-neumorphic glassmorphism-card">
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold flex items-center gap-2">
+            <Shield className="h-5 w-5 text-primary" />
+            Passwort ändern
+          </CardTitle>
+          <CardDescription className="text-sm">
+            Hier können Sie Ihr Passwort ändern oder einen Link zum Zurücksetzen anfordern.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <FormSection
+              title="Passwort-Sicherheit"
+              description="Ändern Sie Ihr Passwort oder fordern Sie einen Zurücksetzungs-Link an"
+              icon={<Key className="h-5 w-5 text-primary" />}
+            >
+              <div>
+                <Label htmlFor="newPassword">Neues Passwort</Label>
+                <Input
+                  id="newPassword"
+                  type="password"
+                  {...form.register("newPassword")}
+                  placeholder="••••••••"
+                />
+                {form.formState.errors.newPassword && (
+                  <p className="text-red-500 text-xs mt-1">{form.formState.errors.newPassword.message}</p>
+                )}
+              </div>
+              <div>
+                <Label htmlFor="confirmPassword">Neues Passwort bestätigen</Label>
+                <Input
+                  id="confirmPassword"
+                  type="password"
+                  {...form.register("confirmPassword")}
+                  placeholder="••••••••"
+                />
+                {form.formState.errors.confirmPassword && (
+                  <p className="text-red-500 text-xs mt-1">{form.formState.errors.confirmPassword.message}</p>
+                )}
+              </div>
+            </FormSection>
+
+            <FormActions
+              isSubmitting={form.formState.isSubmitting}
+              onCancel={handleCancel}
+              submitLabel="Passwort ändern"
+              cancelLabel="Abbrechen"
+              showCancel={true}
+              submitVariant="default"
+              loadingText="Wird gespeichert..."
+              align="right"
+            />
+          </form>
+
+          <div className="relative my-4">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-background px-2 text-muted-foreground">
+                Oder
+              </span>
+            </div>
+          </div>
+
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={handleSendResetEmail}
+            type="button"
+          >
+            <Mail className="mr-2 h-4 w-4" />
+            Link zum Zurücksetzen des Passworts senden
+          </Button>
+        </CardContent>
+      </Card>
+    </UnsavedChangesProtection>
   );
 }

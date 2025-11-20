@@ -10,7 +10,7 @@ import { DocumentUploader } from "@/components/document-uploader";
 import { DocumentList } from "@/components/document-list";
 import { Separator } from "@/components/ui/separator";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { CustomerContactCreateDialog } from "@/components/customer-contact-create-dialog";
+import { CustomerContactCreateGeneralDialog } from "@/components/customer-contact-create-general-dialog";
 import { CustomerContactEditDialog } from "@/components/customer-contact-edit-dialog";
 import { DeleteCustomerContactButton } from "@/components/delete-customer-contact-button";
 import { ContactRound } from "lucide-react";
@@ -163,7 +163,7 @@ export function CustomerDetailTabs({ customer }: CustomerDetailTabsProps) {
               <CardTitle>Ansprechpartner</CardTitle>
               <CardDescription>Verwalten Sie die Kontakte für diesen Kunden.</CardDescription>
             </div>
-            <CustomerContactCreateDialog customerId={customer.id} onContactCreated={refreshContacts} />
+            <CustomerContactCreateGeneralDialog customerId={customer.id} onContactCreated={refreshContacts} />
           </CardHeader>
           <CardContent>
             {contacts.length === 0 ? (

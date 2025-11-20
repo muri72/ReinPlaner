@@ -13,6 +13,8 @@ import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { settingsService, Bundesland } from "@/lib/services/settings-service";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useFormUnsavedChanges } from "@/components/ui/unsaved-changes-context";
+import { FormActions } from "@/components/ui/form-actions";
 
 const companyInfoSchema = z.object({
   company_name: z.string().min(1, "Firmenname ist erforderlich"),
@@ -62,6 +64,10 @@ export function SettingsForm() {
     },
   });
 
+  // Register with unsaved changes context
+  useFormUnsavedChanges("company-info-form", companyInfoForm.formState.isDirty);
+  useFormUnsavedChanges("regional-form", regionalForm.formState.isDirty);
+
   const payrollForm = useForm<PayrollSettingsForm>({
     resolver: zodResolver(payrollSettingsSchema),
     defaultValues: {
@@ -70,6 +76,9 @@ export function SettingsForm() {
       weekend_premium_pay_multiplier: "1.4",
     },
   });
+
+  // Register with unsaved changes context
+  useFormUnsavedChanges("payroll-form", payrollForm.formState.isDirty);
 
   const loadSettings = async () => {
     setLoading(true);
@@ -194,7 +203,7 @@ export function SettingsForm() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={companyInfoForm.handleSubmit(handleSaveCompanyInfo)} className="space-y-4">
+            <form onSubmit={companyInfoForm.handleSubmit(handleSaveCompanyInfo)} className="space-y-6">
               <div className="space-y-2">
                 <Label htmlFor="company_name">Firmenname</Label>
                 <Input
@@ -240,7 +249,7 @@ export function SettingsForm() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={regionalForm.handleSubmit(handleSaveRegional)} className="space-y-4">
+            <form onSubmit={regionalForm.handleSubmit(handleSaveRegional)} className="space-y-6">
               <div className="space-y-2">
                 <Label htmlFor="default_timezone">Zeitzone</Label>
                 <Select
@@ -294,7 +303,7 @@ export function SettingsForm() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={payrollForm.handleSubmit(handleSavePayroll)} className="space-y-4">
+            <form onSubmit={payrollForm.handleSubmit(handleSavePayroll)} className="space-y-6">
               <div className="space-y-2">
                 <Label htmlFor="default_employee_hourly_rate">Standard-Stundensatz (€)</Label>
                 <Input

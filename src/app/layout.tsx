@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ImpersonationProviderWrapper } from "@/components/impersonation-provider-wrapper";
 import { UserProfileProvider } from "@/components/user-profile-provider";
+import { UnsavedChangesProvider } from "@/components/ui/unsaved-changes-context";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "next-themes";
 import React from 'react'; // Hinzugefügt: Expliziter Import von React
@@ -61,7 +62,9 @@ export default function RootLayout({
         >
           <ImpersonationProviderWrapper>
             <UserProfileProvider>
-              {children}
+              <UnsavedChangesProvider>
+                {children}
+              </UnsavedChangesProvider>
             </UserProfileProvider>
           </ImpersonationProviderWrapper>
           <Toaster />

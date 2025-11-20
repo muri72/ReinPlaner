@@ -8,11 +8,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { FormActions } from "@/components/ui/form-actions";
+import { UnsavedChangesProtection } from "@/components/ui/unsaved-changes-dialog";
+import { UnsavedChangesAlert } from "@/components/ui/unsaved-changes-alert";
+import { useFormUnsavedChanges } from "@/components/ui/unsaved-changes-context";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { PlusCircle, X, Clock, Copy } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { createClient } from "@/lib/supabase/client";
-import { CustomerContactCreateDialog } from "@/components/customer-contact-create-dialog";
+import { CustomerContactCreateGeneralDialog } from "@/components/customer-contact-create-general-dialog";
 import { DatePicker } from "@/components/date-picker";
 import { handleActionResponse } from "@/lib/toast-utils";
 import { cn, calculateEndTime, calculateStartTime } from "@/lib/utils";
@@ -151,15 +156,20 @@ interface OrderFormProps {
   onSubmit: (data: OrderFormValues) => Promise<{ success: boolean; message: string }>;
   submitButtonText: string;
   onSuccess?: () => void;
+  isInDialog?: boolean;
+  title?: string;
+  description?: string;
 }
 
-export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }: OrderFormProps) {
+export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess, isInDialog = false, title, description }: OrderFormProps) {
   const supabase = createClient();
+  const router = useRouter();
   const [customers, setCustomers] = useState<{ id: string; name: string }[]>([]);
   const [objects, setObjects] = useState<any[]>([]); // Keep as any[] for now, detailed type not needed here
   const [allEmployees, setAllEmployees] = useState<{ id: string; first_name: string; last_name: string }[]>([]);
   const [customerContacts, setCustomerContacts] = useState<{ id: string; first_name: string; last_name: string; customer_id: string }[]>([]);
   const [serviceRates, setServiceRates] = useState<{ service_type: string; hourly_rate: number }[]>([]);
+  const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
 
   const resolvedDefaultValues: OrderFormValues = {
     title: initialData?.title ?? "",
@@ -186,6 +196,9 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     defaultValues: resolvedDefaultValues,
     mode: "onChange",
   });
+
+  // Register with unsaved changes context
+  useFormUnsavedChanges("order-form", form.formState.isDirty);
 
   const { fields: assignedEmployeeFields, replace: replaceAssignedEmployees, update: updateAssignedEmployee } = useFieldArray({
     control: form.control,
@@ -693,6 +706,14 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     }
   };
 
+  const handleCancel = () => {
+    if (form.formState.isDirty && !form.formState.isSubmitting) {
+      setShowUnsavedDialog(true);
+    } else {
+      onSuccess?.();
+    }
+  };
+
   const handleObjectCreated = async (newObjectId: string) => {
     if (selectedCustomerId) {
       // Refresh the objects list
@@ -732,8 +753,18 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
     : "Gesamtstunden (automatisch berechnet)";
 
   return (
-    <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 w-full">
-      <div>
+    <>
+      {!isInDialog && (title || description) && (
+        <div className="space-y-1 mb-6">
+          <h2 className="text-2xl font-bold tracking-tight">{title}</h2>
+          {description && (
+            <p className="text-sm text-muted-foreground">{description}</p>
+          )}
+        </div>
+      )}
+      <UnsavedChangesProtection formId="order-form">
+        <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 w-full">
+        <div>
         <Label htmlFor="customerId">Kunde</Label>
         <Select onValueChange={(value: string) => {
           form.setValue("customerId", value);
@@ -777,11 +808,14 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
                 <p className="text-muted-foreground text-sm">Bitte wählen Sie zuerst einen Kunden aus.</p>
             )}
           </div>
-          <ObjectCreateDialog
-            customerId={selectedCustomerId}
-            onObjectCreated={handleObjectCreated}
-            disabled={!selectedCustomerId}
-          />
+          {!selectedCustomerId ? (
+            <p className="text-sm text-muted-foreground">Bitte wählen Sie zuerst einen Kunden aus.</p>
+          ) : (
+            <ObjectCreateDialog
+              customerId={selectedCustomerId}
+              onObjectCreated={handleObjectCreated}
+            />
+          )}
         </div>
       </div>
 
@@ -838,10 +872,9 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
           </Select>
           {form.formState.errors.customerContactId && <p className="text-red-500 text-sm mt-1">{form.formState.errors.customerContactId.message}</p>}
         </div>
-        <CustomerContactCreateDialog
+        <CustomerContactCreateGeneralDialog
           customerId={selectedCustomerId}
           onContactCreated={handleCustomerContactCreated}
-          disabled={!selectedCustomerId}
         />
       </div>
 
@@ -1288,9 +1321,28 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess }
         {form.formState.errors.requestStatus && <p className="text-red-500 text-sm mt-1">{form.formState.errors.requestStatus.message}</p>}
       </div>
       
-      <Button type="submit" disabled={form.formState.isSubmitting}>
-        {form.formState.isSubmitting ? `${submitButtonText}...` : submitButtonText}
-      </Button>
+      <FormActions
+        isSubmitting={form.formState.isSubmitting}
+        onCancel={handleCancel}
+        submitLabel={submitButtonText}
+        cancelLabel="Abbrechen"
+        showCancel={!isInDialog}
+        submitVariant="default"
+        loadingText={`${submitButtonText}...`}
+      />
     </form>
+
+    <UnsavedChangesAlert
+      open={showUnsavedDialog}
+      onConfirm={() => {
+        setShowUnsavedDialog(false);
+        onSuccess?.();
+      }}
+      onCancel={() => setShowUnsavedDialog(false)}
+      title="Ungespeicherte Änderungen verwerfen?"
+      description="Wenn Sie das Auftrags-Formular jetzt verlassen, gehen Ihre Eingaben verloren."
+    />
+  </UnsavedChangesProtection>
+    </>
   );
 }

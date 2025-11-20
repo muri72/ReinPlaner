@@ -11,8 +11,14 @@ import { updateProfile } from "@/app/dashboard/actions";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useState, useRef } from "react";
 import { Switch } from "@/components/ui/switch";
-import { handleActionResponse } from "@/lib/toast-utils"; // Importiere die neue Utility
-import { useRouter } from "next/navigation"; // Importiere useRouter
+import { handleActionResponse } from "@/lib/toast-utils";
+import { useRouter } from "next/navigation";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { FormSection } from "@/components/ui/form-section";
+import { FormActions } from "@/components/ui/form-actions";
+import { UnsavedChangesProtection } from "@/components/ui/unsaved-changes-dialog";
+import { UnsavedChangesAlert } from "@/components/ui/unsaved-changes-alert";
+import { User, Camera, Mail, UserCheck } from "lucide-react";
 
 const MAX_AVATAR_SIZE = 10 * 1024 * 1024; // 10 MB
 
@@ -31,13 +37,15 @@ interface ProfileUpdateFormProps {
     avatarUrl: string | null;
     emailNotificationsEnabled: boolean;
   };
+  isInDialog?: boolean;
 }
 
-export function ProfileUpdateForm({ initialData }: ProfileUpdateFormProps) {
+export function ProfileUpdateForm({ initialData, isInDialog = false }: ProfileUpdateFormProps) {
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
+  const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const router = useRouter(); // Initialisiere useRouter
+  const router = useRouter();
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
@@ -75,7 +83,7 @@ export function ProfileUpdateForm({ initialData }: ProfileUpdateFormProps) {
 
     const result = await updateProfile(formData);
 
-    handleActionResponse(result); // Nutze die neue Utility
+    handleActionResponse(result);
 
     if (result.success) {
       setFile(null);
@@ -83,70 +91,224 @@ export function ProfileUpdateForm({ initialData }: ProfileUpdateFormProps) {
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
-      router.refresh(); // Seite aktualisieren, um das neue Profilbild im Layout anzuzeigen
+      router.refresh();
     }
   };
 
+  const handleCancel = () => {
+    if (form.formState.isDirty && !form.formState.isSubmitting) {
+      setShowUnsavedDialog(true);
+    } else {
+      router.push('/dashboard');
+    }
+  };
+
+  if (isInDialog) {
+    return (
+      <>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <FormSection
+            title="Profilbild"
+            description="Laden Sie ein neues Profilbild hoch"
+            icon={<Camera className="h-5 w-5 text-primary" />}
+          >
+            <div className="space-y-2 text-center">
+              <Avatar className="w-24 h-24 mx-auto">
+                <AvatarImage src={preview || initialData.avatarUrl || undefined} alt="User avatar" />
+                <AvatarFallback>{initialData.firstName?.[0]}{initialData.lastName?.[0]}</AvatarFallback>
+              </Avatar>
+              <Input
+                id="avatar"
+                type="file"
+                accept="image/png, image/jpeg, image/webp"
+                onChange={handleFileChange}
+                ref={fileInputRef}
+                className="w-full"
+              />
+            </div>
+          </FormSection>
+
+          <FormSection
+            title="Persönliche Daten"
+            description="Ihre grundlegenden Informationen"
+            icon={<User className="h-5 w-5 text-primary" />}
+          >
+            <div>
+              <Label htmlFor="firstName">Vorname</Label>
+              <Input
+                id="firstName"
+                {...form.register("firstName")}
+                placeholder="Ihr Vorname"
+              />
+              {form.formState.errors.firstName && (
+                <p className="text-red-500 text-sm mt-1">{form.formState.errors.firstName.message}</p>
+              )}
+            </div>
+            <div>
+              <Label htmlFor="lastName">Nachname</Label>
+              <Input
+                id="lastName"
+                {...form.register("lastName")}
+                placeholder="Ihr Nachname"
+              />
+              {form.formState.errors.lastName && (
+                <p className="text-red-500 text-sm mt-1">{form.formState.errors.lastName.message}</p>
+              )}
+            </div>
+          </FormSection>
+
+          <FormSection
+            title="Benachrichtigungen"
+            description="E-Mail-Einstellungen verwalten"
+            icon={<Mail className="h-5 w-5 text-primary" />}
+          >
+            <div className="flex items-center justify-between rounded-lg border p-4">
+              <div className="space-y-0.5">
+                <Label htmlFor="emailNotificationsEnabled">E-Mail-Benachrichtigungen</Label>
+                <p className="text-sm text-muted-foreground">
+                  Erhalten Sie E-Mails für wichtige Ereignisse.
+                </p>
+              </div>
+              <Controller
+                control={form.control}
+                name="emailNotificationsEnabled"
+                render={({ field }) => (
+                  <Switch
+                    id="emailNotificationsEnabled"
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                )}
+              />
+            </div>
+          </FormSection>
+
+          <FormActions
+            isSubmitting={form.formState.isSubmitting}
+            onCancel={handleCancel}
+            submitLabel="Profil speichern"
+            cancelLabel="Abbrechen"
+            showCancel={true}
+            submitVariant="default"
+            loadingText="Wird gespeichert..."
+            align="right"
+          />
+        </form>
+
+        <UnsavedChangesAlert
+          open={showUnsavedDialog}
+          onConfirm={() => {
+            setShowUnsavedDialog(false);
+            router.push('/dashboard');
+          }}
+          onCancel={() => setShowUnsavedDialog(false)}
+          title="Ungespeicherte Änderungen verwerfen?"
+          description="Wenn Sie das Profil-Formular jetzt verlassen, gehen Ihre Eingaben verloren."
+        />
+      </>
+    );
+  }
+
   return (
-    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 w-full max-w-md">
-      <div className="space-y-2 text-center">
-        <Avatar className="w-24 h-24 mx-auto">
-          <AvatarImage src={preview || initialData.avatarUrl || undefined} alt="User avatar" />
-          <AvatarFallback>{initialData.firstName?.[0]}{initialData.lastName?.[0]}</AvatarFallback>
-        </Avatar>
-        <Input
-          id="avatar"
-          type="file"
-          accept="image/png, image/jpeg, image/webp"
-          onChange={handleFileChange}
-          ref={fileInputRef}
-          className="w-full"
-        />
-      </div>
-      <div>
-        <Label htmlFor="firstName">Vorname</Label>
-        <Input
-          id="firstName"
-          {...form.register("firstName")}
-          placeholder="Ihr Vorname"
-        />
-        {form.formState.errors.firstName && (
-          <p className="text-red-500 text-sm mt-1">{form.formState.errors.firstName.message}</p>
-        )}
-      </div>
-      <div>
-        <Label htmlFor="lastName">Nachname</Label>
-        <Input
-          id="lastName"
-          {...form.register("lastName")}
-          placeholder="Ihr Nachname"
-        />
-        {form.formState.errors.lastName && (
-          <p className="text-red-500 text-sm mt-1">{form.formState.errors.lastName.message}</p>
-        )}
-      </div>
-      <div className="flex items-center justify-between rounded-lg border p-4 shadow-neumorphic glassmorphism-card">
-        <div className="space-y-0.5">
-          <Label htmlFor="emailNotificationsEnabled">E-Mail-Benachrichtigungen</Label>
-          <p className="text-sm text-muted-foreground">
-            Erhalten Sie E-Mails für wichtige Ereignisse.
-          </p>
-        </div>
-        <Controller
-          control={form.control}
-          name="emailNotificationsEnabled"
-          render={({ field }) => (
-            <Switch
-              id="emailNotificationsEnabled"
-              checked={field.value}
-              onCheckedChange={field.onChange}
+    <UnsavedChangesProtection formId="profile-update-form">
+      <Card className="shadow-neumorphic glassmorphism-card">
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold flex items-center gap-2">
+            <UserCheck className="h-5 w-5 text-primary" />
+            Profil bearbeiten
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <FormSection
+              title="Profilbild"
+              description="Laden Sie ein neues Profilbild hoch"
+              icon={<Camera className="h-5 w-5 text-primary" />}
+            >
+              <div className="space-y-2 text-center">
+                <Avatar className="w-24 h-24 mx-auto">
+                  <AvatarImage src={preview || initialData.avatarUrl || undefined} alt="User avatar" />
+                  <AvatarFallback>{initialData.firstName?.[0]}{initialData.lastName?.[0]}</AvatarFallback>
+                </Avatar>
+                <Input
+                  id="avatar"
+                  type="file"
+                  accept="image/png, image/jpeg, image/webp"
+                  onChange={handleFileChange}
+                  ref={fileInputRef}
+                  className="w-full"
+                />
+              </div>
+            </FormSection>
+
+            <FormSection
+              title="Persönliche Daten"
+              description="Ihre grundlegenden Informationen"
+              icon={<User className="h-5 w-5 text-primary" />}
+            >
+              <div>
+                <Label htmlFor="firstName">Vorname</Label>
+                <Input
+                  id="firstName"
+                  {...form.register("firstName")}
+                  placeholder="Ihr Vorname"
+                />
+                {form.formState.errors.firstName && (
+                  <p className="text-red-500 text-sm mt-1">{form.formState.errors.firstName.message}</p>
+                )}
+              </div>
+              <div>
+                <Label htmlFor="lastName">Nachname</Label>
+                <Input
+                  id="lastName"
+                  {...form.register("lastName")}
+                  placeholder="Ihr Nachname"
+                />
+                {form.formState.errors.lastName && (
+                  <p className="text-red-500 text-sm mt-1">{form.formState.errors.lastName.message}</p>
+                )}
+              </div>
+            </FormSection>
+
+            <FormSection
+              title="Benachrichtigungen"
+              description="E-Mail-Einstellungen verwalten"
+              icon={<Mail className="h-5 w-5 text-primary" />}
+            >
+              <div className="flex items-center justify-between rounded-lg border p-4">
+                <div className="space-y-0.5">
+                  <Label htmlFor="emailNotificationsEnabled">E-Mail-Benachrichtigungen</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Erhalten Sie E-Mails für wichtige Ereignisse.
+                  </p>
+                </div>
+                <Controller
+                  control={form.control}
+                  name="emailNotificationsEnabled"
+                  render={({ field }) => (
+                    <Switch
+                      id="emailNotificationsEnabled"
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  )}
+                />
+              </div>
+            </FormSection>
+
+            <FormActions
+              isSubmitting={form.formState.isSubmitting}
+              onCancel={handleCancel}
+              submitLabel="Profil speichern"
+              cancelLabel="Abbrechen"
+              showCancel={true}
+              submitVariant="default"
+              loadingText="Wird gespeichert..."
+              align="right"
             />
-          )}
-        />
-      </div>
-      <Button type="submit" disabled={form.formState.isSubmitting}>
-        {form.formState.isSubmitting ? "Speichern..." : "Profil speichern"}
-      </Button>
-    </form>
+          </form>
+        </CardContent>
+      </Card>
+    </UnsavedChangesProtection>
   );
 }

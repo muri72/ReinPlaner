@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
+import { DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { PlusCircle } from "lucide-react";
+import { PlusCircle, UserCheck } from "lucide-react";
 import { UserForm, UserFormValues } from "@/components/user-form";
 import { registerUser } from "@/app/dashboard/users/actions";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+import { RecordDialog } from "@/components/ui/record-dialog";
 
 interface UserCreateDialogProps {
   onUserCreated?: () => void;
@@ -14,7 +14,6 @@ interface UserCreateDialogProps {
 
 export function UserCreateDialog({ onUserCreated }: UserCreateDialogProps) {
   const [open, setOpen] = useState(false);
-  // Removed titleId and descriptionId as they are no longer needed for aria attributes
 
   const handleCreate = async (data: UserFormValues) => {
     const result = await registerUser(data);
@@ -26,30 +25,28 @@ export function UserCreateDialog({ onUserCreated }: UserCreateDialogProps) {
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <RecordDialog
+      open={open}
+      onOpenChange={setOpen}
+      title="Neuen Benutzer registrieren"
+      description="Erstellen Sie einen neuen Benutzer mit entsprechenden Rollen und Zuweisungen."
+      icon={<UserCheck className="h-5 w-5 text-primary" />}
+      size="lg"
+    >
       <DialogTrigger asChild>
         <Button>
           <PlusCircle className="mr-2 h-4 w-4" />
           Neuen Benutzer registrieren
         </Button>
       </DialogTrigger>
-      <DialogContent 
-        key={open ? "user-create-open" : "user-create-closed"} 
-        className="sm:max-w-3xl max-h-[90vh] overflow-y-auto glassmorphism-card"
-      >
-        <DialogHeader>
-          <DialogTitle>Neuen Benutzer registrieren</DialogTitle>
-          <DialogDescription>
-            Formular zum Registrieren eines neuen Benutzers.
-          </DialogDescription>
-        </DialogHeader>
-        <UserForm
-          onSubmit={handleCreate}
-          submitButtonText="Benutzer registrieren"
-          onSuccess={() => setOpen(false)}
-          isEditMode={false}
-        />
-      </DialogContent>
-    </Dialog>
+
+      <UserForm
+        onSubmit={handleCreate}
+        submitButtonText="Benutzer erstellen"
+        onSuccess={() => setOpen(false)}
+        isEditMode={false}
+        isInDialog={true}
+      />
+    </RecordDialog>
   );
 }

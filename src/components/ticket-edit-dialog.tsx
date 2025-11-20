@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
+import { DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Pencil, MessageCircle, Image as ImageIcon } from "lucide-react";
 import { TicketForm, TicketFormValues } from "@/components/ticket-form";
@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TicketCommentSection } from "./ticket-comment-section";
 import Image from "next/image";
 import { Carousel, CarouselContent, CarouselItem } from "./ui/carousel";
+import { RecordDialog } from "@/components/ui/record-dialog";
 
 interface TicketEditDialogProps {
   ticket: {
@@ -23,7 +24,7 @@ interface TicketEditDialogProps {
     priority: string;
     assigned_to_user_id: string | null;
     image_urls: string[] | null;
-    comments: any[]; // Array of comment objects
+    comments: any[];
   };
   onTicketUpdated?: () => void;
 }
@@ -42,7 +43,14 @@ export function TicketEditDialog({ ticket, onTicketUpdated }: TicketEditDialogPr
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <RecordDialog
+      open={open}
+      onOpenChange={setOpen}
+      title="Ticket bearbeiten"
+      description={`Bearbeiten Sie das Ticket: ${ticket.title}`}
+      icon={<MessageCircle className="h-5 w-5 text-primary" />}
+      size="lg"
+    >
       <TooltipProvider delayDuration={300}>
         <Tooltip>
           <TooltipTrigger asChild>
@@ -57,74 +65,72 @@ export function TicketEditDialog({ ticket, onTicketUpdated }: TicketEditDialogPr
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
-      <DialogContent 
-        key={open ? "ticket-edit-open" : "ticket-edit-closed"} 
-        className="sm:max-w-3xl max-h-[90vh] flex flex-col glassmorphism-card"
-      >
-        <DialogHeader>
-          <DialogTitle>Ticket bearbeiten: {ticket.title}</DialogTitle>
-          <DialogDescription>
-            Verwalten Sie die Details, den Status und die Kommentare des Tickets.
-          </DialogDescription>
-        </DialogHeader>
-        <Tabs value={currentTab} onValueChange={setCurrentTab} className="flex-grow flex flex-col">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="details">Details</TabsTrigger>
-            <TabsTrigger value="comments">Kommentare</TabsTrigger>
-            <TabsTrigger value="attachments">Anhänge</TabsTrigger>
-          </TabsList>
-          <TabsContent value="details" className="flex-grow overflow-y-auto pr-4">
-            <TicketForm
-              initialData={{
-                customerId: ticket.customer_id,
-                objectId: ticket.object_id,
-                title: ticket.title,
-                description: ticket.description,
-                status: ticket.status as TicketFormValues["status"],
-                priority: ticket.priority as TicketFormValues["priority"],
-                assignedToUserId: ticket.assigned_to_user_id,
-                imageUrls: ticket.image_urls || [],
-              }}
-              onSubmit={handleUpdate}
-              submitButtonText="Änderungen speichern"
-              onSuccess={() => setOpen(false)}
-              isEditMode={true}
-            />
-          </TabsContent>
-          <TabsContent value="comments" className="flex-grow overflow-y-auto pr-4">
-            <TicketCommentSection
-              ticketId={ticket.id}
-              comments={ticket.comments}
-              onCommentAdded={onTicketUpdated}
-            />
-          </TabsContent>
-          <TabsContent value="attachments" className="flex-grow overflow-y-auto pr-4 space-y-4">
-            <h3 className="text-lg font-semibold flex items-center">
-              <ImageIcon className="mr-2 h-5 w-5" /> Anhänge
-            </h3>
-            {ticket.image_urls && ticket.image_urls.length > 0 ? (
-              <Carousel
-                className="w-full max-w-sm mx-auto relative"
-                opts={{
-                  loop: true,
+
+      <Tabs value={currentTab} onValueChange={setCurrentTab} className="flex flex-col h-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="details">Details</TabsTrigger>
+          <TabsTrigger value="comments">Kommentare</TabsTrigger>
+          <TabsTrigger value="images">
+            <ImageIcon className="h-4 w-4 mr-2" />
+            Bilder
+          </TabsTrigger>
+        </TabsList>
+
+        <div className="flex-1 overflow-hidden">
+          <TabsContent value="details" className="h-full m-0 p-0">
+            <div className="flex-1 overflow-y-auto px-6 py-4 h-full">
+              <TicketForm
+                initialData={{
+                  title: ticket.title,
+                  description: ticket.description || undefined,
+                  status: ticket.status as TicketFormValues["status"],
+                  priority: ticket.priority as TicketFormValues["priority"],
+                  customerId: ticket.customer_id || undefined,
+                  objectId: ticket.object_id || undefined,
+                  assignedToUserId: ticket.assigned_to_user_id || undefined,
                 }}
-              >
-                <CarouselContent>
-                  {ticket.image_urls.map((url, index) => (
-                    <CarouselItem key={index}>
-                      <a href={url} target="_blank" rel="noopener noreferrer" className="block">
-                        <Image src={url} alt={`Ticket-Anhang ${index + 1}`} width={300} height={200} className="rounded-md object-cover w-full h-40" />
-                      </a>
-                    </CarouselItem>
-                  ))}
-                </CarouselContent>
-              </Carousel>
-            ) : (
-              <p className="text-sm text-muted-foreground">Keine Anhänge vorhanden.</p>
-            )}
+                onSubmit={handleUpdate}
+                submitButtonText="Änderungen speichern"
+                onSuccess={() => setOpen(false)}
+                isInDialog={true}
+              />
+            </div>
           </TabsContent>
-        </Tabs>
-      </DialogContent>
-    </Dialog>
+
+          <TabsContent value="comments" className="h-full m-0 p-0">
+            <div className="flex-1 overflow-y-auto px-6 py-4 h-full">
+              <TicketCommentSection ticketId={ticket.id} comments={ticket.comments} />
+            </div>
+          </TabsContent>
+
+          <TabsContent value="images" className="h-full m-0 p-0">
+            <div className="flex-1 overflow-y-auto px-6 py-4 h-full">
+              {ticket.image_urls && ticket.image_urls.length > 0 ? (
+                <Carousel>
+                  <CarouselContent>
+                    {ticket.image_urls.map((url, index) => (
+                      <CarouselItem key={index}>
+                        <div className="relative aspect-video">
+                          <Image
+                            src={url}
+                            alt={`Ticket image ${index + 1}`}
+                            fill
+                            className="object-contain rounded-lg"
+                          />
+                        </div>
+                      </CarouselItem>
+                    ))}
+                  </CarouselContent>
+                </Carousel>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  Keine Bilder vorhanden
+                </div>
+              )}
+            </div>
+          </TabsContent>
+        </div>
+      </Tabs>
+    </RecordDialog>
   );
 }

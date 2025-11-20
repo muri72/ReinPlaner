@@ -1,12 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Pencil } from "lucide-react";
+import { Pencil, UserCog, FileStack } from "lucide-react";
 import { EmployeeForm, EmployeeFormValues } from "@/components/employee-form";
 import { updateEmployee } from "@/app/dashboard/employees/actions";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { RecordDialog } from "@/components/ui/record-dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { DocumentUploader } from "@/components/document-uploader";
+import { DocumentList } from "@/components/document-list";
+import { DialogTrigger } from "@/components/ui/dialog";
 
 interface EmployeeEditDialogProps {
   employee: {
@@ -34,59 +37,77 @@ interface EmployeeEditDialogProps {
     default_recurrence_interval_weeks: number;
     default_start_week_offset: number;
   };
-  children?: React.ReactNode;
-  onEmployeeUpdated?: () => void;
+  trigger?: React.ReactNode;
 }
 
-export function EmployeeEditDialog({ employee, children, onEmployeeUpdated }: EmployeeEditDialogProps) {
-  const [open, setOpen] = useState(false);
+export function EmployeeEditDialog({ employee, trigger }: EmployeeEditDialogProps) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("details");
+
+  const setOpenState = (next: boolean) => {
+    setInternalOpen(next);
+  };
 
   const handleUpdate = async (data: EmployeeFormValues) => {
     const result = await updateEmployee(employee.id, data);
-    
     if (result.success) {
-      setOpen(false);
-      onEmployeeUpdated?.();
+      setInternalOpen(false);
     }
-    
     return result;
   };
 
-  const trigger = children ? (
-    <DialogTrigger asChild>{children}</DialogTrigger>
-  ) : (
-    <TooltipProvider delayDuration={300}>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <DialogTrigger asChild>
-            <Button variant="ghost" size="icon" className="text-primary hover:text-primary/80">
-              <Pencil className="h-4 w-4" />
-            </Button>
-          </DialogTrigger>
-        </TooltipTrigger>
-        <TooltipContent>
-          <p>Mitarbeiter bearbeiten</p>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
-  );
-
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      {trigger}
-      <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Mitarbeiter bearbeiten</DialogTitle>
-        </DialogHeader>
-        <div className="flex-grow overflow-y-auto pr-4">
-          <EmployeeForm
-            initialData={employee as any}
-            onSubmit={handleUpdate}
-            submitButtonText="Änderungen speichern"
-            onSuccess={() => setOpen(false)}
-          />
+    <RecordDialog
+      open={internalOpen}
+      onOpenChange={setOpenState}
+      title="Mitarbeiter bearbeiten"
+      description={`Bearbeiten Sie die Details für ${employee.first_name} ${employee.last_name}.`}
+      icon={<UserCog className="h-5 w-5 text-primary" />}
+      size="lg"
+    >
+      <DialogTrigger asChild>
+        {trigger ?? (
+          <Button variant="ghost" size="icon" className="text-primary hover:text-primary/80">
+            <Pencil className="h-4 w-4" />
+          </Button>
+        )}
+      </DialogTrigger>
+
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="details">Details</TabsTrigger>
+          <TabsTrigger value="documents">
+            <FileStack className="mr-2 h-4 w-4" />
+            Dokumente
+          </TabsTrigger>
+        </TabsList>
+
+        <div className="flex-1 overflow-hidden">
+          <TabsContent value="details" className="h-full m-0 p-0">
+            <EmployeeForm
+              key={`employee-form-${employee.id}-${internalOpen}`}
+              initialData={employee as any}
+              onSubmit={handleUpdate}
+              submitButtonText="Änderungen speichern"
+              onSuccess={() => setInternalOpen(false)}
+              isInDialog={true}
+            />
+          </TabsContent>
+
+          <TabsContent value="documents" className="h-full m-0 p-0">
+            <div className="flex-1 overflow-y-auto space-y-4 px-6 py-4">
+              <h3 className="text-md font-semibold flex items-center">
+                <FileStack className="mr-2 h-5 w-5" /> Dokumente
+              </h3>
+              <DocumentUploader
+                associatedEmployeeId={employee.id}
+                onDocumentUploaded={() => {}}
+              />
+              <DocumentList associatedEmployeeId={employee.id} />
+            </div>
+          </TabsContent>
         </div>
-      </DialogContent>
-    </Dialog>
+      </Tabs>
+    </RecordDialog>
   );
 }

@@ -1,20 +1,20 @@
 "use client";
 
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
+import { DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { PlusCircle } from "lucide-react";
+import { PlusCircle, Users } from "lucide-react";
 import { CustomerContactForm, CustomerContactFormValues } from "@/components/customer-contact-form";
 import { createCustomerContact } from "@/app/dashboard/customer-contacts/actions";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+import { RecordDialog } from "@/components/ui/record-dialog";
 
 interface CustomerContactCreateGeneralDialogProps {
+  customerId?: string;
   onContactCreated?: (newContactId: string) => void;
 }
 
-export function CustomerContactCreateGeneralDialog({ onContactCreated }: CustomerContactCreateGeneralDialogProps) {
+export function CustomerContactCreateGeneralDialog({ customerId, onContactCreated }: CustomerContactCreateGeneralDialogProps) {
   const [open, setOpen] = useState(false);
-  // Removed titleId and descriptionId as they are no longer needed for aria attributes
 
   const handleCreate = async (data: CustomerContactFormValues) => {
     const result = await createCustomerContact(data);
@@ -28,29 +28,28 @@ export function CustomerContactCreateGeneralDialog({ onContactCreated }: Custome
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <RecordDialog
+      open={open}
+      onOpenChange={setOpen}
+      title="Neuen Kundenkontakt hinzufügen"
+      description="Formular zum Hinzufügen eines neuen Kundenkontakts."
+      icon={<Users className="h-5 w-5 text-primary" />}
+      size="lg"
+    >
       <DialogTrigger asChild>
         <Button>
           <PlusCircle className="mr-2 h-4 w-4" />
           Neuen Kundenkontakt hinzufügen
         </Button>
       </DialogTrigger>
-      <DialogContent 
-        key={open ? "customer-contact-create-general-open" : "customer-contact-create-general-closed"} 
-        className="sm:max-w-3xl max-h-[90vh] overflow-y-auto glassmorphism-card"
-      >
-        <DialogHeader>
-          <DialogTitle>Neuen Kundenkontakt hinzufügen</DialogTitle>
-          <DialogDescription>
-            Formular zum Hinzufügen eines neuen Kundenkontakts.
-          </DialogDescription>
-        </DialogHeader>
-        <CustomerContactForm
-          onSubmit={handleCreate}
-          submitButtonText="Kundenkontakt hinzufügen"
-          onSuccess={() => setOpen(false)}
-        />
-      </DialogContent>
-    </Dialog>
+
+      <CustomerContactForm
+        initialData={customerId ? { customerId } : undefined}
+        onSubmit={handleCreate}
+        submitButtonText="Kundenkontakt hinzufügen"
+        onSuccess={() => setOpen(false)}
+        isInDialog={true}
+      />
+    </RecordDialog>
   );
 }

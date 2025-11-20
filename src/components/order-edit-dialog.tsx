@@ -2,17 +2,16 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Pencil } from "lucide-react";
+import { Pencil, ShoppingCart, FileStack } from "lucide-react";
 import { OrderForm, OrderFormValues, AssignedEmployee } from "@/components/order-form";
 import { updateOrder } from "@/app/dashboard/orders/actions";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+import { RecordDialog } from "@/components/ui/record-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DocumentUploader } from "@/components/document-uploader";
 import { DocumentList } from "@/components/document-list";
-import { FileStack } from "lucide-react";
+import { DialogTrigger } from "@/components/ui/dialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 // Definierte Liste der Dienstleistungen (muss mit order-form.tsx übereinstimmen)
 const availableServices = [
@@ -44,10 +43,12 @@ interface OrderEditDialogProps {
     request_status: string;
     assignedEmployees: AssignedEmployee[]; // Use the correct, structured type
   };
+  trigger?: React.ReactNode;
 }
 
-export function OrderEditDialog({ order }: OrderEditDialogProps) {
-  const [open, setOpen] = useState(false);
+export function OrderEditDialog({ order, trigger }: OrderEditDialogProps) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("details");
   const [currentOrder, setCurrentOrder] = useState(order);
   const router = useRouter();
 
@@ -56,12 +57,16 @@ export function OrderEditDialog({ order }: OrderEditDialogProps) {
     setCurrentOrder(order);
   }, [order]);
 
+  const setOpenState = (next: boolean) => {
+    setInternalOpen(next);
+  };
+
   const handleUpdate = async (data: OrderFormValues) => {
     const result = await updateOrder(currentOrder.id, data);
     if (result.success) {
       // Store current path before refresh to maintain pagination
       const currentPath = window.location.pathname + window.location.search;
-      setOpen(false);
+      setOpenState(false);
       // Refresh to show updated data and restore pagination state
       router.refresh();
       // Restore the original URL with all parameters (like page=2)
@@ -78,39 +83,35 @@ export function OrderEditDialog({ order }: OrderEditDialogProps) {
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <TooltipProvider delayDuration={300}>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <DialogTrigger asChild>
-              <Button variant="ghost" size="icon" className="text-primary hover:text-primary/80">
-                <Pencil className="h-4 w-4" />
-              </Button>
-            </DialogTrigger>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Auftrag bearbeiten</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-      <DialogContent 
-        key={open ? "order-edit-open" : "order-edit-closed"} 
-        className="sm:max-w-5xl max-h-[90vh] overflow-y-auto flex flex-col glassmorphism-card"
-      >
-        <DialogHeader>
-          <DialogTitle>Auftrag bearbeiten</DialogTitle>
-          <DialogDescription>
-            Formular zum Bearbeiten der Auftragsdetails.
-          </DialogDescription>
-        </DialogHeader>
-        <Tabs defaultValue="details" className="flex-grow flex flex-col">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="details">Details</TabsTrigger>
-            <TabsTrigger value="documents">Dokumente</TabsTrigger>
-          </TabsList>
-          <TabsContent value="details" className="flex-grow overflow-y-auto pr-4">
+    <RecordDialog
+      open={internalOpen}
+      onOpenChange={setOpenState}
+      title="Auftrag bearbeiten"
+      description="Bearbeiten Sie die Details und Einstellungen des Auftrags."
+      icon={<ShoppingCart className="h-5 w-5 text-primary" />}
+      size="lg"
+    >
+      <DialogTrigger asChild>
+        {trigger ?? (
+          <Button variant="ghost" size="icon" className="text-primary hover:text-primary/80">
+            <Pencil className="h-4 w-4" />
+          </Button>
+        )}
+      </DialogTrigger>
+
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="details">Details</TabsTrigger>
+          <TabsTrigger value="documents">
+            <FileStack className="mr-2 h-4 w-4" />
+            Dokumente
+          </TabsTrigger>
+        </TabsList>
+
+        <div className="flex-1 overflow-hidden">
+          <TabsContent value="details" className="h-full m-0 p-0">
             <OrderForm
-              key={`order-form-${currentOrder.id}-${open}`} // Force remount when dialog opens/closes or order changes
+              key={`order-form-${currentOrder.id}-${internalOpen}`} // Force remount when dialog opens/closes or order changes
               initialData={{
                 title: currentOrder.title,
                 description: currentOrder.description || undefined,
@@ -132,18 +133,25 @@ export function OrderEditDialog({ order }: OrderEditDialogProps) {
               }}
               onSubmit={handleUpdate}
               submitButtonText="Änderungen speichern"
-              onSuccess={() => setOpen(false)}
+              onSuccess={() => setInternalOpen(false)}
+              isInDialog={true}
             />
           </TabsContent>
-          <TabsContent value="documents" className="flex-grow overflow-y-auto pr-4 space-y-4">
-            <h3 className="text-md font-semibold flex items-center">
-              <FileStack className="mr-2 h-5 w-5" /> Dokumente
-            </h3>
-            <DocumentUploader associatedOrderId={currentOrder.id} onDocumentUploaded={() => { /* Re-fetch documents if needed */ }} />
-            <DocumentList associatedOrderId={currentOrder.id} />
+
+          <TabsContent value="documents" className="h-full m-0 p-0">
+            <div className="flex-1 overflow-y-auto space-y-4 px-6 py-4">
+              <h3 className="text-md font-semibold flex items-center">
+                <FileStack className="mr-2 h-5 w-5" /> Dokumente
+              </h3>
+              <DocumentUploader
+                associatedOrderId={currentOrder.id}
+                onDocumentUploaded={() => {}}
+              />
+              <DocumentList associatedOrderId={currentOrder.id} />
+            </div>
           </TabsContent>
-        </Tabs>
-      </DialogContent>
-    </Dialog>
+        </div>
+      </Tabs>
+    </RecordDialog>
   );
 }

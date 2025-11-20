@@ -102,6 +102,7 @@ export function AbsenceRequestsGridView({
                   request={request}
                   currentUserRole={currentUserRole}
                   currentUserId={currentUserId}
+                  onRequestUpdated={onActionSuccess}
                 />
                 <DeleteAbsenceRequestButton
                   requestId={request.id}

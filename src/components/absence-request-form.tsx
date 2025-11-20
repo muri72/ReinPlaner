@@ -12,7 +12,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { DatePicker } from "@/components/date-picker";
-import { handleActionResponse } from "@/lib/toast-utils"; // Importiere die neue Utility
+import { handleActionResponse } from "@/lib/toast-utils";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { FormSection } from "@/components/ui/form-section";
+import { FormActions } from "@/components/ui/form-actions";
+import { useFormUnsavedChanges } from "@/components/ui/unsaved-changes-context";
+import { UnsavedChangesProtection } from "@/components/ui/unsaved-changes-dialog";
+import { UnsavedChangesAlert } from "@/components/ui/unsaved-changes-alert";
+import { CalendarDays, FileText, Settings, User } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 // Define the schema for absence request form values
 export const absenceRequestSchema = z.object({
@@ -38,10 +46,13 @@ interface AbsenceRequestFormProps {
   onSuccess?: () => void;
   currentUserRole: 'admin' | 'manager' | 'employee';
   currentUserId: string;
+  isInDialog?: boolean;
 }
 
-export function AbsenceRequestForm({ initialData, onSubmit, submitButtonText, onSuccess, currentUserRole, currentUserId }: AbsenceRequestFormProps) {
+export function AbsenceRequestForm({ initialData, onSubmit, submitButtonText, onSuccess, currentUserRole, currentUserId, isInDialog = false }: AbsenceRequestFormProps) {
   const supabase = createClient();
+  const router = useRouter();
+  const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
   const [employees, setEmployees] = useState<{ id: string; first_name: string; last_name: string; user_id: string | null }[]>([]);
 
   const resolvedDefaultValues: AbsenceRequestFormValues = {
@@ -60,6 +71,9 @@ export function AbsenceRequestForm({ initialData, onSubmit, submitButtonText, on
   });
 
   const isManagerOrAdmin = currentUserRole === 'admin' || currentUserRole === 'manager';
+
+  // Register with unsaved changes context
+  useFormUnsavedChanges("absence-request-form", form.formState.isDirty);
 
   useEffect(() => {
     const fetchEmployees = async () => {
@@ -117,6 +131,14 @@ export function AbsenceRequestForm({ initialData, onSubmit, submitButtonText, on
     }
   };
 
+  const handleCancel = () => {
+    if (form.formState.isDirty && !form.formState.isSubmitting) {
+      setShowUnsavedDialog(true);
+    } else {
+      onSuccess?.();
+    }
+  };
+
   const typeOptions = {
     vacation: "Urlaub",
     sick_leave: "Krankheit",
@@ -130,75 +152,224 @@ export function AbsenceRequestForm({ initialData, onSubmit, submitButtonText, on
     rejected: "Abgelehnt",
   };
 
-  return (
-    <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 w-full max-w-md" suppressHydrationWarning>
-      <div>
-        <Label htmlFor="employeeId">Mitarbeiter</Label>
-        <Select onValueChange={(value) => form.setValue("employeeId", value)} value={form.watch("employeeId")} disabled={!isManagerOrAdmin && employees.length > 0}>
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Mitarbeiter auswählen" />
-          </SelectTrigger>
-          <SelectContent>
-            {employees.map(emp => (
-              <SelectItem key={emp.id} value={emp.id}>{emp.first_name} {emp.last_name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {form.formState.errors.employeeId && <p className="text-red-500 text-sm mt-1">{form.formState.errors.employeeId.message}</p>}
-        {!isManagerOrAdmin && employees.length === 0 && (
-          <p className="text-muted-foreground text-sm mt-1">Kein aktiver Mitarbeiter für Ihr Konto gefunden.</p>
-        )}
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <DatePicker label="Startdatum" value={form.watch("startDate")} onChange={(date) => form.setValue("startDate", date || new Date())} error={form.formState.errors.startDate?.message} />
-        <DatePicker label="Enddatum" value={form.watch("endDate")} onChange={(date) => form.setValue("endDate", date || new Date())} error={form.formState.errors.endDate?.message} />
-      </div>
-      {form.formState.errors.endDate && <p className="text-red-500 text-sm mt-1">{form.formState.errors.endDate.message}</p>}
-
-      <div>
-        <Label htmlFor="type">Art der Abwesenheit</Label>
-        <Select onValueChange={(value) => form.setValue("type", value as AbsenceRequestFormValues["type"])} value={form.watch("type")}>
-          <SelectTrigger><SelectValue placeholder="Art auswählen" /></SelectTrigger>
-          <SelectContent>
-            {Object.entries(typeOptions).map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        {form.formState.errors.type && <p className="text-red-500 text-sm mt-1">{form.formState.errors.type.message}</p>}
-      </div>
-
-      <div>
-        <Label htmlFor="notes">Notizen (optional)</Label>
-        <Textarea id="notes" {...form.register("notes")} placeholder="Grund für die Abwesenheit..." rows={3} />
-        {form.formState.errors.notes && <p className="text-red-500 text-sm mt-1">{form.formState.errors.notes.message}</p>}
-      </div>
-
-      {isManagerOrAdmin && (
-        <>
-          <div className="border-t pt-4 mt-4 space-y-4">
-            <h3 className="text-md font-semibold">Admin-Bereich</h3>
+  if (isInDialog) {
+    return (
+      <>
+        <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-6" suppressHydrationWarning>
+          <FormSection
+            title="Mitarbeiter"
+            description="Wählen Sie den Mitarbeiter für den Abwesenheitsantrag"
+            icon={<User className="h-5 w-5 text-primary" />}
+          >
             <div>
-              <Label htmlFor="status">Status</Label>
-              <Select onValueChange={(value) => form.setValue("status", value as AbsenceRequestFormValues["status"])} value={form.watch("status")}>
-                <SelectTrigger><SelectValue placeholder="Status auswählen" /></SelectTrigger>
+              <Label htmlFor="employeeId">Mitarbeiter</Label>
+              <Select onValueChange={(value) => form.setValue("employeeId", value)} value={form.watch("employeeId")} disabled={!isManagerOrAdmin && employees.length > 0}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Mitarbeiter auswählen" />
+                </SelectTrigger>
                 <SelectContent>
-                  {Object.entries(statusOptions).map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}
+                  {employees.map(emp => (
+                    <SelectItem key={emp.id} value={emp.id}>{emp.first_name} {emp.last_name}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
-              {form.formState.errors.status && <p className="text-red-500 text-sm mt-1">{form.formState.errors.status.message}</p>}
+              {form.formState.errors.employeeId && <p className="text-red-500 text-sm mt-1">{form.formState.errors.employeeId.message}</p>}
+              {!isManagerOrAdmin && employees.length === 0 && (
+                <p className="text-muted-foreground text-sm mt-1">Kein aktiver Mitarbeiter für Ihr Konto gefunden.</p>
+              )}
+            </div>
+          </FormSection>
+
+          <FormSection
+            title="Abwesenheitszeitraum"
+            description="Start- und Enddatum der Abwesenheit"
+            icon={<CalendarDays className="h-5 w-5 text-primary" />}
+          >
+            <div className="grid grid-cols-2 gap-4">
+              <DatePicker label="Startdatum" value={form.watch("startDate")} onChange={(date) => form.setValue("startDate", date || new Date())} error={form.formState.errors.startDate?.message} />
+              <DatePicker label="Enddatum" value={form.watch("endDate")} onChange={(date) => form.setValue("endDate", date || new Date())} error={form.formState.errors.endDate?.message} />
+            </div>
+            {form.formState.errors.endDate && <p className="text-red-500 text-sm mt-1">{form.formState.errors.endDate.message}</p>}
+          </FormSection>
+
+          <FormSection
+            title="Abwesenheitsdetails"
+            description="Art der Abwesenheit und zusätzliche Informationen"
+            icon={<FileText className="h-5 w-5 text-primary" />}
+          >
+            <div>
+              <Label htmlFor="type">Art der Abwesenheit</Label>
+              <Select onValueChange={(value) => form.setValue("type", value as AbsenceRequestFormValues["type"])} value={form.watch("type")}>
+                <SelectTrigger><SelectValue placeholder="Art auswählen" /></SelectTrigger>
+                <SelectContent>
+                  {Object.entries(typeOptions).map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              {form.formState.errors.type && <p className="text-red-500 text-sm mt-1">{form.formState.errors.type.message}</p>}
             </div>
             <div>
-              <Label htmlFor="adminNotes">Admin-Notizen (optional)</Label>
-              <Textarea id="adminNotes" {...form.register("adminNotes")} placeholder="Interne Notizen zum Antrag..." rows={3} />
-              {form.formState.errors.adminNotes && <p className="text-red-500 text-sm mt-1">{form.formState.errors.adminNotes.message}</p>}
+              <Label htmlFor="notes">Notizen (optional)</Label>
+              <Textarea id="notes" {...form.register("notes")} placeholder="Grund für die Abwesenheit..." rows={3} />
+              {form.formState.errors.notes && <p className="text-red-500 text-sm mt-1">{form.formState.errors.notes.message}</p>}
             </div>
-          </div>
-        </>
-      )}
+          </FormSection>
 
-      <Button type="submit" disabled={form.formState.isSubmitting}>
-        {form.formState.isSubmitting ? `${submitButtonText}...` : submitButtonText}
-      </Button>
-    </form>
+          {isManagerOrAdmin && (
+            <FormSection
+              title="Admin-Bereich"
+              description="Genehmigung und interne Notizen"
+              icon={<Settings className="h-5 w-5 text-primary" />}
+            >
+              <div>
+                <Label htmlFor="status">Status</Label>
+                <Select onValueChange={(value) => form.setValue("status", value as AbsenceRequestFormValues["status"])} value={form.watch("status")}>
+                  <SelectTrigger><SelectValue placeholder="Status auswählen" /></SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(statusOptions).map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                {form.formState.errors.status && <p className="text-red-500 text-sm mt-1">{form.formState.errors.status.message}</p>}
+              </div>
+              <div>
+                <Label htmlFor="adminNotes">Admin-Notizen (optional)</Label>
+                <Textarea id="adminNotes" {...form.register("adminNotes")} placeholder="Interne Notizen zum Antrag..." rows={3} />
+                {form.formState.errors.adminNotes && <p className="text-red-500 text-sm mt-1">{form.formState.errors.adminNotes.message}</p>}
+              </div>
+            </FormSection>
+          )}
+
+          <FormActions
+            isSubmitting={form.formState.isSubmitting}
+            onCancel={handleCancel}
+            submitLabel={submitButtonText}
+            cancelLabel="Abbrechen"
+            showCancel={true}
+            submitVariant="default"
+            loadingText="Wird verarbeitet..."
+            align="right"
+          />
+        </form>
+
+        <UnsavedChangesAlert
+          open={showUnsavedDialog}
+          onConfirm={() => {
+            setShowUnsavedDialog(false);
+            onSuccess?.();
+          }}
+          onCancel={() => setShowUnsavedDialog(false)}
+          title="Ungespeicherte Änderungen verwerfen?"
+          description="Wenn Sie das Abwesenheits-Formular jetzt verlassen, gehen Ihre Eingaben verloren."
+        />
+      </>
+    );
+  }
+
+  return (
+    <UnsavedChangesProtection formId="absence-request-form">
+      <Card className="shadow-neumorphic glassmorphism-card">
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold flex items-center gap-2">
+            <CalendarDays className="h-5 w-5 text-primary" />
+            Abwesenheitsantrag
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-6" suppressHydrationWarning>
+            <FormSection
+              title="Mitarbeiter"
+              description="Wählen Sie den Mitarbeiter für den Abwesenheitsantrag"
+              icon={<User className="h-5 w-5 text-primary" />}
+            >
+              <div>
+                <Label htmlFor="employeeId">Mitarbeiter</Label>
+                <Select onValueChange={(value) => form.setValue("employeeId", value)} value={form.watch("employeeId")} disabled={!isManagerOrAdmin && employees.length > 0}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Mitarbeiter auswählen" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {employees.map(emp => (
+                      <SelectItem key={emp.id} value={emp.id}>{emp.first_name} {emp.last_name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {form.formState.errors.employeeId && <p className="text-red-500 text-sm mt-1">{form.formState.errors.employeeId.message}</p>}
+                {!isManagerOrAdmin && employees.length === 0 && (
+                  <p className="text-muted-foreground text-sm mt-1">Kein aktiver Mitarbeiter für Ihr Konto gefunden.</p>
+                )}
+              </div>
+            </FormSection>
+
+            <FormSection
+              title="Abwesenheitszeitraum"
+              description="Start- und Enddatum der Abwesenheit"
+              icon={<CalendarDays className="h-5 w-5 text-primary" />}
+            >
+              <div className="grid grid-cols-2 gap-4">
+                <DatePicker label="Startdatum" value={form.watch("startDate")} onChange={(date) => form.setValue("startDate", date || new Date())} error={form.formState.errors.startDate?.message} />
+                <DatePicker label="Enddatum" value={form.watch("endDate")} onChange={(date) => form.setValue("endDate", date || new Date())} error={form.formState.errors.endDate?.message} />
+              </div>
+              {form.formState.errors.endDate && <p className="text-red-500 text-sm mt-1">{form.formState.errors.endDate.message}</p>}
+            </FormSection>
+
+            <FormSection
+              title="Abwesenheitsdetails"
+              description="Art der Abwesenheit und zusätzliche Informationen"
+              icon={<FileText className="h-5 w-5 text-primary" />}
+            >
+              <div>
+                <Label htmlFor="type">Art der Abwesenheit</Label>
+                <Select onValueChange={(value) => form.setValue("type", value as AbsenceRequestFormValues["type"])} value={form.watch("type")}>
+                  <SelectTrigger><SelectValue placeholder="Art auswählen" /></SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(typeOptions).map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                {form.formState.errors.type && <p className="text-red-500 text-sm mt-1">{form.formState.errors.type.message}</p>}
+              </div>
+              <div>
+                <Label htmlFor="notes">Notizen (optional)</Label>
+                <Textarea id="notes" {...form.register("notes")} placeholder="Grund für die Abwesenheit..." rows={3} />
+                {form.formState.errors.notes && <p className="text-red-500 text-sm mt-1">{form.formState.errors.notes.message}</p>}
+              </div>
+            </FormSection>
+
+            {isManagerOrAdmin && (
+              <FormSection
+                title="Admin-Bereich"
+                description="Genehmigung und interne Notizen"
+                icon={<Settings className="h-5 w-5 text-primary" />}
+              >
+                <div>
+                  <Label htmlFor="status">Status</Label>
+                  <Select onValueChange={(value) => form.setValue("status", value as AbsenceRequestFormValues["status"])} value={form.watch("status")}>
+                    <SelectTrigger><SelectValue placeholder="Status auswählen" /></SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(statusOptions).map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  {form.formState.errors.status && <p className="text-red-500 text-sm mt-1">{form.formState.errors.status.message}</p>}
+                </div>
+                <div>
+                  <Label htmlFor="adminNotes">Admin-Notizen (optional)</Label>
+                  <Textarea id="adminNotes" {...form.register("adminNotes")} placeholder="Interne Notizen zum Antrag..." rows={3} />
+                  {form.formState.errors.adminNotes && <p className="text-red-500 text-sm mt-1">{form.formState.errors.adminNotes.message}</p>}
+                </div>
+              </FormSection>
+            )}
+
+            <FormActions
+              isSubmitting={form.formState.isSubmitting}
+              onCancel={handleCancel}
+              submitLabel={submitButtonText}
+              cancelLabel="Abbrechen"
+              showCancel={true}
+              submitVariant="default"
+              loadingText="Wird verarbeitet..."
+              align="right"
+            />
+          </form>
+        </CardContent>
+      </Card>
+    </UnsavedChangesProtection>
   );
 }

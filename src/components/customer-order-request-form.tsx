@@ -12,7 +12,14 @@ import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { DatePicker } from "@/components/date-picker";
 import { handleActionResponse } from "@/lib/toast-utils";
-import { createOrder } from "@/app/dashboard/orders/actions"; // Reuse existing action
+import { createOrder } from "@/app/dashboard/orders/actions";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { FormSection } from "@/components/ui/form-section";
+import { FormActions } from "@/components/ui/form-actions";
+import { UnsavedChangesProtection } from "@/components/ui/unsaved-changes-dialog";
+import { UnsavedChangesAlert } from "@/components/ui/unsaved-changes-alert";
+import { FileText, Calendar, Settings, ShoppingCart, Repeat, Info } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 // Definierte Liste der Dienstleistungen (muss mit order-form.tsx übereinstimmen)
 const availableServices = [
@@ -38,12 +45,15 @@ export type CustomerOrderRequestFormValues = z.infer<typeof customerOrderRequest
 export type CustomerOrderRequestFormInput = z.input<typeof customerOrderRequestSchema>;
 
 interface CustomerOrderRequestFormProps {
-  customerId: string; // The customer ID will be passed from the parent
+  customerId: string;
   onSuccess?: () => void;
+  isInDialog?: boolean;
 }
 
-export function CustomerOrderRequestForm({ customerId, onSuccess }: CustomerOrderRequestFormProps) {
+export function CustomerOrderRequestForm({ customerId, onSuccess, isInDialog = false }: CustomerOrderRequestFormProps) {
   const supabase = createClient();
+  const router = useRouter();
+  const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
   const [objects, setObjects] = useState<{ id: string; name: string; customer_id: string }[]>([]);
   const [customerContacts, setCustomerContacts] = useState<{ id: string; first_name: string; last_name: string; customer_id: string }[]>([]);
 
@@ -63,7 +73,6 @@ export function CustomerOrderRequestForm({ customerId, onSuccess }: CustomerOrde
 
   const orderType = form.watch("orderType");
 
-  // Fetch objects and customer contacts for the specific customer
   useEffect(() => {
     const fetchRelatedData = async () => {
       if (customerId) {
@@ -106,109 +115,336 @@ export function CustomerOrderRequestForm({ customerId, onSuccess }: CustomerOrde
     }
   };
 
+  const handleCancel = () => {
+    if (form.formState.isDirty && !form.formState.isSubmitting) {
+      setShowUnsavedDialog(true);
+    } else {
+      onSuccess?.();
+    }
+  };
+
+  if (isInDialog) {
+    return (
+      <>
+        <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-6" suppressHydrationWarning>
+          <FormSection
+            title="Anfragedetails"
+            description="Grundlegende Informationen zur Bestellanfrage"
+            icon={<FileText className="h-5 w-5 text-primary" />}
+          >
+            <div>
+              <Label htmlFor="title">Titel der Anfrage</Label>
+              <Input
+                id="title"
+                {...form.register("title")}
+                placeholder="Z.B. Büroreinigung für KW 30"
+              />
+              {form.formState.errors.title && (
+                <p className="text-red-500 text-sm mt-1">{form.formState.errors.title.message}</p>
+              )}
+            </div>
+            <div>
+              <Label htmlFor="description">Beschreibung (optional)</Label>
+              <Textarea
+                id="description"
+                {...form.register("description")}
+                placeholder="Details zur gewünschten Reinigung..."
+                rows={3}
+              />
+              {form.formState.errors.description && (
+                <p className="text-red-500 text-sm mt-1">{form.formState.errors.description.message}</p>
+              )}
+            </div>
+          </FormSection>
+
+          <FormSection
+            title="Dienstleistung"
+            description="Wählen Sie die gewünschte Dienstleistung aus"
+            icon={<Settings className="h-5 w-5 text-primary" />}
+          >
+            <div>
+              <Label htmlFor="serviceType">Gewünschte Dienstleistung</Label>
+              <Select onValueChange={(value) => form.setValue("serviceType", value as CustomerOrderRequestFormValues["serviceType"])} value={form.watch("serviceType") || ""}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Dienstleistung auswählen" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableServices.map(service => (
+                    <SelectItem key={service} value={service}>{service}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {form.formState.errors.serviceType && (
+                <p className="text-red-500 text-sm mt-1">{form.formState.errors.serviceType.message}</p>
+              )}
+            </div>
+            <div>
+              <Label htmlFor="orderType">Auftragstyp</Label>
+              <Select onValueChange={(value) => {
+                form.setValue("orderType", value as CustomerOrderRequestFormValues["orderType"]);
+                form.setValue("dueDate", null);
+                form.setValue("recurringStartDate", null);
+                form.setValue("recurringEndDate", null);
+              }} value={form.watch("orderType")}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Auftragstyp auswählen" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="one_time">
+                    <div className="flex items-center gap-2">
+                      <Info className="h-4 w-4" />
+                      Einmalig
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="recurring">
+                    <div className="flex items-center gap-2">
+                      <Repeat className="h-4 w-4" />
+                      Wiederkehrend
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              {form.formState.errors.orderType && (
+                <p className="text-red-500 text-sm mt-1">{form.formState.errors.orderType.message}</p>
+              )}
+            </div>
+          </FormSection>
+
+          <FormSection
+            title="Zeitplan"
+            description="Gewünschte Termine für die Dienstleistung"
+            icon={<Calendar className="h-5 w-5 text-primary" />}
+          >
+            {orderType === "one_time" && (
+              <DatePicker
+                label="Gewünschtes Datum (optional)"
+                value={form.watch("dueDate")}
+                onChange={(date) => form.setValue("dueDate", date)}
+                error={form.formState.errors.dueDate?.message}
+              />
+            )}
+
+            {orderType === "recurring" && (
+              <>
+                <DatePicker
+                  label="Gewünschtes Startdatum"
+                  value={form.watch("recurringStartDate")}
+                  onChange={(date) => form.setValue("recurringStartDate", date)}
+                  error={form.formState.errors.recurringStartDate?.message}
+                />
+                <DatePicker
+                  label="Gewünschtes Enddatum (optional)"
+                  value={form.watch("recurringEndDate")}
+                  onChange={(date) => form.setValue("recurringEndDate", date)}
+                  error={form.formState.errors.recurringEndDate?.message}
+                />
+              </>
+            )}
+          </FormSection>
+
+          <FormSection
+            title="Zusätzliche Informationen"
+            description="Weitere Details oder besondere Wünsche"
+            icon={<Info className="h-5 w-5 text-primary" />}
+          >
+            <div>
+              <Label htmlFor="notes">Zusätzliche Notizen (optional)</Label>
+              <Textarea
+                id="notes"
+                {...form.register("notes")}
+                placeholder="Besondere Anweisungen oder Wünsche..."
+                rows={3}
+              />
+              {form.formState.errors.notes && (
+                <p className="text-red-500 text-sm mt-1">{form.formState.errors.notes.message}</p>
+              )}
+            </div>
+          </FormSection>
+
+          <FormActions
+            isSubmitting={form.formState.isSubmitting}
+            onCancel={handleCancel}
+            submitLabel="Anfrage senden"
+            cancelLabel="Abbrechen"
+            showCancel={true}
+            submitVariant="default"
+            loadingText="Wird gesendet..."
+            align="right"
+          />
+        </form>
+
+        <UnsavedChangesAlert
+          open={showUnsavedDialog}
+          onConfirm={() => {
+            setShowUnsavedDialog(false);
+            onSuccess?.();
+          }}
+          onCancel={() => setShowUnsavedDialog(false)}
+          title="Ungespeicherte Änderungen verwerfen?"
+          description="Wenn Sie die Bestellanfrage jetzt verlassen, gehen Ihre Eingaben verloren."
+        />
+      </>
+    );
+  }
+
   return (
-    <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 w-full max-w-md" suppressHydrationWarning>
-      <div>
-        <Label htmlFor="title">Titel der Anfrage</Label>
-        <Input
-          id="title"
-          {...form.register("title")}
-          placeholder="Z.B. Büroreinigung für KW 30"
-        />
-        {form.formState.errors.title && (
-          <p className="text-red-500 text-sm mt-1">{form.formState.errors.title.message}</p>
-        )}
-      </div>
-      <div>
-        <Label htmlFor="description">Beschreibung (optional)</Label>
-        <Textarea
-          id="description"
-          {...form.register("description")}
-          placeholder="Details zur gewünschten Reinigung..."
-          rows={4}
-        />
-        {form.formState.errors.description && (
-          <p className="text-red-500 text-sm mt-1">{form.formState.errors.description.message}</p>
-        )}
-      </div>
-      <div>
-        <Label htmlFor="serviceType">Gewünschte Dienstleistung</Label>
-        <Select onValueChange={(value) => form.setValue("serviceType", value as CustomerOrderRequestFormValues["serviceType"])} value={form.watch("serviceType") || ""}>
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Dienstleistung auswählen" />
-          </SelectTrigger>
-          <SelectContent>
-            {availableServices.map(service => (
-              <SelectItem key={service} value={service}>{service}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {form.formState.errors.serviceType && (
-          <p className="text-red-500 text-sm mt-1">{form.formState.errors.serviceType.message}</p>
-        )}
-      </div>
-      <div>
-        <Label htmlFor="orderType">Auftragstyp</Label>
-        <Select onValueChange={(value) => {
-          form.setValue("orderType", value as CustomerOrderRequestFormValues["orderType"]);
-          form.setValue("dueDate", null);
-          form.setValue("recurringStartDate", null);
-          form.setValue("recurringEndDate", null);
-        }} value={form.watch("orderType")}>
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Auftragstyp auswählen" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="one_time">Einmalig</SelectItem>
-            <SelectItem value="recurring">Wiederkehrend</SelectItem>
-          </SelectContent>
-        </Select>
-        {form.formState.errors.orderType && (
-          <p className="text-red-500 text-sm mt-1">{form.formState.errors.orderType.message}</p>
-        )}
-      </div>
+    <UnsavedChangesProtection formId="customer-order-request-form">
+      <Card className="shadow-neumorphic glassmorphism-card">
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold flex items-center gap-2">
+            <ShoppingCart className="h-5 w-5 text-primary" />
+            Bestellanfrage erstellen
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-6" suppressHydrationWarning>
+            <FormSection
+              title="Anfragedetails"
+              description="Grundlegende Informationen zur Bestellanfrage"
+              icon={<FileText className="h-5 w-5 text-primary" />}
+            >
+              <div>
+                <Label htmlFor="title">Titel der Anfrage</Label>
+                <Input
+                  id="title"
+                  {...form.register("title")}
+                  placeholder="Z.B. Büroreinigung für KW 30"
+                />
+                {form.formState.errors.title && (
+                  <p className="text-red-500 text-sm mt-1">{form.formState.errors.title.message}</p>
+                )}
+              </div>
+              <div>
+                <Label htmlFor="description">Beschreibung (optional)</Label>
+                <Textarea
+                  id="description"
+                  {...form.register("description")}
+                  placeholder="Details zur gewünschten Reinigung..."
+                  rows={3}
+                />
+                {form.formState.errors.description && (
+                  <p className="text-red-500 text-sm mt-1">{form.formState.errors.description.message}</p>
+                )}
+              </div>
+            </FormSection>
 
-      {orderType === "one_time" && (
-        <DatePicker
-          label="Gewünschtes Datum (optional)"
-          value={form.watch("dueDate")}
-          onChange={(date) => form.setValue("dueDate", date)}
-          error={form.formState.errors.dueDate?.message}
-        />
-      )}
+            <FormSection
+              title="Dienstleistung"
+              description="Wählen Sie die gewünschte Dienstleistung aus"
+              icon={<Settings className="h-5 w-5 text-primary" />}
+            >
+              <div>
+                <Label htmlFor="serviceType">Gewünschte Dienstleistung</Label>
+                <Select onValueChange={(value) => form.setValue("serviceType", value as CustomerOrderRequestFormValues["serviceType"])} value={form.watch("serviceType") || ""}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Dienstleistung auswählen" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableServices.map(service => (
+                      <SelectItem key={service} value={service}>{service}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {form.formState.errors.serviceType && (
+                  <p className="text-red-500 text-sm mt-1">{form.formState.errors.serviceType.message}</p>
+                )}
+              </div>
+              <div>
+                <Label htmlFor="orderType">Auftragstyp</Label>
+                <Select onValueChange={(value) => {
+                  form.setValue("orderType", value as CustomerOrderRequestFormValues["orderType"]);
+                  form.setValue("dueDate", null);
+                  form.setValue("recurringStartDate", null);
+                  form.setValue("recurringEndDate", null);
+                }} value={form.watch("orderType")}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Auftragstyp auswählen" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="one_time">
+                      <div className="flex items-center gap-2">
+                        <Info className="h-4 w-4" />
+                        Einmalig
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="recurring">
+                      <div className="flex items-center gap-2">
+                        <Repeat className="h-4 w-4" />
+                        Wiederkehrend
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+                {form.formState.errors.orderType && (
+                  <p className="text-red-500 text-sm mt-1">{form.formState.errors.orderType.message}</p>
+                )}
+              </div>
+            </FormSection>
 
-      {orderType === "recurring" && (
-        <>
-          <DatePicker
-            label="Gewünschtes Startdatum"
-            value={form.watch("recurringStartDate")}
-            onChange={(date) => form.setValue("recurringStartDate", date)}
-            error={form.formState.errors.recurringStartDate?.message}
-          />
-          <DatePicker
-            label="Gewünschtes Enddatum (optional)"
-            value={form.watch("recurringEndDate")}
-            onChange={(date) => form.setValue("recurringEndDate", date)}
-            error={form.formState.errors.recurringEndDate?.message}
-          />
-        </>
-      )}
-      
-      <div>
-        <Label htmlFor="notes">Zusätzliche Notizen (optional)</Label>
-        <Textarea
-          id="notes"
-          {...form.register("notes")}
-          placeholder="Besondere Anweisungen oder Wünsche..."
-          rows={3}
-        />
-        {form.formState.errors.notes && (
-          <p className="text-red-500 text-sm mt-1">{form.formState.errors.notes.message}</p>
-        )}
-      </div>
-      <Button type="submit" disabled={form.formState.isSubmitting}>
-        {form.formState.isSubmitting ? "Anfrage senden..." : "Anfrage senden"}
-      </Button>
-    </form>
+            <FormSection
+              title="Zeitplan"
+              description="Gewünschte Termine für die Dienstleistung"
+              icon={<Calendar className="h-5 w-5 text-primary" />}
+            >
+              {orderType === "one_time" && (
+                <DatePicker
+                  label="Gewünschtes Datum (optional)"
+                  value={form.watch("dueDate")}
+                  onChange={(date) => form.setValue("dueDate", date)}
+                  error={form.formState.errors.dueDate?.message}
+                />
+              )}
+
+              {orderType === "recurring" && (
+                <>
+                  <DatePicker
+                    label="Gewünschtes Startdatum"
+                    value={form.watch("recurringStartDate")}
+                    onChange={(date) => form.setValue("recurringStartDate", date)}
+                    error={form.formState.errors.recurringStartDate?.message}
+                  />
+                  <DatePicker
+                    label="Gewünschtes Enddatum (optional)"
+                    value={form.watch("recurringEndDate")}
+                    onChange={(date) => form.setValue("recurringEndDate", date)}
+                    error={form.formState.errors.recurringEndDate?.message}
+                  />
+                </>
+              )}
+            </FormSection>
+
+            <FormSection
+              title="Zusätzliche Informationen"
+              description="Weitere Details oder besondere Wünsche"
+              icon={<Info className="h-5 w-5 text-primary" />}
+            >
+              <div>
+                <Label htmlFor="notes">Zusätzliche Notizen (optional)</Label>
+                <Textarea
+                  id="notes"
+                  {...form.register("notes")}
+                  placeholder="Besondere Anweisungen oder Wünsche..."
+                  rows={3}
+                />
+                {form.formState.errors.notes && (
+                  <p className="text-red-500 text-sm mt-1">{form.formState.errors.notes.message}</p>
+                )}
+              </div>
+            </FormSection>
+
+            <FormActions
+              isSubmitting={form.formState.isSubmitting}
+              onCancel={handleCancel}
+              submitLabel="Anfrage senden"
+              cancelLabel="Abbrechen"
+              showCancel={true}
+              submitVariant="default"
+              loadingText="Wird gesendet..."
+              align="right"
+            />
+          </form>
+        </CardContent>
+      </Card>
+    </UnsavedChangesProtection>
   );
 }

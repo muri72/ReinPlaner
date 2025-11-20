@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
+import { DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { PlusCircle } from "lucide-react";
+import { PlusCircle, Clock } from "lucide-react";
 import { TimeEntryForm, TimeEntryFormValues } from "@/components/time-entry-form";
 import { createTimeEntry } from "@/app/dashboard/time-tracking/actions";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+import { RecordDialog } from "@/components/ui/record-dialog";
 
 interface TimeEntryCreateDialogProps {
   initialData?: Partial<TimeEntryFormValues>;
@@ -32,46 +32,40 @@ export function TimeEntryCreateDialog({
   isAdmin,
 }: TimeEntryCreateDialogProps) {
   const [open, setOpen] = useState(false);
-  // Removed titleId and descriptionId as they are no longer needed for aria attributes
 
   const handleCreate = async (data: TimeEntryFormValues) => {
     const result = await createTimeEntry(data);
     if (result.success) {
       setOpen(false);
-      if (result.newEntryId) {
-        onEntryCreated?.(result.newEntryId);
-      }
+      onEntryCreated?.(result.newEntryId || "");
     }
     return result;
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <RecordDialog
+      open={open}
+      onOpenChange={setOpen}
+      title={dialogTitle}
+      icon={<Clock className="h-5 w-5 text-primary" />}
+      size="lg"
+    >
       <DialogTrigger asChild>
         <Button variant={triggerButtonVariant} className={triggerButtonClassName}>
-          {triggerButtonIcon}
+          {triggerButtonIcon || <PlusCircle className="mr-2 h-4 w-4" />}
           {triggerButtonText}
         </Button>
       </DialogTrigger>
-      <DialogContent 
-        key={open ? "time-entry-create-open" : "time-entry-create-closed"} 
-        className="sm:max-w-3xl max-h-[90vh] overflow-y-auto glassmorphism-card"
-      >
-        <DialogHeader>
-          <DialogTitle>{dialogTitle}</DialogTitle>
-          <DialogDescription>
-            Formular zum Erstellen eines neuen Zeiteintrags.
-          </DialogDescription>
-        </DialogHeader>
-        <TimeEntryForm
-          initialData={initialData}
-          onSubmit={handleCreate}
-          submitButtonText="Zeiteintrag hinzufügen"
-          onSuccess={() => setOpen(false)}
-          currentUserId={currentUserId}
-          isAdmin={isAdmin}
-        />
-      </DialogContent>
-    </Dialog>
+
+      <TimeEntryForm
+        initialData={initialData}
+        onSubmit={handleCreate}
+        submitButtonText="Zeiteintrag erstellen"
+        onSuccess={() => setOpen(false)}
+        currentUserId={currentUserId}
+        isAdmin={isAdmin}
+        isInDialog={true}
+      />
+    </RecordDialog>
   );
 }

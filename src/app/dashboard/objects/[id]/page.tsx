@@ -42,19 +42,21 @@ export default async function ObjectDetailPage({ params }: { params: Promise<{ i
   };
 
   return (
-    <div className="p-4 md:p-8 space-y-8">
-      <PageHeader title={flattenedObject.name}>
-        <BackButtonWithParams backUrl="/dashboard/objects" />
-      </PageHeader>
+    <>
+      <div className="p-4 md:p-8 space-y-8">
+        <PageHeader title={flattenedObject.name}>
+          <BackButtonWithParams backUrl="/dashboard/objects" />
+        </PageHeader>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-1">
-          <ObjectSummaryCard object={flattenedObject} />
-        </div>
-        <div className="lg:col-span-2">
-          <ObjectDetailTabs object={flattenedObject} />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="lg:col-span-1">
+            <ObjectSummaryCard object={flattenedObject} />
+          </div>
+          <div className="lg:col-span-2">
+            <ObjectDetailTabs object={flattenedObject} />
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }

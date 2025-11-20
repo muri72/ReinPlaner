@@ -16,6 +16,14 @@ import { X, Image as ImageIcon } from "lucide-react";
 import Image from "next/image";
 import { v4 as uuidv4 } from 'uuid';
 import { createTicket, generateSignedUploadUrlsForTickets } from "@/app/dashboard/tickets/actions";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { FormSection } from "@/components/ui/form-section";
+import { FormActions } from "@/components/ui/form-actions";
+import { useFormUnsavedChanges } from "@/components/ui/unsaved-changes-context";
+import { UnsavedChangesProtection } from "@/components/ui/unsaved-changes-dialog";
+import { UnsavedChangesAlert } from "@/components/ui/unsaved-changes-alert";
+import { useRouter } from "next/navigation";
+import { AlertTriangle, Building, FileText, Settings, User } from "lucide-react";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 const MAX_TOTAL_FILES = 5;
@@ -40,16 +48,19 @@ interface TicketFormProps {
   submitButtonText: string;
   onSuccess?: () => void;
   isEditMode?: boolean;
-  ticketId?: string; // Added ticketId prop for edit mode
+  ticketId?: string;
+  isInDialog?: boolean;
 }
 
-export function TicketForm({ initialData, onSubmit, submitButtonText, onSuccess, isEditMode = false, ticketId }: TicketFormProps) {
+export function TicketForm({ initialData, onSubmit, submitButtonText, onSuccess, isEditMode = false, ticketId, isInDialog = false }: TicketFormProps) {
   const supabase = createClient();
+  const router = useRouter();
   const [customers, setCustomers] = useState<{ id: string; name: string }[]>([]);
   const [objects, setObjects] = useState<{ id: string; name: string; customer_id: string }[]>([]);
   const [users, setUsers] = useState<{ id: string; first_name: string | null; last_name: string | null; role: string }[]>([]);
   const [files, setFiles] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const resolvedDefaultValues: TicketFormValues = {
@@ -67,6 +78,9 @@ export function TicketForm({ initialData, onSubmit, submitButtonText, onSuccess,
     resolver: zodResolver(ticketSchema),
     defaultValues: resolvedDefaultValues,
   });
+
+  // Register with unsaved changes context
+  useFormUnsavedChanges("ticket-form", form.formState.isDirty);
 
   const selectedCustomerId = form.watch("customerId");
   const selectedObjectId = form.watch("objectId");
@@ -175,154 +189,390 @@ export function TicketForm({ initialData, onSubmit, submitButtonText, onSuccess,
     }
   };
 
-  return (
-    <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 w-full max-w-md mx-auto">
-      <div>
-        <Label htmlFor="customerId">Kunde (optional)</Label>
-        <Select onValueChange={(value) => {
-          form.setValue("customerId", value === "unassigned" ? null : value);
-          form.setValue("objectId", null); // Reset object when customer changes
-        }} value={selectedCustomerId || "unassigned"}>
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Kunde auswählen" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="unassigned">Kein Kunde zugewiesen</SelectItem>
-            {customers.map(customer => (
-              <SelectItem key={customer.id} value={customer.id}>{customer.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {form.formState.errors.customerId && (
-          <p className="text-red-500 text-sm mt-1">{form.formState.errors.customerId.message}</p>
-        )}
-      </div>
+  const handleCancel = () => {
+    if (form.formState.isDirty && !isSubmitting) {
+      setShowUnsavedDialog(true);
+    } else {
+      onSuccess?.();
+    }
+  };
 
-      <div>
-        <Label htmlFor="objectId">Objekt (optional)</Label>
-        <Select onValueChange={(value) => form.setValue("objectId", value === "unassigned" ? null : value)} value={selectedObjectId || "unassigned"} disabled={!selectedCustomerId || objects.length === 0}>
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Objekt auswählen" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="unassigned">Kein Objekt zugewiesen</SelectItem>
-            {objects.map(obj => (
-              <SelectItem key={obj.id} value={obj.id}>{obj.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {form.formState.errors.objectId && (
-          <p className="text-red-500 text-sm mt-1">{form.formState.errors.objectId.message}</p>
-        )}
-        {selectedCustomerId && objects.length === 0 && (
-          <p className="text-muted-foreground text-sm mt-1">Keine Objekte für diesen Kunden gefunden.</p>
-        )}
-      </div>
+  if (isInDialog) {
+    return (
+      <>
+        <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-6">
+          <FormSection
+            title="Zuordnung"
+            description="Kunde und Objekt zuordnen (optional)"
+            icon={<User className="h-5 w-5 text-primary" />}
+          >
+            <div>
+              <Label htmlFor="customerId">Kunde (optional)</Label>
+              <Select onValueChange={(value) => {
+                form.setValue("customerId", value === "unassigned" ? null : value);
+                form.setValue("objectId", null);
+              }} value={selectedCustomerId || "unassigned"}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Kunde auswählen" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unassigned">Kein Kunde zugewiesen</SelectItem>
+                  {customers.map(customer => (
+                    <SelectItem key={customer.id} value={customer.id}>{customer.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {form.formState.errors.customerId && (
+                <p className="text-red-500 text-sm mt-1">{form.formState.errors.customerId.message}</p>
+              )}
+            </div>
+            <div>
+              <Label htmlFor="objectId">Objekt (optional)</Label>
+              <Select onValueChange={(value) => form.setValue("objectId", value === "unassigned" ? null : value)} value={selectedObjectId || "unassigned"} disabled={!selectedCustomerId || objects.length === 0}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Objekt auswählen" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unassigned">Kein Objekt zugewiesen</SelectItem>
+                  {objects.map(obj => (
+                    <SelectItem key={obj.id} value={obj.id}>{obj.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {form.formState.errors.objectId && (
+                <p className="text-red-500 text-sm mt-1">{form.formState.errors.objectId.message}</p>
+              )}
+              {selectedCustomerId && objects.length === 0 && (
+                <p className="text-muted-foreground text-sm mt-1">Keine Objekte für diesen Kunden gefunden.</p>
+              )}
+            </div>
+          </FormSection>
 
-      <div>
-        <Label htmlFor="title">Titel *</Label>
-        <Input
-          id="title"
-          {...form.register("title")}
-          placeholder="Kurze Zusammenfassung des Anliegens"
-        />
-        {form.formState.errors.title && (
-          <p className="text-red-500 text-sm mt-1">{form.formState.errors.title.message}</p>
-        )}
-      </div>
+          <FormSection
+            title="Details"
+            description="Titel und Beschreibung des Tickets"
+            icon={<FileText className="h-5 w-5 text-primary" />}
+          >
+            <div>
+              <Label htmlFor="title">Titel *</Label>
+              <Input
+                id="title"
+                {...form.register("title")}
+                placeholder="Kurze Zusammenfassung des Anliegens"
+              />
+              {form.formState.errors.title && (
+                <p className="text-red-500 text-sm mt-1">{form.formState.errors.title.message}</p>
+              )}
+            </div>
+            <div>
+              <Label htmlFor="description">Beschreibung (optional)</Label>
+              <Textarea
+                id="description"
+                {...form.register("description")}
+                placeholder="Detaillierte Beschreibung des Problems oder Anliegens"
+                rows={5}
+              />
+              {form.formState.errors.description && (
+                <p className="text-red-500 text-sm mt-1">{form.formState.errors.description.message}</p>
+              )}
+            </div>
+          </FormSection>
 
-      <div>
-        <Label htmlFor="description">Beschreibung (optional)</Label>
-        <Textarea
-          id="description"
-          {...form.register("description")}
-          placeholder="Detaillierte Beschreibung des Problems oder Anliegens"
-          rows={5}
-        />
-        {form.formState.errors.description && (
-          <p className="text-red-500 text-sm mt-1">{form.formState.errors.description.message}</p>
-        )}
-      </div>
+          {isEditMode && (
+            <FormSection
+              title="Einstellungen"
+              description="Status, Priorität und Zuweisung"
+              icon={<Settings className="h-5 w-5 text-primary" />}
+            >
+              <div>
+                <Label htmlFor="status">Status</Label>
+                <Select onValueChange={(value) => form.setValue("status", value as TicketFormValues["status"])} value={form.watch("status")}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Status auswählen" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="open">Offen</SelectItem>
+                    <SelectItem value="in_progress">In Bearbeitung</SelectItem>
+                    <SelectItem value="resolved">Gelöst</SelectItem>
+                    <SelectItem value="closed">Geschlossen</SelectItem>
+                  </SelectContent>
+                </Select>
+                {form.formState.errors.status && (
+                  <p className="text-red-500 text-sm mt-1">{form.formState.errors.status.message}</p>
+                )}
+              </div>
+              <div>
+                <Label htmlFor="priority">Priorität</Label>
+                <Select onValueChange={(value) => form.setValue("priority", value as TicketFormValues["priority"])} value={form.watch("priority")}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Priorität auswählen" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="low">Niedrig</SelectItem>
+                    <SelectItem value="medium">Mittel</SelectItem>
+                    <SelectItem value="high">Hoch</SelectItem>
+                    <SelectItem value="urgent">Dringend</SelectItem>
+                  </SelectContent>
+                </Select>
+                {form.formState.errors.priority && (
+                  <p className="text-red-500 text-sm mt-1">{form.formState.errors.priority.message}</p>
+                )}
+              </div>
+              <div>
+                <Label htmlFor="assignedToUserId">Zugewiesen an (optional)</Label>
+                <Select onValueChange={(value) => form.setValue("assignedToUserId", value === "unassigned" ? null : value)} value={form.watch("assignedToUserId") || "unassigned"}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Benutzer auswählen" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="unassigned">Nicht zugewiesen</SelectItem>
+                    {users.map(user => (
+                      <SelectItem key={user.id} value={user.id}>{user.first_name} {user.last_name} ({user.role})</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {form.formState.errors.assignedToUserId && (
+                  <p className="text-red-500 text-sm mt-1">{form.formState.errors.assignedToUserId.message}</p>
+                )}
+              </div>
+            </FormSection>
+          )}
 
-      {isEditMode && (
-        <>
-          <div>
-            <Label htmlFor="status">Status</Label>
-            <Select onValueChange={(value) => form.setValue("status", value as TicketFormValues["status"])} value={form.watch("status")}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Status auswählen" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="open">Offen</SelectItem>
-                <SelectItem value="in_progress">In Bearbeitung</SelectItem>
-                <SelectItem value="resolved">Gelöst</SelectItem>
-                <SelectItem value="closed">Geschlossen</SelectItem>
-              </SelectContent>
-            </Select>
-            {form.formState.errors.status && (
-              <p className="text-red-500 text-sm mt-1">{form.formState.errors.status.message}</p>
-            )}
-          </div>
-
-          <div>
-            <Label htmlFor="priority">Priorität</Label>
-            <Select onValueChange={(value) => form.setValue("priority", value as TicketFormValues["priority"])} value={form.watch("priority")}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Priorität auswählen" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="low">Niedrig</SelectItem>
-                <SelectItem value="medium">Mittel</SelectItem>
-                <SelectItem value="high">Hoch</SelectItem>
-                <SelectItem value="urgent">Dringend</SelectItem>
-              </SelectContent>
-            </Select>
-            {form.formState.errors.priority && (
-              <p className="text-red-500 text-sm mt-1">{form.formState.errors.priority.message}</p>
-            )}
-          </div>
-
-          <div>
-            <Label htmlFor="assignedToUserId">Zugewiesen an (optional)</Label>
-            <Select onValueChange={(value) => form.setValue("assignedToUserId", value === "unassigned" ? null : value)} value={form.watch("assignedToUserId") || "unassigned"}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Benutzer auswählen" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="unassigned">Nicht zugewiesen</SelectItem>
-                {users.map(user => (
-                  <SelectItem key={user.id} value={user.id}>{user.first_name} {user.last_name} ({user.role})</SelectItem>
+          <FormSection
+            title="Anhänge"
+            description="Bilder hinzufügen (optional, max. 5)"
+            icon={<ImageIcon className="h-5 w-5 text-primary" />}
+          >
+            <div>
+              <Input id="images" type="file" multiple accept="image/png, image/jpeg, image/webp" onChange={handleFileChange} ref={fileInputRef} className="hidden" />
+              <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>Bilder auswählen</Button>
+              <div className="mt-2 grid grid-cols-3 gap-2">
+                {initialData?.imageUrls?.map((url, index) => (
+                  <div key={`initial-${index}`} className="relative">
+                    <Image src={url} alt={`Vorschau ${index}`} width={100} height={100} className="rounded-md object-cover w-full h-24" />
+                  </div>
                 ))}
-              </SelectContent>
-            </Select>
-            {form.formState.errors.assignedToUserId && (
-              <p className="text-red-500 text-sm mt-1">{form.formState.errors.assignedToUserId.message}</p>
+                {files.map((file, index) => (
+                  <div key={`new-${index}`} className="relative">
+                    <Image src={URL.createObjectURL(file)} alt={`Vorschau ${index}`} width={100} height={100} className="rounded-md object-cover w-full h-24" />
+                    <Button type="button" variant="destructive" size="icon" className="absolute top-1 right-1 h-6 w-6" onClick={() => handleRemoveFile(index)}><X className="h-4 w-4" /></Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </FormSection>
+
+          <FormActions
+            isSubmitting={isSubmitting}
+            onCancel={handleCancel}
+            submitLabel={submitButtonText}
+            cancelLabel="Abbrechen"
+            showCancel={true}
+            submitVariant="default"
+            loadingText={`${submitButtonText}...`}
+            align="right"
+          />
+        </form>
+
+        <UnsavedChangesAlert
+          open={showUnsavedDialog}
+          onConfirm={() => {
+            setShowUnsavedDialog(false);
+            onSuccess?.();
+          }}
+          onCancel={() => setShowUnsavedDialog(false)}
+          title="Ungespeicherte Änderungen verwerfen?"
+          description="Wenn Sie das Ticket-Formular jetzt verlassen, gehen Ihre Eingaben verloren."
+        />
+      </>
+    );
+  }
+
+  return (
+    <UnsavedChangesProtection formId="ticket-form">
+      <Card className="shadow-neumorphic glassmorphism-card">
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5 text-primary" />
+            Ticket {isEditMode ? "bearbeiten" : "erstellen"}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-6">
+            <FormSection
+              title="Zuordnung"
+              description="Kunde und Objekt zuordnen (optional)"
+              icon={<User className="h-5 w-5 text-primary" />}
+            >
+              <div>
+                <Label htmlFor="customerId">Kunde (optional)</Label>
+                <Select onValueChange={(value) => {
+                  form.setValue("customerId", value === "unassigned" ? null : value);
+                  form.setValue("objectId", null);
+                }} value={selectedCustomerId || "unassigned"}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Kunde auswählen" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="unassigned">Kein Kunde zugewiesen</SelectItem>
+                    {customers.map(customer => (
+                      <SelectItem key={customer.id} value={customer.id}>{customer.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {form.formState.errors.customerId && (
+                  <p className="text-red-500 text-sm mt-1">{form.formState.errors.customerId.message}</p>
+                )}
+              </div>
+              <div>
+                <Label htmlFor="objectId">Objekt (optional)</Label>
+                <Select onValueChange={(value) => form.setValue("objectId", value === "unassigned" ? null : value)} value={selectedObjectId || "unassigned"} disabled={!selectedCustomerId || objects.length === 0}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Objekt auswählen" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="unassigned">Kein Objekt zugewiesen</SelectItem>
+                    {objects.map(obj => (
+                      <SelectItem key={obj.id} value={obj.id}>{obj.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {form.formState.errors.objectId && (
+                  <p className="text-red-500 text-sm mt-1">{form.formState.errors.objectId.message}</p>
+                )}
+                {selectedCustomerId && objects.length === 0 && (
+                  <p className="text-muted-foreground text-sm mt-1">Keine Objekte für diesen Kunden gefunden.</p>
+                )}
+              </div>
+            </FormSection>
+
+            <FormSection
+              title="Details"
+              description="Titel und Beschreibung des Tickets"
+              icon={<FileText className="h-5 w-5 text-primary" />}
+            >
+              <div>
+                <Label htmlFor="title">Titel *</Label>
+                <Input
+                  id="title"
+                  {...form.register("title")}
+                  placeholder="Kurze Zusammenfassung des Anliegens"
+                />
+                {form.formState.errors.title && (
+                  <p className="text-red-500 text-sm mt-1">{form.formState.errors.title.message}</p>
+                )}
+              </div>
+              <div>
+                <Label htmlFor="description">Beschreibung (optional)</Label>
+                <Textarea
+                  id="description"
+                  {...form.register("description")}
+                  placeholder="Detaillierte Beschreibung des Problems oder Anliegens"
+                  rows={5}
+                />
+                {form.formState.errors.description && (
+                  <p className="text-red-500 text-sm mt-1">{form.formState.errors.description.message}</p>
+                )}
+              </div>
+            </FormSection>
+
+            {isEditMode && (
+              <FormSection
+                title="Einstellungen"
+                description="Status, Priorität und Zuweisung"
+                icon={<Settings className="h-5 w-5 text-primary" />}
+              >
+                <div>
+                  <Label htmlFor="status">Status</Label>
+                  <Select onValueChange={(value) => form.setValue("status", value as TicketFormValues["status"])} value={form.watch("status")}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Status auswählen" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="open">Offen</SelectItem>
+                      <SelectItem value="in_progress">In Bearbeitung</SelectItem>
+                      <SelectItem value="resolved">Gelöst</SelectItem>
+                      <SelectItem value="closed">Geschlossen</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {form.formState.errors.status && (
+                    <p className="text-red-500 text-sm mt-1">{form.formState.errors.status.message}</p>
+                  )}
+                </div>
+                <div>
+                  <Label htmlFor="priority">Priorität</Label>
+                  <Select onValueChange={(value) => form.setValue("priority", value as TicketFormValues["priority"])} value={form.watch("priority")}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Priorität auswählen" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="low">Niedrig</SelectItem>
+                      <SelectItem value="medium">Mittel</SelectItem>
+                      <SelectItem value="high">Hoch</SelectItem>
+                      <SelectItem value="urgent">Dringend</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {form.formState.errors.priority && (
+                    <p className="text-red-500 text-sm mt-1">{form.formState.errors.priority.message}</p>
+                  )}
+                </div>
+                <div>
+                  <Label htmlFor="assignedToUserId">Zugewiesen an (optional)</Label>
+                  <Select onValueChange={(value) => form.setValue("assignedToUserId", value === "unassigned" ? null : value)} value={form.watch("assignedToUserId") || "unassigned"}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Benutzer auswählen" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="unassigned">Nicht zugewiesen</SelectItem>
+                      {users.map(user => (
+                        <SelectItem key={user.id} value={user.id}>{user.first_name} {user.last_name} ({user.role})</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {form.formState.errors.assignedToUserId && (
+                    <p className="text-red-500 text-sm mt-1">{form.formState.errors.assignedToUserId.message}</p>
+                  )}
+                </div>
+              </FormSection>
             )}
-          </div>
-        </>
-      )}
 
-      <div>
-        <Label htmlFor="images">Bilder hinzufügen (optional, max. 5)</Label>
-        <Input id="images" type="file" multiple accept="image/png, image/jpeg, image/webp" onChange={handleFileChange} ref={fileInputRef} className="hidden" />
-        <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>Bilder auswählen</Button>
-        <div className="mt-2 grid grid-cols-3 gap-2">
-          {initialData?.imageUrls?.map((url, index) => (
-            <div key={`initial-${index}`} className="relative">
-              <Image src={url} alt={`Vorschau ${index}`} width={100} height={100} className="rounded-md object-cover w-full h-24" />
-              {/* Option to remove existing images could be added here */}
-            </div>
-          ))}
-          {files.map((file, index) => (
-            <div key={`new-${index}`} className="relative">
-              <Image src={URL.createObjectURL(file)} alt={`Vorschau ${index}`} width={100} height={100} className="rounded-md object-cover w-full h-24" />
-              <Button type="button" variant="destructive" size="icon" className="absolute top-1 right-1 h-6 w-6" onClick={() => handleRemoveFile(index)}><X className="h-4 w-4" /></Button>
-            </div>
-          ))}
-        </div>
-      </div>
+            <FormSection
+              title="Anhänge"
+              description="Bilder hinzufügen (optional, max. 5)"
+              icon={<ImageIcon className="h-5 w-5 text-primary" />}
+            >
+              <div>
+                <Input id="images" type="file" multiple accept="image/png, image/jpeg, image/webp" onChange={handleFileChange} ref={fileInputRef} className="hidden" />
+                <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>Bilder auswählen</Button>
+                <div className="mt-2 grid grid-cols-3 gap-2">
+                  {initialData?.imageUrls?.map((url, index) => (
+                    <div key={`initial-${index}`} className="relative">
+                      <Image src={url} alt={`Vorschau ${index}`} width={100} height={100} className="rounded-md object-cover w-full h-24" />
+                    </div>
+                  ))}
+                  {files.map((file, index) => (
+                    <div key={`new-${index}`} className="relative">
+                      <Image src={URL.createObjectURL(file)} alt={`Vorschau ${index}`} width={100} height={100} className="rounded-md object-cover w-full h-24" />
+                      <Button type="button" variant="destructive" size="icon" className="absolute top-1 right-1 h-6 w-6" onClick={() => handleRemoveFile(index)}><X className="h-4 w-4" /></Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </FormSection>
 
-      <Button type="submit" disabled={isSubmitting}>{isSubmitting ? `${submitButtonText}...` : submitButtonText}</Button>
-    </form>
+            <FormActions
+              isSubmitting={isSubmitting}
+              onCancel={handleCancel}
+              submitLabel={submitButtonText}
+              cancelLabel="Abbrechen"
+              showCancel={true}
+              submitVariant="default"
+              loadingText={`${submitButtonText}...`}
+              align="right"
+            />
+          </form>
+        </CardContent>
+      </Card>
+    </UnsavedChangesProtection>
   );
 }

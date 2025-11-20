@@ -1,17 +1,23 @@
 "use client";
 
-import { useForm, SubmitHandler } from "react-hook-form";
+import { useForm, SubmitHandler, Control } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button"; // Korrigierter Import
-import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { handleActionResponse } from "@/lib/toast-utils"; // Importiere die neue Utility
+import { handleActionResponse } from "@/lib/toast-utils";
+import { FormSection } from "@/components/ui/form-section";
+import { FormInputField, FormTextareaField } from "@/components/ui/form-field";
+import { FormActions } from "@/components/ui/form-actions";
+import { Card, CardContent } from "@/components/ui/card";
+import { UnsavedChangesProtection } from "@/components/ui/unsaved-changes-dialog";
+import { UnsavedChangesAlert } from "@/components/ui/unsaved-changes-alert";
+import { useFormUnsavedChanges } from "@/components/ui/unsaved-changes-context";
+import { useRouter } from "next/navigation";
+import { Building2, Mail, Phone, MapPin, FileText, Users } from "lucide-react";
 
 // Define the schema for customer form values
 export const customerSchema = z.object({
@@ -31,10 +37,15 @@ interface CustomerFormProps {
   onSubmit: (data: CustomerFormValues) => Promise<{ success: boolean; message: string }>;
   submitButtonText: string;
   onSuccess?: () => void;
+  isInDialog?: boolean;
+  title?: string;
+  description?: string;
 }
 
-export function CustomerForm({ initialData, onSubmit, submitButtonText, onSuccess }: CustomerFormProps) {
+export function CustomerForm({ initialData, onSubmit, submitButtonText, onSuccess, isInDialog = false, title, description }: CustomerFormProps) {
   const supabase = createClient();
+  const router = useRouter();
+  const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
 
   const resolvedDefaultValues: CustomerFormValues = {
     name: initialData?.name ?? "",
@@ -50,6 +61,9 @@ export function CustomerForm({ initialData, onSubmit, submitButtonText, onSucces
     defaultValues: resolvedDefaultValues,
   });
 
+  // Register with unsaved changes context
+  useFormUnsavedChanges("customer-form", form.formState.isDirty);
+
   const handleFormSubmit: SubmitHandler<CustomerFormInput> = async (data) => {
     const result = await onSubmit(data as CustomerFormValues);
 
@@ -63,85 +77,142 @@ export function CustomerForm({ initialData, onSubmit, submitButtonText, onSucces
     }
   };
 
+  const handleCancel = () => {
+    if (form.formState.isDirty && !form.formState.isSubmitting) {
+      setShowUnsavedDialog(true);
+    } else {
+      onSuccess?.();
+    }
+  };
+
   return (
-    <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 w-full">
-      <div>
-        <Label htmlFor="name">Kundenname</Label>
-        <Input
-          id="name"
-          {...form.register("name")}
-          placeholder="Z.B. Muster GmbH"
-        />
-        {form.formState.errors.name && (
-          <p className="text-red-500 text-sm mt-1">{form.formState.errors.name.message}</p>
-        )}
-      </div>
-      <div>
-        <Label htmlFor="address">Adresse</Label>
-        <Textarea
-          id="address"
-          {...form.register("address")}
-          placeholder="Z.B. Musterstraße 1, 12345 Musterstadt"
-          rows={3}
-        />
-        {form.formState.errors.address && (
-          <p className="text-red-500 text-sm mt-1">{form.formState.errors.address.message}</p>
-        )}
-      </div>
-      <div>
-        <Label htmlFor="contactEmail">Kontakt-E-Mail</Label>
-        <Input
-          id="contactEmail"
-          type="email"
-          {...form.register("contactEmail")}
-          placeholder="Z.B. kontakt@muster.de"
-        />
-        {form.formState.errors.contactEmail && (
-          <p className="text-red-500 text-sm mt-1">{form.formState.errors.contactEmail.message}</p>
-        )}
-      </div>
-      <div>
-        <Label htmlFor="contactPhone">Kontakt-Telefon</Label>
-        <Input
-          id="contactPhone"
-          type="tel"
-          {...form.register("contactPhone")}
-          placeholder="Z.B. +49 123 456789"
-        />
-        {form.formState.errors.contactPhone && (
-          <p className="text-red-500 text-sm mt-1">{form.formState.errors.contactPhone.message}</p>
-        )}
-      </div>
-      <div>
-        <Label htmlFor="customerType">Kundentyp</Label>
-        <Select onValueChange={(value) => form.setValue("customerType", value as "customer" | "partner")} value={form.watch("customerType")}>
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Typ auswählen" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="customer">Kunde</SelectItem>
-            <SelectItem value="partner">Partner</SelectItem>
-          </SelectContent>
-        </Select>
-        {form.formState.errors.customerType && (
-          <p className="text-red-500 text-sm mt-1">{form.formState.errors.customerType.message}</p>
-        )}
-      </div>
-      <div>
-        <Label htmlFor="contractualServices">Vertragsdaten (optional)</Label>
-        <Textarea
-          id="contractualServices"
-          {...form.register("contractualServices")}
-          placeholder="Z.B. Details zu Reinigungsintervallen, Sonderleistungen, Kündigungsfristen..."
-          rows={5}
-        />
-        {form.formState.errors.contractualServices && (
-          <p className="text-red-500 text-sm mt-1">{form.formState.errors.contractualServices.message}</p>
-        )}
-      </div>
-      <Button type="submit" disabled={form.formState.isSubmitting}>
-        {form.formState.isSubmitting ? `${submitButtonText}...` : submitButtonText}
-      </Button>
-    </form>
+    <>
+      {!isInDialog && (title || description) && (
+        <div className="space-y-1 mb-6">
+          <h2 className="text-2xl font-bold tracking-tight">{title}</h2>
+          {description && (
+            <p className="text-sm text-muted-foreground">{description}</p>
+          )}
+        </div>
+      )}
+      <UnsavedChangesProtection formId="customer-form">
+        <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-6 w-full">
+          {/* Basic Information Section */}
+          <FormSection
+            title="Grundinformationen"
+            description="Stammdaten des Kunden oder Partners"
+            icon={<Building2 className="h-5 w-5" />}
+          >
+            <FormInputField
+              name="name"
+              label="Kundenname"
+              placeholder="Z.B. Muster GmbH"
+              required
+              control={form.control}
+              description="Offizieller Name des Unternehmens"
+            />
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormInputField
+                name="contactEmail"
+                label="Kontakt-E-Mail"
+                type="email"
+                placeholder="Z.B. kontakt@muster.de"
+                control={form.control}
+                description="E-Mail-Adresse für die Kommunikation"
+              />
+
+              <FormInputField
+                name="contactPhone"
+                label="Kontakt-Telefon"
+                type="tel"
+                placeholder="Z.B. +49 123 456789"
+                control={form.control}
+                description="Telefonnummer für die Kommunikation"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium after:content-['*'] after:ml-0.5 after:text-destructive">
+                Kundentyp
+              </label>
+              <Select
+                onValueChange={(value) => form.setValue("customerType", value as "customer" | "partner")}
+                value={form.watch("customerType")}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Typ auswählen" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="customer">Kunde</SelectItem>
+                  <SelectItem value="partner">Partner</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Klassifizierung des Kunden
+              </p>
+              {form.formState.errors.customerType && (
+                <p className="text-xs text-destructive">
+                  {form.formState.errors.customerType.message}
+                </p>
+              )}
+            </div>
+          </FormSection>
+
+          {/* Address Section */}
+          <FormSection
+            title="Adresse"
+            description="Anschrift des Kunden"
+            icon={<MapPin className="h-5 w-5" />}
+          >
+            <FormTextareaField
+              name="address"
+              label="Vollständige Adresse"
+              placeholder="Z.B. Musterstraße 1, 12345 Musterstadt"
+              rows={3}
+              control={form.control}
+              description="Vollständige postalische Adresse"
+            />
+          </FormSection>
+
+          {/* Contract Information Section */}
+          <FormSection
+            title="Vertragsinformationen"
+            description="Details zu vertraglichen Vereinbarungen"
+            icon={<FileText className="h-5 w-5" />}
+          >
+            <FormTextareaField
+              name="contractualServices"
+              label="Vertragsdaten (optional)"
+              placeholder="Z.B. Details zu Reinigungsintervallen, Sonderleistungen, Kündigungsfristen..."
+              rows={5}
+              control={form.control}
+              description="Zusätzliche vertragliche Informationen und Konditionen"
+            />
+          </FormSection>
+
+          <FormActions
+            isSubmitting={form.formState.isSubmitting}
+            onCancel={handleCancel}
+            submitLabel={submitButtonText}
+            cancelLabel="Abbrechen"
+            showCancel={!isInDialog}
+            submitVariant="default"
+            loadingText={`${submitButtonText}...`}
+          />
+        </form>
+      </UnsavedChangesProtection>
+
+      <UnsavedChangesAlert
+        open={showUnsavedDialog}
+        onConfirm={() => {
+          setShowUnsavedDialog(false);
+          onSuccess?.();
+        }}
+        onCancel={() => setShowUnsavedDialog(false)}
+        title="Ungespeicherte Änderungen verwerfen?"
+        description="Wenn Sie das Kunden-Formular jetzt verlassen, gehen Ihre Eingaben verloren."
+      />
+    </>
   );
 }
