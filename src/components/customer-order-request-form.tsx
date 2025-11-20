@@ -106,6 +106,7 @@ export function CustomerOrderRequestForm({ customerId, onSuccess, isInDialog = f
       requestStatus: 'pending',
       priority: 'medium',
       totalEstimatedHours: null,
+      isActive: true,
     });
 
     handleActionResponse(result);

@@ -12,6 +12,7 @@ import { DocumentUploader } from "@/components/document-uploader";
 import { DocumentList } from "@/components/document-list";
 import { DialogTrigger } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { parseLocalDate } from "@/lib/utils";
 
 // Definierte Liste der Dienstleistungen (muss mit order-form.tsx übereinstimmen)
 const availableServices = [
@@ -41,6 +42,8 @@ interface OrderEditDialogProps {
     notes: string | null;
     service_type: string | null;
     request_status: string;
+    is_active: boolean;
+    end_date: string | null;
     assignedEmployees: AssignedEmployee[]; // Use the correct, structured type
   };
   trigger?: React.ReactNode;
@@ -115,14 +118,14 @@ export function OrderEditDialog({ order, trigger }: OrderEditDialogProps) {
               initialData={{
                 title: currentOrder.title,
                 description: currentOrder.description || undefined,
-                dueDate: currentOrder.due_date ? new Date(currentOrder.due_date) : undefined,
+                dueDate: currentOrder.due_date ? parseLocalDate(currentOrder.due_date) : undefined,
                 status: currentOrder.status as OrderFormValues["status"],
                 customerId: currentOrder.customer_id ?? undefined,
                 objectId: currentOrder.object_id ?? undefined,
                 customerContactId: currentOrder.customer_contact_id ?? undefined,
                 orderType: currentOrder.order_type as OrderFormValues["orderType"],
-                recurringStartDate: currentOrder.recurring_start_date ? new Date(currentOrder.recurring_start_date) : undefined,
-                recurringEndDate: currentOrder.recurring_end_date ? new Date(currentOrder.recurring_end_date) : undefined,
+                recurringStartDate: currentOrder.recurring_start_date ? parseLocalDate(currentOrder.recurring_start_date) : undefined,
+                recurringEndDate: currentOrder.recurring_end_date ? parseLocalDate(currentOrder.recurring_end_date) : undefined,
                 priority: currentOrder.priority as OrderFormValues["priority"],
                 totalEstimatedHours: currentOrder.total_estimated_hours,
                 fixedMonthlyPrice: currentOrder.fixed_monthly_price,
@@ -130,6 +133,8 @@ export function OrderEditDialog({ order, trigger }: OrderEditDialogProps) {
                 serviceType: getServiceTypeForForm(currentOrder.service_type),
                 requestStatus: currentOrder.request_status as OrderFormValues["requestStatus"],
                 assignedEmployees: currentOrder.assignedEmployees,
+                isActive: currentOrder.is_active,
+                endDate: currentOrder.end_date ? parseLocalDate(currentOrder.end_date) : undefined,
               }}
               onSubmit={handleUpdate}
               submitButtonText="Änderungen speichern"

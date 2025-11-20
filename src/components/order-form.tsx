@@ -97,6 +97,8 @@ export const baseOrderSchema = z.object({
   serviceType: z.enum(availableServices).optional().nullable(),
   requestStatus: z.enum(["pending", "approved", "rejected"]).default("approved"),
   assignedEmployees: z.array(assignedEmployeeSchema).optional(),
+  isActive: z.boolean().default(true),
+  endDate: z.date().optional().nullable(),
 });
 
 const createOrderSchema = (objects: any[]) => baseOrderSchema.superRefine((data, ctx) => {
@@ -189,6 +191,8 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess, 
     serviceType: initialData?.serviceType ?? null,
     requestStatus: initialData?.requestStatus ?? "approved",
     assignedEmployees: (initialData?.assignedEmployees as OrderFormValues['assignedEmployees']) ?? [],
+    isActive: initialData?.isActive ?? true,
+    endDate: initialData?.endDate ? new Date(initialData.endDate) : null,
   };
 
   const form = useForm<OrderFormInput>({
@@ -252,6 +256,19 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess, 
         }
       } else {
         form.setValue("recurringEndDate", null, { shouldValidate: false });
+      }
+
+      if (initialData?.endDate) {
+        const endDate = initialData.endDate instanceof Date ? initialData.endDate : new Date(initialData.endDate);
+        if (!isNaN(endDate.getTime())) {
+          form.setValue("endDate", endDate, { shouldValidate: false });
+        }
+      } else {
+        form.setValue("endDate", null, { shouldValidate: false });
+      }
+
+      if (initialData?.isActive !== undefined) {
+        form.setValue("isActive", initialData.isActive, { shouldValidate: false });
       }
 
       // Set IDs with proper null/undefined handling
@@ -926,7 +943,19 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess, 
           )}
         </div>
       )}
-      
+
+      <div className="space-y-4">
+        <DatePicker
+          label="Auftrag Enddatum (optional)"
+          value={form.watch("endDate")}
+          onChange={(date: Date | null) => form.setValue("endDate", date)}
+          error={form.formState.errors.endDate?.message}
+        />
+        <p className="text-xs text-muted-foreground">
+          Wenn das Enddatum überschritten ist, wird der Auftrag automatisch inaktiv.
+        </p>
+      </div>
+
       <div className="space-y-4">
         <Label>Zugewiesene Mitarbeiter (optional)</Label>
         <MultiSelectEmployees
@@ -1305,7 +1334,23 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess, 
         </Select>
         {form.formState.errors.status && <p className="text-red-500 text-sm mt-1">{form.formState.errors.status.message}</p>}
       </div>
-      
+
+      <div className="flex items-center space-x-2">
+        <input
+          type="checkbox"
+          id="isActive"
+          checked={form.watch("isActive")}
+          onChange={(e) => form.setValue("isActive", e.target.checked)}
+          className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+        />
+        <Label htmlFor="isActive" className="text-sm font-medium">
+          Auftrag ist aktiv
+        </Label>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        Inaktive Aufträge werden nicht in der normalen Ansicht angezeigt.
+      </p>
+
       <div>
         <Label htmlFor="requestStatus">Anfragestatus</Label>
         <Select onValueChange={(value: OrderFormValues["requestStatus"]) => form.setValue("requestStatus", value)} value={form.watch("requestStatus")}>

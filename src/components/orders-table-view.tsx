@@ -9,6 +9,7 @@ import { format } from "date-fns";
 import { de } from "date-fns/locale";
 import { AssignedEmployee } from "@/components/order-form";
 import Link from "next/link";
+import { parseLocalDate } from "@/lib/utils";
 
 interface DisplayOrder {
   id: string;
@@ -126,14 +127,14 @@ export function OrdersTableView({
                   {order.order_type === "one_time" && order.due_date && (
                     <div className="flex items-center">
                       <CalendarDays className="mr-1 h-3 w-3" />
-                      {format(new Date(order.due_date), 'dd.MM.yyyy', { locale: de })}
+                      {format(parseLocalDate(order.due_date)!, 'dd.MM.yyyy', { locale: de })}
                     </div>
                   )}
                   {(order.order_type === "recurring" || order.order_type === "substitution" || order.order_type === "permanent") && order.recurring_start_date && (
                     <div className="flex items-center">
                       <CalendarDays className="mr-1 h-3 w-3" />
-                      {format(new Date(order.recurring_start_date), 'dd.MM.yyyy', { locale: de })}
-                      {order.recurring_end_date && ` - ${format(new Date(order.recurring_end_date), 'dd.MM.yyyy', { locale: de })}`}
+                      {format(parseLocalDate(order.recurring_start_date)!, 'dd.MM.yyyy', { locale: de })}
+                      {order.recurring_end_date && ` - ${format(parseLocalDate(order.recurring_end_date)!, 'dd.MM.yyyy', { locale: de })}`}
                     </div>
                   )}
                 </TableCell>

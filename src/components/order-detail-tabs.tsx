@@ -10,6 +10,7 @@ import { DocumentList } from "@/components/document-list";
 import { Separator } from "@/components/ui/separator";
 import { OrderHoursSummary } from "@/components/order-hours-summary";
 import { Calendar, Clock, User } from "lucide-react";
+import { parseLocalDate } from "@/lib/utils";
 
 interface OrderData {
   id: string;
@@ -33,6 +34,8 @@ interface OrderData {
   customer_id: string | null;
   object_id: string | null;
   customer_contact_id: string | null;
+  is_active: boolean;
+  end_date: string | null;
   // Employee data
   employee_first_names: string[] | null;
   employee_last_names: string[] | null;
@@ -98,21 +101,33 @@ export function OrderDetailTabs({ order }: OrderDetailTabsProps) {
               {order.due_date && (
                 <div className="space-y-1">
                   <p className="font-medium text-muted-foreground">Fällig am</p>
-                  <p>{new Date(order.due_date).toLocaleDateString()}</p>
+                  <p>{parseLocalDate(order.due_date)?.toLocaleDateString()}</p>
                 </div>
               )}
               {order.recurring_start_date && (
                 <div className="space-y-1">
                   <p className="font-medium text-muted-foreground">Startdatum</p>
-                  <p>{new Date(order.recurring_start_date).toLocaleDateString()}</p>
+                  <p>{parseLocalDate(order.recurring_start_date)?.toLocaleDateString()}</p>
                 </div>
               )}
               {order.recurring_end_date && (
                 <div className="space-y-1">
-                  <p className="font-medium text-muted-foreground">Enddatum</p>
-                  <p>{new Date(order.recurring_end_date).toLocaleDateString()}</p>
+                  <p className="font-medium text-muted-foreground">Enddatum (Wiederkehrend)</p>
+                  <p>{parseLocalDate(order.recurring_end_date)?.toLocaleDateString()}</p>
                 </div>
               )}
+              {order.end_date && (
+                <div className="space-y-1">
+                  <p className="font-medium text-muted-foreground">Auftrag Enddatum</p>
+                  <p>{parseLocalDate(order.end_date)?.toLocaleDateString()}</p>
+                </div>
+              )}
+              <div className="space-y-1">
+                <p className="font-medium text-muted-foreground">Status</p>
+                <p className={order.is_active ? "text-green-600 font-medium" : "text-gray-500"}>
+                  {order.is_active ? "Aktiv" : "Inaktiv"}
+                </p>
+              </div>
               {order.total_estimated_hours && (
                 <div className="space-y-1">
                   <p className="font-medium text-muted-foreground">Stunden</p>

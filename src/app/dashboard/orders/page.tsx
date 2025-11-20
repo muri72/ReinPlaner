@@ -59,6 +59,8 @@ export interface DisplayOrder {
   notes: string | null;
   request_status: string;
   service_type: string | null;
+  is_active: boolean;
+  end_date: string | null;
   // Derived for display
   customer_name: string | null;
   object_name: string | null;
@@ -118,6 +120,7 @@ export default function OrdersPage({
   const serviceTypeFilter = (currentSearchParams.get('serviceType') || '') as string;
   const customerIdFilter = (currentSearchParams.get('customerId') || '') as string;
   const employeeIdFilter = (currentSearchParams.get('employeeId') || '') as string;
+  const isActiveFilter = (currentSearchParams.get('isActive') || 'true') as string;
   const viewMode = (currentSearchParams.get('viewMode') || 'grid') as string;
   const sortColumn = (currentSearchParams.get('sortColumn') || 'created_at') as string;
   const sortDirection = (currentSearchParams.get('sortDirection') || 'desc') as string;
@@ -202,6 +205,8 @@ export default function OrdersPage({
         notes,
         request_status,
         service_type,
+        is_active,
+        end_date,
         customers ( name ),
         objects ( name, address, notes, time_of_day, access_method, pin, is_alarm_secured, alarm_password, security_code_word, recurrence_interval_weeks, start_week_offset, daily_schedules ),
         customer_contacts ( first_name, last_name, phone ),
@@ -230,6 +235,11 @@ export default function OrdersPage({
     }
     if (employeeIdFilter) {
       selectQuery = selectQuery.eq('order_employee_assignments.employee_id', employeeIdFilter);
+    }
+    if (isActiveFilter === 'true') {
+      selectQuery = selectQuery.eq('is_active', true);
+    } else if (isActiveFilter === 'false') {
+      selectQuery = selectQuery.eq('is_active', false);
     }
 
     // Apply search filter if query exists - search in main table first
@@ -277,6 +287,8 @@ export default function OrdersPage({
         notes: order.notes,
         request_status: order.request_status,
         service_type: order.service_type,
+        is_active: order.is_active,
+        end_date: order.end_date,
         order_feedback: order.order_feedback,
         customer_name: customerData?.name || null,
         object_name: objectData?.name || null,
@@ -318,6 +330,7 @@ export default function OrdersPage({
     serviceTypeFilter,
     customerIdFilter,
     employeeIdFilter,
+    isActiveFilter,
     sortColumn,
     sortDirection,
     currentSearchParams
@@ -358,12 +371,18 @@ export default function OrdersPage({
     { value: 'permanent', label: 'Permanent' },
   ];
 
+  const isActiveOptions = [
+    { value: 'true', label: 'Aktiv' },
+    { value: 'false', label: 'Inaktiv' },
+  ];
+
   const filterOptions: FilterOption[] = [
     { value: 'status', label: 'Status', options: orderStatusOptions },
     { value: 'orderType', label: 'Auftragstyp', options: orderTypeOptions },
     { value: 'serviceType', label: 'Dienstleistung', options: availableServices.map(s => ({ value: s, label: s })) },
     { value: 'customerId', label: 'Kunde', options: customers.map(c => ({ value: c.id, label: c.name })) },
     { value: 'employeeId', label: 'Mitarbeiter', options: employees.map(e => ({ value: e.id, label: `${e.first_name} ${e.last_name}` })) },
+    { value: 'isActive', label: 'Aktivitätsstatus', options: isActiveOptions },
   ];
 
   const sortOptions: SortOption[] = [

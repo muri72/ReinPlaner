@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { OrderFormValues } from "@/components/order-form";
 import { sendNotification } from "@/lib/actions/notifications";
 import { logDataChange } from "@/lib/audit-log";
+import { formatDateToYMD } from "@/lib/utils";
 
 export async function createOrder(data: OrderFormValues) {
   const supabase = await createClient();
@@ -32,6 +33,8 @@ export async function createOrder(data: OrderFormValues) {
     serviceType,
     requestStatus,
     assignedEmployees,
+    isActive,
+    endDate,
   } = data;
 
   const { data: newOrder, error } = await supabase
@@ -46,14 +49,16 @@ export async function createOrder(data: OrderFormValues) {
       object_id: objectId,
       customer_contact_id: customerContactId,
       order_type: orderType,
-      recurring_start_date: recurringStartDate ? recurringStartDate.toISOString().split('T')[0] : null,
-      recurring_end_date: recurringEndDate ? recurringEndDate.toISOString().split('T')[0] : null,
+      recurring_start_date: formatDateToYMD(recurringStartDate),
+      recurring_end_date: formatDateToYMD(recurringEndDate),
       priority,
       total_estimated_hours: totalEstimatedHours,
       fixed_monthly_price: fixedMonthlyPrice,
       notes,
       service_type: serviceType,
       request_status: requestStatus,
+      is_active: isActive,
+      end_date: formatDateToYMD(endDate),
     })
     .select('id')
     .single();
@@ -149,6 +154,8 @@ export async function updateOrder(orderId: string, data: OrderFormValues) {
     serviceType,
     requestStatus,
     assignedEmployees,
+    isActive,
+    endDate,
   } = data;
 
   // Get old order data for audit log
@@ -169,14 +176,16 @@ export async function updateOrder(orderId: string, data: OrderFormValues) {
       object_id: data.objectId,
       customer_contact_id: data.customerContactId,
       order_type: orderType,
-      recurring_start_date: recurringStartDate ? recurringStartDate.toISOString().split('T')[0] : null,
-      recurring_end_date: recurringEndDate ? recurringEndDate.toISOString().split('T')[0] : null,
+      recurring_start_date: formatDateToYMD(recurringStartDate),
+      recurring_end_date: formatDateToYMD(recurringEndDate),
       priority,
       total_estimated_hours: totalEstimatedHours,
       fixed_monthly_price: fixedMonthlyPrice,
       notes: data.notes,
       service_type: serviceType,
       request_status: requestStatus,
+      is_active: isActive,
+      end_date: formatDateToYMD(endDate),
     })
     .eq('id', orderId);
 
