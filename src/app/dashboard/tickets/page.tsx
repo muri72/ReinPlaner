@@ -54,7 +54,7 @@ export default function TicketsPage() {
 
   const query = currentSearchParams.get('query') || '';
   const currentPage = Number(currentSearchParams.get('page')) || 1;
-  const pageSize = 10;
+  const pageSize = 9;
   const statusFilter = currentSearchParams.get('status') || '';
   const priorityFilter = currentSearchParams.get('priority') || '';
   const assignedToUserFilter = currentSearchParams.get('assignedToUser') || '';

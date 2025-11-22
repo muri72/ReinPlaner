@@ -54,7 +54,7 @@ export default function EmployeesPage() {
 
   const query = currentSearchParams.get('query') || '';
   const currentPage = Number(currentSearchParams.get('page')) || 1;
-  const pageSize = 10;
+  const pageSize = 9;
   const statusFilter = currentSearchParams.get('status') || 'active'; // Default: only show active employees
   const contractTypeFilter = currentSearchParams.get('contractType') || '';
   const viewMode = currentSearchParams.get('viewMode') || 'grid';

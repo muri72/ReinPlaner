@@ -44,7 +44,7 @@ export default function AbsenceRequestsPage() {
 
   const query = currentSearchParams.get('query') || '';
   const currentPage = Number(currentSearchParams.get('page')) || 1;
-  const pageSize = 10;
+  const pageSize = 9;
   const employeeIdFilter = currentSearchParams.get('employeeId') || '';
   const typeFilter = currentSearchParams.get('type') || '';
   const statusFilter = currentSearchParams.get('status') || '';

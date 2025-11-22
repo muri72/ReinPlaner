@@ -114,7 +114,7 @@ export default function OrdersPage({
 
   const query = (currentSearchParams.get('query') || '') as string;
   const currentPage = Number(currentSearchParams.get('page')) || 1;
-  const pageSize = 10;
+  const pageSize = 9;
   const statusFilter = (currentSearchParams.get('status') || '') as string;
   const orderTypeFilter = (currentSearchParams.get('orderType') || '') as string;
   const serviceTypeFilter = (currentSearchParams.get('serviceType') || '') as string;

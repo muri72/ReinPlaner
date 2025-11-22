@@ -79,6 +79,7 @@ export function AssignmentEditDialog({ orderId, children, onSuccess }: Assignmen
   const [loading, setLoading] = React.useState(true);
   const [allEmployees, setAllEmployees] = React.useState<{ id: string; first_name: string; last_name: string }[]>([]);
   const [orderTitle, setOrderTitle] = React.useState("");
+  const [availableDays, setAvailableDays] = React.useState<typeof dayNames[number][]>([]);
   const { isDirty } = useDialogUnsavedChanges();
 
   const handleOpenChange = (nextOpen: boolean) => {
@@ -126,7 +127,7 @@ export function AssignmentEditDialog({ orderId, children, onSuccess }: Assignmen
       const { data: employeesData } = await supabase.from('employees').select('id, first_name, last_name').eq('status', 'active');
       setAllEmployees(employeesData || []);
 
-      const { data: orderData } = await supabase.from('orders').select('title, order_employee_assignments(*)').eq('id', orderId).single();
+      const { data: orderData } = await supabase.from('orders').select('title, order_employee_assignments(*), objects ( daily_schedules )').eq('id', orderId).single();
       if (orderData) {
         setOrderTitle(orderData.title);
         const firstAssignment = orderData.order_employee_assignments[0];
@@ -136,6 +137,19 @@ export function AssignmentEditDialog({ orderId, children, onSuccess }: Assignmen
           assigned_recurrence_interval_weeks: firstAssignment?.assigned_recurrence_interval_weeks || 1,
           assigned_start_week_offset: firstAssignment?.assigned_start_week_offset || 0,
         });
+        // Extract available days from object daily_schedules
+        const objectData = Array.isArray(orderData.objects) ? orderData.objects[0] : orderData.objects;
+        if (objectData?.daily_schedules && Array.isArray(objectData.daily_schedules)) {
+          // Extract day names from daily_schedules that have hours > 0
+          const available = dayNames.filter(day => {
+            const daySchedule = objectData.daily_schedules.find((ds: any) => ds.day === day);
+            return daySchedule && daySchedule.hours && daySchedule.hours > 0;
+          });
+          setAvailableDays(available);
+        } else {
+          // If no daily_schedules, all days are available
+          setAvailableDays([...dayNames]);
+        }
       }
       setLoading(false);
     };
@@ -213,12 +227,26 @@ export function AssignmentEditDialog({ orderId, children, onSuccess }: Assignmen
     let copiedCount = 0;
     dailySchedulesFields.forEach((_field, weekIndex) => {
       if (weekIndex !== sourceWeekIndex) {
-        form.setValue(`assigned_daily_schedules.${weekIndex}`, sourceWeekSchedule, { shouldValidate: true });
+        // Create a new schedule for all days of the week
+        const newSchedule: any = {};
+        // Set all days to the source values (or empty if not available in source)
+        dayNames.forEach(day => {
+          if (availableDays.includes(day) && sourceWeekSchedule[day]) {
+            newSchedule[day] = sourceWeekSchedule[day];
+          }
+          // If day is not available in source or not in availableDays, leave it empty
+        });
+        // Set the complete schedule (this will overwrite all existing values)
+        form.setValue(`assigned_daily_schedules.${weekIndex}`, newSchedule, { shouldValidate: true });
         copiedCount++;
       }
     });
-    if (copiedCount > 0) toast.success(`Wochenplan von Woche ${sourceWeekIndex + 1} wurde in ${copiedCount} weitere Wochen kopiert.`);
-    else toast.info("Keine weiteren Wochen zum Kopieren gefunden.");
+    if (copiedCount > 0) {
+      const dayNamesStr = availableDays.map(d => germanDayNames[d]).join(', ');
+      toast.success(`Wochenplan von Woche ${sourceWeekIndex + 1} wurde in ${copiedCount} weitere Wochen kopiert (nur verfügbare Tage: ${dayNamesStr}).`);
+    } else {
+      toast.info("Keine weiteren Wochen zum Kopieren gefunden.");
+    }
   };
 
   return (

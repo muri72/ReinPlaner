@@ -475,12 +475,47 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess, 
     }
   }, [watchedAssignedEmployees, form.watch("orderType"), form.watch("dueDate"), selectedObjectId, objects, form]);
 
-  // Separate effect to trigger recalculation when assignedEmployees actually change (deep watch)
+  // Callback to recalculate total hours
+  const recalculateTotalHours = useCallback(() => {
+    let total = 0;
+    const assignments = form.getValues("assignedEmployees") || [];
+    const orderType = (form.getValues("orderType") as string) ?? 'one_time';
+
+    assignments.forEach((assignment) => {
+      if (assignment.assigned_daily_schedules && assignment.assigned_daily_schedules.length > 0) {
+        // For recurring, substitution, permanent orders: only use first week (they repeat)
+        // For one_time orders: sum all weeks
+        const weeksToSum = ['recurring', 'substitution', 'permanent'].includes(orderType)
+          ? 1
+          : assignment.assigned_daily_schedules.length;
+
+        for (let weekIndex = 0; weekIndex < weeksToSum; weekIndex++) {
+          const weekSchedule = assignment.assigned_daily_schedules[weekIndex];
+          if (!weekSchedule) continue;
+
+          dayNames.forEach(day => {
+            const dayData = weekSchedule?.[day];
+            if (dayData && typeof dayData.hours === 'number') {
+              total += dayData.hours;
+            }
+          });
+        }
+      }
+    });
+
+    // Update form with calculated total hours
+    form.setValue("totalEstimatedHours", total, { shouldValidate: false });
+  }, [form]);
+
+  // Auto-calculate on initial load
   useEffect(() => {
-    // Force recalculation by triggering the main effect through a dummy state
-    // This ensures totalEstimatedHours is recalculated when assignments change in edit mode
-    form.trigger("totalEstimatedHours");
-  }, [JSON.stringify(watchedAssignedEmployees), form]);
+    recalculateTotalHours();
+  }, []);
+
+  // Watch for changes in assigned employees
+  useEffect(() => {
+    recalculateTotalHours();
+  }, [watchedAssignedEmployees, form.watch("orderType")]);
 
   const handleEmployeeSelectionChange = useCallback((selectedIds: string[]) => {
     const currentObjectId = form.getValues("objectId") ?? null;
@@ -618,46 +653,59 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess, 
     }
 
     let copiedCount = 0;
-    let skippedCount = 0;
 
-    // Get selected object to validate against object hours
+    // Get selected object to validate against object hours (but don't skip if already has hours)
     const currentObjectId = form.getValues("objectId");
     const selectedObject = objects.find(obj => obj.id === currentObjectId);
 
-    for (const targetDay of dayNames) {
+    // Extract available days from object's daily schedules
+    let availableDays: typeof dayNames[number][] = [...dayNames]; // Default: all days
+    if (selectedObject?.daily_schedules && Array.isArray(selectedObject.daily_schedules)) {
+      availableDays = dayNames.filter(day => {
+        const daySchedule = selectedObject.daily_schedules[weekIndex]?.[day];
+        return daySchedule && daySchedule.hours && daySchedule.hours > 0;
+      });
+    }
+
+    // First, clear all days that are NOT available (if there's an object selected)
+    if (selectedObject?.daily_schedules) {
+      for (const day of dayNames) {
+        if (!availableDays.includes(day)) {
+          // Clear values for days that are not available in the object
+          form.setValue(`assignedEmployees.${employeeIndex}.assigned_daily_schedules.${weekIndex}.${day}`, {}, { shouldValidate: true });
+        }
+      }
+    }
+
+    // Then copy to available days (except source day)
+    for (const targetDay of availableDays) {
       if (targetDay === sourceDay) continue; // Skip source day
 
-      // Check if target day already has hours
-      const targetSchedule = form.getValues(`assignedEmployees.${employeeIndex}.assigned_daily_schedules.${weekIndex}.${targetDay}`) as any;
-      const targetHasHours = (targetSchedule?.hours ?? 0) > 0 || targetSchedule?.start || targetSchedule?.end;
+      // Always copy, regardless of whether target day already has hours
+      // This will overwrite existing values
 
-      if (targetHasHours) {
-        skippedCount++;
-        continue;
-      }
-
-      // Validate against object hours if object is selected
+      // Optionally validate against object hours (but don't skip on error)
       if (selectedObject && sourceSchedule?.hours) {
         const objectDayHours = (selectedObject.daily_schedules?.[weekIndex] as any)?.[targetDay]?.hours;
         if (objectDayHours && sourceSchedule.hours > objectDayHours + 0.1) {
-          toast.error(`Kopieren nicht möglich: ${germanDayNames[targetDay]}`,
-            { description: `Arbeitszeiten (${sourceSchedule.hours}h) überschreiten Objektstunden (${objectDayHours}h)` }
+          // Show warning but still copy
+          toast.warning(`Warnung: ${germanDayNames[targetDay]}`,
+            { description: `Arbeitszeiten (${sourceSchedule.hours}h) überschreiten Objektstunden (${objectDayHours}h) - wurde trotzdem kopiert.` }
           );
-          continue;
         }
       }
 
+      // Always copy (overwrite) the schedule
       form.setValue(`assignedEmployees.${employeeIndex}.assigned_daily_schedules.${weekIndex}.${targetDay}`, sourceSchedule, { shouldValidate: true });
       copiedCount++;
     }
 
     if (copiedCount > 0) {
-      toast.success(`Zeiten von ${germanDayNames[sourceDay]} wurden in ${copiedCount} ${copiedCount === 1 ? 'weiteren Tag' : 'weitere Tage'} kopiert.`);
-    }
-    if (skippedCount > 0) {
-      toast.info(`${skippedCount} ${skippedCount === 1 ? 'Tag wurde übersprungen' : 'Tage wurden übersprungen'} - bereits Zeiten vorhanden.`);
-    }
-    if (copiedCount === 0 && skippedCount === 0) {
+      const availableDayNamesStr = availableDays.map(d => germanDayNames[d]).join(', ');
+      toast.success(`Zeiten von ${germanDayNames[sourceDay]} wurden in ${copiedCount} ${copiedCount === 1 ? 'weiteren Tag' : 'weitere Tage'} kopiert (nur verfügbare Tage: ${availableDayNamesStr}).`);
+      // Recalculate total hours after copying
+      recalculateTotalHours();
+    } else {
       toast.info("Keine weiteren Tage zum Kopieren gefunden.");
     }
   }, [form, objects]);
@@ -1148,6 +1196,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess, 
                                     onChange={(e) => {
                                       field.onChange(e.target.value === '' ? null : Number(e.target.value));
                                       handleAssignedDailyHoursChange(assignedIndex, weekIndex, day, e.target.value);
+                                      recalculateTotalHours();
                                     }}
                                   />
                                 </div>
@@ -1168,6 +1217,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess, 
                                     onChange={(e) => {
                                       field.onChange(e.target.value);
                                       handleAssignedStartTimeChange(assignedIndex, weekIndex, day, e.target.value);
+                                      recalculateTotalHours();
                                     }}
                                   />
                                 </div>
@@ -1188,6 +1238,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess, 
                                     onChange={(e) => {
                                       field.onChange(e.target.value);
                                       handleAssignedEndTimeChange(assignedIndex, weekIndex, day, e.target.value);
+                                      recalculateTotalHours();
                                     }}
                                   />
                                 </div>

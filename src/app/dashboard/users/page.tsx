@@ -42,7 +42,7 @@ export default function UsersPage() {
 
   const query = currentSearchParams.get('query') || '';
   const currentPage = Number(currentSearchParams.get('page')) || 1;
-  const pageSize = 10;
+  const pageSize = 9;
   const roleFilter = currentSearchParams.get('role') || '';
   const viewMode = currentSearchParams.get('viewMode') || 'grid';
   const sortColumn = currentSearchParams.get('sortColumn') || 'last_name';

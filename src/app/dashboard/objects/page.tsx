@@ -54,7 +54,7 @@ export default function ObjectsPage() {
 
   const query = currentSearchParams.get('query') || '';
   const currentPage = Number(currentSearchParams.get('page')) || 1;
-  const pageSize = 10;
+  const pageSize = 9;
   const customerIdFilter = currentSearchParams.get('customerId') || '';
   const priorityFilter = currentSearchParams.get('priority') || '';
   const timeOfDayFilter = currentSearchParams.get('timeOfDay') || '';
