@@ -35,7 +35,7 @@ export const customerOrderRequestSchema = z.object({
   description: z.string().max(500, "Beschreibung ist zu lang").optional().nullable(),
   dueDate: z.date().optional().nullable(), // Only for one-time requests
   orderType: z.enum(["one_time", "recurring"]).default("one_time"), // Simplified types for customer
-  recurringStartDate: z.date().optional().nullable(), // For recurring requests
+  startDate: z.date().optional().nullable(), // For recurring requests
   recurringEndDate: z.date().optional().nullable(), // For recurring requests
   serviceType: z.enum(availableServices, { required_error: "Dienstleistung ist erforderlich" }),
   notes: z.string().max(500, "Notizen sind zu lang").optional().nullable(),
@@ -64,7 +64,7 @@ export function CustomerOrderRequestForm({ customerId, onSuccess, isInDialog = f
       description: null,
       dueDate: null,
       orderType: "one_time",
-      recurringStartDate: null,
+      startDate: null,
       recurringEndDate: null,
       serviceType: availableServices[0],
       notes: null,
@@ -106,7 +106,6 @@ export function CustomerOrderRequestForm({ customerId, onSuccess, isInDialog = f
       requestStatus: 'pending',
       priority: 'medium',
       totalEstimatedHours: null,
-      isActive: true,
     });
 
     handleActionResponse(result);
@@ -184,7 +183,7 @@ export function CustomerOrderRequestForm({ customerId, onSuccess, isInDialog = f
               <Select onValueChange={(value) => {
                 form.setValue("orderType", value as CustomerOrderRequestFormValues["orderType"]);
                 form.setValue("dueDate", null);
-                form.setValue("recurringStartDate", null);
+                form.setValue("startDate", null);
                 form.setValue("recurringEndDate", null);
               }} value={form.watch("orderType")}>
                 <SelectTrigger className="w-full">
@@ -229,9 +228,9 @@ export function CustomerOrderRequestForm({ customerId, onSuccess, isInDialog = f
               <>
                 <DatePicker
                   label="Gewünschtes Startdatum"
-                  value={form.watch("recurringStartDate")}
-                  onChange={(date) => form.setValue("recurringStartDate", date)}
-                  error={form.formState.errors.recurringStartDate?.message}
+                  value={form.watch("startDate")}
+                  onChange={(date) => form.setValue("startDate", date)}
+                  error={form.formState.errors.startDate?.message}
                 />
                 <DatePicker
                   label="Gewünschtes Enddatum (optional)"
@@ -355,7 +354,7 @@ export function CustomerOrderRequestForm({ customerId, onSuccess, isInDialog = f
                 <Select onValueChange={(value) => {
                   form.setValue("orderType", value as CustomerOrderRequestFormValues["orderType"]);
                   form.setValue("dueDate", null);
-                  form.setValue("recurringStartDate", null);
+                  form.setValue("startDate", null);
                   form.setValue("recurringEndDate", null);
                 }} value={form.watch("orderType")}>
                   <SelectTrigger className="w-full">
@@ -400,9 +399,9 @@ export function CustomerOrderRequestForm({ customerId, onSuccess, isInDialog = f
                 <>
                   <DatePicker
                     label="Gewünschtes Startdatum"
-                    value={form.watch("recurringStartDate")}
-                    onChange={(date) => form.setValue("recurringStartDate", date)}
-                    error={form.formState.errors.recurringStartDate?.message}
+                    value={form.watch("startDate")}
+                    onChange={(date) => form.setValue("startDate", date)}
+                    error={form.formState.errors.startDate?.message}
                   />
                   <DatePicker
                     label="Gewünschtes Enddatum (optional)"

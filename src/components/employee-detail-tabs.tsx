@@ -32,7 +32,7 @@ interface Order {
   status: string;
   order_type: string;
   due_date: string | null;
-  recurring_start_date: string | null;
+  start_date: string | null;
   recurring_end_date: string | null;
   objects: { name: string | null } | null;
 }

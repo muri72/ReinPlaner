@@ -38,8 +38,8 @@ interface OrderWithDetails {
   customer_id: string;
   object_id: string | null;
   order_type: string;
-  recurring_start_date: string | null;
-  due_date: string | null;
+  start_date: string | null;
+  end_date: string | null;
   object: {
     name: string;
     recurrence_interval_weeks: number;
@@ -316,7 +316,7 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
         const { data: ordersData, error: ordersError } = await supabase
           .from('orders')
           .select(`
-            id, title, customer_id, object_id, order_type, recurring_start_date, due_date,
+            id, title, customer_id, object_id, order_type, start_date, end_date,
             objects ( name, recurrence_interval_weeks, start_week_offset, monday_hours, tuesday_hours, wednesday_hours, thursday_hours, friday_hours, saturday_hours, sunday_hours, monday_start_time, tuesday_start_time, wednesday_start_time, thursday_start_time, friday_start_time, saturday_start_time, sunday_start_time, monday_end_time, tuesday_end_time, wednesday_end_time, thursday_end_time, friday_end_time, saturday_end_time, sunday_end_time ),
             order_employee_assignments!inner ( 
               employee_id, assigned_recurrence_interval_weeks, assigned_start_week_offset,
@@ -339,8 +339,8 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
             customer_id: order.customer_id,
             object_id: order.object_id,
             order_type: order.order_type,
-            recurring_start_date: order.recurring_start_date,
-            due_date: order.due_date,
+            start_date: order.start_date,
+            end_date: order.end_date,
             object: Array.isArray(order.objects) ? order.objects[0] : order.objects,
             assigned_recurrence_interval_weeks: order.order_employee_assignments?.[0]?.assigned_recurrence_interval_weeks || null,
             assigned_start_week_offset: order.order_employee_assignments?.[0]?.assigned_start_week_offset || null,
@@ -405,7 +405,7 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
           const startWeekOffset = selectedOrder.assigned_start_week_offset || selectedOrder.object?.start_week_offset || 0;
 
           if (recurrenceIntervalWeeks > 1) {
-            const orderStartDate = selectedOrder.recurring_start_date ? new Date(selectedOrder.recurring_start_date) : (selectedOrder.due_date ? new Date(selectedOrder.due_date) : today);
+            const orderStartDate = selectedOrder.start_date ? new Date(selectedOrder.start_date) : (selectedOrder.end_date ? new Date(selectedOrder.end_date) : today);
             const startWeekNumber = getWeek(orderStartDate, { weekStartsOn: 1 });
             const currentWeekNumber = getWeek(today, { weekStartsOn: 1 });
             const weekDifference = currentWeekNumber - startWeekNumber;

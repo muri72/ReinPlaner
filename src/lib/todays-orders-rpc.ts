@@ -9,7 +9,7 @@ RETURNS TABLE (
   order_id UUID,
   title TEXT,
   status TEXT,
-  due_date DATE,
+  end_date DATE,
   customer_id UUID,
   object_id UUID,
   order_type TEXT,
@@ -30,25 +30,24 @@ BEGIN
       o.id,
       o.title,
       o.status,
-      o.due_date,
+      o.end_date,
       o.customer_id,
       o.object_id,
       o.order_type,
-      o.recurring_start_date,
-      o.recurring_end_date,
+      o.start_date,
       o.objects,
       o.customers
     FROM orders o
     WHERE o.request_status = 'approved'
       AND (
         -- One-time orders due today
-        (o.order_type = 'one_time' AND o.due_date = target_date)
+        (o.order_type = 'one_time' AND o.end_date = target_date)
         OR
         -- Recurring orders active today
         (
           o.order_type IN ('recurring', 'permanent', 'substitution')
-          AND o.recurring_start_date <= target_date
-          AND (o.recurring_end_date IS NULL OR o.recurring_end_date >= target_date)
+          AND o.start_date <= target_date
+          AND (o.end_date IS NULL OR o.end_date >= target_date)
         )
       )
   ),
@@ -76,7 +75,7 @@ BEGIN
     fo.id,
     fo.title,
     fo.status,
-    fo.due_date,
+    fo.end_date,
     fo.customer_id,
     fo.object_id,
     fo.order_type,
@@ -93,7 +92,7 @@ $$;
 
 -- Index für bessere Performance:
 CREATE INDEX IF NOT EXISTS idx_orders_todays_optimized
-ON orders (request_status, order_type, due_date, recurring_start_date, recurring_end_date)
+ON orders (request_status, order_type, end_date, start_date)
 WHERE request_status = 'approved';
 
 -- Grant permissions:
@@ -104,7 +103,7 @@ export interface TodaysOrderRPCResult {
   order_id: string;
   title: string;
   status: string;
-  due_date: string;
+  end_date: string;
   customer_id: string;
   object_id: string;
   order_type: string;

@@ -40,12 +40,12 @@ interface DisplayOrder {
   id: string;
   title: string;
   status: string;
-  due_date: string | null;
+  end_date: string | null;
   assignedEmployees: (AssignedEmployee & { name: string; avatarUrl: string | null })[];
   customer_name: string | null;
   object_name: string | null;
   order_type: string;
-  recurring_start_date: string | null;
+  start_date: string | null;
   object: { recurrence_interval_weeks: number; start_week_offset: number; daily_schedules: any[] } | null;
 }
 
@@ -69,7 +69,7 @@ export function TodaysOrdersOverview() {
 
     const recurrenceInterval = assignment.assigned_recurrence_interval_weeks || order.object?.recurrence_interval_weeks || 1;
     const startWeekOffset = assignment.assigned_start_week_offset || order.object?.start_week_offset || 0;
-    const orderStartDate = order.recurring_start_date ? new Date(order.recurring_start_date) : today;
+    const orderStartDate = order.start_date ? new Date(order.start_date) : today;
 
     const daysPassed = differenceInDays(today, orderStartDate);
     if (daysPassed < 0) return null;
@@ -210,7 +210,7 @@ export function TodaysOrdersOverview() {
                               order.recurrence_interval_weeks || 1;
     const startWeekOffset = order.order_employee_assignments?.[0]?.assigned_start_week_offset ||
                             order.start_week_offset || 0;
-    const orderStartDate = order.recurring_start_date ? new Date(order.recurring_start_date) : today;
+    const orderStartDate = order.start_date ? new Date(order.start_date) : today;
     const daysPassed = differenceInDays(today, orderStartDate);
     if (daysPassed < 0) return false;
 
@@ -275,11 +275,11 @@ export function TodaysOrdersOverview() {
         id: order.order_id,
         title: order.title,
         status: order.status,
-        due_date: order.due_date,
+        end_date: order.end_date,
         customer_name: order.customer_name,
         object_name: order.object_name,
         order_type: order.order_type,
-        recurring_start_date: null,
+        start_date: null,
         object: {
           recurrence_interval_weeks: order.recurrence_interval_weeks,
           start_week_offset: order.start_week_offset,
@@ -313,12 +313,12 @@ export function TodaysOrdersOverview() {
       let query = supabase
         .from('orders')
         .select(`
-          id, title, status, due_date, customer_id, object_id, order_type, recurring_start_date,
+          id, title, status, end_date, customer_id, object_id, order_type, start_date,
           objects ( name, recurrence_interval_weeks, start_week_offset, daily_schedules ),
           customers ( name )
         `)
         .eq('request_status', 'approved')
-        .or(`due_date.eq.${todayStr},and(recurring_start_date.lte.${todayStr},or(recurring_end_date.gte.${todayStr},recurring_end_date.is.null))`)
+        .or(`end_date.eq.${todayStr},and(start_date.lte.${todayStr},or(end_date.gte.${todayStr},end_date.is.null))`)
         .limit(50); // Reduced limit for faster loading
 
       const { data: ordersData, error: queryError } = await query;
@@ -366,7 +366,7 @@ export function TodaysOrdersOverview() {
         id: order.id,
         title: order.title,
         status: order.status,
-        due_date: order.due_date,
+        end_date: order.end_date,
         assignedEmployees: order.order_employee_assignments?.map((a: any) => {
           const employee = Array.isArray(a.employees) ? a.employees[0] : a.employees;
           const name = `${employee?.first_name || ''} ${employee?.last_name || ''}`.trim();
@@ -382,7 +382,7 @@ export function TodaysOrdersOverview() {
         customer_name: order.customers?.[0]?.name || null,
         object_name: order.objects?.[0]?.name || null,
         order_type: order.order_type,
-        recurring_start_date: order.recurring_start_date,
+        start_date: order.start_date,
         object: order.objects?.[0] || null,
       }));
 

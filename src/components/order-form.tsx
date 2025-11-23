@@ -26,14 +26,6 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { ObjectCreateDialog } from "@/components/object-create-dialog";
 import { getWeek } from 'date-fns';
 
-const availableServices = [
-  "Unterhaltsreinigung",
-  "Glasreinigung",
-  "Grundreinigung",
-  "Graffitientfernung",
-  "Sonderreinigung",
-] as const;
-
 const preprocessNumber = (val: unknown) => (val === "" || isNaN(Number(val)) ? null : Number(val));
 const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
 
@@ -76,14 +68,13 @@ export type AssignedEmployee = z.infer<typeof assignedEmployeeSchema>;
 export const baseOrderSchema = z.object({
   title: z.string().min(1, "Titel ist erforderlich").max(100, "Titel ist zu lang"),
   description: z.string().max(500, "Beschreibung ist zu lang").optional().nullable(),
-  dueDate: z.date().optional().nullable(),
   status: z.enum(["pending", "in_progress", "completed"]).default("pending"),
   customerId: z.string().uuid("Ungültige Kunden-ID").min(1, "Kunde ist erforderlich"),
   objectId: z.string().uuid("Ungültiges Objekt-ID").optional().nullable(),
   customerContactId: z.string().uuid("Ungültige Kundenkontakt-ID").optional().nullable(),
   orderType: z.enum(["one_time", "recurring", "substitution", "permanent"]).default("one_time"),
-  recurringStartDate: z.date().optional().nullable(),
-  recurringEndDate: z.date().optional().nullable(),
+  startDate: z.date().optional().nullable(),
+  endDate: z.date().optional().nullable(),
   priority: z.enum(["low", "medium", "high"]).default("low"),
   totalEstimatedHours: z.preprocess(
     (val) => (val === "" || isNaN(Number(val)) ? null : Number(val)),
@@ -94,11 +85,18 @@ export const baseOrderSchema = z.object({
     z.nullable(z.number().min(0, "Preis muss positiv sein").max(999999, "Preis ist zu hoch")).optional()
   ),
   notes: z.string().max(500, "Notizen sind zu lang").optional().nullable(),
-  serviceType: z.enum(availableServices).optional().nullable(),
+  serviceType: z.string().optional().nullable(),
+  serviceKey: z.string().optional().nullable(),
+  markupPercentage: z.preprocess(
+    (val) => (val === "" || isNaN(Number(val)) ? null : Number(val)),
+    z.nullable(z.number().min(0, "Prozentsatz muss positiv sein").max(100, "Prozentsatz ist zu hoch")).optional()
+  ),
+  customHourlyRate: z.preprocess(
+    (val) => (val === "" || isNaN(Number(val)) ? null : Number(val)),
+    z.nullable(z.number().min(0, "Stundensatz muss positiv sein").max(999, "Stundensatz ist zu hoch")).optional()
+  ),
   requestStatus: z.enum(["pending", "approved", "rejected"]).default("approved"),
   assignedEmployees: z.array(assignedEmployeeSchema).optional(),
-  isActive: z.boolean().default(true),
-  endDate: z.date().optional().nullable(),
 });
 
 const createOrderSchema = (objects: any[]) => baseOrderSchema.superRefine((data, ctx) => {
@@ -171,28 +169,29 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess, 
   const [allEmployees, setAllEmployees] = useState<{ id: string; first_name: string; last_name: string }[]>([]);
   const [customerContacts, setCustomerContacts] = useState<{ id: string; first_name: string; last_name: string; customer_id: string }[]>([]);
   const [serviceRates, setServiceRates] = useState<{ service_type: string; hourly_rate: number }[]>([]);
+  const [services, setServices] = useState<{ id: string; key: string; title: string; default_hourly_rate: number | null }[]>([]);
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
 
   const resolvedDefaultValues: OrderFormValues = {
     title: initialData?.title ?? "",
     description: initialData?.description ?? null,
-    dueDate: initialData?.dueDate ? new Date(initialData.dueDate) : null,
     status: initialData?.status ?? "pending",
     customerId: initialData?.customerId ?? "",
     objectId: initialData?.objectId ?? null,
     customerContactId: initialData?.customerContactId ?? null,
     orderType: initialData?.orderType ?? "one_time",
-    recurringStartDate: initialData?.recurringStartDate ? new Date(initialData.recurringStartDate) : null,
-    recurringEndDate: initialData?.recurringEndDate ? new Date(initialData.recurringEndDate) : null,
+    startDate: initialData?.startDate ? new Date(initialData.startDate) : null,
+    endDate: initialData?.endDate ? new Date(initialData.endDate) : null,
     priority: initialData?.priority ?? "low",
     totalEstimatedHours: (initialData?.totalEstimatedHours as number | null | undefined) ?? null,
     fixedMonthlyPrice: (initialData?.fixedMonthlyPrice as number | null | undefined) ?? null,
     notes: initialData?.notes ?? null,
     serviceType: initialData?.serviceType ?? null,
+    serviceKey: initialData?.serviceKey ?? null,
+    markupPercentage: (initialData?.markupPercentage as number | null | undefined) ?? null,
+    customHourlyRate: (initialData?.customHourlyRate as number | null | undefined) ?? null,
     requestStatus: initialData?.requestStatus ?? "approved",
     assignedEmployees: (initialData?.assignedEmployees as OrderFormValues['assignedEmployees']) ?? [],
-    isActive: initialData?.isActive ?? true,
-    endDate: initialData?.endDate ? new Date(initialData.endDate) : null,
   };
 
   const form = useForm<OrderFormInput>({
@@ -201,7 +200,10 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess, 
     mode: "onChange",
   });
 
-  // Register with unsaved changes context
+  // Determine if this is create mode (no initialData means creating a new order)
+  const isCreateMode = !initialData;
+
+  // Register with unsaved changes context - formKey pattern prevents false dirty state in create mode
   useFormUnsavedChanges("order-form", form.formState.isDirty);
 
   const { fields: assignedEmployeeFields, replace: replaceAssignedEmployees, update: updateAssignedEmployee } = useFieldArray({
@@ -231,31 +233,13 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess, 
       form.setValue("requestStatus", (initialData?.requestStatus as OrderFormValues["requestStatus"]) ?? "approved", { shouldValidate: false });
 
       // Set dates with null checks
-      if (initialData?.dueDate) {
-        const dueDate = initialData.dueDate instanceof Date ? initialData.dueDate : new Date(initialData.dueDate);
-        if (!isNaN(dueDate.getTime())) {
-          form.setValue("dueDate", dueDate, { shouldValidate: false });
-        }
-      } else {
-        form.setValue("dueDate", null, { shouldValidate: false });
-      }
-
-      if (initialData?.recurringStartDate) {
-        const startDate = initialData.recurringStartDate instanceof Date ? initialData.recurringStartDate : new Date(initialData.recurringStartDate);
+      if (initialData?.startDate) {
+        const startDate = initialData.startDate instanceof Date ? initialData.startDate : new Date(initialData.startDate);
         if (!isNaN(startDate.getTime())) {
-          form.setValue("recurringStartDate", startDate, { shouldValidate: false });
+          form.setValue("startDate", startDate, { shouldValidate: false });
         }
       } else {
-        form.setValue("recurringStartDate", null, { shouldValidate: false });
-      }
-
-      if (initialData?.recurringEndDate) {
-        const endDate = initialData.recurringEndDate instanceof Date ? initialData.recurringEndDate : new Date(initialData.recurringEndDate);
-        if (!isNaN(endDate.getTime())) {
-          form.setValue("recurringEndDate", endDate, { shouldValidate: false });
-        }
-      } else {
-        form.setValue("recurringEndDate", null, { shouldValidate: false });
+        form.setValue("startDate", null, { shouldValidate: false });
       }
 
       if (initialData?.endDate) {
@@ -265,10 +249,6 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess, 
         }
       } else {
         form.setValue("endDate", null, { shouldValidate: false });
-      }
-
-      if (initialData?.isActive !== undefined) {
-        form.setValue("isActive", initialData.isActive, { shouldValidate: false });
       }
 
       // Set IDs with proper null/undefined handling
@@ -295,11 +275,38 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess, 
       // Set text fields
       form.setValue("notes", initialData?.notes ?? null, { shouldValidate: false });
 
-      // Set service type with validation
-      if (initialData?.serviceType && availableServices.includes(initialData.serviceType as any)) {
-        form.setValue("serviceType", initialData.serviceType as OrderFormValues["serviceType"], { shouldValidate: false });
+      // Set service type and key - get from database if not in initialData
+      if (initialData?.serviceKey) {
+        form.setValue("serviceKey", initialData.serviceKey, { shouldValidate: false });
+        // If we have serviceKey but no serviceType, try to find it from services
+        if (!initialData.serviceType && services.length > 0) {
+          const service = services.find(s => s.key === initialData.serviceKey);
+          if (service) {
+            form.setValue("serviceType", service.title, { shouldValidate: false });
+          }
+        } else {
+          form.setValue("serviceType", initialData.serviceType ?? null, { shouldValidate: false });
+        }
+      } else if (initialData?.serviceType) {
+        // Fallback: if only serviceType is provided, try to find the key
+        const service = services.find(s => s.title === initialData.serviceType);
+        if (service) {
+          form.setValue("serviceKey", service.key, { shouldValidate: false });
+        }
+        form.setValue("serviceType", initialData.serviceType ?? null, { shouldValidate: false });
       } else {
         form.setValue("serviceType", null, { shouldValidate: false });
+        form.setValue("serviceKey", null, { shouldValidate: false });
+      }
+
+      // Set markup percentage and custom hourly rate
+      if (initialData?.markupPercentage !== undefined) {
+        const markup = typeof initialData.markupPercentage === 'number' ? initialData.markupPercentage : null;
+        form.setValue("markupPercentage", markup, { shouldValidate: false });
+      }
+      if (initialData?.customHourlyRate !== undefined) {
+        const rate = typeof initialData.customHourlyRate === 'number' ? initialData.customHourlyRate : null;
+        form.setValue("customHourlyRate", rate, { shouldValidate: false });
       }
 
       // Set assigned employees with deep validation
@@ -364,13 +371,22 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess, 
       if (employeesData) setAllEmployees(employeesData);
       if (employeesError) console.error("Fehler beim Laden der Mitarbeiter:", employeesError);
 
-      // Fetch service rates
+      // Fetch services from database
+      const { data: servicesData, error: servicesError } = await supabase
+        .from('services')
+        .select('id, key, title, default_hourly_rate')
+        .eq('is_active', true)
+        .order('title', { ascending: true });
+      if (servicesData) setServices(servicesData);
+      if (servicesError) console.error("Fehler beim Laden der Services:", servicesError);
+
+      // Keep service_rates for backward compatibility (but prefer service's default_hourly_rate)
       const { data: ratesData, error: ratesError } = await supabase.from('service_rates').select('service_type, hourly_rate');
       if (ratesData) setServiceRates(ratesData);
       if (ratesError) console.error("Fehler beim Laden der Stundensätze:", ratesError);
     };
     fetchDropdownData();
-  }, [supabase]);
+  }, [supabase, isCreateMode, form]);
 
   useEffect(() => {
     if (selectedCustomerId) {
@@ -403,7 +419,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess, 
   useEffect(() => {
     const assignedEmployees = (form.watch("assignedEmployees") ?? []) as AssignedEmployee[];
     const orderTypeSafe = (form.watch("orderType") as OrderFormValues["orderType"] | undefined) ?? 'one_time';
-    const dueDate = form.watch("dueDate");
+    const endDate = form.watch("endDate");
     const selectedObject = objects.find(obj => obj.id === selectedObjectId);
 
     let newTotalEstimatedHours: number | null = null;
@@ -440,15 +456,15 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess, 
       }
       // Store total hours per cycle, not per week
       newTotalEstimatedHours = totalHoursInCycle;
-    } else if (orderTypeSafe === 'one_time' && dueDate) {
+    } else if (orderTypeSafe === 'one_time' && endDate) {
       let totalHoursForDay = 0;
       if (assignedEmployees && assignedEmployees.length > 0) {
-        const dayOfWeek = dueDate.getDay();
+        const dayOfWeek = endDate.getDay();
         const dayKey = dayNames[dayOfWeek === 0 ? 6 : dayOfWeek - 1];
         totalHoursForDay = assignedEmployees.reduce((total: number, emp: AssignedEmployee) => {
           const employeeRecurrenceInterval = Number(emp.assigned_recurrence_interval_weeks ?? 1);
           const employeeSchedules = emp.assigned_daily_schedules ?? [];
-          const startWeekNumber = getWeek(dueDate, { weekStartsOn: 1 });
+          const startWeekNumber = getWeek(endDate, { weekStartsOn: 1 });
           const weekOffset = (startWeekNumber - Number(emp.assigned_start_week_offset ?? 0)) % employeeRecurrenceInterval;
           const currentWeekSchedule = employeeSchedules[weekOffset < 0 ? weekOffset + employeeRecurrenceInterval : weekOffset];
           const hours = currentWeekSchedule?.[dayKey]?.hours;
@@ -456,11 +472,11 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess, 
           return total + (isNaN(num) ? 0 : num);
         }, 0);
       } else if (selectedObject) {
-        const dayOfWeek = dueDate.getDay();
+        const dayOfWeek = endDate.getDay();
         const dayKey = dayNames[dayOfWeek === 0 ? 6 : dayOfWeek - 1];
         const objectRecurrenceInterval = selectedObject.recurrence_interval_weeks;
         const objectSchedules = selectedObject.daily_schedules || [];
-        const startWeekNumber = getWeek(dueDate, { weekStartsOn: 1 });
+        const startWeekNumber = getWeek(endDate, { weekStartsOn: 1 });
         const weekOffset = (startWeekNumber - (selectedObject.start_week_offset || 0)) % objectRecurrenceInterval;
         const currentWeekSchedule = objectSchedules[weekOffset < 0 ? weekOffset + objectRecurrenceInterval : weekOffset];
         totalHoursForDay = currentWeekSchedule?.[dayKey]?.hours || 0;
@@ -473,7 +489,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess, 
     if (currentTotal !== safeNewTotal) {
       form.setValue("totalEstimatedHours", safeNewTotal, { shouldValidate: false, shouldDirty: false });
     }
-  }, [watchedAssignedEmployees, form.watch("orderType"), form.watch("dueDate"), selectedObjectId, objects, form]);
+  }, [watchedAssignedEmployees, form.watch("orderType"), form.watch("endDate"), selectedObjectId, objects, form]);
 
   // Callback to recalculate total hours
   const recalculateTotalHours = useCallback(() => {
@@ -817,6 +833,37 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess, 
     ? "Wochenstunden (automatisch berechnet)"
     : "Gesamtstunden (automatisch berechnet)";
 
+  // Effect to calculate total hours based on service rate and fixed price
+  useEffect(() => {
+    const fixedPrice = form.watch("fixedMonthlyPrice") as number | null | undefined;
+    const serviceKey = form.watch("serviceKey");
+    const markupPercentage = form.watch("markupPercentage") as number | null | undefined;
+    const customHourlyRate = form.watch("customHourlyRate") as number | null | undefined;
+
+    // If fixed price is provided and no calculated hours yet, try to calculate from service rate
+    if (fixedPrice && fixedPrice > 0 && serviceKey) {
+      const service = services.find(s => s.key === serviceKey);
+      const defaultRate = Number(service?.default_hourly_rate || 0);
+
+      if (defaultRate > 0) {
+        // Calculate final hourly rate
+        let finalRate = Number(customHourlyRate || defaultRate);
+        if (markupPercentage && markupPercentage > 0) {
+          finalRate = finalRate * (1 + markupPercentage / 100);
+        }
+
+        // Calculate total hours from fixed price
+        const calculatedHours = fixedPrice / finalRate;
+        const currentHours = form.getValues("totalEstimatedHours");
+
+        // Only update if current hours are empty or we're in initial setup
+        if (!currentHours || currentHours === 0) {
+          form.setValue("totalEstimatedHours", parseFloat(calculatedHours.toFixed(2)), { shouldValidate: false });
+        }
+      }
+    }
+  }, [form.watch("fixedMonthlyPrice"), form.watch("serviceKey"), form.watch("markupPercentage"), form.watch("customHourlyRate"), services, form]);
+
   return (
     <>
       {!isInDialog && (title || description) && (
@@ -907,19 +954,92 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess, 
       </div>
       
       <div>
-        <Label htmlFor="serviceType">Reinigungsdienstleistung</Label>
-        <Select onValueChange={(value: string) => form.setValue("serviceType", value as OrderFormValues["serviceType"])} value={form.watch("serviceType") || ""}>
+        <Label htmlFor="serviceType">Dienstleistung</Label>
+        <Select onValueChange={(value: string) => {
+          form.setValue("serviceKey", value);
+          // Find the service and set serviceType to its title
+          const service = services.find(s => s.key === value);
+          if (service) {
+            form.setValue("serviceType", service.title);
+          }
+        }} value={form.watch("serviceKey") || ""}>
           <SelectTrigger className="w-full">
             <SelectValue placeholder="Dienstleistung auswählen" />
           </SelectTrigger>
           <SelectContent>
-            {availableServices.map(service => (
-              <SelectItem key={service} value={service}>{service}</SelectItem>
+            {services.map(service => (
+              <SelectItem key={service.key} value={service.key}>{service.title}</SelectItem>
             ))}
           </SelectContent>
         </Select>
         {form.formState.errors.serviceType && <p className="text-red-500 text-sm mt-1">{form.formState.errors.serviceType.message}</p>}
       </div>
+
+      {/* Markup and Custom Rate Section */}
+      {form.watch("serviceKey") && (() => {
+        const service = services.find(s => s.key === form.watch("serviceKey"));
+        const defaultRate = Number(service?.default_hourly_rate || 0);
+        const markupPercentage = form.watch("markupPercentage") as number | null | undefined;
+        const customHourlyRate = form.watch("customHourlyRate") as number | null | undefined;
+
+        // Calculate final hourly rate
+        let finalRate = Number(customHourlyRate || defaultRate);
+        if (markupPercentage && markupPercentage > 0) {
+          finalRate = finalRate * (1 + markupPercentage / 100);
+        }
+
+        return (
+          <div className="grid grid-cols-2 gap-4 p-4 border rounded-lg bg-muted/30">
+            <div>
+              <Label htmlFor="markupPercentage">Aufschlag (%)</Label>
+              <Input
+                id="markupPercentage"
+                type="number"
+                step="0.1"
+                min="0"
+                max="100"
+                {...form.register("markupPercentage")}
+                placeholder="z.B. 10"
+              />
+              <p className="text-xs text-muted-foreground mt-1">Prozentualer Aufschlag auf den Stundensatz</p>
+            </div>
+            <div>
+              <Label htmlFor="customHourlyRate">Stundensatz (€/h)</Label>
+              <Input
+                id="customHourlyRate"
+                type="number"
+                step="0.01"
+                min="0"
+                {...form.register("customHourlyRate")}
+                placeholder={defaultRate > 0 ? defaultRate.toFixed(2) : "z.B. 45.00"}
+              />
+              <p className="text-xs text-muted-foreground mt-1">Individueller Stundensatz für diesen Auftrag</p>
+            </div>
+            {finalRate > 0 && (
+              <div className="col-span-2 mt-2 p-3 bg-primary/10 rounded-md border border-primary/20">
+                <p className="text-sm font-semibold text-primary">
+                  Finaler Stundensatz: {finalRate.toFixed(2)} €/h
+                </p>
+                {markupPercentage && markupPercentage > 0 && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    (Basis: {Number(customHourlyRate || defaultRate).toFixed(2)} € + {markupPercentage}% Aufschlag)
+                  </p>
+                )}
+                {!markupPercentage && customHourlyRate && customHourlyRate > 0 && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    (individueller Stundensatz ohne Aufschlag)
+                  </p>
+                )}
+                {!markupPercentage && !customHourlyRate && defaultRate > 0 && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    (Standard-Stundensatz der Dienstleistung)
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })()}
       
       <div className="flex items-end gap-2">
         <div className="flex-grow">
@@ -947,9 +1067,8 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess, 
         <Label htmlFor="orderType">Auftragstyp</Label>
         <Select onValueChange={(value: OrderFormValues["orderType"]) => {
           form.setValue("orderType", value);
-          form.setValue("dueDate", null);
-          form.setValue("recurringStartDate", null);
-          form.setValue("recurringEndDate", null);
+          form.setValue("startDate", null);
+          form.setValue("endDate", null);
         }} value={form.watch("orderType")}>
           <SelectTrigger className="w-full">
             <SelectValue placeholder="Auftragstyp auswählen" />
@@ -964,37 +1083,16 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess, 
         {form.formState.errors.orderType && <p className="text-red-500 text-sm mt-1">{form.formState.errors.orderType.message}</p>}
       </div>
 
-      {orderType === "one_time" && (
-        <DatePicker
-          label="Fälligkeitsdatum (optional)"
-          value={form.watch("dueDate")}
-          onChange={(date: Date | null) => form.setValue("dueDate", date)}
-          error={form.formState.errors.dueDate?.message}
-        />
-      )}
-      
-      {(orderType === "recurring" || orderType === "substitution" || orderType === "permanent") && (
-        <div className="space-y-4">
-          <DatePicker
-            label="Startdatum"
-            value={form.watch("recurringStartDate")}
-            onChange={(date: Date | null) => form.setValue("recurringStartDate", date)}
-            error={form.formState.errors.recurringStartDate?.message}
-          />
-          {orderType !== "permanent" && (
-            <DatePicker
-              label="Enddatum (optional)"
-              value={form.watch("recurringEndDate")}
-              onChange={(date: Date | null) => form.setValue("recurringEndDate", date)}
-              error={form.formState.errors.recurringEndDate?.message}
-            />
-          )}
-        </div>
-      )}
+      <DatePicker
+        label="Startdatum"
+        value={form.watch("startDate")}
+        onChange={(date: Date | null) => form.setValue("startDate", date)}
+        error={form.formState.errors.startDate?.message}
+      />
 
       <div className="space-y-4">
         <DatePicker
-          label="Auftrag Enddatum (optional)"
+          label="Enddatum (optional)"
           value={form.watch("endDate")}
           onChange={(date: Date | null) => form.setValue("endDate", date)}
           error={form.formState.errors.endDate?.message}
@@ -1321,19 +1419,39 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess, 
         {form.formState.errors.totalEstimatedHours && <p className="text-red-500 text-sm mt-1">{form.formState.errors.totalEstimatedHours.message}</p>}
         {(() => {
           const totalHours = form.watch("totalEstimatedHours") as number | null | undefined;
-          const serviceType = form.watch("serviceType");
+          const serviceKey = form.watch("serviceKey");
+          const markupPercentage = form.watch("markupPercentage") as number | null | undefined;
+          const customHourlyRate = form.watch("customHourlyRate") as number | null | undefined;
           const fixedPrice = form.watch("fixedMonthlyPrice") as number | null | undefined;
 
-          if (totalHours && totalHours > 0 && serviceType && !fixedPrice) {
-            const rate = serviceRates.find(r => r.service_type === serviceType);
-            if (rate) {
-              const total = (totalHours || 0) * rate.hourly_rate;
-              return (
-                <p className="text-xs text-muted-foreground mt-1">
-                  Zeitaufwand: {totalHours.toFixed(2)} Stunden × {rate.hourly_rate.toFixed(2)} €/Stunde = <span className="font-semibold">{total.toFixed(2)} €</span>
-                </p>
-              );
+          if (totalHours && totalHours > 0 && serviceKey && !fixedPrice) {
+            // Get the service's default hourly rate
+            const service = services.find(s => s.key === serviceKey);
+            const defaultRate = Number(service?.default_hourly_rate || 0);
+
+            // Calculate final hourly rate
+            let finalRate = Number(customHourlyRate || defaultRate);
+            const baseRate = finalRate; // Store base rate before markup
+            if (markupPercentage && markupPercentage > 0) {
+              finalRate = finalRate * (1 + markupPercentage / 100);
             }
+
+            const total = (totalHours || 0) * finalRate;
+            return (
+              <div className="text-xs text-muted-foreground mt-1 space-y-1">
+                <div>Zeitaufwand: {totalHours.toFixed(2)} Stunden</div>
+                <div>
+                  Stundensatz: {finalRate.toFixed(2)} €/h
+                  {markupPercentage && markupPercentage > 0 && (
+                    <span className="text-muted-foreground"> (inkl. {markupPercentage}% Aufschlag)</span>
+                  )}
+                  {customHourlyRate && customHourlyRate > 0 && (
+                    <span className="text-muted-foreground"> (angepasst)</span>
+                  )}
+                </div>
+                <div className="font-semibold text-foreground">Gesamt: {total.toFixed(2)} €</div>
+              </div>
+            );
           }
           return null;
         })()}
@@ -1385,22 +1503,6 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess, 
         </Select>
         {form.formState.errors.status && <p className="text-red-500 text-sm mt-1">{form.formState.errors.status.message}</p>}
       </div>
-
-      <div className="flex items-center space-x-2">
-        <input
-          type="checkbox"
-          id="isActive"
-          checked={form.watch("isActive")}
-          onChange={(e) => form.setValue("isActive", e.target.checked)}
-          className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-        />
-        <Label htmlFor="isActive" className="text-sm font-medium">
-          Auftrag ist aktiv
-        </Label>
-      </div>
-      <p className="text-xs text-muted-foreground">
-        Inaktive Aufträge werden nicht in der normalen Ansicht angezeigt.
-      </p>
 
       <div>
         <Label htmlFor="requestStatus">Anfragestatus</Label>

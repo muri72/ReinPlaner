@@ -34,7 +34,7 @@ interface DisplayOrder {
   customer_contact_first_name: string | null;
   customer_contact_last_name: string | null;
   order_type: string;
-  recurring_start_date: string | null;
+  start_date: string | null;
   recurring_end_date: string | null;
   priority: string;
   total_estimated_hours: number | null;
@@ -55,7 +55,7 @@ interface RawOrderResponse {
   object_id: string | null;
   customer_contact_id: string | null;
   order_type: string;
-  recurring_start_date: string | null;
+  start_date: string | null;
   recurring_end_date: string | null;
   priority: string;
   total_estimated_hours: number | null;
@@ -124,7 +124,7 @@ export default function CustomerBookingsPage() {
       const { data, error } = await supabase
         .from('orders')
         .select(`
-          id, title, description, status, due_date, customer_id, object_id, customer_contact_id, order_type, recurring_start_date, recurring_end_date, priority, total_estimated_hours, notes, request_status, service_type,
+          id, title, description, status, due_date, customer_id, object_id, customer_contact_id, order_type, start_date, recurring_end_date, priority, total_estimated_hours, notes, request_status, service_type,
           objects ( name, recurrence_interval_weeks, start_week_offset, daily_schedules ),
           customers ( name ),
           customer_contacts ( first_name, last_name ),
@@ -153,7 +153,7 @@ export default function CustomerBookingsPage() {
             employee_last_names: order.order_employee_assignments?.map((a: any) => a.employees?.[0]?.last_name || '') || null,
             assignedEmployees: mappedAssignments, customer_contact_id: order.customer_contact_id, customer_name: order.customers?.[0]?.name || null, object_name: order.objects?.[0]?.name || null,
             customer_contact_first_name: order.customer_contacts?.[0]?.first_name || null, customer_contact_last_name: order.customer_contacts?.[0]?.last_name || null,
-            order_type: order.order_type, recurring_start_date: order.recurring_start_date, recurring_end_date: order.recurring_end_date, priority: order.priority,
+            order_type: order.order_type, start_date: order.start_date, recurring_end_date: order.recurring_end_date, priority: order.priority,
             total_estimated_hours: order.total_estimated_hours, notes: order.notes, request_status: order.request_status, service_type: order.service_type,
             order_feedback: order.order_feedback || [], object: order.objects?.[0] || null,
           };
@@ -191,7 +191,7 @@ export default function CustomerBookingsPage() {
     const assignedRecurrenceIntervalWeeks = order.assignedEmployees?.[0]?.assigned_recurrence_interval_weeks || order.object?.recurrence_interval_weeks || 1;
     const assignedStartWeekOffset = order.assignedEmployees?.[0]?.assigned_start_week_offset || order.object?.start_week_offset || 0;
     if (assignedRecurrenceIntervalWeeks > 1) {
-      const orderStartDate = order.recurring_start_date ? new Date(order.recurring_start_date) : (order.due_date ? new Date(order.due_date) : today);
+      const orderStartDate = order.start_date ? new Date(order.start_date) : (order.due_date ? new Date(order.due_date) : today);
       const startWeekNumber = getWeek(orderStartDate, { weekStartsOn: 1 });
       let weekDifference = currentWeekNumber - startWeekNumber;
       if (weekDifference < 0) { weekDifference += 52; }
@@ -270,10 +270,10 @@ export default function CustomerBookingsPage() {
                             {format(new Date(order.due_date), 'dd.MM.yyyy', { locale: de })}
                           </div>
                         )}
-                        {(order.order_type === "recurring" || order.order_type === "permanent" || order.order_type === "substitution") && order.recurring_start_date && (
+                        {(order.order_type === "recurring" || order.order_type === "permanent" || order.order_type === "substitution") && order.start_date && (
                           <div className="flex items-center">
                             <CalendarDays className="mr-1 h-3 w-3" />
-                            {format(new Date(order.recurring_start_date), 'dd.MM.yyyy', { locale: de })}
+                            {format(new Date(order.start_date), 'dd.MM.yyyy', { locale: de })}
                             {order.recurring_end_date && ` - ${format(new Date(order.recurring_end_date), 'dd.MM.yyyy', { locale: de })}`}
                           </div>
                         )}

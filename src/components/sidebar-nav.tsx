@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Home, Briefcase, Users, ContactRound, Building, UsersRound, Clock, CalendarOff,
-  CalendarCheck, TrendingUp, FileText, Star, DollarSign, ListOrdered, MessageSquare, Shield, Settings
+  CalendarCheck, TrendingUp, FileText, Star, DollarSign, ListOrdered, MessageSquare, Shield, Settings, Wrench
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -98,6 +98,7 @@ const navItems: NavItem[] = [
     isCategory: true,
     roles: ['admin'],
     children: [
+      { title: "Services", href: "/dashboard/services", icon: Wrench, roles: ['admin'] },
       { title: "Einstellungen", href: "/dashboard/settings", icon: Settings, roles: ['admin'] },
       { title: "Audit-Logs", href: "/dashboard/audit-logs", icon: Shield, roles: ['admin'] },
       { title: "Benutzer", href: "/dashboard/users", icon: Users, roles: ['admin'] },

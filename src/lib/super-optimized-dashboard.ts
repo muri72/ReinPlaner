@@ -87,7 +87,7 @@ export async function getSuperOptimizedDashboardData() {
       // Pending requests - AGGRESSIVE limit
       supabase
         .from('orders')
-        .select('id, title, request_status, service_type, order_type, due_date, recurring_start_date, recurring_end_date')
+        .select('id, title, request_status, service_type, order_type, end_date, start_date')
         .eq('request_status', 'pending')
         .order('created_at', { ascending: true })
         .limit(10), // Only 10 most recent
@@ -181,9 +181,8 @@ export async function getSuperOptimizedDashboardData() {
         service_type: order.service_type,
         request_status: order.request_status,
         order_type: order.order_type,
-        due_date: order.due_date,
-        recurring_start_date: order.recurring_start_date,
-        recurring_end_date: order.recurring_end_date,
+        end_date: order.end_date,
+        start_date: order.start_date,
       })),
       allUnresolvedFeedback: [], // Don't load to save time
       statusCounts,

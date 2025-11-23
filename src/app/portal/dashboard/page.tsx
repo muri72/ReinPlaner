@@ -27,9 +27,8 @@ interface Order {
   title: string;
   status: string;
   priority: string;
-  due_date: string | null;
-  recurring_start_date: string | null;
-  recurring_end_date: string | null;
+  start_date: string | null;
+  end_date: string | null;
   order_type: string;
   service_type: string | null;
   customer_name: string | null;
@@ -81,9 +80,8 @@ export default function CustomerDashboard() {
           title,
           status,
           priority,
-          due_date,
-          recurring_start_date,
-          recurring_end_date,
+          start_date,
+          end_date,
           order_type,
           service_type,
           customer_notes,

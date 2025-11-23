@@ -53,10 +53,10 @@ export async function getMultiMonthFinancialData(numberOfMonths: number = 6) {
       // Fixed monthly prices from permanent orders (only count if the month is within their recurring period)
       const { data: fixedPriceOrders, error: fixedPriceError } = await supabase
         .from('orders')
-        .select('fixed_monthly_price, recurring_start_date, recurring_end_date, order_employee_assignments ( employee_id )') // Include assignments to filter
+        .select('fixed_monthly_price, start_date, recurring_end_date, order_employee_assignments ( employee_id )') // Include assignments to filter
         .eq('order_type', 'permanent')
         .not('fixed_monthly_price', 'is', null)
-        .lte('recurring_start_date', endDate.toISOString().split('T')[0]) // Order started before or in this month
+        .lte('start_date', endDate.toISOString().split('T')[0]) // Order started before or in this month
         .or(`recurring_end_date.gte.${startDate.toISOString().split('T')[0]},recurring_end_date.is.null`); // Order ends after or in this month, or never ends
 
       if (fixedPriceError) throw fixedPriceError;
@@ -175,10 +175,10 @@ export async function getRevenueLast7Days() {
     // or a dedicated invoicing system. For now, we'll just sum up fixed prices if the order was active.
     const { data: fixedPriceOrders, error: fixedPriceError } = await supabase
       .from('orders')
-      .select('fixed_monthly_price, recurring_start_date, recurring_end_date, order_employee_assignments ( employee_id )') // Include assignments
+      .select('fixed_monthly_price, start_date, recurring_end_date, order_employee_assignments ( employee_id )') // Include assignments
       .eq('order_type', 'permanent')
       .not('fixed_monthly_price', 'is', null)
-      .lte('recurring_start_date', today.toISOString().split('T')[0])
+      .lte('start_date', today.toISOString().split('T')[0])
       .or(`recurring_end_date.gte.${sevenDaysAgo.toISOString().split('T')[0]},recurring_end_date.is.null`);
 
     if (fixedPriceError) throw fixedPriceError;

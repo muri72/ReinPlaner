@@ -17,7 +17,6 @@ interface DisplayOrder {
   title: string;
   description: string | null;
   status: string;
-  due_date: string | null;
   created_at: string | null;
   customer_id: string | null;
   object_id: string | null;
@@ -31,8 +30,8 @@ interface DisplayOrder {
   customer_contact_first_name: string | null;
   customer_contact_last_name: string | null;
   order_type: string;
-  recurring_start_date: string | null;
-  recurring_end_date: string | null;
+  start_date: string | null;
+  end_date: string | null;
   priority: string;
   total_estimated_hours: number | null;
   notes: string | null;
@@ -124,17 +123,17 @@ export function OrdersTableView({
                 <TableCell><Badge variant={getPriorityBadgeVariant(order.priority)}>{order.priority}</Badge></TableCell>
                 <TableCell><Badge variant={getStatusBadgeVariant(order.status)}>{order.status}</Badge></TableCell>
                 <TableCell className="text-sm">
-                  {order.order_type === "one_time" && order.due_date && (
+                  {order.start_date && (
                     <div className="flex items-center">
                       <CalendarDays className="mr-1 h-3 w-3" />
-                      {format(parseLocalDate(order.due_date)!, 'dd.MM.yyyy', { locale: de })}
+                      {format(parseLocalDate(order.start_date)!, 'dd.MM.yyyy', { locale: de })}
+                      {order.end_date && ` - ${format(parseLocalDate(order.end_date)!, 'dd.MM.yyyy', { locale: de })}`}
                     </div>
                   )}
-                  {(order.order_type === "recurring" || order.order_type === "substitution" || order.order_type === "permanent") && order.recurring_start_date && (
+                  {!order.start_date && order.end_date && (
                     <div className="flex items-center">
                       <CalendarDays className="mr-1 h-3 w-3" />
-                      {format(parseLocalDate(order.recurring_start_date)!, 'dd.MM.yyyy', { locale: de })}
-                      {order.recurring_end_date && ` - ${format(parseLocalDate(order.recurring_end_date)!, 'dd.MM.yyyy', { locale: de })}`}
+                      {format(parseLocalDate(order.end_date)!, 'dd.MM.yyyy', { locale: de })}
                     </div>
                   )}
                 </TableCell>

@@ -27,6 +27,7 @@ import { PageHeader } from "@/components/page-header";
 import { DataTableToolbar, FilterOption, SortOption } from "@/components/data-table-toolbar";
 import { OrdersGridView } from "@/components/orders-grid-view";
 import { OrdersGridSkeleton } from "@/components/orders-grid-skeleton";
+import { calculateFinalHourlyRate, calculateTotalCost } from "@/lib/utils";
 
 const dayNames = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const;
 const germanDayNames: { [key: string]: string } = {
@@ -45,22 +46,22 @@ export interface DisplayOrder {
   title: string;
   description: string | null;
   status: string;
-  due_date: string | null;
   created_at: string | null;
   customer_id: string | null;
   object_id: string | null;
   customer_contact_id: string | null;
   order_type: string;
-  recurring_start_date: string | null;
-  recurring_end_date: string | null;
+  start_date: string | null;
+  end_date: string | null;
   priority: string;
   total_estimated_hours: number | null;
   fixed_monthly_price: number | null;
   notes: string | null;
   request_status: string;
   service_type: string | null;
-  is_active: boolean;
-  end_date: string | null;
+  service_key: string | null;
+  markup_percentage: number | null;
+  custom_hourly_rate: number | null;
   // Derived for display
   customer_name: string | null;
   object_name: string | null;
@@ -70,7 +71,8 @@ export interface DisplayOrder {
   employee_ids: string[] | null;
   employee_first_names: string[] | null;
   employee_last_names: string[] | null;
-  hourly_rate: number | null;
+  hourly_rate: number | null; // Final calculated hourly rate (with markup and custom rate)
+  total_cost: number | null; // Total cost calculation
   // Full assignment data
   assignedEmployees: AssignedEmployee[];
   order_feedback: {
@@ -85,14 +87,6 @@ export interface DisplayOrder {
   customer: { name: string | null; } | null;
   customer_contact: { first_name: string | null; last_name: string | null; phone: string | null; } | null;
 }
-
-const availableServices = [
-  "Unterhaltsreinigung",
-  "Glasreinigung",
-  "Grundreinigung",
-  "Graffitientfernung",
-  "Sonderreinigung",
-] as const;
 
 export default function OrdersPage({
   searchParams,
@@ -109,6 +103,7 @@ export default function OrdersPage({
   const [allOrders, setAllOrders] = useState<DisplayOrder[]>([]);
   const [customers, setCustomers] = useState<{ id: string; name: string }[]>([]);
   const [employees, setEmployees] = useState<{ id: string; first_name: string | null; last_name: string | null }[]>([]);
+  const [services, setServices] = useState<{ id: string; key: string; title: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [totalCount, setTotalCount] = useState<number | null>(0);
 
@@ -120,7 +115,6 @@ export default function OrdersPage({
   const serviceTypeFilter = (currentSearchParams.get('serviceType') || '') as string;
   const customerIdFilter = (currentSearchParams.get('customerId') || '') as string;
   const employeeIdFilter = (currentSearchParams.get('employeeId') || '') as string;
-  const isActiveFilter = (currentSearchParams.get('isActive') || 'true') as string;
   const viewMode = (currentSearchParams.get('viewMode') || 'grid') as string;
   const sortColumn = (currentSearchParams.get('sortColumn') || 'created_at') as string;
   const sortDirection = (currentSearchParams.get('sortDirection') || 'desc') as string;
@@ -152,13 +146,16 @@ export default function OrdersPage({
     const { data: customersData, error: customersError } = await supabase.from('customers').select('id, name').order('name', { ascending: true });
     const { data: employeesData, error: employeesError } = await supabase.from('employees').select('id, first_name, last_name, status').eq('status', 'active').order('last_name', { ascending: true });
     const { data: serviceRatesData, error: serviceRatesError } = await supabase.from('service_rates').select('service_type, hourly_rate');
+    const { data: servicesData, error: servicesError } = await supabase.from('services').select('id, key, title, default_hourly_rate').eq('is_active', true).order('title', { ascending: true });
 
     if (customersError) console.error("Fehler beim Laden der Kunden für Filter:", customersError.message);
     if (employeesError) console.error("Fehler beim Laden der Mitarbeiter für Filter:", employeesError.message);
     if (serviceRatesError) console.error("Fehler beim Laden der Stundensätze:", serviceRatesError.message);
+    if (servicesError) console.error("Fehler beim Laden der Services:", servicesError.message);
 
     setCustomers(customersData || []);
     setEmployees(employeesData || []);
+    setServices(servicesData || []);
 
     let ordersData: DisplayOrder[] = [];
     let ordersError: any = null;
@@ -191,21 +188,21 @@ export default function OrdersPage({
         title,
         description,
         status,
-        due_date,
         created_at,
         customer_id,
         object_id,
         customer_contact_id,
         order_type,
-        recurring_start_date,
-        recurring_end_date,
+        start_date,
         priority,
         total_estimated_hours,
         fixed_monthly_price,
         notes,
         request_status,
         service_type,
-        is_active,
+        service_key,
+        markup_percentage,
+        custom_hourly_rate,
         end_date,
         customers ( name ),
         objects ( name, address, notes, time_of_day, access_method, pin, is_alarm_secured, alarm_password, security_code_word, recurrence_interval_weeks, start_week_offset, daily_schedules ),
@@ -221,7 +218,10 @@ export default function OrdersPage({
       .order(sortColumn, { ascending: sortDirection === 'asc' });
 
     // Apply base filters
-    if (statusFilter) {
+    if (!statusFilter || statusFilter === 'active') {
+      // Default: Show only active orders (pending + in_progress)
+      selectQuery = selectQuery.in('status', ['pending', 'in_progress']);
+    } else {
       selectQuery = selectQuery.eq('status', statusFilter);
     }
     if (orderTypeFilter) {
@@ -235,11 +235,6 @@ export default function OrdersPage({
     }
     if (employeeIdFilter) {
       selectQuery = selectQuery.eq('order_employee_assignments.employee_id', employeeIdFilter);
-    }
-    if (isActiveFilter === 'true') {
-      selectQuery = selectQuery.eq('is_active', true);
-    } else if (isActiveFilter === 'false') {
-      selectQuery = selectQuery.eq('is_active', false);
     }
 
     // Apply search filter if query exists - search in main table first
@@ -262,10 +257,22 @@ export default function OrdersPage({
           assigned_start_week_offset: a.assigned_start_week_offset,
       })) || [];
 
-      // Get hourly rate for this order's service type
-      const hourlyRate = order.service_type
-        ? ordersServiceRates.find((r: any) => r.service_type === order.service_type)?.hourly_rate || null
-        : null;
+      // Calculate final hourly rate using the new service system
+      const serviceConfig = {
+        service_key: order.service_key,
+        markup_percentage: order.markup_percentage,
+        custom_hourly_rate: order.custom_hourly_rate,
+      };
+      const finalHourlyRate = calculateFinalHourlyRate(
+        serviceConfig,
+        servicesData || []
+      );
+
+      // Calculate total cost
+      const totalCost = calculateTotalCost(
+        order.total_estimated_hours,
+        finalHourlyRate
+      );
 
       return {
         id: order.id,
@@ -273,22 +280,22 @@ export default function OrdersPage({
         title: order.title,
         description: order.description,
         status: order.status,
-        due_date: order.due_date,
         created_at: order.created_at,
         customer_id: order.customer_id,
         object_id: order.object_id,
         customer_contact_id: order.customer_contact_id,
         order_type: order.order_type,
-        recurring_start_date: order.recurring_start_date,
-        recurring_end_date: order.recurring_end_date,
+        start_date: order.start_date,
+        end_date: order.end_date,
         priority: order.priority,
         total_estimated_hours: order.total_estimated_hours,
         fixed_monthly_price: order.fixed_monthly_price,
         notes: order.notes,
         request_status: order.request_status,
         service_type: order.service_type,
-        is_active: order.is_active,
-        end_date: order.end_date,
+        service_key: order.service_key,
+        markup_percentage: order.markup_percentage,
+        custom_hourly_rate: order.custom_hourly_rate,
         order_feedback: order.order_feedback,
         customer_name: customerData?.name || null,
         object_name: objectData?.name || null,
@@ -304,7 +311,8 @@ export default function OrdersPage({
           const employee = Array.isArray(a.employees) ? a.employees[0] : a.employees;
           return employee?.last_name || '';
         }) || null,
-        hourly_rate: hourlyRate,
+        hourly_rate: finalHourlyRate,
+        total_cost: totalCost,
         assignedEmployees: mappedAssignments,
         object: objectData,
         customer: customerData,
@@ -330,7 +338,6 @@ export default function OrdersPage({
     serviceTypeFilter,
     customerIdFilter,
     employeeIdFilter,
-    isActiveFilter,
     sortColumn,
     sortDirection,
     currentSearchParams
@@ -371,18 +378,12 @@ export default function OrdersPage({
     { value: 'permanent', label: 'Permanent' },
   ];
 
-  const isActiveOptions = [
-    { value: 'true', label: 'Aktiv' },
-    { value: 'false', label: 'Inaktiv' },
-  ];
-
   const filterOptions: FilterOption[] = [
     { value: 'status', label: 'Status', options: orderStatusOptions },
     { value: 'orderType', label: 'Auftragstyp', options: orderTypeOptions },
-    { value: 'serviceType', label: 'Dienstleistung', options: availableServices.map(s => ({ value: s, label: s })) },
+    { value: 'serviceType', label: 'Dienstleistung', options: services.map(s => ({ value: s.key, label: s.title })) },
     { value: 'customerId', label: 'Kunde', options: customers.map(c => ({ value: c.id, label: c.name })) },
     { value: 'employeeId', label: 'Mitarbeiter', options: employees.map(e => ({ value: e.id, label: `${e.first_name} ${e.last_name}` })) },
-    { value: 'isActive', label: 'Aktivitätsstatus', options: isActiveOptions },
   ];
 
   const sortOptions: SortOption[] = [

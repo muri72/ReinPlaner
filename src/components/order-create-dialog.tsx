@@ -30,10 +30,17 @@ export function OrderCreateDialog({
   const [internalOpen, setInternalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("details");
   const [createdOrderId, setCreatedOrderId] = useState<string | null>(null);
+  const [formKey, setFormKey] = useState(0);
   const isControlled = controlledOpen !== undefined;
   const open = isControlled ? controlledOpen : internalOpen;
 
   const setOpenState = (next: boolean) => {
+    if (next && !open) {
+      // Reset form when opening dialog
+      setFormKey(prev => prev + 1);
+      setCreatedOrderId(null);
+      setActiveTab("details");
+    }
     if (!isControlled) {
       setInternalOpen(next);
     }
@@ -88,6 +95,7 @@ export function OrderCreateDialog({
         <div className="flex-1 overflow-hidden">
           <TabsContent value="details" className="h-full m-0 p-0">
             <OrderForm
+              key={`order-create-form-${formKey}`}
               onSubmit={handleCreate}
               submitButtonText="Auftrag erstellen"
               onSuccess={() => {}}

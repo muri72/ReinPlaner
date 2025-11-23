@@ -61,7 +61,7 @@ function MonthDayCell({ day, monthStart, employeeId, employee, activeDragId, onA
 
   // Get unassigned orders for this day
   const ordersForDay = unassignedOrders.filter(
-    (order) => order.due_date && format(new Date(order.due_date), "yyyy-MM-dd") === dateString
+    (order) => order.end_date && format(new Date(order.end_date), "yyyy-MM-dd") === dateString
   );
 
   const totalAssignments = dayData?.assignments?.length || 0;

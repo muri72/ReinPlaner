@@ -153,10 +153,10 @@ export function PlanningKpiSummary({
     let unassignedInRange = 0;
 
     unassignedOrders.forEach((order) => {
-      if (!order.due_date) {
+      if (!order.end_date) {
         return;
       }
-      const dueDate = new Date(order.due_date);
+      const dueDate = new Date(order.end_date);
       if (Number.isNaN(dueDate.getTime())) {
         return;
       }

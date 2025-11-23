@@ -25,9 +25,8 @@ interface Order {
   title: string;
   status: string;
   priority: string;
-  due_date: string | null;
-  recurring_start_date: string | null;
-  recurring_end_date: string | null;
+  start_date: string | null;
+  end_date: string | null;
   order_type: string;
   service_type: string | null;
   customer_name: string | null;
@@ -182,14 +181,14 @@ export function MobileOrderCard({
             <div className="flex items-center gap-1">
               <Calendar className="h-4 w-4" />
               <span>
-                {order.due_date
-                  ? formatDate(order.due_date)
-                  : formatDate(order.recurring_start_date)}
+                {order.start_date
+                  ? formatDate(order.start_date)
+                  : order.end_date && formatDate(order.end_date)}
               </span>
             </div>
-            {order.recurring_end_date && (
+            {order.end_date && (
               <span className="text-xs text-muted-foreground/80">
-                bis {formatDate(order.recurring_end_date)}
+                bis {formatDate(order.end_date)}
               </span>
             )}
           </div>

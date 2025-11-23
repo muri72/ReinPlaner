@@ -95,3 +95,52 @@ export const formatDateWithWeekday = (dateStr: string): string => {
   const weekday = date.toLocaleDateString('de-DE', { weekday: 'short' });
   return `${weekday} ${day}.${month}.${year}`;
 };
+
+// Helper to calculate final hourly rate based on service configuration
+export interface ServiceConfig {
+  service_key: string | null;
+  markup_percentage: number | null;
+  custom_hourly_rate: number | null;
+}
+
+export interface ServiceItem {
+  key: string;
+  default_hourly_rate: number | null;
+}
+
+export const calculateFinalHourlyRate = (
+  serviceConfig: ServiceConfig,
+  services: ServiceItem[]
+): number | null => {
+  const { service_key, markup_percentage, custom_hourly_rate } = serviceConfig;
+
+  // If custom hourly rate is provided, use it
+  if (custom_hourly_rate && custom_hourly_rate > 0) {
+    return Number(custom_hourly_rate);
+  }
+
+  // Otherwise, get default rate from service and apply markup
+  if (service_key) {
+    const service = services.find(s => s.key === service_key);
+    let defaultRate = Number(service?.default_hourly_rate || 0);
+
+    if (defaultRate > 0 && markup_percentage && markup_percentage > 0) {
+      defaultRate = defaultRate * (1 + markup_percentage / 100);
+    }
+
+    return defaultRate > 0 ? defaultRate : null;
+  }
+
+  return null;
+};
+
+// Helper to calculate total cost based on hours and rate
+export const calculateTotalCost = (
+  hours: number | null,
+  hourlyRate: number | null
+): number | null => {
+  if (!hours || !hourlyRate || hours <= 0 || hourlyRate <= 0) {
+    return null;
+  }
+  return hours * hourlyRate;
+};

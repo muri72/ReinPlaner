@@ -12,6 +12,9 @@ interface OrderData {
   status: string;
   priority: string;
   service_type: string | null;
+  service_key: string | null;
+  markup_percentage: number | null;
+  custom_hourly_rate: number | null;
   customer_name: string | null;
   object_name: string | null;
   object_address: string | null;
@@ -20,12 +23,12 @@ interface OrderData {
   employee_first_names: string[] | null;
   employee_last_names: string[] | null;
   order_type: string;
-  due_date: string | null;
-  recurring_start_date: string | null;
-  recurring_end_date: string | null;
+  start_date: string | null;
+  end_date: string | null;
   total_estimated_hours: number | null;
   fixed_monthly_price: number | null;
   hourly_rate: number | null;
+  total_cost: number | null;
   // For better hour display
   object?: { recurrence_interval_weeks: number } | null;
   assignedEmployees?: Array<{
@@ -190,20 +193,45 @@ export function OrderSummaryCard({ order }: OrderSummaryCardProps) {
           }
 
           // For hourly rates
-          if (order.total_estimated_hours && order.total_estimated_hours > 0 && order.service_type) {
+          if (order.total_estimated_hours && order.total_estimated_hours > 0 && order.hourly_rate) {
+            const totalCost = order.total_cost || (order.total_estimated_hours * order.hourly_rate);
+
             return (
               <div className="mt-2 p-2 bg-blue-5 rounded-md border border-blue-200">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium">Zeitaufwand:</span>
                   <span className="text-sm font-semibold">
                     {order.total_estimated_hours.toFixed(2)} Std.
-                    {order.hourly_rate && (
-                      <span className="text-xs text-muted-foreground ml-2">
-                        × {order.hourly_rate.toFixed(2)} €/h = {(order.total_estimated_hours * order.hourly_rate).toFixed(2)} €
-                      </span>
-                    )}
+                    <span className="text-xs text-muted-foreground ml-2">
+                      × {order.hourly_rate.toFixed(2)} €/h = {totalCost.toFixed(2)} €
+                    </span>
                   </span>
                 </div>
+                {order.markup_percentage && order.markup_percentage > 0 && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    inkl. {order.markup_percentage}% Aufschlag
+                  </p>
+                )}
+                {order.custom_hourly_rate && order.custom_hourly_rate > 0 && order.markup_percentage === null && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    individueller Stundensatz
+                  </p>
+                )}
+              </div>
+            );
+          } else if (order.total_estimated_hours && order.total_estimated_hours > 0 && order.service_type) {
+            // Fallback: show hours without cost if no rate available
+            return (
+              <div className="mt-2 p-2 bg-gray-50 rounded-md border border-gray-200">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">Zeitaufwand:</span>
+                  <span className="text-sm font-semibold">
+                    {order.total_estimated_hours.toFixed(2)} Std.
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Stundensatz nicht hinterlegt
+                </p>
               </div>
             );
           }
@@ -212,19 +240,28 @@ export function OrderSummaryCard({ order }: OrderSummaryCardProps) {
         })()}
 
         {/* Monthly cost for recurring, substitution, and permanent orders with hourly rate */}
-        {['recurring', 'substitution', 'permanent'].includes(order.order_type) && order.total_estimated_hours && order.total_estimated_hours > 0 && order.hourly_rate && (
-          <div className="mt-2 p-2 bg-green-50 rounded-md border border-green-200">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">Monatliche Hochrechnung:</span>
-              <span className="text-sm font-semibold text-green-600">
-                {(order.total_estimated_hours * order.hourly_rate * (4.33 / (order.object?.recurrence_interval_weeks || 1))).toFixed(2)} €
-              </span>
+        {['recurring', 'substitution', 'permanent'].includes(order.order_type) && order.total_estimated_hours && order.total_estimated_hours > 0 && order.hourly_rate && (() => {
+          const totalCost = order.total_cost || (order.total_estimated_hours * order.hourly_rate);
+          const weeksPerMonth = 4.33;
+          const recurrenceInterval = order.object?.recurrence_interval_weeks || 1;
+          const occurrencesPerMonth = weeksPerMonth / recurrenceInterval;
+          const monthlyTotal = totalCost * occurrencesPerMonth;
+
+          return (
+            <div className="mt-2 p-2 bg-green-50 rounded-md border border-green-200">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Monatliche Hochrechnung:</span>
+                <span className="text-sm font-semibold text-green-600">
+                  {monthlyTotal.toFixed(2)} €
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                {occurrencesPerMonth.toFixed(2)}x pro Monat
+                {recurrenceInterval > 1 && ` (alle ${recurrenceInterval} Wochen)`}
+              </p>
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {order.total_estimated_hours.toFixed(2)}h × {order.hourly_rate.toFixed(2)} €/h × {(4.33 / (order.object?.recurrence_interval_weeks || 1)).toFixed(2)}x
-            </p>
-          </div>
-        )}
+          );
+        })()}
       </CardContent>
     </Card>
   );

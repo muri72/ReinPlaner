@@ -4,6 +4,7 @@ import { PageHeader } from "@/components/page-header";
 import { OrderSummaryCard } from "@/components/order-summary-card";
 import { OrderDetailTabs } from "@/components/order-detail-tabs";
 import { BackButtonWithParams } from "@/components/back-button-with-params";
+import { calculateFinalHourlyRate, calculateTotalCost } from "@/lib/utils";
 
 export default async function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const supabase = await createClient();
@@ -39,19 +40,32 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
     redirect("/dashboard/orders");
   }
 
-  // Fetch service rates for hourly rate calculation
-  const { data: serviceRatesData, error: serviceRatesError } = await supabase
-    .from('service_rates')
-    .select('service_type, hourly_rate');
+  // Fetch services for hourly rate calculation
+  const { data: servicesData, error: servicesError } = await supabase
+    .from('services')
+    .select('id, key, title, default_hourly_rate')
+    .eq('is_active', true);
 
-  if (serviceRatesError) {
-    console.error("Fehler beim Laden der Stundensätze:", serviceRatesError.message);
+  if (servicesError) {
+    console.error("Fehler beim Laden der Services:", servicesError.message);
   }
 
-  // Calculate hourly rate based on service type
-  const hourlyRate = order.service_type
-    ? serviceRatesData?.find((r: any) => r.service_type === order.service_type)?.hourly_rate || null
-    : null;
+  // Calculate final hourly rate using the new service system
+  const serviceConfig = {
+    service_key: order.service_key,
+    markup_percentage: order.markup_percentage,
+    custom_hourly_rate: order.custom_hourly_rate,
+  };
+  const finalHourlyRate = calculateFinalHourlyRate(
+    serviceConfig,
+    servicesData || []
+  );
+
+  // Calculate total cost
+  const totalCost = calculateTotalCost(
+    order.total_estimated_hours,
+    finalHourlyRate
+  );
 
   // Flatten nested data for easier prop passing
   const flattenedOrder = {
@@ -76,7 +90,8 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
       assigned_start_week_offset: a.assigned_start_week_offset || 0,
     })) || [],
     object: Array.isArray(order.objects) ? order.objects[0] : order.objects,
-    hourly_rate: hourlyRate,
+    hourly_rate: finalHourlyRate,
+    total_cost: totalCost,
   };
 
   return (

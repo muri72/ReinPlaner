@@ -19,23 +19,24 @@ interface OrderData {
   status: string;
   priority: string;
   service_type: string | null;
+  service_key: string | null;
+  markup_percentage: number | null;
+  custom_hourly_rate: number | null;
   customer_name: string | null;
   object_name: string | null;
   object_address: string | null;
   notes: string | null;
   order_type: string;
-  due_date: string | null;
-  recurring_start_date: string | null;
-  recurring_end_date: string | null;
+  start_date: string | null;
+  end_date: string | null;
   total_estimated_hours: number | null;
   fixed_monthly_price: number | null;
   hourly_rate: number | null;
+  total_cost: number | null;
   request_status: string;
   customer_id: string | null;
   object_id: string | null;
   customer_contact_id: string | null;
-  is_active: boolean;
-  end_date: string | null;
   // Employee data
   employee_first_names: string[] | null;
   employee_last_names: string[] | null;
@@ -98,39 +99,27 @@ export function OrderDetailTabs({ order }: OrderDetailTabsProps) {
                 <p className="font-medium text-muted-foreground">Typ</p>
                 <p>{order.order_type}</p>
               </div>
-              {order.due_date && (
-                <div className="space-y-1">
-                  <p className="font-medium text-muted-foreground">Fällig am</p>
-                  <p>{parseLocalDate(order.due_date)?.toLocaleDateString()}</p>
-                </div>
-              )}
-              {order.recurring_start_date && (
+              {order.start_date && (
                 <div className="space-y-1">
                   <p className="font-medium text-muted-foreground">Startdatum</p>
-                  <p>{parseLocalDate(order.recurring_start_date)?.toLocaleDateString()}</p>
-                </div>
-              )}
-              {order.recurring_end_date && (
-                <div className="space-y-1">
-                  <p className="font-medium text-muted-foreground">Enddatum (Wiederkehrend)</p>
-                  <p>{parseLocalDate(order.recurring_end_date)?.toLocaleDateString()}</p>
+                  <p>{parseLocalDate(order.start_date)?.toLocaleDateString()}</p>
                 </div>
               )}
               {order.end_date && (
                 <div className="space-y-1">
-                  <p className="font-medium text-muted-foreground">Auftrag Enddatum</p>
+                  <p className="font-medium text-muted-foreground">Enddatum</p>
                   <p>{parseLocalDate(order.end_date)?.toLocaleDateString()}</p>
                 </div>
               )}
               <div className="space-y-1">
                 <p className="font-medium text-muted-foreground">Status</p>
-                <p className={order.is_active ? "text-green-600 font-medium" : "text-gray-500"}>
-                  {order.is_active ? "Aktiv" : "Inaktiv"}
+                <p className={order.status === 'completed' ? "text-gray-500" : "text-green-600 font-medium"}>
+                  {order.status === 'completed' ? 'Abgeschlossen' : order.status === 'in_progress' ? 'In Bearbeitung' : 'Ausstehend'}
                 </p>
               </div>
               {order.total_estimated_hours && (
                 <div className="space-y-1">
-                  <p className="font-medium text-muted-foreground">Stunden</p>
+                  <p className="font-medium text-muted-foreground">Zeitaufwand</p>
                   <OrderHoursSummary
                     totalHours={order.total_estimated_hours}
                     employees={
@@ -170,19 +159,45 @@ export function OrderDetailTabs({ order }: OrderDetailTabsProps) {
                       <p className="text-sm text-muted-foreground">pro Auftrag</p>
                     </div>
                   );
+                } else if (order.total_estimated_hours && order.total_estimated_hours > 0 && order.hourly_rate) {
+                  // Calculate total cost if not already calculated
+                  const totalCost = order.total_cost || (order.total_estimated_hours * order.hourly_rate);
+
+                  return (
+                    <div className="space-y-2">
+                      <p className="font-medium text-muted-foreground">Zeitaufwand & Kosten</p>
+                      <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                        <p className="text-lg font-semibold">
+                          {order.total_estimated_hours.toFixed(2)} Std. × {order.hourly_rate.toFixed(2)} €/h
+                        </p>
+                        <p className="text-xl font-bold text-primary">
+                          = {totalCost.toFixed(2)} € {['recurring', 'substitution', 'permanent'].includes(order.order_type) ? 'pro Einsatz' : 'gesamt'}
+                        </p>
+                        {order.markup_percentage && order.markup_percentage > 0 && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            (inkl. {order.markup_percentage}% Aufschlag)
+                          </p>
+                        )}
+                        {order.custom_hourly_rate && order.custom_hourly_rate > 0 && order.markup_percentage === null && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            (individueller Stundensatz)
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  );
                 } else if (order.total_estimated_hours && order.total_estimated_hours > 0 && order.service_type) {
+                  // Fallback: show hours without cost if no rate available
                   return (
                     <div className="space-y-2">
                       <p className="font-medium text-muted-foreground">Zeitaufwand</p>
-                      <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                      <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
                         <p className="text-lg font-semibold">
-                          {order.total_estimated_hours.toFixed(2)} Std. {order.hourly_rate ? `× ${order.hourly_rate.toFixed(2)} €/h` : ''}
+                          {order.total_estimated_hours.toFixed(2)} Std.
                         </p>
-                        {order.hourly_rate && (
-                          <p className="text-xl font-bold text-primary">
-                            = {(order.total_estimated_hours * order.hourly_rate).toFixed(2)} € pro Einsatz
-                          </p>
-                        )}
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Stundensatz nicht hinterlegt
+                        </p>
                       </div>
                     </div>
                   );

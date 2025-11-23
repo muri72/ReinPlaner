@@ -14,7 +14,7 @@ interface Order {
   status: string;
   order_type: string;
   due_date: string | null;
-  recurring_start_date: string | null;
+  start_date: string | null;
   recurring_end_date: string | null;
   objects: { name: string | null } | null;
 }
@@ -68,10 +68,10 @@ export function CustomerOrdersList({ orders }: CustomerOrdersListProps) {
                     {format(new Date(order.due_date), 'dd.MM.yyyy', { locale: de })}
                   </div>
                 )}
-                {(order.order_type === "recurring" || order.order_type === "permanent" || order.order_type === "substitution") && order.recurring_start_date && (
+                {(order.order_type === "recurring" || order.order_type === "permanent" || order.order_type === "substitution") && order.start_date && (
                   <div className="flex items-center text-sm">
                     <CalendarDays className="mr-1 h-3 w-3" />
-                    {format(new Date(order.recurring_start_date), 'dd.MM.yyyy', { locale: de })}
+                    {format(new Date(order.start_date), 'dd.MM.yyyy', { locale: de })}
                     {order.recurring_end_date && ` - ${format(new Date(order.recurring_end_date), 'dd.MM.yyyy', { locale: de })}`}
                   </div>
                 )}

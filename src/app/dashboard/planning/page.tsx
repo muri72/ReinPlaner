@@ -191,11 +191,11 @@ export default function PlanningPage() {
     }
     const selectedKey = format(mobileSelectedDate, "yyyy-MM-dd");
     return unassignedOrders.filter((order) => {
-      if (!order.due_date) {
+      if (!order.end_date) {
         return false;
       }
       try {
-        return format(new Date(order.due_date), "yyyy-MM-dd") === selectedKey;
+        return format(new Date(order.end_date), "yyyy-MM-dd") === selectedKey;
       } catch {
         return false;
       }

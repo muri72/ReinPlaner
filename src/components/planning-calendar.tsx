@@ -121,7 +121,7 @@ export function PlanningCalendar({ planningData, unassignedOrders, weekDays, act
               {weekDays.map((day) => {
                 const dateString = format(day, "yyyy-MM-dd");
                 const ordersForDay = unassignedOrders.filter(
-                  (order) => order.due_date && format(parseISO(order.due_date), "yyyy-MM-dd") === dateString
+                  (order) => order.end_date && format(parseISO(order.end_date), "yyyy-MM-dd") === dateString
                 );
                 const droppableId = `unassigned__${dateString}`;
                 return (

@@ -139,9 +139,9 @@ export function MobilePlanningCalendar({
   const unassignedCountByDate = React.useMemo(() => {
     const map = new Map<string, number>();
     unassignedOrders.forEach((order) => {
-      if (!order.due_date) return;
+      if (!order.end_date) return;
       try {
-        const dateKey = format(new Date(order.due_date), "yyyy-MM-dd");
+        const dateKey = format(new Date(order.end_date), "yyyy-MM-dd");
         map.set(dateKey, (map.get(dateKey) ?? 0) + 1);
       } catch {
         // ignore parsing issues
@@ -213,11 +213,11 @@ export function MobilePlanningCalendar({
 
   const unassignedForSelectedDate = React.useMemo(() => {
     return unassignedOrders.filter((order) => {
-      if (!order.due_date) {
+      if (!order.end_date) {
         return false;
       }
       try {
-        const dueKey = format(new Date(order.due_date), "yyyy-MM-dd");
+        const dueKey = format(new Date(order.end_date), "yyyy-MM-dd");
         return dueKey === selectedDateKey;
       } catch {
         return false;

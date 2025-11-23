@@ -28,22 +28,22 @@ interface OrderEditDialogProps {
     id: string;
     title: string;
     description: string | null;
-    due_date: string | null;
     status: string;
     customer_id: string | null;
     object_id: string | null;
     customer_contact_id: string | null;
     order_type: string;
-    recurring_start_date: string | null;
-    recurring_end_date: string | null;
+    start_date: string | null;
+    end_date: string | null;
     priority: string;
     total_estimated_hours: number | null;
     fixed_monthly_price: number | null;
     notes: string | null;
     service_type: string | null;
+    service_key: string | null;
+    markup_percentage: number | null;
+    custom_hourly_rate: number | null;
     request_status: string;
-    is_active: boolean;
-    end_date: string | null;
     assignedEmployees: AssignedEmployee[]; // Use the correct, structured type
   };
   trigger?: React.ReactNode;
@@ -78,11 +78,15 @@ export function OrderEditDialog({ order, trigger }: OrderEditDialogProps) {
     return result;
   };
 
-  const getServiceTypeForForm = (serviceType: string | null): OrderFormValues["serviceType"] => {
-    if (serviceType && availableServices.includes(serviceType as any)) {
-      return serviceType as OrderFormValues["serviceType"];
+  const getServiceTypeForForm = (serviceType: string | null, serviceKey: string | null): { serviceType: OrderFormValues["serviceType"], serviceKey: string | null } => {
+    // Use serviceKey if available, otherwise fallback to serviceType
+    if (serviceKey) {
+      return { serviceType: serviceType as OrderFormValues["serviceType"], serviceKey };
     }
-    return null;
+    if (serviceType && availableServices.includes(serviceType as any)) {
+      return { serviceType: serviceType as OrderFormValues["serviceType"], serviceKey: null };
+    }
+    return { serviceType: null, serviceKey: null };
   };
 
   return (
@@ -118,23 +122,23 @@ export function OrderEditDialog({ order, trigger }: OrderEditDialogProps) {
               initialData={{
                 title: currentOrder.title,
                 description: currentOrder.description || undefined,
-                dueDate: currentOrder.due_date ? parseLocalDate(currentOrder.due_date) : undefined,
                 status: currentOrder.status as OrderFormValues["status"],
                 customerId: currentOrder.customer_id ?? undefined,
                 objectId: currentOrder.object_id ?? undefined,
                 customerContactId: currentOrder.customer_contact_id ?? undefined,
                 orderType: currentOrder.order_type as OrderFormValues["orderType"],
-                recurringStartDate: currentOrder.recurring_start_date ? parseLocalDate(currentOrder.recurring_start_date) : undefined,
-                recurringEndDate: currentOrder.recurring_end_date ? parseLocalDate(currentOrder.recurring_end_date) : undefined,
+                startDate: currentOrder.start_date ? parseLocalDate(currentOrder.start_date) : undefined,
+                endDate: currentOrder.end_date ? parseLocalDate(currentOrder.end_date) : undefined,
                 priority: currentOrder.priority as OrderFormValues["priority"],
                 totalEstimatedHours: currentOrder.total_estimated_hours,
                 fixedMonthlyPrice: currentOrder.fixed_monthly_price,
                 notes: currentOrder.notes,
-                serviceType: getServiceTypeForForm(currentOrder.service_type),
+                serviceType: currentOrder.service_type || null,
+                serviceKey: currentOrder.service_key || null,
+                markupPercentage: currentOrder.markup_percentage,
+                customHourlyRate: currentOrder.custom_hourly_rate,
                 requestStatus: currentOrder.request_status as OrderFormValues["requestStatus"],
                 assignedEmployees: currentOrder.assignedEmployees,
-                isActive: currentOrder.is_active,
-                endDate: currentOrder.end_date ? parseLocalDate(currentOrder.end_date) : undefined,
               }}
               onSubmit={handleUpdate}
               submitButtonText="Änderungen speichern"

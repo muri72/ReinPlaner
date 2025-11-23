@@ -44,7 +44,7 @@ export interface UnassignedOrder {
   title: string;
   total_estimated_hours: number | null;
   service_type: string | null;
-  due_date: string | null; // Hinzugefügt
+  end_date: string | null; // Fixed: was due_date
 }
 
 export interface PlanningPageData {
@@ -118,14 +118,14 @@ export async function getPlanningDataForRange(startDate: Date, endDate: Date, fi
     if (absencesError) throw absencesError;
 
     // 3. Fetch all relevant assignments for the week
-    const filterString = `and(order_type.eq.one_time,due_date.gte.${start_date_iso},due_date.lte.${end_date_iso}),and(order_type.in.("recurring","permanent","substitution"),recurring_start_date.lte.${end_date_iso},or(recurring_end_date.is.null,recurring_end_date.gte.${start_date_iso}))`;
+    const filterString = `and(order_type.eq.one_time,end_date.gte.${start_date_iso},end_date.lte.${end_date_iso}),and(order_type.in.("recurring","permanent","substitution"),start_date.lte.${end_date_iso},or(end_date.is.null,end_date.gte.${start_date_iso}))`;
     const { data: activeAssignments, error: assignmentsError } = await supabase
       .from('order_employee_assignments')
       .select(`
         *,
         orders!inner(
-            id, title, order_type, due_date, total_estimated_hours, status,
-            recurring_start_date, recurring_end_date, service_type,
+            id, title, order_type, end_date, total_estimated_hours, status,
+            start_date, service_type,
             order_employee_assignments ( count )
         )
       `)
@@ -202,8 +202,8 @@ export async function getPlanningDataForRange(startDate: Date, endDate: Date, fi
           let assignedEndTime: string | null = null;
 
           if (order.order_type === 'one_time') {
-            if (order.due_date && formatISO(parseISO(order.due_date), { representation: 'date' }) === dateString) {
-              const dueDate = parseISO(order.due_date);
+            if (order.end_date && formatISO(parseISO(order.end_date), { representation: 'date' }) === dateString) {
+              const dueDate = parseISO(order.end_date);
               const dayOfWeekForLookup = getDay(dueDate);
               const dayKeyForLookup = dayNames[dayOfWeekForLookup];
               
@@ -224,7 +224,7 @@ export async function getPlanningDataForRange(startDate: Date, endDate: Date, fi
 
             const recurrenceIntervalWeeks = assignment.assigned_recurrence_interval_weeks || 1;
             const startWeekOffset = assignment.assigned_start_week_offset || 0;
-            const startDateForLookup = order.recurring_start_date ? parseISO(order.recurring_start_date) : dateForScheduleLookup;
+            const startDateForLookup = order.start_date ? parseISO(order.start_date) : dateForScheduleLookup;
             
             const daysPassed = differenceInDays(dateForScheduleLookup, startDateForLookup);
             if (daysPassed >= 0) {
@@ -347,11 +347,11 @@ export async function assignOrderToEmployee(
       }
     }
 
-    // 3. Update order (set due_date for one_time orders)
+    // 3. Update order (set end_date for one_time orders)
     if (order.order_type === 'one_time') {
       const { error: updateError } = await supabaseAdmin
         .from('orders')
-        .update({ due_date: dateString, status: 'pending' })
+        .update({ end_date: dateString, status: 'pending' })
         .eq('id', orderId);
       if (updateError) throw updateError;
     }
@@ -447,7 +447,7 @@ export async function reassignRecurringOrder(
           title: `${originalOrder.title} (Sondertermin)`,
           description: originalOrder.description,
           status: 'pending', // New one-time orders are pending
-          due_date: newDate,
+          end_date: newDate,
           customer_id: originalOrder.customer_id,
           object_id: originalOrder.object_id,
           customer_contact_id: originalOrder.customer_contact_id,
@@ -458,8 +458,7 @@ export async function reassignRecurringOrder(
           request_status: 'approved',
           service_type: originalOrder.service_type,
           fixed_monthly_price: null, // One-time orders don't have fixed monthly price
-          recurring_start_date: null,
-          recurring_end_date: null,
+          start_date: null,
         })
         .select('id')
         .single();
@@ -530,10 +529,10 @@ export async function reassignSingleOrder(
       throw new Error("Originale Zuweisung nicht gefunden.");
     }
 
-    // 2. Update the order's due date
+    // 2. Update the order's end date
     const { error: orderUpdateError } = await supabaseAdmin
       .from('orders')
-      .update({ due_date: newDate })
+      .update({ end_date: newDate })
       .eq('id', assignment.order_id);
 
     if (orderUpdateError) {

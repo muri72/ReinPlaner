@@ -52,14 +52,13 @@ async function getScheduledOrdersToday(supabase: any, today: Date) {
     .select(`
       id,
       order_type,
-      due_date,
-      recurring_start_date,
-      recurring_end_date,
+      end_date,
+      start_date,
       status,
       request_status
     `)
     .eq('request_status', 'approved')
-    .or(`due_date.eq.${format(today, 'yyyy-MM-dd')},and(recurring_start_date.lte.${format(today, 'yyyy-MM-dd')},or(recurring_end_date.gte.${format(today, 'yyyy-MM-dd')},recurring_end_date.is.null))`)
+    .or(`end_date.eq.${format(today, 'yyyy-MM-dd')},and(start_date.lte.${format(today, 'yyyy-MM-dd')},or(end_date.gte.${format(today, 'yyyy-MM-dd')},end_date.is.null))`)
     .limit(100); // Add limit to prevent massive queries
 
   if (error) {
@@ -84,14 +83,13 @@ async function getPendingCustomerRequests(supabase: any) {
       title,
       description,
       status,
-      due_date,
+      end_date,
       created_at,
       customer_id,
       object_id,
       customer_contact_id,
       order_type,
-      recurring_start_date,
-      recurring_end_date,
+      start_date,
       priority,
       total_estimated_hours,
       notes,
@@ -310,9 +308,8 @@ export async function getOptimizedDashboardData(): Promise<DashboardStats> {
             service_type: order.service_type,
             request_status: order.request_status,
             order_type: order.order_type,
-            due_date: order.due_date,
-            recurring_start_date: order.recurring_start_date,
-            recurring_end_date: order.recurring_end_date,
+            end_date: order.end_date,
+            start_date: order.start_date,
           }))
         : [],
       allUnresolvedFeedback: feedback,
