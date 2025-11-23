@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Briefcase, UserRound, Clock } from "lucide-react";
 import Link from "next/link";
 import { OrderHoursSummary } from "@/components/order-hours-summary";
+import { OrderCostBreakdown } from "@/components/order-cost-breakdown";
 
 interface DisplayOrder {
   id: string;
@@ -196,6 +197,7 @@ export function OrdersGridView({ orders, employees, onActionSuccess }: OrdersGri
                   employees={calculateEmployeeHours(order)}
                   orderType={order.order_type}
                   recurrenceIntervalWeeks={order.object?.recurrence_interval_weeks || 1}
+                  assignedEmployees={order.assignedEmployees}
                 />
               )}
 
@@ -228,6 +230,36 @@ export function OrdersGridView({ orders, employees, onActionSuccess }: OrdersGri
                 // For hourly rates
                 if (order.total_estimated_hours && order.total_estimated_hours > 0 && order.hourly_rate) {
                   const totalCost = order.total_cost || (order.total_estimated_hours * order.hourly_rate);
+                  const isRecurring = ['recurring', 'substitution', 'permanent'].includes(order.order_type);
+
+                  // Calculate work days per week
+                  const workDaysPerWeek = order.assignedEmployees && order.assignedEmployees.length > 0
+                    ? (() => {
+                        const daysWithWork = new Set<string>();
+                        const dayNames = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+                        order.assignedEmployees.forEach((assignment) => {
+                          if (assignment.assigned_daily_schedules && assignment.assigned_daily_schedules.length > 0) {
+                            const firstWeekSchedule = assignment.assigned_daily_schedules[0];
+                            if (firstWeekSchedule) {
+                              dayNames.forEach(day => {
+                                const dayHours = firstWeekSchedule[day]?.hours;
+                                if (typeof dayHours === 'number' && dayHours > 0) {
+                                  daysWithWork.add(day);
+                                }
+                              });
+                            }
+                          }
+                        });
+                        return daysWithWork.size;
+                      })()
+                    : 0;
+
+                  const isPerDeployment = workDaysPerWeek === 1;
+                  const costDescription = isRecurring
+                    ? isPerDeployment
+                      ? 'pro Einsatz'
+                      : 'pro Woche'
+                    : 'gesamt';
 
                   return (
                     <div className="mt-2 p-2 bg-blue-5 rounded-md border border-blue-200">
@@ -242,7 +274,7 @@ export function OrdersGridView({ orders, employees, onActionSuccess }: OrdersGri
                       </div>
                       <div className="mt-1 text-right">
                         <span className="text-xs font-medium">
-                          Gesamt: {totalCost.toFixed(2)} € {['recurring', 'substitution', 'permanent'].includes(order.order_type) ? 'pro Einsatz' : ''}
+                          {totalCost.toFixed(2)} € {costDescription}
                         </span>
                       </div>
                       {order.markup_percentage && order.markup_percentage > 0 && (
@@ -257,7 +289,7 @@ export function OrdersGridView({ orders, employees, onActionSuccess }: OrdersGri
                       )}
 
                       {/* Monthly Extrapolation for hourly rates - only for recurring, substitution, and permanent */}
-                      {['recurring', 'substitution', 'permanent'].includes(order.order_type) && (() => {
+                      {isRecurring && (() => {
                         const weeksPerMonth = 4.33; // Average weeks per month
                         const recurrenceInterval = order.object?.recurrence_interval_weeks || 1;
                         const occurrencesPerMonth = weeksPerMonth / recurrenceInterval;
@@ -267,7 +299,6 @@ export function OrdersGridView({ orders, employees, onActionSuccess }: OrdersGri
                           <div className="mt-2 p-2 bg-green-50 rounded-md border border-green-200">
                             <p className="text-xs text-muted-foreground">
                               {occurrencesPerMonth.toFixed(2)}x pro Monat
-                              {recurrenceInterval > 1 && ` (alle ${recurrenceInterval} Wochen)`}
                             </p>
                             <p className="text-sm font-bold text-green-600">
                               {monthlyTotal.toFixed(2)} €

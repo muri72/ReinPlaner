@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { FormActions } from "@/components/ui/form-actions";
 import { UnsavedChangesProtection } from "@/components/ui/unsaved-changes-dialog";
 import { UnsavedChangesAlert } from "@/components/ui/unsaved-changes-alert";
-import { useFormUnsavedChanges } from "@/components/ui/unsaved-changes-context";
+import { useFormUnsavedChangesForCreate } from "@/components/ui/unsaved-changes-context";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { PlusCircle, X, Clock, Copy } from "lucide-react";
@@ -203,8 +203,13 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess, 
   // Determine if this is create mode (no initialData means creating a new order)
   const isCreateMode = !initialData;
 
-  // Register with unsaved changes context - formKey pattern prevents false dirty state in create mode
-  useFormUnsavedChanges("order-form", form.formState.isDirty);
+  // Calculate actual dirty state - only true if user has actually changed fields
+  // This prevents false positives from auto-generated values triggering isDirty
+  const hasActualChanges = Object.keys(form.formState.dirtyFields).length > 0;
+
+  // Register with unsaved changes context
+  // Use hasActualChanges instead of isDirty to prevent false positives
+  useFormUnsavedChangesForCreate("order-form", hasActualChanges, isCreateMode);
 
   const { fields: assignedEmployeeFields, replace: replaceAssignedEmployees, update: updateAssignedEmployee } = useFieldArray({
     control: form.control,

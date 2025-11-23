@@ -22,6 +22,33 @@ interface OrderHoursSummaryProps {
   }>;
 }
 
+// Helper function to calculate how many days per week have work scheduled
+function calculateWorkDaysPerWeek(assignedEmployees: Array<{ assigned_daily_schedules: any[] }> | undefined): number {
+  if (!assignedEmployees || assignedEmployees.length === 0) {
+    return 0;
+  }
+
+  const daysWithWork = new Set<string>();
+  const dayNames = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+
+  assignedEmployees.forEach((assignment) => {
+    if (assignment.assigned_daily_schedules && assignment.assigned_daily_schedules.length > 0) {
+      // Check first week of the schedule (representative for recurring work)
+      const firstWeekSchedule = assignment.assigned_daily_schedules[0];
+      if (firstWeekSchedule) {
+        dayNames.forEach(day => {
+          const dayHours = firstWeekSchedule[day]?.hours;
+          if (typeof dayHours === 'number' && dayHours > 0) {
+            daysWithWork.add(day);
+          }
+        });
+      }
+    }
+  });
+
+  return daysWithWork.size;
+}
+
 export function OrderHoursSummary({
   totalHours,
   employees,
@@ -37,12 +64,19 @@ export function OrderHoursSummary({
 
   const isRecurring = ['recurring', 'substitution', 'permanent'].includes(orderType);
 
+  // Calculate work days per week
+  const workDaysPerWeek = calculateWorkDaysPerWeek(assignedEmployees);
+
+  // Determine if this is "per deployment" or "per week"
+  // "pro Einsatz" when only 1 day per week, "pro Woche" when multiple days
+  const isPerDeployment = workDaysPerWeek === 1;
+
   const intervalText = isRecurring
     ? recurrenceIntervalWeeks === 1
-      ? "jede Woche"
+      ? isPerDeployment ? "pro Einsatz (wöchentlich)" : "pro Woche"
       : recurrenceIntervalWeeks === 2
-      ? "alle 2 Wochen"
-      : `alle ${recurrenceIntervalWeeks} Wochen`
+      ? isPerDeployment ? "pro Einsatz (alle 2 Wochen)" : `alle 2 Wochen`
+      : isPerDeployment ? `pro Einsatz (alle ${recurrenceIntervalWeeks} Wochen)` : `alle ${recurrenceIntervalWeeks} Wochen`
     : "einmalig";
 
   // Calculate hours per employee from assigned_daily_schedules if provided

@@ -9,6 +9,7 @@ import { DocumentUploader } from "@/components/document-uploader";
 import { DocumentList } from "@/components/document-list";
 import { Separator } from "@/components/ui/separator";
 import { OrderHoursSummary } from "@/components/order-hours-summary";
+import { OrderCostBreakdown } from "@/components/order-cost-breakdown";
 import { Calendar, Clock, User } from "lucide-react";
 import { parseLocalDate } from "@/lib/utils";
 
@@ -55,8 +56,39 @@ interface OrderDetailTabsProps {
   order: OrderData;
 }
 
+// Helper function to calculate how many days per week have work scheduled
+function calculateWorkDaysPerWeek(assignedEmployees: Array<{ assigned_daily_schedules: any[] }> | undefined): number {
+  if (!assignedEmployees || assignedEmployees.length === 0) {
+    return 0;
+  }
+
+  const daysWithWork = new Set<string>();
+  const dayNames = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+
+  assignedEmployees.forEach((assignment) => {
+    if (assignment.assigned_daily_schedules && assignment.assigned_daily_schedules.length > 0) {
+      // Check first week of the schedule (representative for recurring work)
+      const firstWeekSchedule = assignment.assigned_daily_schedules[0];
+      if (firstWeekSchedule) {
+        dayNames.forEach(day => {
+          const dayHours = firstWeekSchedule[day]?.hours;
+          if (typeof dayHours === 'number' && dayHours > 0) {
+            daysWithWork.add(day);
+          }
+        });
+      }
+    }
+  });
+
+  return daysWithWork.size;
+}
+
 export function OrderDetailTabs({ order }: OrderDetailTabsProps) {
   const [documentUpdateKey, setDocumentUpdateKey] = useState(0);
+
+  // Calculate work days per week for cost description
+  const workDaysPerWeek = calculateWorkDaysPerWeek(order.assignedEmployees);
+  const isPerDeployment = workDaysPerWeek === 1;
 
   return (
     <Tabs defaultValue="stammdaten" className="w-full">
@@ -137,6 +169,7 @@ export function OrderDetailTabs({ order }: OrderDetailTabsProps) {
                   />
                 </div>
               )}
+
               {/* Price Display */}
               {(() => {
                 // For recurring, substitution, and permanent orders with flat rate, show only monthly cost
@@ -160,31 +193,28 @@ export function OrderDetailTabs({ order }: OrderDetailTabsProps) {
                     </div>
                   );
                 } else if (order.total_estimated_hours && order.total_estimated_hours > 0 && order.hourly_rate) {
-                  // Calculate total cost if not already calculated
-                  const totalCost = order.total_cost || (order.total_estimated_hours * order.hourly_rate);
+                  // Prepare employee data for OrderCostBreakdown
+                  const employeeData = order.employee_first_names && order.employee_last_names
+                    ? order.employee_first_names.map((first, i) => ({
+                        first_name: first,
+                        last_name: order.employee_last_names?.[i] || "",
+                        hours_per_week: 0,
+                      }))
+                    : [];
 
                   return (
-                    <div className="space-y-2">
-                      <p className="font-medium text-muted-foreground">Zeitaufwand & Kosten</p>
-                      <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-                        <p className="text-lg font-semibold">
-                          {order.total_estimated_hours.toFixed(2)} Std. × {order.hourly_rate.toFixed(2)} €/h
-                        </p>
-                        <p className="text-xl font-bold text-primary">
-                          = {totalCost.toFixed(2)} € {['recurring', 'substitution', 'permanent'].includes(order.order_type) ? 'pro Einsatz' : 'gesamt'}
-                        </p>
-                        {order.markup_percentage && order.markup_percentage > 0 && (
-                          <p className="text-xs text-muted-foreground mt-1">
-                            (inkl. {order.markup_percentage}% Aufschlag)
-                          </p>
-                        )}
-                        {order.custom_hourly_rate && order.custom_hourly_rate > 0 && order.markup_percentage === null && (
-                          <p className="text-xs text-muted-foreground mt-1">
-                            (individueller Stundensatz)
-                          </p>
-                        )}
-                      </div>
-                    </div>
+                    <OrderCostBreakdown
+                      totalEstimatedHours={order.total_estimated_hours}
+                      hourlyRate={order.hourly_rate}
+                      orderType={order.order_type}
+                      recurrenceIntervalWeeks={order.object?.recurrence_interval_weeks || 1}
+                      assignedEmployees={order.assignedEmployees}
+                      markupPercentage={order.markup_percentage}
+                      customHourlyRate={order.custom_hourly_rate}
+                      totalCost={order.total_cost}
+                      showEmployeeBreakdown={employeeData.length > 1}
+                      employees={employeeData}
+                    />
                   );
                 } else if (order.total_estimated_hours && order.total_estimated_hours > 0 && order.service_type) {
                   // Fallback: show hours without cost if no rate available
@@ -197,32 +227,6 @@ export function OrderDetailTabs({ order }: OrderDetailTabsProps) {
                         </p>
                         <p className="text-xs text-muted-foreground mt-1">
                           Stundensatz nicht hinterlegt
-                        </p>
-                      </div>
-                    </div>
-                  );
-                }
-
-                // Monthly cost for hourly rates on recurring orders
-                if (['recurring', 'substitution', 'permanent'].includes(order.order_type) && order.total_estimated_hours && order.total_estimated_hours > 0 && order.hourly_rate) {
-                  const weeksPerMonth = 4.33; // Average weeks per month
-                  const recurrenceInterval = order.object?.recurrence_interval_weeks || 1;
-                  const occurrencesPerMonth = weeksPerMonth / recurrenceInterval;
-                  const monthlyTotal = order.total_estimated_hours * order.hourly_rate * occurrencesPerMonth;
-
-                  return (
-                    <div className="space-y-1">
-                      <p className="font-medium text-muted-foreground">Monatliche Hochrechnung</p>
-                      <div className="p-3 bg-green-50 rounded-lg border border-green-200">
-                        <p className="text-sm text-muted-foreground">
-                          {occurrencesPerMonth.toFixed(2)}x pro Monat
-                          {recurrenceInterval > 1 && ` (alle ${recurrenceInterval} Wochen)`}
-                        </p>
-                        <p className="text-2xl font-bold text-green-600">
-                          {monthlyTotal.toFixed(2)} €
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {order.total_estimated_hours.toFixed(2)}h × {order.hourly_rate.toFixed(2)} €/h × {occurrencesPerMonth.toFixed(2)}x
                         </p>
                       </div>
                     </div>
