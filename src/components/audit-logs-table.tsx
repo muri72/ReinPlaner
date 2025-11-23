@@ -34,7 +34,6 @@ interface AuditLog {
   id: string;
   created_at: string;
   user_id: string | null;
-  user_email: string | null;
   action: string;
   table_name: string | null;
   record_id: string | null;
@@ -62,7 +61,7 @@ export function AuditLogsTable({ limit = 100 }: AuditLogsTableProps) {
       setError(null);
 
       let query = supabase
-        .from("audit_logs_with_users")
+        .from("audit_logs")
         .select("*")
         .order("created_at", { ascending: false })
         .limit(limit);
@@ -187,7 +186,7 @@ export function AuditLogsTable({ limit = 100 }: AuditLogsTableProps) {
                                   {format(new Date(log.created_at), "dd.MM.yyyy HH:mm:ss", { locale: de })}
                                 </span>
                                 <span className="text-sm font-medium truncate">
-                                  {log.user_email || "System"}
+                                  {log.user_id ? log.user_id.substring(0, 8) + "..." : "System"}
                                 </span>
                               </div>
                             </CardDescription>
@@ -318,11 +317,11 @@ export function AuditLogsTable({ limit = 100 }: AuditLogsTableProps) {
                       <TableCell>
                         <div className="flex flex-col">
                           <span className="font-medium">
-                            {log.user_email || "System"}
+                            {log.user_id ? log.user_id.substring(0, 8) + "..." : "System"}
                           </span>
                           {log.user_id && (
                             <span className="text-xs text-muted-foreground">
-                              {log.user_id.substring(0, 8)}...
+                              User-ID
                             </span>
                           )}
                         </div>

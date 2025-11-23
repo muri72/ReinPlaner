@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { getSuperOptimizedDashboardData, getUnresolvedFeedback } from "@/lib/super-optimized-dashboard";
 import { TodaysOrdersOverview } from "@/components/todays-orders-overview";
+import { captureError, trackApiError } from "@/lib/sentry";
 import {
   Calendar,
   TrendingUp,
@@ -39,11 +40,23 @@ export default function DashboardPage() {
       const data = await getSuperOptimizedDashboardData();
       setDashboardData(data);
     } catch (err: any) {
+      console.error('Error loading dashboard data:', err);
       setError(err.message || "Fehler beim Laden der Dashboard-Daten");
+      // Send error to Sentry
+      captureError(err, {
+        tags: {
+          component: 'DashboardPage',
+          function: 'loadDashboardData',
+        },
+        extra: {
+          userId: userProfile ? Object.keys(userProfile).length > 0 ? 'user_exists' : null : null,
+          userRole: currentUserRole,
+        },
+      });
     } finally {
       setDataLoading(false);
     }
-  }, []);
+  }, [userProfile, currentUserRole]);
 
   const today = useMemo(() => new Date(), []);
   const formattedDate = useMemo(() => {

@@ -1,12 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { ImpersonationProviderWrapper } from "@/components/impersonation-provider-wrapper";
-import { UserProfileProvider } from "@/components/user-profile-provider";
-import { UnsavedChangesProvider } from "@/components/ui/unsaved-changes-context";
-import { Toaster } from "@/components/ui/sonner";
-import { ThemeProvider } from "next-themes";
-import React from 'react'; // Hinzugefügt: Expliziter Import von React
+import { Providers } from "@/components/providers";
+import React from 'react';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -54,21 +50,9 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          <ImpersonationProviderWrapper>
-            <UserProfileProvider>
-              <UnsavedChangesProvider>
-                {children}
-              </UnsavedChangesProvider>
-            </UserProfileProvider>
-          </ImpersonationProviderWrapper>
-          <Toaster />
-        </ThemeProvider>
+        <Providers>
+          {children}
+        </Providers>
       </body>
     </html>
   );

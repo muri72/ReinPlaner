@@ -1,6 +1,8 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/middleware'
 
+export const runtime = 'edge'
+
 export async function middleware(request: NextRequest) {
   const { supabase, response } = createClient(request)
   const { data: { session } } = await supabase.auth.getSession()
