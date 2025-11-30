@@ -78,7 +78,7 @@ export async function generateProfessionalPDF({
       const ctx = canvas.getContext('2d');
 
       // Fetch logo via API route (works on both local and deployed environments)
-      const logoUrl = `/api/logo?file=logo.svg`;
+      const logoUrl = `/api/logo?file=logo.png`;
       const response = await fetch(logoUrl);
       const logoData = await response.json();
 
