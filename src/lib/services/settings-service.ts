@@ -36,6 +36,64 @@ export interface EmployeeHolidayPreference {
 class SettingsService {
   private cache = new Map<string, { value: any; timestamp: number }>();
   private cacheTTL = 5 * 60 * 1000; // 5 minutes
+  private retryConfig = {
+    maxRetries: 3,
+    retryDelay: 1000,
+    backoffFactor: 2,
+  };
+
+  /**
+   * Execute a function with retry logic
+   */
+  private async withRetry<T>(
+    operation: () => Promise<T>,
+    context: string = "operation"
+  ): Promise<T> {
+    let lastError: any;
+
+    for (let attempt = 1; attempt <= this.retryConfig.maxRetries; attempt++) {
+      try {
+        return await operation();
+      } catch (error: any) {
+        lastError = error;
+        console.warn(`SettingsService: Attempt ${attempt}/${this.retryConfig.maxRetries} failed for ${context}:`, error.message);
+
+        if (attempt === this.retryConfig.maxRetries) {
+          console.error(`SettingsService: All ${this.retryConfig.maxRetries} attempts failed for ${context}`);
+          throw error;
+        }
+
+        // Wait before retrying with exponential backoff
+        const delay = this.retryConfig.retryDelay * Math.pow(this.retryConfig.backoffFactor, attempt - 1);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+
+    throw lastError;
+  }
+
+  /**
+   * Check if the database connection is healthy
+   */
+  async checkConnection(): Promise<{ healthy: boolean; error?: string }> {
+    try {
+      const supabase = createClient();
+      const { error } = await supabase
+        .from('app_settings')
+        .select('key')
+        .limit(1)
+        .maybeSingle();
+
+      if (error && error.code !== 'PGRST116') {
+        throw error;
+      }
+
+      return { healthy: true };
+    } catch (error: any) {
+      console.error('SettingsService: Connection check failed:', error);
+      return { healthy: false, error: error.message };
+    }
+  }
 
   /**
    * Get a platform setting by key
@@ -48,51 +106,70 @@ class SettingsService {
       return cached.value;
     }
 
-    const supabase = createClient();
+    try {
+      const result = await this.withRetry(async () => {
+        const supabase = createClient();
 
-    let query = supabase
-      .from('app_settings')
-      .select('value')
-      .eq('key', key)
-      .eq('scope', scope)
-      .eq('is_active', true);
+        let query = supabase
+          .from('app_settings')
+          .select('value')
+          .eq('key', key)
+          .eq('scope', scope)
+          .eq('is_active', true);
 
-    if (scopeId) {
-      query = query.eq('scope_id', scopeId);
-    } else {
-      query = query.is('scope_id', null);
-    }
+        if (scopeId) {
+          query = query.eq('scope_id', scopeId);
+        } else {
+          query = query.is('scope_id', null);
+        }
 
-    const { data, error } = await query.single();
+        const { data, error } = await query.single();
 
-    if (error || !data) {
-      console.warn(`Setting ${key} not found:`, error?.message);
+        if (error || !data) {
+          console.warn(`Setting ${key} not found:`, error?.message);
+          return null;
+        }
+
+        return data.value;
+      }, `getSetting(${key})`);
+
+      this.cache.set(cacheKey, { value: result, timestamp: Date.now() });
+      return result;
+    } catch (error: any) {
+      console.error(`SettingsService: Failed to get setting ${key}:`, error);
+      // Return null instead of throwing to allow graceful degradation
       return null;
     }
-
-    this.cache.set(cacheKey, { value: data.value, timestamp: Date.now() });
-    return data.value;
   }
 
   /**
    * Get multiple settings by category
    */
   async getSettingsByCategory(category: string): Promise<PlatformSetting[]> {
-    const supabase = createClient();
+    try {
+      const result = await this.withRetry(async () => {
+        const supabase = createClient();
 
-    const { data, error } = await supabase
-      .from('app_settings')
-      .select('key, value, category, description, setting_type, scope')
-      .eq('category', category)
-      .eq('is_active', true)
-      .order('key');
+        const { data, error } = await supabase
+          .from('app_settings')
+          .select('key, value, category, description, setting_type, scope')
+          .eq('category', category)
+          .eq('is_active', true)
+          .order('key');
 
-    if (error) {
-      console.error('Error fetching settings by category:', error);
+        if (error) {
+          console.error('Error fetching settings by category:', error);
+          throw error;
+        }
+
+        return data || [];
+      }, `getSettingsByCategory(${category})`);
+
+      return result;
+    } catch (error: any) {
+      console.error(`SettingsService: Failed to get settings for category ${category}:`, error);
       return [];
     }
-
-    return data || [];
   }
 
   /**
@@ -179,19 +256,28 @@ class SettingsService {
    * Get all Bundesländer
    */
   async getBundeslaender(): Promise<Bundesland[]> {
-    const supabase = createClient();
+    try {
+      const result = await this.withRetry(async () => {
+        const supabase = createClient();
 
-    const { data, error } = await supabase
-      .from('bundeslaender')
-      .select('*')
-      .order('name');
+        const { data, error } = await supabase
+          .from('bundeslaender')
+          .select('*')
+          .order('name');
 
-    if (error) {
-      console.error('Error fetching Bundesländer:', error);
+        if (error) {
+          console.error('Error fetching Bundesländer:', error);
+          throw error;
+        }
+
+        return data || [];
+      }, 'getBundeslaender');
+
+      return result;
+    } catch (error: any) {
+      console.error('SettingsService: Failed to get Bundesländer:', error);
       return [];
     }
-
-    return data || [];
   }
 
   /**
@@ -418,6 +504,295 @@ class SettingsService {
    */
   clearCache(): void {
     this.cache.clear();
+  }
+
+  /**
+   * Get invoice settings
+   */
+  async getInvoiceSettings(userId?: string): Promise<any> {
+    const supabase = createClient();
+
+    // If no userId provided, get current user
+    if (!userId) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+      userId = user.id;
+    }
+
+    const { data, error } = await supabase
+      .from('invoice_settings')
+      .select('*')
+      .eq('user_id', userId)
+      .single();
+
+    if (error && error.code !== 'PGRST116') {
+      console.error('Error fetching invoice settings:', error);
+      throw error;
+    }
+
+    return data || null;
+  }
+
+  /**
+   * Update invoice settings
+   */
+  async updateInvoiceSettings(
+    settings: any,
+    userId?: string
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      const supabase = createClient();
+
+      // If no userId provided, get current user
+      if (!userId) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('Not authenticated');
+        userId = user.id;
+      }
+
+      const { error } = await supabase
+        .from('invoice_settings')
+        .upsert({
+          user_id: userId,
+          ...settings,
+          updated_at: new Date().toISOString(),
+        });
+
+      if (error) throw error;
+
+      return { success: true };
+    } catch (error: any) {
+      console.error('Error updating invoice settings:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Get tax settings
+   */
+  async getTaxSettings(userId?: string): Promise<any> {
+    const supabase = createClient();
+
+    // If no userId provided, get current user
+    if (!userId) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+      userId = user.id;
+    }
+
+    const { data, error } = await supabase
+      .from('tax_settings')
+      .select('*')
+      .eq('user_id', userId)
+      .single();
+
+    if (error && error.code !== 'PGRST116') {
+      console.error('Error fetching tax settings:', error);
+      throw error;
+    }
+
+    return data || null;
+  }
+
+  /**
+   * Update tax settings
+   */
+  async updateTaxSettings(
+    settings: any,
+    userId?: string
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      const supabase = createClient();
+
+      // If no userId provided, get current user
+      if (!userId) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('Not authenticated');
+        userId = user.id;
+      }
+
+      const { error } = await supabase
+        .from('tax_settings')
+        .upsert({
+          user_id: userId,
+          ...settings,
+          updated_at: new Date().toISOString(),
+        });
+
+      if (error) throw error;
+
+      return { success: true };
+    } catch (error: any) {
+      console.error('Error updating tax settings:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Get bank connection
+   */
+  async getBankConnection(userId?: string): Promise<any> {
+    const supabase = createClient();
+
+    // If no userId provided, get current user
+    if (!userId) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+      userId = user.id;
+    }
+
+    const { data, error } = await supabase
+      .from('bank_connections')
+      .select('*')
+      .eq('user_id', userId)
+      .single();
+
+    if (error && error.code !== 'PGRST116') {
+      console.error('Error fetching bank connection:', error);
+      throw error;
+    }
+
+    return data || null;
+  }
+
+  /**
+   * Update bank connection
+   */
+  async updateBankConnection(
+    settings: any,
+    userId?: string
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      const supabase = createClient();
+
+      // If no userId provided, get current user
+      if (!userId) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('Not authenticated');
+        userId = user.id;
+      }
+
+      const { error } = await supabase
+        .from('bank_connections')
+        .upsert({
+          user_id: userId,
+          ...settings,
+          updated_at: new Date().toISOString(),
+        });
+
+      if (error) throw error;
+
+      return { success: true };
+    } catch (error: any) {
+      console.error('Error updating bank connection:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Get all products/services
+   */
+  async getProducts(userId?: string): Promise<any[]> {
+    const supabase = createClient();
+
+    // If no userId provided, get current user
+    if (!userId) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+      userId = user.id;
+    }
+
+    const { data, error } = await supabase
+      .from('products')
+      .select('*')
+      .eq('user_id', userId)
+      .order('type', { ascending: true })
+      .order('name', { ascending: true });
+
+    if (error) {
+      console.error('Error fetching products:', error);
+      throw error;
+    }
+
+    return data || [];
+  }
+
+  /**
+   * Create or update a product
+   */
+  async saveProduct(
+    product: any,
+    userId?: string
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      const supabase = createClient();
+
+      // If no userId provided, get current user
+      if (!userId) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('Not authenticated');
+        userId = user.id;
+      }
+
+      const productData = {
+        user_id: userId,
+        ...product,
+        updated_at: new Date().toISOString(),
+      };
+
+      if (product.id) {
+        const { error } = await supabase
+          .from('products')
+          .update(productData)
+          .eq('id', product.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('products')
+          .insert({
+            ...productData,
+            created_at: new Date().toISOString(),
+          });
+        if (error) throw error;
+      }
+
+      return { success: true };
+    } catch (error: any) {
+      console.error('Error saving product:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Delete a product
+   */
+  async deleteProduct(
+    productId: string,
+    userId?: string
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      const supabase = createClient();
+
+      // If no userId provided, get current user
+      if (!userId) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('Not authenticated');
+        userId = user.id;
+      }
+
+      const { error } = await supabase
+        .from('products')
+        .delete()
+        .eq('id', productId)
+        .eq('user_id', userId);
+
+      if (error) throw error;
+
+      return { success: true };
+    } catch (error: any) {
+      console.error('Error deleting product:', error);
+      return { success: false, error: error.message };
+    }
   }
 }
 

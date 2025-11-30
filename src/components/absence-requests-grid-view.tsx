@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CalendarOff, CheckCircle2, XCircle, AlertCircle, User, FileText } from "lucide-react";
+import { CalendarOff, CheckCircle2, XCircle, AlertCircle, User } from "lucide-react";
 import { AbsenceRequestCreateDialog } from "@/components/absence-request-create-dialog";
 import { AbsenceRequestEditDialog } from "@/components/absence-request-edit-dialog";
 import { DeleteAbsenceRequestButton } from "@/components/delete-absence-request-button";
@@ -127,7 +127,6 @@ export function AbsenceRequestsGridView({
               </div>
               {request.notes && (
                 <div className="flex items-start">
-                  <FileText className="mr-2 h-4 w-4 mt-1 flex-shrink-0" />
                   <p className="flex-grow">Notizen: {request.notes}</p>
                 </div>
               )}

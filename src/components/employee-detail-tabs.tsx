@@ -173,18 +173,24 @@ export function EmployeeDetailTabs({ employee }: EmployeeDetailTabsProps) {
       <TabsContent value="dokumente">
         <Card className="shadow-neumorphic glassmorphism-card">
           <CardHeader>
-            <CardTitle>Dokumente</CardTitle>
-            <CardDescription>Verwalten Sie Dokumente, die mit diesem Mitarbeiter verknüpft sind.</CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Dokumente</CardTitle>
+                <CardDescription>Verwalten Sie Dokumente, die mit diesem Mitarbeiter verknüpft sind.</CardDescription>
+              </div>
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            <DocumentUploader 
-              associatedEmployeeId={employee.id} 
-              onDocumentUploaded={() => setDocumentUpdateKey(prev => prev + 1)} 
-            />
+            <div className="flex gap-2">
+              <DocumentUploader
+                associatedEmployeeId={employee.id}
+                onDocumentUploaded={() => setDocumentUpdateKey(prev => prev + 1)}
+              />
+            </div>
             <Separator />
-            <DocumentList 
-              key={documentUpdateKey} 
-              associatedEmployeeId={employee.id} 
+            <DocumentList
+              key={documentUpdateKey}
+              associatedEmployeeId={employee.id}
               onDocumentChange={() => setDocumentUpdateKey(prev => prev + 1)}
             />
           </CardContent>

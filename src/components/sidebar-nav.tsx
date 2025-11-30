@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Home, Briefcase, Users, ContactRound, Building, UsersRound, Clock, CalendarOff,
-  CalendarCheck, TrendingUp, FileText, Star, DollarSign, ListOrdered, MessageSquare, Shield, Settings, Wrench
+  CalendarCheck, TrendingUp, FileText, Star, DollarSign, ListOrdered, MessageSquare, Shield, Settings, Wrench, Activity, FileEdit
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -98,8 +98,10 @@ const navItems: NavItem[] = [
     isCategory: true,
     roles: ['admin'],
     children: [
+      { title: "Platform Health", href: "/dashboard/platform-health", icon: Activity, roles: ['admin'] },
       { title: "Services", href: "/dashboard/services", icon: Wrench, roles: ['admin'] },
       { title: "Einstellungen", href: "/dashboard/settings", icon: Settings, roles: ['admin'] },
+      { title: "Vorlagen", href: "/dashboard/templates", icon: FileEdit, roles: ['admin'] },
       { title: "Audit-Logs", href: "/dashboard/audit-logs", icon: Shield, roles: ['admin'] },
       { title: "Benutzer", href: "/dashboard/users", icon: Users, roles: ['admin'] },
     ],

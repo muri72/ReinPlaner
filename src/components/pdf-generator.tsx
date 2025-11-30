@@ -72,10 +72,20 @@ export async function generateProfessionalPDF({
     pdf.setFontSize(9);
     pdf.text(new Date().toLocaleDateString('de-DE'), margin, 29);
 
-    // Add ultra-high-quality logo
+    // Add ultra-high-quality logo via API route (works locally and deployed)
     try {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
+
+      // Fetch logo via API route (works on both local and deployed environments)
+      const logoUrl = `/api/logo?file=logo.svg`;
+      const response = await fetch(logoUrl);
+      const logoData = await response.json();
+
+      if (!logoData.success || !logoData.dataUrl) {
+        throw new Error('Failed to fetch logo from API');
+      }
+
       const img = new Image();
 
       await new Promise((resolve, reject) => {
@@ -96,10 +106,11 @@ export async function generateProfessionalPDF({
           }
         };
         img.onerror = reject;
-        img.src = '/logo.svg';
+        img.src = logoData.dataUrl;
       });
     } catch (e) {
       // Fallback to placeholder if logo fails
+      console.warn('Logo could not be loaded from API, using placeholder');
       pdf.setDrawColor(26, 54, 93);
       pdf.setLineWidth(2);
       pdf.rect(pageWidth - margin - logoWidth, 5, logoWidth, logoHeight);
