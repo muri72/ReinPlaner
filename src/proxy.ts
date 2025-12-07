@@ -1,15 +1,15 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/middleware'
 
-export const runtime = 'edge'
-
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { supabase, response } = createClient(request)
-  const { data: { session } } = await supabase.auth.getSession()
   const { pathname } = request.nextUrl;
 
   // --- 1. Behandlung von nicht authentifizierten Benutzern ---
-  if (!session) {
+  // Use getUser() to get an authenticated user object
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
     // Erlaube Zugriff auf öffentliche Pfade (Login, Auth Callback)
     if (pathname === '/login' || pathname.startsWith('/auth/callback')) {
       return response;
@@ -23,7 +23,7 @@ export async function middleware(request: NextRequest) {
   const { data: profileData, error: profileError } = await supabase
     .from('profiles')
     .select('role')
-    .eq('id', session.user.id)
+    .eq('id', user.id)
     .single();
 
   if (profileError) {
@@ -31,6 +31,26 @@ export async function middleware(request: NextRequest) {
   }
 
   const userRole = profileData?.role || 'employee'; // Standard auf 'employee', falls Rolle nicht gefunden
+
+  // NEU: Überprüfe den Mitarbeiterstatus, wenn die Rolle 'employee' ist
+  if (userRole === 'employee') {
+    const { data: employeeData, error: employeeError } = await supabase
+      .from('employees')
+      .select('status')
+      .eq('user_id', user.id)
+      .single();
+
+    if (employeeError && employeeError.code !== 'PGRST116') { // PGRST116 = no rows found
+      console.error("Fehler beim Abrufen des Mitarbeiterstatus:", employeeError?.message || JSON.stringify(employeeError));
+    }
+
+    // Wenn der Mitarbeiterstatus 'inactive' oder 'on_leave' ist, Leite zum Login um
+    if (employeeData?.status === 'inactive' || employeeData?.status === 'on_leave') {
+      console.log(`Mitarbeiter ${user.id} ist ${employeeData.status}. Umleitung zum Login.`);
+      await supabase.auth.signOut(); // Melde den Benutzer ab
+      return NextResponse.redirect(new URL('/login', request.url));
+    }
+  }
 
   // Den korrekten Basis-Dashboard-Pfad für die Benutzerrolle bestimmen
   let baseDashboardPath: string;

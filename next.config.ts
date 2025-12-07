@@ -1,21 +1,6 @@
 import type { NextConfig } from "next";
 import { withSentryConfig } from "@sentry/nextjs";
 
-// Bundle analyzer helper (disabled by default)
-const withBundleAnalyzer = (config: NextConfig) => {
-  if (process.env.ANALYZE === 'true') {
-    const { BundleAnalyzerPlugin } = require('webpack-bundle-analyzer');
-    config.plugins = config.plugins || [];
-    config.plugins.push(
-      new BundleAnalyzerPlugin({
-        analyzerMode: 'server',
-        analyzerPort: 8888,
-        openAnalyzer: true,
-      })
-    );
-  }
-  return config;
-};
 
 const nextConfig: NextConfig = {
   // ============================================
@@ -307,14 +292,6 @@ const nextConfig: NextConfig = {
   },
 
   // ============================================
-  // ESLINT OPTIMIZATION
-  // ============================================
-  eslint: {
-    // Warning: This allows production builds to successfully complete even if ESLint errors
-    ignoreDuringBuilds: false,
-  },
-
-  // ============================================
   // SWC OPTIMIZATION
   // ============================================
   compiler: {
@@ -370,8 +347,5 @@ const sentryWebpackPluginOptions = {
   project: process.env.SENTRY_PROJECT,
 };
 
-// Apply bundle analyzer in development if enabled
-const configWithAnalyzer = withBundleAnalyzer(nextConfig);
-
 // Export with Sentry configuration
-export default withSentryConfig(configWithAnalyzer, sentryWebpackPluginOptions);
+export default withSentryConfig(nextConfig, sentryWebpackPluginOptions);
