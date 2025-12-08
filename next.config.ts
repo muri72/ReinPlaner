@@ -31,7 +31,8 @@ const nextConfig: NextConfig = {
   // OUTPUT CONFIGURATION
   // ============================================
   // Optimize for CDN deployment
-  output: process.env.NODE_ENV === 'production' ? 'standalone' : undefined,
+  // Temporarily disabled due to Turbopack .nft.json issue
+  // output: process.env.NODE_ENV === 'production' ? 'standalone' : undefined,
 
   // ============================================
   // SERVER EXTERNAL PACKAGES
