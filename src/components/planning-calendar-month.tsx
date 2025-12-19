@@ -11,7 +11,6 @@ import { cn } from "@/lib/utils";
 import { PlanningData, UnassignedOrder } from "@/app/dashboard/planning/actions";
 import { EmployeeEditDialog } from "./employee-edit-dialog";
 import { AssignmentCard } from "./assignment-card";
-import { DraggableOrderCard } from "./draggable-order-card";
 import { useDroppable } from "@dnd-kit/core";
 
 const absenceTypeTranslations: { [key: string]: string } = {

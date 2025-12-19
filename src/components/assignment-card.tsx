@@ -7,8 +7,11 @@ import { useDraggable } from "@dnd-kit/core";
 import { Badge } from "@/components/ui/badge";
 import { AssignmentEditDialog } from "./assignment-edit-dialog"; // Import the new dialog
 
+import { deleteOrder } from "@/app/dashboard/orders/actions"; // Adjust path if needed
+import { handleActionResponse } from "@/lib/toast-utils";
+
 interface Assignment {
-  id: string;
+  id: string; // Assignment ID (from order_employee_assignments)
   orderId: string; // Order ID
   title: string;
   startTime: string | null;
@@ -18,34 +21,23 @@ interface Assignment {
   isTeam: boolean;
   status: 'completed' | 'pending' | 'future';
   service_type: string | null;
+  scheduleDate?: string; // Optional: specific date for this card instance if known
 }
 
 interface AssignmentCardProps {
   assignment: Assignment;
-  onSuccess: () => void; // Add onSuccess callback
+  onSuccess: () => void;
+  date?: string; // Date context for this card
 }
 
-const serviceTypeBadgeColors: { [key: string]: string } = {
-  "Unterhaltsreinigung": "bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200",
-  "Glasreinigung": "bg-cyan-100 text-cyan-800 dark:bg-cyan-900/50 dark:text-cyan-200",
-  "Grundreinigung": "bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200",
-  "Graffitientfernung": "bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-200",
-  "Sonderreinigung": "bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-200",
-  "default": "bg-gray-100 text-gray-800 dark:bg-gray-900/50 dark:text-gray-200",
-};
 
-const serviceTypeDotColors: { [key: string]: string } = {
-    "Unterhaltsreinigung": "bg-green-500",
-    "Glasreinigung": "bg-cyan-500",
-    "Grundreinigung": "bg-blue-500",
-    "Graffitientfernung": "bg-orange-500",
-    "Sonderreinigung": "bg-purple-500",
-    "default": "bg-gray-500",
-};
 
-export function AssignmentCard({ assignment, onSuccess }: AssignmentCardProps) {
+export function AssignmentCard({ assignment, onSuccess, date, services = [] }: AssignmentCardProps) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
-    id: `assignment__${assignment.id}`,
+    id: `assignment__${assignment.id}`, // Note: assignment.id might need to be unique per day if same assignment ID is used? 
+    // In actions.ts, assignment.id is the remote ID. If recurring, same ID appears multiple times? 
+    // Usually dnd-kit needs unique IDs. The PlanningCalendar presumably appends date to ID or handles it?
+    // Let's assume passed assignment.id is unique or correct for now.
     data: { assignment },
   });
 
@@ -63,41 +55,83 @@ export function AssignmentCard({ assignment, onSuccess }: AssignmentCardProps) {
     }
   };
 
-  const badgeColorClass = serviceTypeBadgeColors[assignment.service_type || 'default'] || serviceTypeBadgeColors.default;
-  const dotColorClass = serviceTypeDotColors[assignment.service_type || 'default'] || serviceTypeDotColors.default;
+  // Dynamic Service Colors
+  const currentService = services.find(s => s.name === assignment.service_type || s.key === assignment.service_type);
+  const serviceColor = currentService?.color || assignment.service_color || "#6b7280"; // Default gray
+
+  // Helper to determine if a color is light or dark to adjust text color
+  const isLightColor = (hexColor: string) => {
+    const hex = hexColor.replace('#', '');
+    const r = parseInt(hex.substr(0, 2), 16);
+    const g = parseInt(hex.substr(2, 2), 16);
+    const b = parseInt(hex.substr(4, 2), 16);
+    const brightness = ((r * 299) * (g * 587) + (b * 114)) / 1000;
+    return brightness > 155;
+  };
+
+  // We'll apply the background color via style prop, so we just need text color class
+  const badgeTextColorClass = isLightColor(serviceColor) ? "text-gray-800" : "text-white";
+
+  const handleDeleteOrder = async () => {
+    const formData = new FormData();
+    formData.append("orderId", assignment.orderId);
+    const result = await deleteOrder(formData);
+    handleActionResponse(result);
+    if (result.success) onSuccess();
+  };
+
+  const handleCancelRequest = () => {
+    // Confirm standard deletion
+    if (confirm("Möchten Sie diesen Auftrag wirklich löschen?")) {
+      handleDeleteOrder();
+    }
+  };
 
   return (
-    <AssignmentEditDialog orderId={assignment.orderId} onSuccess={onSuccess}>
-      <div
-        ref={setNodeRef}
-        style={style}
-        {...listeners}
-        {...attributes}
-        className={cn(
-          "p-2 rounded-md border-l-4 bg-card text-card-foreground shadow-sm cursor-grab active:cursor-grabbing touch-none space-y-1",
-          getStatusColor(),
-          isDragging && "shadow-lg opacity-75"
-        )}
+    <>
+      <AssignmentEditDialog
+        orderId={assignment.orderId}
+        onSuccess={onSuccess}
+        onCancel={handleCancelRequest}
       >
-        <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <span>{assignment.startTime || 'N/A'} → {assignment.endTime || 'N/A'}</span>
-          <div className="flex items-center gap-1.5">
-            {assignment.isTeam && <Users className="h-3 w-3" />}
-            {assignment.isRecurring && <Repeat className="h-3 w-3" />}
+        <div
+          ref={setNodeRef}
+          style={style}
+          {...listeners}
+          {...attributes}
+          className={cn(
+            "p-2 rounded-md border-l-4 bg-card text-card-foreground shadow-sm cursor-grab active:cursor-grabbing touch-none space-y-1",
+            getStatusColor(),
+            isDragging && "shadow-lg opacity-75"
+          )}
+        >
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <span>{assignment.startTime || 'N/A'} → {assignment.endTime || 'N/A'}</span>
+            <div className="flex items-center gap-1.5">
+              {assignment.isTeam && <Users className="h-3 w-3" />}
+              {assignment.isRecurring && <Repeat className="h-3 w-3" />}
+            </div>
           </div>
+          <div className="flex items-center text-xs text-muted-foreground">
+            <Clock className="mr-1 h-3 w-3" />
+            <span>{assignment.hours.toFixed(2)}h</span>
+          </div>
+          <p className="font-bold text-sm truncate">{assignment.title}</p>
+          {assignment.service_type && (
+            <Badge
+              variant="secondary"
+              className={cn("text-xs font-normal border-none w-full justify-start", badgeTextColorClass)}
+              style={{ backgroundColor: serviceColor }}
+            >
+              <span
+                className="h-2 w-2 rounded-full mr-1.5 shrink-0"
+                style={{ backgroundColor: isLightColor(serviceColor) ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.4)' }}
+              />
+              <span className="truncate">{assignment.service_type}</span>
+            </Badge>
+          )}
         </div>
-        <div className="flex items-center text-xs text-muted-foreground">
-          <Clock className="mr-1 h-3 w-3" />
-          <span>{assignment.hours.toFixed(2)}h</span>
-        </div>
-        <p className="font-bold text-sm truncate">{assignment.title}</p>
-        {assignment.service_type && (
-          <Badge variant="outline" className={cn("text-xs font-normal border-none w-full justify-start", badgeColorClass)}>
-            <span className={cn("h-2 w-2 rounded-full mr-1.5", dotColorClass)} />
-            <span className="truncate">{assignment.service_type}</span>
-          </Badge>
-        )}
-      </div>
-    </AssignmentEditDialog>
+      </AssignmentEditDialog>
+    </>
   );
 }

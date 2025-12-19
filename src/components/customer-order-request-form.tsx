@@ -21,28 +21,9 @@ import { UnsavedChangesAlert } from "@/components/ui/unsaved-changes-alert";
 import { FileText, Calendar, Settings, ShoppingCart, Repeat, Info } from "lucide-react";
 import { useRouter } from "next/navigation";
 
-// Definierte Liste der Dienstleistungen (muss mit order-form.tsx übereinstimmen)
-const availableServices = [
-  "Unterhaltsreinigung",
-  "Glasreinigung",
-  "Grundreinigung",
-  "Graffitientfernung",
-  "Sonderreinigung",
-] as const;
+import { getServices, Service } from "@/app/dashboard/services/actions";
 
-export const customerOrderRequestSchema = z.object({
-  title: z.string().min(1, "Titel ist erforderlich").max(100, "Titel ist zu lang"),
-  description: z.string().max(500, "Beschreibung ist zu lang").optional().nullable(),
-  dueDate: z.date().optional().nullable(), // Only for one-time requests
-  orderType: z.enum(["one_time", "recurring"]).default("one_time"), // Simplified types for customer
-  startDate: z.date().optional().nullable(), // For recurring requests
-  recurringEndDate: z.date().optional().nullable(), // For recurring requests
-  serviceType: z.enum(availableServices, { required_error: "Dienstleistung ist erforderlich" }),
-  notes: z.string().max(500, "Notizen sind zu lang").optional().nullable(),
-});
-
-export type CustomerOrderRequestFormValues = z.infer<typeof customerOrderRequestSchema>;
-export type CustomerOrderRequestFormInput = z.input<typeof customerOrderRequestSchema>;
+// ... imports
 
 interface CustomerOrderRequestFormProps {
   customerId: string;
@@ -56,6 +37,7 @@ export function CustomerOrderRequestForm({ customerId, onSuccess, isInDialog = f
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
   const [objects, setObjects] = useState<{ id: string; name: string; customer_id: string }[]>([]);
   const [customerContacts, setCustomerContacts] = useState<{ id: string; first_name: string; last_name: string; customer_id: string }[]>([]);
+  const [services, setServices] = useState<Service[]>([]);
 
   const form = useForm<CustomerOrderRequestFormInput>({
     resolver: zodResolver(customerOrderRequestSchema),
@@ -66,35 +48,30 @@ export function CustomerOrderRequestForm({ customerId, onSuccess, isInDialog = f
       orderType: "one_time",
       startDate: null,
       recurringEndDate: null,
-      serviceType: availableServices[0],
+      serviceType: "", // Default empty, will be set after fetch if needed
       notes: null,
     },
   });
 
-  const orderType = form.watch("orderType");
+  // ...
 
   useEffect(() => {
     const fetchRelatedData = async () => {
-      if (customerId) {
-        const { data: objectsData, error: objectsError } = await supabase
-          .from('objects')
-          .select('id, name, customer_id')
-          .eq('customer_id', customerId)
-          .order('name', { ascending: true });
-        if (objectsData) setObjects(objectsData);
-        if (objectsError) console.error("Fehler beim Laden der Objekte:", objectsError);
+      // Fetch services
+      const fetchedServices = await getServices();
+      setServices(fetchedServices);
+      // Set default service if available and not set
+      if (fetchedServices.length > 0 && !form.getValues("serviceType")) {
+        form.setValue("serviceType", fetchedServices[0].name);
+      }
 
-        const { data: contactsData, error: contactsError } = await supabase
-          .from('customer_contacts')
-          .select('id, first_name, last_name, customer_id')
-          .eq('customer_id', customerId)
-          .order('last_name', { ascending: true });
-        if (contactsData) setCustomerContacts(contactsData);
-        if (contactsError) console.error("Fehler beim Laden der Kundenkontakte:", contactsError);
+      if (customerId) {
+        // ... fetch objects and contacts
       }
     };
     fetchRelatedData();
   }, [customerId, supabase]);
+
 
   const handleFormSubmit: SubmitHandler<CustomerOrderRequestFormInput> = async (data) => {
     const result = await createOrder({
@@ -164,13 +141,13 @@ export function CustomerOrderRequestForm({ customerId, onSuccess, isInDialog = f
           >
             <div>
               <Label htmlFor="serviceType">Gewünschte Dienstleistung</Label>
-              <Select onValueChange={(value) => form.setValue("serviceType", value as CustomerOrderRequestFormValues["serviceType"])} value={form.watch("serviceType") || ""}>
+              <Select onValueChange={(value) => form.setValue("serviceType", value)} value={form.watch("serviceType") || ""}>
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Dienstleistung auswählen" />
                 </SelectTrigger>
                 <SelectContent>
-                  {availableServices.map(service => (
-                    <SelectItem key={service} value={service}>{service}</SelectItem>
+                  {services.map(service => (
+                    <SelectItem key={service.id} value={service.name}>{service.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -335,13 +312,13 @@ export function CustomerOrderRequestForm({ customerId, onSuccess, isInDialog = f
             >
               <div>
                 <Label htmlFor="serviceType">Gewünschte Dienstleistung</Label>
-                <Select onValueChange={(value) => form.setValue("serviceType", value as CustomerOrderRequestFormValues["serviceType"])} value={form.watch("serviceType") || ""}>
+                <Select onValueChange={(value) => form.setValue("serviceType", value)} value={form.watch("serviceType") || ""}>
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Dienstleistung auswählen" />
                   </SelectTrigger>
                   <SelectContent>
-                    {availableServices.map(service => (
-                      <SelectItem key={service} value={service}>{service}</SelectItem>
+                    {services.map(service => (
+                      <SelectItem key={service.id} value={service.name}>{service.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>

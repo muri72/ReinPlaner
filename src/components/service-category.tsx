@@ -15,6 +15,7 @@ interface Service {
   base_price: number | null;
   default_hourly_rate: number | null;
   is_active: boolean;
+  color: string | null;
 }
 
 interface ServiceCategory {
@@ -54,6 +55,12 @@ export function ServiceCategory({
             <div key={service.id} className="p-4 flex items-start justify-between gap-4 hover:bg-muted/30 transition-colors">
               <div className="flex-1">
                 <div className="flex items-center gap-2">
+                  {service.color && (
+                    <div
+                      className="h-4 w-4 rounded-full border border-border"
+                      style={{ backgroundColor: service.color }}
+                    />
+                  )}
                   <h4 className="font-semibold">{service.title}</h4>
                   <Badge variant={service.is_active ? "default" : "secondary"}>
                     {service.is_active ? "Aktiv" : "Inaktiv"}

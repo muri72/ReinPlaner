@@ -1,4 +1,5 @@
 "use server";
+// Force rebuild
 
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
@@ -28,7 +29,9 @@ export interface EmployeePlanningData {
         isRecurring: boolean;
         isTeam: boolean;
         status: 'completed' | 'pending' | 'future';
-        service_type: string | null; // Hinzugefügt
+        service_type: string | null;
+        service_color: string | null;
+        isSubstitution: boolean; // Hinzugefügt für Badge-Logik
       }[];
     };
   };
@@ -137,7 +140,24 @@ export async function getPlanningDataForRange(startDate: Date, endDate: Date, fi
     const { data: unassignedOrdersData, error: unassignedOrdersError } = await supabase.rpc('get_unassigned_orders');
     if (unassignedOrdersError) throw unassignedOrdersError;
 
-    // 5. Process data
+
+    // 6. Fetch service colors
+    const { data: servicesData, error: servicesError } = await supabase
+      .from('services')
+      .select('title, color');
+
+    if (servicesError) console.error("Error fetching services:", servicesError);
+
+    const serviceColorMap = new Map<string, string>();
+    if (servicesData) {
+      servicesData.forEach(s => {
+        if (s.title && s.color) {
+          serviceColorMap.set(s.title, s.color);
+        }
+      });
+    }
+
+    // 7. Process data
     const planningData: PlanningData = {};
 
     for (const employee of employeesWithAvatars) {
@@ -180,7 +200,7 @@ export async function getPlanningDataForRange(startDate: Date, endDate: Date, fi
         const daysPassedDefault = differenceInDays(day, startOfWeek(new Date(), { weekStartsOn: 1 }));
         const weeksPassedDefault = Math.floor(daysPassedDefault / 7);
         const effectiveWeekIndexDefault = (weeksPassedDefault + defaultStartOffset) % defaultRecurrenceInterval;
-        
+
         const defaultWeekSchedule = employee.default_daily_schedules?.[effectiveWeekIndexDefault];
         const defaultDaySchedule = (defaultWeekSchedule as any)?.[dayKey];
         const defaultHours = Number(defaultDaySchedule?.hours ?? 0);
@@ -200,13 +220,14 @@ export async function getPlanningDataForRange(startDate: Date, endDate: Date, fi
           let dailyHours = 0;
           let assignedStartTime: string | null = null;
           let assignedEndTime: string | null = null;
+          let isCancelled = false;
 
           if (order.order_type === 'one_time') {
             if (order.end_date && formatISO(parseISO(order.end_date), { representation: 'date' }) === dateString) {
               const dueDate = parseISO(order.end_date);
               const dayOfWeekForLookup = getDay(dueDate);
               const dayKeyForLookup = dayNames[dayOfWeekForLookup];
-              
+
               // For one-time orders, we assume the schedule is in the first week of the assignment's schedule array
               const weekSchedule = assignment.assigned_daily_schedules?.[0];
               const daySchedule = (weekSchedule as any)?.[dayKeyForLookup];
@@ -225,38 +246,38 @@ export async function getPlanningDataForRange(startDate: Date, endDate: Date, fi
             const recurrenceIntervalWeeks = assignment.assigned_recurrence_interval_weeks || 1;
             const startWeekOffset = assignment.assigned_start_week_offset || 0;
             const startDateForLookup = order.start_date ? parseISO(order.start_date) : dateForScheduleLookup;
-            
+
             const daysPassed = differenceInDays(dateForScheduleLookup, startDateForLookup);
             if (daysPassed >= 0) {
               const weeksPassed = Math.floor(daysPassed / 7);
-              
+
               if ((weeksPassed + startWeekOffset) % recurrenceIntervalWeeks === 0) {
                 const effectiveWeekIndex = (weeksPassed + startWeekOffset) % recurrenceIntervalWeeks;
 
                 let employeeDailySchedules: any[] = [];
                 if (typeof assignment.assigned_daily_schedules === 'string') {
-                    try {
-                        employeeDailySchedules = JSON.parse(assignment.assigned_daily_schedules);
-                    } catch (e) {
-                        console.error("Failed to parse assigned_daily_schedules:", e);
-                    }
+                  try {
+                    employeeDailySchedules = JSON.parse(assignment.assigned_daily_schedules);
+                  } catch (e) {
+                    console.error("Failed to parse assigned_daily_schedules:", e);
+                  }
                 } else {
-                    employeeDailySchedules = assignment.assigned_daily_schedules || [];
+                  employeeDailySchedules = assignment.assigned_daily_schedules || [];
                 }
 
                 if (employeeDailySchedules && employeeDailySchedules.length > effectiveWeekIndex) {
-                    const weekSchedule = employeeDailySchedules[effectiveWeekIndex];
-                    const daySchedule = (weekSchedule as any)?.[dayKeyForLookup];
-                    if (daySchedule && daySchedule.hours > 0) {
-                        dailyHours = daySchedule.hours;
-                        assignedStartTime = daySchedule.start;
-                        assignedEndTime = daySchedule.end;
-                    }
+                  const weekSchedule = employeeDailySchedules[effectiveWeekIndex];
+                  const daySchedule = (weekSchedule as any)?.[dayKeyForLookup];
+                  if (daySchedule && daySchedule.hours > 0) {
+                    dailyHours = daySchedule.hours;
+                    assignedStartTime = daySchedule.start;
+                    assignedEndTime = daySchedule.end;
+                  }
                 }
               }
             }
           }
-          
+
           if (dailyHours > 0) {
             const totalAssignmentsForOrder = order.order_employee_assignments[0]?.count || 1;
             const isTeam = totalAssignmentsForOrder > 1;
@@ -274,6 +295,8 @@ export async function getPlanningDataForRange(startDate: Date, endDate: Date, fi
               isTeam: isTeam,
               status: order.status === 'completed' ? 'completed' : (new Date() > day ? 'pending' : 'future'),
               service_type: order.service_type,
+              service_color: order.service_type ? serviceColorMap.get(order.service_type) || null : null,
+              isSubstitution: order.order_type === 'substitution',
             });
           }
         }
@@ -396,113 +419,6 @@ export async function assignOrderToEmployee(
   }
 }
 
-export async function reassignRecurringOrder(
-  params: {
-    assignmentId: string;
-    originalDate: string;
-    newEmployeeId: string;
-    newDate: string;
-    updateType: 'single' | 'series';
-  }
-): Promise<{ success: boolean; message: string }> {
-  const supabaseAdmin = createAdminClient();
-  const { assignmentId, originalDate, newEmployeeId, newDate, updateType } = params;
-
-  try {
-    // 1. Fetch the original assignment and order details
-    const { data: originalAssignment, error: assignmentError } = await supabaseAdmin
-      .from('order_employee_assignments')
-      .select(`
-        *,
-        orders!inner(*)
-      `)
-      .eq('id', assignmentId)
-      .single();
-
-    if (assignmentError || !originalAssignment || !originalAssignment.orders) {
-      throw new Error("Originale Zuweisung nicht gefunden.");
-    }
-
-    const originalOrder = originalAssignment.orders;
-
-    if (updateType === 'single') {
-      // --- Handle single instance change ---
-
-      // 1. Create or update an exception for the original assignment on the original date
-      const { error: exceptionError } = await supabaseAdmin
-        .from('assignment_exceptions')
-        .upsert({
-          assignment_id: assignmentId,
-          original_date: originalDate,
-          reason: `Verschoben zu ${newDate} für Mitarbeiter ${newEmployeeId}`,
-        }, { onConflict: 'assignment_id, original_date' });
-      if (exceptionError) throw new Error(`Ausnahme konnte nicht erstellt werden: ${exceptionError.message}`);
-
-      // 2. Create a new one-time order as a copy
-      const { data: newOneTimeOrder, error: newOrderError } = await supabaseAdmin
-        .from('orders')
-        .insert({
-          // Copy most fields, but adjust for one-time nature
-          user_id: originalOrder.user_id,
-          title: `${originalOrder.title} (Sondertermin)`,
-          description: originalOrder.description,
-          status: 'pending', // New one-time orders are pending
-          end_date: newDate,
-          customer_id: originalOrder.customer_id,
-          object_id: originalOrder.object_id,
-          customer_contact_id: originalOrder.customer_contact_id,
-          priority: originalOrder.priority,
-          total_estimated_hours: originalOrder.total_estimated_hours, // This might need adjustment
-          notes: `Verschoben von wiederkehrendem Auftrag am ${originalDate}. Original-Auftrag: ${originalOrder.id}`,
-          order_type: 'one_time',
-          request_status: 'approved',
-          service_type: originalOrder.service_type,
-          fixed_monthly_price: null, // One-time orders don't have fixed monthly price
-          start_date: null,
-        })
-        .select('id')
-        .single();
-
-      if (newOrderError || !newOneTimeOrder) throw new Error(`Einmaliger Auftrag konnte nicht erstellt werden: ${newOrderError?.message}`);
-
-      // 3. Assign the new one-time order to the new employee
-      const { error: newAssignmentError } = await supabaseAdmin
-        .from('order_employee_assignments')
-        .insert({
-          order_id: newOneTimeOrder.id,
-          employee_id: newEmployeeId,
-          // For a one-time order, the schedule is not strictly necessary but can be copied for consistency
-          assigned_daily_schedules: originalAssignment.assigned_daily_schedules,
-          assigned_recurrence_interval_weeks: 1,
-          assigned_start_week_offset: 0,
-        });
-
-      if (newAssignmentError) throw new Error(`Neuer Auftrag konnte nicht zugewiesen werden: ${newAssignmentError.message}`);
-
-    } else { // updateType === 'series'
-      // --- Handle series change ---
-      // For now, we only support reassigning the employee for the entire series.
-      // A date change for the whole series is a more complex operation.
-      if (originalAssignment.employee_id === newEmployeeId) {
-         return { success: false, message: "Das Ändern des Datums für eine ganze Serie wird noch nicht unterstützt. Nur die Mitarbeiterzuweisung kann für die Serie geändert werden." };
-      }
-
-      const { error: updateAssignmentError } = await supabaseAdmin
-        .from('order_employee_assignments')
-        .update({ employee_id: newEmployeeId })
-        .eq('id', assignmentId);
-
-      if (updateAssignmentError) throw new Error(`Serie konnte nicht neu zugewiesen werden: ${updateAssignmentError.message}`);
-    }
-
-    revalidatePath("/dashboard/planning");
-    return { success: true, message: "Einsatz erfolgreich verschoben." };
-
-  } catch (error: any) {
-    console.error("Fehler beim Verschieben des Einsatzes:", error.message);
-    return { success: false, message: `Fehler: ${error.message}` };
-  }
-}
 
 export async function reassignSingleOrder(
   assignmentId: string,
@@ -578,6 +494,7 @@ export async function reassignSingleOrder(
     return { success: false, message: `Fehler: ${error.message}` };
   }
 }
+
 
 export async function updateOrderAssignments(
   orderId: string,

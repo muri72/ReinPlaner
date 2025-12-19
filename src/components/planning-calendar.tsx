@@ -10,11 +10,11 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useDroppable } from "@dnd-kit/core";
 import { PlanningData, UnassignedOrder } from "@/app/dashboard/planning/actions";
-import { EmployeeWorkloadBar } from "./employee-workload-bar";
+import { Service } from "@/app/dashboard/services/actions";
 import { AssignmentCard } from "./assignment-card";
-import { DraggableOrderCard } from "./draggable-order-card";
 import { EmployeeEditDialog } from "./employee-edit-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Progress } from "@/components/ui/progress";
 
 const absenceTypeTranslations: { [key: string]: string } = {
   vacation: "Urlaub",
@@ -79,10 +79,13 @@ interface PlanningCalendarProps {
   onActionSuccess: () => void;
   weekNumber: number;
   holidaysMap: { [key: string]: { name: string } | null };
+  currentUserRole?: 'admin' | 'manager' | 'employee' | 'customer';
+  services: Service[];
 }
 
-export function PlanningCalendar({ planningData, unassignedOrders, weekDays, activeDragId, showUnassigned, onActionSuccess, weekNumber, holidaysMap }: PlanningCalendarProps) {
+export function PlanningCalendar({ planningData, unassignedOrders, weekDays, activeDragId, showUnassigned, onActionSuccess, weekNumber, holidaysMap, currentUserRole = 'employee', services }: PlanningCalendarProps) {
   const employeeIds = Object.keys(planningData);
+  const canManageSubstitutions = currentUserRole === 'admin' || currentUserRole === 'manager';
 
   return (
     <div className="border rounded-lg shadow-neumorphic glassmorphism-card h-full overflow-auto custom-scrollbar">
@@ -135,7 +138,12 @@ export function PlanningCalendar({ planningData, unassignedOrders, weekDays, act
                   >
                     <div className="space-y-1">
                       {ordersForDay.map((order) => (
-                        <DraggableOrderCard key={order.id} order={order} />
+                        <div key={order.id} className="p-2 rounded-md border bg-muted/30">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium">{order.title}</span>
+                            <Badge variant="outline">{order.order_type}</Badge>
+                          </div>
+                        </div>
                       ))}
                     </div>
                   </DroppableCell>
@@ -173,11 +181,14 @@ export function PlanningCalendar({ planningData, unassignedOrders, weekDays, act
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <div className="mt-2">
-                                <EmployeeWorkloadBar
-                                  planned={employee.totalHoursPlanned}
-                                  available={employee.totalHoursAvailable}
+                              <div className="mt-2 space-y-1">
+                                <Progress
+                                  value={employee.totalHoursAvailable > 0 ? (employee.totalHoursPlanned / employee.totalHoursAvailable) * 100 : 0}
+                                  className="h-2"
                                 />
+                                <p className="text-xs text-muted-foreground">
+                                  {employee.totalHoursPlanned.toFixed(1)}h / {employee.totalHoursAvailable.toFixed(1)}h
+                                </p>
                               </div>
                             </TooltipTrigger>
                             <TooltipContent>
@@ -230,7 +241,12 @@ export function PlanningCalendar({ planningData, unassignedOrders, weekDays, act
                       >
                         <div className="space-y-1">
                           {dayData.assignments.map((assignment) => (
-                            <AssignmentCard key={assignment.id} assignment={assignment} onSuccess={onActionSuccess} />
+                            <AssignmentCard
+                              key={assignment.id}
+                              assignment={assignment}
+                              onSuccess={onActionSuccess}
+                              services={services}
+                            />
                           ))}
                         </div>
                       </DroppableCell>

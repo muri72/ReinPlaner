@@ -2,8 +2,9 @@
 
 import * as React from "react";
 import { getPlanningDataForRange, PlanningPageData, reassignSingleOrder } from "@/app/dashboard/planning/actions";
+import { getServices, Service } from "@/app/dashboard/services/actions";
 import { toast } from "sonner";
-import { DndContext, DragEndEvent } from "@dnd-kit/core";
+import { DndContext, DragEndEvent, useSensor, useSensors, PointerSensor } from "@dnd-kit/core";
 import { PlanningToolbar } from "@/components/planning-toolbar";
 import { PlanningCalendar } from "@/components/planning-calendar";
 import { PlanningCalendarMonth } from "@/components/planning-calendar-month";
@@ -11,8 +12,7 @@ import { MobilePlanningToolbar } from "@/components/planning-toolbar-mobile";
 import { MobilePlanningCalendar } from "@/components/planning-calendar-mobile";
 import { PlanningKpiSummary } from "@/components/planning-kpi-summary";
 import { Skeleton } from "@/components/ui/skeleton";
-import { OrderCreateDialog } from "@/components/order-create-dialog";
-import { assignOrderToEmployee, reassignRecurringOrder } from "./actions";
+import { assignOrderToEmployee } from "./actions";
 import {
   startOfWeek,
   endOfWeek,
@@ -25,37 +25,35 @@ import {
 } from "date-fns";
 import { createClient } from "@/lib/supabase/client";
 import { useSearchParams } from "next/navigation";
-import { RecurringEditDialog } from "@/components/recurring-edit-dialog";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { format as formatDateFns } from "date-fns";
-
-interface PendingReassignment {
-  assignmentId: string;
-  originalDate: string;
-  newEmployeeId: string;
-  newDate: string;
-}
 
 export default function PlanningPage() {
   const [currentDate, setCurrentDate] = React.useState(() => startOfDay(new Date()));
   const [viewMode, setViewMode] = React.useState<"day" | "week" | "month">("week");
   const [showUnassigned, setShowUnassigned] = React.useState(true);
   const [planningPageData, setPlanningPageData] = React.useState<PlanningPageData | null>(null);
+  const [services, setServices] = React.useState<Service[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [activeDragId, setActiveDragId] = React.useState<string | null>(null);
   const [currentUser, setCurrentUser] = React.useState<any>(null);
+  const [currentUserRole, setCurrentUserRole] = React.useState<'admin' | 'manager' | 'employee' | 'customer'>('employee');
   const [isAdmin, setIsAdmin] = React.useState(false);
-  const [isOrderDialogOpen, setIsOrderDialogOpen] = React.useState(false);
   const [mobileSelectedDate, setMobileSelectedDate] = React.useState(() => startOfDay(new Date()));
   const [bundeslandCode, setBundeslandCode] = React.useState<string>('HH'); // Default to Hamburg
   const [holidaysMap, setHolidaysMap] = React.useState<{ [key: string]: { name: string } | null }>({});
 
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    })
+  );
+
   const isMobile = useIsMobile();
   const searchParams = useSearchParams();
   const query = searchParams.get("query") || "";
-
-  const [isRecurringDialogOpen, setIsRecurringDialogOpen] = React.useState(false);
-  const [pendingReassignment, setPendingReassignment] = React.useState<PendingReassignment | null>(null);
 
   const { startDate, endDate, daysToDisplay } = React.useMemo(() => {
     let start: Date;
@@ -87,7 +85,9 @@ export default function PlanningPage() {
     if (user) {
       setCurrentUser(user);
       const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
-      setIsAdmin(profile?.role === "admin");
+      const role = profile?.role as 'admin' | 'manager' | 'employee' | 'customer' || 'employee';
+      setCurrentUserRole(role);
+      setIsAdmin(role === "admin");
     }
 
     // Load bundesland from settings (default to HH if not found)
@@ -101,13 +101,18 @@ export default function PlanningPage() {
     const holidayResults = await settingsService.checkMultipleHolidays(uniqueDates, code);
     setHolidaysMap(holidayResults);
 
-    const result = await getPlanningDataForRange(start, end, { query: searchQuery });
+    const [result, fetchedServices] = await Promise.all([
+      getPlanningDataForRange(start, end, { query: searchQuery }),
+      getServices()
+    ]);
+
     if (result.success) {
       setPlanningPageData(result.data);
     } else {
       toast.error(result.message);
       console.error(result.message);
     }
+    setServices(fetchedServices);
     setLoading(false);
   }, []);
 
@@ -178,7 +183,7 @@ export default function PlanningPage() {
   }, []);
 
   const openOrderDialog = React.useCallback(() => {
-    setIsOrderDialogOpen(true);
+    setCreateJobOpen(true);
   }, []);
 
   const planningData = planningPageData?.planningData ?? {};
@@ -234,7 +239,7 @@ export default function PlanningPage() {
 
     if (dragType === "unassigned") {
       const orderId = dragId;
-      toast.info(`Weise Auftrag zu...`);
+      toast.info(`Weise Einsatz zu...`);
       const result = await assignOrderToEmployee(orderId, newEmployeeId, newDate, null);
       if (result.success) {
         toast.success(result.message);
@@ -247,46 +252,20 @@ export default function PlanningPage() {
       if (!assignment) return;
 
       const assignmentId = assignment.id;
-      const originalDate =
-        Object.keys(planningData[newEmployeeId]?.schedule || {}).find((date) =>
-          planningData[newEmployeeId]?.schedule[date]?.assignments.some((a) => a.id === assignmentId),
-        ) || newDate;
-
-      if (assignment.isRecurring) {
-        setPendingReassignment({ assignmentId, originalDate, newEmployeeId, newDate });
-        setIsRecurringDialogOpen(true);
+      toast.info("Verschiebe Einsatz...");
+      const result = await reassignSingleOrder(assignmentId, newEmployeeId, newDate);
+      if (result.success) {
+        toast.success(result.message);
+        refreshData();
       } else {
-        toast.info("Verschiebe einmaligen Einsatz...");
-        const result = await reassignSingleOrder(assignmentId, newEmployeeId, newDate);
-        if (result.success) {
-          toast.success(result.message);
-          refreshData();
-        } else {
-          toast.error(result.message);
-        }
+        toast.error(result.message);
       }
     }
   };
 
-  const handleRecurringUpdate = async (updateType: "single" | "series") => {
-    if (!pendingReassignment) return;
-
-    toast.info(`Aktualisiere wiederkehrenden Auftrag...`);
-    const result = await reassignRecurringOrder({ ...pendingReassignment, updateType });
-
-    if (result.success) {
-      toast.success(result.message);
-      refreshData();
-    } else {
-      toast.error(result.message);
-    }
-
-    setPendingReassignment(null);
-    setIsRecurringDialogOpen(false);
-  };
 
   return (
-    <DndContext onDragStart={({ active }) => setActiveDragId(active.id as string)} onDragEnd={handleDragEnd}>
+    <DndContext sensors={sensors} onDragStart={({ active }) => setActiveDragId(active.id as string)} onDragEnd={handleDragEnd}>
       <div className="flex flex-col gap-8 p-4 md:p-8 h-full">
         {isMobile ? (
           <>
@@ -369,24 +348,14 @@ export default function PlanningPage() {
                   onActionSuccess={refreshData}
                   weekNumber={weekNumber}
                   holidaysMap={holidaysMap}
+                  currentUserRole={currentUserRole}
+                  services={services}
                 />
               )}
             </div>
           </>
         )}
       </div>
-      <OrderCreateDialog
-        open={isOrderDialogOpen}
-        onOpenChange={(open) => setIsOrderDialogOpen(open)}
-        onOrderCreated={refreshData}
-        hideTrigger
-      />
-      <RecurringEditDialog
-        open={isRecurringDialogOpen}
-        onOpenChange={setIsRecurringDialogOpen}
-        onConfirmSingle={() => handleRecurringUpdate("single")}
-        onConfirmSeries={() => handleRecurringUpdate("series")}
-      />
     </DndContext>
   );
 }

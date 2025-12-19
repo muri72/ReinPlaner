@@ -4,7 +4,7 @@ import * as React from "react";
 import { format, addDays, subDays, startOfWeek, endOfWeek, addMonths, subMonths, startOfMonth, startOfDay } from "date-fns";
 import { de } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Filter, Eye, EyeOff } from "lucide-react";
+import { ChevronLeft, ChevronRight, Filter, Eye, EyeOff, PlusCircle } from "lucide-react";
 import { DatePicker } from "@/components/date-picker";
 import {
   DropdownMenu,
@@ -15,8 +15,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { TimeEntryCreateDialog } from "@/components/time-entry-create-dialog";
-import { SearchInput } from "./search-input";
-import { OrderCreateDialog } from "@/components/order-create-dialog";
+import { Input } from "@/components/ui/input";
 
 interface PlanningToolbarProps {
   currentDate: Date;
@@ -41,7 +40,6 @@ export function PlanningToolbar({
   isAdmin,
   onActionSuccess,
 }: PlanningToolbarProps) {
-
   const viewModeTranslations = {
     day: 'Heute',
     week: 'Woche',
@@ -130,7 +128,7 @@ export function PlanningToolbar({
           </h2>
         </div>
         <div className="flex items-center gap-2">
-          <SearchInput placeholder="Mitarbeiter suchen..." className="w-full sm:w-auto" />
+          <Input placeholder="Mitarbeiter suchen..." className="w-full sm:w-auto" />
           <Button variant="outline" size="icon" disabled>
             <Filter className="h-4 w-4" />
           </Button>
@@ -149,7 +147,6 @@ export function PlanningToolbar({
               </DropdownMenuRadioGroup>
             </DropdownMenuContent>
           </DropdownMenu>
-          <OrderCreateDialog onOrderCreated={onActionSuccess} />
         </div>
       </div>
 

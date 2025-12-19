@@ -56,7 +56,7 @@ export function MobileQuickActions({
     {
       id: 'new-order',
       title: 'Neuer Auftrag',
-      description: 'Auftrag erstellen',
+      description: 'Auftrag anlegen',
       icon: <Plus className="h-6 w-6" />,
       color: 'bg-blue-500',
       action: onNewOrder || (() => {}),

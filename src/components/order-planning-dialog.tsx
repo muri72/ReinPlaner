@@ -309,7 +309,7 @@ export function OrderPlanningDialog({ order }: OrderPlanningDialogProps) {
             )}
             {!order.object_id && selectedEmployeeId && (
               <p className="text-sm text-muted-foreground mt-2">
-                Kein Objekt für diesen Auftrag hinterlegt. Tägliche Stunden und Zeiten können nicht automatisch vorgeschlagen werden.
+                Kein Objekt für diesen Einsatz hinterlegt. Tägliche Stunden und Zeiten können nicht automatisch vorgeschlagen werden.
               </p>
             )}
           </form>

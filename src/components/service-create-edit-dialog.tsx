@@ -22,6 +22,7 @@ interface Service {
   base_price: number | null;
   default_hourly_rate: number | null;
   is_active: boolean;
+  color?: string | null;
 }
 
 interface ServiceCategory {
@@ -63,6 +64,7 @@ export function ServiceCreateEditDialog({
     category_id: "",
     base_price: "",
     default_hourly_rate: "",
+    color: "#000000",
     is_active: true,
   });
   const [features, setFeatures] = useState<Feature[]>([]);
@@ -77,6 +79,7 @@ export function ServiceCreateEditDialog({
         category_id: service.category_id,
         base_price: service.base_price?.toString() || "",
         default_hourly_rate: service.default_hourly_rate?.toString() || "",
+        color: (service as any).color || "#000000",
         is_active: service.is_active,
       });
       // Load features
@@ -90,6 +93,7 @@ export function ServiceCreateEditDialog({
         category_id: "",
         base_price: "",
         default_hourly_rate: "",
+        color: "#000000",
         is_active: true,
       });
       setFeatures([]);
@@ -176,6 +180,7 @@ export function ServiceCreateEditDialog({
             category_id: formData.category_id,
             base_price: formData.base_price ? parseFloat(formData.base_price) : null,
             default_hourly_rate: formData.default_hourly_rate ? parseFloat(formData.default_hourly_rate) : null,
+            color: formData.color,
             is_active: formData.is_active,
           })
           .eq('id', service.id);
@@ -195,6 +200,7 @@ export function ServiceCreateEditDialog({
             category_id: formData.category_id,
             base_price: formData.base_price ? parseFloat(formData.base_price) : null,
             default_hourly_rate: formData.default_hourly_rate ? parseFloat(formData.default_hourly_rate) : null,
+            color: formData.color,
             is_active: formData.is_active,
           })
           .select('id')
@@ -347,6 +353,26 @@ export function ServiceCreateEditDialog({
             </div>
           </div>
 
+          <div>
+            <Label htmlFor="color">Farbe</Label>
+            <div className="flex gap-2">
+              <Input
+                id="color"
+                type="color"
+                value={formData.color}
+                onChange={(e) => setFormData(prev => ({ ...prev, color: e.target.value }))}
+                className="w-12 h-10 p-1 cursor-pointer"
+              />
+              <Input
+                value={formData.color}
+                onChange={(e) => setFormData(prev => ({ ...prev, color: e.target.value }))}
+                placeholder="#000000"
+                className="flex-1"
+                pattern="^#[0-9A-Fa-f]{6}$"
+              />
+            </div>
+          </div>
+
           <div className="flex items-center space-x-2">
             <Switch
               id="is_active"
@@ -403,8 +429,8 @@ export function ServiceCreateEditDialog({
               {loading ? "Speichern..." : "Speichern"}
             </Button>
           </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+        </form >
+      </DialogContent >
+    </Dialog >
   );
 }

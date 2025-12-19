@@ -67,7 +67,7 @@ export function OrderCreateDialog({
     <RecordDialog
       open={open}
       onOpenChange={setOpenState}
-      title="Neuen Auftrag hinzufügen"
+      title="Neuen Auftrag erstellen"
       description="Erstellen Sie einen neuen Auftrag für einen Kunden."
       icon={<ShoppingCart className="h-5 w-5 text-primary" />}
       size="lg"
@@ -77,7 +77,7 @@ export function OrderCreateDialog({
           {trigger ?? (
             <Button>
               <PlusCircle className="mr-2 h-4 w-4" />
-              Neuen Auftrag hinzufügen
+              Neuen Auftrag erstellen
             </Button>
           )}
         </DialogTrigger>
@@ -97,7 +97,7 @@ export function OrderCreateDialog({
             <OrderForm
               key={`order-create-form-${formKey}`}
               onSubmit={handleCreate}
-              submitButtonText="Auftrag erstellen"
+              submitButtonText="Neuen Auftrag erstellen"
               onSuccess={() => {}}
               isInDialog={true}
             />

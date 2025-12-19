@@ -32,6 +32,7 @@ interface MultiSelectEmployeesProps {
   selectedEmployeeIds: string[];
   onSelectionChange: (selectedIds: string[]) => void;
   disabled?: boolean;
+  trigger?: React.ReactNode;
 }
 
 export function MultiSelectEmployees({
@@ -39,6 +40,7 @@ export function MultiSelectEmployees({
   selectedEmployeeIds,
   onSelectionChange,
   disabled,
+  trigger,
 }: MultiSelectEmployeesProps) {
   const [open, setOpen] = React.useState(false);
 

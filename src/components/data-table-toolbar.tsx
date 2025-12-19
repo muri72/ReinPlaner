@@ -20,6 +20,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
 import {
   Command,
   CommandEmpty,
@@ -28,7 +29,6 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { SearchInput } from "./search-input";
 
 export interface FilterOption {
   value: string;
@@ -125,7 +125,7 @@ export function DataTableToolbar({
   return (
     <div className="flex flex-col gap-2">
       <div className="flex flex-col sm:flex-row items-center gap-2">
-        <SearchInput placeholder={searchPlaceholder} className="w-full sm:max-w-xs" />
+        <Input placeholder={searchPlaceholder} className="w-full sm:max-w-xs" />
         <Popover open={isFilterPopoverOpen} onOpenChange={setIsFilterPopoverOpen}>
           <PopoverTrigger asChild>
             <Button variant="outline" size="sm" className="h-9 border-dashed w-full sm:w-auto">
