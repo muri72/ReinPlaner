@@ -183,7 +183,8 @@ export default function PlanningPage() {
   }, []);
 
   const openOrderDialog = React.useCallback(() => {
-    setCreateJobOpen(true);
+    // TODO: Implement create order dialog
+    console.log('Open create order dialog');
   }, []);
 
   const planningData = planningPageData?.planningData ?? {};

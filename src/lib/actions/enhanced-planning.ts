@@ -2,7 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
-import { getPlanningJobs } from "./jobs";
+// import { getPlanningJobs } from "./jobs"; // TODO: Implement jobs module
 import { startOfWeek, endOfWeek, eachDayOfInterval, formatISO, parseISO, getDay, getWeek } from 'date-fns';
 import { de } from 'date-fns/locale';
 
@@ -72,15 +72,16 @@ export async function getEnhancedPlanningDataForRange(
 
   try {
     // Get jobs using the new RPC function
-    const jobsResult = await getPlanningJobs(startDate, endDate, {
-      statusFilter: ['planned', 'confirmed', 'active', 'completed', 'cancelled', 'replaced']
-    });
+    // const jobsResult = await getPlanningJobs(startDate, endDate, {
+    //   statusFilter: ['planned', 'confirmed', 'active', 'completed', 'cancelled', 'replaced']
+    // });
 
-    if (!jobsResult.success) {
-      return { success: false, data: null, message: jobsResult.message };
-    }
+    // if (!jobsResult.success) {
+    //   return { success: false, data: null, message: jobsResult.message || "Fehler beim Abrufen der Planungsdaten." };
+    // }
 
-    const jobs = jobsResult.data;
+    // const jobs = jobsResult.data;
+    const jobs: any[] = []; // TODO: Get jobs from getPlanningJobs when implemented
 
     // Fetch employees with search filter
     let employeesQuery = supabase
@@ -296,17 +297,18 @@ export async function createQuickJob(
       `${dateString}T${String(9 + Math.floor(estimatedHours)).padStart(2, '0')}:00:00.000Z`;
 
     // Create the job using the existing function
-    const { createJob } = await import('./jobs');
-    const result = await createJob({
-      orderId,
-      assignmentId: assignment.id,
-      employeeId,
-      startAt,
-      endAt,
-      status: 'planned'
-    });
+    // const { createJob } = await import('./jobs'); // TODO: Implement jobs module
+    // const result = await createJob({
+    //   orderId,
+    //   assignmentId: assignment.id,
+    //   employeeId,
+    //   startAt,
+    //   endAt,
+    //   status: 'planned'
+    // });
 
-    return result;
+    // return result;
+    return { success: false, message: "createQuickJob not implemented - jobs module missing" };
   } catch (error: any) {
     console.error("Error creating quick job:", error);
     return { success: false, message: error.message || "Fehler beim Erstellen des Einsatzes." };

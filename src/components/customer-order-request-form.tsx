@@ -23,7 +23,26 @@ import { useRouter } from "next/navigation";
 
 import { getServices, Service } from "@/app/dashboard/services/actions";
 
-// ... imports
+// Schema and types for the form
+export const customerOrderRequestSchema = z.object({
+  title: z.string().min(1, "Titel ist erforderlich").max(255, "Titel ist zu lang"),
+  description: z.string().optional().nullable(),
+  dueDate: z.date().optional().nullable(),
+  orderType: z.enum(["permanent", "one_time", "recurring", "substitution"], {
+    required_error: "Auftragstyp ist erforderlich",
+  }),
+  startDate: z.date().optional().nullable(),
+  recurringEndDate: z.date().optional().nullable(),
+  objectId: z.string().uuid("Ungültige Objekt-ID").optional().nullable(),
+  contactId: z.string().uuid("Ungültige Kontakt-ID").optional().nullable(),
+  serviceType: z.string().optional().nullable(),
+  serviceIds: z.array(z.string().uuid()).optional().default([]),
+  recurringInterval: z.number().optional().nullable(),
+  notes: z.string().optional().nullable(),
+});
+
+export type CustomerOrderRequestFormInput = z.input<typeof customerOrderRequestSchema>;
+export type CustomerOrderRequestFormValues = z.infer<typeof customerOrderRequestSchema>;
 
 interface CustomerOrderRequestFormProps {
   customerId: string;
@@ -192,7 +211,7 @@ export function CustomerOrderRequestForm({ customerId, onSuccess, isInDialog = f
             description="Gewünschte Termine für die Dienstleistung"
             icon={<Calendar className="h-5 w-5 text-primary" />}
           >
-            {orderType === "one_time" && (
+            {form.watch("orderType") === "one_time" && (
               <DatePicker
                 label="Gewünschtes Datum (optional)"
                 value={form.watch("dueDate")}
@@ -201,7 +220,7 @@ export function CustomerOrderRequestForm({ customerId, onSuccess, isInDialog = f
               />
             )}
 
-            {orderType === "recurring" && (
+            {form.watch("orderType") === "recurring" && (
               <>
                 <DatePicker
                   label="Gewünschtes Startdatum"
@@ -363,7 +382,7 @@ export function CustomerOrderRequestForm({ customerId, onSuccess, isInDialog = f
               description="Gewünschte Termine für die Dienstleistung"
               icon={<Calendar className="h-5 w-5 text-primary" />}
             >
-              {orderType === "one_time" && (
+              {form.watch("orderType") === "one_time" && (
                 <DatePicker
                   label="Gewünschtes Datum (optional)"
                   value={form.watch("dueDate")}
@@ -372,7 +391,7 @@ export function CustomerOrderRequestForm({ customerId, onSuccess, isInDialog = f
                 />
               )}
 
-              {orderType === "recurring" && (
+              {form.watch("orderType") === "recurring" && (
                 <>
                   <DatePicker
                     label="Gewünschtes Startdatum"

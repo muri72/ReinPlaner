@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
-import { CustomerOrderRequestForm, CustomerOrderRequestFormValues } from "@/components/customer-order-request-form";
+import { CustomerOrderRequestForm } from "@/components/customer-order-request-form";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { useDialogUnsavedChanges } from "@/components/ui/unsaved-changes-context";
 import { UnsavedChangesAlert } from "@/components/ui/unsaved-changes-alert";

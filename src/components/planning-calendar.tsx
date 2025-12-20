@@ -141,7 +141,7 @@ export function PlanningCalendar({ planningData, unassignedOrders, weekDays, act
                         <div key={order.id} className="p-2 rounded-md border bg-muted/30">
                           <div className="flex items-center justify-between">
                             <span className="text-sm font-medium">{order.title}</span>
-                            <Badge variant="outline">{order.order_type}</Badge>
+                            <Badge variant="outline">{order.service_type || 'N/A'}</Badge>
                           </div>
                         </div>
                       ))}

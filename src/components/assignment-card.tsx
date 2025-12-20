@@ -21,6 +21,7 @@ interface Assignment {
   isTeam: boolean;
   status: 'completed' | 'pending' | 'future';
   service_type: string | null;
+  service_color?: string | null; // Optional color for the service
   scheduleDate?: string; // Optional: specific date for this card instance if known
 }
 
@@ -28,6 +29,7 @@ interface AssignmentCardProps {
   assignment: Assignment;
   onSuccess: () => void;
   date?: string; // Date context for this card
+  services?: any[]; // Services for the assignment
 }
 
 
@@ -92,7 +94,6 @@ export function AssignmentCard({ assignment, onSuccess, date, services = [] }: A
       <AssignmentEditDialog
         orderId={assignment.orderId}
         onSuccess={onSuccess}
-        onCancel={handleCancelRequest}
       >
         <div
           ref={setNodeRef}
