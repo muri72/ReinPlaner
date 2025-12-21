@@ -2,17 +2,15 @@
 
 import { useForm, SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useState, useEffect } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { useState, useEffect, useCallback } from "react";
 import { DatePicker } from "@/components/date-picker";
-import { calculateHours } from "@/lib/utils"; // Importiere von utils
+import { calculateHours } from "@/lib/utils";
 import { handleActionResponse } from "@/lib/toast-utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FormSection } from "@/components/ui/form-section";
@@ -22,58 +20,12 @@ import { UnsavedChangesProtection } from "@/components/ui/unsaved-changes-dialog
 import { UnsavedChangesAlert } from "@/components/ui/unsaved-changes-alert";
 import { useRouter } from "next/navigation";
 import { Clock, Settings, User, Building, FileText, Calendar } from "lucide-react";
+import { timeEntrySchema, TimeEntryFormInput, TimeEntryFormValues } from "@/lib/utils/form-utils";
+import { useTimeEntryFormData } from "@/hooks/use-time-entry-form-data";
 
-export const timeEntrySchema = z.object({
-  employeeId: z.string().uuid("Ungültige Mitarbeiter-ID").optional().nullable(),
-  customerId: z.string().uuid("Ungültige Kunden-ID").optional().nullable(),
-  objectId: z.string().uuid("Ungültiges Objekt-ID").optional().nullable(),
-  orderId: z.string().uuid("Ungültige Auftrags-ID").optional().nullable(),
-  startDate: z.date({ required_error: "Startdatum ist erforderlich" }),
-  startTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Ungültiges Startzeitformat (HH:MM)"),
-  endDate: z.date().optional().nullable(),
-  endTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Ungültiges Endzeitformat (HH:MM)").optional().nullable(),
-  durationMinutes: z.preprocess(
-    (val) => (val === "" ? null : Number(val)),
-    z.nullable(z.number().min(0, "Dauer muss positiv sein").max(99999, "Dauer ist zu hoch")).optional()
-  ),
-  breakMinutes: z.preprocess( // Neues Feld für Pausenminuten
-    (val) => (val === "" ? null : Number(val)),
-    z.nullable(z.number().min(0).max(1440, "Pausenminuten sind zu hoch")).optional()
-  ),
-  type: z.enum(["manual", "clock_in_out", "stopwatch", "automatic_scheduled_order"]).default("manual"), // Typ umbenannt
-  notes: z.string().max(500, "Notizen sind zu lang").optional().nullable(),
-}).superRefine((data, ctx) => {
-  // Wenn Enddatum und Endzeit angegeben sind, müssen sie gültig sein
-  if ((data.endDate && !data.endTime) || (!data.endDate && data.endTime)) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "Enddatum und Endzeit müssen beide angegeben oder beide weggelassen werden.",
-      path: ["endDate"],
-    });
-  }
-
-  // Wenn Start- und Enddatum/zeit vorhanden sind, prüfen, ob Endzeit nach Startzeit liegt
-  if (data.startDate && data.startTime && data.endDate && data.endTime) {
-    const startDateTime = new Date(data.startDate);
-    const [startH, startM] = data.startTime.split(':').map(Number);
-    startDateTime.setHours(startH, startM, 0, 0);
-
-    const endDateTime = new Date(data.endDate);
-    const [endH, endM] = data.endTime.split(':').map(Number);
-    endDateTime.setHours(endH, endM, 0, 0);
-
-    if (endDateTime < startDateTime) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Endzeit muss nach der Startzeit liegen.",
-        path: ["endTime"],
-      });
-    }
-  }
-});
-
-export type TimeEntryFormInput = z.input<typeof timeEntrySchema>;
-export type TimeEntryFormValues = z.infer<typeof timeEntrySchema>;
+// Re-export types for backward compatibility
+export type { TimeEntryFormInput, TimeEntryFormValues } from "@/lib/utils/form-utils";
+export { timeEntrySchema } from "@/lib/utils/form-utils";
 
 interface TimeEntryFormProps {
   initialData?: Partial<TimeEntryFormInput>;
@@ -86,12 +38,7 @@ interface TimeEntryFormProps {
 }
 
 export function TimeEntryForm({ initialData, onSubmit, submitButtonText, onSuccess, currentUserId, isAdmin, isInDialog = false }: TimeEntryFormProps) {
-  const supabase = createClient();
   const router = useRouter();
-  const [employees, setEmployees] = useState<{ id: string; first_name: string; last_name: string }[]>([]);
-  const [customers, setCustomers] = useState<{ id: string; name: string }[]>([]);
-  const [objects, setObjects] = useState<{ id: string; name: string; customer_id: string; monday_start_time: string | null; monday_end_time: string | null; tuesday_start_time: string | null; tuesday_end_time: string | null; wednesday_start_time: string | null; wednesday_end_time: string | null; thursday_start_time: string | null; thursday_end_time: string | null; friday_start_time: string | null; friday_end_time: string | null; saturday_start_time: string | null; saturday_end_time: string | null; sunday_start_time: string | null; sunday_end_time: string | null; }[]>([]);
-  const [orders, setOrders] = useState<{ id: string; title: string; customer_id: string; object_id: string }[]>([]);
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
 
   const resolvedDefaultValues: TimeEntryFormValues = {
@@ -104,7 +51,7 @@ export function TimeEntryForm({ initialData, onSubmit, submitButtonText, onSucce
     endDate: initialData?.endDate ?? null,
     endTime: initialData?.endTime ?? null,
     durationMinutes: typeof initialData?.durationMinutes === 'number' ? initialData.durationMinutes : null,
-    breakMinutes: typeof initialData?.breakMinutes === 'number' ? initialData.breakMinutes : null, // Initialwert für Pausenminuten
+    breakMinutes: typeof initialData?.breakMinutes === 'number' ? initialData.breakMinutes : null,
     type: initialData?.type ?? "manual",
     notes: initialData?.notes ?? null,
   };
@@ -119,54 +66,32 @@ export function TimeEntryForm({ initialData, onSubmit, submitButtonText, onSucce
 
   const selectedCustomerId = form.watch("customerId");
   const selectedObjectId = form.watch("objectId");
-  const selectedStartDate = form.watch("startDate"); // Watch for startDate changes
+  const selectedStartDate = form.watch("startDate");
   const selectedType = form.watch("type");
 
-  // Fetch data for dropdowns
-  useEffect(() => {
-    const fetchDropdownData = async () => {
-      // Fetch all employees if admin, otherwise only the employee linked to the current user
-      let employeesQuery = supabase.from('employees').select('id, first_name, last_name').order('last_name', { ascending: true });
-      if (!isAdmin) {
-        employeesQuery = employeesQuery.eq('user_id', currentUserId);
-      }
-      // Filter for active employees only
-      employeesQuery = employeesQuery.eq('status', 'active');
+  // Handle auto-set employee for non-admin users
+  const handleEmployeeAutoSet = useCallback((employeeId: string) => {
+    form.setValue("employeeId", employeeId);
+  }, [form]);
 
-      const { data: employeesData, error: employeesError } = await employeesQuery;
-      if (employeesData) {
-        setEmployees(employeesData);
-        // If not admin and an employee is found, set it as default
-        if (!isAdmin && employeesData.length > 0 && !initialData?.employeeId) {
-          form.setValue("employeeId", employeesData[0].id);
-        }
-      }
-      if (employeesError) console.error("Fehler beim Laden der Mitarbeiter:", employeesError);
-
-      const { data: customersData, error: customersError } = await supabase.from('customers').select('id, name').order('name', { ascending: true });
-      if (customersData) setCustomers(customersData);
-      if (customersError) console.error("Fehler beim Laden der Kunden:", customersError);
-
-      // Fetch all object details including time schedules
-      const { data: objectsData, error: objectsError } = await supabase.from('objects').select('id, name, customer_id, monday_start_time, monday_end_time, tuesday_start_time, tuesday_end_time, wednesday_start_time, wednesday_end_time, thursday_start_time, thursday_end_time, friday_start_time, friday_end_time, saturday_start_time, saturday_end_time, sunday_start_time, sunday_end_time').order('name', { ascending: true });
-      if (objectsData) setObjects(objectsData);
-      if (objectsError) console.error("Fehler beim Laden der Objekte:", objectsError);
-
-      const { data: ordersData, error: ordersError } = await supabase.from('orders').select('id, title, customer_id, object_id').order('title', { ascending: true });
-      if (ordersData) setOrders(ordersData);
-      if (ordersError) console.error("Fehler beim Laden der Aufträge:", ordersError);
-    };
-    fetchDropdownData();
-  }, [supabase, currentUserId, isAdmin, form, initialData]); // Abhängigkeiten aktualisiert
+  // Use extracted hook for data fetching
+  const {
+    employees,
+    customers,
+    loading: loadingDropdowns,
+    getFilteredObjects,
+    getFilteredOrders,
+    getObjectSchedule,
+  } = useTimeEntryFormData({
+    currentUserId,
+    isAdmin,
+    initialEmployeeId: initialData?.employeeId,
+    onEmployeeAutoSet: handleEmployeeAutoSet,
+  });
 
   // Filter objects and orders based on selected customer/object
-  const filteredObjects = selectedCustomerId
-    ? objects.filter(obj => obj.customer_id === selectedCustomerId)
-    : [];
-
-  const filteredOrders = selectedObjectId
-    ? orders.filter(order => order.object_id === selectedObjectId)
-    : (selectedCustomerId ? orders.filter(order => order.customer_id === selectedCustomerId) : []);
+  const filteredObjects = getFilteredObjects(selectedCustomerId || null);
+  const filteredOrders = getFilteredOrders(selectedCustomerId || null, selectedObjectId || null);
 
   // Reset object/order if customer/object changes
   useEffect(() => {
@@ -181,58 +106,23 @@ export function TimeEntryForm({ initialData, onSubmit, submitButtonText, onSucce
   // Intelligent pre-filling based on selected object and date
   useEffect(() => {
     if (selectedObjectId && selectedStartDate) {
-      const selectedObject = objects.find(obj => obj.id === selectedObjectId);
-      if (selectedObject) {
-        const dayOfWeek = selectedStartDate.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
-        let startTime: string | null = null;
-        let endTime: string | null = null;
+      const dayOfWeek = selectedStartDate.getDay();
+      const { startTime, endTime } = getObjectSchedule(selectedObjectId, dayOfWeek);
 
-        switch (dayOfWeek) {
-          case 0: // Sunday
-            startTime = selectedObject.sunday_start_time;
-            endTime = selectedObject.sunday_end_time;
-            break;
-          case 1: // Monday
-            startTime = selectedObject.monday_start_time;
-            endTime = selectedObject.monday_end_time;
-            break;
-          case 2: // Tuesday
-            startTime = selectedObject.tuesday_start_time;
-            endTime = selectedObject.tuesday_end_time;
-            break;
-          case 3: // Wednesday
-            startTime = selectedObject.wednesday_start_time;
-            endTime = selectedObject.wednesday_end_time;
-            break;
-          case 4: // Thursday
-            startTime = selectedObject.thursday_start_time;
-            endTime = selectedObject.thursday_end_time;
-            break;
-          case 5: // Friday
-            startTime = selectedObject.friday_start_time;
-            endTime = selectedObject.friday_end_time;
-            break;
-          case 6: // Saturday
-            startTime = selectedObject.saturday_start_time;
-            endTime = selectedObject.saturday_end_time;
-            break;
+      if (startTime && endTime) {
+        form.setValue("startTime", startTime);
+        form.setValue("endTime", endTime);
+        form.setValue("endDate", selectedStartDate);
+        const duration = calculateHours(startTime, endTime);
+        if (duration !== null) {
+          form.setValue("durationMinutes", Math.round(duration * 60));
         }
-
-        if (startTime && endTime) {
-          form.setValue("startTime", startTime);
-          form.setValue("endTime", endTime);
-          form.setValue("endDate", selectedStartDate); // Set end date to start date if times are found
-          const duration = calculateHours(startTime, endTime);
-          if (duration !== null) {
-            form.setValue("durationMinutes", Math.round(duration * 60));
-          }
-        } else {
-          // Clear times if no schedule found for the day
-          form.setValue("startTime", new Date().toTimeString().slice(0, 5)); // Default to current time
-          form.setValue("endTime", null);
-          form.setValue("endDate", null);
-          form.setValue("durationMinutes", null);
-        }
+      } else {
+        // Clear times if no schedule found for the day
+        form.setValue("startTime", new Date().toTimeString().slice(0, 5));
+        form.setValue("endTime", null);
+        form.setValue("endDate", null);
+        form.setValue("durationMinutes", null);
       }
     } else if (!initialData) {
       // Reset to current time if object or date is cleared and not in edit mode
@@ -241,7 +131,7 @@ export function TimeEntryForm({ initialData, onSubmit, submitButtonText, onSucce
       form.setValue("endDate", null);
       form.setValue("durationMinutes", null);
     }
-  }, [selectedObjectId, selectedStartDate, objects, form, initialData]);
+  }, [selectedObjectId, selectedStartDate, getObjectSchedule, form, initialData]);
 
 
   const handleFormSubmit: SubmitHandler<TimeEntryFormInput> = async (data) => {

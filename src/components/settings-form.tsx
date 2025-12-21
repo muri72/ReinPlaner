@@ -18,67 +18,21 @@ import { Textarea } from "@/components/ui/textarea";
 import { SimpleErrorBoundary } from "@/components/error-boundary";
 import { RefreshCw, AlertCircle, CheckCircle2 } from "lucide-react";
 
-const companyInfoSchema = z.object({
-  company_name: z.string().min(1, "Firmenname ist erforderlich"),
-  company_logo_url: z.string().url("Muss eine gültige URL sein"),
-});
-
-const regionalSettingsSchema = z.object({
-  default_timezone: z.string(),
-  default_bundesland: z.string().min(1, "Bundesland ist erforderlich"),
-});
-
-const payrollSettingsSchema = z.object({
-  default_employee_hourly_rate: z.string().refine((val) => !isNaN(Number(val)) && Number(val) > 0, {
-    message: "Muss eine gültige Zahl sein",
-  }),
-  holiday_premium_pay_multiplier: z.string().refine((val) => !isNaN(Number(val)) && Number(val) >= 1, {
-    message: "Muss mindestens 1 sein",
-  }),
-  weekend_premium_pay_multiplier: z.string().refine((val) => !isNaN(Number(val)) && Number(val) >= 1, {
-    message: "Muss mindestens 1 sein",
-  }),
-});
-
-const invoiceSettingsSchema = z.object({
-  invoice_prefix: z.string().min(1, "Rechnungspräfix ist erforderlich"),
-  next_invoice_number: z.string().refine((val) => !isNaN(Number(val)) && Number(val) > 0, {
-    message: "Muss eine gültige Zahl sein",
-  }),
-  offer_prefix: z.string().min(1, "Angebotspräfix ist erforderlich"),
-  next_offer_number: z.string().refine((val) => !isNaN(Number(val)) && Number(val) > 0, {
-    message: "Muss eine gültige Zahl sein",
-  }),
-  credit_note_prefix: z.string().min(1, "Gutschriftpräfix ist erforderlich"),
-  next_credit_note_number: z.string().refine((val) => !isNaN(Number(val)) && Number(val) > 0, {
-    message: "Muss eine gültige Zahl sein",
-  }),
-  default_payment_term: z.string().min(1, "Zahlungsziel ist erforderlich"),
-  default_invoice_header_text: z.string().optional(),
-  default_invoice_footer_text: z.string().optional(),
-  default_offer_header_text: z.string().optional(),
-  default_offer_footer_text: z.string().optional(),
-});
-
-const taxSettingsSchema = z.object({
-  currency: z.string().min(1, "Währung ist erforderlich"),
-  vat_number: z.string().optional(),
-  vat_option: z.string().min(1, "MwSt.-Option ist erforderlich"),
-});
-
-const bankConnectionSchema = z.object({
-  account_holder: z.string().min(1, "Kontoinhaber ist erforderlich"),
-  iban: z.string().min(1, "IBAN ist erforderlich"),
-  bic: z.string().optional(),
-  bank_name: z.string().min(1, "Bankname ist erforderlich"),
-});
-
-type CompanyInfoForm = z.infer<typeof companyInfoSchema>;
-type RegionalSettingsForm = z.infer<typeof regionalSettingsSchema>;
-type PayrollSettingsForm = z.infer<typeof payrollSettingsSchema>;
-type InvoiceSettingsForm = z.infer<typeof invoiceSettingsSchema>;
-type TaxSettingsForm = z.infer<typeof taxSettingsSchema>;
-type BankConnectionForm = z.infer<typeof bankConnectionSchema>;
+// Import schemas and types from form-utils
+import {
+  companyInfoSchema,
+  regionalSettingsSchema,
+  payrollSettingsSchema,
+  invoiceSettingsSchema,
+  taxSettingsSchema,
+  bankConnectionSchema,
+  CompanyInfoForm,
+  RegionalSettingsForm,
+  PayrollSettingsForm,
+  InvoiceSettingsForm,
+  TaxSettingsForm,
+  BankConnectionForm,
+} from "@/lib/utils/form-utils";
 
 export function SettingsForm() {
   const supabase = createClient();

@@ -1,4 +1,7 @@
 import { createClient } from '@/lib/supabase/client';
+import { SettingsCache } from './settings-cache';
+import { withRetry, defaultRetryConfig } from './settings-retry';
+import { checkConnection } from './settings-connection';
 
 export interface PlatformSetting {
   key: string;
@@ -34,106 +37,58 @@ export interface EmployeeHolidayPreference {
 }
 
 class SettingsService {
-  private cache = new Map<string, { value: any; timestamp: number }>();
-  private cacheTTL = 5 * 60 * 1000; // 5 minutes
-  private retryConfig = {
-    maxRetries: 3,
-    retryDelay: 1000,
-    backoffFactor: 2,
-  };
-
-  /**
-   * Execute a function with retry logic
-   */
-  private async withRetry<T>(
-    operation: () => Promise<T>,
-    context: string = "operation"
-  ): Promise<T> {
-    let lastError: any;
-
-    for (let attempt = 1; attempt <= this.retryConfig.maxRetries; attempt++) {
-      try {
-        return await operation();
-      } catch (error: any) {
-        lastError = error;
-        console.warn(`SettingsService: Attempt ${attempt}/${this.retryConfig.maxRetries} failed for ${context}:`, error.message);
-
-        if (attempt === this.retryConfig.maxRetries) {
-          console.error(`SettingsService: All ${this.retryConfig.maxRetries} attempts failed for ${context}`);
-          throw error;
-        }
-
-        // Wait before retrying with exponential backoff
-        const delay = this.retryConfig.retryDelay * Math.pow(this.retryConfig.backoffFactor, attempt - 1);
-        await new Promise(resolve => setTimeout(resolve, delay));
-      }
-    }
-
-    throw lastError;
-  }
+  private cache = new SettingsCache(5 * 60 * 1000); // 5 minutes TTL
 
   /**
    * Check if the database connection is healthy
    */
   async checkConnection(): Promise<{ healthy: boolean; error?: string }> {
-    try {
-      const supabase = createClient();
-      const { error } = await supabase
-        .from('app_settings')
-        .select('key')
-        .limit(1)
-        .maybeSingle();
-
-      if (error && error.code !== 'PGRST116') {
-        throw error;
-      }
-
-      return { healthy: true };
-    } catch (error: any) {
-      console.error('SettingsService: Connection check failed:', error);
-      return { healthy: false, error: error.message };
-    }
+    return await checkConnection();
   }
 
   /**
    * Get a platform setting by key
    */
   async getSetting(key: string, scope: string = 'global', scopeId?: string): Promise<string | null> {
-    const cacheKey = `${key}:${scope}:${scopeId || 'global'}`;
+    const cacheKey = this.cache.getCacheKey(key, scope, scopeId);
     const cached = this.cache.get(cacheKey);
 
-    if (cached && Date.now() - cached.timestamp < this.cacheTTL) {
-      return cached.value;
+    if (cached !== null) {
+      return cached;
     }
 
     try {
-      const result = await this.withRetry(async () => {
-        const supabase = createClient();
+      const result = await withRetry(
+        async () => {
+          const supabase = createClient();
 
-        let query = supabase
-          .from('app_settings')
-          .select('value')
-          .eq('key', key)
-          .eq('scope', scope)
-          .eq('is_active', true);
+          let query = supabase
+            .from('app_settings')
+            .select('value')
+            .eq('key', key)
+            .eq('scope', scope)
+            .eq('is_active', true);
 
-        if (scopeId) {
-          query = query.eq('scope_id', scopeId);
-        } else {
-          query = query.is('scope_id', null);
-        }
+          if (scopeId) {
+            query = query.eq('scope_id', scopeId);
+          } else {
+            query = query.is('scope_id', null);
+          }
 
-        const { data, error } = await query.single();
+          const { data, error } = await query.single();
 
-        if (error || !data) {
-          console.warn(`Setting ${key} not found:`, error?.message);
-          return null;
-        }
+          if (error || !data) {
+            console.warn(`Setting ${key} not found:`, error?.message);
+            return null;
+          }
 
-        return data.value;
-      }, `getSetting(${key})`);
+          return data.value;
+        },
+        defaultRetryConfig,
+        `getSetting(${key})`
+      );
 
-      this.cache.set(cacheKey, { value: result, timestamp: Date.now() });
+      this.cache.set(cacheKey, result);
       return result;
     } catch (error: any) {
       console.error(`SettingsService: Failed to get setting ${key}:`, error);
@@ -147,23 +102,27 @@ class SettingsService {
    */
   async getSettingsByCategory(category: string): Promise<PlatformSetting[]> {
     try {
-      const result = await this.withRetry(async () => {
-        const supabase = createClient();
+      const result = await withRetry(
+        async () => {
+          const supabase = createClient();
 
-        const { data, error } = await supabase
-          .from('app_settings')
-          .select('key, value, category, description, setting_type, scope')
-          .eq('category', category)
-          .eq('is_active', true)
-          .order('key');
+          const { data, error } = await supabase
+            .from('app_settings')
+            .select('key, value, category, description, setting_type, scope')
+            .eq('category', category)
+            .eq('is_active', true)
+            .order('key');
 
-        if (error) {
-          console.error('Error fetching settings by category:', error);
-          throw error;
-        }
+          if (error) {
+            console.error('Error fetching settings by category:', error);
+            throw error;
+          }
 
-        return data || [];
-      }, `getSettingsByCategory(${category})`);
+          return data || [];
+        },
+        defaultRetryConfig,
+        `getSettingsByCategory(${category})`
+      );
 
       return result;
     } catch (error: any) {
@@ -243,7 +202,8 @@ class SettingsService {
       if (error) throw error;
 
       // Invalidate cache
-      this.cache.delete(`${key}:${scope}:${scopeId || 'global'}`);
+      const cacheKey = this.cache.getCacheKey(key, scope, scopeId);
+      this.cache.delete(cacheKey);
 
       return { success: true };
     } catch (error: any) {
@@ -257,21 +217,25 @@ class SettingsService {
    */
   async getBundeslaender(): Promise<Bundesland[]> {
     try {
-      const result = await this.withRetry(async () => {
-        const supabase = createClient();
+      const result = await withRetry(
+        async () => {
+          const supabase = createClient();
 
-        const { data, error } = await supabase
-          .from('bundeslaender')
-          .select('*')
-          .order('name');
+          const { data, error } = await supabase
+            .from('bundeslaender')
+            .select('*')
+            .order('name');
 
-        if (error) {
-          console.error('Error fetching Bundesländer:', error);
-          throw error;
-        }
+          if (error) {
+            console.error('Error fetching Bundesländer:', error);
+            throw error;
+          }
 
-        return data || [];
-      }, 'getBundeslaender');
+          return data || [];
+        },
+        defaultRetryConfig,
+        'getBundeslaender'
+      );
 
       return result;
     } catch (error: any) {

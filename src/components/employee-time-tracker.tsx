@@ -17,6 +17,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { getWeek } from "date-fns";
 import { cn } from "@/lib/utils";
 
+// Import extracted utilities and hooks
+import { formatLiveTime, calculateDistance, calculateBreakMinutesFallback, isLocationValid } from "@/lib/utils/time-tracking-utils";
+import { useTimeTracker, useActiveTimeEntry, useLocationTracking } from "@/hooks/use-time-tracker";
+import { TimeProgressDisplay } from "@/components/time-tracking/time-progress-display";
+
 interface EmployeeTimeTrackerProps {
   userId: string;
 }
@@ -93,63 +98,6 @@ interface OrderWithDetails {
   assigned_saturday_end_time: string | null;
   assigned_sunday_end_time: string | null;
 }
-
-// Helper to format seconds into HH:MM:SS for live display
-const formatLiveTime = (totalSeconds: number): string => {
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
-  const pad = (num: number) => String(num).padStart(2, '0');
-  return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
-};
-
-// New component for displaying time progress
-const TimeProgressDisplay = ({ plannedMinutes, actualSeconds }: { plannedMinutes: number | null, actualSeconds: number }) => {
-  if (plannedMinutes === null || plannedMinutes <= 0) return null;
-
-  const plannedSeconds = plannedMinutes * 60;
-  const progressPercentage = plannedSeconds > 0 ? (actualSeconds / plannedSeconds) * 100 : 0;
-  const isOvertime = actualSeconds > plannedSeconds;
-
-  return (
-    <div className="space-y-2 pt-2 mt-2 border-t">
-      <div className="flex justify-between text-sm font-medium">
-        <span>Tatsächliche Zeit: {formatLiveTime(actualSeconds)}</span>
-        <span>Geplante Zeit: {formatDuration(plannedMinutes)}</span>
-      </div>
-      <div className="w-full bg-muted rounded-full h-4 overflow-hidden">
-        <div
-          className={cn(
-            "h-4 rounded-full transition-all duration-500",
-            isOvertime ? "bg-destructive" : "bg-success"
-          )}
-          style={{ width: `${Math.min(progressPercentage, 100)}%` }}
-        />
-      </div>
-      {isOvertime && (
-        <p className="text-xs text-destructive text-center font-semibold">
-          Überstunden: {formatLiveTime(actualSeconds - plannedSeconds)}
-        </p>
-      )}
-    </div>
-  );
-};
-
-// Helper function to calculate distance between two coordinates
-const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
-  const R = 6371e3; // Earth's radius in meters
-  const φ1 = lat1 * Math.PI / 180;
-  const φ2 = lat2 * Math.PI / 180;
-  const Δφ = (lat2 - lat1) * Math.PI / 180;
-  const Δλ = (lon2 - lon1) * Math.PI / 180;
-
-  const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
-          Math.cos(φ1) * Math.cos(φ2) *
-          Math.sin(Δλ/2) * Math.sin(Δλ/2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-
-  return R * c; // Distance in meters
-};
 
 export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
   const supabase = createClient();

@@ -2,83 +2,23 @@
 
 import { useForm, SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useState, useEffect } from "react";
-import { createClient } from "@/lib/supabase/client";
-import { Checkbox } from "@/components/ui/checkbox"; // For multi-select
-import { handleActionResponse } from "@/lib/toast-utils"; // Importiere die neue Utility
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Card, CardContent } from "@/components/ui/card";
+import { useEffect } from "react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { handleActionResponse } from "@/lib/toast-utils";
 import { FormActions } from "@/components/ui/form-actions";
 import { useFormUnsavedChanges } from "@/components/ui/unsaved-changes-context";
+import { userSchema, UserFormInput, UserFormValues } from "@/lib/utils/form-utils";
+import { useUserFormData, useUserAssignmentDialogs } from "@/hooks/use-user-form-data";
+import { ReassignmentDialog, UnassignDialog } from "@/components/user-form/user-assignment-dialogs";
 
-// Define the base schema first to avoid circular dependency
-const baseUserSchema = z.object({
-  email: z.union([
-    z.string().email("Ungültiges E-Mail-Format"),
-    z.literal(""), // Erlaube leeren String
-  ]).transform(e => e === "" ? null : e).optional().nullable(),
-  password: z.string().min(6, "Passwort muss mindestens 6 Zeichen lang sein").optional(), // Optional for updates
-  firstName: z.string().min(1, "Vorname ist erforderlich").max(100, "Vorname ist zu lang"),
-  lastName: z.string().min(1, "Nachname ist erforderlich").max(100, "Nachname ist zu lang"),
-  role: z.enum(["admin", "manager", "employee", "customer"]).default("employee"),
-  // These are only for NEW user creation, not for editing existing users
-  employeeId: z.string().uuid("Ungültige Mitarbeiter-ID").optional().nullable(),
-  customerId: z.string().uuid("Ungültige Kunden-ID").optional().nullable(), // This is now primarily a filter
-  customerContactId: z.string().uuid("Ungültige Kundenkontakt-ID").optional().nullable(), // Neues Feld für Kundenkontakt
-  managerCustomerIds: z.array(z.string().uuid()).optional(), // For manager role
-});
-
-// Now define the types based on the base schema
-export type UserFormInput = z.input<typeof baseUserSchema>;
-export type UserFormValues = z.infer<typeof baseUserSchema>;
-
-// Apply refine methods to the base schema
-export const userSchema = baseUserSchema
-.refine((data) => {
-  // Rule 1: Email is required for new users if no direct assignment (employee or customer contact)
-  if (data.password !== undefined && !data.employeeId && !data.customerContactId) {
-    return data.email !== null && data.email !== "";
-  }
-  return true;
-}, {
-  message: "E-Mail ist erforderlich, wenn kein Mitarbeiter oder Kundenkontakt zugewiesen ist.",
-  path: ["email"],
-})
-.refine((data) => {
-  if (data.password !== undefined) { // Only for new users
-    // Rule 2: A user can be linked to AT MOST one of employeeId or customerContactId.
-    // customerId is just a filter for customerContactId, not a direct assignment for the user.
-    const directAssignments = [data.employeeId, data.customerContactId].filter(Boolean);
-    if (directAssignments.length > 1) {
-      return false; // Cannot be both an employee and a customer contact
-    }
-
-    // Rule 3: If a customer contact is assigned, the role MUST be 'customer'.
-    if (data.customerContactId && data.role !== 'customer') {
-      return false;
-    }
-
-    // Rule 4: If the role is NOT 'manager', then managerCustomerIds should be empty.
-    if (data.role !== 'manager' && data.managerCustomerIds && data.managerCustomerIds.length > 0) {
-      return false;
-    }
-
-    // No specific role restriction for employeeId anymore.
-    // A user can be linked to an employee (any role: admin, manager, employee, customer).
-    // A user linked to a customer contact must be 'customer'.
-    // A user not linked to anything can be admin, manager, employee, customer.
-  }
-  return true;
-}, {
-  message: "Ungültige Rollen- und Zuweisungskombination.",
-  path: ["role"],
-});
+// Re-export types for backward compatibility
+export type { UserFormInput, UserFormValues } from "@/lib/utils/form-utils";
+export { userSchema } from "@/lib/utils/form-utils";
 
 
 interface UserFormProps {
@@ -96,28 +36,36 @@ interface UserFormProps {
 }
 
 export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, isEditMode = false, employee, customerContact, isInDialog = false }: UserFormProps) {
-  const supabase = createClient();
-  const [employees, setEmployees] = useState<{ id: string; first_name: string; last_name: string; user_id: string | null; email: string | null }[]>([]);
-  const [customers, setCustomers] = useState<{ id: string; name: string; user_id: string | null; contact_email: string | null }[]>([]);
-  const [customerContactsForUserAssignment, setCustomerContactsForUserAssignment] = useState<{ id: string; first_name: string; last_name: string; email: string | null; customer_id: string; user_id: string | null }[]>([]); // State für Kundenkontakte zur Zuweisung
-  const [allCustomersForManager, setAllCustomersForManager] = useState<{ id: string; name: string }[]>([]); // For manager assignment
-  const [loadingDropdowns, setLoadingDropdowns] = useState(true);
-  const [showReassignmentDialog, setShowReassignmentDialog] = useState(false);
-  const [pendingReassignment, setPendingReassignment] = useState<{ type: 'employee' | 'customerContact', id: string, name: string } | null>(null);
-  const [showUnassignDialog, setShowUnassignDialog] = useState(false);
-  const [pendingUnassign, setPendingUnassign] = useState<{ type: 'employee' | 'customerContact' | 'customer', id: string, name: string } | null>(null);
+  // Use extracted hooks for data fetching and dialogs
+  const {
+    employees,
+    customers,
+    customerContactsForUserAssignment,
+    allCustomersForManager,
+    loadingDropdowns,
+    fetchCustomerContacts,
+  } = useUserFormData();
+
+  const {
+    showReassignmentDialog,
+    setShowReassignmentDialog,
+    pendingReassignment,
+    handleReassignmentConfirm,
+    showUnassignDialog,
+    setShowUnassignDialog,
+    pendingUnassign,
+    handleUnassignConfirm,
+  } = useUserAssignmentDialogs();
 
   const resolvedDefaultValues: UserFormValues = {
-    email: initialData?.email ?? null, // Set to null if undefined
+    email: initialData?.email ?? null,
     password: initialData?.password ?? (isEditMode ? undefined : ""),
     firstName: initialData?.firstName ?? "",
     lastName: initialData?.lastName ?? "",
     role: initialData?.role ?? "employee",
-    // These initialData values are used for both new user creation and editing
-    // Use prop values if provided (for edit mode), otherwise use initialData
     employeeId: initialData?.employeeId ?? employee?.id ?? null,
     customerId: initialData?.customerId ?? customerContact?.customer_id ?? null,
-    customerContactId: initialData?.customerContactId ?? customerContact?.id ?? null, // Neues Feld für Kundenkontakt
+    customerContactId: initialData?.customerContactId ?? customerContact?.id ?? null,
     managerCustomerIds: initialData?.managerCustomerIds ?? [],
   };
 
@@ -133,75 +81,15 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
   const selectedRole = form.watch("role");
   const selectedEmployeeId = form.watch("employeeId");
   const selectedCustomerId = form.watch("customerId");
-  const selectedCustomerContactId = form.watch("customerContactId"); // Neues Watch-Feld
-
-  // Fetch data for dropdowns
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoadingDropdowns(true);
-      // Fetch all employees (not just unassigned) for new user creation
-      const { data: employeesData, error: employeesError } = await supabase
-        .from('employees')
-        .select('id, first_name, last_name, user_id, email')
-        .order('last_name', { ascending: true });
-
-      if (employeesError) {
-        console.error("Fehler beim Laden der Mitarbeiter:", employeesError);
-        toast.error("Fehler beim Laden der Mitarbeiter.");
-      }
-      setEmployees(employeesData || []);
-
-      // Fetch all customers (not just unassigned) for new user creation
-      const { data: customersData, error: customersError } = await supabase
-        .from('customers')
-        .select('id, name, user_id, contact_email')
-        .order('name', { ascending: true });
-
-      if (customersError) {
-        console.error("Fehler beim Laden der Kunden:", customersError);
-        toast.error("Fehler beim Laden der Kunden.");
-      }
-      setCustomers(customersData || []);
-
-      // Fetch ALL customers for manager assignment (if applicable)
-      const { data: allCustomersData, error: allCustomersError } = await supabase
-        .from('customers')
-        .select('id, name')
-        .order('name', { ascending: true });
-
-      if (allCustomersError) {
-        console.error("Fehler beim Laden aller Kunden für Manager-Zuweisung:", allCustomersError);
-        toast.error("Fehler beim Laden aller Kunden für Manager-Zuweisung.");
-      }
-      setAllCustomersForManager(allCustomersData || []);
-
-      setLoadingDropdowns(false);
-    };
-    fetchData();
-  }, [supabase]);
+  const selectedCustomerContactId = form.watch("customerContactId");
 
   // Effect to fetch customer contacts when a customer is selected
   useEffect(() => {
-    const fetchContacts = async () => {
-      if (selectedCustomerId) {
-        const { data: contactsData, error: contactsError } = await supabase
-          .from('customer_contacts')
-          .select('id, first_name, last_name, email, customer_id, user_id')
-          .eq('customer_id', selectedCustomerId)
-          .order('last_name', { ascending: true });
-
-        if (contactsError) {
-          console.error("Fehler beim Laden der Kundenkontakte:", contactsError);
-          toast.error("Fehler beim Laden der Kundenkontakte.");
-        }
-        setCustomerContactsForUserAssignment(contactsData || []);
-      } else {
-        setCustomerContactsForUserAssignment([]);
-        form.setValue("customerContactId", null, { shouldValidate: false });
-      }
-    };
-    fetchContacts();
-  }, [selectedCustomerId, supabase, form]);
+    fetchCustomerContacts(selectedCustomerId || null);
+    if (!selectedCustomerId) {
+      form.setValue("customerContactId", null, { shouldValidate: false });
+    }
+  }, [selectedCustomerId, fetchCustomerContacts, form]);
 
 
   // Effect to handle changes in employee/customer/customerContact selection for auto-populating fields
@@ -260,26 +148,16 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
     }
   }, [customerContact, isEditMode, form]);
 
-  // Handler für Bestätigungsdialoge
-  const handleReassignmentConfirm = (type: 'employee' | 'customerContact', id: string, name: string) => {
-    setPendingReassignment({ type, id, name });
-    setShowReassignmentDialog(true);
-  };
-
+  // Confirm reassignment handler
   const confirmReassignment = () => {
     if (pendingReassignment) {
       form.setValue(pendingReassignment.type === 'employee' ? 'employeeId' : 'customerContactId', pendingReassignment.id);
       setShowReassignmentDialog(false);
-      setPendingReassignment(null);
       toast.success(`Zuweisung wird geändert: ${pendingReassignment.name} wird diesem Benutzer zugewiesen.`);
     }
   };
 
-  const handleUnassignConfirm = (type: 'employee' | 'customerContact' | 'customer', id: string, name: string) => {
-    setPendingUnassign({ type, id, name });
-    setShowUnassignDialog(true);
-  };
-
+  // Confirm unassign handler
   const confirmUnassign = () => {
     if (pendingUnassign) {
       const fieldName = pendingUnassign.type === 'employee' ? 'employeeId' :
@@ -287,7 +165,6 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
                        'customerId';
       form.setValue(fieldName as any, null);
       setShowUnassignDialog(false);
-      setPendingUnassign(null);
       toast.success(`Zuweisung aufgehoben: ${pendingUnassign.name} ist jetzt ohne Benutzer-Zuweisung.`);
     }
   };
@@ -739,57 +616,19 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
         />
       </form>
 
-      {/* Bestätigungsdialog für Neuzuweisungen */}
-      <AlertDialog open={showReassignmentDialog} onOpenChange={setShowReassignmentDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>⚠️ Neuzuweisung bestätigen</AlertDialogTitle>
-            <AlertDialogDescription>
-              {pendingReassignment && (
-                <>
-                  Sie möchten <strong>{pendingReassignment.name}</strong> einem anderen Benutzer zuweisen.
-                  <br /><br />
-                  Der aktuell zugewiesene Benutzer wird automatisch entkoppelt und dieser Benutzer wird die neue Zuweisung erhalten.
-                  <br /><br />
-                  Möchten Sie fortfahren?
-                </>
-              )}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmReassignment} className="bg-destructive hover:bg-destructive/90">
-              Ja, Zuweisung ändern
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Bestätigungsdialog für Aufhebung */}
-      <AlertDialog open={showUnassignDialog} onOpenChange={setShowUnassignDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>🗑️ Zuweisung aufheben</AlertDialogTitle>
-            <AlertDialogDescription>
-              {pendingUnassign && (
-                <>
-                  Möchten Sie die Zuweisung von <strong>{pendingUnassign.name}</strong> wirklich aufheben?
-                  <br /><br />
-                  Der Kunde/Mitarbeiter wird dann keinen Benutzer-Account mehr zugewiesen haben.
-                  <br /><br />
-                  Diese Aktion kann rückgängig gemacht werden, indem Sie später eine neue Zuweisung vornehmen.
-                </>
-              )}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmUnassign} className="bg-destructive hover:bg-destructive/90">
-              Ja, Zuweisung aufheben
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* Confirmation Dialogs */}
+      <ReassignmentDialog
+        open={showReassignmentDialog}
+        onOpenChange={setShowReassignmentDialog}
+        pendingReassignment={pendingReassignment}
+        onConfirm={confirmReassignment}
+      />
+      <UnassignDialog
+        open={showUnassignDialog}
+        onOpenChange={setShowUnassignDialog}
+        pendingUnassign={pendingUnassign}
+        onConfirm={confirmUnassign}
+      />
     </>
   );
 }

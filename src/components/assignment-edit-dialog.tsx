@@ -19,36 +19,14 @@ import { Copy } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useDialogUnsavedChanges } from "@/components/ui/unsaved-changes-context";
 import { UnsavedChangesAlert } from "@/components/ui/unsaved-changes-alert";
-
-const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
-const preprocessNumber = (val: unknown) => (val === "" || isNaN(Number(val)) ? null : Number(val));
-
-const dayNames = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const;
-const germanDayNames: { [key: string]: string } = {
-  monday: 'Mo',
-  tuesday: 'Di',
-  wednesday: 'Mi',
-  thursday: 'Do',
-  friday: 'Fr',
-  saturday: 'Sa',
-  sunday: 'So',
-};
-
-const dailyScheduleSchema = z.object({
-  hours: z.preprocess(preprocessNumber, z.nullable(z.number().min(0).max(24)).optional()),
-  start: z.string().regex(timeRegex, "Ungültiges Format (HH:MM)").or(z.literal("")).optional().nullable(),
-  end: z.string().regex(timeRegex, "Ungültiges Format (HH:MM)").or(z.literal("")).optional().nullable(),
-});
-
-const weeklyScheduleSchema = z.object({
-  monday: dailyScheduleSchema.optional(),
-  tuesday: dailyScheduleSchema.optional(),
-  wednesday: dailyScheduleSchema.optional(),
-  thursday: dailyScheduleSchema.optional(),
-  friday: dailyScheduleSchema.optional(),
-  saturday: dailyScheduleSchema.optional(),
-  sunday: dailyScheduleSchema.optional(),
-});
+import {
+  preprocessNumber,
+  timeRegex,
+  dayNames,
+  germanDayNames,
+  dailyScheduleSchema,
+  weeklyScheduleSchema,
+} from "@/lib/utils/form-utils";
 
 const assignmentEditSchema = z.object({
   employeeIds: z.array(z.string().uuid()).min(1, "Mindestens ein Mitarbeiter muss zugewiesen sein."),

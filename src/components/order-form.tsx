@@ -26,36 +26,14 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { ObjectCreateDialog } from "@/components/object-create-dialog";
 import { getWeek } from 'date-fns';
 import { getServices } from "@/app/dashboard/services/actions";
-
-const preprocessNumber = (val: unknown) => (val === "" || isNaN(Number(val)) ? null : Number(val));
-const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
-
-const dayNames = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const;
-const germanDayNames: { [key: string]: string } = {
-  monday: 'Mo',
-  tuesday: 'Di',
-  wednesday: 'Mi',
-  thursday: 'Do',
-  friday: 'Fr',
-  saturday: 'Sa',
-  sunday: 'So',
-};
-
-const dailyScheduleSchema = z.object({
-  hours: z.preprocess(preprocessNumber, z.nullable(z.number().min(0).max(24)).optional()),
-  start: z.string().regex(timeRegex, "Ungültiges Format (HH:MM)").or(z.literal("")).optional().nullable(),
-  end: z.string().regex(timeRegex, "Ungültiges Format (HH:MM)").or(z.literal("")).optional().nullable(),
-});
-
-const weeklyScheduleSchema = z.object({
-  monday: dailyScheduleSchema.optional(),
-  tuesday: dailyScheduleSchema.optional(),
-  wednesday: dailyScheduleSchema.optional(),
-  thursday: dailyScheduleSchema.optional(),
-  friday: dailyScheduleSchema.optional(),
-  saturday: dailyScheduleSchema.optional(),
-  sunday: dailyScheduleSchema.optional(),
-});
+import {
+  preprocessNumber,
+  timeRegex,
+  dayNames,
+  germanDayNames,
+  dailyScheduleSchema,
+  weeklyScheduleSchema,
+} from "@/lib/utils/form-utils";
 
 const assignedEmployeeSchema = z.object({
   employeeId: z.string().uuid("Ungültige Mitarbeiter-ID"),

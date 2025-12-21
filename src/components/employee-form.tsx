@@ -15,41 +15,14 @@ import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { FormActions } from "@/components/ui/form-actions";
 import { useFormUnsavedChanges, useFormUnsavedChangesForCreate } from "@/components/ui/unsaved-changes-context";
-
-const preprocessNumber = (val: unknown) => {
-  if (val === "" || val === null || val === undefined) return null;
-  const num = Number(val);
-  return isNaN(num) ? null : num;
-};
-
-const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
-
-const dayNames = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const;
-const germanDayNames: { [key: string]: string } = {
-  monday: 'Mo',
-  tuesday: 'Di',
-  wednesday: 'Mi',
-  thursday: 'Do',
-  friday: 'Fr',
-  saturday: 'Sa',
-  sunday: 'So',
-};
-
-const dailyScheduleSchema = z.object({
-  hours: z.preprocess(preprocessNumber, z.number().min(0).max(24).optional().nullable()),
-  start: z.string().regex(timeRegex, "Ungültiges Format (HH:MM)").or(z.literal("")).optional().nullable(),
-  end: z.string().regex(timeRegex, "Ungültiges Format (HH:MM)").or(z.literal("")).optional().nullable(),
-});
-
-const weeklyScheduleSchema = z.object({
-  monday: dailyScheduleSchema.optional(),
-  tuesday: dailyScheduleSchema.optional(),
-  wednesday: dailyScheduleSchema.optional(),
-  thursday: dailyScheduleSchema.optional(),
-  friday: dailyScheduleSchema.optional(),
-  saturday: dailyScheduleSchema.optional(),
-  sunday: dailyScheduleSchema.optional(),
-});
+import {
+  preprocessNumber,
+  timeRegex,
+  dayNames,
+  germanDayNames,
+  dailyScheduleSchema,
+  weeklyScheduleSchema,
+} from "@/lib/utils/form-utils";
 
 export const employeeSchema = z.object({
   first_name: z.string().min(1, "Vorname ist erforderlich"),
