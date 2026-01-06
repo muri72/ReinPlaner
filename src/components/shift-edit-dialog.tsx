@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { format, parseISO } from "date-fns";
 import { de } from "date-fns/locale";
-import { ShiftAssignment, deleteShift, deleteSeries, SeriesDeleteMode, copyAssignment, copyShift, updateShift } from "@/lib/actions/shift-planning";
+import { ShiftAssignment, deleteShift, deleteSeries, SeriesDeleteMode, copyAssignment, copyShift, updateShift, addEmployeeToShift, removeEmployeeFromShift } from "@/lib/actions/shift-planning";
 import { toast } from "sonner";
 import {
   Command,
@@ -44,6 +44,7 @@ interface ActionOption {
 }
 
 type SeriesDeleteModeType = SeriesDeleteMode;
+type SeriesEditModeType = "single" | "series";
 
 type ShiftStatus = ShiftAssignment['status'];
 
@@ -67,6 +68,7 @@ export function ShiftEditDialog({
   const [action, setAction] = React.useState<ActionType>("edit");
   const [deleting, setDeleting] = React.useState(false);
   const [deleteMode, setDeleteMode] = React.useState<SeriesDeleteModeType>("single");
+  const [editMode, setEditMode] = React.useState<SeriesEditModeType>("single");
   const [copyMode, setCopyMode] = React.useState<"single" | "series">("single");
   const [selectedEmployee, setSelectedEmployee] = React.useState<string | null>(null);
   const [copying, setCopying] = React.useState(false);
@@ -92,6 +94,7 @@ export function ShiftEditDialog({
     if (open && shift) {
       setAction("edit");
       setDeleteMode("single");
+      setEditMode("single");
       setCopyMode("single");
       setSelectedEmployee(null);
       setCopyDate("");
@@ -226,11 +229,6 @@ export function ShiftEditDialog({
   };
 
   const handleSave = async () => {
-    if (!shift.assignment_id) {
-      toast.error("Keine Zuweisungs-ID gefunden");
-      return;
-    }
-
     setSaving(true);
 
     try {
@@ -239,20 +237,57 @@ export function ShiftEditDialog({
       const employeesToAdd = assignedEmployeeIds.filter(id => !currentEmployeeIds.includes(id));
       const employeesToRemove = currentEmployeeIds.filter(id => !assignedEmployeeIds.includes(id));
 
-      // Move employees if needed
-      if (onMoveToEmployee && employeesToAdd.length > 0) {
+      // Add new employees to shift (team mode) - use new addEmployeeToShift function
+      if (isTeamMode && employeesToAdd.length > 0) {
         for (const empId of employeesToAdd) {
-          await onMoveToEmployee(empId, shift.shift_date);
+          console.log("[HANDLE-SAVE] Adding employee to shift:", { shiftId: shift.id, employeeId: empId });
+          const addResult = await addEmployeeToShift({
+            shiftId: shift.id,
+            employeeId: empId,
+          });
+          if (!addResult.success) {
+            toast.warning(`Mitarbeiter konnte nicht hinzugefügt werden: ${addResult.message}`);
+          }
         }
       }
 
-      // Update shift details
-      const result = await updateShift(shift.assignment_id, shift.shift_date, {
-        start_time: startTime,
-        end_time: endTime,
-        estimated_hours: hours,
-        status,
-      });
+      // Remove employees from shift (team mode) - use new removeEmployeeFromShift function
+      if (isTeamMode && employeesToRemove.length > 0) {
+        for (const empId of employeesToRemove) {
+          console.log("[HANDLE-SAVE] Removing employee from shift:", { shiftId: shift.id, employeeId: empId });
+          const removeResult = await removeEmployeeFromShift({
+            shiftId: shift.id,
+            employeeId: empId,
+          });
+          if (!removeResult.success) {
+            toast.warning(`Mitarbeiter konnte nicht entfernt werden: ${removeResult.message}`);
+          }
+        }
+      }
+
+      // Update shift details - check if it's a recurring shift
+      const isTrulyRecurring = shift.is_recurring && !shift.is_detached_from_series && !!shift.assignment_id;
+
+      let result;
+      if (isTrulyRecurring && editMode === "series") {
+        // Update entire series
+        result = await updateShift(shift.assignment_id!, shift.shift_date, {
+          start_time: startTime,
+          end_time: endTime,
+          estimated_hours: hours,
+          status,
+          update_mode: "series",
+        });
+      } else {
+        // Update single shift only (or detached shift)
+        result = await updateShift(shift.assignment_id!, shift.shift_date, {
+          start_time: startTime,
+          end_time: endTime,
+          estimated_hours: hours,
+          status,
+          update_mode: "single",
+        });
+      }
 
       if (result.success) {
         toast.success(result.message);
@@ -365,6 +400,47 @@ export function ShiftEditDialog({
           {/* EDIT ACTION */}
           {action === "edit" && (
             <div className="space-y-3">
+              {/* Edit Mode Selector for Recurring Shifts */}
+              {shift.is_recurring && !shift.is_detached_from_series && (
+                <div className="border rounded-lg p-3">
+                  <p className="text-xs text-muted-foreground mb-2">Was möchten Sie bearbeiten?</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setEditMode("single")}
+                      className={cn(
+                        "p-2 rounded border text-center text-sm",
+                        editMode === "single" ? "border-primary bg-primary/10" : "hover:bg-muted/50"
+                      )}
+                    >
+                      <div className="font-medium">Dieses Datum</div>
+                      <div className="text-xs text-muted-foreground mt-0.5">{formattedDate}</div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditMode("series")}
+                      className={cn(
+                        "p-2 rounded border text-center text-sm",
+                        editMode === "series" ? "border-primary bg-primary/10" : "hover:bg-muted/50"
+                      )}
+                    >
+                      <div className="font-medium">Gesamte Serie</div>
+                      <div className="text-xs text-muted-foreground mt-0.5">Alle Termine</div>
+                    </button>
+                  </div>
+                  {editMode === "single" && (
+                    <p className="text-[10px] text-amber-600 mt-2">
+                      ⚠️ Änderungen gelten nur für dieses Datum
+                    </p>
+                  )}
+                  {editMode === "series" && (
+                    <p className="text-[10px] text-green-600 mt-2">
+                      ✓ Änderungen gelten für alle zukünftigen Termine
+                    </p>
+                  )}
+                </div>
+              )}
+
               {/* Team Mode Toggle */}
               <div className="flex items-center justify-between">
                 <label className="text-xs text-muted-foreground">Mitarbeiterzuweisung</label>

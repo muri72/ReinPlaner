@@ -408,33 +408,38 @@ export async function getShiftPlanningData(
       const order = assignment.orders;
       if (!order) continue;
 
-      // Get the current employee from shift_employees table (this reflects actual assignments after moves)
+      // Get the current employees from shift_employees table (this reflects actual assignments after moves)
+      // IMPORTANT: Handle MULTIPLE employees per shift - each employee should see the shift
       const shiftEmployees = shift.shift_employees || [];
-      const currentEmployeeId = shiftEmployees[0]?.employee_id;
 
-      if (!currentEmployeeId) {
+      if (shiftEmployees.length === 0) {
         console.log("[PLANNING] Shift has no employee assignment:", shift.id);
         continue;
       }
 
-      if (!employeeDateShifts[currentEmployeeId]) {
-        employeeDateShifts[currentEmployeeId] = {};
+      // Add this shift to EACH employee's calendar
+      for (const shiftEmployee of shiftEmployees) {
+        const currentEmployeeId = shiftEmployee.employee_id;
+
+        if (!employeeDateShifts[currentEmployeeId]) {
+          employeeDateShifts[currentEmployeeId] = {};
+        }
+        if (!employeeDateShifts[currentEmployeeId][shift.shift_date]) {
+          employeeDateShifts[currentEmployeeId][shift.shift_date] = [];
+        }
+        employeeDateShifts[currentEmployeeId][shift.shift_date].push({
+          shiftId: shift.id,
+          orderId: order.id,
+          orderTitle: order.title || "Unbekannt",
+          objectName: (order as any).objects?.name || null,
+          objectAddress: (order as any).objects?.address || null,
+          serviceType: order.service_type || null,
+          startTime: shift.start_time,
+          endTime: shift.end_time,
+          hours: Number(shift.estimated_hours) || 0,
+          assignmentId: shift.assignment_id,
+        });
       }
-      if (!employeeDateShifts[currentEmployeeId][shift.shift_date]) {
-        employeeDateShifts[currentEmployeeId][shift.shift_date] = [];
-      }
-      employeeDateShifts[currentEmployeeId][shift.shift_date].push({
-        shiftId: shift.id,
-        orderId: order.id,
-        orderTitle: order.title || "Unbekannt",
-        objectName: (order as any).objects?.name || null,
-        objectAddress: (order as any).objects?.address || null,
-        serviceType: order.service_type || null,
-        startTime: shift.start_time,
-        endTime: shift.end_time,
-        hours: Number(shift.estimated_hours) || 0,
-        assignmentId: shift.assignment_id,
-      });
     }
     // 5. Build the final planning data structure
     for (const employee of employees) {
@@ -1991,6 +1996,7 @@ export async function updateShift(
     end_time?: string;
     estimated_hours?: number;
     status?: "scheduled" | "in_progress" | "completed" | "cancelled" | "no_show";
+    update_mode?: "single" | "series";
   }
 ): Promise<{ success: boolean; message: string }> {
   const supabaseAdmin = createAdminClient();
@@ -2045,47 +2051,79 @@ export async function updateShift(
 
     // This is an assignment with potential series
     const isRecurring = assignment.series_id && !assignment.is_detached_from_series;
+    const updateMode = updates.update_mode || "single";
 
     if (isRecurring) {
-      // For recurring assignments, create an override with the new values
-      const { data: existingOverride } = await supabaseAdmin
-        .from("shift_overrides")
-        .select("id")
-        .eq("assignment_id", assignmentId)
-        .eq("shift_date", shiftDate)
-        .is("action", null)
-        .single();
+      if (updateMode === "series") {
+        // Update all future shifts in the series directly
+        // First, get all shifts from the series that are on or after shiftDate
+        const { data: seriesShifts, error: seriesError } = await supabaseAdmin
+          .from("shifts")
+          .select("id")
+          .eq("assignment_id", assignmentId)
+          .gte("shift_date", shiftDate);
 
-      const overrideData = {
-        modified_data: {
-          start_time: updates.start_time,
-          end_time: updates.end_time,
-          estimated_hours: updates.estimated_hours,
-          status: updates.status,
-        },
-        notes: updates.status ? `Status geändert auf ${updates.status}` : "Einsatzdaten geändert",
-        updated_at: new Date().toISOString(),
-      };
+        if (seriesError) throw seriesError;
 
-      if (existingOverride) {
-        const { error: updateError } = await supabaseAdmin
-          .from("shift_overrides")
-          .update(overrideData)
-          .eq("id", existingOverride.id);
+        // Update each shift
+        for (const shift of seriesShifts || []) {
+          const { error: updateError } = await supabaseAdmin
+            .from("shifts")
+            .update({
+              start_time: updates.start_time || shift.start_time,
+              end_time: updates.end_time || shift.end_time,
+              estimated_hours: updates.estimated_hours || shift.estimated_hours,
+              status: updates.status || shift.status,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", shift.id);
 
-        if (updateError) throw updateError;
+          if (updateError) throw updateError;
+        }
+
+        // Also update the assignment's start_week_offset and daily_schedules if needed
+        // This would require more complex logic - for now we just update individual shifts
       } else {
-        const { error: insertError } = await supabaseAdmin
+        // Single shift update - create an override with the new values
+        const { data: existingOverride } = await supabaseAdmin
           .from("shift_overrides")
-          .insert({
-            assignment_id: assignmentId,
-            shift_date: shiftDate,
-            action: null, // null means modification
-            ...overrideData,
-            created_by: user.id,
-          });
+          .select("id")
+          .eq("assignment_id", assignmentId)
+          .eq("shift_date", shiftDate)
+          .is("action", null)
+          .single();
 
-        if (insertError) throw insertError;
+        const overrideData = {
+          modified_data: {
+            start_time: updates.start_time,
+            end_time: updates.end_time,
+            estimated_hours: updates.estimated_hours,
+            status: updates.status,
+          },
+          notes: updates.status ? `Status geändert auf ${updates.status}` : "Einsatzdaten geändert",
+          updated_at: new Date().toISOString(),
+        };
+
+        if (existingOverride) {
+          const { error: updateError } = await supabaseAdmin
+            .from("shift_overrides")
+            .update(overrideData)
+            .eq("id", existingOverride.id);
+
+          if (updateError) throw updateError;
+        } else {
+          const { error: insertError } = await supabaseAdmin
+            .from("shift_overrides")
+            .insert({
+              assignment_id: assignmentId,
+              shift_date: shiftDate,
+              action: null, // null means modification
+              ...overrideData,
+              created_by: user.id,
+            });
+
+          if (insertError) throw insertError;
+        }
       }
     } else {
       // Non-recurring assignment - update directly
@@ -2116,6 +2154,12 @@ export async function updateShift(
     }
 
     revalidatePath("/dashboard/planning");
+
+    // Return appropriate message based on update mode
+    if (isRecurring && updateMode === "series") {
+      return { success: true, message: "Gesamte Serie erfolgreich aktualisiert." };
+    }
+
     return { success: true, message: "Einsatz erfolgreich aktualisiert." };
   } catch (error: any) {
     console.error("[UPDATE-SHIFT] Error:", error);
@@ -2265,6 +2309,139 @@ export async function simpleReassignShift(params: {
     return { success: true, message: "Einsatz erfolgreich verschoben." };
   } catch (error: any) {
     console.error("[SIMPLE-REASSIGN] Error:", error.message);
+    return { success: false, message: `Fehler: ${error.message}` };
+  }
+}
+
+// ============================================================================
+// ADD EMPLOYEE TO SHIFT (For team mode - adds without replacing)
+// ============================================================================
+
+export async function addEmployeeToShift(params: {
+  shiftId: string;
+  employeeId: string;
+}): Promise<{ success: boolean; message: string }> {
+  const supabaseAdmin = createAdminClient();
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { success: false, message: "Benutzer nicht authentifiziert." };
+  }
+
+  const { shiftId, employeeId } = params;
+
+  try {
+    console.log("[ADD-EMPLOYEE] Adding employee to shift:", { shiftId, employeeId });
+
+    // Check if employee is already assigned
+    const { data: existing, error: checkError } = await supabaseAdmin
+      .from("shift_employees")
+      .select("id")
+      .eq("shift_id", shiftId)
+      .eq("employee_id", employeeId)
+      .single();
+
+    if (existing) {
+      console.log("[ADD-EMPLOYEE] Employee already assigned to this shift");
+      return { success: true, message: "Mitarbeiter ist bereits zugewiesen." };
+    }
+
+    if (checkError && checkError.code !== 'PGRST116') {
+      throw checkError;
+    }
+
+    // Get shift details for notification
+    const { data: shift } = await supabaseAdmin
+      .from("shifts")
+      .select("shift_date, job_title")
+      .eq("id", shiftId)
+      .single();
+
+    // Add new assignment
+    console.log("[ADD-EMPLOYEE] Inserting new shift_employees entry...");
+    const { error: insertEmpError } = await supabaseAdmin
+      .from("shift_employees")
+      .insert({
+        shift_id: shiftId,
+        employee_id: employeeId,
+        role: "worker",
+      });
+
+    if (insertEmpError) {
+      console.error("[ADD-EMPLOYEE] Error inserting shift_employees:", insertEmpError);
+      throw insertEmpError;
+    }
+
+    console.log("[ADD-EMPLOYEE] New shift_employees inserted successfully");
+
+    // Send notification to new employee
+    const { data: newEmp } = await supabaseAdmin
+      .from("employees")
+      .select("user_id, first_name, last_name")
+      .eq("id", employeeId)
+      .single();
+
+    if (newEmp?.user_id) {
+      await sendNotification({
+        userId: newEmp.user_id,
+        title: "Einsatz zugewiesen",
+        message: `Ihnen wurde ein Einsatz am ${shift?.shift_date} zugewiesen.`,
+        link: "/dashboard/planning",
+      });
+    }
+
+    revalidatePath("/dashboard/planning");
+    return { success: true, message: "Mitarbeiter zum Einsatz hinzugefügt." };
+  } catch (error: any) {
+    console.error("[ADD-EMPLOYEE] Error:", error);
+    return { success: false, message: `Fehler: ${error.message}` };
+  }
+}
+
+// ============================================================================
+// REMOVE EMPLOYEE FROM SHIFT (For team mode)
+// ============================================================================
+
+export async function removeEmployeeFromShift(params: {
+  shiftId: string;
+  employeeId: string;
+}): Promise<{ success: boolean; message: string }> {
+  const supabaseAdmin = createAdminClient();
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { success: false, message: "Benutzer nicht authentifiziert." };
+  }
+
+  const { shiftId, employeeId } = params;
+
+  try {
+    console.log("[REMOVE-EMPLOYEE] Removing employee from shift:", { shiftId, employeeId });
+
+    // Delete assignment
+    const { error: deleteError } = await supabaseAdmin
+      .from("shift_employees")
+      .delete()
+      .eq("shift_id", shiftId)
+      .eq("employee_id", employeeId);
+
+    if (deleteError) {
+      console.error("[REMOVE-EMPLOYEE] Error deleting shift_employees:", deleteError);
+      throw deleteError;
+    }
+
+    console.log("[REMOVE-EMPLOYEE] Employee removed successfully");
+
+    revalidatePath("/dashboard/planning");
+    return { success: true, message: "Mitarbeiter vom Einsatz entfernt." };
+  } catch (error: any) {
+    console.error("[REMOVE-EMPLOYEE] Error:", error);
     return { success: false, message: `Fehler: ${error.message}` };
   }
 }

@@ -24,7 +24,7 @@ export function TriggerAutoTimeEntryButton() {
   return (
     <Button onClick={handleTrigger} disabled={loading}>
       <Bot className="mr-2 h-4 w-4" />
-      {loading ? "Zeiteinträge werden erstellt..." : "Automatische Zeiteinträge jetzt erstellen"}
+      {loading ? "Zeiteinträge werden erstellt..." : "Zeiteinträge aus Einsätzen erstellen"}
     </Button>
   );
 }

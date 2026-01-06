@@ -136,7 +136,7 @@ export async function generateProfessionalPDF({
     const createdDate = new Date().toLocaleDateString('de-DE');
 
     const infoLines = [
-      { label: 'Monat:', value: `${month} ${year}` },
+      { label: 'Monat:', value: `${monthLabel} ${year}` },
       { label: 'Erstellt am:', value: createdDate },
     ];
 
