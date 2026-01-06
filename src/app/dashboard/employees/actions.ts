@@ -34,7 +34,8 @@ export async function createEmployee(data: EmployeeFormValues) {
       phone: data.phone,
       hire_date: formatDateForDB(data.hire_date),
       status: data.status,
-      contract_type: data.contract_type === "" ? null : data.contract_type,
+      // Convert null/undefined to null for database
+      contract_type: data.contract_type || null,
       contract_end_date: formatDateForDB(data.contract_end_date),
       hourly_rate: data.hourly_rate,
       start_date: formatDateForDB(data.start_date),
