@@ -80,11 +80,15 @@ export function FormActions({
           </Button>
         )}
         <Button
-          type="submit"
-          onClick={onSubmit}
+          type="button"
           variant={submitVariant}
           disabled={isSubmitting}
           className={cn(submitClassName)}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onSubmit?.();
+          }}
         >
           {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           {isSubmitting ? "Wird gespeichert..." : submitLabel}

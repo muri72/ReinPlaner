@@ -147,6 +147,12 @@ export function EmployeeForm({ initialData, onSubmit, submitButtonText, onSucces
     }
   };
 
+  // Wrapper function to call handleFormSubmit with current form values
+  const handleSubmitClick = async () => {
+    const data = form.getValues();
+    await handleFormSubmit(data);
+  };
+
   const handleCancel = () => {
     if (form.formState.isDirty && !isSubmitting) {
       // Show confirmation - dialog protection will handle this
@@ -176,7 +182,7 @@ export function EmployeeForm({ initialData, onSubmit, submitButtonText, onSucces
   return (
     <>
       <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <Label htmlFor="first_name">Vorname</Label>
           <Input id="first_name" {...form.register("first_name")} />
@@ -354,6 +360,7 @@ export function EmployeeForm({ initialData, onSubmit, submitButtonText, onSucces
         <FormActions
           isSubmitting={isSubmitting}
           onCancel={handleCancel}
+          onSubmit={handleSubmitClick}
           submitLabel={submitButtonText}
           cancelLabel="Abbrechen"
           showCancel={!isInDialog}

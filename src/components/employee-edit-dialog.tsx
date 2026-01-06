@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Pencil, UserCog, FileStack } from "lucide-react";
 import { EmployeeForm, EmployeeFormValues } from "@/components/employee-form";
@@ -38,9 +39,11 @@ interface EmployeeEditDialogProps {
     default_start_week_offset: number;
   };
   trigger?: React.ReactNode;
+  onActionSuccess?: () => void;
 }
 
-export function EmployeeEditDialog({ employee, trigger }: EmployeeEditDialogProps) {
+export function EmployeeEditDialog({ employee, trigger, onActionSuccess }: EmployeeEditDialogProps) {
+  const router = useRouter();
   const [internalOpen, setInternalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("details");
 
@@ -50,8 +53,11 @@ export function EmployeeEditDialog({ employee, trigger }: EmployeeEditDialogProp
 
   const handleUpdate = async (data: EmployeeFormValues) => {
     const result = await updateEmployee(employee.id, data);
+
     if (result.success) {
       setInternalOpen(false);
+      router.refresh();
+      onActionSuccess?.();
     }
     return result;
   };
@@ -85,7 +91,7 @@ export function EmployeeEditDialog({ employee, trigger }: EmployeeEditDialogProp
         <div className="flex-1 overflow-hidden">
           <TabsContent value="details" className="h-full m-0 p-0">
             <EmployeeForm
-              key={`employee-form-${employee.id}-${internalOpen}`}
+              key={`employee-form-${employee.id}`}
               initialData={employee as any}
               onSubmit={handleUpdate}
               submitButtonText="Änderungen speichern"
