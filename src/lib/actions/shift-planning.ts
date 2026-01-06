@@ -2065,15 +2065,15 @@ export async function updateShift(
 
         if (seriesError) throw seriesError;
 
-        // Update each shift
+        // Update each shift - use updates values directly for series mode
         for (const shift of seriesShifts || []) {
           const { error: updateError } = await supabaseAdmin
             .from("shifts")
             .update({
-              start_time: updates.start_time || shift.start_time,
-              end_time: updates.end_time || shift.end_time,
-              estimated_hours: updates.estimated_hours || shift.estimated_hours,
-              status: updates.status || shift.status,
+              start_time: updates.start_time,
+              end_time: updates.end_time,
+              estimated_hours: updates.estimated_hours,
+              status: updates.status,
               updated_at: new Date().toISOString(),
             })
             .eq("id", shift.id);
