@@ -28,7 +28,7 @@ export const customerOrderRequestSchema = z.object({
   title: z.string().min(1, "Titel ist erforderlich").max(255, "Titel ist zu lang"),
   description: z.string().optional().nullable(),
   dueDate: z.date().optional().nullable(),
-  orderType: z.enum(["permanent", "one_time", "recurring", "substitution"], {
+  orderType: z.enum(["one_time", "recurring"], {
     required_error: "Auftragstyp ist erforderlich",
   }),
   startDate: z.date().optional().nullable(),
@@ -98,7 +98,7 @@ export function CustomerOrderRequestForm({ customerId, onSuccess, isInDialog = f
       customerId: customerId,
       objectId: objects.length > 0 ? objects[0].id : null,
       customerContactId: customerContacts.length > 0 ? customerContacts[0].id : null,
-      status: 'pending',
+      status: 'active',
       requestStatus: 'pending',
       priority: 'medium',
       totalEstimatedHours: null,

@@ -6,13 +6,13 @@ import { de } from "date-fns/locale";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { PlanningData, UnassignedOrder } from "@/app/dashboard/planning/actions";
+import { ShiftPlanningData, UnassignedShift } from "@/lib/actions/shift-planning";
 import { cn } from "@/lib/utils";
 import { Clock3, Gauge, ListChecks, UsersRound } from "lucide-react";
 
 interface PlanningKpiSummaryProps {
-  planningData: PlanningData;
-  unassignedOrders: UnassignedOrder[];
+  planningData: ShiftPlanningData;
+  unassignedOrders: UnassignedShift[];
   selectedDate: Date;
   dateRange: Date[];
   isLoading: boolean;
@@ -121,7 +121,7 @@ export function PlanningKpiSummary({
         if (!rangeDayData) {
           return;
         }
-        rangeAssignments += rangeDayData.assignments?.length ?? 0;
+        rangeAssignments += rangeDayData.shifts?.length ?? 0;
         rangeHours += rangeDayData.totalHours ?? 0;
       });
 
@@ -137,13 +137,13 @@ export function PlanningKpiSummary({
         absentEmployees += 1;
       }
 
-      const assignments = dayData.assignments ?? [];
-      totalAssignments += assignments.length;
+      const shifts = dayData.shifts ?? [];
+      totalAssignments += shifts.length;
 
-      assignments.forEach((assignment) => {
-        if (assignment.status === "completed") {
+      shifts.forEach((shift) => {
+        if (shift.status === "completed") {
           completedAssignments += 1;
-        } else if (assignment.status === "pending") {
+        } else if (shift.status === "cancelled") {
           overdueAssignments += 1;
         }
       });
@@ -152,11 +152,11 @@ export function PlanningKpiSummary({
     let unassignedToday = 0;
     let unassignedInRange = 0;
 
-    unassignedOrders.forEach((order) => {
-      if (!order.end_date) {
+    unassignedOrders.forEach((shift) => {
+      if (!shift.shift_date) {
         return;
       }
-      const dueDate = new Date(order.end_date);
+      const dueDate = new Date(shift.shift_date);
       if (Number.isNaN(dueDate.getTime())) {
         return;
       }

@@ -219,8 +219,8 @@ export default function OrdersPage({
 
     // Apply base filters
     if (!statusFilter || statusFilter === 'active') {
-      // Default: Show only active orders (pending + in_progress)
-      selectQuery = selectQuery.in('status', ['pending', 'in_progress']);
+      // Default: Show only active orders
+      selectQuery = selectQuery.eq('status', 'active');
     } else {
       selectQuery = selectQuery.eq('status', statusFilter);
     }
@@ -366,16 +366,13 @@ export default function OrdersPage({
   const otherOrders = allOrders.filter(order => order.request_status !== 'pending');
 
   const orderStatusOptions = [
-    { value: 'pending', label: 'Ausstehend' },
-    { value: 'in_progress', label: 'In Bearbeitung' },
-    { value: 'completed', label: 'Abgeschlossen' },
+    { value: 'active', label: 'Aktiv' },
+    { value: 'inactive', label: 'Inaktiv' },
   ];
 
   const orderTypeOptions = [
     { value: 'one_time', label: 'Einmalig' },
     { value: 'recurring', label: 'Wiederkehrend' },
-    { value: 'substitution', label: 'Vertretung' },
-    { value: 'permanent', label: 'Permanent' },
   ];
 
   const filterOptions: FilterOption[] = [

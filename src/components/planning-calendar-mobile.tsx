@@ -8,8 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { ChevronRight, Clock, MapPin, User, AlertCircle } from "lucide-react";
-import { PlanningData, UnassignedOrder } from "@/app/dashboard/planning/actions";
-import { AssignmentEditDialog } from "./assignment-edit-dialog";
+import { ShiftPlanningData, UnassignedShift } from "@/lib/actions/shift-planning";
+import { ShiftCard } from "./shift-card";
 
 const absenceTypeLabels: Record<string, string> = {
   vacation: "Urlaub",
@@ -42,8 +42,8 @@ const formatRangeEdge = (date: Date) =>
 const getWeekdayIndex = (date: Date) => (date.getDay() + 6) % 7;
 
 interface MobilePlanningCalendarProps {
-  planningData: PlanningData;
-  unassignedOrders: UnassignedOrder[];
+  planningData: ShiftPlanningData;
+  unassignedOrders: UnassignedShift[];
   weekDays: Date[];
   selectedDate: Date;
   showUnassigned: boolean;
@@ -51,6 +51,7 @@ interface MobilePlanningCalendarProps {
   onSelectedDateChange: (date: Date) => void;
   viewMode: "day" | "week" | "month";
   holidaysMap: { [key: string]: { name: string } | null };
+  onEditShift?: (shiftId: string, shift: any, date: string) => void;
 }
 
 export function MobilePlanningCalendar({
@@ -63,11 +64,42 @@ export function MobilePlanningCalendar({
   onSelectedDateChange,
   viewMode,
   holidaysMap,
+  onEditShift,
 }: MobilePlanningCalendarProps) {
   const sortedDays = React.useMemo(
     () => [...weekDays].sort((a, b) => a.getTime() - b.getTime()),
     [weekDays],
   );
+
+  // Build a map of all team members per order for team display in ShiftCard
+  const orderTeamMembersMap = React.useMemo(() => {
+    const map: { [orderId: string]: { employee_id: string; employee_name: string; avatar_url?: string }[] } = {};
+    Object.values(planningData ?? {}).forEach((employee) => {
+      Object.values(employee.schedule ?? {}).forEach((dayData) => {
+        if (dayData.shifts) {
+          dayData.shifts.forEach((shift) => {
+            const orderId = shift.order_id;
+            if (orderId && shift.employees) {
+              if (!map[orderId]) {
+                map[orderId] = [];
+              }
+              // Add all team members from this shift
+              shift.employees.forEach((emp) => {
+                if (!map[orderId].find(m => m.employee_id === emp.employee_id)) {
+                  map[orderId].push({
+                    employee_id: emp.employee_id,
+                    employee_name: emp.employee_name,
+                    avatar_url: emp.avatar_url
+                  });
+                }
+              });
+            }
+          });
+        }
+      });
+    });
+    return map;
+  }, [planningData]);
 
   const rangeLabel = React.useMemo(() => {
     if (viewMode === "month") {
@@ -127,7 +159,7 @@ export function MobilePlanningCalendar({
     const map = new Map<string, number>();
     Object.values(planningData ?? {}).forEach((employee) => {
       Object.entries(employee.schedule ?? {}).forEach(([dateKey, dayData]) => {
-        const count = dayData?.assignments?.length ?? 0;
+        const count = dayData?.shifts?.length ?? 0;
         if (count > 0) {
           map.set(dateKey, (map.get(dateKey) ?? 0) + count);
         }
@@ -138,10 +170,10 @@ export function MobilePlanningCalendar({
 
   const unassignedCountByDate = React.useMemo(() => {
     const map = new Map<string, number>();
-    unassignedOrders.forEach((order) => {
-      if (!order.end_date) return;
+    unassignedOrders.forEach((shift) => {
+      if (!shift.shift_date) return;
       try {
-        const dateKey = format(new Date(order.end_date), "yyyy-MM-dd");
+        const dateKey = format(new Date(shift.shift_date), "yyyy-MM-dd");
         map.set(dateKey, (map.get(dateKey) ?? 0) + 1);
       } catch {
         // ignore parsing issues
@@ -177,7 +209,7 @@ export function MobilePlanningCalendar({
         return;
       }
 
-      const assignmentsCount = dayData.assignments?.length ?? 0;
+      const assignmentsCount = dayData.shifts?.length ?? 0;
       if (assignmentsCount > 0) {
         visible.push(employeeId);
         return;
@@ -212,12 +244,12 @@ export function MobilePlanningCalendar({
   }, [hiddenEmployeeCount]);
 
   const unassignedForSelectedDate = React.useMemo(() => {
-    return unassignedOrders.filter((order) => {
-      if (!order.end_date) {
+    return unassignedOrders.filter((shift) => {
+      if (!shift.shift_date) {
         return false;
       }
       try {
-        const dueKey = format(new Date(order.end_date), "yyyy-MM-dd");
+        const dueKey = format(new Date(shift.shift_date), "yyyy-MM-dd");
         return dueKey === selectedDateKey;
       } catch {
         return false;
@@ -437,25 +469,25 @@ export function MobilePlanningCalendar({
                 Keine unbesetzten Einsätze für dieses Datum.
               </div>
             ) : (
-              unassignedForSelectedDate.map((order) => (
+              unassignedForSelectedDate.map((shift) => (
                 <Card
-                  key={order.id}
+                  key={shift.id}
                   className="border border-dashed border-border/60 p-3 transition-colors hover:border-primary/60"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="text-sm font-semibold leading-tight">
-                        {order.title}
+                        {shift.job_title}
                       </p>
-                      {order.service_type && (
+                      {shift.service_title && (
                         <p className="text-xs text-muted-foreground">
-                          {order.service_type}
+                          {shift.service_title}
                         </p>
                       )}
                     </div>
                     <Badge variant="secondary" className="text-xs">
-                      {order.total_estimated_hours
-                        ? `${order.total_estimated_hours}h`
+                      {shift.estimated_hours
+                        ? `${shift.estimated_hours}h`
                         : "k.A."}
                     </Badge>
                   </div>
@@ -503,8 +535,8 @@ export function MobilePlanningCalendar({
                 }
 
                 const dayData = employee.schedule[selectedDateKey];
-                const assignments = dayData?.assignments ?? [];
-                const assignmentCount = assignments.length;
+                const shifts = dayData?.shifts ?? [];
+                const assignmentCount = shifts.length;
 
                 return (
                   <Card key={employeeId} className="glassmorphism-card">
@@ -535,55 +567,14 @@ export function MobilePlanningCalendar({
                           {absenceTypeLabels[dayData.absenceType ?? "other"]}
                         </div>
                       ) : assignmentCount > 0 ? (
-                        assignments.map((assignment) => (
-                          <AssignmentEditDialog
-                            key={assignment.id}
-                            orderId={assignment.orderId}
+                        shifts.map((shift) => (
+                          <ShiftCard
+                            key={shift.id}
+                            shift={shift}
                             onSuccess={onActionSuccess}
-                          >
-                            <div className="cursor-pointer rounded-lg border border-border/60 bg-muted/30 p-3 transition-colors hover:border-primary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                              <div className="flex items-start justify-between gap-2">
-                                <div className="space-y-1">
-                                  <p className="text-sm font-semibold leading-tight">
-                                    {assignment.title}
-                                  </p>
-                                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                    <Clock className="h-3.5 w-3.5" />
-                                    <span>
-                                      {(assignment.startTime ?? "09:00") +
-                                        " – " +
-                                        (assignment.endTime ?? "17:00")}
-                                    </span>
-                                    <span>•</span>
-                                    <span>{assignment.hours.toFixed(2)}h</span>
-                                  </div>
-                                  {assignment.service_type && (
-                                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                      <MapPin className="h-3.5 w-3.5" />
-                                      <span className="truncate">
-                                        {assignment.service_type}
-                                      </span>
-                                    </div>
-                                  )}
-                                </div>
-                                <div className="flex flex-col items-end gap-2">
-                                  <Badge
-                                    className={cn(
-                                      "text-[10px] font-medium",
-                                      statusBadgeClassNames[assignment.status],
-                                    )}
-                                  >
-                                    {assignment.status === "completed"
-                                      ? "Abgeschlossen"
-                                      : assignment.status === "pending"
-                                        ? "Überfällig"
-                                        : "Geplant"}
-                                  </Badge>
-                                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                                </div>
-                              </div>
-                            </div>
-                          </AssignmentEditDialog>
+                            teamMembers={shift.order_id ? orderTeamMembersMap[shift.order_id] : shift.employees}
+                            onEdit={onEditShift ? (id) => onEditShift(id, shift, selectedDateKey) : undefined}
+                          />
                         ))
                       ) : (
                         <div className="rounded-lg border border-dashed border-border/60 py-6 text-center text-sm text-muted-foreground">

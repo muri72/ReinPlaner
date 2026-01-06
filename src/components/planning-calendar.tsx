@@ -9,12 +9,13 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useDroppable } from "@dnd-kit/core";
-import { PlanningData, UnassignedOrder } from "@/app/dashboard/planning/actions";
+import { UnassignedShift, ShiftPlanningData } from "@/lib/actions/shift-planning";
 import { Service } from "@/app/dashboard/services/actions";
-import { AssignmentCard } from "./assignment-card";
+import { ShiftCard } from "./shift-card";
 import { EmployeeEditDialog } from "./employee-edit-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
+import { CircleDashed, Clock, UserX } from "lucide-react";
 
 const absenceTypeTranslations: { [key: string]: string } = {
   vacation: "Urlaub",
@@ -33,46 +34,49 @@ const absenceTypeColors: { [key: string]: string } = {
 function DroppableCell({ id, children, isOver, isAvailable, day, holidaysMap }: {
   id: string;
   children: React.ReactNode;
-  isOver: boolean;
+  isOver?: boolean;
   isAvailable: boolean;
   day?: Date;
   holidaysMap: { [key: string]: { name: string } | null };
 }) {
-  const { setNodeRef } = useDroppable({ id });
+  const { setNodeRef, isOver: dndIsOver } = useDroppable({ id });
+  const isOverCell = isOver ?? dndIsOver;
 
-  // Get styling based on holidaysMap and weekend check
-  let className = "";
-  if (day) {
-    const dayKey = format(day, "yyyy-MM-dd");
-    const holidayInfo = holidaysMap[dayKey];
+  // Memoize styling calculations
+  const styling = React.useMemo(() => {
+    if (day) {
+      const dayKey = format(day, "yyyy-MM-dd");
+      const holidayInfo = holidaysMap[dayKey];
 
-    if (holidayInfo) {
-      // Holiday styling
-      className = "bg-red-50 border-red-200 text-red-700";
-    } else if (isWeekend(day)) {
-      // Weekend styling
-      className = "bg-blue-50 border-blue-200 text-blue-700";
+      if (holidayInfo) {
+        return "bg-red-50 border-red-200 text-red-700";
+      } else if (isWeekend(day)) {
+        return "bg-blue-50 border-blue-200 text-blue-700";
+      }
     }
-  }
+    return "";
+  }, [day, holidaysMap]);
 
   return (
     <TableCell
       ref={setNodeRef}
       className={cn(
-        "p-1 border h-24 align-top",
-        isOver && "bg-primary/20 ring-2 ring-primary",
-        !isAvailable && "bg-muted/50 bg-[repeating-linear-gradient(-45deg,transparent,transparent_4px,hsl(var(--border))_4px,hsl(var(--border))_5px)]",
-        className
+        "p-1 border h-24 align-top relative transition-all duration-200",
+        // Blue background when dragging over - clear visual feedback
+        isOverCell && "bg-blue-100 border-blue-500 border-2 ring-2 ring-blue-400",
+        // Unavailable days have striped pattern
+        !isAvailable && !isOverCell && "bg-muted/50 bg-[repeating-linear-gradient(-45deg,transparent,transparent_4px,hsl(var(--border))_4px,hsl(var(--border))_5px)]",
+        styling
       )}
     >
-      <div className="h-full w-full">{children}</div>
+      <div className={cn("h-full w-full relative z-10", isOverCell && "opacity-50")}>{children}</div>
     </TableCell>
   );
 }
 
 interface PlanningCalendarProps {
-  planningData: PlanningData;
-  unassignedOrders: UnassignedOrder[];
+  planningData: ShiftPlanningData;
+  unassignedOrders: UnassignedShift[];
   weekDays: Date[];
   activeDragId: string | null;
   showUnassigned: boolean;
@@ -81,11 +85,47 @@ interface PlanningCalendarProps {
   holidaysMap: { [key: string]: { name: string } | null };
   currentUserRole?: 'admin' | 'manager' | 'employee' | 'customer';
   services: Service[];
+  onEditShift?: (shiftId: string, shift: any, date: string) => void;
 }
 
-export function PlanningCalendar({ planningData, unassignedOrders, weekDays, activeDragId, showUnassigned, onActionSuccess, weekNumber, holidaysMap, currentUserRole = 'employee', services }: PlanningCalendarProps) {
+export function PlanningCalendar({ planningData, unassignedOrders, weekDays, activeDragId, showUnassigned, onActionSuccess, weekNumber, holidaysMap, currentUserRole = 'employee', services, onEditShift }: PlanningCalendarProps) {
   const employeeIds = Object.keys(planningData);
   const canManageSubstitutions = currentUserRole === 'admin' || currentUserRole === 'manager';
+
+  // Build a map of all team members per order for team display in ShiftCard
+  // Memoize to avoid recalculation on every render
+  const orderTeamMembersMap = React.useMemo(() => {
+    const map: Record<string, Array<{ employee_id: string; employee_name: string; avatar_url?: string }>> = {};
+
+    for (const employee of Object.values(planningData)) {
+      for (const dayData of Object.values(employee.schedule)) {
+        if (!dayData.shifts?.length) continue;
+
+        for (const shift of dayData.shifts) {
+          const orderId = shift.order_id;
+          if (!orderId || !shift.employees?.length) continue;
+
+          if (!map[orderId]) {
+            map[orderId] = [];
+          }
+
+          // Add unique team members
+          for (const emp of shift.employees) {
+            const exists = map[orderId].some(m => m.employee_id === emp.employee_id);
+            if (!exists) {
+              map[orderId].push({
+                employee_id: emp.employee_id,
+                employee_name: emp.employee_name,
+                avatar_url: emp.avatar_url
+              });
+            }
+          }
+        }
+      }
+    }
+
+    return map;
+  }, [planningData]);
 
   return (
     <div className="border rounded-lg shadow-neumorphic glassmorphism-card h-full overflow-auto custom-scrollbar">
@@ -117,33 +157,59 @@ export function PlanningCalendar({ planningData, unassignedOrders, weekDays, act
         <TableBody>
           {/* Unassigned Orders Row */}
           {showUnassigned && (
-            <TableRow>
-              <TableCell className="font-semibold sticky left-0 bg-card z-10 align-top">
-                Unbesetzte Einsätze
+            <TableRow className="bg-amber-50/50">
+              <TableCell className="font-semibold sticky left-0 bg-amber-50 z-10 align-top">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 rounded-full bg-amber-100">
+                    <CircleDashed className="h-4 w-4 text-amber-600" />
+                  </div>
+                  <div>
+                    <span className="text-sm font-medium">Unbesetzte Einsätze</span>
+                    <p className="text-xs text-muted-foreground">Noch nicht zugewiesen</p>
+                  </div>
+                </div>
               </TableCell>
               {weekDays.map((day) => {
                 const dateString = format(day, "yyyy-MM-dd");
                 const ordersForDay = unassignedOrders.filter(
-                  (order) => order.end_date && format(parseISO(order.end_date), "yyyy-MM-dd") === dateString
+                  (shift) => shift.shift_date && format(parseISO(shift.shift_date), "yyyy-MM-dd") === dateString
                 );
                 const droppableId = `unassigned__${dateString}`;
                 return (
                   <DroppableCell
                     key={dateString}
                     id={droppableId}
-                    isOver={activeDragId !== null && droppableId === (activeDragId as string)}
                     isAvailable={true}
                     day={day}
                     holidaysMap={holidaysMap}
                   >
                     <div className="space-y-1">
-                      {ordersForDay.map((order) => (
-                        <div key={order.id} className="p-2 rounded-md border bg-muted/30">
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium">{order.title}</span>
-                            <Badge variant="outline">{order.service_type || 'N/A'}</Badge>
-                          </div>
-                        </div>
+                      {ordersForDay.map((shift) => (
+                        <TooltipProvider key={shift.id} delayDuration={100}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="p-2 rounded-md border border-amber-300 bg-amber-50 hover:bg-amber-100 transition-colors cursor-pointer">
+                                <div className="flex items-center gap-1.5">
+                                  <UserX className="h-3 w-3 text-amber-600 shrink-0" />
+                                  <span className="text-sm font-medium truncate">{shift.job_title}</span>
+                                </div>
+                                <div className="flex items-center justify-between mt-1">
+                                  {shift.estimated_hours && (
+                                    <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                      <Clock className="h-3 w-3" />
+                                      {shift.estimated_hours}h
+                                    </span>
+                                  )}
+                                  <Badge variant="outline" className="text-[10px] px-1 py-0">{shift.service_title || 'N/A'}</Badge>
+                                </div>
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent side="top">
+                              <p className="font-medium">{shift.job_title}</p>
+                              <p className="text-xs text-muted-foreground">Ziehen Sie diesen Einsatz auf einen Mitarbeiter</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       ))}
                     </div>
                   </DroppableCell>
@@ -234,18 +300,18 @@ export function PlanningCalendar({ planningData, unassignedOrders, weekDays, act
                       <DroppableCell
                         key={dateString}
                         id={droppableId}
-                        isOver={activeDragId !== null && droppableId === (activeDragId as string)}
-                        isAvailable={dayData.isAvailable || dayData.assignments.length > 0}
+                        isAvailable={dayData.isAvailable || dayData.shifts.length > 0}
                         day={day}
                         holidaysMap={holidaysMap}
                       >
                         <div className="space-y-1">
-                          {dayData.assignments.map((assignment) => (
-                            <AssignmentCard
-                              key={assignment.id}
-                              assignment={assignment}
+                          {dayData.shifts.map((shift) => (
+                            <ShiftCard
+                              key={shift.id}
+                              shift={shift}
                               onSuccess={onActionSuccess}
-                              services={services}
+                              teamMembers={shift.order_id ? orderTeamMembersMap[shift.order_id] : shift.employees}
+                              onEdit={onEditShift ? (id) => onEditShift(id, shift, dateString) : undefined}
                             />
                           ))}
                         </div>

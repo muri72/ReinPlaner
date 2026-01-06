@@ -62,7 +62,7 @@ export function OrderHoursSummary({
     return null;
   }
 
-  const isRecurring = ['recurring', 'substitution', 'permanent'].includes(orderType);
+  const isRecurring = ['recurring'].includes(orderType);
 
   // Calculate work days per week
   const workDaysPerWeek = calculateWorkDaysPerWeek(assignedEmployees);

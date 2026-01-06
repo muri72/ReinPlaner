@@ -201,8 +201,8 @@ export function OrderSummaryCard({ order }: OrderSummaryCardProps) {
         )}
 
         {(() => {
-          // For recurring, substitution, and permanent orders with flat rate, show only monthly cost
-          if (['recurring', 'substitution', 'permanent'].includes(order.order_type) && order.fixed_monthly_price && order.fixed_monthly_price > 0) {
+          // For recurring orders with flat rate, show only monthly cost
+          if (['recurring'].includes(order.order_type) && order.fixed_monthly_price && order.fixed_monthly_price > 0) {
             return (
               <div className="mt-2 p-2 bg-green-50 rounded-md border border-green-200">
                 <div className="flex items-center justify-between">

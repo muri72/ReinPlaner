@@ -47,11 +47,11 @@ export type AssignedEmployee = z.infer<typeof assignedEmployeeSchema>;
 export const baseOrderSchema = z.object({
   title: z.string().min(1, "Titel ist erforderlich").max(100, "Titel ist zu lang"),
   description: z.string().max(500, "Beschreibung ist zu lang").optional().nullable(),
-  status: z.enum(["pending", "in_progress", "completed"]).default("pending"),
+  status: z.enum(["active", "inactive"]).default("active"),
   customerId: z.string().uuid("Ungültige Kunden-ID").min(1, "Kunde ist erforderlich"),
   objectId: z.string().uuid("Ungültiges Objekt-ID").optional().nullable(),
   customerContactId: z.string().uuid("Ungültige Kundenkontakt-ID").optional().nullable(),
-  orderType: z.enum(["one_time", "recurring", "substitution", "permanent"]).default("one_time"),
+  orderType: z.enum(["one_time", "recurring"]).default("one_time"),
   startDate: z.date().optional().nullable(),
   endDate: z.date().optional().nullable(),
   priority: z.enum(["low", "medium", "high"]).default("low"),
@@ -154,7 +154,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess, 
   const resolvedDefaultValues: OrderFormValues = {
     title: initialData?.title ?? "",
     description: initialData?.description ?? null,
-    status: initialData?.status ?? "pending",
+    status: initialData?.status ?? "active",
     customerId: initialData?.customerId ?? "",
     objectId: initialData?.objectId ?? null,
     customerContactId: initialData?.customerContactId ?? null,
@@ -412,7 +412,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess, 
 
     let newTotalEstimatedHours: number | null = null;
 
-    if (['recurring', 'substitution', 'permanent'].includes(orderTypeSafe)) {
+    if (['recurring'].includes(orderTypeSafe)) {
       let totalHoursInCycle = 0;
       let recurrenceInterval = 1;
 
@@ -487,9 +487,9 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess, 
 
     assignments.forEach((assignment) => {
       if (assignment.assigned_daily_schedules && assignment.assigned_daily_schedules.length > 0) {
-        // For recurring, substitution, permanent orders: only use first week (they repeat)
+        // For recurring orders: only use first week (they repeat)
         // For one_time orders: sum all weeks
-        const weeksToSum = ['recurring', 'substitution', 'permanent'].includes(orderType)
+        const weeksToSum = ['recurring'].includes(orderType)
           ? 1
           : assignment.assigned_daily_schedules.length;
 
@@ -817,7 +817,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess, 
     return sumAssigned <= objectHours + 0.1; // Add a small tolerance for float comparison
   };
 
-  const totalHoursLabel = ['recurring', 'substitution', 'permanent'].includes(((form.watch("orderType") as OrderFormValues["orderType"] | undefined) ?? 'one_time'))
+  const totalHoursLabel = ['recurring'].includes(((form.watch("orderType") as OrderFormValues["orderType"] | undefined) ?? 'one_time'))
     ? "Wochenstunden (automatisch berechnet)"
     : "Gesamtstunden (automatisch berechnet)";
 
@@ -1064,8 +1064,6 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess, 
               <SelectContent>
                 <SelectItem value="one_time">Einmalig</SelectItem>
                 <SelectItem value="recurring">Wiederkehrend</SelectItem>
-                <SelectItem value="substitution">Vertretung</SelectItem>
-                <SelectItem value="permanent">Permanent</SelectItem>
               </SelectContent>
             </Select>
             {form.formState.errors.orderType && <p className="text-red-500 text-sm mt-1">{form.formState.errors.orderType.message}</p>}
@@ -1484,9 +1482,8 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess, 
                 <SelectValue placeholder="Status auswählen" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="pending">Ausstehend</SelectItem>
-                <SelectItem value="in_progress">In Bearbeitung</SelectItem>
-                <SelectItem value="completed">Abgeschlossen</SelectItem>
+                <SelectItem value="active">Aktiv</SelectItem>
+                <SelectItem value="inactive">Inaktiv</SelectItem>
               </SelectContent>
             </Select>
             {form.formState.errors.status && <p className="text-red-500 text-sm mt-1">{form.formState.errors.status.message}</p>}

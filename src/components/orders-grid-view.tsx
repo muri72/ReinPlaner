@@ -202,8 +202,8 @@ export function OrdersGridView({ orders, employees, onActionSuccess }: OrdersGri
               )}
 
               {(() => {
-                // For recurring, substitution, and permanent orders with flat rate, show only monthly cost
-                if (['recurring', 'substitution', 'permanent'].includes(order.order_type) && order.fixed_monthly_price && order.fixed_monthly_price > 0) {
+                // For recurring orders with flat rate, show only monthly cost
+                if (['recurring'].includes(order.order_type) && order.fixed_monthly_price && order.fixed_monthly_price > 0) {
                   return (
                     <div className="mt-2 p-2 bg-green-50 rounded-md border border-green-200">
                       <div className="flex items-center justify-between">
@@ -230,7 +230,7 @@ export function OrdersGridView({ orders, employees, onActionSuccess }: OrdersGri
                 // For hourly rates
                 if (order.total_estimated_hours && order.total_estimated_hours > 0 && order.hourly_rate) {
                   const totalCost = order.total_cost || (order.total_estimated_hours * order.hourly_rate);
-                  const isRecurring = ['recurring', 'substitution', 'permanent'].includes(order.order_type);
+                  const isRecurring = ['recurring'].includes(order.order_type);
 
                   // Calculate work days per week
                   const workDaysPerWeek = order.assignedEmployees && order.assignedEmployees.length > 0

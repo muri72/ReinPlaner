@@ -145,8 +145,8 @@ export function OrderDetailTabs({ order }: OrderDetailTabsProps) {
               )}
               <div className="space-y-1">
                 <p className="font-medium text-muted-foreground">Status</p>
-                <p className={order.status === 'completed' ? "text-gray-500" : "text-green-600 font-medium"}>
-                  {order.status === 'completed' ? 'Abgeschlossen' : order.status === 'in_progress' ? 'In Bearbeitung' : 'Ausstehend'}
+                <p className={order.status === 'inactive' ? "text-gray-500" : "text-green-600 font-medium"}>
+                  {order.status === 'inactive' ? 'Inaktiv' : 'Aktiv'}
                 </p>
               </div>
               {order.total_estimated_hours && (
@@ -172,8 +172,8 @@ export function OrderDetailTabs({ order }: OrderDetailTabsProps) {
 
               {/* Price Display */}
               {(() => {
-                // For recurring, substitution, and permanent orders with flat rate, show only monthly cost
-                if (['recurring', 'substitution', 'permanent'].includes(order.order_type) && order.fixed_monthly_price && order.fixed_monthly_price > 0) {
+                // For recurring orders with flat rate, show only monthly cost
+                if (['recurring'].includes(order.order_type) && order.fixed_monthly_price && order.fixed_monthly_price > 0) {
                   return (
                     <div className="space-y-1">
                       <p className="font-medium text-muted-foreground">Monatliche Kosten</p>

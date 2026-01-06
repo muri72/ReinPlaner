@@ -59,7 +59,7 @@ export function OrderCostBreakdown({
 }: OrderCostBreakdownProps) {
   const workDaysPerWeek = calculateWorkDaysPerWeek(assignedEmployees);
   const isPerDeployment = workDaysPerWeek === 1;
-  const isRecurring = ['recurring', 'substitution', 'permanent'].includes(orderType);
+  const isRecurring = ['recurring'].includes(orderType);
 
   // Base cost per deployment/week
   const baseCost = totalCost || (totalEstimatedHours * hourlyRate);

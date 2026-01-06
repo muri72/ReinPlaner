@@ -1,51 +1,33 @@
 "use client";
 
 import * as React from "react";
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, getWeek, getDay } from "date-fns";
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, getDay } from "date-fns";
 import { de } from "date-fns/locale";
-import { getDateStyling, getHolidayTooltip } from "@/lib/date-utils";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { ShiftPlanningData, UnassignedShift } from "@/lib/actions/shift-planning";
-import { EmployeeEditDialog } from "./employee-edit-dialog";
+import { ShiftPlanningData, UnassignedShift, ShiftAssignment } from "@/lib/actions/shift-planning";
 import { ShiftCard } from "./shift-card";
 import { useDroppable } from "@dnd-kit/core";
-
-const absenceTypeTranslations: { [key: string]: string } = {
-  vacation: "Urlaub",
-  sick_leave: "Krankheit",
-  training: "Weiterbildung",
-  other: "Sonstiges",
-};
-
-const absenceTypeColors: { [key: string]: string } = {
-  vacation: "bg-blue-500",
-  sick_leave: "bg-yellow-500",
-  training: "bg-purple-500",
-  other: "bg-gray-500",
-};
+import { CircleDashed, Clock } from "lucide-react";
 
 interface MonthDayCellProps {
   day: Date;
   monthStart: Date;
-  employeeId: string;
-  employee: any;
-  activeDragId: string | null;
-  onActionSuccess: () => void;
+  shifts: ShiftAssignment[];
   unassignedOrders: UnassignedShift[];
+  activeDragId: string | null;
   holidaysMap: { [key: string]: { name: string } | null };
 }
 
-function MonthDayCell({ day, monthStart, employeeId, employee, activeDragId, onActionSuccess, unassignedOrders, holidaysMap }: MonthDayCellProps) {
+function MonthDayCell({ day, monthStart, shifts, unassignedOrders, activeDragId, holidaysMap }: MonthDayCellProps) {
   const dateString = format(day, "yyyy-MM-dd");
-  const dayData = employee.schedule[dateString];
-  const droppableId = `${employeeId}__${dateString}`;
+  const droppableId = `date__${dateString}`;
   const isCurrentMonth = isSameMonth(day, monthStart);
   const isCurrentDay = isToday(day);
 
-  // Use holidaysMap instead of getDateStyling
+  // Use holidaysMap
   const holidayInfo = holidaysMap[dateString];
   const isWeekendDay = getDay(day) === 0 || getDay(day) === 6;
 
@@ -55,7 +37,7 @@ function MonthDayCell({ day, monthStart, employeeId, employee, activeDragId, onA
   } else if (isWeekendDay) {
     className = "bg-blue-50 border-blue-200 text-blue-700";
   }
-  
+
   const { setNodeRef, isOver } = useDroppable({ id: droppableId });
 
   // Get unassigned orders for this day
@@ -63,19 +45,18 @@ function MonthDayCell({ day, monthStart, employeeId, employee, activeDragId, onA
     (shift) => shift.shift_date && format(new Date(shift.shift_date), "yyyy-MM-dd") === dateString
   );
 
-  const totalAssignments = dayData?.shifts?.length || 0;
-  const totalHours = dayData?.shifts?.reduce((sum: number, a: any) => sum + a.estimated_hours, 0) || 0;
+  const totalAssignments = shifts.length;
+  const totalHours = shifts.reduce((sum, a) => sum + a.estimated_hours, 0);
 
   return (
     <div
       ref={setNodeRef}
       className={cn(
-        "min-h-[80px] p-1 border border-border/50 transition-all relative",
+        "min-h-[120px] p-2 border border-border/50 transition-all relative",
         !isCurrentMonth && "bg-muted/30 text-muted-foreground",
         isCurrentDay && "bg-primary/5 border-primary/30",
         // Blue background when dragging over
         isOver && "bg-blue-100 border-blue-500 border-2 ring-2 ring-blue-400",
-        dayData?.isAbsence && "bg-muted/50",
         isCurrentMonth && className,
         "hover:bg-accent/50"
       )}
@@ -90,17 +71,26 @@ function MonthDayCell({ day, monthStart, employeeId, employee, activeDragId, onA
         )}>
           {format(day, "d")}
         </span>
-        {dayData?.isAbsence && (
+
+        {/* Summary badges */}
+        {totalAssignments > 0 && (
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <div className={cn(
-                  "w-2 h-2 rounded-full",
-                  absenceTypeColors[dayData.absenceType || 'other']
-                )} />
+                <Badge variant="secondary" className="text-xs px-1 py-0 h-4">
+                  {totalAssignments}
+                </Badge>
               </TooltipTrigger>
               <TooltipContent>
-                <p>{absenceTypeTranslations[dayData.absenceType || 'other']}</p>
+                <div className="text-xs space-y-1 max-w-48">
+                  <p className="font-medium">{totalAssignments} Einsätze ({totalHours.toFixed(1)}h)</p>
+                  {shifts.map((shift) => (
+                    <div key={shift.id} className="flex items-center gap-1">
+                      <span className="font-medium truncate">{shift.job_title}</span>
+                      <span className="text-muted-foreground">({shift.estimated_hours.toFixed(2)}h)</span>
+                    </div>
+                  ))}
+                </div>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -112,7 +102,7 @@ function MonthDayCell({ day, monthStart, employeeId, employee, activeDragId, onA
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
-              <div className="text-xs text-red-600 font-medium truncate">
+              <div className="text-xs text-red-600 font-medium truncate mb-1">
                 {holidayInfo.name}
               </div>
             </TooltipTrigger>
@@ -123,42 +113,12 @@ function MonthDayCell({ day, monthStart, employeeId, employee, activeDragId, onA
         </TooltipProvider>
       )}
 
-      {/* Assignment summary */}
-      {totalAssignments > 0 && (
-        <div className="space-y-1">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className="flex items-center gap-1">
-                  <Badge variant="secondary" className="text-xs px-1 py-0 h-4">
-                    {totalAssignments}
-                  </Badge>
-                  <span className="text-xs text-muted-foreground">
-                    {totalHours.toFixed(1)}h
-                  </span>
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                <div className="text-xs space-y-1 max-w-48">
-                  {dayData.shifts.map((shift: any) => (
-                    <div key={shift.id} className="flex items-center gap-1">
-                      <span className="font-medium truncate">{shift.job_title}</span>
-                      <span className="text-muted-foreground">({shift.estimated_hours.toFixed(2)}h)</span>
-                    </div>
-                  ))}
-                </div>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </div>
-      )}
-
       {/* Unassigned orders indicator */}
       {ordersForDay.length > 0 && (
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
-              <div className="mt-1">
+              <div className="mb-1">
                 <Badge variant="outline" className="text-xs px-1 py-0 h-4 border-orange-200 text-orange-600">
                   {ordersForDay.length} offen
                 </Badge>
@@ -166,6 +126,7 @@ function MonthDayCell({ day, monthStart, employeeId, employee, activeDragId, onA
             </TooltipTrigger>
             <TooltipContent>
               <div className="text-xs space-y-1 max-w-48">
+                <p className="font-medium">{ordersForDay.length} unbesetzte Einsätze</p>
                 {ordersForDay.map((shift) => (
                   <div key={shift.id} className="truncate">
                     {shift.job_title}
@@ -176,12 +137,29 @@ function MonthDayCell({ day, monthStart, employeeId, employee, activeDragId, onA
           </Tooltip>
         </TooltipProvider>
       )}
+
+      {/* Shifts list */}
+      <div className="space-y-1">
+        {shifts.slice(0, 2).map((shift) => (
+          <div key={shift.id} className="text-xs truncate">
+            <span className="font-medium">{shift.job_title}</span>
+            <span className="text-muted-foreground ml-1">
+              ({shift.estimated_hours.toFixed(1)}h)
+            </span>
+          </div>
+        ))}
+        {shifts.length > 2 && (
+          <div className="text-xs text-muted-foreground">
+            +{shifts.length - 2} weitere
+          </div>
+        )}
+      </div>
       </div>
     </div>
   );
 }
 
-interface PlanningCalendarMonthProps {
+interface ShiftCalendarMonthProps {
   planningData: ShiftPlanningData;
   unassignedOrders: UnassignedShift[];
   weekDays: Date[];
@@ -192,7 +170,7 @@ interface PlanningCalendarMonthProps {
   holidaysMap: { [key: string]: { name: string } | null };
 }
 
-export function PlanningCalendarMonth({
+export function ShiftCalendarMonth({
   planningData,
   unassignedOrders,
   weekDays,
@@ -201,8 +179,27 @@ export function PlanningCalendarMonth({
   onActionSuccess,
   weekNumber,
   holidaysMap
-}: PlanningCalendarMonthProps) {
-  const employeeIds = Object.keys(planningData);
+}: ShiftCalendarMonthProps) {
+  // Flatten all shifts from all employees
+  const allShifts: { shift: ShiftAssignment; date: string }[] = [];
+
+  Object.values(planningData).forEach((employee) => {
+    Object.entries(employee.schedule).forEach(([date, dayData]) => {
+      dayData.shifts.forEach((shift) => {
+        allShifts.push({ shift, date });
+      });
+    });
+  });
+
+  // Group shifts by date
+  const shiftsByDate: { [date: string]: ShiftAssignment[] } = {};
+  allShifts.forEach(({ shift, date }) => {
+    if (!shiftsByDate[date]) {
+      shiftsByDate[date] = [];
+    }
+    shiftsByDate[date].push(shift);
+  });
+
   const monthStart = startOfMonth(weekDays[0]);
   const monthEnd = endOfMonth(weekDays[0]);
   const monthDays = eachDayOfInterval({ start: monthStart, end: monthEnd });
@@ -210,11 +207,11 @@ export function PlanningCalendarMonth({
   // Group days by week
   const weeks: (Date | null)[][] = [];
   let currentWeek: Date[] = [];
-  
+
   for (let i = 0; i < monthDays.length; i++) {
     const day = monthDays[i];
     currentWeek.push(day);
-    
+
     // Start new week on Monday (day 1) or when we reach the end of month
     if (getDay(day) === 0 || i === monthDays.length - 1) {
       weeks.push([...currentWeek]);
@@ -244,24 +241,48 @@ export function PlanningCalendarMonth({
 
   const dayHeaders = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
 
+  // Calculate totals
+  const totalShifts = allShifts.length;
+  const totalHours = allShifts.reduce((sum, { shift }) => sum + shift.estimated_hours, 0);
+  const totalUnassigned = unassignedOrders.length;
+
   return (
     <div className="border rounded-lg shadow-neumorphic glassmorphism-card h-full overflow-auto custom-scrollbar">
       <div className="p-4">
-        <div className="mb-4">
-          <h3 className="text-lg font-semibold">
-            {format(monthStart, "MMMM yyyy", { locale: de })}
-          </h3>
-          <p className="text-sm text-muted-foreground">
-            Woche {weekNumber} • {employeeIds.length} Mitarbeiter
-          </p>
+        <div className="mb-4 flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-semibold">
+              {format(monthStart, "MMMM yyyy", { locale: de })}
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              Woche {weekNumber} • {totalShifts} Einsätze ({totalHours.toFixed(1)}h)
+            </p>
+          </div>
+
+          {/* Summary badges */}
+          <div className="flex gap-2">
+            <Badge variant="secondary" className="text-xs">
+              <Clock className="h-3 w-3 mr-1" />
+              {totalShifts} Einsätze
+            </Badge>
+            {showUnassigned && totalUnassigned > 0 && (
+              <Badge variant="outline" className="text-xs border-orange-200 text-orange-600">
+                <CircleDashed className="h-3 w-3 mr-1" />
+                {totalUnassigned} offen
+              </Badge>
+            )}
+            <Badge variant="outline" className="text-xs">
+              {Object.keys(planningData).length} Mitarbeiter
+            </Badge>
+          </div>
         </div>
 
         {/* Unassigned orders summary */}
-        {showUnassigned && unassignedOrders.length > 0 && (
+        {showUnassigned && totalUnassigned > 0 && (
           <div className="mb-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium text-orange-800">
-                {unassignedOrders.length} unbesetzte Aufträge
+                {totalUnassigned} unbesetzte Einsätze
               </span>
               <div className="flex gap-1">
                 {unassignedOrders.slice(0, 3).map((shift) => (
@@ -269,9 +290,9 @@ export function PlanningCalendarMonth({
                     {shift.job_title.length > 15 ? `${shift.job_title.substring(0, 15)}...` : shift.job_title}
                   </Badge>
                 ))}
-                {unassignedOrders.length > 3 && (
+                {totalUnassigned > 3 && (
                   <Badge variant="outline" className="text-xs">
-                    +{unassignedOrders.length - 3} mehr
+                    +{totalUnassigned - 3} mehr
                   </Badge>
                 )}
               </div>
@@ -296,67 +317,48 @@ export function PlanningCalendarMonth({
             })}
           </div>
 
-          {/* Employee rows */}
-          {employeeIds.length === 0 ? (
-            <div className="text-center text-muted-foreground py-8">
-              Keine Mitarbeiter gefunden.
-            </div>
-          ) : (
-            employeeIds.map((id) => {
-              const employee = planningData[id];
-              if (!employee) return null;
-
-              return (
-                <div key={id} className="space-y-2">
-                  {/* Employee header */}
-                  <div className="flex items-center gap-2 p-2 bg-muted/30 rounded-lg">
-                    <Avatar className="h-6 w-6">
-                      <AvatarImage src={employee.raw.avatar_url} alt={employee.name} />
-                      <AvatarFallback className="text-xs">
-                        {employee.name.split(' ').map(n => n[0]).join('')}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="cursor-pointer hover:text-primary">
-                      <EmployeeEditDialog employee={employee.raw as any} />
-                      <span className="text-sm font-medium">{employee.name}</span>
-                      <span className="text-xs text-muted-foreground ml-2">
-                        {employee.raw.job_title || 'Mitarbeiter'}
-                      </span>
+          {/* Calendar days */}
+          <div className="space-y-1">
+            {weeks.map((week: (Date | null)[], weekIndex: number) => (
+              <React.Fragment key={weekIndex}>
+                <div className="grid grid-cols-7 gap-1">
+                  {week.map((day: Date | null, dayIndex: number) => (
+                    <div key={`${weekIndex}-${dayIndex}`}>
+                      {day ? (
+                        <MonthDayCell
+                          day={day}
+                          monthStart={monthStart}
+                          shifts={shiftsByDate[format(day, "yyyy-MM-dd")] || []}
+                          unassignedOrders={unassignedOrders}
+                          activeDragId={activeDragId}
+                          holidaysMap={holidaysMap}
+                        />
+                      ) : (
+                        <div className="min-h-[120px] border border-transparent" />
+                      )}
                     </div>
-                    <div className="ml-auto text-xs text-muted-foreground">
-                      {employee.totalHoursPlanned.toFixed(1)}h / {employee.totalHoursAvailable.toFixed(1)}h
-                    </div>
-                  </div>
-
-                  {/* Calendar days for this employee */}
-                  <div className="grid grid-cols-7 gap-1">
-                    {weeks.map((week: (Date | null)[], weekIndex: number) => (
-                      <React.Fragment key={weekIndex}>
-                        {week.map((day: Date | null, dayIndex: number) => (
-                          <div key={`${weekIndex}-${dayIndex}`}>
-                            {day ? (
-                              <MonthDayCell
-                                day={day}
-                                monthStart={monthStart}
-                                employeeId={id}
-                                employee={employee}
-                                activeDragId={activeDragId}
-                                onActionSuccess={onActionSuccess}
-                                unassignedOrders={unassignedOrders}
-                                holidaysMap={holidaysMap}
-                              />
-                            ) : (
-                              <div className="min-h-[80px] border border-transparent" />
-                            )}
-                          </div>
-                        ))}
-                      </React.Fragment>
-                    ))}
-                  </div>
+                  ))}
                 </div>
-              );
-            })
-          )}
+              </React.Fragment>
+            ))}
+          </div>
+        </div>
+
+        {/* Footer summary */}
+        <div className="mt-4 p-3 bg-muted/30 rounded-lg">
+          <div className="flex items-center justify-center gap-6 text-xs text-muted-foreground">
+            <span>Geplante Einsätze: {totalShifts}</span>
+            <span>•</span>
+            <span>Gesamtstunden: {totalHours.toFixed(1)}h</span>
+            <span>•</span>
+            <span>Mitarbeiter: {Object.keys(planningData).length}</span>
+            {showUnassigned && (
+              <>
+                <span>•</span>
+                <span className="text-orange-600">Unbesetzt: {totalUnassigned}</span>
+              </>
+            )}
+          </div>
         </div>
       </div>
     </div>

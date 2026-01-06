@@ -4,7 +4,7 @@ import * as React from "react";
 import { format, addDays, subDays, startOfWeek, endOfWeek, addMonths, subMonths, startOfMonth, startOfDay } from "date-fns";
 import { de } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Filter, Eye, EyeOff, PlusCircle } from "lucide-react";
+import { ChevronLeft, ChevronRight, Filter, Eye, EyeOff, PlusCircle, Users, Building2, Briefcase, Clock } from "lucide-react";
 import { DatePicker } from "@/components/date-picker";
 import {
   DropdownMenu,
@@ -14,8 +14,19 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import { TimeEntryCreateDialog } from "@/components/time-entry-create-dialog";
+import { CreateShiftDialog } from "@/components/create-shift-dialog";
 import { Input } from "@/components/ui/input";
+import { PlanningFilterDialog } from "./planning-filter-dialog";
+import { Badge } from "@/components/ui/badge";
+
+export interface FilterValues {
+  employeeGroups?: string[];
+  objects?: string[];
+  services?: string[];
+  experienceLevel?: string;
+  showAvailableOnly?: boolean;
+  shiftStatus?: string;
+}
 
 interface PlanningToolbarProps {
   currentDate: Date;
@@ -27,6 +38,11 @@ interface PlanningToolbarProps {
   currentUserId?: string;
   isAdmin?: boolean;
   onActionSuccess?: () => void;
+  filters?: FilterValues;
+  onFiltersChange?: (filters: FilterValues) => void;
+  employeeGroups?: { id: string; name: string }[];
+  objects?: { id: string; name: string }[];
+  services?: { id: string; title: string; color?: string }[];
 }
 
 export function PlanningToolbar({
@@ -39,11 +55,34 @@ export function PlanningToolbar({
   currentUserId,
   isAdmin,
   onActionSuccess,
+  filters = {},
+  onFiltersChange,
+  employeeGroups = [],
+  objects = [],
+  services = [],
 }: PlanningToolbarProps) {
+  const [createShiftOpen, setCreateShiftOpen] = React.useState(false);
+  const [filterDialogOpen, setFilterDialogOpen] = React.useState(false);
+
   const viewModeTranslations = {
     day: 'Heute',
     week: 'Woche',
     month: 'Monat',
+  };
+
+  const activeFilterCount = React.useMemo(() => {
+    let count = 0;
+    if (filters.employeeGroups?.length) count++;
+    if (filters.objects?.length) count++;
+    if (filters.services?.length) count++;
+    if (filters.experienceLevel && filters.experienceLevel !== "all") count++;
+    if (filters.shiftStatus && filters.shiftStatus !== "all") count++;
+    if (filters.showAvailableOnly) count++;
+    return count;
+  }, [filters]);
+
+  const handleClearAllFilters = () => {
+    onFiltersChange?.({});
   };
 
   const handlePrev = () => {
@@ -129,11 +168,22 @@ export function PlanningToolbar({
         </div>
         <div className="flex items-center gap-2">
           <Input placeholder="Mitarbeiter suchen..." className="w-full sm:w-auto" />
-          <Button variant="outline" size="icon" disabled>
-            <Filter className="h-4 w-4" />
-          </Button>
+          <PlanningFilterDialog
+            open={filterDialogOpen}
+            onOpenChange={setFilterDialogOpen}
+            filters={filters}
+            onFiltersChange={(newFilters) => onFiltersChange?.(newFilters)}
+            employeeGroups={employeeGroups}
+            objects={objects}
+            services={services}
+            onClearAll={handleClearAllFilters}
+          />
           <Button variant="outline" size="icon" onClick={() => onShowUnassignedChange(!showUnassigned)}>
             {showUnassigned ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+          </Button>
+          <Button variant="default" size="sm" onClick={() => setCreateShiftOpen(true)}>
+            <PlusCircle className="h-4 w-4 mr-2" />
+            Einsatz erstellen
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -151,7 +201,7 @@ export function PlanningToolbar({
       </div>
 
       <div className="bg-muted/30 rounded-lg p-3 border border-border/50">
-        <div className="flex items-center gap-2 overflow-x-auto pb-1">
+        <div className="flex flex-wrap items-center gap-2 overflow-x-auto pb-1">
           <span className="text-sm text-muted-foreground whitespace-nowrap">Schnellzugriff:</span>
           {quickActions.map((action) => (
             <Button
@@ -173,8 +223,75 @@ export function PlanningToolbar({
               <span className="text-[10px] font-mono">{format(action.date, "dd.MM", { locale: de })}</span>
             </Button>
           ))}
+
+          {/* Active Filters Display */}
+          {activeFilterCount > 0 && (
+            <div className="flex flex-wrap items-center gap-2 ml-auto">
+              <span className="text-xs text-muted-foreground">Filter aktiv:</span>
+              {filters.employeeGroups?.map((groupId) => {
+                const group = employeeGroups.find((g) => g.id === groupId);
+                return group ? (
+                  <Badge key={groupId} variant="secondary" className="text-[10px] gap-1">
+                    <Users className="h-3 w-3" />
+                    {group.name}
+                  </Badge>
+                ) : null;
+              })}
+              {filters.objects?.map((objId) => {
+                const obj = objects.find((o) => o.id === objId);
+                return obj ? (
+                  <Badge key={objId} variant="secondary" className="text-[10px] gap-1">
+                    <Building2 className="h-3 w-3" />
+                    {obj.name}
+                  </Badge>
+                ) : null;
+              })}
+              {filters.services?.map((serviceId) => {
+                const service = services.find((s) => s.id === serviceId);
+                return service ? (
+                  <Badge
+                    key={serviceId}
+                    variant="secondary"
+                    className="text-[10px] gap-1"
+                    style={{
+                      backgroundColor: service.color || undefined,
+                      color: service.color ? "white" : undefined,
+                    }}
+                  >
+                    <Briefcase className="h-3 w-3" />
+                    {service.title}
+                  </Badge>
+                ) : null;
+              })}
+              {filters.showAvailableOnly && (
+                <Badge variant="outline" className="text-[10px] gap-1">
+                  <Clock className="h-3 w-3" />
+                  Nur verfügbar
+                </Badge>
+              )}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 text-[10px]"
+                onClick={handleClearAllFilters}
+              >
+                Alle löschen
+              </Button>
+            </div>
+          )}
         </div>
       </div>
+
+      <CreateShiftDialog
+        open={createShiftOpen}
+        onClose={() => setCreateShiftOpen(false)}
+        onSuccess={() => {
+          if (onActionSuccess) {
+            onActionSuccess();
+          }
+        }}
+        defaultDate={currentDate}
+      />
     </div>
   );
 }

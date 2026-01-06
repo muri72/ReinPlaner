@@ -170,9 +170,8 @@ export default function CustomerBookingsPage() {
 
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
-      case 'completed': return 'default';
-      case 'in_progress': return 'secondary';
-      case 'pending': default: return 'outline';
+      case 'inactive': return 'default';
+      case 'active': default: return 'secondary';
     }
   };
 
@@ -270,7 +269,7 @@ export default function CustomerBookingsPage() {
                             {format(new Date(order.due_date), 'dd.MM.yyyy', { locale: de })}
                           </div>
                         )}
-                        {(order.order_type === "recurring" || order.order_type === "permanent" || order.order_type === "substitution") && order.start_date && (
+                        {(order.order_type === "recurring") && order.start_date && (
                           <div className="flex items-center">
                             <CalendarDays className="mr-1 h-3 w-3" />
                             {format(new Date(order.start_date), 'dd.MM.yyyy', { locale: de })}
@@ -302,7 +301,7 @@ export default function CustomerBookingsPage() {
                       <TableCell><Badge variant={getRequestStatusBadgeVariant(order.request_status)}>{order.request_status}</Badge></TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end space-x-1">
-                          {order.status === 'completed' && order.order_feedback.length === 0 && (
+                          {order.status === 'inactive' && order.order_feedback.length === 0 && (
                             <OrderFeedbackDialog orderId={order.id} />
                           )}
                           <Button variant="ghost" size="icon" title="Details anzeigen">

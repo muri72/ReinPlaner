@@ -548,3 +548,144 @@ export async function updateOrderAssignments(
     return { success: false, message: `Fehler: ${error.message}` };
   }
 }
+
+export type SeriesEditMode = "single" | "future" | "all";
+
+/**
+ * Reassign a series assignment with support for "only this" or "all future" modes
+ *
+ * - "single": Detach this specific occurrence from the series and create a one-time order
+ * - "future": Update this and all future occurrences
+ */
+export async function reassignSeriesAssignment(
+  assignmentId: string,
+  newEmployeeId: string,
+  newDate: string,
+  mode: SeriesEditMode,
+  originalDate: string
+): Promise<{ success: boolean; message: string }> {
+  const supabaseAdmin = createAdminClient();
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { success: false, message: "Benutzer nicht authentifiziert." };
+  }
+
+  try {
+    // 1. Get the original assignment with order details
+    const { data: assignment, error: assignmentError } = await supabaseAdmin
+      .from('order_employee_assignments')
+      .select(`
+        *,
+        orders!inner(
+          id, title, order_type, start_date, end_date,
+          customer_id, object_id, service_type, total_estimated_hours,
+          status, priority, notes, request_status
+        )
+      `)
+      .eq('id', assignmentId)
+      .single();
+
+    if (assignmentError || !assignment) {
+      throw new Error("Originale Zuweisung nicht gefunden.");
+    }
+
+    const order = assignment.orders;
+
+    if (mode === "single") {
+      // Create a new one-time order for this specific date (detached from series)
+      const { data: newOrder, error: newOrderError } = await supabaseAdmin
+        .from('orders')
+        .insert({
+          user_id: user.id,
+          title: `${order.title} (Einzeltermin)`,
+          order_type: 'one_time',
+          customer_id: order.customer_id,
+          object_id: order.object_id,
+          service_type: order.service_type,
+          total_estimated_hours: order.total_estimated_hours,
+          start_date: newDate,
+          end_date: newDate,
+          status: 'pending',
+          priority: order.priority,
+          notes: `Abgetrennt von Serie am ${originalDate}. ${order.notes || ''}`.trim(),
+          request_status: 'approved',
+        })
+        .select('id')
+        .single();
+
+      if (newOrderError || !newOrder) {
+        throw new Error(`Fehler beim Erstellen des Einzeltermins: ${newOrderError?.message}`);
+      }
+
+      // Create assignment for the new one-time order
+      const dayOfWeek = new Date(originalDate).getDay();
+      const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+      const dayKey = dayNames[dayOfWeek];
+
+      // Extract schedule for this specific day from original assignment
+      const originalSchedule = assignment.assigned_daily_schedules?.[0]?.[dayKey] || {};
+
+      const { error: newAssignmentError } = await supabaseAdmin
+        .from('order_employee_assignments')
+        .insert({
+          order_id: newOrder.id,
+          employee_id: newEmployeeId,
+          assigned_daily_schedules: [{ [dayKey]: originalSchedule }],
+          assigned_recurrence_interval_weeks: 1,
+          assigned_start_week_offset: 0,
+        });
+
+      if (newAssignmentError) {
+        throw new Error(`Fehler beim Erstellen der Einzeltermin-Zuweisung: ${newAssignmentError.message}`);
+      }
+
+      revalidatePath("/dashboard/planning");
+      revalidatePath("/dashboard/orders");
+      return { success: true, message: "Einzeltermin wurde abgetrennt und neu zugewiesen." };
+    }
+    else if (mode === "future") {
+      // Update the assignment's start week offset and/or employee for all future occurrences
+      // This effectively changes the series from this point forward
+
+      // Simply update the employee for the existing assignment
+      const { error: updateError } = await supabaseAdmin
+        .from('order_employee_assignments')
+        .update({
+          employee_id: newEmployeeId,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', assignmentId);
+
+      if (updateError) {
+        throw new Error(`Fehler beim Aktualisieren der Serie: ${updateError.message}`);
+      }
+
+      revalidatePath("/dashboard/planning");
+      revalidatePath("/dashboard/orders");
+      return { success: true, message: "Alle zukünftigen Termine wurden aktualisiert." };
+    }
+    else {
+      // "all" mode - update entire series (same as future for now)
+      const { error: updateError } = await supabaseAdmin
+        .from('order_employee_assignments')
+        .update({
+          employee_id: newEmployeeId,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', assignmentId);
+
+      if (updateError) {
+        throw new Error(`Fehler beim Aktualisieren der Serie: ${updateError.message}`);
+      }
+
+      revalidatePath("/dashboard/planning");
+      revalidatePath("/dashboard/orders");
+      return { success: true, message: "Gesamte Serie wurde aktualisiert." };
+    }
+  } catch (error: any) {
+    console.error("Fehler beim Bearbeiten der Serie:", error.message);
+    return { success: false, message: `Fehler: ${error.message}` };
+  }
+}

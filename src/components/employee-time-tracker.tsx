@@ -677,7 +677,7 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
                     <SelectContent>
                       <SelectItem value="unassigned">Kein Auftrag zugewiesen</SelectItem>
                       {orders.map(order => (
-                        <SelectItem key={order.id} value={order.id}>{order.title} ({order.order_type === 'permanent' ? 'Permanent' : 'Einmalig'})</SelectItem>
+                        <SelectItem key={order.id} value={order.id}>{order.title} ({order.order_type === 'recurring' ? 'Wiederkehrend' : 'Einmalig'})</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -770,7 +770,7 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
                     <SelectContent>
                       <SelectItem value="unassigned">Kein Auftrag zugewiesen</SelectItem>
                       {orders.map(order => (
-                        <SelectItem key={order.id} value={order.id}>{order.title} ({order.order_type === 'permanent' ? 'Permanent' : 'Einmalig'})</SelectItem>
+                        <SelectItem key={order.id} value={order.id}>{order.title} ({order.order_type === 'recurring' ? 'Wiederkehrend' : 'Einmalig'})</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>

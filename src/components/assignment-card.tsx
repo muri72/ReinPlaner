@@ -2,9 +2,10 @@
 
 import * as React from "react";
 import { cn } from "@/lib/utils";
-import { Clock, Repeat, Users } from "lucide-react";
+import { Clock, Repeat, Users, ArrowRightLeft } from "lucide-react";
 import { useDraggable } from "@dnd-kit/core";
 import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { AssignmentEditDialog } from "./assignment-edit-dialog"; // Import the new dialog
 
 import { deleteOrder } from "@/app/dashboard/orders/actions"; // Adjust path if needed
@@ -19,6 +20,7 @@ interface Assignment {
   hours: number;
   isRecurring: boolean;
   isTeam: boolean;
+  isSubstitution?: boolean; // Vertretungseinsatz
   status: 'completed' | 'pending' | 'future';
   service_type: string | null;
   service_color?: string | null; // Optional color for the service
@@ -107,11 +109,41 @@ export function AssignmentCard({ assignment, onSuccess, date, services = [] }: A
           )}
         >
           <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <span>{assignment.startTime || 'N/A'} → {assignment.endTime || 'N/A'}</span>
-            <div className="flex items-center gap-1.5">
-              {assignment.isTeam && <Users className="h-3 w-3" />}
-              {assignment.isRecurring && <Repeat className="h-3 w-3" />}
-            </div>
+            <span>{assignment.startTime || 'N/A'} - {assignment.endTime || 'N/A'}</span>
+            <TooltipProvider delayDuration={100}>
+              <div className="flex items-center gap-1.5">
+                {assignment.isSubstitution && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <ArrowRightLeft className="h-3 w-3 text-orange-500" />
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="text-xs">
+                      <p>Vertretungseinsatz</p>
+                    </TooltipContent>
+                  </Tooltip>
+                )}
+                {assignment.isTeam && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Users className="h-3 w-3 text-purple-500" />
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="text-xs">
+                      <p>Team-Einsatz (mehrere Mitarbeiter)</p>
+                    </TooltipContent>
+                  </Tooltip>
+                )}
+                {assignment.isRecurring && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Repeat className="h-3 w-3 text-blue-500" />
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="text-xs">
+                      <p>Wiederkehrender Einsatz (Serie)</p>
+                    </TooltipContent>
+                  </Tooltip>
+                )}
+              </div>
+            </TooltipProvider>
           </div>
           <div className="flex items-center text-xs text-muted-foreground">
             <Clock className="mr-1 h-3 w-3" />

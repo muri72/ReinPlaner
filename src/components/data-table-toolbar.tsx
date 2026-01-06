@@ -45,19 +45,29 @@ interface DataTableToolbarProps {
   searchPlaceholder: string;
   filterOptions: FilterOption[];
   sortOptions: SortOption[];
+  searchQuery?: string;
+  onSearchChange?: (query: string) => void;
 }
 
 export function DataTableToolbar({
   searchPlaceholder,
   filterOptions,
   sortOptions,
+  searchQuery = "",
+  onSearchChange,
 }: DataTableToolbarProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  
+  const [localSearch, setLocalSearch] = React.useState(searchQuery);
+
   const [isFilterPopoverOpen, setIsFilterPopoverOpen] = React.useState(false);
   const [activeFilterCategory, setActiveFilterCategory] = React.useState<FilterOption | null>(null);
+
+  // Sync local search with prop when it changes
+  React.useEffect(() => {
+    setLocalSearch(searchQuery);
+  }, [searchQuery]);
 
   const activeFilters = React.useMemo(() => {
     const filters: { key: string; value: string }[] = [];
@@ -102,10 +112,31 @@ export function DataTableToolbar({
     newParams.delete("query");
     newParams.set('page', '1');
     router.push(`${pathname}?${newParams.toString()}`);
+    setLocalSearch("");
   };
 
   const handleSetSort = (key: string, value: string) => {
     router.push(`${pathname}?${createQueryString({ [key]: value, page: '1' })}`);
+  };
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value;
+    setLocalSearch(newValue);
+    onSearchChange?.(newValue);
+  };
+
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      router.push(`${pathname}?${createQueryString({ query: localSearch, page: '1' })}`);
+    }
+  };
+
+  const handleSearchBlur = () => {
+    // Apply search on blur if it changed
+    const currentQuery = searchParams.get("query") || "";
+    if (localSearch !== currentQuery) {
+      router.push(`${pathname}?${createQueryString({ query: localSearch, page: '1' })}`);
+    }
   };
 
   const getFilterLabel = (key: string, value: string): string => {
@@ -125,7 +156,14 @@ export function DataTableToolbar({
   return (
     <div className="flex flex-col gap-2">
       <div className="flex flex-col sm:flex-row items-center gap-2">
-        <Input placeholder={searchPlaceholder} className="w-full sm:max-w-xs" />
+        <Input
+          placeholder={searchPlaceholder}
+          className="w-full sm:max-w-xs"
+          value={localSearch}
+          onChange={handleSearchChange}
+          onKeyDown={handleSearchKeyDown}
+          onBlur={handleSearchBlur}
+        />
         <Popover open={isFilterPopoverOpen} onOpenChange={setIsFilterPopoverOpen}>
           <PopoverTrigger asChild>
             <Button variant="outline" size="sm" className="h-9 border-dashed w-full sm:w-auto">

@@ -157,6 +157,7 @@ export default function EmployeesPage() {
             searchPlaceholder="Mitarbeiter suchen..."
             filterOptions={filterOptions}
             sortOptions={sortOptions}
+            searchQuery={query}
           />
           {totalCount !== null && !loading && (
             <div className="text-sm text-muted-foreground mt-2">

@@ -150,8 +150,8 @@ export function TodaysOrdersOverview() {
     const now = new Date();
 
     orders.forEach(order => {
-      // If order is marked as completed in database, always show as completed
-      if (order.status === 'completed') {
+      // If order is marked as inactive in database, always show as completed
+      if (order.status === 'inactive') {
         completed.push(order);
         return;
       }
@@ -358,7 +358,7 @@ export function TodaysOrdersOverview() {
 
       const todaysOrders = data.filter(order => {
         if (order.order_type === 'one_time') return true;
-        return ['recurring', 'permanent', 'substitution'].includes(order.order_type) &&
+        return ['recurring'].includes(order.order_type) &&
                isRecurringOrderToday(order, today);
       });
 
@@ -494,7 +494,7 @@ export function TodaysOrdersOverview() {
                         </Badge>
                       )}
                     </div>
-                    {assignedTime && order.status !== "completed" && (
+                    {assignedTime && order.status !== "inactive" && (
                       <TimeProgressBar
                         startTime={assignedTime.start}
                         endTime={assignedTime.end}
@@ -512,9 +512,8 @@ export function TodaysOrdersOverview() {
 
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
-      case 'completed': return 'default';
-      case 'in_progress': return 'secondary';
-      case 'pending': default: return 'outline';
+      case 'inactive': return 'default';
+      case 'active': default: return 'secondary';
     }
   };
 

@@ -21,6 +21,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { cn } from "@/lib/utils";
 import { Calendar, ChevronLeft, ChevronRight, Filter, MoreHorizontal, Plus } from "lucide-react";
 import { SearchInput } from "./search-input";
+import { CreateShiftDialog } from "@/components/create-shift-dialog";
 
 interface MobilePlanningToolbarProps {
   currentDate: Date;
@@ -52,6 +53,7 @@ export function MobilePlanningToolbar({
   onOpenFilters,
 }: MobilePlanningToolbarProps) {
   const [isSheetOpen, setIsSheetOpen] = React.useState(false);
+  const [createShiftOpen, setCreateShiftOpen] = React.useState(false);
 
   const handlePrev = React.useCallback(() => {
     switch (viewMode) {
@@ -205,9 +207,9 @@ export function MobilePlanningToolbar({
         <Button
           variant="default"
           className="flex-1"
-          onClick={() => onCreateOrder?.()}
+          onClick={() => setCreateShiftOpen(true)}
         >
-          <Plus className="mr-2 h-4 w-4" /> Neuer Auftrag
+          <Plus className="mr-2 h-4 w-4" /> Einsatz erstellen
         </Button>
 
         <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
@@ -294,6 +296,15 @@ export function MobilePlanningToolbar({
           </SheetContent>
         </Sheet>
       </div>
+
+      <CreateShiftDialog
+        open={createShiftOpen}
+        onClose={() => setCreateShiftOpen(false)}
+        onSuccess={() => {
+          // TODO: Trigger refresh of planning data
+        }}
+        defaultDate={currentDate}
+      />
     </div>
   );
 }
