@@ -191,6 +191,12 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
     }
   };
 
+  // Wrapper function to call handleFormSubmit with current form values
+  const handleSubmitClick = async () => {
+    const data = form.getValues();
+    await handleFormSubmit(data);
+  };
+
   // Bestimmt, ob die Felder für Vorname, Nachname, E-Mail deaktiviert sein sollen
   const areNameEmailFieldsDisabled = isEditMode || !!selectedEmployeeId || !!selectedCustomerContactId;
   // Bestimmt, ob das Rollenfeld deaktiviert sein soll
@@ -608,6 +614,7 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
         <FormActions
           isSubmitting={form.formState.isSubmitting}
           onCancel={handleCancel}
+          onSubmit={handleSubmitClick}
           submitLabel={submitButtonText}
           cancelLabel="Abbrechen"
           showCancel={!isInDialog}

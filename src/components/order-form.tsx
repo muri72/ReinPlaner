@@ -783,6 +783,12 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess, 
     }
   };
 
+  // Wrapper function to call handleFormSubmit with current form values
+  const handleSubmitClick = async () => {
+    const data = form.getValues();
+    await handleFormSubmit(data);
+  };
+
   const handleObjectCreated = async (newObjectId: string) => {
     if (selectedCustomerId) {
       // Refresh the objects list
@@ -1507,6 +1513,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess, 
           <FormActions
             isSubmitting={form.formState.isSubmitting}
             onCancel={handleCancel}
+            onSubmit={handleSubmitClick}
             submitLabel={submitButtonText}
             cancelLabel="Abbrechen"
             showCancel={!isInDialog}

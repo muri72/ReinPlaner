@@ -102,6 +102,12 @@ export function ManagerCustomerAssignmentForm({ managerId, onSuccess, isInDialog
     }
   };
 
+  // Wrapper function to call onSubmit with current form values
+  const handleSubmitClick = async () => {
+    const data = form.getValues();
+    await onSubmit(data);
+  };
+
   if (loading) {
     return <div className="text-center py-8">Lade Kunden und Zuweisungen...</div>;
   }
@@ -146,6 +152,7 @@ export function ManagerCustomerAssignmentForm({ managerId, onSuccess, isInDialog
           <FormActions
             isSubmitting={loading || form.formState.isSubmitting}
             onCancel={handleCancel}
+            onSubmit={handleSubmitClick}
             submitLabel="Zuweisungen speichern"
             cancelLabel="Abbrechen"
             showCancel={true}
@@ -216,6 +223,7 @@ export function ManagerCustomerAssignmentForm({ managerId, onSuccess, isInDialog
             <FormActions
               isSubmitting={loading || form.formState.isSubmitting}
               onCancel={handleCancel}
+              onSubmit={handleSubmitClick}
               submitLabel="Zuweisungen speichern"
               cancelLabel="Abbrechen"
               showCancel={true}

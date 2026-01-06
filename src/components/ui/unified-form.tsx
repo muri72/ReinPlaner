@@ -84,6 +84,12 @@ export function UnifiedForm<T extends z.ZodTypeAny>({
     }
   };
 
+  // Wrapper function to call handleSubmit with current form values
+  const handleSubmitClick = async () => {
+    const data = form.getValues();
+    await handleSubmit(data);
+  };
+
   const formContent = (
     <StandardForm
       variant={variant}
@@ -109,6 +115,7 @@ export function UnifiedForm<T extends z.ZodTypeAny>({
         isSuccess={isSuccess}
         isError={isError}
         onCancel={() => onCancel?.()}
+        onSubmit={handleSubmitClick}
         submitLabel={submitLabel}
         cancelLabel={cancelLabel}
         showCancel={showCancel}

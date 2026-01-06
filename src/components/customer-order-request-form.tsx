@@ -119,6 +119,12 @@ export function CustomerOrderRequestForm({ customerId, onSuccess, isInDialog = f
     }
   };
 
+  // Wrapper function to call handleFormSubmit with current form values
+  const handleSubmitClick = async () => {
+    const data = form.getValues();
+    await handleFormSubmit(data);
+  };
+
   if (isInDialog) {
     return (
       <>
@@ -260,6 +266,7 @@ export function CustomerOrderRequestForm({ customerId, onSuccess, isInDialog = f
           <FormActions
             isSubmitting={form.formState.isSubmitting}
             onCancel={handleCancel}
+            onSubmit={handleSubmitClick}
             submitLabel="Anfrage senden"
             cancelLabel="Abbrechen"
             showCancel={true}
@@ -431,6 +438,7 @@ export function CustomerOrderRequestForm({ customerId, onSuccess, isInDialog = f
             <FormActions
               isSubmitting={form.formState.isSubmitting}
               onCancel={handleCancel}
+              onSubmit={handleSubmitClick}
               submitLabel="Anfrage senden"
               cancelLabel="Abbrechen"
               showCancel={true}

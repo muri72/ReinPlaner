@@ -139,6 +139,12 @@ export function AbsenceRequestForm({ initialData, onSubmit, submitButtonText, on
     }
   };
 
+  // Wrapper function to call handleFormSubmit with current form values
+  const handleSubmitClick = async () => {
+    const data = form.getValues();
+    await handleFormSubmit(data);
+  };
+
   const typeOptions = {
     vacation: "Urlaub",
     sick_leave: "Krankheit",
@@ -241,6 +247,7 @@ export function AbsenceRequestForm({ initialData, onSubmit, submitButtonText, on
           <FormActions
             isSubmitting={form.formState.isSubmitting}
             onCancel={handleCancel}
+            onSubmit={handleSubmitClick}
             submitLabel={submitButtonText}
             cancelLabel="Abbrechen"
             showCancel={true}
@@ -360,6 +367,7 @@ export function AbsenceRequestForm({ initialData, onSubmit, submitButtonText, on
             <FormActions
               isSubmitting={form.formState.isSubmitting}
               onCancel={handleCancel}
+              onSubmit={handleSubmitClick}
               submitLabel={submitButtonText}
               cancelLabel="Abbrechen"
               showCancel={true}

@@ -168,6 +168,12 @@ export function TimeEntryForm({ initialData, onSubmit, submitButtonText, onSucce
     }
   };
 
+  // Wrapper function to call handleFormSubmit with current form values
+  const handleSubmitClick = async () => {
+    const data = form.getValues();
+    await handleFormSubmit(data);
+  };
+
   if (isInDialog) {
     return (
       <>
@@ -384,6 +390,7 @@ export function TimeEntryForm({ initialData, onSubmit, submitButtonText, onSucce
           <FormActions
             isSubmitting={form.formState.isSubmitting}
             onCancel={handleCancel}
+            onSubmit={handleSubmitClick}
             submitLabel={submitButtonText}
             cancelLabel="Abbrechen"
             showCancel={true}
@@ -630,6 +637,7 @@ export function TimeEntryForm({ initialData, onSubmit, submitButtonText, onSucce
             <FormActions
               isSubmitting={form.formState.isSubmitting}
               onCancel={handleCancel}
+              onSubmit={handleSubmitClick}
               submitLabel={submitButtonText}
               cancelLabel="Abbrechen"
               showCancel={true}

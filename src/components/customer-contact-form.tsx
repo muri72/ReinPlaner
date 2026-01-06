@@ -84,6 +84,16 @@ export function CustomerContactForm({ initialData, onSubmit, submitButtonText, o
     }
   };
 
+  const handleCancel = () => {
+    onSuccess?.();
+  };
+
+  // Wrapper function to call handleFormSubmit with current form values
+  const handleSubmitClick = async () => {
+    const data = form.getValues();
+    await handleFormSubmit(data);
+  };
+
   return (
     <>
       {!isInDialog && (title || description) && (
@@ -204,7 +214,8 @@ export function CustomerContactForm({ initialData, onSubmit, submitButtonText, o
         </FormSection>
         <FormActions
           isSubmitting={form.formState.isSubmitting}
-          onCancel={() => {}}
+          onCancel={handleCancel}
+          onSubmit={handleSubmitClick}
           submitLabel={submitButtonText}
           cancelLabel="Abbrechen"
           showCancel={!isInDialog}

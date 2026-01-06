@@ -128,6 +128,12 @@ export function OrderFeedbackForm({ orderId, onSuccess, isInDialog = false }: Or
     }
   };
 
+  // Wrapper function to call onSubmit with current form values
+  const handleSubmitClick = async () => {
+    const data = form.getValues();
+    await onSubmit(data);
+  };
+
   if (isInDialog) {
     return (
       <>
@@ -223,6 +229,7 @@ export function OrderFeedbackForm({ orderId, onSuccess, isInDialog = false }: Or
           <FormActions
             isSubmitting={isSubmitting}
             onCancel={handleCancel}
+            onSubmit={handleSubmitClick}
             submitLabel="Feedback senden"
             cancelLabel="Abbrechen"
             showCancel={true}
@@ -348,6 +355,7 @@ export function OrderFeedbackForm({ orderId, onSuccess, isInDialog = false }: Or
             <FormActions
               isSubmitting={isSubmitting}
               onCancel={handleCancel}
+              onSubmit={handleSubmitClick}
               submitLabel="Feedback senden"
               cancelLabel="Abbrechen"
               showCancel={true}

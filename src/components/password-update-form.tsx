@@ -70,6 +70,12 @@ export function PasswordUpdateForm({ isInDialog = false }: PasswordUpdateFormPro
     }
   };
 
+  // Wrapper function to call onSubmit with current form values
+  const handleSubmitClick = async () => {
+    const data = form.getValues();
+    await onSubmit(data);
+  };
+
   if (isInDialog) {
     return (
       <>
@@ -108,6 +114,7 @@ export function PasswordUpdateForm({ isInDialog = false }: PasswordUpdateFormPro
           <FormActions
             isSubmitting={form.formState.isSubmitting}
             onCancel={handleCancel}
+            onSubmit={handleSubmitClick}
             submitLabel="Passwort ändern"
             cancelLabel="Abbrechen"
             showCancel={true}
@@ -200,6 +207,7 @@ export function PasswordUpdateForm({ isInDialog = false }: PasswordUpdateFormPro
             <FormActions
               isSubmitting={form.formState.isSubmitting}
               onCancel={handleCancel}
+              onSubmit={handleSubmitClick}
               submitLabel="Passwort ändern"
               cancelLabel="Abbrechen"
               showCancel={true}

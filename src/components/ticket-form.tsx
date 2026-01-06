@@ -197,6 +197,12 @@ export function TicketForm({ initialData, onSubmit, submitButtonText, onSuccess,
     }
   };
 
+  // Wrapper function to call handleFormSubmit with current form values
+  const handleSubmitClick = async () => {
+    const data = form.getValues();
+    await handleFormSubmit(data);
+  };
+
   if (isInDialog) {
     return (
       <>
@@ -365,6 +371,7 @@ export function TicketForm({ initialData, onSubmit, submitButtonText, onSuccess,
           <FormActions
             isSubmitting={isSubmitting}
             onCancel={handleCancel}
+            onSubmit={handleSubmitClick}
             submitLabel={submitButtonText}
             cancelLabel="Abbrechen"
             showCancel={true}
@@ -563,6 +570,7 @@ export function TicketForm({ initialData, onSubmit, submitButtonText, onSuccess,
             <FormActions
               isSubmitting={isSubmitting}
               onCancel={handleCancel}
+              onSubmit={handleSubmitClick}
               submitLabel={submitButtonText}
               cancelLabel="Abbrechen"
               showCancel={true}

@@ -145,6 +145,12 @@ export function GiveFeedbackForm({ onSuccess, isInDialog = false }: GiveFeedback
     setFiles((prevFiles) => prevFiles.filter((_, i) => i !== index));
   };
 
+  // Wrapper function to call onSubmit with current form values
+  const handleSubmitClick = async () => {
+    const data = form.getValues();
+    await onSubmit(data);
+  };
+
   const onSubmit = async (data: FeedbackFormValues) => {
     setIsSubmitting(true);
     try {
@@ -311,6 +317,7 @@ export function GiveFeedbackForm({ onSuccess, isInDialog = false }: GiveFeedback
           <FormActions
             isSubmitting={isSubmitting}
             onCancel={handleCancel}
+            onSubmit={handleSubmitClick}
             submitLabel="Feedback senden"
             cancelLabel="Abbrechen"
             showCancel={true}
@@ -442,6 +449,7 @@ export function GiveFeedbackForm({ onSuccess, isInDialog = false }: GiveFeedback
             <FormActions
               isSubmitting={isSubmitting}
               onCancel={handleCancel}
+              onSubmit={handleSubmitClick}
               submitLabel="Feedback senden"
               cancelLabel="Abbrechen"
               showCancel={true}

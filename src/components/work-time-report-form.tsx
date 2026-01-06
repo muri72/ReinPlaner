@@ -85,6 +85,12 @@ export function WorkTimeReportForm() {
     fetchDropdownData();
   }, [supabase]);
 
+  // Wrapper function to call onSubmit with current form values
+  const handleSubmitClick = async () => {
+    const data = form.getValues();
+    await onSubmit(data);
+  };
+
   const onSubmit: SubmitHandler<ReportFormValues> = async (data) => {
     setLoadingReport(true);
     setObjectReportData(null);
@@ -409,6 +415,7 @@ export function WorkTimeReportForm() {
             <FormActions
               isSubmitting={loadingReport}
               onCancel={() => {}}
+              onSubmit={handleSubmitClick}
               submitLabel="Bericht generieren"
               showCancel={false}
               submitVariant="default"
