@@ -136,7 +136,7 @@ export function ShiftCard({ shift, onSuccess, onEdit, teamMembers }: ShiftCardPr
         ref={setNodeRef}
         style={style}
         className={cn(
-          "p-2 rounded-md border-l-4 bg-card text-card-foreground shadow-sm transition-all duration-200 group relative cursor-pointer",
+          "p-2 rounded-md border-l-4 bg-card text-card-foreground shadow-sm transition-all duration-200 group relative cursor-pointer z-10",
           statusInfo.border,
           isDragging && "shadow-lg opacity-75 scale-102"
         )}
@@ -146,14 +146,14 @@ export function ShiftCard({ shift, onSuccess, onEdit, teamMembers }: ShiftCardPr
         <div
           {...listeners}
           {...attributes}
-          className="absolute top-0 left-0 right-0 h-5 cursor-grab active:cursor-grabbing flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-gradient-to-b from-black/10 to-transparent rounded-t-md"
+          className="absolute top-0 left-0 right-0 h-5 cursor-grab active:cursor-grabbing flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-gradient-to-b from-black/10 to-transparent rounded-t-md z-20"
         >
           <div className="w-8 h-0.5 bg-black/30 rounded-full" />
         </div>
           {/* Main Tooltip Trigger */}
           <Tooltip>
             <TooltipTrigger asChild>
-              <div className="space-y-1.5">
+              <div className="space-y-1.5 relative z-10">
               {/* Time and Icons Row */}
               <div className="flex items-center justify-between text-xs text-muted-foreground">
                 <div className="flex items-center gap-1.5">
@@ -238,7 +238,7 @@ export function ShiftCard({ shift, onSuccess, onEdit, teamMembers }: ShiftCardPr
           {/* Enhanced Tooltip Content */}
           <TooltipContent
             side="right"
-            className="max-w-xs p-3 space-y-2 bg-popover border shadow-lg"
+            className="max-w-xs p-3 space-y-2 bg-popover border shadow-lg z-[100]"
             sideOffset={8}
           >
             {/* Header */}
