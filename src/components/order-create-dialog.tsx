@@ -18,6 +18,8 @@ interface OrderCreateDialogProps {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   hideTrigger?: boolean;
+  objectId?: string;
+  customerId?: string;
 }
 
 export function OrderCreateDialog({
@@ -26,6 +28,8 @@ export function OrderCreateDialog({
   open: controlledOpen,
   onOpenChange,
   hideTrigger = false,
+  objectId,
+  customerId,
 }: OrderCreateDialogProps) {
   const [internalOpen, setInternalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("details");
@@ -96,6 +100,10 @@ export function OrderCreateDialog({
           <TabsContent value="details" className="h-full m-0 p-0">
             <OrderForm
               key={`order-create-form-${formKey}`}
+              initialData={{
+                objectId: objectId || null,
+                customerId: customerId || "",
+              }}
               onSubmit={handleCreate}
               submitButtonText="Neuen Auftrag erstellen"
               onSuccess={() => {}}

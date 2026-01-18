@@ -15,26 +15,37 @@ interface ObjectCreateDialogProps {
   customerId?: string;
   onObjectCreated?: (newObjectId: string) => void;
   trigger?: React.ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  hideTrigger?: boolean;
 }
 
 export function ObjectCreateDialog({
   customerId,
   onObjectCreated,
   trigger,
+  open: controlledOpen,
+  onOpenChange,
+  hideTrigger = false,
 }: ObjectCreateDialogProps) {
   const [internalOpen, setInternalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("details");
   const [createdObjectId, setCreatedObjectId] = useState<string | null>(null);
   const [formKey, setFormKey] = useState(0);
+  const isControlled = controlledOpen !== undefined;
+  const open = isControlled ? controlledOpen : internalOpen;
 
   const setOpenState = (next: boolean) => {
-    if (next && !internalOpen) {
+    if (next && !open) {
       // Reset form when opening dialog
       setFormKey(prev => prev + 1);
       setCreatedObjectId(null);
       setActiveTab("details");
     }
-    setInternalOpen(next);
+    if (!isControlled) {
+      setInternalOpen(next);
+    }
+    onOpenChange?.(next);
   };
 
   const handleCreate = async (data: ObjectFormValues) => {
@@ -54,21 +65,23 @@ export function ObjectCreateDialog({
 
   return (
     <RecordDialog
-      open={internalOpen}
+      open={open}
       onOpenChange={setOpenState}
       title="Neues Objekt erstellen"
       description="Erstellen Sie ein neues Objekt für einen Kunden."
       icon={<Building className="h-5 w-5 text-primary" />}
       size="lg"
     >
-      <DialogTrigger asChild>
-        {trigger ?? (
-          <Button>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Neues Objekt erstellen
-          </Button>
-        )}
-      </DialogTrigger>
+      {!hideTrigger && (
+        <DialogTrigger asChild>
+          {trigger ?? (
+            <Button>
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Neues Objekt erstellen
+            </Button>
+          )}
+        </DialogTrigger>
+      )}
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full">
         <TabsList className="grid w-full grid-cols-2">

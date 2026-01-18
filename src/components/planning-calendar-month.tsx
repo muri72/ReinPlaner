@@ -5,9 +5,12 @@ import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isTod
 import { de } from "date-fns/locale";
 import { getDateStyling, getHolidayTooltip } from "@/lib/date-utils";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Progress } from "@/components/ui/progress";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { Eye, EyeOff } from "lucide-react";
 import { ShiftPlanningData, UnassignedShift } from "@/lib/actions/shift-planning";
 import { EmployeeEditDialog } from "./employee-edit-dialog";
 import { ShiftCard } from "./shift-card";
@@ -134,7 +137,7 @@ function MonthDayCell({ day, monthStart, employeeId, employee, activeDragId, onA
                     {totalAssignments}
                   </Badge>
                   <span className="text-xs text-muted-foreground">
-                    {totalHours.toFixed(1)}h
+                    {totalHours.toFixed(2)}h
                   </span>
                 </div>
               </TooltipTrigger>
@@ -190,6 +193,8 @@ interface PlanningCalendarMonthProps {
   onActionSuccess: () => void;
   weekNumber: number;
   holidaysMap: { [key: string]: { name: string } | null };
+  showHiddenEmployees?: boolean;
+  onShowHiddenEmployeesChange?: (show: boolean) => void;
 }
 
 export function PlanningCalendarMonth({
@@ -200,12 +205,68 @@ export function PlanningCalendarMonth({
   showUnassigned,
   onActionSuccess,
   weekNumber,
-  holidaysMap
+  holidaysMap,
+  showHiddenEmployees = false,
+  onShowHiddenEmployeesChange,
 }: PlanningCalendarMonthProps) {
   const employeeIds = Object.keys(planningData);
   const monthStart = startOfMonth(weekDays[0]);
   const monthEnd = endOfMonth(weekDays[0]);
   const monthDays = eachDayOfInterval({ start: monthStart, end: monthEnd });
+
+  // Calculate hidden employees (those with no shifts in the month)
+  const { visibleEmployeeIds, hiddenEmployeeIds } = React.useMemo(() => {
+    const visible: string[] = [];
+    const hidden: string[] = [];
+
+    for (const employeeId of employeeIds) {
+      const employee = planningData[employeeId];
+      if (!employee) continue;
+
+      // Check if employee has any shifts in the month
+      let hasShifts = false;
+      for (const [dateKey, dayData] of Object.entries(employee.schedule)) {
+        if (dayData.shifts && dayData.shifts.length > 0) {
+          hasShifts = true;
+          break;
+        }
+      }
+
+      if (hasShifts) {
+        visible.push(employeeId);
+      } else {
+        hidden.push(employeeId);
+      }
+    }
+
+    return { visibleEmployeeIds: visible, hiddenEmployeeIds: hidden };
+  }, [employeeIds, planningData]);
+
+  // Filter employee IDs based on showHiddenEmployees state
+  const filteredEmployeeIds = React.useMemo(() => {
+    return showHiddenEmployees ? employeeIds : visibleEmployeeIds;
+  }, [employeeIds, visibleEmployeeIds, showHiddenEmployees]);
+
+  // Calculate monthly hours for all employees (outside map to follow Rules of Hooks)
+  // Monthly = weekly available × 4 (assuming 4 weeks per month)
+  const allMonthlyHours = React.useMemo(() => {
+    const result: { [employeeId: string]: { planned: number; available: number } } = {};
+    for (const employeeId of employeeIds) {
+      const employee = planningData[employeeId];
+      if (!employee) continue;
+      let planned = 0;
+      // Sum up planned hours from all shifts in the schedule
+      for (const [dateKey, dayData] of Object.entries(employee.schedule)) {
+        if (dayData.shifts && dayData.shifts.length > 0) {
+          planned += dayData.shifts.reduce((sum: number, shift: any) => sum + (shift.estimated_hours || 0), 0);
+        }
+      }
+      // Monthly available = weekly available × 4 weeks
+      const available = (employee.totalHoursAvailable || 0) * 4;
+      result[employeeId] = { planned, available };
+    }
+    return result;
+  }, [employeeIds, planningData]);
 
   // Group days by week
   const weeks: (Date | null)[][] = [];
@@ -245,15 +306,39 @@ export function PlanningCalendarMonth({
   const dayHeaders = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
 
   return (
-    <div className="border rounded-lg shadow-neumorphic glassmorphism-card h-full overflow-auto custom-scrollbar">
+    <div className="border rounded-lg shadow-neumorphic glassmorphism-card h-full overflow-auto custom-scrollbar relative">
       <div className="p-4">
-        <div className="mb-4">
-          <h3 className="text-lg font-semibold">
-            {format(monthStart, "MMMM yyyy", { locale: de })}
-          </h3>
-          <p className="text-sm text-muted-foreground">
-            Woche {weekNumber} • {employeeIds.length} Mitarbeiter
-          </p>
+        <div className="mb-4 flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-semibold">
+              {format(monthStart, "MMMM yyyy", { locale: de })}
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              Woche {weekNumber} • {visibleEmployeeIds.length} mit Einsätzen
+              {hiddenEmployeeIds.length > 0 && (
+                <span className="text-muted-foreground">/</span>
+              )}
+              {hiddenEmployeeIds.length > 0 && (
+                <span className="text-amber-600"> {hiddenEmployeeIds.length} ohne</span>
+              )}
+            </p>
+          </div>
+
+          {/* Hide/Show hidden employees button */}
+          {hiddenEmployeeIds.length > 0 && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={() => onShowHiddenEmployeesChange?.(!showHiddenEmployees)}
+            >
+              {showHiddenEmployees ? (
+                <Eye className="h-4 w-4 text-muted-foreground" />
+              ) : (
+                <EyeOff className="h-4 w-4 text-amber-600" />
+              )}
+            </Button>
+          )}
         </div>
 
         {/* Unassigned orders summary */}
@@ -297,14 +382,15 @@ export function PlanningCalendarMonth({
           </div>
 
           {/* Employee rows */}
-          {employeeIds.length === 0 ? (
+          {filteredEmployeeIds.length === 0 ? (
             <div className="text-center text-muted-foreground py-8">
               Keine Mitarbeiter gefunden.
             </div>
           ) : (
-            employeeIds.map((id) => {
+            filteredEmployeeIds.map((id) => {
               const employee = planningData[id];
               if (!employee) return null;
+              const monthlyHours = allMonthlyHours[id] || { planned: 0, available: 0 };
 
               return (
                 <div key={id} className="space-y-2">
@@ -323,8 +409,54 @@ export function PlanningCalendarMonth({
                         {employee.raw.job_title || 'Mitarbeiter'}
                       </span>
                     </div>
-                    <div className="ml-auto text-xs text-muted-foreground">
-                      {employee.totalHoursPlanned.toFixed(1)}h / {employee.totalHoursAvailable.toFixed(1)}h
+
+                    {/* Weekly workload */}
+                    <div className="ml-auto flex items-center gap-3">
+                      {/* Monthly workload */}
+                      <TooltipProvider delayDuration={100} disableHoverableContent>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="flex items-center gap-1">
+                              <Progress
+                                value={monthlyHours.available > 0 ? (monthlyHours.planned / monthlyHours.available) * 100 : 0}
+                                className="h-2 w-16"
+                              />
+                              <span className="text-xs text-muted-foreground whitespace-nowrap">
+                                Mo: {monthlyHours.planned.toFixed(2)}h
+                              </span>
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent className="z-[100]">
+                            <div className="text-sm space-y-1">
+                              <p>Monat: {monthlyHours.planned.toFixed(2)}h / {monthlyHours.available.toFixed(2)}h</p>
+                              <p>Noch verfügbar: {(monthlyHours.available - monthlyHours.planned).toFixed(2)}h</p>
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+
+                      {/* Weekly workload */}
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="flex items-center gap-1">
+                              <Progress
+                                value={employee.totalHoursAvailable > 0 ? (employee.totalHoursPlanned / employee.totalHoursAvailable) * 100 : 0}
+                                className="h-2 w-16"
+                              />
+                              <span className="text-xs text-muted-foreground whitespace-nowrap">
+                                Wo: {employee.totalHoursPlanned.toFixed(2)}h / {employee.totalHoursAvailable.toFixed(2)}h
+                              </span>
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent className="z-[100]">
+                            <div className="text-sm space-y-1">
+                              <p>Woche: {employee.totalHoursPlanned.toFixed(2)}h / {employee.totalHoursAvailable.toFixed(2)}h</p>
+                              <p>Noch verfügbar: {(employee.totalHoursAvailable - employee.totalHoursPlanned).toFixed(2)}h</p>
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     </div>
                   </div>
 

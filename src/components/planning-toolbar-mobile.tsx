@@ -54,6 +54,86 @@ export function MobilePlanningToolbar({
 }: MobilePlanningToolbarProps) {
   const [isSheetOpen, setIsSheetOpen] = React.useState(false);
   const [createShiftOpen, setCreateShiftOpen] = React.useState(false);
+  const [availableEmployees, setAvailableEmployees] = React.useState<{ id: string; name: string }[]>([]);
+  const [availableObjects, setAvailableObjects] = React.useState<{ id: string; name: string; address?: string; daily_schedules?: any[] }[]>([]);
+  const [availableOrders, setAvailableOrders] = React.useState<{ id: string; title: string; object_id: string; object_name?: string; customer_name?: string }[]>([]);
+  const [availableServices, setAvailableServices] = React.useState<{ id: string; name: string }[]>([]);
+  const [availableCustomers, setAvailableCustomers] = React.useState<{ id: string; name: string }[]>([]);
+
+  // Load data for shift dialog
+  React.useEffect(() => {
+    if (createShiftOpen) {
+      const loadData = async () => {
+        const { createClient } = await import("@/lib/supabase/client");
+        const supabase = createClient();
+
+        // Load employees
+        const { data: employees } = await supabase
+          .from("employees")
+          .select("id, first_name, last_name")
+          .eq("status", "active")
+          .order("last_name");
+        if (employees) {
+          setAvailableEmployees(employees.map(e => ({
+            id: e.id,
+            name: `${e.first_name} ${e.last_name}`
+          })));
+        }
+
+        // Load objects
+        const { data: objects } = await supabase
+          .from("objects")
+          .select("id, name, address, daily_schedules")
+          .order("name");
+        if (objects) {
+          setAvailableObjects(objects);
+        }
+
+        // Load orders
+        const { data: orders } = await supabase
+          .from("orders")
+          .select("id, title, object_id, objects(name)")
+          .eq("status", "active")
+          .order("title");
+        if (orders) {
+          setAvailableOrders(orders.map(o => {
+            const objectsData = Array.isArray(o.objects) ? o.objects[0] : o.objects;
+            return {
+              id: o.id,
+              title: o.title,
+              object_id: o.object_id,
+              object_name: objectsData?.name
+            };
+          }));
+        }
+
+        // Load services
+        const { data: services } = await supabase
+          .from("services")
+          .select("id, name")
+          .order("name");
+        if (services) {
+          setAvailableServices(services.map((s: any) => ({
+            id: s.id,
+            name: s.name
+          })));
+        }
+
+        // Load customers
+        const { data: customers } = await supabase
+          .from("customers")
+          .select("id, name")
+          .order("name");
+        if (customers) {
+          setAvailableCustomers(customers.map((c: any) => ({
+            id: c.id,
+            name: c.name
+          })));
+        }
+      };
+      loadData();
+    }
+  }, [createShiftOpen]);
 
   const handlePrev = React.useCallback(() => {
     switch (viewMode) {
@@ -299,11 +379,15 @@ export function MobilePlanningToolbar({
 
       <CreateShiftDialog
         open={createShiftOpen}
-        onClose={() => setCreateShiftOpen(false)}
+        onOpenChange={setCreateShiftOpen}
         onSuccess={() => {
           // TODO: Trigger refresh of planning data
         }}
-        defaultDate={currentDate}
+        availableEmployees={availableEmployees}
+        availableObjects={availableObjects}
+        availableOrders={availableOrders}
+        availableServices={availableServices}
+        availableCustomers={availableCustomers}
       />
     </div>
   );

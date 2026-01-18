@@ -40,7 +40,9 @@ export interface ShiftAssignment {
   start_time: string | null;
   end_time: string | null;
   estimated_hours: number;
-  status: "scheduled" | "in_progress" | "completed" | "cancelled" | "no_show";
+  travel_time_minutes: number | null;
+  break_time_minutes: number | null;
+  status: "scheduled" | "in_progress" | "completed" | "cancelled";
   is_detached_from_series: boolean;
 
   // Job Info
@@ -68,6 +70,7 @@ export interface ShiftAssignment {
   // Employees
   employees: ShiftEmployee[];
   is_team: boolean;
+  is_multi_shift: boolean;
 
   // Assignment reference (for order_employee_assignments)
   assignment_id: string | null;
@@ -142,8 +145,7 @@ export interface PlanningFilters {
 export async function getShiftPlanningData(
   startDate: Date,
   endDate: Date,
-  filters: { query?: string; filters?: PlanningFilters },
-  forceRefresh: boolean = false
+  filters: { query?: string; filters?: PlanningFilters }
 ): Promise<{
   success: boolean;
   data: ShiftPlanningPageData | null;
@@ -276,111 +278,129 @@ export async function getShiftPlanningData(
     const { data: assignments, error: assignmentsError } = await assignmentsQuery;
     if (assignmentsError) throw assignmentsError;
 
-    // 5. Build a map of existing shifts by assignment_id and date for fast lookup
-    const existingShiftsMap = new Map<string, any>();
+    // DEBUG: Log data overview
+    console.log("[PLANNING] === DEBUG DATA OVERVIEW ===");
+    console.log("[PLANNING] Employees loaded:", employees?.length || 0);
+    console.log("[PLANNING] Assignments loaded:", assignments?.length || 0);
+    console.log("[PLANNING] Existing shifts loaded:", existingShifts?.length || 0);
+
+    // DEBUG: Log assignments per order
+    if (assignments?.length) {
+      const ordersWithAssignments: Record<string, string[]> = {};
+      for (const a of assignments) {
+        const orderTitle = a.orders?.title || 'Unknown';
+        const empName = `${a.employees?.first_name} ${a.employees?.last_name}`;
+        if (!ordersWithAssignments[orderTitle]) ordersWithAssignments[orderTitle] = [];
+        ordersWithAssignments[orderTitle].push(empName);
+      }
+      console.log("[PLANNING] Assignments per order:", ordersWithAssignments);
+    }
+
+    // DEBUG: Log existing shifts per order
+    if (existingShifts?.length) {
+      const shiftsPerDate: Record<string, string[]> = {};
+      for (const s of existingShifts) {
+        const date = s.shift_date;
+        const shiftId = s.id?.slice(0, 8);
+        if (!shiftsPerDate[date]) shiftsPerDate[date] = [];
+        shiftsPerDate[date].push(shiftId);
+      }
+      console.log("[PLANNING] Shifts per date:", shiftsPerDate);
+    }
+
+    // 5. PRE-BUILD TEAM MEMBERS LOOKUP MAP (Performance Optimization)
+    // Instead of O(n²) nested loops, build a lookup map once
+    const teamMembersByOrderDate: {
+      [orderId: string]: {
+        [date: string]: {
+          employeeId: string;
+          employeeName: string;
+        }[];
+      };
+    } = {};
+
+    // Collect all shifts to build the lookup map efficiently
     for (const shift of (existingShifts || [])) {
-      const key = `${shift.assignment_id}_${shift.shift_date}`;
-      existingShiftsMap.set(key, shift);
-    }
+      if (!shift?.shift_date || !shift?.assignment_id) continue;
 
-    // 6. For each assignment, ensure shifts exist in DB for this period
-    const shiftsToInsert: any[] = [];
-    const assignmentsNeedingShifts: any[] = [];
+      const assignment = assignments?.find((a: any) => a.id === shift.assignment_id);
+      if (!assignment) continue;
 
-    for (const assignment of assignments || []) {
-      const order = assignment.orders;
-      const employee = assignment.employees;
+      const orderId = assignment.order_id;
+      if (!orderId) continue;
 
-      if (!order || !employee) continue;
+      const dateKey = shift.shift_date;
+      const shiftEmployees = shift.shift_employees || [];
 
-      // Check if assignment is valid for this period
-      const assignmentStart = assignment.start_date ? parseISO(assignment.start_date) : null;
-      const assignmentEnd = assignment.end_date ? parseISO(assignment.end_date) : null;
+      if (!teamMembersByOrderDate[orderId]) {
+        teamMembersByOrderDate[orderId] = {};
+      }
+      if (!teamMembersByOrderDate[orderId][dateKey]) {
+        teamMembersByOrderDate[orderId][dateKey] = [];
+      }
 
-      // Get the assignment's schedule settings
-      const recurrenceInterval = assignment.assigned_recurrence_interval_weeks || 1;
-      const startOffset = assignment.assigned_start_week_offset || 0;
-      const dailySchedules = assignment.assigned_daily_schedules || [];
-
-      // Calculate reference date
-      const referenceDate = assignmentStart || new Date();
-      const daysPassed = differenceInDays(startDate, startOfWeek(referenceDate, { weekStartsOn: 1 }));
-      const weeksPassed = Math.floor(daysPassed / 7);
-      const effectiveWeekIndex = (weeksPassed + startOffset) % recurrenceInterval;
-      const weekSchedule = dailySchedules[effectiveWeekIndex];
-
-      // Generate shifts for each day in the display period
-      for (const day of weekDays) {
-        const dateString = formatISO(day, { representation: "date" });
-        const dayOfWeek = getDay(day);
-        const dayKey = dayNames[dayOfWeek];
-
-        // Check if day is within assignment validity period
-        if (assignmentStart && day < assignmentStart) continue;
-        if (assignmentEnd && day > assignmentEnd) continue;
-
-        // Check if shift already exists in DB
-        const shiftKey = `${assignment.id}_${dateString}`;
-        const existingShift = existingShiftsMap.get(shiftKey);
-
-        if (!existingShift) {
-          // Shift doesn't exist - prepare to create it
-          const daySchedule = (weekSchedule as any)?.[dayKey];
-          if (daySchedule && daySchedule.hours > 0) {
-            shiftsToInsert.push({
-              assignment_id: assignment.id,
-              shift_date: dateString,
-              start_time: daySchedule.start || null,
-              end_time: daySchedule.end || null,
-              estimated_hours: daySchedule.hours,
-              status: 'scheduled',
-              created_at: new Date().toISOString(),
-            });
-          }
+      // Add each employee to the team member list for this order/date
+      for (const se of shiftEmployees) {
+        const empData = employees.find((e: any) => e.id === se.employee_id);
+        if (empData) {
+          teamMembersByOrderDate[orderId][dateKey].push({
+            employeeId: se.employee_id,
+            employeeName: `${empData.first_name} ${empData.last_name}`,
+          });
         }
       }
     }
 
-    // 7. Batch insert missing shifts (ONLY if forceRefresh is true)
-    // This allows initial population but prevents re-creating deleted shifts
-    if (shiftsToInsert.length > 0 && forceRefresh) {
-      console.log("[PLANNING] Creating", shiftsToInsert.length, "new shifts");
-
-      // Insert in batches of 100
-      const batchSize = 100;
-      for (let i = 0; i < shiftsToInsert.length; i += batchSize) {
-        const batch = shiftsToInsert.slice(i, i + batchSize);
-        const { data: insertedShifts, error: insertError } = await supabaseAdmin
-          .from("shifts")
-          .insert(batch)
-          .select("id, assignment_id, shift_date, start_time, end_time, estimated_hours");
-
-        if (insertError) {
-          console.error("[PLANNING] Error inserting shifts:", insertError);
-        } else {
-          // Add the new shifts to our map
-          for (const shift of (insertedShifts || [])) {
-            const shiftKey = `${shift.assignment_id}_${shift.shift_date}`;
-            existingShiftsMap.set(shiftKey, shift);
-
-            // Also create shift_employee entry
-            const assignment = assignments?.find((a: any) => a.id === shift.assignment_id);
-            if (assignment) {
-              await supabaseAdmin.from("shift_employees").insert({
-                shift_id: shift.id,
-                employee_id: assignment.employee_id,
-                role: "worker",
-                is_confirmed: false,
-              });
-            }
-          }
-        }
+    // Remove duplicates from team member lists
+    for (const oid of Object.keys(teamMembersByOrderDate)) {
+      for (const dk of Object.keys(teamMembersByOrderDate[oid])) {
+        const seen = new Set<string>();
+        teamMembersByOrderDate[oid][dk] = teamMembersByOrderDate[oid][dk].filter(m => {
+          if (seen.has(m.employeeId)) return false;
+          seen.add(m.employeeId);
+          return true;
+        });
       }
-    } else if (shiftsToInsert.length > 0 && !forceRefresh) {
-      console.log("[PLANNING] Skipping", shiftsToInsert.length, "new shifts (use forceRefresh to create)");
     }
 
-    // 8. Build planning data structure
+    // 6. Build a map of existing shifts by order_id and date for fast lookup
+    // This groups all shifts for the same order on the same date together
+    const existingShiftsByOrderDateMap = new Map<string, any[]>();
+    for (const shift of (existingShifts || [])) {
+      if (!shift?.shift_date) continue;
+
+      // Get order_id - first from direct order_id, then from assignment
+      let orderId: string | null = null;
+      if (shift?.order_id) {
+        // Direct shift with order_id
+        orderId = shift.order_id;
+      } else if (shift?.assignment_id) {
+        // Shift from assignment
+        const shiftAssignment = (assignments || []).find((a: any) => a.id === shift.assignment_id);
+        orderId = shiftAssignment?.orders?.id || null;
+      }
+
+      if (orderId) {
+        const key = `${orderId}_${shift.shift_date}`;
+        if (!existingShiftsByOrderDateMap.has(key)) {
+          existingShiftsByOrderDateMap.set(key, []);
+        }
+        existingShiftsByOrderDateMap.get(key)!.push(shift);
+      }
+    }
+
+    // DEBUG: Log existing shifts count
+    // let existingShiftCount = 0;
+    // for (const shifts of existingShiftsByOrderDateMap.values()) {
+    //   existingShiftCount += shifts.length;
+    // }
+    // console.log(`[DEBUG] Total existing shifts in map: ${existingShiftCount}`);
+    // console.log(`[DEBUG] Existing shifts by order/date:`, Object.fromEntries(
+    //   Array.from(existingShiftsByOrderDateMap.entries()).map(([k, v]) => [k, v.length])
+    // ));
+
+    // 6. Build planning data structure
+    // Only use EXISTING shifts from the database - no automatic creation
     const planningData: ShiftPlanningData = {};
     const employeeDateShifts: {
       [employeeId: string]: {
@@ -394,53 +414,92 @@ export async function getShiftPlanningData(
           startTime: string | null;
           endTime: string | null;
           hours: number;
+          travelTimeMinutes: number | null;
+          breakTimeMinutes: number | null;
           assignmentId: string;
         }[];
       };
     } = {};
 
-    // Re-build employeeDateShifts with all shifts (existing + newly created)
-    // IMPORTANT: Use shift_employees to get the CURRENT employee assignment, not the assignment's original employee
-    for (const [key, shift] of existingShiftsMap.entries()) {
-      const assignment = assignments?.find((a: any) => a.id === shift.assignment_id);
-      if (!assignment) continue;
-
-      const order = assignment.orders;
-      if (!order) continue;
-
-      // Get the current employees from shift_employees table (this reflects actual assignments after moves)
-      // IMPORTANT: Handle MULTIPLE employees per shift - each employee should see the shift
-      const shiftEmployees = shift.shift_employees || [];
-
-      if (shiftEmployees.length === 0) {
-        console.log("[PLANNING] Shift has no employee assignment:", shift.id);
-        continue;
-      }
-
-      // Add this shift to EACH employee's calendar
-      for (const shiftEmployee of shiftEmployees) {
-        const currentEmployeeId = shiftEmployee.employee_id;
-
-        if (!employeeDateShifts[currentEmployeeId]) {
-          employeeDateShifts[currentEmployeeId] = {};
+    // Collect all direct order_ids from shifts with assignment_id: null
+    const directOrderIds = new Set<string>();
+    for (const shifts of existingShiftsByOrderDateMap.values()) {
+      for (const shift of shifts) {
+        if (!shift?.assignment_id && shift?.order_id) {
+          directOrderIds.add(shift.order_id);
         }
-        if (!employeeDateShifts[currentEmployeeId][shift.shift_date]) {
-          employeeDateShifts[currentEmployeeId][shift.shift_date] = [];
-        }
-        employeeDateShifts[currentEmployeeId][shift.shift_date].push({
-          shiftId: shift.id,
-          orderId: order.id,
-          orderTitle: order.title || "Unbekannt",
-          objectName: (order as any).objects?.name || null,
-          objectAddress: (order as any).objects?.address || null,
-          serviceType: order.service_type || null,
-          startTime: shift.start_time,
-          endTime: shift.end_time,
-          hours: Number(shift.estimated_hours) || 0,
-          assignmentId: shift.assignment_id,
-        });
       }
     }
+
+    // Fetch all direct orders at once for efficiency
+    const directOrdersMap = new Map<string, any>();
+    if (directOrderIds.size > 0) {
+      const { data: directOrders } = await supabaseAdmin
+        .from("orders")
+        .select("id, title, service_type, objects(id, name, address)")
+        .in("id", Array.from(directOrderIds));
+      for (const order of (directOrders || [])) {
+        directOrdersMap.set(order.id, order);
+      }
+    }
+
+    // Re-build employeeDateShifts with all shifts (existing + newly created)
+    // IMPORTANT: Use shift_employees to get the CURRENT employee assignment, not the assignment's original employee
+    for (const shifts of existingShiftsByOrderDateMap.values()) {
+      for (const shift of shifts) {
+        // Get order and assignment info - handle both assignment-based and direct shifts
+        let assignment: any = null;
+        let order: any = null;
+
+        if (shift?.assignment_id) {
+          assignment = assignments?.find((a: any) => a.id === shift.assignment_id);
+          order = assignment?.orders;
+        }
+
+        // For direct shifts (assignment_id: null), use pre-fetched orders map
+        if (!order && shift?.order_id) {
+          order = directOrdersMap.get(shift.order_id);
+        }
+
+        if (!order) continue;
+
+        // Get the current employees from shift_employees table (this reflects actual assignments after moves)
+        // IMPORTANT: Handle MULTIPLE employees per shift - each employee should see the shift
+        const shiftEmployees = shift.shift_employees || [];
+
+        if (shiftEmployees.length === 0) {
+          console.log("[PLANNING] Shift has no employee assignment:", shift.id);
+          continue;
+        }
+
+        // Add this shift to EACH employee's calendar
+        for (const shiftEmployee of shiftEmployees) {
+          const currentEmployeeId = shiftEmployee.employee_id;
+
+          if (!employeeDateShifts[currentEmployeeId]) {
+            employeeDateShifts[currentEmployeeId] = {};
+          }
+          if (!employeeDateShifts[currentEmployeeId][shift.shift_date]) {
+            employeeDateShifts[currentEmployeeId][shift.shift_date] = [];
+          }
+          employeeDateShifts[currentEmployeeId][shift.shift_date].push({
+            shiftId: shift.id,
+            orderId: order.id,
+            orderTitle: order.title || "Unbekannt",
+            objectName: (order as any).objects?.name || null,
+            objectAddress: (order as any).objects?.address || null,
+            serviceType: order.service_type || null,
+            startTime: shift.start_time,
+            endTime: shift.end_time,
+            hours: Number(shift.estimated_hours) || 0,
+            travelTimeMinutes: shift.travel_time_minutes ?? null,
+            breakTimeMinutes: shift.break_time_minutes ?? null,
+            assignmentId: shift.assignment_id,
+          });
+        }
+      }
+    }
+
     // 5. Build the final planning data structure
     for (const employee of employees) {
       let totalHoursAvailable = 0;
@@ -512,39 +571,42 @@ export async function getShiftPlanningData(
           shiftsByAssignment[shiftData.assignmentId].push(shiftData);
         }
 
-        // Build a map of all shifts for this order on this date to collect team members
-        const allShiftsForOrderOnDate: {
-          employeeId: string;
-          employeeName: string;
-          assignmentId: string;
-          orderId: string;
-        }[] = [];
-
-        for (const [empId, empDayData] of Object.entries(employeeDateShifts)) {
-          for (const [dateStr, shifts] of Object.entries(empDayData)) {
-            if (dateStr === dateString) {
-              for (const s of shifts) {
-                const shiftAssignment = assignments?.find((a: any) => a.id === s.assignmentId);
-                if (shiftAssignment) {
-                  const empData = employees.find((e: any) => e.id === empId);
-                  if (empData) {
-                    allShiftsForOrderOnDate.push({
-                      employeeId: empId,
-                      employeeName: `${empData.first_name} ${empData.last_name}`,
-                      assignmentId: s.assignmentId,
-                      orderId: shiftAssignment.order_id,
-                    });
-                  }
-                }
-              }
-            }
+        // Detect multi-shifts: check if multiple shift IDs exist for same order/date
+        // This indicates employees have separate shifts with potentially different times
+        const shiftIdsByOrderDate: { [key: string]: Set<string> } = {};
+        for (const shiftData of shiftsForDay) {
+          const key = `${shiftData.orderId}_${dateString}`;
+          if (!shiftIdsByOrderDate[key]) {
+            shiftIdsByOrderDate[key] = new Set();
           }
+          shiftIdsByOrderDate[key].add(shiftData.shiftId);
         }
 
-        // Remove duplicates based on employeeId
-        const uniqueTeamMembers = allShiftsForOrderOnDate.filter((member, index, self) =>
-          index === self.findIndex((m) => m.employeeId === member.employeeId)
-        );
+        // DEBUG: Log shift detection info
+        console.log(`[DEBUG] ${employee.first_name} ${employee.last_name} - ${dateString} - shiftsForDay:`, shiftsForDay.map(s => ({
+          orderId: s.orderId,
+          shiftId: s.shiftId?.slice(0, 8),
+          startTime: s.startTime,
+          endTime: s.endTime,
+          hours: s.hours,
+          orderTitle: s.orderTitle
+        })));
+        console.log(`[DEBUG] ${dateString} - shiftIdsByOrderDate:`, Object.entries(shiftIdsByOrderDate).map(([k, v]) => ({ key: k, count: v.size, ids: Array.from(v).map((id: any) => id?.slice(0, 8)) })));
+
+        // OPTIMIZED: Use pre-built teamMembersByOrderDate lookup map instead of O(n²) loop
+        // Get team members from lookup map
+        const teamMembersForDay: {
+          [orderId: string]: {
+            employeeId: string;
+            employeeName: string;
+          }[];
+        } = {};
+
+        for (const [orderId, dateMap] of Object.entries(teamMembersByOrderDate)) {
+          if (dateMap[dateString]) {
+            teamMembersForDay[orderId] = dateMap[dateString];
+          }
+        }
 
         for (const shiftData of shiftsForDay) {
           const hours = shiftData.hours;
@@ -560,13 +622,31 @@ export async function getShiftPlanningData(
             assignment.assigned_daily_schedules.length > 0
           );
 
-          // Check if this is a team shift - more than one employee working on same order/date
-          // Get the order_id for this shift
+          // Check if this is a team shift vs multi-shift
+          // - Team shift: Multiple employees work SAME shift (one shift ID)
+          // - Multi-shift: Multiple employees work DIFFERENT shifts (multiple shift IDs)
           const currentOrderId = assignment?.order_id;
-          const teamMembersForThisOrder = uniqueTeamMembers.filter(
-            (m) => m.orderId === currentOrderId
-          );
-          const isTeam = teamMembersForThisOrder.length > 1;
+          const teamMembersForThisOrder = teamMembersForDay[currentOrderId] || [];
+          const orderDateKey = `${shiftData.orderId}_${dateString}`;
+          const uniqueShiftIds = shiftIdsByOrderDate[orderDateKey];
+          const hasMultipleShifts = uniqueShiftIds && uniqueShiftIds.size > 1;
+
+          // is_team: Same shift with multiple employees (not multi-shift)
+          // is_multi_shift: Different shifts for same order/date (employees have separate shifts)
+          const isTeam = teamMembersForThisOrder.length > 1 && !hasMultipleShifts;
+          const isMultiShift = hasMultipleShifts;
+
+          // DEBUG: Log detection result
+          console.log(`[DEBUG] ${dateString} - Shift ${shiftData.shiftId?.slice(0, 8)}:`, {
+            orderId: shiftData.orderId,
+            orderTitle: shiftData.orderTitle,
+            teamMembersCount: teamMembersForThisOrder.length,
+            uniqueShiftIdsCount: uniqueShiftIds?.size || 0,
+            hasMultipleShifts,
+            isTeam,
+            isMultiShift,
+            shiftId: shiftData.shiftId
+          });
 
           // Determine status based on date AND time (PlanD style):
           // - Past dates → "completed" (green)
@@ -616,6 +696,8 @@ export async function getShiftPlanningData(
             start_time: shiftData.startTime,
             end_time: shiftData.endTime,
             estimated_hours: hours,
+            travel_time_minutes: Number(shiftData.travelTimeMinutes) || null,
+            break_time_minutes: Number(shiftData.breakTimeMinutes) || null,
             status: shiftStatus,
             is_detached_from_series: false,
 
@@ -640,7 +722,8 @@ export async function getShiftPlanningData(
             order_id: shiftData.orderId,
 
             // Use all team members for team shifts, otherwise just the current employee
-            employees: isTeam ? teamMembersForThisOrder.map((member) => ({
+            // For multi-shifts, also just show the current employee (each has their own shift)
+            employees: (isTeam && !isMultiShift) ? teamMembersForThisOrder.map((member) => ({
               employee_id: member.employeeId,
               employee_name: member.employeeName,
               role: "worker" as const,
@@ -652,9 +735,24 @@ export async function getShiftPlanningData(
               is_confirmed: false,
             }],
             is_team: isTeam,
+            is_multi_shift: isMultiShift,
 
             assignment_id: shiftData.assignmentId,
           });
+
+          // DEBUG: Log final shift card data
+          // if (isMultiShift) {
+          //   console.log(`[DEBUG] ${dateString} - MULTI-SHIFT created:`, {
+          //     shiftId: shiftData.shiftId,
+          //     orderTitle: shiftData.orderTitle,
+          //     startTime: shiftData.startTime,
+          //     endTime: shiftData.endTime,
+          //     hours: shiftData.hours,
+          //     is_team: isTeam,
+          //     is_multi_shift: isMultiShift,
+          //     employee: `${employee.first_name} ${employee.last_name}`
+          //   });
+          // }
         }
       }
 
@@ -708,6 +806,17 @@ export async function getShiftPlanningData(
       unassignedShifts,
       weekNumber,
     };
+
+    // DEBUG: Log final planning data summary
+    console.log("[PLANNING] === FINAL PLANNING DATA ===");
+    console.log("[PLANNING] Total employees in planningData:", Object.keys(planningData).length);
+    for (const [empId, empData] of Object.entries(planningData)) {
+      let totalShifts = 0;
+      for (const [date, schedule] of Object.entries(empData.schedule)) {
+        totalShifts += schedule.shifts.length;
+      }
+      console.log(`[PLANNING] ${empData.name}: ${totalShifts} shifts total`);
+    }
 
     // Always revalidate to ensure fresh data after mutations
     revalidatePath("/dashboard/planning");
@@ -895,114 +1004,6 @@ export async function reassignShift(
 }
 
 // ============================================================================
-// CREATE JOB WITH SERIES
-// ============================================================================
-
-export async function createJobWithSeries(data: {
-  title: string;
-  object_id: string;
-  service_id?: string;
-  estimated_hours?: number;
-  priority?: string;
-
-  // Series config
-  pattern_type: "weekly" | "biweekly" | "monthly" | "custom";
-  weekdays: string[];
-  daily_schedules: any[];
-  interval_weeks?: number;
-  start_date: string;
-  end_date?: string;
-
-  // Initial employees
-  employee_ids?: string[];
-}): Promise<{ success: boolean; message: string; job_id?: string }> {
-  const supabaseAdmin = createAdminClient();
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return { success: false, message: "Benutzer nicht authentifiziert." };
-  }
-
-  try {
-    // Get customer from object
-    const { data: objectData } = await supabaseAdmin
-      .from("objects")
-      .select("customer_id")
-      .eq("id", data.object_id)
-      .single();
-
-    // 1. Create Job
-    const { data: job, error: jobError } = await supabaseAdmin
-      .from("jobs")
-      .insert({
-        user_id: user.id,
-        title: data.title,
-        object_id: data.object_id,
-        customer_id: objectData?.customer_id,
-        service_id: data.service_id,
-        estimated_hours: data.estimated_hours,
-        priority: data.priority || "medium",
-        status: "active",
-      })
-      .select("id")
-      .single();
-
-    if (jobError || !job) throw jobError;
-
-    // 2. Create Series
-    const { data: series, error: seriesError } = await supabaseAdmin
-      .from("job_series")
-      .insert({
-        job_id: job.id,
-        pattern_type: data.pattern_type,
-        weekdays: data.weekdays,
-        daily_schedules: data.daily_schedules,
-        interval_weeks: data.interval_weeks || 1,
-        start_date: data.start_date,
-        end_date: data.end_date,
-        is_active: true,
-      })
-      .select("id")
-      .single();
-
-    if (seriesError) throw seriesError;
-
-    // 3. Call Edge Function to generate initial shifts
-    const projectUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-    if (projectUrl && serviceKey) {
-      await fetch(`${projectUrl}/functions/v1/generate-shifts`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${serviceKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          series_id: series?.id,
-          months_ahead: 3,
-        }),
-      });
-    }
-
-    revalidatePath("/dashboard/planning");
-    revalidatePath("/dashboard/orders");
-
-    return {
-      success: true,
-      message: "Auftrag mit Serie erfolgreich erstellt.",
-      job_id: job.id,
-    };
-  } catch (error: any) {
-    console.error("Fehler beim Erstellen:", error.message);
-    return { success: false, message: `Fehler: ${error.message}` };
-  }
-}
-
-// ============================================================================
 // UPDATE SHIFT STATUS
 // ============================================================================
 
@@ -1080,7 +1081,19 @@ export async function deleteShift(
       throw deleteEmployeesError;
     }
 
-    console.log("[DELETE] shift_employees deleted, now deleting shift...");
+    console.log("[DELETE] shift_employees deleted, now deleting time_entries...");
+    // Delete related time_entries
+    const { error: deleteTimeEntriesError } = await supabaseAdmin
+      .from("time_entries")
+      .delete()
+      .eq("shift_id", shiftId);
+
+    if (deleteTimeEntriesError) {
+      console.error("[DELETE] Error deleting time_entries:", deleteTimeEntriesError);
+      throw deleteTimeEntriesError;
+    }
+
+    console.log("[DELETE] time_entries deleted, now deleting shift...");
 
     // Then delete the shift itself
     const { error: deleteError } = await supabaseAdmin
@@ -1199,6 +1212,16 @@ export async function deleteSeries(
 
       if (deleteEmpError) {
         console.error("[DELETE-SERIES] Error deleting shift_employees:", deleteEmpError);
+      }
+
+      // Delete related time_entries
+      const { error: deleteTimeEntriesError } = await supabaseAdmin
+        .from("time_entries")
+        .delete()
+        .eq("shift_id", shift.id);
+
+      if (deleteTimeEntriesError) {
+        console.error("[DELETE-SERIES] Error deleting time_entries:", deleteTimeEntriesError);
       }
 
       // Delete the shift
@@ -1995,6 +2018,8 @@ export async function updateShift(
     start_time?: string;
     end_time?: string;
     estimated_hours?: number;
+    travel_time_minutes?: number;
+    break_time_minutes?: number;
     status?: "scheduled" | "in_progress" | "completed" | "cancelled" | "no_show";
     update_mode?: "single" | "series";
   }
@@ -2038,6 +2063,8 @@ export async function updateShift(
           start_time: updates.start_time || shiftData.start_time,
           end_time: updates.end_time || shiftData.end_time,
           estimated_hours: updates.estimated_hours || shiftData.estimated_hours,
+          travel_time_minutes: updates.travel_time_minutes,
+          break_time_minutes: updates.break_time_minutes,
           status: updates.status || shiftData.status,
           updated_at: new Date().toISOString(),
         })
@@ -2073,6 +2100,8 @@ export async function updateShift(
               start_time: updates.start_time,
               end_time: updates.end_time,
               estimated_hours: updates.estimated_hours,
+              travel_time_minutes: updates.travel_time_minutes,
+              break_time_minutes: updates.break_time_minutes,
               status: updates.status,
               updated_at: new Date().toISOString(),
             })
@@ -2084,46 +2113,33 @@ export async function updateShift(
         // Also update the assignment's start_week_offset and daily_schedules if needed
         // This would require more complex logic - for now we just update individual shifts
       } else {
-        // Single shift update - create an override with the new values
-        const { data: existingOverride } = await supabaseAdmin
-          .from("shift_overrides")
+        // Single shift update - update the shift directly
+        // For recurring shifts in single mode, we need to find and update the specific shift
+        const { data: shiftToUpdate, error: shiftFindError } = await supabaseAdmin
+          .from("shifts")
           .select("id")
           .eq("assignment_id", assignmentId)
           .eq("shift_date", shiftDate)
-          .is("action", null)
           .single();
 
-        const overrideData = {
-          modified_data: {
+        if (shiftFindError || !shiftToUpdate) {
+          throw new Error("Shift nicht gefunden.");
+        }
+
+        const { error: updateError } = await supabaseAdmin
+          .from("shifts")
+          .update({
             start_time: updates.start_time,
             end_time: updates.end_time,
             estimated_hours: updates.estimated_hours,
+            travel_time_minutes: updates.travel_time_minutes,
+            break_time_minutes: updates.break_time_minutes,
             status: updates.status,
-          },
-          notes: updates.status ? `Status geändert auf ${updates.status}` : "Einsatzdaten geändert",
-          updated_at: new Date().toISOString(),
-        };
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", shiftToUpdate.id);
 
-        if (existingOverride) {
-          const { error: updateError } = await supabaseAdmin
-            .from("shift_overrides")
-            .update(overrideData)
-            .eq("id", existingOverride.id);
-
-          if (updateError) throw updateError;
-        } else {
-          const { error: insertError } = await supabaseAdmin
-            .from("shift_overrides")
-            .insert({
-              assignment_id: assignmentId,
-              shift_date: shiftDate,
-              action: null, // null means modification
-              ...overrideData,
-              created_by: user.id,
-            });
-
-          if (insertError) throw insertError;
-        }
+        if (updateError) throw updateError;
       }
     } else {
       // Non-recurring assignment - update directly
@@ -2145,6 +2161,8 @@ export async function updateShift(
           start_time: updates.start_time,
           end_time: updates.end_time,
           estimated_hours: updates.estimated_hours,
+          travel_time_minutes: updates.travel_time_minutes,
+          break_time_minutes: updates.break_time_minutes,
           status: updates.status,
           updated_at: new Date().toISOString(),
         })
@@ -2353,12 +2371,24 @@ export async function addEmployeeToShift(params: {
       throw checkError;
     }
 
-    // Get shift details for notification
+    // Get shift details for notification and time_entry cleanup
     const { data: shift } = await supabaseAdmin
       .from("shifts")
-      .select("shift_date, job_title")
+      .select("shift_date, job_title, assignment_id, order_id")
       .eq("id", shiftId)
       .single();
+
+    // Clean up any orphaned time_entry first (if removal didn't happen properly)
+    if (shift?.assignment_id && shift?.shift_date && shift?.order_id) {
+      const shiftDate = new Date(shift.shift_date);
+      await supabaseAdmin
+        .from("time_entries")
+        .delete()
+        .eq("employee_id", employeeId)
+        .eq("order_id", shift.order_id)
+        .eq("date", shiftDate.toISOString().split('T')[0])
+        .eq("type", "shift");
+    }
 
     // Add new assignment
     console.log("[ADD-EMPLOYEE] Inserting new shift_employees entry...");
@@ -2423,6 +2453,25 @@ export async function removeEmployeeFromShift(params: {
 
   try {
     console.log("[REMOVE-EMPLOYEE] Removing employee from shift:", { shiftId, employeeId });
+
+    // Get shift details for time_entry deletion
+    const { data: shift } = await supabaseAdmin
+      .from("shifts")
+      .select("assignment_id, shift_date, order_id")
+      .eq("id", shiftId)
+      .single();
+
+    if (shift?.assignment_id && shift?.shift_date && shift?.order_id) {
+      // Delete orphaned time_entry for this employee/order/date
+      const shiftDate = new Date(shift.shift_date);
+      await supabaseAdmin
+        .from("time_entries")
+        .delete()
+        .eq("employee_id", employeeId)
+        .eq("order_id", shift.order_id)
+        .eq("date", shiftDate.toISOString().split('T')[0])
+        .eq("type", "shift");
+    }
 
     // Delete assignment
     const { error: deleteError } = await supabaseAdmin
@@ -2562,6 +2611,560 @@ export async function copyShift(params: {
     return { success: true, message: "Einsatz erfolgreich kopiert." };
   } catch (error: any) {
     console.error("[COPY-SHIFT] Error:", error.message);
+    return { success: false, message: `Fehler: ${error.message}` };
+  }
+}
+
+// ============================================================================
+// MARK OVERDUE SHIFTS AS COMPLETED
+// Automatically updates shift status based on current time and creates time_entries
+// This should be called periodically (e.g., via cron job or API endpoint)
+// ============================================================================
+
+export async function markOverdueShiftsAsCompleted(): Promise<{
+  success: boolean;
+  message: string;
+  updated_count: number;
+}> {
+  const supabaseAdmin = createAdminClient();
+
+  try {
+    const now = new Date();
+    const today = startOfDay(now);
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+    const currentTimeMinutes = currentHour * 60 + currentMinute;
+
+    console.log("[MARK-OVERDUE] Checking for overdue shifts at", now.toISOString());
+
+    // Get all scheduled/in_progress shifts that should be marked as completed
+    // A shift is overdue if:
+    // 1. The date is in the past (before today), OR
+    // 2. The date is today AND the end_time has passed
+    const { data: shiftsToUpdate, error: fetchError } = await supabaseAdmin
+      .from("shifts")
+      .select("id, shift_date, start_time, end_time, status")
+      .in("status", ["scheduled", "in_progress"]);
+
+    if (fetchError) {
+      console.error("[MARK-OVERDUE] Error fetching shifts:", fetchError);
+      throw fetchError;
+    }
+
+    let updatedCount = 0;
+    const nowDateStr = formatISO(today, { representation: "date" });
+
+    for (const shift of shiftsToUpdate || []) {
+      const shiftDate = parseISO(shift.shift_date);
+      const shiftDateStr = shift.shift_date;
+
+      let shouldBeCompleted = false;
+
+      if (shiftDateStr < nowDateStr) {
+        // Date is in the past
+        shouldBeCompleted = true;
+      } else if (shiftDateStr === nowDateStr && shift.end_time) {
+        // Same date - check if end_time has passed
+        const [endHour, endMin] = shift.end_time.split(":").map(Number);
+        const endTimeMinutes = endHour * 60 + endMin;
+
+        if (currentTimeMinutes >= endTimeMinutes) {
+          shouldBeCompleted = true;
+        }
+      }
+
+      if (shouldBeCompleted && shift.status !== "completed") {
+        console.log("[MARK-OVERDUE] Marking shift", shift.id, "as completed");
+
+        const { error: updateError } = await supabaseAdmin
+          .from("shifts")
+          .update({
+            status: "completed",
+            completed_at: now.toISOString(),
+            updated_at: now.toISOString(),
+          })
+          .eq("id", shift.id);
+
+        if (updateError) {
+          console.error("[MARK-OVERDUE] Error updating shift", shift.id, ":", updateError);
+        } else {
+          updatedCount++;
+        }
+      }
+    }
+
+    console.log("[MARK-OVERDUE] Completed. Updated", updatedCount, "shifts");
+
+    return {
+      success: true,
+      message: `${updatedCount} überfällige Einsätze wurden auf "abgeschlossen" gesetzt.`,
+      updated_count: updatedCount,
+    };
+  } catch (error: any) {
+    console.error("[MARK-OVERDUE] Error:", error.message);
+    return { success: false, message: error.message, updated_count: 0 };
+  }
+}
+
+export interface CreateShiftParams {
+  order_id: string;
+  employee_id: string;
+  shift_date: string;
+  start_time: string;
+  end_time: string;
+  estimated_hours: number;
+  travel_time_minutes?: number;
+  break_time_minutes?: number;
+  is_team?: boolean;
+  team_employee_ids?: string[];
+  notes?: string;
+}
+
+export async function createShift(
+  params: CreateShiftParams
+): Promise<{ success: boolean; message: string; shift_id?: string }> {
+  const supabaseAdmin = createAdminClient();
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { success: false, message: "Benutzer nicht authentifiziert." };
+  }
+
+  try {
+    // Get the order to verify it exists and get related info
+    const { data: order, error: orderError } = await supabaseAdmin
+      .from("orders")
+      .select("id, title, service_type, object_id, customer_id")
+      .eq("id", params.order_id)
+      .single();
+
+    if (orderError || !order) {
+      return { success: false, message: "Auftrag nicht gefunden." };
+    }
+
+    // Check if assignment exists, create if not
+    let assignmentId: string | null = null;
+    const { data: existingAssignment } = await supabaseAdmin
+      .from("order_employee_assignments")
+      .select("id")
+      .eq("order_id", params.order_id)
+      .eq("employee_id", params.employee_id)
+      .maybeSingle();
+
+    if (existingAssignment) {
+      assignmentId = existingAssignment.id;
+    } else {
+      // Create new assignment
+      const { data: newAssignment, error: assignmentError } = await supabaseAdmin
+        .from("order_employee_assignments")
+        .insert({
+          order_id: params.order_id,
+          employee_id: params.employee_id,
+          assigned_daily_schedules: [],
+          assigned_recurrence_interval_weeks: 1,
+          assigned_start_week_offset: 0,
+        })
+        .select("id")
+        .single();
+
+      if (assignmentError) {
+        console.error("[CREATE-SHIFT] Error creating assignment:", assignmentError);
+      } else {
+        assignmentId = newAssignment.id;
+      }
+    }
+
+    // Create the shift
+    const { data: newShift, error: shiftError } = await supabaseAdmin
+      .from("shifts")
+      .insert({
+        assignment_id: assignmentId,
+        shift_date: params.shift_date,
+        start_time: params.start_time,
+        end_time: params.end_time,
+        estimated_hours: params.estimated_hours,
+        travel_time_minutes: params.travel_time_minutes || 0,
+        break_time_minutes: params.break_time_minutes || 0,
+        status: "scheduled",
+        notes: params.notes,
+        order_id: params.order_id,
+      })
+      .select("id")
+      .single();
+
+    if (shiftError) {
+      console.error("[CREATE-SHIFT] Error creating shift:", shiftError);
+      return { success: false, message: `Fehler beim Erstellen: ${shiftError.message}` };
+    }
+
+    // Add the main employee
+    const { error: mainEmpError } = await supabaseAdmin.from("shift_employees").insert({
+      shift_id: newShift.id,
+      employee_id: params.employee_id,
+      role: "worker",
+      is_confirmed: false,
+    });
+
+    if (mainEmpError) {
+      console.error("[CREATE-SHIFT] Error adding main employee:", mainEmpError);
+    }
+
+    // Add team members if this is a team shift
+    if (params.is_team && params.team_employee_ids) {
+      for (const teamMemberId of params.team_employee_ids) {
+        if (teamMemberId !== params.employee_id) {
+          const { error: teamError } = await supabaseAdmin.from("shift_employees").insert({
+            shift_id: newShift.id,
+            employee_id: teamMemberId,
+            role: "worker",
+            is_confirmed: false,
+          });
+          if (teamError) {
+            console.error("[CREATE-SHIFT] Error adding team member:", teamError);
+          }
+        }
+      }
+    }
+
+    // Create time entry if shift date is in the past
+    const shiftDate = parseISO(params.shift_date);
+    const today = startOfDay(new Date());
+    const shiftStart = startOfDay(shiftDate);
+    const isPast = isBefore(shiftStart, today);
+
+    if (isPast) {
+      // Get employee user_id
+      const { data: empData } = await supabaseAdmin
+        .from("employees")
+        .select("user_id")
+        .eq("id", params.employee_id)
+        .single();
+
+      // Calculate duration in minutes
+      const [startHour, startMin] = params.start_time.split(':').map(Number);
+      const [endHour, endMin] = params.end_time.split(':').map(Number);
+      const startMinutes = startHour * 60 + startMin;
+      const endMinutes = endHour * 60 + endMin;
+      let durationMinutes = endMinutes - startMinutes;
+      if (durationMinutes < 0) durationMinutes += 24 * 60; // Handle overnight
+
+      // Subtract break time
+      const breakMinutes = params.break_time_minutes || 0;
+      durationMinutes = Math.max(0, durationMinutes - breakMinutes);
+
+      // Calculate start and end timestamps
+      const startDateTime = new Date(shiftDate);
+      startDateTime.setHours(startHour, startMin, 0, 0);
+      const endDateTime = new Date(shiftDate);
+      endDateTime.setHours(endHour, endMin, 0, 0);
+      if (endMinutes < startMinutes) {
+        endDateTime.setDate(endDateTime.getDate() + 1);
+      }
+
+      await supabaseAdmin.from("time_entries").insert({
+        user_id: user.id,
+        employee_id: params.employee_id,
+        customer_id: order.customer_id,
+        object_id: order.object_id,
+        order_id: params.order_id,
+        shift_id: newShift.id,
+        start_time: startDateTime.toISOString(),
+        end_time: endDateTime.toISOString(),
+        duration_minutes: durationMinutes,
+        type: "shift",
+        break_minutes: breakMinutes,
+        notes: params.notes,
+      });
+    }
+
+    // Send notification to the employee
+    const { data: empData } = await supabaseAdmin
+      .from("employees")
+      .select("user_id, first_name, last_name")
+      .eq("id", params.employee_id)
+      .single();
+
+    if (empData?.user_id) {
+      await sendNotification({
+        userId: empData.user_id,
+        title: "Neuer Einsatz",
+        message: `Ihnen wurde ein Einsatz am ${params.shift_date} zugewiesen.`,
+        link: "/dashboard/planning",
+      });
+    }
+
+    revalidatePath("/dashboard/planning");
+    return { success: true, message: "Einsatz erfolgreich erstellt.", shift_id: newShift.id };
+  } catch (error: any) {
+    console.error("[CREATE-SHIFT] Error:", error.message);
+    return { success: false, message: `Fehler: ${error.message}` };
+  }
+}
+
+export interface CreateShiftWithScheduleParams {
+  order_id: string;
+  employee_ids: string[];
+  object_id: string;
+  schedules: { [key: string]: { hours: number; start: string; end: string } };
+  shift_type: 'single' | 'recurring';
+  shift_date?: string;           // For single shifts
+  recurring_weekdays?: number[]; // 0-6 for recurring (0=Sun, 6=Sat)
+  recurring_end_date?: string;   // For recurring
+  travel_time_minutes?: number;
+  break_time_minutes?: number;
+  notes?: string;
+}
+
+export async function createShiftWithSchedule(
+  params: CreateShiftWithScheduleParams
+): Promise<{ success: boolean; message: string; created_shift_ids?: string[] }> {
+  const supabaseAdmin = createAdminClient();
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { success: false, message: "Benutzer nicht authentifiziert." };
+  }
+
+  try {
+    // Verify order exists
+    const { data: order, error: orderError } = await supabaseAdmin
+      .from("orders")
+      .select("id, title")
+      .eq("id", params.order_id)
+      .single();
+
+    if (orderError || !order) {
+      return { success: false, message: "Auftrag nicht gefunden." };
+    }
+
+    // Calculate dates to create shifts for
+    const datesToCreate: string[] = [];
+
+    if (params.shift_type === 'recurring' && params.recurring_weekdays && params.recurring_end_date) {
+      const start = parseISO(params.shift_date!);
+      const end = parseISO(params.recurring_end_date);
+      const allDates = eachDayOfInterval({ start, end });
+
+      for (const date of allDates) {
+        const dayOfWeek = getDay(date);
+        if (params.recurring_weekdays.includes(dayOfWeek)) {
+          datesToCreate.push(format(date, "yyyy-MM-dd"));
+        }
+      }
+    } else if (params.shift_date) {
+      // Single shift
+      datesToCreate.push(params.shift_date);
+    }
+
+    if (datesToCreate.length === 0) {
+      return { success: false, message: "Keine Daten zum Erstellen von Einsätzen." };
+    }
+
+    console.log("[CREATE-SCHEDULE] params.schedules:", JSON.stringify(params.schedules));
+    console.log("[CREATE-SCHEDULE] params.schedules keys:", Object.keys(params.schedules));
+
+    // Build daily schedules for order_employee_assignments
+    // params.schedules uses day names as keys (monday, tuesday, etc.)
+    const weeklySchedule: { [key: string]: { hours: number; start: string; end: string } } = {};
+    Object.entries(params.schedules).forEach(([dayName, schedule]) => {
+      console.log(`[CREATE-SCHEDULE] processing day: ${dayName}, schedule:`, schedule);
+      if (schedule.hours > 0) {
+        weeklySchedule[dayName] = schedule;
+      }
+    });
+
+    const assigned_daily_schedules = [weeklySchedule];
+
+    // Delete existing assignments for this order
+    await supabaseAdmin
+      .from('order_employee_assignments')
+      .delete()
+      .eq('order_id', params.order_id);
+
+    // Create new assignments for all employees with the same schedule
+    if (params.employee_ids.length > 0) {
+      const newAssignments = params.employee_ids.map(employeeId => ({
+        order_id: params.order_id,
+        employee_id: employeeId,
+        assigned_daily_schedules,
+        assigned_recurrence_interval_weeks: 1,
+        assigned_start_week_offset: 0,
+      }));
+      await supabaseAdmin.from('order_employee_assignments').insert(newAssignments);
+    }
+
+    // Create shifts for each employee and date
+    const createdShiftIds: string[] = [];
+
+    // Map day of week number to day name
+    const dayIndexToName: { [key: number]: string } = {
+      0: 'sunday', 1: 'monday', 2: 'tuesday', 3: 'wednesday',
+      4: 'thursday', 5: 'friday', 6: 'saturday'
+    };
+
+    for (const employeeId of params.employee_ids) {
+      // Get employee user_id for notification
+      const { data: empData } = await supabaseAdmin
+        .from("employees")
+        .select("user_id, first_name, last_name")
+        .eq("id", employeeId)
+        .single();
+
+      for (const date of datesToCreate) {
+        // Determine times for this date using day name as key
+        const dayOfWeek = getDay(parseISO(date));
+        const dayName = dayIndexToName[dayOfWeek];
+        console.log(`[CREATE-SCHEDULE] date: ${date}, dayOfWeek: ${dayOfWeek}, dayName: ${dayName}`);
+        console.log(`[CREATE-SCHEDULE] looking for schedule with key "${dayName}"`);
+        console.log(`[CREATE-SCHEDULE] params.schedules[dayName]:`, params.schedules[dayName]);
+        const daySchedule = params.schedules[dayName] || { hours: 8, start: "08:00", end: "17:00" };
+        console.log(`[CREATE-SCHEDULE] daySchedule used:`, daySchedule);
+
+        const { data: newShift, error: shiftError } = await supabaseAdmin
+          .from("shifts")
+          .insert({
+            assignment_id: null,
+            shift_date: date,
+            start_time: daySchedule.start,
+            end_time: daySchedule.end,
+            estimated_hours: daySchedule.hours,
+            travel_time_minutes: params.travel_time_minutes || 0,
+            break_time_minutes: params.break_time_minutes || 0,
+            status: "scheduled",
+            notes: params.notes,
+            order_id: params.order_id,
+          })
+          .select("id")
+          .single();
+
+        if (shiftError) {
+          console.error("[CREATE-SHIFT-SCHEDULE] Error creating shift:", shiftError);
+          continue;
+        }
+
+        createdShiftIds.push(newShift.id);
+
+        // Add employee to shift
+        const { error: empError } = await supabaseAdmin.from("shift_employees").insert({
+          shift_id: newShift.id,
+          employee_id: employeeId,
+          role: "worker",
+          is_confirmed: false,
+        });
+
+        if (empError) {
+          console.error("[CREATE-SHIFT-SCHEDULE] Error adding employee to shift:", empError);
+        }
+
+        // Create time entry if shift date is in the past
+        const shiftDate = parseISO(date);
+        const today = startOfDay(new Date());
+        const shiftStart = startOfDay(shiftDate);
+        const isPast = isBefore(shiftStart, today);
+
+        if (isPast) {
+          // Get order info
+          const { data: orderInfo } = await supabaseAdmin
+            .from("orders")
+            .select("customer_id, object_id")
+            .eq("id", params.order_id)
+            .single();
+
+          // Calculate duration in minutes
+          const [startHour, startMin] = daySchedule.start.split(':').map(Number);
+          const [endHour, endMin] = daySchedule.end.split(':').map(Number);
+          const startMinutes = startHour * 60 + startMin;
+          const endMinutes = endHour * 60 + endMin;
+          let durationMinutes = endMinutes - startMinutes;
+          if (durationMinutes < 0) durationMinutes += 24 * 60;
+
+          // Subtract break time
+          const breakMinutes = params.break_time_minutes || 0;
+          durationMinutes = Math.max(0, durationMinutes - breakMinutes);
+
+          // Calculate start and end timestamps
+          const startDateTime = new Date(shiftDate);
+          startDateTime.setHours(startHour, startMin, 0, 0);
+          const endDateTime = new Date(shiftDate);
+          endDateTime.setHours(endHour, endMin, 0, 0);
+          if (endMinutes < startMinutes) {
+            endDateTime.setDate(endDateTime.getDate() + 1);
+          }
+
+          await supabaseAdmin.from("time_entries").insert({
+            user_id: user.id,
+            employee_id: employeeId,
+            customer_id: orderInfo?.customer_id,
+            object_id: orderInfo?.object_id,
+            order_id: params.order_id,
+            shift_id: newShift.id,
+            start_time: startDateTime.toISOString(),
+            end_time: endDateTime.toISOString(),
+            duration_minutes: durationMinutes,
+            type: "shift",
+            break_minutes: breakMinutes,
+            notes: params.notes,
+          });
+        }
+
+        // Send notification to employee
+        if (empData?.user_id) {
+          await sendNotification({
+            userId: empData.user_id,
+            title: "Neuer Einsatz",
+            message: `Ihnen wurde ein Einsatz am ${date} zugewiesen.`,
+            link: "/dashboard/planning",
+          });
+        }
+      }
+    }
+
+    revalidatePath("/dashboard/planning");
+    return {
+      success: true,
+      message: `${createdShiftIds.length} Einsatz/Einsätze erfolgreich erstellt.`,
+      created_shift_ids: createdShiftIds
+    };
+  } catch (error: any) {
+    console.error("[CREATE-SHIFT-SCHEDULE] Error:", error.message);
+    return { success: false, message: `Fehler: ${error.message}` };
+  }
+}
+
+/**
+ * Generate shifts from order employee assignments for current and next month.
+ * Calls the PostgreSQL RPC function generate_shifts_from_assignments().
+ */
+export async function generateShiftsFromAssignments(): Promise<{ success: boolean; message: string; created_count?: number }> {
+  const supabaseAdmin = createAdminClient();
+
+  try {
+    const { data, error } = await supabaseAdmin.rpc("generate_shifts_from_assignments");
+
+    if (error) {
+      console.error("[GENERATE-SHIFTS] RPC Error:", error);
+      return { success: false, message: `Fehler beim Generieren der Einsätze: ${error.message}` };
+    }
+
+    const result = Array.isArray(data) ? data[0] : data;
+    const createdCount = result?.created_count ?? 0;
+
+    revalidatePath("/dashboard/planning");
+
+    return {
+      success: true,
+      message: result?.message || `${createdCount} Einsatz/Einsätze erfolgreich erstellt.`,
+      created_count: createdCount
+    };
+
+  } catch (error: any) {
+    console.error("[GENERATE-SHIFTS] Error:", error.message);
     return { success: false, message: `Fehler: ${error.message}` };
   }
 }

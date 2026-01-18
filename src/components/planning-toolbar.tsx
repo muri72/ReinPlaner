@@ -20,10 +20,8 @@ import { PlanningFilterDialog } from "./planning-filter-dialog";
 import { Badge } from "@/components/ui/badge";
 
 export interface FilterValues {
-  employeeGroups?: string[];
   objects?: string[];
   services?: string[];
-  experienceLevel?: string;
   showAvailableOnly?: boolean;
   shiftStatus?: string;
 }
@@ -40,9 +38,14 @@ interface PlanningToolbarProps {
   onActionSuccess?: () => void;
   filters?: FilterValues;
   onFiltersChange?: (filters: FilterValues) => void;
-  employeeGroups?: { id: string; name: string }[];
   objects?: { id: string; name: string }[];
   services?: { id: string; title: string; color?: string }[];
+  onCreateShift?: (employeeId: string, date: string) => void;
+  availableObjects?: { id: string; name: string; address?: string; daily_schedules?: any[] }[];
+  availableOrders?: { id: string; title: string; object_id: string; object_name?: string; customer_name?: string }[];
+  availableEmployees?: { id: string; name: string }[];
+  availableServices?: { id: string; name: string }[];
+  availableCustomers?: { id: string; name: string }[];
 }
 
 export function PlanningToolbar({
@@ -57,9 +60,14 @@ export function PlanningToolbar({
   onActionSuccess,
   filters = {},
   onFiltersChange,
-  employeeGroups = [],
   objects = [],
   services = [],
+  onCreateShift,
+  availableObjects = [],
+  availableOrders = [],
+  availableEmployees = [],
+  availableServices = [],
+  availableCustomers = [],
 }: PlanningToolbarProps) {
   const [createShiftOpen, setCreateShiftOpen] = React.useState(false);
   const [filterDialogOpen, setFilterDialogOpen] = React.useState(false);
@@ -72,10 +80,8 @@ export function PlanningToolbar({
 
   const activeFilterCount = React.useMemo(() => {
     let count = 0;
-    if (filters.employeeGroups?.length) count++;
     if (filters.objects?.length) count++;
     if (filters.services?.length) count++;
-    if (filters.experienceLevel && filters.experienceLevel !== "all") count++;
     if (filters.shiftStatus && filters.shiftStatus !== "all") count++;
     if (filters.showAvailableOnly) count++;
     return count;
@@ -173,7 +179,6 @@ export function PlanningToolbar({
             onOpenChange={setFilterDialogOpen}
             filters={filters}
             onFiltersChange={(newFilters) => onFiltersChange?.(newFilters)}
-            employeeGroups={employeeGroups}
             objects={objects}
             services={services}
             onClearAll={handleClearAllFilters}
@@ -181,7 +186,9 @@ export function PlanningToolbar({
           <Button variant="outline" size="icon" onClick={() => onShowUnassignedChange(!showUnassigned)}>
             {showUnassigned ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
           </Button>
-          <Button variant="default" size="sm" onClick={() => setCreateShiftOpen(true)}>
+          <Button variant="default" size="sm" onClick={() => {
+            setCreateShiftOpen(true);
+          }}>
             <PlusCircle className="h-4 w-4 mr-2" />
             Einsatz erstellen
           </Button>
@@ -228,15 +235,6 @@ export function PlanningToolbar({
           {activeFilterCount > 0 && (
             <div className="flex flex-wrap items-center gap-2 ml-auto">
               <span className="text-xs text-muted-foreground">Filter aktiv:</span>
-              {filters.employeeGroups?.map((groupId) => {
-                const group = employeeGroups.find((g) => g.id === groupId);
-                return group ? (
-                  <Badge key={groupId} variant="secondary" className="text-[10px] gap-1">
-                    <Users className="h-3 w-3" />
-                    {group.name}
-                  </Badge>
-                ) : null;
-              })}
               {filters.objects?.map((objId) => {
                 const obj = objects.find((o) => o.id === objId);
                 return obj ? (
@@ -284,13 +282,17 @@ export function PlanningToolbar({
 
       <CreateShiftDialog
         open={createShiftOpen}
-        onClose={() => setCreateShiftOpen(false)}
+        onOpenChange={setCreateShiftOpen}
         onSuccess={() => {
           if (onActionSuccess) {
             onActionSuccess();
           }
         }}
-        defaultDate={currentDate}
+        availableEmployees={availableEmployees}
+        availableObjects={availableObjects}
+        availableOrders={availableOrders}
+        availableServices={availableServices}
+        availableCustomers={availableCustomers}
       />
     </div>
   );

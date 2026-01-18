@@ -27,6 +27,7 @@ import { MobilePlanningCalendar } from "@/components/planning-calendar-mobile";
 import { PlanningKpiSummary } from "@/components/planning-kpi-summary";
 import { SeriesEditModeDialog, SeriesEditMode as DialogSeriesEditMode } from "@/components/series-edit-mode-dialog";
 import { ShiftEditDialog } from "@/components/shift-edit-dialog";
+import { CreateShiftDialog } from "@/components/create-shift-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { assignOrderToEmployee } from "./actions";
@@ -59,9 +60,8 @@ interface ObjectOption {
 export default function PlanningPage() {
   const [currentDate, setCurrentDate] = React.useState(() => startOfDay(new Date()));
   const [viewMode, setViewMode] = React.useState<"day" | "week" | "month">("week");
-  const [showUnassigned, setShowUnassigned] = React.useState(true);
+  const [showUnassigned, setShowUnassigned] = React.useState(false);
   const [filters, setFilters] = React.useState<FilterValues>({});
-  const [employeeGroups, setEmployeeGroups] = React.useState<EmployeeGroup[]>([]);
   const [objects, setObjects] = React.useState<ObjectOption[]>([]);
   const [planningPageData, setPlanningPageData] = React.useState<ShiftPlanningPageData | null>(null);
   const [services, setServices] = React.useState<Service[]>([]);
@@ -73,6 +73,12 @@ export default function PlanningPage() {
   const [mobileSelectedDate, setMobileSelectedDate] = React.useState(() => startOfDay(new Date()));
   const [bundeslandCode, setBundeslandCode] = React.useState<string>('HH'); // Default to Hamburg
   const [holidaysMap, setHolidaysMap] = React.useState<{ [key: string]: { name: string } | null }>({});
+  const [showHiddenEmployees, setShowHiddenEmployees] = React.useState(false);
+  const [availableObjects, setAvailableObjects] = React.useState<{ id: string; name: string; address?: string; daily_schedules?: any[] }[]>([]);
+  const [availableOrders, setAvailableOrders] = React.useState<{ id: string; title: string; object_id: string; object_name?: string; customer_name?: string }[]>([]);
+  const [availableEmployees, setAvailableEmployees] = React.useState<{ id: string; name: string }[]>([]);
+  const [availableServices, setAvailableServices] = React.useState<{ id: string; name: string }[]>([]);
+  const [availableCustomers, setAvailableCustomers] = React.useState<{ id: string; name: string }[]>([]);
 
   // Series edit dialog state
   const [seriesDialogOpen, setSeriesDialogOpen] = React.useState(false);
@@ -150,7 +156,7 @@ export default function PlanningPage() {
     return { startDate: start, endDate: end, daysToDisplay: eachDayOfInterval({ start, end }) };
   }, [currentDate, viewMode]);
 
-  const fetchData = React.useCallback(async (start: Date, end: Date, searchQuery: string, displayDays: Date[], currentFilters: FilterValues, forceRefresh: boolean = false) => {
+  const fetchData = React.useCallback(async (start: Date, end: Date, searchQuery: string, displayDays: Date[], currentFilters: FilterValues) => {
     setLoading(true);
     const supabase = createClient();
     const {
@@ -174,53 +180,112 @@ export default function PlanningPage() {
     const holidayResults = await settingsService.checkMultipleHolidays(uniqueDates, code);
     setHolidaysMap(holidayResults);
 
-    // Load employee groups, objects, and services (for filters)
-    const [groupsData, objectsData, fetchedServices] = await Promise.all([
-      supabase.from("employee_groups").select("id, name").order("name"),
-      supabase.from("objects").select("id, name").order("name"),
+    // Load objects and services (for filters)
+    const [objectsData, fetchedServices] = await Promise.all([
+      supabase.from("objects").select("id, name, address, daily_schedules").order("name"),
       getServices()
     ]);
 
-    if (groupsData.data) {
-      setEmployeeGroups(groupsData.data.map((g: any) => ({ id: g.id, name: g.name })));
-    }
     if (objectsData.data) {
       setObjects(objectsData.data.map((o: any) => ({ id: o.id, name: o.name })));
+      setAvailableObjects(objectsData.data.map((o: any) => ({
+        id: o.id,
+        name: o.name,
+        address: o.address || undefined,
+        daily_schedules: o.daily_schedules || undefined,
+      })));
+    }
+
+    // Store services for shift dialog
+    if (fetchedServices) {
+      setAvailableServices(fetchedServices.map((s: any) => ({
+        id: s.id,
+        name: s.name,
+      })));
+    }
+
+    // Load customers for order creation
+    const { data: customersData } = await supabase
+      .from("customers")
+      .select("id, name")
+      .order("name");
+
+    if (customersData) {
+      setAvailableCustomers(customersData.map((c: any) => ({
+        id: c.id,
+        name: c.name,
+      })));
+    }
+
+    // Load available orders for shift creation
+    const { data: ordersData } = await supabase
+      .from("orders")
+      .select(`
+        id,
+        title,
+        object_id,
+        objects(name),
+        customers(name)
+      `)
+      .eq("status", "active")
+      .order("title");
+
+    if (ordersData) {
+      const orders = ordersData.map((order: any) => ({
+        id: order.id,
+        title: order.title,
+        object_id: order.object_id,
+        object_name: order.objects?.name || null,
+        customer_name: order.customers?.name || null,
+      }));
+      setAvailableOrders(orders);
+    }
+
+    // Load employees for shift creation
+    const { data: employeesData } = await supabase
+      .from("employees")
+      .select("id, first_name, last_name")
+      .eq("status", "active")
+      .order("first_name");
+
+    if (employeesData) {
+      const employees = employeesData.map((emp: any) => ({
+        id: emp.id,
+        name: `${emp.first_name} ${emp.last_name}`.trim(),
+      }));
+      setAvailableEmployees(employees);
     }
 
     const [result] = await Promise.all([
       getShiftPlanningData(start, end, {
         query: searchQuery,
         filters: {
-          employeeGroups: currentFilters.employeeGroups,
           objects: currentFilters.objects,
           services: currentFilters.services,
-          experienceLevel: currentFilters.experienceLevel,
           showAvailableOnly: currentFilters.showAvailableOnly,
         }
-      }, forceRefresh),
+      }),
     ]);
 
-    if (result.success) {
+    if (result?.success) {
       setPlanningPageData(result.data);
     } else {
-      toast.error(result.message);
-      console.error(result.message);
+      const errorMsg = result?.message || "Unbekannter Fehler beim Laden der Planungsdaten.";
+      toast.error(errorMsg);
+      console.error("Planning data error:", errorMsg);
     }
     setServices(fetchedServices);
     setLoading(false);
   }, []);
 
   const refreshData = React.useCallback(() => {
-    // forceRefresh=false: nur existierende Shifts laden, keine neuen erstellen
-    // Das verhindert, dass gelöschte Shifts neu erstellt werden
-    void fetchData(startDate, endDate, query, daysToDisplay, filters, false);
+    void fetchData(startDate, endDate, query, daysToDisplay, filters);
   }, [fetchData, startDate, endDate, query, daysToDisplay, filters]);
 
-  // Initial load: forceRefresh=true um fehlende Shifts aus Assignment-Zeitplan zu erstellen
+  // Load planning data
   React.useEffect(() => {
-    fetchData(startDate, endDate, query, daysToDisplay, filters, true);
-  }, [startDate, endDate, query, fetchData, daysToDisplay, filters]);
+    fetchData(startDate, endDate, query, daysToDisplay, filters);
+  }, [startDate, endDate, query, daysToDisplay, filters]);
 
   React.useEffect(() => {
     setMobileSelectedDate((previous) => {
@@ -496,6 +561,17 @@ export default function PlanningPage() {
     setEditDialogOpen(true);
   }, []);
 
+  // Create shift dialog state
+  const [createShiftDialogOpen, setCreateShiftDialogOpen] = React.useState(false);
+  const [createShiftInitialDate, setCreateShiftInitialDate] = React.useState<string>("");
+  const [createShiftInitialEmployee, setCreateShiftInitialEmployee] = React.useState<string>("");
+
+  const handleCreateShift = React.useCallback((employeeId: string, date: string) => {
+    setCreateShiftInitialDate(date);
+    setCreateShiftInitialEmployee(employeeId);
+    setCreateShiftDialogOpen(true);
+  }, []);
+
 
   return (
     <DndContext
@@ -563,10 +639,15 @@ export default function PlanningPage() {
               isAdmin={isAdmin}
               onActionSuccess={refreshData}
               filters={filters}
-              onFiltersChange={setFilters}
-              employeeGroups={employeeGroups}
+              onFiltersChange={(newFilters) => {
+                setFilters(newFilters);
+                refreshData();
+              }}
               objects={objects}
               services={services.map(s => ({ id: s.id, title: s.name, color: s.color }))}
+              availableObjects={availableObjects}
+              availableOrders={availableOrders}
+              availableEmployees={availableEmployees}
             />
             <PlanningKpiSummary
               planningData={planningData}
@@ -588,6 +669,8 @@ export default function PlanningPage() {
                   onActionSuccess={refreshData}
                   weekNumber={weekNumber}
                   holidaysMap={holidaysMap}
+                  showHiddenEmployees={showHiddenEmployees}
+                  onShowHiddenEmployeesChange={setShowHiddenEmployees}
                 />
               ) : (
                 <PlanningCalendar
@@ -602,6 +685,9 @@ export default function PlanningPage() {
                   currentUserRole={currentUserRole}
                   services={services}
                   onEditShift={handleEditShift}
+                  onCreateShift={handleCreateShift}
+                  showHiddenEmployees={showHiddenEmployees}
+                  onShowHiddenEmployeesChange={setShowHiddenEmployees}
                 />
               )}
             </div>
@@ -663,6 +749,18 @@ export default function PlanningPage() {
             }
           }
         }}
+      />
+
+      {/* Shift Create Dialog with Schedule Management */}
+      <CreateShiftDialog
+        open={createShiftDialogOpen}
+        onOpenChange={setCreateShiftDialogOpen}
+        onSuccess={refreshData}
+        availableEmployees={availableEmployees}
+        availableObjects={availableObjects}
+        availableOrders={availableOrders}
+        availableServices={availableServices}
+        availableCustomers={availableCustomers}
       />
 
       {/* Drag Overlay for better visual feedback */}

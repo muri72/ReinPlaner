@@ -101,6 +101,54 @@ export function MobilePlanningCalendar({
     return map;
   }, [planningData]);
 
+  // Calculate which orders have multi-shift (different hours for employees at same order)
+  // True team: same hours for all employees
+  // Multi-shift: same order but different hours (2+ employees with different times)
+  const multiShiftOrderIds = React.useMemo(() => {
+    const result = new Set<string>();
+    const orderData: Record<string, { shifts: import("@/lib/actions/shift-planning").ShiftAssignment[]; employees: Set<string> }> = {};
+
+    Object.values(planningData ?? {}).forEach((employee) => {
+      Object.values(employee.schedule ?? {}).forEach((dayData) => {
+        if (dayData.shifts) {
+          dayData.shifts.forEach((shift) => {
+            if (!shift.order_id) return;
+            if (!orderData[shift.order_id]) {
+              orderData[shift.order_id] = { shifts: [], employees: new Set() };
+            }
+            orderData[shift.order_id].shifts.push(shift);
+            // Add unique employee IDs
+            shift.employees.forEach((emp) => {
+              if (emp.employee_id) {
+                orderData[shift.order_id!].employees.add(emp.employee_id);
+              }
+            });
+          });
+        }
+      });
+    });
+
+    for (const [orderId, data] of Object.entries(orderData)) {
+      // Must have 2+ unique employees AND different hours to be multi-shift
+      if (data.employees.size < 2) continue;
+
+      const shifts = data.shifts;
+      if (shifts.length < 2) continue;
+
+      // Check if any have different estimated_hours
+      const firstShift = shifts[0];
+      const hasDifferentTimes = shifts.some(s =>
+        s.estimated_hours !== firstShift.estimated_hours
+      );
+
+      if (hasDifferentTimes) {
+        result.add(orderId);
+      }
+    }
+
+    return result;
+  }, [planningData]);
+
   const rangeLabel = React.useMemo(() => {
     if (viewMode === "month") {
       return format(selectedDate, "MMMM yyyy", { locale: de });
@@ -573,6 +621,7 @@ export function MobilePlanningCalendar({
                             shift={shift}
                             onSuccess={onActionSuccess}
                             teamMembers={shift.order_id ? orderTeamMembersMap[shift.order_id] : shift.employees}
+                            isMultiShift={shift.order_id ? multiShiftOrderIds.has(shift.order_id) : false}
                             onEdit={onEditShift ? (id) => onEditShift(id, shift, selectedDateKey) : undefined}
                           />
                         ))

@@ -992,7 +992,16 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess, 
                     step="0.1"
                     min="0"
                     max="100"
-                    {...form.register("markupPercentage")}
+                    value={(form.watch("markupPercentage") as number | null | undefined) ?? ""}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val === "" || val === null || val === undefined) {
+                        form.setValue("markupPercentage", null as any, { shouldValidate: true });
+                      } else {
+                        const num = Number(val);
+                        form.setValue("markupPercentage", isNaN(num) ? null as any : num as any, { shouldValidate: true });
+                      }
+                    }}
                     placeholder="z.B. 10"
                   />
                   <p className="text-xs text-muted-foreground mt-1">Prozentualer Aufschlag auf den Stundensatz</p>
@@ -1004,7 +1013,16 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess, 
                     type="number"
                     step="0.01"
                     min="0"
-                    {...form.register("customHourlyRate")}
+                    value={(form.watch("customHourlyRate") as number | null | undefined) ?? ""}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val === "" || val === null || val === undefined) {
+                        form.setValue("customHourlyRate", null as any, { shouldValidate: true });
+                      } else {
+                        const num = Number(val);
+                        form.setValue("customHourlyRate", isNaN(num) ? null as any : num as any, { shouldValidate: true });
+                      }
+                    }}
                     placeholder={defaultRate > 0 ? defaultRate.toFixed(2) : "z.B. 45.00"}
                   />
                   <p className="text-xs text-muted-foreground mt-1">Individueller Stundensatz für diesen Auftrag</p>

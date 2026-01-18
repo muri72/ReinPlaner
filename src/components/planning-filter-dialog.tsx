@@ -27,19 +27,17 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Filter, X, Users, Building2, Briefcase, Calendar, Clock } from "lucide-react";
+import { Filter, X, Building2, Briefcase, Calendar, Clock } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { cn } from "@/lib/utils";
 
 const formSchema = z.object({
-  employeeGroups: z.array(z.string()).optional(),
   objects: z.array(z.string()).optional(),
   services: z.array(z.string()).optional(),
-  experienceLevel: z.string().optional(),
-  showAvailableOnly: z.boolean().optional(),
   shiftStatus: z.string().optional(),
+  showAvailableOnly: z.boolean().optional(),
 });
 
 type FilterValues = z.infer<typeof formSchema>;
@@ -49,7 +47,6 @@ interface PlanningFilterDialogProps {
   onOpenChange: (open: boolean) => void;
   filters: FilterValues;
   onFiltersChange: (filters: FilterValues) => void;
-  employeeGroups: { id: string; name: string }[];
   objects: { id: string; name: string }[];
   services: { id: string; title: string; color?: string }[];
   onClearAll: () => void;
@@ -60,7 +57,6 @@ export function PlanningFilterDialog({
   onOpenChange,
   filters,
   onFiltersChange,
-  employeeGroups,
   objects,
   services,
   onClearAll,
@@ -88,23 +84,12 @@ export function PlanningFilterDialog({
 
   const activeFilterCount = React.useMemo(() => {
     let count = 0;
-    if (filters.employeeGroups?.length) count++;
     if (filters.objects?.length) count++;
     if (filters.services?.length) count++;
-    if (filters.experienceLevel && filters.experienceLevel !== "all") count++;
     if (filters.shiftStatus && filters.shiftStatus !== "all") count++;
     if (filters.showAvailableOnly) count++;
     return count;
   }, [filters]);
-
-  const handleGroupToggle = (groupId: string, current: string[] | undefined) => {
-    const currentGroups = current || [];
-    if (currentGroups.includes(groupId)) {
-      return currentGroups.filter((id) => id !== groupId);
-    } else {
-      return [...currentGroups, groupId];
-    }
-  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -134,43 +119,6 @@ export function PlanningFilterDialog({
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            {/* Employee Groups */}
-            <FormField
-              name="employeeGroups"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center gap-2">
-                    <Users className="h-4 w-4" />
-                    Mitarbeitergruppen
-                  </FormLabel>
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {employeeGroups.map((group) => (
-                      <label
-                        key={group.id}
-                        className={cn(
-                          "cursor-pointer inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm border transition-colors",
-                          field.value?.includes(group.id)
-                            ? "bg-primary text-primary-foreground border-primary"
-                            : "bg-background hover:bg-muted"
-                        )}
-                      >
-                        <Checkbox
-                          checked={field.value?.includes(group.id) || false}
-                          onCheckedChange={(checked) => {
-                            field.onChange(handleGroupToggle(group.id, field.value));
-                          }}
-                          className="sr-only"
-                        />
-                        {group.name}
-                      </label>
-                    ))}
-                  </div>
-                </FormItem>
-              )}
-            />
-
-            <Separator />
-
             {/* Objects */}
             <FormField
               name="objects"
@@ -258,37 +206,6 @@ export function PlanningFilterDialog({
 
             <Separator />
 
-            {/* Experience Level */}
-            <FormField
-              name="experienceLevel"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center gap-2">
-                    <Users className="h-4 w-4" />
-                    Erfahrungslevel
-                  </FormLabel>
-                  <Select
-                    value={field.value || "all"}
-                    onValueChange={field.onChange}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Alle Levels" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="all">Alle Levels</SelectItem>
-                      <SelectItem value="beginner">Anfänger</SelectItem>
-                      <SelectItem value="intermediate">Fortgeschritten</SelectItem>
-                      <SelectItem value="expert">Experte</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </FormItem>
-              )}
-            />
-
-            <Separator />
-
             {/* Shift Status */}
             <FormField
               name="shiftStatus"
@@ -348,21 +265,6 @@ export function PlanningFilterDialog({
             {activeFilterCount > 0 && (
               <div className="flex flex-wrap gap-2 items-center">
                 <span className="text-sm text-muted-foreground">Aktiv:</span>
-                {filters.employeeGroups?.map((id) => {
-                  const group = employeeGroups.find((g) => g.id === id);
-                  return group ? (
-                    <Badge key={id} variant="secondary" className="gap-1">
-                      {group.name}
-                      <X
-                        className="h-3 w-3 cursor-pointer"
-                        onClick={() => {
-                          const newGroups = filters.employeeGroups?.filter((g) => g !== id);
-                          onFiltersChange({ ...filters, employeeGroups: newGroups });
-                        }}
-                      />
-                    </Badge>
-                  ) : null;
-                })}
                 {filters.objects?.map((id) => {
                   const obj = objects.find((o) => o.id === id);
                   return obj ? (

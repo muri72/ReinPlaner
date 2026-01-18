@@ -3,7 +3,430 @@
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { TimeEntryFormValues } from "@/components/time-entry-form";
-import { getWeek, getDay, parseISO, formatISO } from 'date-fns';
+import { getWeek, getDay, parseISO, formatISO, differenceInDays, startOfWeek, eachDayOfInterval } from 'date-fns';
+import { de } from 'date-fns/locale';
+
+const dayNames = [
+  "sunday", "monday", "tuesday", "wednesday",
+  "thursday", "friday", "saturday"
+] as const;
+
+// ============================================================================
+// GENERATE MISSING SHIFTS FROM ASSIGNMENTS
+// ============================================================================
+
+export async function generateShiftsFromAssignments(
+  startDate: string,
+  endDate: string
+): Promise<{ success: boolean; message: string; created: number }> {
+  const supabaseAdmin = createAdminClient();
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { success: false, message: "Benutzer nicht authentifiziert.", created: 0 };
+  }
+
+  // Check if user is admin
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single();
+
+  if (profile?.role !== 'admin') {
+    return { success: false, message: "Nur Administratoren können diese Aktion ausführen.", created: 0 };
+  }
+
+  try {
+    console.log("[GENERATE-SHIFTS] Starting shift generation:", { startDate, endDate });
+
+    // 1. Fetch all active assignments with their schedules
+    const { data: assignments, error: assignmentsError } = await supabaseAdmin
+      .from("order_employee_assignments")
+      .select(`
+        id,
+        order_id,
+        employee_id,
+        assigned_daily_schedules,
+        assigned_recurrence_interval_weeks,
+        assigned_start_week_offset,
+        start_date,
+        end_date,
+        status,
+        orders!inner (
+          id,
+          title,
+          objects (name, address)
+        ),
+        employees!inner (
+          id,
+          first_name,
+          last_name
+        )
+      `)
+      .eq("status", "active");
+
+    if (assignmentsError) throw assignmentsError;
+
+    // 2. Fetch existing shifts in the date range
+    const { data: existingShifts, error: shiftsError } = await supabaseAdmin
+      .from("shifts")
+      .select("id, assignment_id, shift_date, shift_employees(employee_id)")
+      .gte("shift_date", startDate)
+      .lte("shift_date", endDate);
+
+    if (shiftsError) throw shiftsError;
+
+    // Build a map of existing shifts: key = assignment_id + date
+    const existingShiftMap = new Map<string, string[]>();
+    for (const shift of (existingShifts || [])) {
+      if (!shift?.assignment_id || !shift?.shift_date) continue;
+      const key = `${shift.assignment_id}_${shift.shift_date}`;
+      if (!existingShiftMap.has(key)) {
+        existingShiftMap.set(key, []);
+      }
+      const empIds = shift.shift_employees?.map((se: any) => se.employee_id) || [];
+      existingShiftMap.set(key, empIds);
+    }
+
+    // 3. Calculate date range
+    const start = parseISO(startDate);
+    const end = parseISO(endDate);
+    const weekDays = eachDayOfInterval({ start, end });
+
+    // 4. Build list of shifts to create
+    const shiftsToCreate: any[] = [];
+
+    for (const assignment of (assignments || [])) {
+      const empArray = Array.isArray(assignment.employees) ? assignment.employees : [assignment.employees].filter(Boolean);
+      const employee = empArray[0];
+      const order = Array.isArray(assignment.orders) ? assignment.orders[0] : assignment.orders;
+      if (!employee || !order) continue;
+
+      const assignmentStart = assignment.start_date ? parseISO(assignment.start_date) : null;
+      const assignmentEnd = assignment.end_date ? parseISO(assignment.end_date) : null;
+
+      const recurrenceInterval = assignment.assigned_recurrence_interval_weeks || 1;
+      const startOffset = assignment.assigned_start_week_offset || 0;
+      const dailySchedules = assignment.assigned_daily_schedules || [];
+
+      const referenceDate = assignmentStart || start;
+      const daysPassed = differenceInDays(start, startOfWeek(referenceDate, { weekStartsOn: 1 }));
+      const weeksPassed = Math.floor(daysPassed / 7);
+      const effectiveWeekIndex = (weeksPassed + startOffset) % recurrenceInterval;
+      const weekSchedule = dailySchedules[effectiveWeekIndex];
+
+      for (const day of weekDays) {
+        const dateString = formatISO(day, { representation: "date" });
+        const dayOfWeek = getDay(day);
+        const dayKey = dayNames[dayOfWeek];
+
+        // Skip if before assignment starts or after assignment ends
+        if (assignmentStart && day < assignmentStart) continue;
+        if (assignmentEnd && day > assignmentEnd) continue;
+
+        // Get schedule for this day
+        const daySchedule = (weekSchedule as any)?.[dayKey];
+        if (!daySchedule || !daySchedule.hours || daySchedule.hours <= 0) continue;
+
+        // Check if shift already exists for this assignment on this date
+        const existingKey = `${assignment.id}_${dateString}`;
+        const existingEmpIds = existingShiftMap.get(existingKey) || [];
+
+        // Check if this employee already has a shift
+        if (existingEmpIds.includes(employee.id)) continue;
+
+        // Create new shift
+        shiftsToCreate.push({
+          assignment_id: assignment.id,
+          shift_date: dateString,
+          start_time: daySchedule.start || null,
+          end_time: daySchedule.end || null,
+          estimated_hours: daySchedule.hours,
+          status: 'scheduled',
+          created_at: new Date().toISOString(),
+          employee_id: employee.id,
+          order_id: order.id,
+          order_title: order.title,
+          employee_name: `${employee.first_name} ${employee.last_name}`,
+        });
+      }
+    }
+
+    console.log(`[GENERATE-SHIFTS] Found ${shiftsToCreate.length} shifts to create`);
+
+    // 5. Insert shifts in batches
+    let createdCount = 0;
+    const batchSize = 50;
+
+    for (let i = 0; i < shiftsToCreate.length; i += batchSize) {
+      const batch = shiftsToCreate.slice(i, i + batchSize);
+
+      // Prepare shift data for insertion
+      const shiftsData = batch.map((item) => ({
+        assignment_id: item.assignment_id,
+        shift_date: item.shift_date,
+        start_time: item.start_time,
+        end_time: item.end_time,
+        estimated_hours: item.estimated_hours,
+        status: item.status,
+        created_at: item.created_at,
+      }));
+
+      const { data: insertedShifts, error: insertError } = await supabaseAdmin
+        .from("shifts")
+        .insert(shiftsData)
+        .select("id, assignment_id, shift_date");
+
+      if (insertError) {
+        console.error("[GENERATE-SHIFTS] Error inserting shifts:", insertError);
+        continue;
+      }
+
+      // Create shift_employee entries
+      for (let j = 0; j < (insertedShifts || []).length; j++) {
+        const shift = insertedShifts![j];
+        const batchItem = batch[j];
+
+        await supabaseAdmin.from("shift_employees").insert({
+          shift_id: shift.id,
+          employee_id: batchItem.employee_id,
+          role: "worker",
+          is_confirmed: false,
+        });
+
+        createdCount++;
+      }
+    }
+
+    console.log(`[GENERATE-SHIFTS] Successfully created ${createdCount} shifts`);
+
+    revalidatePath("/dashboard/planning");
+    revalidatePath("/dashboard/time-tracking");
+
+    return {
+      success: true,
+      message: `${createdCount} Einsätze wurden erfolgreich generiert.`,
+      created: createdCount,
+    };
+  } catch (error: any) {
+    console.error("[GENERATE-SHIFTS] Error:", error);
+    return { success: false, message: `Fehler: ${error.message}`, created: 0 };
+  }
+}
+
+// ============================================================================
+// GENERATE TIME ENTRIES FROM COMPLETED SHIFTS
+// ============================================================================
+
+export async function generateTimeEntriesFromShifts(
+  startDate: string,
+  endDate: string
+): Promise<{ success: boolean; message: string; created: number; skipped: number }> {
+  const supabaseAdmin = createAdminClient();
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { success: false, message: "Benutzer nicht authentifiziert.", created: 0, skipped: 0 };
+  }
+
+  // Check if user is admin
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single();
+
+  if (profile?.role !== 'admin') {
+    return { success: false, message: "Nur Administratoren können diese Aktion ausführen.", created: 0, skipped: 0 };
+  }
+
+  try {
+    console.log("[GENERATE-TIME-ENTRIES] Starting time entry generation:", { startDate, endDate });
+
+    // 1. Fetch completed shifts with their employees and related data
+    const { data: shifts, error: shiftsError } = await supabaseAdmin
+      .from("shifts")
+      .select(`
+        id,
+        shift_date,
+        start_time,
+        end_time,
+        estimated_hours,
+        status,
+        assignment_id,
+        job_id,
+        notes,
+        shift_employees (
+          id,
+          employee_id,
+          role,
+          is_confirmed,
+          actual_start_time,
+          actual_end_time,
+          actual_hours,
+          employees!inner (
+            id,
+            user_id,
+            first_name,
+            last_name
+          )
+        ),
+        jobs!inner (
+          id,
+          customer_id,
+          object_id
+        )
+      `)
+      .eq("status", "completed")
+      .gte("shift_date", startDate)
+      .lte("shift_date", endDate);
+
+    if (shiftsError) throw shiftsError;
+
+    console.log(`[GENERATE-TIME-ENTRIES] Found ${shifts?.length || 0} completed shifts`);
+
+    // 2. Fetch existing time entries for these shifts to avoid duplicates
+    const shiftIds = (shifts || []).map(s => s.id);
+    const { data: existingTimeEntries, error: existingError } = await supabaseAdmin
+      .from("time_entries")
+      .select("shift_id, employee_id")
+      .in("shift_id", shiftIds);
+
+    if (existingError) throw existingError;
+
+    // Build a map of existing time entries: key = shift_id_employee_id
+    const existingEntryMap = new Set<string>();
+    for (const entry of (existingTimeEntries || [])) {
+      if (entry.shift_id && entry.employee_id) {
+        existingEntryMap.add(`${entry.shift_id}_${entry.employee_id}`);
+      }
+    }
+
+    // 3. Build list of time entries to create
+    const timeEntriesToCreate: any[] = [];
+
+    for (const shift of (shifts || [])) {
+      for (const se of (shift.shift_employees || [])) {
+        const empArray = Array.isArray(se.employees) ? se.employees : [se.employees].filter(Boolean);
+        const employee = empArray[0];
+        if (!employee) continue;
+
+        // Check if time entry already exists for this shift-employee combination
+        const entryKey = `${shift.id}_${employee.id}`;
+        if (existingEntryMap.has(entryKey)) {
+          console.log(`[GENERATE-TIME-ENTRIES] Skipping shift ${shift.id.slice(0, 8)} for employee ${employee.id.slice(0, 8)} - already exists`);
+          continue;
+        }
+
+        // Calculate duration from actual hours or estimated hours
+        let durationMinutes: number | null = null;
+        if (se.actual_hours) {
+          durationMinutes = Number(se.actual_hours) * 60;
+        } else if (shift.estimated_hours) {
+          durationMinutes = Number(shift.estimated_hours) * 60;
+        }
+
+        // Calculate break based on duration
+        let breakMinutes = 0;
+        if (durationMinutes !== null) {
+          breakMinutes = calculateBreakMinutesFallback(durationMinutes);
+        }
+
+        // Build datetime from shift_date and start_time/end_time
+        const shiftDate = new Date(shift.shift_date);
+        let startTime: Date | null = null;
+        let endTime: Date | null = null;
+
+        if (shift.start_time) {
+          startTime = new Date(shift.shift_date);
+          const [startH, startM] = shift.start_time.split(':').map(Number);
+          startTime.setHours(startH, startM, 0, 0);
+        }
+
+        if (shift.end_time) {
+          endTime = new Date(shift.shift_date);
+          const [endH, endM] = shift.end_time.split(':').map(Number);
+          endTime.setHours(endH, endM, 0, 0);
+
+          // Handle overnight shifts
+          if (endTime && startTime && endTime < startTime) {
+            endTime.setDate(endTime.getDate() + 1);
+          }
+        }
+
+        // Get customer_id and object_id from jobs
+        const jobArray = Array.isArray(shift.jobs) ? shift.jobs : [shift.jobs].filter(Boolean);
+        const job = jobArray[0];
+
+        timeEntriesToCreate.push({
+          user_id: employee.user_id,
+          employee_id: employee.id,
+          customer_id: job?.customer_id || null,
+          object_id: job?.object_id || null,
+          order_id: null, // Jobs don't have direct order relationship in this schema
+          shift_id: shift.id,
+          start_time: startTime ? startTime.toISOString() : null,
+          end_time: endTime ? endTime.toISOString() : null,
+          duration_minutes: durationMinutes,
+          break_minutes: breakMinutes,
+          type: 'shift',
+          notes: shift.notes || null,
+          created_at: new Date().toISOString(),
+        });
+      }
+    }
+
+    console.log(`[GENERATE-TIME-ENTRIES] Found ${timeEntriesToCreate.length} time entries to create`);
+
+    // 4. Insert time entries in batches
+    let createdCount = 0;
+    let skippedCount = 0;
+    const batchSize = 50;
+
+    for (let i = 0; i < timeEntriesToCreate.length; i += batchSize) {
+      const batch = timeEntriesToCreate.slice(i, i + batchSize);
+
+      const { data: insertedEntries, error: insertError } = await supabaseAdmin
+        .from("time_entries")
+        .insert(batch)
+        .select("id");
+
+      if (insertError) {
+        console.error("[GENERATE-TIME-ENTRIES] Error inserting time entries:", insertError);
+        skippedCount += batch.length;
+        continue;
+      }
+
+      createdCount += insertedEntries?.length || 0;
+    }
+
+    console.log(`[GENERATE-TIME-ENTRIES] Successfully created ${createdCount} time entries, skipped ${skippedCount}`);
+
+    revalidatePath("/dashboard/planning");
+    revalidatePath("/dashboard/time-tracking");
+
+    return {
+      success: true,
+      message: `${createdCount} Zeiteinträge wurden erfolgreich aus abgeschlossenen Einsätzen generiert. ${skippedCount > 0 ? `(${skippedCount} bereits vorhanden)` : ''}`,
+      created: createdCount,
+      skipped: skippedCount,
+    };
+  } catch (error: any) {
+    console.error("[GENERATE-TIME-ENTRIES] Error:", error);
+    return { success: false, message: `Fehler: ${error.message}`, created: 0, skipped: 0 };
+  }
+}
+
+// ============================================================================
+// TIME ENTRY FUNCTIONS
+// ============================================================================
 
 // Helper function to calculate break minutes based on gross duration (same as in reports/actions.ts)
 function calculateBreakMinutesFallback(grossDurationMinutes: number): number {
@@ -220,49 +643,6 @@ export async function deleteTimeEntry(formData: FormData): Promise<{ success: bo
   revalidatePath("/dashboard/time-tracking");
   revalidatePath("/dashboard/planning"); // Revalidiere Planungsseite
   return { success: true, message: "Zeiteintrag erfolgreich gelöscht!" };
-}
-
-export async function triggerAutomaticTimeEntryCreation(): Promise<{ success: boolean; message: string; createdCount?: number }> {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
-    return { success: false, message: "Benutzer nicht authentifiziert." };
-  }
-
-  // Check if user is admin
-  const { data: profile, error: profileError } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single();
-
-  if (profileError || profile?.role !== 'admin') {
-    console.error("Fehler beim Abrufen des Benutzerprofils:", profileError?.message || profileError);
-    return { success: false, message: "Nur Admins können diese Aktion ausführen." };
-  }
-
-  try {
-    // Call the new shift-based function
-    const { data: createdCount, error: rpcError } = await supabase.rpc('create_time_entries_from_completed_shifts');
-
-    if (rpcError) {
-      console.error("Fehler beim Ausführen der DB-Funktion:", rpcError);
-      return {
-        success: false,
-        message: `Die automatische Erstellung konnte nicht durchgeführt werden. Fehler: ${rpcError.message}`,
-        createdCount: 0
-      };
-    }
-
-    console.log(`Erstelle ${createdCount ?? 0} Einträge aus abgeschlossenen Einsätzen`);
-    revalidatePath("/dashboard/time-tracking");
-    revalidatePath("/dashboard/planning");
-    return { success: true, message: `Überprüfung abgeschlossen. ${createdCount ?? 0} neue Zeiteinträge aus abgeschlossenen Einsätzen erstellt.`, createdCount: createdCount ?? 0 };
-  } catch (err: any) {
-    console.error("Unerwarteter Fehler:", err);
-    return { success: false, message: `Unerwarteter Fehler: ${err.message}` };
-  }
 }
 
 interface TimeEntry {

@@ -4,6 +4,7 @@
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { sendNotification } from "@/lib/actions/notifications";
+import { generateShiftsFromAssignments } from "@/lib/actions/shift-planning";
 import { startOfWeek, endOfWeek, eachDayOfInterval, formatISO, parseISO, getDay, differenceInDays, format, addMinutes, getWeek } from 'date-fns';
 import { de } from 'date-fns/locale';
 
@@ -538,7 +539,11 @@ export async function updateOrderAssignments(
       }
     }
 
-    // 3. Send notifications (optional, can be added later)
+    // 3. Generate shifts for current and next month based on the updated assignments
+    const shiftResult = await generateShiftsFromAssignments();
+    console.log(`[UPDATE-ASSIGNMENTS] Shifts generated: ${shiftResult.created_count}`);
+
+    // 4. Send notifications (optional, can be added later)
 
     revalidatePath("/dashboard/planning");
     revalidatePath("/dashboard/orders");

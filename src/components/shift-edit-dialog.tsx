@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Calendar, Clock, Users, Repeat, Trash2, Copy, Edit3, ArrowRightLeft, Check, Save, UserPlus, X, ChevronsUpDown } from "lucide-react";
+import { Calendar, Clock, Users, Repeat, Trash2, Copy, Edit3, ArrowRightLeft, Check, Save, UserPlus, X, ChevronsUpDown, Layers, MapPin, User, Coffee, Car } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
@@ -53,7 +53,6 @@ const statusOptions: { value: ShiftStatus; label: string; color: string; bg: str
   { value: "in_progress", label: "In Bearbeitung", color: "text-yellow-700", bg: "bg-yellow-100" },
   { value: "completed", label: "Abgeschlossen", color: "text-green-700", bg: "bg-green-100" },
   { value: "cancelled", label: "Abgesagt", color: "text-red-700", bg: "bg-red-100" },
-  { value: "no_show", label: "Nicht erschienen", color: "text-gray-700", bg: "bg-gray-100" },
 ];
 
 export function ShiftEditDialog({
@@ -77,7 +76,9 @@ export function ShiftEditDialog({
   const [startTime, setStartTime] = React.useState("08:00");
   const [endTime, setEndTime] = React.useState("17:00");
   const [hours, setHours] = React.useState(8);
-  type ShiftStatus = "scheduled" | "in_progress" | "completed" | "cancelled" | "no_show";
+  const [travelTime, setTravelTime] = React.useState<number | "">("");
+  const [breakTime, setBreakTime] = React.useState<number | "">("");
+  type ShiftStatus = "scheduled" | "in_progress" | "completed" | "cancelled";
   const [status, setStatus] = React.useState<ShiftStatus>("scheduled");
   const [editEmployeeId, setEditEmployeeId] = React.useState<string | null>(null);
   const [saving, setSaving] = React.useState(false);
@@ -102,6 +103,8 @@ export function ShiftEditDialog({
       setStartTime(shift.start_time?.slice(0, 5) || "08:00");
       setEndTime(shift.end_time?.slice(0, 5) || "17:00");
       setHours(shift.estimated_hours || 8);
+      setTravelTime(shift.travel_time_minutes || "");
+      setBreakTime(shift.break_time_minutes || "");
       setStatus((shift.status as ShiftStatus) || "scheduled");
       setIsTeamMode(shift.is_team || false);
       setAssignedEmployeeIds(shift.employees.map(e => e.employee_id));
@@ -275,6 +278,8 @@ export function ShiftEditDialog({
           start_time: startTime,
           end_time: endTime,
           estimated_hours: hours,
+          travel_time_minutes: travelTime === "" ? 0 : travelTime,
+          break_time_minutes: breakTime === "" ? 0 : breakTime,
           status,
           update_mode: "series",
         });
@@ -284,6 +289,8 @@ export function ShiftEditDialog({
           start_time: startTime,
           end_time: endTime,
           estimated_hours: hours,
+          travel_time_minutes: travelTime === "" ? 0 : travelTime,
+          break_time_minutes: breakTime === "" ? 0 : breakTime,
           status,
           update_mode: "single",
         });
@@ -325,10 +332,13 @@ export function ShiftEditDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto p-0">
+      <DialogContent
+        className="sm:max-w-md max-h-[90vh] overflow-y-auto p-0"
+        aria-labelledby="shift-dialog-title"
+      >
         {/* Header */}
         <DialogHeader className="px-4 pt-4 pb-2">
-          <DialogTitle className="text-base font-medium flex items-start justify-between gap-2">
+          <DialogTitle className="text-base font-medium flex items-start justify-between gap-2" id="shift-dialog-title">
             <div className="flex-1 min-w-0">
               <div className="truncate">{shift.job_title}</div>
               <div className="flex items-center gap-1.5 mt-1 text-sm text-muted-foreground">
@@ -338,7 +348,69 @@ export function ShiftEditDialog({
               <div className="flex items-center gap-1.5 mt-0.5 text-sm text-muted-foreground">
                 <Clock className="h-3.5 w-3.5 shrink-0" />
                 <span>{startTime} - {endTime} ({hours.toFixed(2)} Std.)</span>
+                {(shift.travel_time_minutes || shift.break_time_minutes) && (
+                  <span className="text-xs">
+                    {(shift.travel_time_minutes || 0) > 0 && (
+                      <span className="inline-flex items-center gap-0.5">
+                        <Car className="h-3 w-3" />
+                        {shift.travel_time_minutes}m
+                      </span>
+                    )}
+                    {(shift.break_time_minutes || 0) > 0 && (
+                      <span className="inline-flex items-center gap-0.5 ml-2">
+                        <Coffee className="h-3 w-3" />
+                        {shift.break_time_minutes}m
+                      </span>
+                    )}
+                  </span>
+                )}
               </div>
+              {/* Address */}
+              {(shift.object_address || shift.object_name) && (
+                <div className="flex items-center gap-1.5 mt-1.5 text-sm text-muted-foreground">
+                  <MapPin className="h-3.5 w-3.5 shrink-0" />
+                  {shift.object_address ? (
+                    <a
+                      href={`https://maps.google.com/maps?q=${encodeURIComponent(shift.object_address)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="hover:text-primary hover:underline transition-colors"
+                      onClick={(e) => {
+                        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+                        if (isMobile && shift.object_address) {
+                          window.location.href = `maps:0,0?q=${encodeURIComponent(shift.object_address)}`;
+                          e.preventDefault();
+                        }
+                      }}
+                    >
+                      {shift.object_address}
+                    </a>
+                  ) : (
+                    <span>{shift.object_name}</span>
+                  )}
+                </div>
+              )}
+              {/* Team Members - for team shift */}
+              {shift.is_team && shift.employees.length > 1 && !shift.is_multi_shift && (
+                <div className="flex items-center gap-1.5 mt-1.5 text-sm text-muted-foreground">
+                  <Users className="h-3.5 w-3.5 shrink-0" />
+                  <span>{shift.employees.map(e => e.employee_name).join(", ")}</span>
+                </div>
+              )}
+              {/* Multi-Shift - show all employees */}
+              {shift.is_multi_shift && shift.employees.length > 1 && (
+                <div className="flex items-center gap-1.5 mt-1.5 text-sm text-muted-foreground">
+                  <Layers className="h-3.5 w-3.5 shrink-0" />
+                  <span>{shift.employees.map(e => e.employee_name).join(", ")}</span>
+                </div>
+              )}
+              {/* Single Employee */}
+              {!shift.is_team && !shift.is_multi_shift && shift.employees[0] && (
+                <div className="flex items-center gap-1.5 mt-1.5 text-sm text-muted-foreground">
+                  <User className="h-3.5 w-3.5 shrink-0" />
+                  <span>{shift.employees[0].employee_name}</span>
+                </div>
+              )}
             </div>
           </DialogTitle>
         </DialogHeader>
@@ -356,7 +428,14 @@ export function ShiftEditDialog({
               {shift.service_title}
             </Badge>
           )}
-          {shift.is_team && (
+          {/* Multi-Shift: show if is_multi_shift is true OR if multiple employees but not team mode */}
+          {(shift.is_multi_shift || (shift.employees.length > 1 && !shift.is_team)) && (
+            <Badge variant="outline" className="text-xs gap-1 border-indigo-300 text-indigo-700 bg-indigo-50">
+              <Layers className="h-3 w-3" />
+              Mehrschicht ({shift.employees.length})
+            </Badge>
+          )}
+          {shift.is_team && shift.employees.length > 1 && !shift.is_multi_shift && (
             <Badge variant="secondary" className="text-xs gap-1">
               <Users className="h-3 w-3" />
               Team ({shift.employees.length})
@@ -604,6 +683,40 @@ export function ShiftEditDialog({
                   step="0.5"
                   className="w-full px-3 py-2 text-sm border rounded-md bg-background focus:outline-none focus:ring-1 focus:ring-primary"
                 />
+              </div>
+
+              {/* Travel Time and Break Time */}
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block flex items-center gap-1">
+                    <Car className="h-3 w-3" />
+                    Fahrtzeit (min)
+                  </label>
+                  <input
+                    type="number"
+                    value={travelTime}
+                    onChange={(e) => setTravelTime(e.target.value === "" ? "" : parseInt(e.target.value) || 0)}
+                    min="0"
+                    max="480"
+                    placeholder="-"
+                    className="w-full px-3 py-2 text-sm border rounded-md bg-background focus:outline-none focus:ring-1 focus:ring-primary"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block flex items-center gap-1">
+                    <Coffee className="h-3 w-3" />
+                    Pause (min)
+                  </label>
+                  <input
+                    type="number"
+                    value={breakTime}
+                    onChange={(e) => setBreakTime(e.target.value === "" ? "" : parseInt(e.target.value) || 0)}
+                    min="0"
+                    max="480"
+                    placeholder="-"
+                    className="w-full px-3 py-2 text-sm border rounded-md bg-background focus:outline-none focus:ring-1 focus:ring-primary"
+                  />
+                </div>
               </div>
 
               {/* Status */}

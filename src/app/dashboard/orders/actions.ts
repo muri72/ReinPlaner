@@ -177,13 +177,14 @@ export async function updateOrder(orderId: string, data: OrderFormValues) {
       order_type: orderType,
       start_date: formatDateToYMD(startDate),
       priority,
-      total_estimated_hours: totalEstimatedHours,
-      fixed_monthly_price: fixedMonthlyPrice,
+      // Handle numeric fields - convert empty/undefined to null
+      total_estimated_hours: totalEstimatedHours == null || String(totalEstimatedHours).trim() === "" ? null : Number(totalEstimatedHours),
+      fixed_monthly_price: fixedMonthlyPrice == null || String(fixedMonthlyPrice).trim() === "" ? null : Number(fixedMonthlyPrice),
       notes: data.notes,
       service_type: serviceType,
       service_key: serviceKey,
-      markup_percentage: markupPercentage,
-      custom_hourly_rate: customHourlyRate,
+      markup_percentage: markupPercentage == null || String(markupPercentage).trim() === "" ? null : Number(markupPercentage),
+      custom_hourly_rate: customHourlyRate == null || String(customHourlyRate).trim() === "" ? null : Number(customHourlyRate),
       request_status: requestStatus,
       end_date: formatDateToYMD(endDate),
     })

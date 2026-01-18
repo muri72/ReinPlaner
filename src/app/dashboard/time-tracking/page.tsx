@@ -4,15 +4,15 @@ import { createClient } from "@/lib/supabase/client";
 import { redirect, useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmployeeTimeTracker } from "@/components/employee-time-tracker";
-import { Clock, PlusCircle } from "lucide-react";
+import { PlusCircle } from "lucide-react";
 import { getWeek } from 'date-fns';
 import { TimeTrackingCharts } from '@/components/time-tracking-charts';
 import { AdminTimeEntriesOverview } from "@/components/admin-time-entries-overview";
-import { TriggerAutoTimeEntryButton } from "@/components/trigger-auto-time-entry-button";
 import { TimeEntryCreateDialog } from "@/components/time-entry-create-dialog";
 import { useCallback, useEffect, useState } from "react";
 import { DataTableToolbar, FilterOption, SortOption } from "@/components/data-table-toolbar";
 import { toast } from "sonner";
+import { generateShiftsFromAssignments } from "./actions";
 
 interface DisplayTimeEntry {
   id: string;
@@ -197,17 +197,6 @@ export default function TimeTrackingPage() {
 
       {isAdmin ? (
         <>
-          <Card className="shadow-neumorphic glassmorphism-card">
-            <CardHeader>
-              <CardTitle className="text-lg font-semibold">Automatische Zeiterfassung</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground mb-4">
-                Lösen Sie die automatische Erstellung von Zeiteinträgen für alle geplanten Aufträge aus. Dies füllt fehlende Einträge für vergangene Tage auf.
-              </p>
-              <TriggerAutoTimeEntryButton />
-            </CardContent>
-          </Card>
           <Card className="shadow-neumorphic glassmorphism-card">
             <CardHeader>
               <CardTitle className="text-lg font-semibold">Zeiteinträge verwalten</CardTitle>
