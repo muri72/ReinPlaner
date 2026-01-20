@@ -40,6 +40,34 @@ export interface EmployeeWorkTimeReportData {
 }
 
 
+// Helper function to format time in user's timezone
+async function formatTimeInTimezone(isoString: string, supabase: any): Promise<string> {
+  try {
+    // Fetch user's timezone setting
+    const { data: tzData } = await supabase
+      .from('app_settings')
+      .select('value')
+      .eq('key', 'default_timezone')
+      .single();
+
+    const timezone = tzData?.value || 'Europe/Berlin';
+
+    // Parse the ISO string and format in the specified timezone
+    const date = new Date(isoString);
+    return date.toLocaleTimeString('de-DE', {
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: timezone,
+    });
+  } catch (error) {
+    // Fallback to browser local time
+    return new Date(isoString).toLocaleTimeString('de-DE', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  }
+}
+
 // Helper function to calculate break minutes based on gross duration (fallback)
 function calculateBreakMinutesFallback(grossDurationMinutes: number): number {
   if (grossDurationMinutes >= 9 * 60) { // More than 9 hours (540 minutes)
@@ -115,26 +143,26 @@ export async function getWorkTimeReport(objectId: string, month: number, year: n
 
   let totalNetMinutes = 0;
 
-  const reportEntries: ReportEntry[] = timeEntries.map(entry => {
+  const reportEntries: ReportEntry[] = await Promise.all(timeEntries.map(async entry => {
     const grossDurationMinutes = entry.duration_minutes || 0;
     // Verwende gespeicherte Pausenminuten, wenn vorhanden, sonst Fallback-Berechnung
     const breakMins = entry.break_minutes !== null ? entry.break_minutes : calculateBreakMinutesFallback(grossDurationMinutes);
     const netDurationMinutes = grossDurationMinutes - breakMins;
     totalNetMinutes += netDurationMinutes;
-    
+
     const employee = Array.isArray(entry.employees) ? entry.employees[0] : entry.employees;
 
     return {
       id: entry.id,
       date: new Date(entry.start_time).toLocaleDateString('de-DE'),
-      startTime: new Date(entry.start_time).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }),
-      endTime: entry.end_time ? new Date(entry.end_time).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) : 'N/A',
+      startTime: await formatTimeInTimezone(entry.start_time, supabase),
+      endTime: entry.end_time ? await formatTimeInTimezone(entry.end_time, supabase) : 'N/A',
       employeeName: `${employee?.first_name || ''} ${employee?.last_name || ''}`.trim() || 'Unbekannt',
       duration: grossDurationMinutes, // Store gross duration
       breakMinutes: breakMins,
       // notes: entry.notes || '', // Entfernt
     };
-  });
+  }));
 
   const reportData: WorkTimeReportData = {
     entries: reportEntries,
@@ -187,7 +215,7 @@ export async function getEmployeeWorkTimeReport(employeeId: string, month: numbe
   }
 
   let totalNetMinutes = 0;
-  const reportEntries: EmployeeReportEntry[] = timeEntries.map(entry => {
+  const reportEntries: EmployeeReportEntry[] = await Promise.all(timeEntries.map(async entry => {
     const grossDurationMinutes = entry.duration_minutes || 0;
     const breakMins = entry.break_minutes !== null ? entry.break_minutes : calculateBreakMinutesFallback(grossDurationMinutes);
     const netDurationMinutes = grossDurationMinutes - breakMins;
@@ -199,14 +227,14 @@ export async function getEmployeeWorkTimeReport(employeeId: string, month: numbe
     return {
       id: entry.id,
       date: new Date(entry.start_time).toLocaleDateString('de-DE'),
-      startTime: new Date(entry.start_time).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }),
-      endTime: entry.end_time ? new Date(entry.end_time).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) : 'N/A',
+      startTime: await formatTimeInTimezone(entry.start_time, supabase),
+      endTime: entry.end_time ? await formatTimeInTimezone(entry.end_time, supabase) : 'N/A',
       objectName: object?.name || 'N/A',
       customerName: customer?.name || 'N/A',
       duration: grossDurationMinutes,
       breakMinutes: breakMins,
     };
-  });
+  }));
 
   const reportData: EmployeeWorkTimeReportData = {
     entries: reportEntries,

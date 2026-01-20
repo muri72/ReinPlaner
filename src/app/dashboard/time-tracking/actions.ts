@@ -340,25 +340,38 @@ export async function generateTimeEntriesFromShifts(
         }
 
         // Build datetime from shift_date and start_time/end_time
-        const shiftDate = new Date(shift.shift_date);
-        let startTime: Date | null = null;
-        let endTime: Date | null = null;
+        // IMPORTANT: Shift times are stored as local time (TIME type), so we need to preserve them
+        // by creating the timestamp with the correct timezone offset (Europe/Berlin = UTC+1 in winter)
+        let startTime: string | null = null;
+        let endTime: string | null = null;
 
-        if (shift.start_time) {
-          startTime = new Date(shift.shift_date);
-          const [startH, startM] = shift.start_time.split(':').map(Number);
-          startTime.setHours(startH, startM, 0, 0);
+        if (shift.start_time && shift.shift_date) {
+          // Create timestamp with explicit timezone offset to preserve local time
+          // Europe/Berlin is UTC+1 in winter, UTC+2 in summer
+          const month = parseInt(shift.shift_date.split('-')[1]);
+          const offset = (month >= 3 && month <= 10) ? '+02:00' : '+01:00'; // DST aware
+          startTime = `${shift.shift_date}T${shift.start_time}:00${offset}`;
         }
 
-        if (shift.end_time) {
-          endTime = new Date(shift.shift_date);
-          const [endH, endM] = shift.end_time.split(':').map(Number);
-          endTime.setHours(endH, endM, 0, 0);
+        if (shift.end_time && shift.shift_date) {
+          const month = parseInt(shift.shift_date.split('-')[1]);
+          const offset = (month >= 3 && month <= 10) ? '+02:00' : '+01:00';
+          let endTimestamp = `${shift.shift_date}T${shift.end_time}:00${offset}`;
 
           // Handle overnight shifts
-          if (endTime && startTime && endTime < startTime) {
-            endTime.setDate(endTime.getDate() + 1);
+          if (shift.start_time && shift.end_time) {
+            const [startH] = shift.start_time.split(':').map(Number);
+            const [endH] = shift.end_time.split(':').map(Number);
+            if (endH < startH) {
+              // End time is next day - add one day to the date
+              const nextDay = new Date(shift.shift_date);
+              nextDay.setDate(nextDay.getDate() + 1);
+              const nextDayStr = nextDay.toISOString().split('T')[0];
+              endTimestamp = `${nextDayStr}T${shift.end_time}:00${offset}`;
+            }
           }
+
+          endTime = endTimestamp;
         }
 
         // Get customer_id and object_id from jobs
@@ -372,8 +385,8 @@ export async function generateTimeEntriesFromShifts(
           object_id: job?.object_id || null,
           order_id: null, // Jobs don't have direct order relationship in this schema
           shift_id: shift.id,
-          start_time: startTime ? startTime.toISOString() : null,
-          end_time: endTime ? endTime.toISOString() : null,
+          start_time: startTime,
+          end_time: endTime,
           duration_minutes: durationMinutes,
           break_minutes: breakMinutes,
           type: 'shift',

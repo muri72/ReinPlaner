@@ -19,6 +19,8 @@ import {
   isBefore,
   isAfter,
   addMinutes,
+  subDays,
+  addDays,
 } from "date-fns";
 import { de } from "date-fns/locale";
 
@@ -167,6 +169,18 @@ export async function getShiftPlanningData(
   const endDateIso = formatISO(endDate, { representation: "date" });
 
   try {
+    // 0. Generate shifts for visible week + 2 weeks buffer (before/after)
+    // This creates missing shifts on-demand without duplicates
+    const extendedStartDate = formatISO(subDays(startDate, 14), { representation: "date" });
+    const extendedEndDate = formatISO(addDays(endDate, 14), { representation: "date" });
+    const { data: shiftGenResult } = await supabaseAdmin.rpc("generate_shifts_for_date_range", {
+      p_start_date: extendedStartDate,
+      p_end_date: extendedEndDate,
+    });
+    if (shiftGenResult && Array.isArray(shiftGenResult) && shiftGenResult[0]?.created_count > 0) {
+      console.log(`[SHIFT-PLANNING] Auto-generated ${shiftGenResult[0].created_count} shifts for date range`);
+    }
+
     // 1. Fetch all active employees
     let employeesQuery = supabase
       .from("employees")
@@ -238,7 +252,29 @@ export async function getShiftPlanningData(
       // Continue without shifts - we'll generate them
     }
 
-    // 4. Fetch assignments for the period
+    // DEBUG: Log shift data for debugging
+    console.log("[PLANNING] Fetched shifts count:", existingShifts?.length || 0);
+    if (existingShifts && existingShifts.length > 0) {
+      const sibelShift = existingShifts.find((s: any) => s.id === 'eced5938-4e61-4489-8788-ab0579280768');
+      console.log("[PLANNING] Sibel shift found:", !!sibelShift);
+      console.log("[PLANNING] Sibel shift_employees:", sibelShift?.shift_employees);
+
+      // Find ALL shifts with Sibel as employee
+      const sibelEmployeeId = 'da426795-7a54-4367-9da3-9cccb680eec3';
+      const sibelShifts = existingShifts.filter((s: any) =>
+        s.shift_employees?.some((se: any) => se.employee_id === sibelEmployeeId)
+      );
+      console.log("[PLANNING] Sibel Demirova's shifts:", sibelShifts.map((s: any) => ({
+        id: s.id,
+        shift_date: s.shift_date,
+        start_time: s.start_time,
+        status: s.status,
+        order_id: s.order_id,
+        employees: s.shift_employees?.length
+      })));
+    }
+
+    // 4. Fetch assignments for the period (include inactive to show completed shifts after employee removal)
     let assignmentsQuery = supabase
       .from("order_employee_assignments")
       .select(`
@@ -266,7 +302,9 @@ export async function getShiftPlanningData(
           default_start_week_offset
         )
       `)
-      .eq("status", "active");
+      .eq("orders.request_status", "approved")
+      .neq("orders.status", "completed")
+      .neq("orders.status", "cancelled");
 
     if (filters.filters?.objects && filters.filters.objects.length > 0) {
       assignmentsQuery = assignmentsQuery.in("orders.object_id", filters.filters.objects);
@@ -275,8 +313,39 @@ export async function getShiftPlanningData(
       assignmentsQuery = assignmentsQuery.in("orders.service_type", filters.filters.services);
     }
 
-    const { data: assignments, error: assignmentsError } = await assignmentsQuery;
+    const { data: assignmentsData, error: assignmentsError } = await assignmentsQuery;
     if (assignmentsError) throw assignmentsError;
+
+    // OPTIONAL: Load additional assignments for completed shifts whose assignment was removed
+    // This ensures completed shifts are still shown after employee removal
+    let assignments = assignmentsData;
+    if (existingShifts && existingShifts.length > 0) {
+      const existingIds = new Set(assignments?.map((a: any) => a.id) || []);
+      const shiftAssignmentIds = [...new Set(existingShifts.map((s: any) => s.assignment_id).filter(Boolean))];
+      const missingAssignmentIds = shiftAssignmentIds.filter((id: any) => !existingIds.has(id));
+
+      if (missingAssignmentIds.length > 0) {
+        console.log("[PLANNING] Loading additional assignments for completed shifts:", missingAssignmentIds.length);
+        const { data: additionalAssignments, error: additionalError } = await supabaseAdmin
+          .from("order_employee_assignments")
+          .select(`
+            *,
+            orders!inner (
+              id, title, priority, object_id, service_type, total_estimated_hours,
+              objects (id, name, address)
+            ),
+            employees (id, first_name, last_name, user_id, default_daily_schedules, default_recurrence_interval_weeks, default_start_week_offset)
+          `)
+          .in("id", missingAssignmentIds);
+
+        if (!additionalError && additionalAssignments && additionalAssignments.length > 0) {
+          // Merge additional assignments with the main list
+          const newAssignments = (additionalAssignments as any[]).filter(a => !existingIds.has(a.id));
+          assignments = [...(assignments || []), ...newAssignments];
+          console.log("[PLANNING] Merged additional assignments:", newAssignments.length);
+        }
+      }
+    }
 
     // DEBUG: Log data overview
     console.log("[PLANNING] === DEBUG DATA OVERVIEW ===");
@@ -463,9 +532,16 @@ export async function getShiftPlanningData(
 
         if (!order) continue;
 
-        // Get the current employees from shift_employees table (this reflects actual assignments after moves)
+        // Get the employees from shift_employees table (this reflects actual assignments after moves)
         // IMPORTANT: Handle MULTIPLE employees per shift - each employee should see the shift
-        const shiftEmployees = shift.shift_employees || [];
+        let shiftEmployees = shift.shift_employees || [];
+
+        // SPECIAL CASE: For completed shifts with no shift_employees (employee was removed),
+        // still show the shift using the original assignment's employee_id
+        if (shiftEmployees.length === 0 && shift.status === 'completed' && assignment?.employee_id) {
+          console.log("[PLANNING] Completed shift without shift_employees, using assignment employee:", shift.id);
+          shiftEmployees = [{ employee_id: assignment.employee_id, role: 'worker', is_confirmed: false }];
+        }
 
         if (shiftEmployees.length === 0) {
           console.log("[PLANNING] Shift has no employee assignment:", shift.id);
@@ -812,10 +888,17 @@ export async function getShiftPlanningData(
     console.log("[PLANNING] Total employees in planningData:", Object.keys(planningData).length);
     for (const [empId, empData] of Object.entries(planningData)) {
       let totalShifts = 0;
+      const datesWithShifts: string[] = [];
       for (const [date, schedule] of Object.entries(empData.schedule)) {
         totalShifts += schedule.shifts.length;
+        if (schedule.shifts.length > 0) {
+          datesWithShifts.push(`${date}: ${schedule.shifts.map((s: any) => s.orderTitle + '(' + s.shiftId?.slice(0,8) + ')').join(', ')}`);
+        }
       }
-      console.log(`[PLANNING] ${empData.name}: ${totalShifts} shifts total`);
+      if (empData.name.includes('Sibel') && totalShifts > 0) {
+        console.log(`[PLANNING] ${empData.name}: ${totalShifts} shifts total`);
+        datesWithShifts.forEach(d => console.log(`[PLANNING]   ${d}`));
+      }
     }
 
     // Always revalidate to ensure fresh data after mutations

@@ -5,7 +5,7 @@ import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { sendNotification } from "@/lib/actions/notifications";
 import { generateShiftsFromAssignments } from "@/lib/actions/shift-planning";
-import { startOfWeek, endOfWeek, eachDayOfInterval, formatISO, parseISO, getDay, differenceInDays, format, addMinutes, getWeek } from 'date-fns';
+import { startOfWeek, endOfWeek, eachDayOfInterval, formatISO, parseISO, getDay, differenceInDays, format, addMinutes, getWeek, subDays, addDays } from 'date-fns';
 import { de } from 'date-fns/locale';
 
 export interface EmployeePlanningData {
@@ -83,6 +83,19 @@ export async function getPlanningDataForRange(startDate: Date, endDate: Date, fi
   const end_date_iso = formatISO(endDate, { representation: 'date' });
 
   try {
+    // 0. Generate shifts for visible week + 2 weeks buffer (before/after)
+    // This creates missing shifts on-demand without duplicates
+    const extendedStartDate = formatISO(subDays(startDate, 14), { representation: 'date' });
+    const extendedEndDate = formatISO(addDays(endDate, 14), { representation: 'date' });
+    const supabaseAdmin = createAdminClient();
+    const { data: shiftGenResult } = await supabaseAdmin.rpc('generate_shifts_for_date_range', {
+      p_start_date: extendedStartDate,
+      p_end_date: extendedEndDate
+    });
+    if (shiftGenResult && Array.isArray(shiftGenResult) && shiftGenResult[0]?.created_count > 0) {
+      console.log(`[PLANNING] Auto-generated ${shiftGenResult[0].created_count} shifts for date range`);
+    }
+
     // 1. Fetch all active employees with their default schedules, applying search filter
     let employeesQuery = supabase
       .from('employees')
@@ -508,9 +521,60 @@ export async function updateOrderAssignments(
 ): Promise<{ success: boolean; message: string }> {
   const supabaseAdmin = createAdminClient();
   const { employeeIds, assigned_daily_schedules, assigned_recurrence_interval_weeks, assigned_start_week_offset } = data;
+  const today = new Date().toISOString().split('T')[0];
 
   try {
-    // 1. Delete all existing assignments for this order
+    // 1. Delete FUTURE shifts for removed employees (keep completed shifts with time entries)
+    // First, get all assignments for this order
+    const { data: oldAssignments } = await supabaseAdmin
+      .from('order_employee_assignments')
+      .select('id, employee_id')
+      .eq('order_id', orderId);
+
+    if (oldAssignments && oldAssignments.length > 0) {
+      const oldEmployeeIds = oldAssignments.map(a => a.employee_id);
+      const newEmployeeIds = employeeIds || [];
+
+      // Find employees that are being removed
+      const removedEmployeeIds = oldEmployeeIds.filter(id => !newEmployeeIds.includes(id));
+
+      if (removedEmployeeIds.length > 0) {
+        // Delete future shifts for removed employees (keep completed ones)
+        const { data: shiftsToDelete } = await supabaseAdmin
+          .from('shifts')
+          .select('id, shift_date, status')
+          .eq('order_id', orderId)
+          .in('assignment_id', oldAssignments.map(a => a.id))
+          .gte('shift_date', today)
+          .neq('status', 'completed');
+
+        if (shiftsToDelete && shiftsToDelete.length > 0) {
+          const shiftIdsToDelete = shiftsToDelete.map(s => s.id);
+
+          // Delete time_entries first
+          await supabaseAdmin
+            .from('time_entries')
+            .delete()
+            .in('shift_id', shiftIdsToDelete);
+
+          // Delete shift_employees
+          await supabaseAdmin
+            .from('shift_employees')
+            .delete()
+            .in('shift_id', shiftIdsToDelete);
+
+          // Delete shifts
+          await supabaseAdmin
+            .from('shifts')
+            .delete()
+            .in('id', shiftIdsToDelete);
+
+          console.log(`[UPDATE-ASSIGNMENTS] Deleted ${shiftIdsToDelete.length} future shifts for removed employees`);
+        }
+      }
+    }
+
+    // 2. Delete all existing assignments for this order
     const { error: deleteError } = await supabaseAdmin
       .from('order_employee_assignments')
       .delete()
@@ -520,7 +584,7 @@ export async function updateOrderAssignments(
       throw new Error(`Fehler beim Löschen alter Zuweisungen: ${deleteError.message}`);
     }
 
-    // 2. Create new assignments for all selected employees with the new shared schedule
+    // 3. Create new assignments for all selected employees with the new shared schedule
     if (employeeIds.length > 0) {
       const newAssignments = employeeIds.map(employeeId => ({
         order_id: orderId,
@@ -539,11 +603,11 @@ export async function updateOrderAssignments(
       }
     }
 
-    // 3. Generate shifts for current and next month based on the updated assignments
+    // 4. Generate shifts for current and next month based on the updated assignments
     const shiftResult = await generateShiftsFromAssignments();
     console.log(`[UPDATE-ASSIGNMENTS] Shifts generated: ${shiftResult.created_count}`);
 
-    // 4. Send notifications (optional, can be added later)
+    // 5. Send notifications (optional, can be added later)
 
     revalidatePath("/dashboard/planning");
     revalidatePath("/dashboard/orders");
