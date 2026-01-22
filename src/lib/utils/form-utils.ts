@@ -310,6 +310,7 @@ export const timeEntrySchema = z.object({
   customerId: z.string().uuid("Ungültige Kunden-ID").optional().nullable(),
   objectId: z.string().uuid("Ungültiges Objekt-ID").optional().nullable(),
   orderId: z.string().uuid("Ungültige Auftrags-ID").optional().nullable(),
+  shiftId: z.string().uuid("Ungültige Schicht-ID").optional().nullable(),
   startDate: z.date({ required_error: "Startdatum ist erforderlich" }),
   startTime: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Ungültiges Startzeitformat (HH:MM)"),
   endDate: z.date().optional().nullable(),
@@ -322,7 +323,7 @@ export const timeEntrySchema = z.object({
     (val) => (val === "" ? null : Number(val)),
     z.nullable(z.number().min(0).max(1440, "Pausenminuten sind zu hoch")).optional()
   ),
-  type: z.enum(["manual", "clock_in_out", "stopwatch", "automatic_scheduled_order"]).default("manual"),
+  type: z.enum(["manual", "clock_in_out", "stopwatch", "automatic_scheduled_order", "shift"]).default("manual"),
   notes: z.string().max(500, "Notizen sind zu lang").optional().nullable(),
 }).superRefine((data, ctx) => {
   // End date and time must both be provided or both be empty

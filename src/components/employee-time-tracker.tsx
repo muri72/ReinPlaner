@@ -113,6 +113,7 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
   const [suggestedEndTime, setSuggestedEndTime] = useState<string | null>(null);
   const [suggestedDuration, setSuggestedDuration] = useState<number | null>(null);
   const [suggestedBreakMinutes, setSuggestedBreakMinutes] = useState<number | null>(null);
+  const [suggestedShiftId, setSuggestedShiftId] = useState<string | null>(null);
   const [recurrenceInfo, setRecurrenceInfo] = useState<string | null>(null);
 
   const [currentLocation, setCurrentLocation] = useState<{ latitude: number; longitude: number } | null>(null);
@@ -337,6 +338,7 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
       setSuggestedEndTime(null);
       setSuggestedDuration(null);
       setSuggestedBreakMinutes(null);
+      setSuggestedShiftId(null);
       setRecurrenceInfo(null);
 
       if (selectedOrderId && employeeId) {
@@ -344,6 +346,7 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
 
         if (selectedOrder) {
           const today = new Date();
+          const todayStr = today.toISOString().split('T')[0];
           const dayOfWeek = today.getDay(); // 0=So, 1=Mo, ...
           const dayKeys = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
           const currentDayKey = dayKeys[dayOfWeek];
@@ -382,12 +385,30 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
             setSuggestedDuration(grossMinutesToStore);
             setSuggestedBreakMinutes(calculatedBreakMinutes);
             setSuggestedStartTime(grossStartTimeFromSchedule);
-            
+
             // Calculate suggestedEndTime based on suggestedStartTime and grossMinutesToStore
             if (grossStartTimeFromSchedule) {
               setSuggestedEndTime(calculateEndTime(grossStartTimeFromSchedule, grossMinutesToStore / 60));
             } else {
               setSuggestedEndTime(null);
+            }
+
+            // Look for an existing shift for this order/employee on today's date
+            if (grossStartTimeFromSchedule && grossEndTimeFromSchedule) {
+              const supabase = createClient();
+              const { data: existingShift } = await supabase
+                .from('shifts')
+                .select('id')
+                .eq('order_id', selectedOrderId)
+                .eq('shift_date', todayStr)
+                .eq('start_time', grossStartTimeFromSchedule)
+                .eq('end_time', grossEndTimeFromSchedule)
+                .limit(1)
+                .single();
+
+              if (existingShift) {
+                setSuggestedShiftId(existingShift.id);
+              }
             }
           }
 
@@ -596,16 +617,22 @@ export function EmployeeTimeTracker({ userId }: EmployeeTimeTrackerProps) {
     };
 
     if (isScheduledOrder) {
+      // If we have a matching shift, use type 'shift' and set the shiftId
+      // Otherwise fall back to 'automatic_scheduled_order' (for orders without shifts)
+      const entryType = suggestedShiftId ? 'shift' : 'automatic_scheduled_order';
       return {
         ...baseData,
+        shiftId: suggestedShiftId || undefined,
         startDate: now,
         startTime: suggestedStartTime || undefined, // Cast null to undefined
         endDate: now,
         endTime: suggestedEndTime || undefined, // Cast null to undefined
         durationMinutes: suggestedDuration,
         breakMinutes: suggestedBreakMinutes,
-        type: 'automatic_scheduled_order' as const,
-        notes: `Automatisch erfasster geplanter Auftrag: ${suggestedDuration !== null && suggestedBreakMinutes !== null ? ((suggestedDuration - suggestedBreakMinutes) / 60).toFixed(2) : 'N/A'} Netto-Stunden`,
+        type: entryType,
+        notes: suggestedShiftId
+          ? `Automatisch erfasster geplanter Auftrag: ${suggestedDuration !== null && suggestedBreakMinutes !== null ? ((suggestedDuration - suggestedBreakMinutes) / 60).toFixed(2) : 'N/A'} Netto-Stunden`
+          : `Zeiteintrag für Auftrag: ${selectedOrder?.title}`,
       };
     } else {
       return {
