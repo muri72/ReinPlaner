@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { handleActionResponse } from "@/lib/toast-utils";
 import { FormActions } from "@/components/ui/form-actions";
@@ -15,6 +15,7 @@ import { useFormUnsavedChanges } from "@/components/ui/unsaved-changes-context";
 import { userSchema, UserFormInput, UserFormValues } from "@/lib/utils/form-utils";
 import { useUserFormData, useUserAssignmentDialogs } from "@/hooks/use-user-form-data";
 import { ReassignmentDialog, UnassignDialog } from "@/components/user-form/user-assignment-dialogs";
+import { Eye, EyeOff } from "lucide-react";
 
 // Re-export types for backward compatibility
 export type { UserFormInput, UserFormValues } from "@/lib/utils/form-utils";
@@ -36,6 +37,8 @@ interface UserFormProps {
 }
 
 export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, isEditMode = false, employee, customerContact, isInDialog = false }: UserFormProps) {
+  const [showPassword, setShowPassword] = useState(false);
+
   // Use extracted hooks for data fetching and dialogs
   const {
     employees,
@@ -370,12 +373,22 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
       {!isEditMode && (
         <div>
           <Label htmlFor="password">Passwort</Label>
-          <Input
-            id="password"
-            type="password"
-            {...form.register("password")}
-            placeholder="Passwort"
-          />
+          <div className="relative">
+            <Input
+              id="password"
+              type={showPassword ? "text" : "password"}
+              {...form.register("password")}
+              placeholder="Passwort"
+              className="pr-10"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+            >
+              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
+          </div>
           {form.formState.errors.password && (
             <p className="text-red-500 text-sm mt-1">{form.formState.errors.password.message}</p>
           )}

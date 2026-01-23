@@ -268,6 +268,25 @@
   -ms-overflow-style: none !important;  /* IE and Edge */
 }
 
+/* Hide browser password reveal buttons */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-webkit-contacts-auto-fill-button,
+input[type="password"]::-webkit-credentials-auto-fill-button {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  position: absolute !important;
+  width: 0 !important;
+  height: 0 !important;
+  overflow: hidden !important;
+}
+
+/* Remove default password toggle styling */
+input[type="password"] {
+  -webkit-text-security: none !important;
+  text-security: none !important;
+}
+
 /* Custom Scrollbar for specific elements */
 .custom-scrollbar {
   scrollbar-width: thin !important; /* For Firefox */
