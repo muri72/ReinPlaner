@@ -1,7 +1,20 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Bell } from "lucide-react";
+import { NotificationList } from "@/components/notification-list";
+import { NotificationType } from "@/lib/actions/notifications";
+import { ArrowLeft } from "lucide-react";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+
+interface Notification {
+  id: string;
+  title: string;
+  message: string | null;
+  link: string | null;
+  is_read: boolean;
+  created_at: string;
+  type: NotificationType;
+}
 
 export default async function NotificationsPage() {
   const supabase = await createClient();
@@ -11,22 +24,43 @@ export default async function NotificationsPage() {
     redirect("/login");
   }
 
-  // You can fetch and display notifications here if needed
-  // For now, it's a placeholder page.
+  // Fetch notifications
+  const { data: notifications } = await supabase
+    .from("notifications")
+    .select("*")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false })
+    .limit(50);
+
+  const typedNotifications: Notification[] = (notifications || []).map((n) => ({
+    ...n,
+    type: (n.type as NotificationType) || "default",
+  }));
 
   return (
-    <div className="p-4 md:p-8 space-y-8">
-      <h1 className="text-2xl md:text-3xl font-bold">Ihre Benachrichtigungen</h1>
-      <Card className="shadow-neumorphic glassmorphism-card">
-        <CardHeader>
-          <CardTitle className="text-lg font-semibold">Benachrichtigungsübersicht</CardTitle>
-        </CardHeader>
-        <CardContent className="text-center text-muted-foreground py-8">
-          <Bell className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
-          <p className="text-base md:text-lg font-semibold">Keine Benachrichtigungen vorhanden</p>
-          <p className="text-sm">Neue Benachrichtigungen werden hier angezeigt.</p>
-        </CardContent>
-      </Card>
+    <div className="p-4 md:p-8 space-y-6 max-w-4xl mx-auto">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Link href="/dashboard">
+            <Button variant="ghost" size="icon">
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+          </Link>
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold">Benachrichtigungen</h1>
+            <p className="text-muted-foreground text-sm mt-1">
+              Bleiben Sie auf dem Laufenden
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Notification List */}
+      <NotificationList
+        initialNotifications={typedNotifications}
+        userId={user.id}
+      />
     </div>
   );
 }

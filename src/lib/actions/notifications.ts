@@ -2,14 +2,29 @@
 
 import { createAdminClient } from "@/lib/supabase/server";
 
-interface NotificationPayload {
+export type NotificationType =
+  | 'order'
+  | 'shift'
+  | 'ticket'
+  | 'system'
+  | 'absence'
+  | 'default';
+
+export interface NotificationPayload {
   userId: string;
   title: string;
   message: string;
   link: string;
+  type?: NotificationType;
 }
 
-export async function sendNotification({ userId, title, message, link }: NotificationPayload) {
+export async function sendNotification({
+  userId,
+  title,
+  message,
+  link,
+  type = 'default',
+}: NotificationPayload) {
   const supabaseAdmin = createAdminClient();
 
   // 1. In-App-Benachrichtigung erstellen
@@ -20,6 +35,7 @@ export async function sendNotification({ userId, title, message, link }: Notific
       title,
       message,
       link,
+      type,
     });
 
   if (notificationError) {
@@ -63,4 +79,86 @@ export async function sendNotification({ userId, title, message, link }: Notific
   } catch (error: any) {
     console.error(`Fehler beim Aufrufen der send-email-Funktion für Benutzer ${userId}:`, error?.message || error);
   }
+}
+
+export async function markAllNotificationsAsRead(userId: string): Promise<boolean> {
+  const supabaseAdmin = createAdminClient();
+
+  const { error } = await supabaseAdmin
+    .from('notifications')
+    .update({ is_read: true, read_at: new Date().toISOString() })
+    .eq('user_id', userId)
+    .eq('is_read', false);
+
+  if (error) {
+    console.error('Fehler beim Markieren aller als gelesen:', error);
+    return false;
+  }
+
+  return true;
+}
+
+export async function markNotificationAsRead(id: string): Promise<boolean> {
+  const supabaseAdmin = createAdminClient();
+
+  const { error } = await supabaseAdmin
+    .from('notifications')
+    .update({ is_read: true, read_at: new Date().toISOString() })
+    .eq('id', id);
+
+  if (error) {
+    console.error('Fehler beim Markieren als gelesen:', error);
+    return false;
+  }
+
+  return true;
+}
+
+export async function deleteNotification(id: string): Promise<boolean> {
+  const supabaseAdmin = createAdminClient();
+
+  const { error } = await supabaseAdmin
+    .from('notifications')
+    .delete()
+    .eq('id', id);
+
+  if (error) {
+    console.error('Fehler beim Löschen der Benachrichtigung:', error);
+    return false;
+  }
+
+  return true;
+}
+
+export async function deleteAllNotifications(userId: string): Promise<boolean> {
+  const supabaseAdmin = createAdminClient();
+
+  const { error } = await supabaseAdmin
+    .from('notifications')
+    .delete()
+    .eq('user_id', userId);
+
+  if (error) {
+    console.error('Fehler beim Löschen aller Benachrichtigungen:', error);
+    return false;
+  }
+
+  return true;
+}
+
+export async function deleteReadNotifications(userId: string): Promise<boolean> {
+  const supabaseAdmin = createAdminClient();
+
+  const { error } = await supabaseAdmin
+    .from('notifications')
+    .delete()
+    .eq('user_id', userId)
+    .eq('is_read', true);
+
+  if (error) {
+    console.error('Fehler beim Löschen der gelesenen Benachrichtigungen:', error);
+    return false;
+  }
+
+  return true;
 }
