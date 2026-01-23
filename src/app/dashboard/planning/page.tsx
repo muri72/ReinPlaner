@@ -30,7 +30,7 @@ import { ShiftEditDialog } from "@/components/shift-edit-dialog";
 import { CreateShiftDialog } from "@/components/create-shift-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { assignOrderToEmployee } from "./actions";
+import { assignOrderToEmployee, checkAndCompleteOverdueShifts } from "./actions";
 import {
   startOfWeek,
   endOfWeek,
@@ -101,6 +101,18 @@ export default function PlanningPage() {
 
   // Track Alt key for copy mode
   const [isAltPressed, setIsAltPressed] = React.useState(false);
+
+  // Auto-complete overdue shifts on page load
+  React.useEffect(() => {
+    const checkOverdueShifts = async () => {
+      try {
+        await checkAndCompleteOverdueShifts();
+      } catch (error) {
+        console.error("Error checking overdue shifts:", error);
+      }
+    };
+    checkOverdueShifts();
+  }, []);
 
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {

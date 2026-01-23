@@ -4,9 +4,35 @@
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { sendNotification } from "@/lib/actions/notifications";
-import { generateShiftsFromAssignments } from "@/lib/actions/shift-planning";
+import { generateShiftsFromAssignments, markOverdueShiftsAsCompleted } from "@/lib/actions/shift-planning";
 import { startOfWeek, endOfWeek, eachDayOfInterval, formatISO, parseISO, getDay, differenceInDays, format, addMinutes, getWeek, subDays, addDays } from 'date-fns';
 import { de } from 'date-fns/locale';
+
+// ============================================================================
+// AUTO-COMPLETE OVERDUE SHIFTS ON PAGE VISIT
+// ============================================================================
+
+export async function checkAndCompleteOverdueShifts(): Promise<{
+  success: boolean;
+  message: string;
+  updated_count: number;
+  time_entries_created: number;
+}> {
+  try {
+    console.log("[PLANNING] Checking for overdue shifts on page visit...");
+
+    const result = await markOverdueShiftsAsCompleted();
+
+    if (result.success && result.updated_count > 0) {
+      console.log("[PLANNING] Completed:", result.updated_count, "shifts,", result.time_entries_created, "time entries");
+    }
+
+    return result;
+  } catch (error: any) {
+    console.error("[PLANNING] Error checking overdue shifts:", error);
+    return { success: false, message: error.message, updated_count: 0, time_entries_created: 0 };
+  }
+}
 
 export interface EmployeePlanningData {
   name: string;

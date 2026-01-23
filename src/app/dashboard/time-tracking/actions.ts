@@ -251,6 +251,7 @@ export async function generateTimeEntriesFromShifts(
     console.log("[GENERATE-TIME-ENTRIES] Starting time entry generation:", { startDate, endDate });
 
     // 1. Fetch completed shifts with their employees and related data
+    // Note: shifts table has order_id, not job_id. Join via orders to get customer_id/object_id
     const { data: shifts, error: shiftsError } = await supabaseAdmin
       .from("shifts")
       .select(`
@@ -261,7 +262,7 @@ export async function generateTimeEntriesFromShifts(
         estimated_hours,
         status,
         assignment_id,
-        job_id,
+        order_id,
         notes,
         shift_employees (
           id,
@@ -278,7 +279,7 @@ export async function generateTimeEntriesFromShifts(
             last_name
           )
         ),
-        jobs!inner (
+        orders!inner (
           id,
           customer_id,
           object_id
@@ -325,74 +326,11 @@ export async function generateTimeEntriesFromShifts(
           continue;
         }
 
-        // Calculate duration from actual hours or estimated hours
-        let durationMinutes: number | null = null;
-        if (se.actual_hours) {
-          durationMinutes = Number(se.actual_hours) * 60;
-        } else if (shift.estimated_hours) {
-          durationMinutes = Number(shift.estimated_hours) * 60;
+        // Build time entry data
+        const timeEntryData = buildTimeEntryData(shift, se, employee);
+        if (timeEntryData) {
+          timeEntriesToCreate.push(timeEntryData);
         }
-
-        // Calculate break based on duration
-        let breakMinutes = 0;
-        if (durationMinutes !== null) {
-          breakMinutes = calculateBreakMinutesFallback(durationMinutes);
-        }
-
-        // Build datetime from shift_date and start_time/end_time
-        // IMPORTANT: Shift times are stored as local time (TIME type), so we need to preserve them
-        // by creating the timestamp with the correct timezone offset (Europe/Berlin = UTC+1 in winter)
-        let startTime: string | null = null;
-        let endTime: string | null = null;
-
-        if (shift.start_time && shift.shift_date) {
-          // Create timestamp with explicit timezone offset to preserve local time
-          // Europe/Berlin is UTC+1 in winter, UTC+2 in summer
-          const month = parseInt(shift.shift_date.split('-')[1]);
-          const offset = (month >= 3 && month <= 10) ? '+02:00' : '+01:00'; // DST aware
-          startTime = `${shift.shift_date}T${shift.start_time}:00${offset}`;
-        }
-
-        if (shift.end_time && shift.shift_date) {
-          const month = parseInt(shift.shift_date.split('-')[1]);
-          const offset = (month >= 3 && month <= 10) ? '+02:00' : '+01:00';
-          let endTimestamp = `${shift.shift_date}T${shift.end_time}:00${offset}`;
-
-          // Handle overnight shifts
-          if (shift.start_time && shift.end_time) {
-            const [startH] = shift.start_time.split(':').map(Number);
-            const [endH] = shift.end_time.split(':').map(Number);
-            if (endH < startH) {
-              // End time is next day - add one day to the date
-              const nextDay = new Date(shift.shift_date);
-              nextDay.setDate(nextDay.getDate() + 1);
-              const nextDayStr = nextDay.toISOString().split('T')[0];
-              endTimestamp = `${nextDayStr}T${shift.end_time}:00${offset}`;
-            }
-          }
-
-          endTime = endTimestamp;
-        }
-
-        // Get customer_id and object_id from jobs
-        const jobArray = Array.isArray(shift.jobs) ? shift.jobs : [shift.jobs].filter(Boolean);
-        const job = jobArray[0];
-
-        timeEntriesToCreate.push({
-          user_id: employee.user_id,
-          employee_id: employee.id,
-          customer_id: job?.customer_id || null,
-          object_id: job?.object_id || null,
-          order_id: null, // Jobs don't have direct order relationship in this schema
-          shift_id: shift.id,
-          start_time: startTime,
-          end_time: endTime,
-          duration_minutes: durationMinutes,
-          break_minutes: breakMinutes,
-          type: 'shift',
-          notes: shift.notes || null,
-          created_at: new Date().toISOString(),
-        });
       }
     }
 
@@ -434,6 +372,201 @@ export async function generateTimeEntriesFromShifts(
   } catch (error: any) {
     console.error("[GENERATE-TIME-ENTRIES] Error:", error);
     return { success: false, message: `Fehler: ${error.message}`, created: 0, skipped: 0 };
+  }
+}
+
+// ============================================================================
+// HELPER: Build time entry data for a single shift-employee combination
+// ============================================================================
+
+function buildTimeEntryData(shift: any, shiftEmployee: any, employee: any): any | null {
+  // Calculate duration from actual hours or estimated hours
+  let durationMinutes: number | null = null;
+  if (shiftEmployee.actual_hours) {
+    durationMinutes = Number(shiftEmployee.actual_hours) * 60;
+  } else if (shift.estimated_hours) {
+    durationMinutes = Number(shift.estimated_hours) * 60;
+  }
+
+  // Calculate break based on duration
+  let breakMinutes = 0;
+  if (durationMinutes !== null) {
+    breakMinutes = calculateBreakMinutesFallback(durationMinutes);
+  }
+
+  // Build datetime from shift_date and start_time/end_time
+  // IMPORTANT: Shift times are stored as local time (TIME type), so we need to preserve them
+  // by creating the timestamp with the correct timezone offset (Europe/Berlin = UTC+1 in winter)
+  let startTime: string | null = null;
+  let endTime: string | null = null;
+
+  if (shift.start_time && shift.shift_date) {
+    // Create timestamp with explicit timezone offset to preserve local time
+    // Europe/Berlin is UTC+1 in winter, UTC+2 in summer
+    const month = parseInt(shift.shift_date.split('-')[1]);
+    const offset = (month >= 3 && month <= 10) ? '+02:00' : '+01:00'; // DST aware
+    startTime = `${shift.shift_date}T${shift.start_time}:00${offset}`;
+  }
+
+  if (shift.end_time && shift.shift_date) {
+    const month = parseInt(shift.shift_date.split('-')[1]);
+    const offset = (month >= 3 && month <= 10) ? '+02:00' : '+01:00';
+    let endTimestamp = `${shift.shift_date}T${shift.end_time}:00${offset}`;
+
+    // Handle overnight shifts
+    if (shift.start_time && shift.end_time) {
+      const [startH] = shift.start_time.split(':').map(Number);
+      const [endH] = shift.end_time.split(':').map(Number);
+      if (endH < startH) {
+        // End time is next day - add one day to the date
+        const nextDay = new Date(shift.shift_date);
+        nextDay.setDate(nextDay.getDate() + 1);
+        const nextDayStr = nextDay.toISOString().split('T')[0];
+        endTimestamp = `${nextDayStr}T${shift.end_time}:00${offset}`;
+      }
+    }
+
+    endTime = endTimestamp;
+  }
+
+  // Get customer_id and object_id from orders (shifts join orders via order_id)
+  const orderArray = Array.isArray(shift.orders) ? shift.orders : [shift.orders].filter(Boolean);
+  const order = orderArray[0];
+
+  return {
+    user_id: employee.user_id,
+    employee_id: employee.id,
+    customer_id: order?.customer_id || null,
+    object_id: order?.object_id || null,
+    order_id: order?.id || null,
+    shift_id: shift.id,
+    start_time: startTime,
+    end_time: endTime,
+    duration_minutes: durationMinutes,
+    break_minutes: breakMinutes,
+    type: 'shift',
+    notes: shift.notes || null,
+    created_at: new Date().toISOString(),
+  };
+}
+
+// ============================================================================
+// GENERATE TIME ENTRIES FOR A SINGLE SHIFT (used when shift is completed)
+// ============================================================================
+
+export async function generateTimeEntriesForShift(shiftId: string): Promise<{ success: boolean; message: string; created: number }> {
+  const supabaseAdmin = createAdminClient();
+
+  try {
+    console.log("[GENERATE-TIME-ENTRIES-SINGLE] Generating time entries for shift:", shiftId);
+
+    // 1. Fetch the completed shift with its employees and related data
+    const { data: shift, error: shiftError } = await supabaseAdmin
+      .from("shifts")
+      .select(`
+        id,
+        shift_date,
+        start_time,
+        end_time,
+        estimated_hours,
+        status,
+        assignment_id,
+        order_id,
+        notes,
+        shift_employees (
+          id,
+          employee_id,
+          role,
+          is_confirmed,
+          actual_start_time,
+          actual_end_time,
+          actual_hours,
+          employees!inner (
+            id,
+            user_id,
+            first_name,
+            last_name
+          )
+        ),
+        orders!inner (
+          id,
+          customer_id,
+          object_id
+        )
+      `)
+      .eq("id", shiftId)
+      .eq("status", "completed")
+      .single();
+
+    if (shiftError) {
+      console.error("[GENERATE-TIME-ENTRIES-SINGLE] Shift not found or not completed:", shiftError);
+      return { success: false, message: "Shift nicht gefunden oder nicht abgeschlossen.", created: 0 };
+    }
+
+    // 2. Fetch existing time entries for this shift to avoid duplicates
+    const { data: existingTimeEntries, error: existingError } = await supabaseAdmin
+      .from("time_entries")
+      .select("employee_id")
+      .eq("shift_id", shiftId);
+
+    if (existingError) throw existingError;
+
+    // Build a set of existing employee IDs
+    const existingEmployees = new Set((existingTimeEntries || []).map(e => e.employee_id));
+
+    // 3. Build and insert time entries for employees without existing entries
+    const timeEntriesToCreate: any[] = [];
+    let skippedCount = 0;
+
+    for (const se of (shift.shift_employees || [])) {
+      const empArray = Array.isArray(se.employees) ? se.employees : [se.employees].filter(Boolean);
+      const employee = empArray[0];
+      if (!employee) continue;
+
+      // Check if time entry already exists for this shift-employee combination
+      if (existingEmployees.has(employee.id)) {
+        console.log(`[GENERATE-TIME-ENTRIES-SINGLE] Skipping employee ${employee.id.slice(0, 8)} - already has time entry`);
+        skippedCount++;
+        continue;
+      }
+
+      // Build time entry data
+      const timeEntryData = buildTimeEntryData(shift, se, employee);
+      if (timeEntryData) {
+        timeEntriesToCreate.push(timeEntryData);
+      }
+    }
+
+    if (timeEntriesToCreate.length === 0) {
+      console.log("[GENERATE-TIME-ENTRIES-SINGLE] No new time entries to create");
+      return { success: true, message: "Keine neuen Zeiteinträge erforderlich.", created: 0 };
+    }
+
+    // 4. Insert time entries
+    const { data: insertedEntries, error: insertError } = await supabaseAdmin
+      .from("time_entries")
+      .insert(timeEntriesToCreate)
+      .select("id");
+
+    if (insertError) {
+      console.error("[GENERATE-TIME-ENTRIES-SINGLE] Error inserting time entries:", insertError);
+      return { success: false, message: `Fehler beim Erstellen der Zeiteinträge: ${insertError.message}`, created: 0 };
+    }
+
+    const createdCount = insertedEntries?.length || 0;
+    console.log(`[GENERATE-TIME-ENTRIES-SINGLE] Successfully created ${createdCount} time entries, skipped ${skippedCount}`);
+
+    revalidatePath("/dashboard/planning");
+    revalidatePath("/dashboard/time-tracking");
+
+    return {
+      success: true,
+      message: `${createdCount} Zeiteintrag${createdCount === 1 ? '' : 'e'} automatisch erstellt.`,
+      created: createdCount,
+    };
+  } catch (error: any) {
+    console.error("[GENERATE-TIME-ENTRIES-SINGLE] Error:", error);
+    return { success: false, message: `Fehler: ${error.message}`, created: 0 };
   }
 }
 

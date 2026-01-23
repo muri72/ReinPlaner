@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient, createAdminClient } from "@/lib/supabase/server";
+import { generateTimeEntriesForShift } from "@/app/dashboard/time-tracking/actions";
 import { revalidatePath } from "next/cache";
 import { sendNotification } from "@/lib/actions/notifications";
 import {
@@ -1108,6 +1109,15 @@ export async function updateShiftStatus(
       .eq("id", shiftId);
 
     if (error) throw error;
+
+    // Automatically generate time entries when shift is marked as completed
+    if (status === "completed") {
+      const timeEntryResult = await generateTimeEntriesForShift(shiftId);
+      if (!timeEntryResult.success) {
+        console.warn("[updateShiftStatus] Time entry generation failed:", timeEntryResult.message);
+        // Don't fail the whole operation if time entry creation fails
+      }
+    }
 
     revalidatePath("/dashboard/planning");
     return { success: true, message: "Status erfolgreich aktualisiert." };
@@ -2708,6 +2718,7 @@ export async function markOverdueShiftsAsCompleted(): Promise<{
   success: boolean;
   message: string;
   updated_count: number;
+  time_entries_created: number;
 }> {
   const supabaseAdmin = createAdminClient();
 
@@ -2735,7 +2746,9 @@ export async function markOverdueShiftsAsCompleted(): Promise<{
     }
 
     let updatedCount = 0;
+    let timeEntriesCreated = 0;
     const nowDateStr = formatISO(today, { representation: "date" });
+    const completedShiftIds: string[] = [];
 
     for (const shift of shiftsToUpdate || []) {
       const shiftDate = parseISO(shift.shift_date);
@@ -2772,20 +2785,30 @@ export async function markOverdueShiftsAsCompleted(): Promise<{
           console.error("[MARK-OVERDUE] Error updating shift", shift.id, ":", updateError);
         } else {
           updatedCount++;
+          completedShiftIds.push(shift.id);
         }
       }
     }
 
-    console.log("[MARK-OVERDUE] Completed. Updated", updatedCount, "shifts");
+    // Generate time entries for all newly completed shifts
+    for (const shiftId of completedShiftIds) {
+      const timeEntryResult = await generateTimeEntriesForShift(shiftId);
+      if (timeEntryResult.success) {
+        timeEntriesCreated += timeEntryResult.created;
+      }
+    }
+
+    console.log("[MARK-OVERDUE] Completed. Updated", updatedCount, "shifts, created", timeEntriesCreated, "time entries");
 
     return {
       success: true,
-      message: `${updatedCount} überfällige Einsätze wurden auf "abgeschlossen" gesetzt.`,
+      message: `${updatedCount} überfällige Einsätze wurden auf "abgeschlossen" gesetzt. ${timeEntriesCreated > 0 ? `${timeEntriesCreated} Zeiteinträge erstellt.` : ''}`,
       updated_count: updatedCount,
+      time_entries_created: timeEntriesCreated,
     };
   } catch (error: any) {
     console.error("[MARK-OVERDUE] Error:", error.message);
-    return { success: false, message: error.message, updated_count: 0 };
+    return { success: false, message: error.message, updated_count: 0, time_entries_created: 0 };
   }
 }
 
