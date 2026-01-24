@@ -660,15 +660,15 @@ export async function getShiftPlanningData(
         }
 
         // DEBUG: Log shift detection info
-        console.log(`[DEBUG] ${employee.first_name} ${employee.last_name} - ${dateString} - shiftsForDay:`, shiftsForDay.map(s => ({
-          orderId: s.orderId,
-          shiftId: s.shiftId?.slice(0, 8),
-          startTime: s.startTime,
-          endTime: s.endTime,
-          hours: s.hours,
-          orderTitle: s.orderTitle
-        })));
-        console.log(`[DEBUG] ${dateString} - shiftIdsByOrderDate:`, Object.entries(shiftIdsByOrderDate).map(([k, v]) => ({ key: k, count: v.size, ids: Array.from(v).map((id: any) => id?.slice(0, 8)) })));
+        // console.log(`[DEBUG] ${employee.first_name} ${employee.last_name} - ${dateString} - shiftsForDay:`, shiftsForDay.map(s => ({
+        //   orderId: s.orderId,
+        //   shiftId: s.shiftId?.slice(0, 8),
+        //   startTime: s.startTime,
+        //   endTime: s.endTime,
+        //   hours: s.hours,
+        //   orderTitle: s.orderTitle
+        // })));
+        // console.log(`[DEBUG] ${dateString} - shiftIdsByOrderDate:`, Object.entries(shiftIdsByOrderDate).map(([k, v]) => ({ key: k, count: v.size, ids: Array.from(v).map((id: any) => id?.slice(0, 8)) })));
 
         // OPTIMIZED: Use pre-built teamMembersByOrderDate lookup map instead of O(n²) loop
         // Get team members from lookup map
@@ -714,16 +714,16 @@ export async function getShiftPlanningData(
           const isMultiShift = hasMultipleShifts;
 
           // DEBUG: Log detection result
-          console.log(`[DEBUG] ${dateString} - Shift ${shiftData.shiftId?.slice(0, 8)}:`, {
-            orderId: shiftData.orderId,
-            orderTitle: shiftData.orderTitle,
-            teamMembersCount: teamMembersForThisOrder.length,
-            uniqueShiftIdsCount: uniqueShiftIds?.size || 0,
-            hasMultipleShifts,
-            isTeam,
-            isMultiShift,
-            shiftId: shiftData.shiftId
-          });
+          // console.log(`[DEBUG] ${dateString} - Shift ${shiftData.shiftId?.slice(0, 8)}:`, {
+          //   orderId: shiftData.orderId,
+          //   orderTitle: shiftData.orderTitle,
+          //   teamMembersCount: teamMembersForThisOrder.length,
+          //   uniqueShiftIdsCount: uniqueShiftIds?.size || 0,
+          //   hasMultipleShifts,
+          //   isTeam,
+          //   isMultiShift,
+          //   shiftId: shiftData.shiftId
+          // });
 
           // Determine status based on date AND time (PlanD style):
           // - Past dates → "completed" (green)

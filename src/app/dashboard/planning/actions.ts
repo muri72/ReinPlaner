@@ -114,6 +114,30 @@ export async function getPlanningDataForRange(startDate: Date, endDate: Date, fi
     const extendedStartDate = formatISO(subDays(startDate, 14), { representation: 'date' });
     const extendedEndDate = formatISO(addDays(endDate, 14), { representation: 'date' });
     const supabaseAdmin = createAdminClient();
+
+    // First: Generate shifts for orders with start_date before the visible range
+    // This ensures orders like "start_date: 2026-01-01" are included even when viewing Jan 20-26
+    const { data: earlyOrders } = await supabaseAdmin
+      .from('orders')
+      .select('id, start_date')
+      .eq('request_status', 'approved')
+      .neq('status', 'completed')
+      .neq('status', 'cancelled')
+      .lt('start_date', extendedStartDate);
+
+    if (earlyOrders && earlyOrders.length > 0) {
+      // Generate shifts from each order's start_date to the extended end date
+      for (const order of earlyOrders) {
+        if (order.start_date) {
+          await supabaseAdmin.rpc('generate_shifts_for_date_range', {
+            p_start_date: order.start_date,
+            p_end_date: extendedEndDate
+          });
+        }
+      }
+    }
+
+    // Second: Generate shifts for the visible range as before
     const { data: shiftGenResult } = await supabaseAdmin.rpc('generate_shifts_for_date_range', {
       p_start_date: extendedStartDate,
       p_end_date: extendedEndDate

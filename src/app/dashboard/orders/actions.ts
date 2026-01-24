@@ -85,6 +85,16 @@ export async function createOrder(data: OrderFormValues) {
     if (assignError) {
       console.error("Fehler beim Speichern der Mitarbeiterzuweisungen:", assignError?.message || assignError);
     }
+
+    // Update time_entries based on current shift data
+    if (newOrder?.id && requestStatus === 'approved') {
+      try {
+        const supabaseAdmin = createAdminClient();
+        await supabaseAdmin.rpc('update_time_entries_from_shifts', { p_order_id: newOrder.id });
+      } catch (e) {
+        console.error("Fehler beim Aktualisieren von Time Entries:", e);
+      }
+    }
   }
 
   // Benachrichtigung bei neuer Anfrage
@@ -223,6 +233,13 @@ export async function updateOrder(orderId: string, data: OrderFormValues) {
       console.error("Fehler beim Einfügen neuer Mitarbeiterzuweisungen:", insertAssignError?.message || insertAssignError);
       return { success: false, message: `Fehler beim Aktualisieren der Zuweisungen: ${insertAssignError.message }` };
     }
+  }
+
+  // Update time_entries based on current shift data (in case schedule changed)
+  try {
+    await supabaseAdmin.rpc('update_time_entries_from_shifts', { p_order_id: orderId });
+  } catch (e) {
+    console.error("Fehler beim Aktualisieren von Time Entries:", e);
   }
 
   revalidatePath("/dashboard/orders");

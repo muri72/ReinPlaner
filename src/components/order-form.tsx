@@ -1374,7 +1374,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess, 
                         <h5 className="font-semibold text-sm">Woche {weekIndex + 1}</h5>
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
                           {dayNames.map(day => {
-                            const objectDayHours = objectWeekSchedule?.[day]?.hours;
+                            const objectDayHours = Number(objectWeekSchedule?.[day]?.hours) || 0;
                             const totalAssigned = getSumAssignedHoursForDay(weekIndex, day);
 
                             if (!objectDayHours || objectDayHours === 0) return null;
