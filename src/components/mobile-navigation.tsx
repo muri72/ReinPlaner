@@ -334,7 +334,7 @@ export function MobileNavigation({
                   : "text-muted-foreground hover:text-foreground",
               )}
             >
-              <item.icon className="mb-1 h-5 w-5" />
+              <item.icon className="mb-1 h-5 w-5" aria-hidden="true" />
               <span className="text-xs font-medium">{item.label}</span>
               {item.href === "/dashboard/notifications" && notificationCount > 0 && (
                 <Badge className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-xs text-white">
@@ -359,6 +359,7 @@ export function MobileNavigation({
               variant="ghost"
               size="sm"
               className="flex flex-col items-center justify-center py-2 px-3 rounded-lg"
+              aria-label="Menü"
             >
               <Menu className="mb-1 h-5 w-5" />
               <span className="text-xs font-medium">Mehr</span>

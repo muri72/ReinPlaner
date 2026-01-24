@@ -115,7 +115,7 @@ export function NotificationBell() {
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative h-9 w-9">
+        <Button variant="ghost" size="icon" className="relative h-9 w-9" aria-label="Benachrichtigungen">
           {unreadCount > 0 ? (
             <BellRing className="h-4 w-4 text-destructive" />
           ) : (

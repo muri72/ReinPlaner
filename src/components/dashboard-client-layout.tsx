@@ -101,7 +101,7 @@ export function DashboardClientLayout({ children, onSignOut }: DashboardClientLa
       <header className="md:hidden fixed top-0 left-0 w-full bg-sidebar text-sidebar-foreground border-b border-sidebar-border p-4 flex items-center justify-between z-50 glassmorphism-card">
         <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
           <SheetTrigger asChild>
-            <Button variant="ghost" size="icon">
+            <Button variant="ghost" size="icon" aria-label="Menü öffnen">
               <Menu className="h-7 w-7" />
             </Button>
           </SheetTrigger>
@@ -168,6 +168,7 @@ export function DashboardClientLayout({ children, onSignOut }: DashboardClientLa
             size="icon"
             onClick={() => setIsCollapsed(!isCollapsed)}
             className="mt-4"
+            aria-label={isCollapsed ? "Sidebar erweitern" : "Sidebar minimieren"}
           >
             {isCollapsed ? (
               <ChevronRight className="h-6 w-6" />

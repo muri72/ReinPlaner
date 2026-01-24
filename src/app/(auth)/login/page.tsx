@@ -261,7 +261,7 @@ export default function LoginPage() {
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                         </svg>
-                        E-Mail wird gesendet...
+                        E-Mail wird gesendet…
                       </span>
                     ) : (
                       <span className="flex items-center gap-2">
@@ -331,7 +331,7 @@ export default function LoginPage() {
                         onFocus={() => setFocusedField('password')}
                         onBlur={() => setFocusedField(null)}
                         required
-                        autoComplete="off"
+                        autoComplete="current-password"
                         className={`pl-12 h-12 bg-slate-50 border-slate-200 rounded-xl transition-all duration-300 [::-ms-reveal]:hidden [::-webkit-appearance:none] ${
                           focusedField === 'password'
                             ? 'border-blue-400 bg-white ring-4 ring-blue-500/10'
@@ -374,7 +374,7 @@ export default function LoginPage() {
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                         </svg>
-                        Anmeldung läuft...
+                        Anmeldung läuft…
                       </span>
                     ) : (
                       <span className="flex items-center gap-2">
