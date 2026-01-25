@@ -237,6 +237,7 @@ export async function updateOrder(orderId: string, data: OrderFormValues) {
 
   // Update time_entries based on current shift data (in case schedule changed)
   try {
+    const supabaseAdmin = await createAdminClient();
     await supabaseAdmin.rpc('update_time_entries_from_shifts', { p_order_id: orderId });
   } catch (e) {
     console.error("Fehler beim Aktualisieren von Time Entries:", e);
