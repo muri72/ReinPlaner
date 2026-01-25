@@ -21,6 +21,7 @@ import { UnsavedChangesProtection } from "@/components/ui/unsaved-changes-dialog
 import { UnsavedChangesAlert } from "@/components/ui/unsaved-changes-alert";
 import { CalendarDays, FileText, Settings, User } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { parseLocalDate } from "@/lib/utils";
 
 // Define the schema for absence request form values
 export const absenceRequestSchema = z.object({
@@ -57,8 +58,16 @@ export function AbsenceRequestForm({ initialData, onSubmit, submitButtonText, on
 
   const resolvedDefaultValues: AbsenceRequestFormValues = {
     employeeId: initialData?.employeeId ?? "",
-    startDate: initialData?.startDate ? new Date(initialData.startDate) : new Date(),
-    endDate: initialData?.endDate ? new Date(initialData.endDate) : new Date(),
+    startDate: initialData?.startDate
+      ? (typeof initialData.startDate === 'string'
+          ? parseLocalDate(initialData.startDate) || new Date(initialData.startDate)
+          : new Date(initialData.startDate))
+      : new Date(),
+    endDate: initialData?.endDate
+      ? (typeof initialData.endDate === 'string'
+          ? parseLocalDate(initialData.endDate) || new Date(initialData.endDate)
+          : new Date(initialData.endDate))
+      : new Date(),
     type: initialData?.type ?? "vacation",
     status: initialData?.status ?? "pending",
     notes: initialData?.notes ?? null,

@@ -61,26 +61,27 @@ export const calculateStartTime = (endTime: string, durationHours: number): stri
   return `${String(startH).padStart(2, '0')}:${String(startM).padStart(2, '0')}`;
 };
 
-// Helper to convert ISO date string (YYYY-MM-DD) to local Date object
-// This prevents timezone issues where UTC date appears as previous day
+// Helper to convert ISO date string (YYYY-MM-DD) to Date object using UTC
+// This ensures consistent date handling across timezones
 export const parseLocalDate = (dateString: string | null | undefined): Date | null => {
   if (!dateString) return null;
 
   // dateString format: "YYYY-MM-DD"
   const [year, month, day] = dateString.split('-').map(Number);
 
-  // Create date in local timezone
-  return new Date(year, month - 1, day);
+  // Use UTC at noon to avoid timezone issues at midnight
+  return new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
 };
 
-// Helper to convert Date object to YYYY-MM-DD string in local timezone
-// This prevents timezone issues where toISOString() shifts the date
+// Helper to convert Date object to YYYY-MM-DD string using UTC
+// This ensures consistent output regardless of local timezone
 export const formatDateToYMD = (date: Date | null | undefined): string | null => {
   if (!date) return null;
 
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
+  // Use UTC methods to get consistent date parts
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(date.getUTCDate()).padStart(2, '0');
 
   return `${year}-${month}-${day}`;
 };

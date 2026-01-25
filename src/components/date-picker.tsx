@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { format, parse, isValid } from "date-fns";
-import { de } from "date-fns/locale"; // Import German locale
+import { de } from "date-fns/locale";
 import { Calendar as CalendarIcon } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -34,23 +34,48 @@ export function DatePicker({ label, placeholder, value, onChange, disabled, erro
     const text = e.target.value;
     setInputValue(text);
 
-    // Versuche, das Datum zu parsen, wenn die Länge 10 (DD.MM.YYYY) erreicht ist
+    // Parse date when length is 10 (DD.MM.YYYY format)
     if (text.length === 10) {
-      const parsedDate = parse(text, "dd.MM.yyyy", new Date(), { locale: de });
+      const referenceDate = new Date(Date.UTC(
+        new Date().getFullYear(),
+        new Date().getMonth(),
+        new Date().getDate(),
+        12, 0, 0
+      ));
+      const parsedDate = parse(text, "dd.MM.yyyy", referenceDate, { locale: de });
+
       if (isValid(parsedDate)) {
-        onChange(parsedDate);
+        // Create UTC date using local values to avoid timezone shifts
+        const correctedDate = new Date(Date.UTC(
+          parsedDate.getUTCFullYear(),
+          parsedDate.getUTCMonth(),
+          parsedDate.getUTCDate(),
+          12, 0, 0
+        ));
+        onChange(correctedDate);
       } else {
-        onChange(null); // Ungültiges Datum
+        onChange(null);
       }
-    } else {
-      // Bei teilweiser Eingabe oder ungültigem Format wird der Wert nicht sofort aktualisiert
-      // Dies ermöglicht dem Benutzer, die Eingabe zu vervollständigen
     }
   };
 
   const handleDateSelect = (date: Date | undefined) => {
-    onChange(date || null);
-    setInputValue(date ? format(date, "dd.MM.yyyy", { locale: de }) : "");
+    if (!date) {
+      onChange(null);
+      setInputValue("");
+      return;
+    }
+
+    // Extract LOCAL values (which are correct from the calendar)
+    const localYear = date.getFullYear();
+    const localMonth = date.getMonth();
+    const localDay = date.getDate();
+
+    // Create a consistent UTC date at noon to avoid timezone issues
+    const correctedDate = new Date(Date.UTC(localYear, localMonth, localDay, 12, 0, 0));
+
+    onChange(correctedDate);
+    setInputValue(format(correctedDate, "dd.MM.yyyy", { locale: de }));
   };
 
   return (
@@ -66,7 +91,7 @@ export function DatePicker({ label, placeholder, value, onChange, disabled, erro
               onChange={handleInputChange}
               disabled={disabled}
               className={cn(
-                "w-full pl-10", // Platz für das Icon
+                "w-full pl-10",
                 !value && "text-muted-foreground"
               )}
             />
@@ -79,7 +104,7 @@ export function DatePicker({ label, placeholder, value, onChange, disabled, erro
             selected={value || undefined}
             onSelect={handleDateSelect}
             initialFocus
-            locale={de} // Kalender auf Deutsch einstellen
+            locale={de}
           />
         </PopoverContent>
       </Popover>

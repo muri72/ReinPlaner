@@ -20,7 +20,7 @@ import { createClient } from "@/lib/supabase/client";
 import { CustomerContactCreateGeneralDialog } from "@/components/customer-contact-create-general-dialog";
 import { DatePicker } from "@/components/date-picker";
 import { handleActionResponse } from "@/lib/toast-utils";
-import { cn, calculateEndTime, calculateStartTime } from "@/lib/utils";
+import { cn, calculateEndTime, calculateStartTime, parseLocalDate } from "@/lib/utils";
 import { MultiSelectEmployees } from "@/components/multi-select-employees";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ObjectCreateDialog } from "@/components/object-create-dialog";
@@ -159,8 +159,12 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess, 
     objectId: initialData?.objectId ?? null,
     customerContactId: initialData?.customerContactId ?? null,
     orderType: initialData?.orderType ?? "one_time",
-    startDate: initialData?.startDate ? new Date(initialData.startDate) : null,
-    endDate: initialData?.endDate ? new Date(initialData.endDate) : null,
+    startDate: initialData?.startDate
+      ? (typeof initialData.startDate === 'string' ? parseLocalDate(initialData.startDate) : new Date(initialData.startDate))
+      : null,
+    endDate: initialData?.endDate
+      ? (typeof initialData.endDate === 'string' ? parseLocalDate(initialData.endDate) : new Date(initialData.endDate))
+      : null,
     priority: initialData?.priority ?? "low",
     totalEstimatedHours: (initialData?.totalEstimatedHours as number | null | undefined) ?? null,
     fixedMonthlyPrice: (initialData?.fixedMonthlyPrice as number | null | undefined) ?? null,
@@ -218,8 +222,11 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess, 
 
       // Set dates with null checks
       if (initialData?.startDate) {
-        const startDate = initialData.startDate instanceof Date ? initialData.startDate : new Date(initialData.startDate);
-        if (!isNaN(startDate.getTime())) {
+        // Use parseLocalDate to avoid timezone issues
+        const startDate = initialData.startDate instanceof Date
+          ? initialData.startDate
+          : (typeof initialData.startDate === 'string' ? parseLocalDate(initialData.startDate) : new Date(initialData.startDate));
+        if (startDate && !isNaN(startDate.getTime())) {
           form.setValue("startDate", startDate, { shouldValidate: false });
         }
       } else {
@@ -227,8 +234,11 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess, 
       }
 
       if (initialData?.endDate) {
-        const endDate = initialData.endDate instanceof Date ? initialData.endDate : new Date(initialData.endDate);
-        if (!isNaN(endDate.getTime())) {
+        // Use parseLocalDate to avoid timezone issues
+        const endDate = initialData.endDate instanceof Date
+          ? initialData.endDate
+          : (typeof initialData.endDate === 'string' ? parseLocalDate(initialData.endDate) : new Date(initialData.endDate));
+        if (endDate && !isNaN(endDate.getTime())) {
           form.setValue("endDate", endDate, { shouldValidate: false });
         }
       } else {
