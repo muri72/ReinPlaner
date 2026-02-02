@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Pencil, UserCog, FileStack } from "lucide-react";
@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DocumentUploader } from "@/components/document-uploader";
 import { DocumentList } from "@/components/document-list";
 import { DialogTrigger } from "@/components/ui/dialog";
+import { createClient } from "@/lib/supabase/client";
 
 interface EmployeeEditDialogProps {
   employee: {
@@ -37,6 +38,9 @@ interface EmployeeEditDialogProps {
     default_daily_schedules: any[];
     default_recurrence_interval_weeks: number;
     default_start_week_offset: number;
+    working_days_per_week: number | null;
+    contract_hours_per_week: number | null;
+    vacation_balance: number | null;
   };
   trigger?: React.ReactNode;
   onActionSuccess?: () => void;
@@ -44,12 +48,38 @@ interface EmployeeEditDialogProps {
 
 export function EmployeeEditDialog({ employee, trigger, onActionSuccess }: EmployeeEditDialogProps) {
   const router = useRouter();
+  const supabase = createClient();
   const [internalOpen, setInternalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("details");
+  const [currentEmployee, setCurrentEmployee] = useState(employee);
+  const [loadCount, setLoadCount] = useState(0);
+  const prevOpenRef = useRef<boolean>(false);
 
-  const setOpenState = (next: boolean) => {
-    setInternalOpen(next);
-  };
+  // Use useEffect to detect when dialog opens (transition from false to true)
+  useEffect(() => {
+    // Detect transition from closed to open
+    if (internalOpen && !prevOpenRef.current) {
+      const fetchFreshData = async () => {
+        try {
+          const { data: freshEmployee, error } = await supabase
+            .from('employees')
+            .select('*')
+            .eq('id', employee.id)
+            .single();
+
+          if (!error && freshEmployee) {
+            setCurrentEmployee(freshEmployee);
+            setLoadCount(c => c + 1);
+          }
+        } catch (err) {
+          // Silent fail - the initial employee data will be used as fallback
+        }
+      };
+      fetchFreshData();
+    }
+    // Update prevOpenRef after checking
+    prevOpenRef.current = internalOpen;
+  }, [internalOpen, employee.id, supabase]);
 
   const handleUpdate = async (data: EmployeeFormValues) => {
     const result = await updateEmployee(employee.id, data);
@@ -65,9 +95,11 @@ export function EmployeeEditDialog({ employee, trigger, onActionSuccess }: Emplo
   return (
     <RecordDialog
       open={internalOpen}
-      onOpenChange={setOpenState}
+      onOpenChange={(open) => {
+        setInternalOpen(open);
+      }}
       title="Mitarbeiter bearbeiten"
-      description={`Bearbeiten Sie die Details für ${employee.first_name} ${employee.last_name}.`}
+      description={`Bearbeiten Sie die Details für ${currentEmployee.first_name} ${currentEmployee.last_name}.`}
       icon={<UserCog className="h-5 w-5 text-primary" />}
       size="lg"
     >
@@ -91,8 +123,8 @@ export function EmployeeEditDialog({ employee, trigger, onActionSuccess }: Emplo
         <div className="flex-1 overflow-hidden">
           <TabsContent value="details" className="h-full m-0 p-0">
             <EmployeeForm
-              key={`employee-form-${employee.id}`}
-              initialData={employee as any}
+              key={`employee-form-${employee.id}-${loadCount}`}
+              initialData={currentEmployee as any}
               onSubmit={handleUpdate}
               submitButtonText="Änderungen speichern"
               onSuccess={() => setInternalOpen(false)}
@@ -106,10 +138,10 @@ export function EmployeeEditDialog({ employee, trigger, onActionSuccess }: Emplo
                 <FileStack className="mr-2 h-5 w-5" /> Dokumente
               </h3>
               <DocumentUploader
-                associatedEmployeeId={employee.id}
+                associatedEmployeeId={currentEmployee.id}
                 onDocumentUploaded={() => {}}
               />
-              <DocumentList associatedEmployeeId={employee.id} />
+              <DocumentList associatedEmployeeId={currentEmployee.id} />
             </div>
           </TabsContent>
         </div>

@@ -174,13 +174,10 @@ export async function getShiftPlanningData(
     // This creates missing shifts on-demand without duplicates
     const extendedStartDate = formatISO(subDays(startDate, 14), { representation: "date" });
     const extendedEndDate = formatISO(addDays(endDate, 14), { representation: "date" });
-    const { data: shiftGenResult } = await supabaseAdmin.rpc("generate_shifts_for_date_range", {
+    await supabaseAdmin.rpc("generate_shifts_for_date_range", {
       p_start_date: extendedStartDate,
       p_end_date: extendedEndDate,
     });
-    if (shiftGenResult && Array.isArray(shiftGenResult) && shiftGenResult[0]?.created_count > 0) {
-      console.log(`[SHIFT-PLANNING] Auto-generated ${shiftGenResult[0].created_count} shifts for date range`);
-    }
 
     // 1. Fetch all active employees
     let employeesQuery = supabase
@@ -249,30 +246,7 @@ export async function getShiftPlanningData(
       .lte("shift_date", endDateIso);
 
     if (shiftsError) {
-      console.warn("[PLANNING] Error fetching shifts:", shiftsError);
       // Continue without shifts - we'll generate them
-    }
-
-    // DEBUG: Log shift data for debugging
-    console.log("[PLANNING] Fetched shifts count:", existingShifts?.length || 0);
-    if (existingShifts && existingShifts.length > 0) {
-      const sibelShift = existingShifts.find((s: any) => s.id === 'eced5938-4e61-4489-8788-ab0579280768');
-      console.log("[PLANNING] Sibel shift found:", !!sibelShift);
-      console.log("[PLANNING] Sibel shift_employees:", sibelShift?.shift_employees);
-
-      // Find ALL shifts with Sibel as employee
-      const sibelEmployeeId = 'da426795-7a54-4367-9da3-9cccb680eec3';
-      const sibelShifts = existingShifts.filter((s: any) =>
-        s.shift_employees?.some((se: any) => se.employee_id === sibelEmployeeId)
-      );
-      console.log("[PLANNING] Sibel Demirova's shifts:", sibelShifts.map((s: any) => ({
-        id: s.id,
-        shift_date: s.shift_date,
-        start_time: s.start_time,
-        status: s.status,
-        order_id: s.order_id,
-        employees: s.shift_employees?.length
-      })));
     }
 
     // 4. Fetch assignments for the period (include inactive to show completed shifts after employee removal)
@@ -326,7 +300,6 @@ export async function getShiftPlanningData(
       const missingAssignmentIds = shiftAssignmentIds.filter((id: any) => !existingIds.has(id));
 
       if (missingAssignmentIds.length > 0) {
-        console.log("[PLANNING] Loading additional assignments for completed shifts:", missingAssignmentIds.length);
         const { data: additionalAssignments, error: additionalError } = await supabaseAdmin
           .from("order_employee_assignments")
           .select(`
@@ -343,39 +316,8 @@ export async function getShiftPlanningData(
           // Merge additional assignments with the main list
           const newAssignments = (additionalAssignments as any[]).filter(a => !existingIds.has(a.id));
           assignments = [...(assignments || []), ...newAssignments];
-          console.log("[PLANNING] Merged additional assignments:", newAssignments.length);
         }
       }
-    }
-
-    // DEBUG: Log data overview
-    console.log("[PLANNING] === DEBUG DATA OVERVIEW ===");
-    console.log("[PLANNING] Employees loaded:", employees?.length || 0);
-    console.log("[PLANNING] Assignments loaded:", assignments?.length || 0);
-    console.log("[PLANNING] Existing shifts loaded:", existingShifts?.length || 0);
-
-    // DEBUG: Log assignments per order
-    if (assignments?.length) {
-      const ordersWithAssignments: Record<string, string[]> = {};
-      for (const a of assignments) {
-        const orderTitle = a.orders?.title || 'Unknown';
-        const empName = `${a.employees?.first_name} ${a.employees?.last_name}`;
-        if (!ordersWithAssignments[orderTitle]) ordersWithAssignments[orderTitle] = [];
-        ordersWithAssignments[orderTitle].push(empName);
-      }
-      console.log("[PLANNING] Assignments per order:", ordersWithAssignments);
-    }
-
-    // DEBUG: Log existing shifts per order
-    if (existingShifts?.length) {
-      const shiftsPerDate: Record<string, string[]> = {};
-      for (const s of existingShifts) {
-        const date = s.shift_date;
-        const shiftId = s.id?.slice(0, 8);
-        if (!shiftsPerDate[date]) shiftsPerDate[date] = [];
-        shiftsPerDate[date].push(shiftId);
-      }
-      console.log("[PLANNING] Shifts per date:", shiftsPerDate);
     }
 
     // 5. PRE-BUILD TEAM MEMBERS LOOKUP MAP (Performance Optimization)
@@ -540,12 +482,10 @@ export async function getShiftPlanningData(
         // SPECIAL CASE: For completed shifts with no shift_employees (employee was removed),
         // still show the shift using the original assignment's employee_id
         if (shiftEmployees.length === 0 && shift.status === 'completed' && assignment?.employee_id) {
-          console.log("[PLANNING] Completed shift without shift_employees, using assignment employee:", shift.id);
           shiftEmployees = [{ employee_id: assignment.employee_id, role: 'worker', is_confirmed: false }];
         }
 
         if (shiftEmployees.length === 0) {
-          console.log("[PLANNING] Shift has no employee assignment:", shift.id);
           continue;
         }
 
@@ -609,7 +549,7 @@ export async function getShiftPlanningData(
         if (absence) {
           employeeSchedule[dateString].isAbsence = true;
           employeeSchedule[dateString].absenceType = absence.type;
-          continue;
+          // Don't continue - still process shifts so they show as "open" for substitution
         }
 
         // Calculate available hours from default schedule
@@ -883,24 +823,6 @@ export async function getShiftPlanningData(
       unassignedShifts,
       weekNumber,
     };
-
-    // DEBUG: Log final planning data summary
-    console.log("[PLANNING] === FINAL PLANNING DATA ===");
-    console.log("[PLANNING] Total employees in planningData:", Object.keys(planningData).length);
-    for (const [empId, empData] of Object.entries(planningData)) {
-      let totalShifts = 0;
-      const datesWithShifts: string[] = [];
-      for (const [date, schedule] of Object.entries(empData.schedule)) {
-        totalShifts += schedule.shifts.length;
-        if (schedule.shifts.length > 0) {
-          datesWithShifts.push(`${date}: ${schedule.shifts.map((s: any) => s.orderTitle + '(' + s.shiftId?.slice(0,8) + ')').join(', ')}`);
-        }
-      }
-      if (empData.name.includes('Sibel') && totalShifts > 0) {
-        console.log(`[PLANNING] ${empData.name}: ${totalShifts} shifts total`);
-        datesWithShifts.forEach(d => console.log(`[PLANNING]   ${d}`));
-      }
-    }
 
     // Always revalidate to ensure fresh data after mutations
     revalidatePath("/dashboard/planning");
@@ -2624,8 +2546,6 @@ export async function copyShift(params: {
   }
 
   try {
-    console.log("[COPY-SHIFT] Starting copy:", params);
-
     // Get the source shift with all details
     const { data: sourceShift, error: fetchError } = await supabaseAdmin
       .from("shifts")
@@ -2642,15 +2562,8 @@ export async function copyShift(params: {
       .single();
 
     if (fetchError || !sourceShift) {
-      console.error("[COPY-SHIFT] Source shift not found:", fetchError);
       throw new Error("Quell-Einsatz nicht gefunden.");
     }
-
-    console.log("[COPY-SHIFT] Source shift:", {
-      id: sourceShift.id,
-      shift_date: sourceShift.shift_date,
-      employee_id: sourceShift.shift_employees?.[0]?.employee_id,
-    });
 
     // Create a copy of the shift (without is_manual since column may not exist)
     const { data: newShift, error: createError } = await supabaseAdmin
@@ -2670,11 +2583,8 @@ export async function copyShift(params: {
       .single();
 
     if (createError) {
-      console.error("[COPY-SHIFT] Error creating shift:", createError);
       throw createError;
     }
-
-    console.log("[COPY-SHIFT] Created new shift:", newShift.id);
 
     // Add the new employee to the shift
     await supabaseAdmin.from("shift_employees").insert({
@@ -2703,7 +2613,6 @@ export async function copyShift(params: {
     revalidatePath("/dashboard/planning");
     return { success: true, message: "Einsatz erfolgreich kopiert." };
   } catch (error: any) {
-    console.error("[COPY-SHIFT] Error:", error.message);
     return { success: false, message: `Fehler: ${error.message}` };
   }
 }
@@ -2729,8 +2638,6 @@ export async function markOverdueShiftsAsCompleted(): Promise<{
     const currentMinute = now.getMinutes();
     const currentTimeMinutes = currentHour * 60 + currentMinute;
 
-    console.log("[MARK-OVERDUE] Checking for overdue shifts at", now.toISOString());
-
     // Get all scheduled/in_progress shifts that should be marked as completed
     // A shift is overdue if:
     // 1. The date is in the past (before today), OR
@@ -2741,7 +2648,6 @@ export async function markOverdueShiftsAsCompleted(): Promise<{
       .in("status", ["scheduled", "in_progress"]);
 
     if (fetchError) {
-      console.error("[MARK-OVERDUE] Error fetching shifts:", fetchError);
       throw fetchError;
     }
 
@@ -2770,8 +2676,6 @@ export async function markOverdueShiftsAsCompleted(): Promise<{
       }
 
       if (shouldBeCompleted && shift.status !== "completed") {
-        console.log("[MARK-OVERDUE] Marking shift", shift.id, "as completed");
-
         const { error: updateError } = await supabaseAdmin
           .from("shifts")
           .update({
@@ -2781,9 +2685,7 @@ export async function markOverdueShiftsAsCompleted(): Promise<{
           })
           .eq("id", shift.id);
 
-        if (updateError) {
-          console.error("[MARK-OVERDUE] Error updating shift", shift.id, ":", updateError);
-        } else {
+        if (!updateError) {
           updatedCount++;
           completedShiftIds.push(shift.id);
         }
@@ -2798,8 +2700,6 @@ export async function markOverdueShiftsAsCompleted(): Promise<{
       }
     }
 
-    console.log("[MARK-OVERDUE] Completed. Updated", updatedCount, "shifts, created", timeEntriesCreated, "time entries");
-
     return {
       success: true,
       message: `${updatedCount} überfällige Einsätze wurden auf "abgeschlossen" gesetzt. ${timeEntriesCreated > 0 ? `${timeEntriesCreated} Zeiteinträge erstellt.` : ''}`,
@@ -2807,7 +2707,6 @@ export async function markOverdueShiftsAsCompleted(): Promise<{
       time_entries_created: timeEntriesCreated,
     };
   } catch (error: any) {
-    console.error("[MARK-OVERDUE] Error:", error.message);
     return { success: false, message: error.message, updated_count: 0, time_entries_created: 0 };
   }
 }

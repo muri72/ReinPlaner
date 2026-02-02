@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { DatePicker } from "@/components/date-picker";
 import { handleActionResponse } from "@/lib/toast-utils";
@@ -19,16 +19,19 @@ import { FormActions } from "@/components/ui/form-actions";
 import { useFormUnsavedChanges } from "@/components/ui/unsaved-changes-context";
 import { UnsavedChangesProtection } from "@/components/ui/unsaved-changes-dialog";
 import { UnsavedChangesAlert } from "@/components/ui/unsaved-changes-alert";
-import { CalendarDays, FileText, Settings, User } from "lucide-react";
+import { CalendarDays, FileText, Settings, User, AlertTriangle, Info } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { parseLocalDate } from "@/lib/utils";
+import { calculateWorkingDays, formatWorkingDays, getDefaultWorkingDays } from "@/lib/utils/date-utils";
+import { getVacationBalance } from "@/app/dashboard/absence-requests/actions";
+import { Checkbox } from "@/components/ui/checkbox";
 
 // Define the schema for absence request form values
 export const absenceRequestSchema = z.object({
   employeeId: z.string().uuid("Ungültige Mitarbeiter-ID").min(1, "Mitarbeiter ist erforderlich"),
   startDate: z.date({ required_error: "Startdatum ist erforderlich" }),
   endDate: z.date({ required_error: "Enddatum ist erforderlich" }),
-  type: z.enum(["vacation", "sick_leave", "training", "other"], { required_error: "Abwesenheitstyp ist erforderlich" }).default("vacation"),
+  type: z.enum(["vacation", "sick_leave", "training", "unpaid_leave"], { required_error: "Abwesenheitstyp ist erforderlich" }).default("vacation"),
   status: z.enum(["pending", "approved", "rejected"]).default("pending"),
   notes: z.string().max(500, "Notizen sind zu lang").optional().nullable(),
   adminNotes: z.string().max(500, "Admin-Notizen sind zu lang").optional().nullable(),
@@ -54,7 +57,11 @@ export function AbsenceRequestForm({ initialData, onSubmit, submitButtonText, on
   const supabase = createClient();
   const router = useRouter();
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
-  const [employees, setEmployees] = useState<{ id: string; first_name: string; last_name: string; user_id: string | null }[]>([]);
+  const [employees, setEmployees] = useState<{ id: string; first_name: string; last_name: string; user_id: string | null; working_days_per_week: number | null }[]>([]);
+  const [workingDaysPerWeek, setWorkingDaysPerWeek] = useState<number>(5);
+  const [vacationBalance, setVacationBalance] = useState<number>(30);
+  const [daysUsed, setDaysUsed] = useState<number>(0);
+  const [convertToUnpaid, setConvertToUnpaid] = useState(false);
 
   const resolvedDefaultValues: AbsenceRequestFormValues = {
     employeeId: initialData?.employeeId ?? "",
@@ -88,7 +95,7 @@ export function AbsenceRequestForm({ initialData, onSubmit, submitButtonText, on
     const fetchEmployees = async () => {
       let query = supabase
         .from('employees')
-        .select('id, first_name, last_name, user_id')
+        .select('id, first_name, last_name, user_id, working_days_per_week')
         .order('last_name', { ascending: true });
 
       // Only show active employees in dropdowns for new requests
@@ -126,6 +133,32 @@ export function AbsenceRequestForm({ initialData, onSubmit, submitButtonText, on
     fetchEmployees();
   }, [supabase, isManagerOrAdmin, currentUserId, form, initialData]);
 
+  // Fetch vacation balance when employee changes
+  useEffect(() => {
+    const fetchVacationBalance = async () => {
+      const employeeId = form.watch("employeeId");
+      if (!employeeId) {
+        setVacationBalance(30);
+        setDaysUsed(0);
+        setWorkingDaysPerWeek(5);
+        return;
+      }
+
+      const result = await getVacationBalance(employeeId);
+      if (result.success && result.data) {
+        setVacationBalance(result.data.remainingDays + result.data.daysUsed);
+        setDaysUsed(result.data.daysUsed);
+        setWorkingDaysPerWeek(result.data.workingDaysPerWeek);
+      } else {
+        setVacationBalance(30);
+        setDaysUsed(0);
+        setWorkingDaysPerWeek(5);
+      }
+    };
+
+    fetchVacationBalance();
+  }, [form.watch("employeeId")]);
+
   const handleFormSubmit: SubmitHandler<AbsenceRequestFormInput> = async (data) => {
     const selectedEmployee = employees.find(e => e.id === data.employeeId);
     const isSelfRequestByAdmin = currentUserRole === 'admin' && selectedEmployee?.user_id === currentUserId;
@@ -158,7 +191,7 @@ export function AbsenceRequestForm({ initialData, onSubmit, submitButtonText, on
     vacation: "Urlaub",
     sick_leave: "Krankheit",
     training: "Weiterbildung",
-    other: "Sonstiges",
+    unpaid_leave: "Unbezahlter Urlaub",
   };
 
   const statusOptions = {
@@ -166,6 +199,25 @@ export function AbsenceRequestForm({ initialData, onSubmit, submitButtonText, on
     approved: "Genehmigt",
     rejected: "Abgelehnt",
   };
+
+  // Calculate vacation days based on selected dates and working days
+  const requestedDays = useMemo(() => {
+    const startDate = form.watch("startDate");
+    const endDate = form.watch("endDate");
+    if (!startDate || !endDate || startDate > endDate) return 0;
+    return calculateWorkingDays(startDate, endDate, workingDaysPerWeek);
+  }, [form.watch("startDate"), form.watch("endDate"), workingDaysPerWeek]);
+
+  // Calculate remaining balance
+  const remainingBalance = vacationBalance - daysUsed;
+
+  // Check if vacation request exceeds balance
+  const isExceedingBalance = form.watch("type") === "vacation" && requestedDays > remainingBalance && remainingBalance >= 0;
+  const excessDays = isExceedingBalance ? requestedDays - remainingBalance : 0;
+
+  // Get working days format for display
+  const workingDaysList = getDefaultWorkingDays(workingDaysPerWeek);
+  const workingDaysText = formatWorkingDays(workingDaysList);
 
   if (isInDialog) {
     return (
@@ -205,6 +257,30 @@ export function AbsenceRequestForm({ initialData, onSubmit, submitButtonText, on
               <DatePicker label="Enddatum" value={form.watch("endDate")} onChange={(date) => form.setValue("endDate", date || new Date())} error={form.formState.errors.endDate?.message} />
             </div>
             {form.formState.errors.endDate && <p className="text-red-500 text-sm mt-1">{form.formState.errors.endDate.message}</p>}
+
+            {/* Vacation days calculation display */}
+            {form.watch("type") === "vacation" && requestedDays > 0 && (
+              <div className="mt-3 p-3 bg-muted/50 rounded-lg border">
+                <div className="flex items-center gap-2 text-sm">
+                  <Info className="h-4 w-4 text-primary" />
+                  <span className="font-medium">{requestedDays} Urlaubstag{requestedDays !== 1 ? 'e' : ''}</span>
+                  <span className="text-muted-foreground">
+                    (basierend auf {workingDaysPerWeek} Arbeitstag{workingDaysPerWeek !== 1 ? 'en' : ''} pro Woche: {workingDaysText})
+                  </span>
+                </div>
+                <div className="mt-2 text-xs text-muted-foreground">
+                  Verfügbar: {remainingBalance} Tage | Bereits verwendet: {daysUsed} Tage
+                </div>
+                {isExceedingBalance && (
+                  <div className="mt-2 p-2 bg-amber-100 dark:bg-amber-900/60 rounded border border-amber-300 dark:border-amber-700">
+                    <div className="flex items-center gap-2 text-amber-800 dark:text-amber-200 text-sm font-medium">
+                      <AlertTriangle className="h-4 w-4" />
+                      Achtung: {excessDays} Tag{excessDays !== 1 ? 'e' : ''} überschreiten Ihr Kontingent!
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </FormSection>
 
           <FormSection
@@ -214,7 +290,12 @@ export function AbsenceRequestForm({ initialData, onSubmit, submitButtonText, on
           >
             <div>
               <Label htmlFor="type">Art der Abwesenheit</Label>
-              <Select onValueChange={(value) => form.setValue("type", value as AbsenceRequestFormValues["type"])} value={form.watch("type")}>
+              <Select onValueChange={(value) => {
+                form.setValue("type", value as AbsenceRequestFormValues["type"]);
+                if (value !== "unpaid_leave") {
+                  setConvertToUnpaid(false);
+                }
+              }} value={form.watch("type")}>
                 <SelectTrigger><SelectValue placeholder="Art auswählen" /></SelectTrigger>
                 <SelectContent>
                   {Object.entries(typeOptions).map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}
@@ -222,6 +303,54 @@ export function AbsenceRequestForm({ initialData, onSubmit, submitButtonText, on
               </Select>
               {form.formState.errors.type && <p className="text-red-500 text-sm mt-1">{form.formState.errors.type.message}</p>}
             </div>
+
+            {/* Option to convert excess to unpaid leave */}
+            {isExceedingBalance && !convertToUnpaid && (
+              <div className="mt-3 p-3 bg-slate-100 dark:bg-slate-800/60 rounded-lg border border-slate-300 dark:border-slate-700">
+                <div className="flex items-start gap-3">
+                  <Checkbox
+                    id="convertToUnpaid"
+                    checked={convertToUnpaid}
+                    onCheckedChange={(checked) => {
+                      setConvertToUnpaid(checked === true);
+                      if (checked === true) {
+                        form.setValue("type", "unpaid_leave");
+                      } else {
+                        form.setValue("type", "vacation");
+                      }
+                    }}
+                    className="mt-0.5"
+                  />
+                  <div className="grid gap-1.5 leading-none">
+                    <Label
+                      htmlFor="convertToUnpaid"
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                    >
+                      {excessDays} Tag{excessDays !== 1 ? 'e' : ''} als unbezahlten Urlaub beantragen
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      Die {excessDays} überschreitenden Tage werden nicht von Ihrem Urlaubskontingent abgezogen.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Show unpaid leave info when selected */}
+            {form.watch("type") === "unpaid_leave" && (
+              <div className="mt-3 p-3 bg-slate-100 dark:bg-slate-800/60 rounded-lg border border-slate-300 dark:border-slate-700">
+                <div className="flex items-center gap-2 text-sm">
+                  <Info className="h-4 w-4 text-slate-600 dark:text-slate-400" />
+                  <span className="font-medium text-slate-800 dark:text-slate-200">
+                    {requestedDays} Tag{requestedDays !== 1 ? 'e' : ''} unbezahlter Urlaub
+                  </span>
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Diese Tage werden nicht von Ihrem Urlaubskontingent abgezogen.
+                </p>
+              </div>
+            )}
+
             <div>
               <Label htmlFor="notes">Notizen (optional)</Label>
               <Textarea id="notes" {...form.register("notes")} placeholder="Grund für die Abwesenheit..." rows={3} />
@@ -325,6 +454,30 @@ export function AbsenceRequestForm({ initialData, onSubmit, submitButtonText, on
                 <DatePicker label="Enddatum" value={form.watch("endDate")} onChange={(date) => form.setValue("endDate", date || new Date())} error={form.formState.errors.endDate?.message} />
               </div>
               {form.formState.errors.endDate && <p className="text-red-500 text-sm mt-1">{form.formState.errors.endDate.message}</p>}
+
+              {/* Vacation days calculation display */}
+              {form.watch("type") === "vacation" && requestedDays > 0 && (
+                <div className="mt-3 p-3 bg-muted/50 rounded-lg border">
+                  <div className="flex items-center gap-2 text-sm">
+                    <Info className="h-4 w-4 text-primary" />
+                    <span className="font-medium">{requestedDays} Urlaubstag{requestedDays !== 1 ? 'e' : ''}</span>
+                    <span className="text-muted-foreground">
+                      (basierend auf {workingDaysPerWeek} Arbeitstag{workingDaysPerWeek !== 1 ? 'en' : ''} pro Woche: {workingDaysText})
+                    </span>
+                  </div>
+                  <div className="mt-2 text-xs text-muted-foreground">
+                    Verfügbar: {remainingBalance} Tage | Bereits verwendet: {daysUsed} Tage
+                  </div>
+                  {isExceedingBalance && (
+                    <div className="mt-2 p-2 bg-amber-100 dark:bg-amber-900/60 rounded border border-amber-300 dark:border-amber-700">
+                      <div className="flex items-center gap-2 text-amber-800 dark:text-amber-200 text-sm font-medium">
+                        <AlertTriangle className="h-4 w-4" />
+                        Achtung: {excessDays} Tag{excessDays !== 1 ? 'e' : ''} überschreiten Ihr Kontingent!
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </FormSection>
 
             <FormSection
@@ -334,7 +487,12 @@ export function AbsenceRequestForm({ initialData, onSubmit, submitButtonText, on
             >
               <div>
                 <Label htmlFor="type">Art der Abwesenheit</Label>
-                <Select onValueChange={(value) => form.setValue("type", value as AbsenceRequestFormValues["type"])} value={form.watch("type")}>
+                <Select onValueChange={(value) => {
+                  form.setValue("type", value as AbsenceRequestFormValues["type"]);
+                  if (value !== "unpaid_leave") {
+                    setConvertToUnpaid(false);
+                  }
+                }} value={form.watch("type")}>
                   <SelectTrigger><SelectValue placeholder="Art auswählen" /></SelectTrigger>
                   <SelectContent>
                     {Object.entries(typeOptions).map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}
@@ -342,6 +500,54 @@ export function AbsenceRequestForm({ initialData, onSubmit, submitButtonText, on
                 </Select>
                 {form.formState.errors.type && <p className="text-red-500 text-sm mt-1">{form.formState.errors.type.message}</p>}
               </div>
+
+              {/* Option to convert excess to unpaid leave */}
+              {isExceedingBalance && !convertToUnpaid && (
+                <div className="mt-3 p-3 bg-slate-100 dark:bg-slate-800/60 rounded-lg border border-slate-300 dark:border-slate-700">
+                  <div className="flex items-start gap-3">
+                    <Checkbox
+                      id="convertToUnpaid2"
+                      checked={convertToUnpaid}
+                      onCheckedChange={(checked) => {
+                        setConvertToUnpaid(checked === true);
+                        if (checked === true) {
+                          form.setValue("type", "unpaid_leave");
+                        } else {
+                          form.setValue("type", "vacation");
+                        }
+                      }}
+                      className="mt-0.5"
+                    />
+                    <div className="grid gap-1.5 leading-none">
+                      <Label
+                        htmlFor="convertToUnpaid2"
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                      >
+                        {excessDays} Tag{excessDays !== 1 ? 'e' : ''} als unbezahlten Urlaub beantragen
+                      </Label>
+                      <p className="text-xs text-muted-foreground">
+                        Die {excessDays} überschreitenden Tage werden nicht von Ihrem Urlaubskontingent abgezogen.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Show unpaid leave info when selected */}
+              {form.watch("type") === "unpaid_leave" && (
+                <div className="mt-3 p-3 bg-slate-100 dark:bg-slate-800/60 rounded-lg border border-slate-300 dark:border-slate-700">
+                  <div className="flex items-center gap-2 text-sm">
+                    <Info className="h-4 w-4 text-slate-600 dark:text-slate-400" />
+                    <span className="font-medium text-slate-800 dark:text-slate-200">
+                      {requestedDays} Tag{requestedDays !== 1 ? 'e' : ''} unbezahlter Urlaub
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Diese Tage werden nicht von Ihrem Urlaubskontingent abgezogen.
+                  </p>
+                </div>
+              )}
+
               <div>
                 <Label htmlFor="notes">Notizen (optional)</Label>
                 <Textarea id="notes" {...form.register("notes")} placeholder="Grund für die Abwesenheit..." rows={3} />

@@ -120,6 +120,11 @@ export const payrollSettingsSchema = z.object({
   weekend_premium_pay_multiplier: z.string().refine((val) => !isNaN(Number(val)) && Number(val) >= 1, {
     message: "Muss mindestens 1 sein",
   }),
+  // Vacation settings
+  base_vacation_days: z.string().refine((val) => !isNaN(Number(val)) && Number(val) >= 0 && Number(val) <= 365, {
+    message: "Muss zwischen 0 und 365 liegen",
+  }),
+  minijob_vacation_calculation: z.enum(["proportional", "full"]),
 });
 
 /**

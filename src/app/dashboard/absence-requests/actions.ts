@@ -3,9 +3,10 @@
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { AbsenceRequestFormValues } from "@/components/absence-request-form";
-import { startOfMonth, endOfMonth } from "date-fns";
+import { startOfMonth, endOfMonth, differenceInDays } from "date-fns";
 import { sendNotification } from "@/lib/actions/notifications";
 import { logDataChange } from "@/lib/audit-log";
+import { calculateWorkingDays } from "@/lib/utils/date-utils";
 
 export async function createAbsenceRequest(data: AbsenceRequestFormValues): Promise<{ success: boolean; message: string }> {
   const supabase = await createClient();
@@ -204,6 +205,7 @@ export async function getAbsencesForMonth(date: Date) {
   const { data, error } = await supabase
     .from('absence_requests')
     .select(`
+      id,
       start_date,
       end_date,
       type,
@@ -219,4 +221,158 @@ export async function getAbsencesForMonth(date: Date) {
   }
 
   return { success: true, message: "Daten geladen", data };
+}
+
+export async function getVacationBalance(employeeId: string) {
+  const supabase = await createClient();
+
+  // Get employee vacation balance and working days
+  const { data: employee, error: employeeError } = await supabase
+    .from('employees')
+    .select('vacation_balance, vacation_days_used, contract_hours_per_week, working_days_per_week, first_name, last_name')
+    .eq('id', employeeId)
+    .single();
+
+  if (employeeError || !employee) {
+    return { success: false, message: "Mitarbeiter nicht gefunden", data: null };
+  }
+
+  // Get approved vacation days used
+  const { data: vacationRequests, error: requestsError } = await supabase
+    .from('absence_requests')
+    .select('start_date, end_date')
+    .eq('employee_id', employeeId)
+    .eq('type', 'vacation')
+    .eq('status', 'approved');
+
+  if (requestsError) {
+    console.error("Fehler beim Laden der Urlaubsanträge:", requestsError.message);
+  }
+
+  // Calculate total vacation days used using working days calculation
+  let totalDaysUsed = employee.vacation_days_used || 0;
+  const workingDaysPerWeek = employee.working_days_per_week || 5;
+  if (vacationRequests) {
+    for (const req of vacationRequests) {
+      const start = new Date(req.start_date);
+      const end = new Date(req.end_date);
+      totalDaysUsed += await calculateWorkingDays(start, end, workingDaysPerWeek);
+    }
+  }
+
+  const balance = (employee.vacation_balance || 30) - totalDaysUsed;
+
+  return {
+    success: true,
+    data: {
+      employeeName: `${employee.first_name || ''} ${employee.last_name || ''}`.trim(),
+      totalDays: employee.vacation_balance || 30,
+      daysUsed: totalDaysUsed,
+      remainingDays: balance,
+      contractHoursPerWeek: employee.contract_hours_per_week || 40,
+      workingDaysPerWeek: workingDaysPerWeek,
+    }
+  };
+}
+
+export async function updateEmployeeVacationBalance(employeeId: string, newBalance: number) {
+  const supabase = await createAdminClient();
+
+  const { error } = await supabase
+    .from('employees')
+    .update({ vacation_balance: newBalance })
+    .eq('id', employeeId);
+
+  if (error) {
+    return { success: false, message: error.message };
+  }
+
+  revalidatePath("/dashboard/absence-requests");
+  return { success: true, message: "Urlaubssaldo aktualisiert" };
+}
+
+export async function getEmployeeAbsenceKPIs(employeeId: string, year?: number) {
+  const supabase = await createClient();
+  const targetYear = year || new Date().getFullYear();
+
+  // Get employee working days info
+  const { data: employee } = await supabase
+    .from('employees')
+    .select('working_days_per_week, vacation_balance')
+    .eq('id', employeeId)
+    .single();
+
+  const workingDaysPerWeek = employee?.working_days_per_week || 5;
+
+  // Get all approved absence requests for the employee in the target year
+  const startOfYear = `${targetYear}-01-01`;
+  const endOfYear = `${targetYear}-12-31`;
+
+  const { data: absences, error } = await supabase
+    .from('absence_requests')
+    .select('start_date, end_date, type, status, created_at')
+    .eq('employee_id', employeeId)
+    .eq('status', 'approved')
+    .gte('end_date', startOfYear)
+    .lte('start_date', endOfYear);
+
+  if (error) {
+    console.error("Fehler beim Laden der Abwesenheiten:", error.message);
+    return { success: false, message: error.message, data: null };
+  }
+
+  // Initialize KPI structure
+  const kpis = {
+    vacation: { total: 0, byMonth: {} as Record<string, number> },
+    sick_leave: { total: 0, byMonth: {} as Record<string, number>, occurrences: 0 },
+    training: { total: 0, byMonth: {} as Record<string, number> },
+    other: { total: 0, byMonth: {} as Record<string, number> },
+    unpaid_leave: { total: 0, byMonth: {} as Record<string, number> },
+  };
+
+  // Aggregate absences by type and month
+  for (const req of absences || []) {
+    const days = await calculateWorkingDays(
+      new Date(req.start_date),
+      new Date(req.end_date),
+      workingDaysPerWeek
+    );
+
+    // Get month key
+    const monthKey = req.start_date.substring(0, 7); // "2024-03"
+
+    // Add to appropriate type
+    if (req.type === 'vacation') {
+      kpis.vacation.total += days;
+      kpis.vacation.byMonth[monthKey] = (kpis.vacation.byMonth[monthKey] || 0) + days;
+    } else if (req.type === 'sick_leave') {
+      kpis.sick_leave.total += days;
+      kpis.sick_leave.byMonth[monthKey] = (kpis.sick_leave.byMonth[monthKey] || 0) + days;
+      kpis.sick_leave.occurrences += 1;
+    } else if (req.type === 'training') {
+      kpis.training.total += days;
+      kpis.training.byMonth[monthKey] = (kpis.training.byMonth[monthKey] || 0) + days;
+    } else if (req.type === 'other') {
+      kpis.other.total += days;
+      kpis.other.byMonth[monthKey] = (kpis.other.byMonth[monthKey] || 0) + days;
+    } else if (req.type === 'unpaid_leave') {
+      kpis.unpaid_leave.total += days;
+      kpis.unpaid_leave.byMonth[monthKey] = (kpis.unpaid_leave.byMonth[monthKey] || 0) + days;
+    }
+  }
+
+  // Calculate remaining vacation days
+  const totalVacation = employee?.vacation_balance || 30;
+  const remainingVacation = totalVacation - kpis.vacation.total;
+
+  return {
+    success: true,
+    data: {
+      year: targetYear,
+      workingDaysPerWeek,
+      totalVacation,
+      remainingVacation,
+      kpis,
+    }
+  };
 }

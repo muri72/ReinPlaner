@@ -17,6 +17,7 @@ import { useFormUnsavedChanges } from "@/components/ui/unsaved-changes-context";
 import { Textarea } from "@/components/ui/textarea";
 import { SimpleErrorBoundary } from "@/components/error-boundary";
 import { RefreshCw, AlertCircle, CheckCircle2 } from "lucide-react";
+import { lohngruppen, psaZuschlaege, raumZuschlaege, zeitZuschlaege, formatEuro } from "@/lib/lohngruppen-config";
 
 // Import schemas and types from form-utils
 import {
@@ -65,6 +66,8 @@ export function SettingsForm() {
       default_employee_hourly_rate: "14.25",
       holiday_premium_pay_multiplier: "1.5",
       weekend_premium_pay_multiplier: "1.4",
+      base_vacation_days: "26",
+      minijob_vacation_calculation: "proportional",
     },
   });
 
@@ -143,6 +146,8 @@ export function SettingsForm() {
         settingsService.getSetting('default_employee_hourly_rate'),
         settingsService.getSetting('holiday_premium_pay_multiplier'),
         settingsService.getSetting('weekend_premium_pay_multiplier'),
+        settingsService.getSetting('base_vacation_days'),
+        settingsService.getSetting('minijob_vacation_calculation'),
         settingsService.getInvoiceSettings(),
         settingsService.getTaxSettings(),
         settingsService.getBankConnection(),
@@ -156,6 +161,8 @@ export function SettingsForm() {
         defaultRate,
         holidayMultiplier,
         weekendMultiplier,
+        baseVacationDays,
+        minijobVacationCalc,
         invoiceSettings,
         taxSettings,
         bankConnection,
@@ -168,6 +175,8 @@ export function SettingsForm() {
       if (defaultRate) payrollForm.setValue('default_employee_hourly_rate', defaultRate);
       if (holidayMultiplier) payrollForm.setValue('holiday_premium_pay_multiplier', holidayMultiplier);
       if (weekendMultiplier) payrollForm.setValue('weekend_premium_pay_multiplier', weekendMultiplier);
+      if (baseVacationDays) payrollForm.setValue('base_vacation_days', baseVacationDays);
+      if (minijobVacationCalc) payrollForm.setValue('minijob_vacation_calculation', minijobVacationCalc);
 
       // Load invoice settings
       if (invoiceSettings) {
@@ -241,6 +250,8 @@ export function SettingsForm() {
       { key: 'default_employee_hourly_rate', value: data.default_employee_hourly_rate },
       { key: 'holiday_premium_pay_multiplier', value: data.holiday_premium_pay_multiplier },
       { key: 'weekend_premium_pay_multiplier', value: data.weekend_premium_pay_multiplier },
+      { key: 'base_vacation_days', value: data.base_vacation_days },
+      { key: 'minijob_vacation_calculation', value: data.minijob_vacation_calculation },
     ], "Lohnbuchhaltung");
   };
 
@@ -521,76 +532,249 @@ export function SettingsForm() {
       </TabsContent>
 
       <TabsContent value="payroll">
-        <Card>
-          <CardHeader>
-            <CardTitle>Lohnbuchhaltung</CardTitle>
-            <CardDescription>
-              Standard-Stundensätze und Zuschläge für Feiertage/Wochenenden
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={payrollForm.handleSubmit(handleSavePayroll)} className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="default_employee_hourly_rate">Standard-Stundensatz (€)</Label>
-                <Input
-                  id="default_employee_hourly_rate"
-                  type="number"
-                  step="0.01"
-                  {...payrollForm.register('default_employee_hourly_rate')}
-                />
-                {payrollForm.formState.errors.default_employee_hourly_rate && (
-                  <p className="text-sm text-red-500">
-                    {payrollForm.formState.errors.default_employee_hourly_rate.message}
-                  </p>
-                )}
-              </div>
+        <Tabs defaultValue="general" className="space-y-4">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="general">Allgemein</TabsTrigger>
+            <TabsTrigger value="tarif">Tariftabelle (TV GD 2026)</TabsTrigger>
+            <TabsTrigger value="vacation">Urlaub</TabsTrigger>
+          </TabsList>
 
-              <div className="space-y-2">
-                <Label htmlFor="holiday_premium_pay_multiplier">
-                  Feiertag-Zuschlag (Multiplikator)
-                </Label>
-                <Input
-                  id="holiday_premium_pay_multiplier"
-                  type="number"
-                  step="0.1"
-                  {...payrollForm.register('holiday_premium_pay_multiplier')}
-                />
-                <p className="text-sm text-muted-foreground">
-                  Beispiel: 1.5 = 150% des normalen Stundensatzes
-                </p>
-                {payrollForm.formState.errors.holiday_premium_pay_multiplier && (
-                  <p className="text-sm text-red-500">
-                    {payrollForm.formState.errors.holiday_premium_pay_multiplier.message}
-                  </p>
-                )}
-              </div>
+          <TabsContent value="general">
+            <Card>
+              <CardHeader>
+                <CardTitle>Allgemeine Lohnbuchhaltung</CardTitle>
+                <CardDescription>
+                  Standard-Stundensätze und Zuschläge für Feiertage/Wochenenden
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={payrollForm.handleSubmit(handleSavePayroll)} className="space-y-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="default_employee_hourly_rate">Standard-Stundensatz (€)</Label>
+                    <Input
+                      id="default_employee_hourly_rate"
+                      type="number"
+                      step="0.01"
+                      {...payrollForm.register('default_employee_hourly_rate')}
+                    />
+                    {payrollForm.formState.errors.default_employee_hourly_rate && (
+                      <p className="text-sm text-red-500">
+                        {payrollForm.formState.errors.default_employee_hourly_rate.message}
+                      </p>
+                    )}
+                  </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="weekend_premium_pay_multiplier">
-                  Wochenende-Zuschlag (Multiplikator)
-                </Label>
-                <Input
-                  id="weekend_premium_pay_multiplier"
-                  type="number"
-                  step="0.1"
-                  {...payrollForm.register('weekend_premium_pay_multiplier')}
-                />
-                <p className="text-sm text-muted-foreground">
-                  Beispiel: 1.4 = 140% des normalen Stundensatzes
-                </p>
-                {payrollForm.formState.errors.weekend_premium_pay_multiplier && (
-                  <p className="text-sm text-red-500">
-                    {payrollForm.formState.errors.weekend_premium_pay_multiplier.message}
-                  </p>
-                )}
-              </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="holiday_premium_pay_multiplier">
+                      Feiertag-Zuschlag (Multiplikator)
+                    </Label>
+                    <Input
+                      id="holiday_premium_pay_multiplier"
+                      type="number"
+                      step="0.1"
+                      {...payrollForm.register('holiday_premium_pay_multiplier')}
+                    />
+                    <p className="text-sm text-muted-foreground">
+                      Beispiel: 1.5 = 150% des normalen Stundensatzes
+                    </p>
+                    {payrollForm.formState.errors.holiday_premium_pay_multiplier && (
+                      <p className="text-sm text-red-500">
+                        {payrollForm.formState.errors.holiday_premium_pay_multiplier.message}
+                      </p>
+                    )}
+                  </div>
 
-              <Button type="submit" disabled={saving}>
-                {saving ? "Speichern..." : "Speichern"}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+                  <div className="space-y-2">
+                    <Label htmlFor="weekend_premium_pay_multiplier">
+                      Wochenende-Zuschlag (Multiplikator)
+                    </Label>
+                    <Input
+                      id="weekend_premium_pay_multiplier"
+                      type="number"
+                      step="0.1"
+                      {...payrollForm.register('weekend_premium_pay_multiplier')}
+                    />
+                    <p className="text-sm text-muted-foreground">
+                      Beispiel: 1.4 = 140% des normalen Stundensatzes
+                    </p>
+                    {payrollForm.formState.errors.weekend_premium_pay_multiplier && (
+                      <p className="text-sm text-red-500">
+                        {payrollForm.formState.errors.weekend_premium_pay_multiplier.message}
+                      </p>
+                    )}
+                  </div>
+
+                  <Button type="submit" disabled={saving}>
+                    {saving ? "Speichern..." : "Speichern"}
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="tarif">
+            <Card>
+              <CardHeader>
+                <CardTitle>Tariftabelle TV GD 2026</CardTitle>
+                <CardDescription>
+                  Bundeseinheitliche Lohngruppen gemäß Tarifvertrag für die Gebäudereinigung 2026
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-6">
+                  {/* Lohngruppen Table */}
+                  <div className="border rounded-lg overflow-hidden">
+                    <table className="w-full text-sm">
+                      <thead className="bg-muted">
+                        <tr>
+                          <th className="text-left p-3 font-medium">LG</th>
+                          <th className="text-left p-3 font-medium">Bezeichnung</th>
+                          <th className="text-right p-3 font-medium">Stundenlohn</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {lohngruppen.map((lg) => (
+                          <tr key={lg.id} className="border-t">
+                            <td className="p-3 font-medium">{lg.id}</td>
+                            <td className="p-3">
+                              <div className="font-medium">{lg.bezeichnung}</div>
+                              <div className="text-xs text-muted-foreground mt-1">
+                                {lg.taetigkeiten.slice(0, 2).join(", ")}
+                                {lg.taetigkeiten.length > 2 && "..."}
+                              </div>
+                            </td>
+                            <td className="p-3 text-right font-semibold text-primary">
+                              {formatEuro(lg.stundenlohn)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* PSA Zuschläge */}
+                  <div>
+                    <h4 className="font-medium mb-3">PSA-Zuschläge (Persönliche Schutzausrüstung)</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                      {psaZuschlaege.filter(p => p.id !== "none").map((psa) => (
+                        <div key={psa.id} className="flex justify-between p-2 bg-muted/30 rounded text-sm">
+                          <span>{psa.bezeichnung}</span>
+                          <span className="font-medium">+{psa.zuschlagProzent}%</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Zeit Zuschläge */}
+                  <div>
+                    <h4 className="font-medium mb-3">Zeit-Zuschläge</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                      {zeitZuschlaege.filter(z => z.id !== "normal").map((zeit) => (
+                        <div key={zeit.id} className="flex justify-between p-2 bg-muted/30 rounded text-sm">
+                          <span>
+                            {zeit.bezeichnung}
+                            {zeit.zeitraum && <span className="text-muted-foreground ml-1">({zeit.zeitraum})</span>}
+                          </span>
+                          <span className="font-medium">
+                            {(zeit.multiplier - 1) * 100 > 0 ? `+${(zeit.multiplier - 1) * 100}%` : "Normal"}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Raum Zuschläge */}
+                  <div>
+                    <h4 className="font-medium mb-3">Erschwernis-Zuschläge (pro Stunde)</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                      {raumZuschlaege.filter(r => r.id !== "none").map((raum) => (
+                        <div key={raum.id} className="flex justify-between p-2 bg-muted/30 rounded text-sm">
+                          <span>{raum.bezeichnung}</span>
+                          <span className="font-medium">+{formatEuro(raum.zuschlagEuro)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="vacation">
+            <Card>
+              <CardHeader>
+                <CardTitle>Urlaubseinstellungen</CardTitle>
+                <CardDescription>
+                  Konfiguration der Urlaubstage-Berechnung für verschiedene Vertragsarten
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={payrollForm.handleSubmit(handleSavePayroll)} className="space-y-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="base_vacation_days">Basis-Urlaubstage pro Jahr</Label>
+                    <Input
+                      id="base_vacation_days"
+                      type="number"
+                      min="0"
+                      max="365"
+                      {...payrollForm.register('base_vacation_days')}
+                    />
+                    <p className="text-sm text-muted-foreground">
+                      Standard-Urlaubstage für Vollzeit-Mitarbeiter (z.B. 26)
+                    </p>
+                    {payrollForm.formState.errors.base_vacation_days && (
+                      <p className="text-sm text-red-500">
+                        {payrollForm.formState.errors.base_vacation_days.message}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="minijob_vacation_calculation">Minijob-Urlaubsberechnung</Label>
+                    <Select
+                      value={payrollForm.watch('minijob_vacation_calculation')}
+                      onValueChange={(value) => payrollForm.setValue('minijob_vacation_calculation', value as "proportional" | "full")}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="proportional">Proportional (anteilig nach Arbeitstagen)</SelectItem>
+                        <SelectItem value="full">Vollständig (gleiche Tage wie Vollzeit)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-sm text-muted-foreground">
+                      Bei proportionaler Berechnung wird der Urlaub anteilig nach den tatsächlichen Arbeitstagen pro Woche berechnet.
+                    </p>
+                  </div>
+
+                  {/* Berechnungsbeispiel */}
+                  <div className="bg-muted/30 rounded-lg p-4 mt-4">
+                    <h4 className="font-medium mb-2">Berechnungsbeispiel</h4>
+                    <div className="text-sm space-y-1">
+                      <div className="flex justify-between">
+                        <span>40h/Woche (Vollzeit):</span>
+                        <span className="font-medium">26 Tage</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>12h/Woche (Minijob, 2 Tage):</span>
+                        <span className="font-medium">26 × 2/5 = 10 Tage (proportional)</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>20h/Woche (Minijob, 3 Tage):</span>
+                        <span className="font-medium">26 × 3/5 = 16 Tage (proportional)</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <Button type="submit" disabled={saving}>
+                    {saving ? "Speichern..." : "Speichern"}
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </TabsContent>
 
       <TabsContent value="billing">

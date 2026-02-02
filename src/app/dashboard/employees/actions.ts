@@ -51,6 +51,16 @@ export async function createEmployee(data: EmployeeFormValues) {
       default_daily_schedules: data.default_daily_schedules,
       default_recurrence_interval_weeks: data.default_recurrence_interval_weeks,
       default_start_week_offset: data.default_start_week_offset,
+      // Vacation & Work settings
+      working_days_per_week: data.working_days_per_week,
+      contract_hours_per_week: data.contract_hours_per_week,
+      vacation_balance: data.vacation_balance,
+      // Lohngruppen settings (TV GD 2026)
+      wage_group: data.wage_group || null,
+      qualification: data.qualification || null,
+      has_professional_education: data.has_professional_education || false,
+      lohngruppen_eingruppung_datum: formatDateForDB(data.lohngruppen_eingruppung_datum),
+      psa_type: data.psa_type || null,
     })
     .select()
     .single();
@@ -92,15 +102,14 @@ export async function updateEmployee(employeeId: string, data: EmployeeFormValue
     .eq('id', employeeId)
     .single();
 
-  const updateData = {
+  // Build update data
+  const updateData: any = {
     first_name: data.first_name,
     last_name: data.last_name,
     email: data.email,
     phone: data.phone,
     hire_date: formatDateForDB(data.hire_date),
     status: data.status,
-    // Convert null/undefined to null for database
-    contract_type: data.contract_type || null,
     contract_end_date: formatDateForDB(data.contract_end_date),
     hourly_rate: data.hourly_rate,
     start_date: formatDateForDB(data.start_date),
@@ -116,7 +125,22 @@ export async function updateEmployee(employeeId: string, data: EmployeeFormValue
     default_daily_schedules: data.default_daily_schedules,
     default_recurrence_interval_weeks: data.default_recurrence_interval_weeks,
     default_start_week_offset: data.default_start_week_offset,
+    // Vacation & Work settings
+    working_days_per_week: data.working_days_per_week,
+    contract_hours_per_week: data.contract_hours_per_week,
+    vacation_balance: data.vacation_balance,
+    // Lohngruppen settings (TV GD 2026)
+    wage_group: data.wage_group || null,
+    qualification: data.qualification || null,
+    has_professional_education: data.has_professional_education || false,
+    lohngruppen_eingruppung_datum: formatDateForDB(data.lohngruppen_eingruppung_datum),
+    psa_type: data.psa_type || null,
   };
+
+  // Conditionally add contract_type only if it has a value
+  if (data.contract_type !== undefined) {
+    updateData.contract_type = data.contract_type;
+  }
 
   const { data: updatedRows, error } = await supabase
     .from('employees')
@@ -143,6 +167,7 @@ export async function updateEmployee(employeeId: string, data: EmployeeFormValue
   );
 
   revalidatePath("/dashboard/employees");
+  revalidatePath("/dashboard/absence-requests");
   return { success: true, message: "Mitarbeiter erfolgreich aktualisiert!" };
 }
 

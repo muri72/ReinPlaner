@@ -19,17 +19,8 @@ export async function checkAndCompleteOverdueShifts(): Promise<{
   time_entries_created: number;
 }> {
   try {
-    console.log("[PLANNING] Checking for overdue shifts on page visit...");
-
-    const result = await markOverdueShiftsAsCompleted();
-
-    if (result.success && result.updated_count > 0) {
-      console.log("[PLANNING] Completed:", result.updated_count, "shifts,", result.time_entries_created, "time entries");
-    }
-
-    return result;
+    return await markOverdueShiftsAsCompleted();
   } catch (error: any) {
-    console.error("[PLANNING] Error checking overdue shifts:", error);
     return { success: false, message: error.message, updated_count: 0, time_entries_created: 0 };
   }
 }
@@ -138,13 +129,10 @@ export async function getPlanningDataForRange(startDate: Date, endDate: Date, fi
     }
 
     // Second: Generate shifts for the visible range as before
-    const { data: shiftGenResult } = await supabaseAdmin.rpc('generate_shifts_for_date_range', {
+    await supabaseAdmin.rpc('generate_shifts_for_date_range', {
       p_start_date: extendedStartDate,
       p_end_date: extendedEndDate
     });
-    if (shiftGenResult && Array.isArray(shiftGenResult) && shiftGenResult[0]?.created_count > 0) {
-      console.log(`[PLANNING] Auto-generated ${shiftGenResult[0].created_count} shifts for date range`);
-    }
 
     // 1. Fetch all active employees with their default schedules, applying search filter
     let employeesQuery = supabase
@@ -618,8 +606,6 @@ export async function updateOrderAssignments(
             .from('shifts')
             .delete()
             .in('id', shiftIdsToDelete);
-
-          console.log(`[UPDATE-ASSIGNMENTS] Deleted ${shiftIdsToDelete.length} future shifts for removed employees`);
         }
       }
     }
@@ -654,8 +640,7 @@ export async function updateOrderAssignments(
     }
 
     // 4. Generate shifts for current and next month based on the updated assignments
-    const shiftResult = await generateShiftsFromAssignments();
-    console.log(`[UPDATE-ASSIGNMENTS] Shifts generated: ${shiftResult.created_count}`);
+    await generateShiftsFromAssignments();
 
     // 5. Send notifications (optional, can be added later)
 

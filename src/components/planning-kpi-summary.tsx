@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ShiftPlanningData, UnassignedShift } from "@/lib/actions/shift-planning";
 import { cn } from "@/lib/utils";
-import { Clock3, Gauge, ListChecks, UsersRound } from "lucide-react";
+import { Clock3, Gauge, ListChecks, UsersRound, CalendarX } from "lucide-react";
 
 interface PlanningKpiSummaryProps {
   planningData: ShiftPlanningData;
@@ -26,7 +26,8 @@ interface PlanningMetrics {
   availableHours: number;
   occupancy: number;
   completionRate: number;
-  absentEmployees: number;
+  absentToday: number;
+  absentInWeek: number;
   employeeCount: number;
   unassignedToday: number;
   unassignedInRange: number;
@@ -42,7 +43,8 @@ const INITIAL_METRICS: PlanningMetrics = {
   availableHours: 0,
   occupancy: 0,
   completionRate: 0,
-  absentEmployees: 0,
+  absentToday: 0,
+  absentInWeek: 0,
   employeeCount: 0,
   unassignedToday: 0,
   unassignedInRange: 0,
@@ -57,6 +59,7 @@ export function PlanningKpiSummary({
   dateRange,
   isLoading,
 }: PlanningKpiSummaryProps) {
+  // Always call hooks in the same order - BEFORE any early returns
   const numberFormatter = React.useMemo(
     () =>
       new Intl.NumberFormat("de-DE", {
@@ -95,7 +98,10 @@ export function PlanningKpiSummary({
   }, [dateRange]);
 
   const metrics = React.useMemo<PlanningMetrics>(() => {
-    if (!planningData || !selectedDate || !dateRange || dateRange.length === 0) {
+    if (isLoading) {
+      return INITIAL_METRICS;
+    }
+    if (!planningData || Object.keys(planningData || {}).length === 0 || !selectedDate || !dateRange || dateRange.length === 0) {
       return INITIAL_METRICS;
     }
 
@@ -107,7 +113,8 @@ export function PlanningKpiSummary({
     let totalAssignments = 0;
     let completedAssignments = 0;
     let overdueAssignments = 0;
-    let absentEmployees = 0;
+    let absentToday = 0;
+    let absentInWeek = 0;
     let rangeAssignments = 0;
     let rangeHours = 0;
 
@@ -116,6 +123,8 @@ export function PlanningKpiSummary({
         return;
       }
 
+      let employeeAbsentDaysInRange = 0;
+
       rangeKeyArray.forEach((dateKey) => {
         const rangeDayData = employee.schedule?.[dateKey];
         if (!rangeDayData) {
@@ -123,30 +132,36 @@ export function PlanningKpiSummary({
         }
         rangeAssignments += rangeDayData.shifts?.length ?? 0;
         rangeHours += rangeDayData.totalHours ?? 0;
+
+        if (rangeDayData.isAbsence) {
+          employeeAbsentDaysInRange++;
+        }
       });
 
       const dayData = employee.schedule[selectedKey];
-      if (!dayData) {
-        return;
+      if (dayData?.isAbsence) {
+        absentToday += 1;
       }
 
-      availableHours += dayData.availableHours ?? 0;
-      plannedHours += dayData.totalHours ?? 0;
+      absentInWeek += employeeAbsentDaysInRange;
 
-      if (dayData.isAbsence) {
-        absentEmployees += 1;
-      }
+      if (dayData) {
+        availableHours += dayData.availableHours ?? 0;
+        plannedHours += dayData.totalHours ?? 0;
 
-      const shifts = dayData.shifts ?? [];
-      totalAssignments += shifts.length;
+        const shifts = dayData.shifts && Array.isArray(dayData.shifts) ? dayData.shifts : [];
+        if (shifts.length > 0) {
+          totalAssignments += shifts.length;
 
-      shifts.forEach((shift) => {
-        if (shift.status === "completed") {
-          completedAssignments += 1;
-        } else if (shift.status === "cancelled") {
-          overdueAssignments += 1;
+          shifts.forEach((shift: any) => {
+            if (shift?.status === "completed") {
+              completedAssignments += 1;
+            } else if (shift?.status === "cancelled") {
+              overdueAssignments += 1;
+            }
+          });
         }
-      });
+      }
     });
 
     let unassignedToday = 0;
@@ -180,30 +195,42 @@ export function PlanningKpiSummary({
       availableHours,
       occupancy,
       completionRate,
-      absentEmployees,
+      absentToday,
+      absentInWeek,
       employeeCount: Object.keys(planningData ?? {}).length,
       unassignedToday,
       unassignedInRange,
       rangeAssignments,
       rangeHours,
     };
-  }, [planningData, selectedDate, dateRange, unassignedOrders]);
+  }, [planningData, selectedDate, dateRange, unassignedOrders, isLoading]);
 
+  // Render skeleton early if loading
   if (isLoading) {
     return (
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {Array.from({ length: 4 }).map((_, index) => (
-          <Card key={`planning-kpi-skeleton-${index}`} className="glassmorphism-card">
-            <CardHeader className="pb-3">
-              <Skeleton className="h-4 w-32" />
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <Skeleton className="h-8 w-24" />
-              <Skeleton className="h-3 w-40" />
-              <Skeleton className="h-3 w-28" />
-            </CardContent>
-          </Card>
-        ))}
+      <div className="space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              Planungs-KPIs
+            </p>
+            <Skeleton className="h-4 w-40 mt-1" />
+          </div>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <Card key={`planning-kpi-skeleton-${index}`} className="glassmorphism-card">
+              <CardHeader className="pb-3">
+                <Skeleton className="h-4 w-32" />
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Skeleton className="h-8 w-24" />
+                <Skeleton className="h-3 w-40" />
+                <Skeleton className="h-3 w-28" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </div>
     );
   }
@@ -314,9 +341,22 @@ export function PlanningKpiSummary({
               <Badge variant="secondary" className="text-[11px]">
                 {metrics.employeeCount} Mitarbeitende
               </Badge>
-              {metrics.absentEmployees > 0 && (
-                <Badge variant="outline" className="text-[11px]">
-                  {metrics.absentEmployees} abwesend
+            </div>
+            {/* Absence KPIs */}
+            <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-border/50">
+              {metrics.absentToday > 0 ? (
+                <Badge variant="outline" className="text-xs px-2.5 py-1 h-7 bg-red-100 border-red-300 text-red-900 dark:bg-red-900/50 dark:border-red-700 dark:text-red-100 font-medium">
+                  <CalendarX className="h-3 w-3 mr-1" />
+                  Heute: {metrics.absentToday}
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="text-[10px] px-2 py-0 h-5 bg-green-50 border-green-200 text-green-700 dark:bg-green-900/30 dark:border-green-800 dark:text-green-300">
+                  Keine Abwesenheiten heute
+                </Badge>
+              )}
+              {metrics.absentInWeek > 0 && (
+                <Badge variant="secondary" className="text-[10px] px-2 py-0 h-5">
+                  Diese Woche: {metrics.absentInWeek} Tage
                 </Badge>
               )}
             </div>

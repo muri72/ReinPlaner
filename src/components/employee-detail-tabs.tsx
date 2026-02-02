@@ -71,6 +71,10 @@ interface Employee {
   default_daily_schedules: any[];
   default_recurrence_interval_weeks: number;
   default_start_week_offset: number;
+  working_days_per_week: number | null;
+  contract_hours_per_week: number | null;
+  vacation_balance: number | null;
+  vacation_days_used: number | null;
   time_entries: TimeEntry[];
   orders: Order[];
   absence_requests: AbsenceRequest[];
@@ -203,7 +207,7 @@ export function EmployeeDetailTabs({ employee }: EmployeeDetailTabsProps) {
             <CardDescription>Eine Liste aller Abwesenheitsanträge für diesen Mitarbeiter.</CardDescription>
           </CardHeader>
           <CardContent>
-            <EmployeeAbsencesList absences={employee.absence_requests || []} />
+            <EmployeeAbsencesList absences={employee.absence_requests || []} employee={employee} />
           </CardContent>
         </Card>
       </TabsContent>

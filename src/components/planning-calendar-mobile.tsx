@@ -10,19 +10,13 @@ import { cn } from "@/lib/utils";
 import { ChevronRight, Clock, MapPin, User, AlertCircle } from "lucide-react";
 import { ShiftPlanningData, UnassignedShift } from "@/lib/actions/shift-planning";
 import { ShiftCard } from "./shift-card";
+import { absenceTypeConfig, typeTranslations } from "@/lib/absence-type-config";
 
 const absenceTypeLabels: Record<string, string> = {
   vacation: "Urlaub",
   sick_leave: "Krankheit",
   training: "Weiterbildung",
   other: "Abwesend",
-};
-
-const absenceTypeEmojis: Record<string, string> = {
-  vacation: "🏖️",
-  sick_leave: "🤒",
-  training: "📚",
-  other: "📅",
 };
 
 const statusBadgeClassNames: Record<string, string> = {
@@ -252,7 +246,9 @@ export function MobilePlanningCalendar({
         return;
       }
 
-      if (dayData.isAbsence) {
+      // Nur bei Abwesenheit sichtbar, wenn der Mitarbeiter an diesem Tag normalerweise arbeiten würde
+      const isWorkDay = dayData.isAvailable || (dayData.shifts?.length ?? 0) > 0;
+      if (dayData.isAbsence && isWorkDay) {
         visible.push(employeeId);
         return;
       }
@@ -385,7 +381,7 @@ export function MobilePlanningCalendar({
                           isSelected
                             ? "border-primary bg-primary text-primary-foreground shadow-lg"
                             : "border-border bg-card hover:border-primary/40",
-                          today && !isSelected && "border-primary/30",
+                          today && !isSelected && "ring-2 ring-red-500 ring-offset-1",
                           holidayInfo && !isSelected && "border-red-200 bg-red-50",
                           !isCurrentMonth && "opacity-50",
                         )}
@@ -446,7 +442,7 @@ export function MobilePlanningCalendar({
                       isSelected
                         ? "border-primary bg-primary text-primary-foreground shadow"
                         : "border-border bg-card hover:border-primary/40",
-                      today && !isSelected && "border-primary/30",
+                      today && !isSelected && "ring-2 ring-red-500 ring-offset-1",
                       holidayInfo && !isSelected && "border-red-200 bg-red-50",
                     )}
                     aria-pressed={isSelected}
@@ -609,11 +605,23 @@ export function MobilePlanningCalendar({
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-2">
-                      {dayData?.isAbsence ? (
-                        <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-900/50 dark:bg-amber-900/20 dark:text-amber-200">
-                          {absenceTypeEmojis[dayData.absenceType ?? "other"]}{" "}
-                          {absenceTypeLabels[dayData.absenceType ?? "other"]}
-                        </div>
+                      {dayData?.isAbsence && (dayData?.isAvailable || (dayData?.shifts?.length ?? 0) > 0) ? (
+                        (() => {
+                          const absenceType = dayData.absenceType || 'other';
+                          const config = absenceTypeConfig[absenceType] || absenceTypeConfig.other;
+                          const IconComponent = config.icon;
+                          return (
+                            <div className={cn(
+                              "rounded-lg border p-3 text-sm flex items-center gap-2",
+                              config.bg,
+                              config.border,
+                              config.text
+                            )}>
+                              <IconComponent className="h-4 w-4" />
+                              <span className="font-medium">{typeTranslations[absenceType] || absenceTypeLabels[absenceType] || 'Abwesend'}</span>
+                            </div>
+                          );
+                        })()
                       ) : assignmentCount > 0 ? (
                         shifts.map((shift) => (
                           <ShiftCard

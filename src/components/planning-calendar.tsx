@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { format, parseISO, isWeekend } from "date-fns";
+import { format, parseISO, isWeekend, isToday, isSameDay } from "date-fns";
 import { de } from "date-fns/locale";
 import { getDateStyling, getHolidayTooltip } from "@/lib/date-utils";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -16,21 +16,8 @@ import { EmployeeEditDialog } from "./employee-edit-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import { CircleDashed, Clock, UserX, Eye, EyeOff, Users, Plus } from "lucide-react";
-
-const absenceTypeTranslations: { [key: string]: string } = {
-  vacation: "Urlaub",
-  sick_leave: "Krankheit",
-  training: "Weiterbildung",
-  other: "Sonstiges",
-};
-
-const absenceTypeColors: { [key: string]: string } = {
-  vacation: "bg-blue-500",
-  sick_leave: "bg-yellow-500",
-  training: "bg-purple-500",
-  other: "bg-gray-500",
-};
+import { CircleDashed, Clock, UserX, Eye, EyeOff, Users, Plus, CalendarX, MoreHorizontal } from "lucide-react";
+import { absenceTypeConfig, typeTranslations } from "@/lib/absence-type-config";
 
 interface HoverAddShiftZoneProps {
   employeeId: string;
@@ -74,7 +61,7 @@ function HoverAddShiftZone({ employeeId, date, onCreateShift }: HoverAddShiftZon
   );
 }
 
-function DroppableCell({ id, children, isOver, isAvailable, day, holidaysMap, onCreateShift, employeeId, dateString }: {
+function DroppableCell({ id, children, isOver, isAvailable, day, holidaysMap, onCreateShift, employeeId, dateString, isTodayColumn, absenceBar }: {
   id: string;
   children: React.ReactNode;
   isOver?: boolean;
@@ -84,7 +71,11 @@ function DroppableCell({ id, children, isOver, isAvailable, day, holidaysMap, on
   onCreateShift?: (employeeId: string, date: string) => void;
   employeeId?: string;
   dateString?: string;
+  isTodayColumn?: boolean;
+  absenceBar?: React.ReactNode;
 }) {
+  const isTodayCheck = day ? isToday(day) : false;
+  const effectiveIsTodayColumn = isTodayColumn ?? isTodayCheck;
   const { setNodeRef, isOver: dndIsOver } = useDroppable({ id });
   const isOverCell = isOver ?? dndIsOver;
 
@@ -112,9 +103,12 @@ function DroppableCell({ id, children, isOver, isAvailable, day, holidaysMap, on
         isOverCell && "bg-blue-100 border-blue-500 border-2 ring-2 ring-blue-400",
         // Unavailable days have striped pattern
         !isAvailable && !isOverCell && "bg-muted/50 bg-[repeating-linear-gradient(-45deg,transparent,transparent_4px,hsl(var(--border))_4px,hsl(var(--border))_5px)]",
-        styling
+        styling,
+        // Red ring for today's column
+        effectiveIsTodayColumn && "ring-2 ring-red-500 ring-offset-1"
       )}
     >
+      {absenceBar}
       <div className={cn("h-full w-full relative z-10", isOverCell && "opacity-50")}>
         {children}
       </div>
@@ -175,16 +169,16 @@ export function PlanningCalendar({
       const employee = planningData[employeeId];
       if (!employee) continue;
 
-      // Check if employee has any shifts in the week
-      let hasShifts = false;
+      // Check if employee has any shifts OR absences in the week
+      let hasVisibleContent = false;
       for (const dayData of Object.values(employee.schedule)) {
-        if (dayData.shifts && dayData.shifts.length > 0) {
-          hasShifts = true;
+        if ((dayData.shifts && dayData.shifts.length > 0) || dayData.isAbsence) {
+          hasVisibleContent = true;
           break;
         }
       }
 
-      if (hasShifts) {
+      if (hasVisibleContent) {
         visible.push(employeeId);
       } else {
         hidden.push(employeeId);
@@ -254,6 +248,49 @@ export function PlanningCalendar({
 
     return map;
   }, [planningData]);
+
+  // Helper function to calculate consecutive absence ranges for Outlook-style display
+  // This groups adjacent days with the same absence type into ranges
+  const getAbsenceRanges = React.useCallback((employee: ShiftPlanningData[string], days: Date[]) => {
+    const ranges: { start: Date; end: Date; type: string }[] = [];
+    let currentRange: { start: Date; end: Date; type: string } | null = null;
+
+    for (const day of days) {
+      const dateKey = format(day, 'yyyy-MM-dd');
+      const dayData = employee.schedule[dateKey];
+
+      if (dayData?.isAbsence && dayData.absenceType) {
+        if (!currentRange) {
+          // Start a new range
+          currentRange = { start: day, end: day, type: dayData.absenceType };
+        } else if (currentRange.type === dayData.absenceType) {
+          // Same type - check if consecutive
+          const prevDay = new Date(currentRange.end);
+          const diffDays = Math.round((day.getTime() - prevDay.getTime()) / (1000 * 60 * 60 * 24));
+          if (diffDays === 1) {
+            // Consecutive day - extend range
+            currentRange.end = day;
+          } else {
+            // Gap in days - start new range
+            ranges.push(currentRange);
+            currentRange = { start: day, end: day, type: dayData.absenceType };
+          }
+        } else {
+          // Different absence type - start new range
+          ranges.push(currentRange);
+          currentRange = { start: day, end: day, type: dayData.absenceType };
+        }
+      } else if (currentRange) {
+        // End of absence - close current range
+        ranges.push(currentRange);
+        currentRange = null;
+      }
+    }
+
+    // Don't forget the last range
+    if (currentRange) ranges.push(currentRange);
+    return ranges;
+  }, []);
 
   // Calculate which shifts are multi-shift (different hours for employees at same order on SAME date)
   // Multi-shift: same order, same date, but 2+ employees with different hours
@@ -456,6 +493,14 @@ export function PlanningCalendar({
               const available = employee.totalHoursAvailable - employee.totalHoursPlanned;
               const monthlyHours = allMonthlyHours[id] || { planned: 0, available: 0 };
 
+              // Check if employee is absent today
+              const todayKey = format(new Date(), "yyyy-MM-dd");
+              const todayData = employee.schedule[todayKey];
+              const isAbsentToday = todayData?.isAbsence;
+
+              // Calculate absence ranges for Outlook-style display
+              const absenceRanges = React.useMemo(() => getAbsenceRanges(employee, weekDays), [employee, weekDays, getAbsenceRanges]);
+
               return (
                 <TableRow key={id}>
                   <TableCell className="font-normal sticky left-0 bg-card z-10 align-top p-2 w-[200px]">
@@ -464,10 +509,27 @@ export function PlanningCalendar({
                         <AvatarImage src={employee.raw.avatar_url} alt={employee.name} />
                         <AvatarFallback>{employee.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
                       </Avatar>
-                      <div className="flex-1 space-y-2">
-                        <div className="text-sm font-semibold cursor-pointer hover:text-primary">
-                          <EmployeeEditDialog employee={employee.raw as any} />
-                          {employee.name}
+                      <div className="flex-1 space-y-2 min-w-0">
+                        <div className="flex items-center gap-2">
+                          {isAbsentToday && (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Badge variant="outline" className="text-xs px-2 py-0.5 h-6 bg-red-100 border-red-300 text-red-900 dark:bg-red-900/50 dark:border-red-700 dark:text-red-100 font-medium">
+                                    <CalendarX className="h-3 w-3 mr-1" />
+                                    Abwesend
+                                  </Badge>
+                                </TooltipTrigger>
+                                <TooltipContent className="z-[100]">
+                                  <p>{typeTranslations[todayData.absenceType || 'other'] || 'Abwesend'}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
+                          <div className="text-sm font-semibold cursor-pointer hover:text-primary truncate">
+                            <EmployeeEditDialog employee={employee.raw as any} />
+                            {employee.name}
+                          </div>
                         </div>
                         <p className="text-xs text-muted-foreground">{employee.raw.job_title || 'Mitarbeiter'}</p>
 
@@ -519,32 +581,135 @@ export function PlanningCalendar({
                       </div>
                     </div>
                   </TableCell>
-                  {weekDays.map((day) => {
+                  {weekDays.map((day, dayIndex) => {
                     const dateString = format(day, "yyyy-MM-dd");
                     const dayData = employee.schedule[dateString];
                     const droppableId = `${id}__${dateString}`;
+                    const isTodayColumn = isToday(day);
 
-                    if (!dayData) return <TableCell key={dateString}></TableCell>;
+                    // Check if this day is part of an absence range (for bar positioning)
+                    const absenceRangeForDay = absenceRanges.find(range =>
+                      day.getTime() >= range.start.getTime() && day.getTime() <= range.end.getTime()
+                    );
 
-                    if (dayData.isAbsence) {
+                    // Check if this is the FIRST day of an absence range (for bar rendering)
+                    const isFirstDayOfRange = absenceRanges.find(range =>
+                      isSameDay(day, range.start)
+                    );
+
+                    if (!dayData) return <TableCell key={dateString} className={cn(isTodayColumn && "ring-2 ring-red-500 ring-offset-1")}></TableCell>;
+
+                    // Nur Abwesenheit anzeigen, wenn der Mitarbeiter an diesem Tag normalerweise arbeiten würde
+                    const isWorkDay = dayData.isAvailable || dayData.shifts.length > 0;
+
+                    if (dayData.isAbsence && dayData.shifts.length === 0 && isWorkDay) {
+                      // Calculate consecutive absence days inline (no hooks in loops)
+                      const absenceType = dayData.absenceType || 'other';
+                      let absenceDays = 0;
+                      if (employee.schedule) {
+                        for (const [, schedData] of Object.entries(employee.schedule)) {
+                          if (schedData.isAbsence && (schedData.absenceType || 'other') === absenceType) {
+                            absenceDays++;
+                          }
+                        }
+                      }
+
+                      const config = absenceTypeConfig[absenceType] || absenceTypeConfig.other;
+                      const IconComponent = config.icon;
+
                       return (
-                        <TableCell key={dateString} className="p-0">
+                        <TableCell key={dateString} className={cn("p-0 relative", isTodayColumn && "ring-2 ring-red-500 ring-offset-1")}>
+                          {/* Outlook-style bar - only render on first day of range */}
+                          {isFirstDayOfRange && (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div
+                                    className={cn(
+                                      "absolute top-0 left-0 h-3 rounded-b-md shadow-sm flex items-center justify-center cursor-help z-20",
+                                      config.solidBg || "bg-gray-500"
+                                    )}
+                                    style={{
+                                      width: `${((weekDays.findIndex(d => isSameDay(d, isFirstDayOfRange.end)) - dayIndex + 1) * 100)}%`
+                                    }}
+                                  >
+                                    <span className={cn("text-[9px] font-semibold text-white truncate px-1", config.text)}>
+                                      {typeTranslations[isFirstDayOfRange.type] || isFirstDayOfRange.type}
+                                    </span>
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent className="max-w-[200px] z-[100]" side="top">
+                                  <p className="font-medium">{typeTranslations[isFirstDayOfRange.type] || isFirstDayOfRange.type}</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {format(isFirstDayOfRange.start, "dd.MM.", { locale: de })} – {format(isFirstDayOfRange.end, "dd.MM.", { locale: de })}
+                                  </p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <div className={cn(
-                                  "w-full h-full flex items-center justify-center font-semibold text-xs sm:text-sm text-white",
-                                  absenceTypeColors[dayData.absenceType || 'other']
+                                  "w-full h-full flex flex-col items-center justify-center font-semibold text-xs sm:text-sm p-1 gap-0.5",
+                                  config.bg,
+                                  config.border,
+                                  config.text
                                 )}>
-                                  {absenceTypeTranslations[dayData.absenceType || 'other']}
+                                  <div className="flex items-center gap-1">
+                                    <IconComponent className="h-3.5 w-3.5" />
+                                    <span>{typeTranslations[absenceType] || absenceType}</span>
+                                  </div>
+                                  {absenceDays > 1 && (
+                                    <span className="text-[9px] opacity-75">{absenceDays} Tage</span>
+                                  )}
                                 </div>
                               </TooltipTrigger>
-                              <TooltipContent><p>{absenceTypeTranslations[dayData.absenceType || 'other']}</p></TooltipContent>
+                              <TooltipContent className="max-w-[200px] z-[100]">
+                                <div className="space-y-1">
+                                  <p className="font-semibold flex items-center gap-1">
+                                    <IconComponent className="h-3 w-3" />
+                                    {typeTranslations[absenceType] || absenceType}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {absenceDays > 1 ? `${absenceDays} aufeinanderfolgende Tage` : '1 Tag'}
+                                  </p>
+                                </div>
+                              </TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
                         </TableCell>
                       );
                     }
+
+                    // Regular day cell (with shifts or available)
+                    const absenceBar = isFirstDayOfRange ? (
+                      <TooltipProvider key="absence-bar">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div
+                              className={cn(
+                                "absolute top-0 left-0 h-3 rounded-b-md shadow-sm flex items-center justify-center cursor-help z-20 pointer-events-auto",
+                                (absenceTypeConfig[isFirstDayOfRange.type] || { solidBg: "bg-gray-500" }).solidBg
+                              )}
+                              style={{
+                                width: `${((weekDays.findIndex(d => isSameDay(d, isFirstDayOfRange.end)) - dayIndex + 1) * 100)}%`
+                              }}
+                            >
+                              <span className={cn("text-[9px] font-semibold text-white truncate px-1", "text-white")}>
+                                {typeTranslations[isFirstDayOfRange.type] || isFirstDayOfRange.type}
+                              </span>
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-[200px] z-[100]" side="top">
+                            <p className="font-medium">{typeTranslations[isFirstDayOfRange.type] || isFirstDayOfRange.type}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {format(isFirstDayOfRange.start, "dd.MM.", { locale: de })} – {format(isFirstDayOfRange.end, "dd.MM.", { locale: de })}
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    ) : null;
 
                     return (
                       <DroppableCell
@@ -556,6 +721,8 @@ export function PlanningCalendar({
                         onCreateShift={onCreateShift}
                         employeeId={id}
                         dateString={dateString}
+                        isTodayColumn={isTodayColumn}
+                        absenceBar={absenceBar}
                       >
                         <div className="space-y-1 pt-5">
                           {dayData.shifts.map((shift) => (

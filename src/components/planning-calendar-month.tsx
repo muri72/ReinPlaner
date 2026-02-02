@@ -15,20 +15,7 @@ import { ShiftPlanningData, UnassignedShift } from "@/lib/actions/shift-planning
 import { EmployeeEditDialog } from "./employee-edit-dialog";
 import { ShiftCard } from "./shift-card";
 import { useDroppable } from "@dnd-kit/core";
-
-const absenceTypeTranslations: { [key: string]: string } = {
-  vacation: "Urlaub",
-  sick_leave: "Krankheit",
-  training: "Weiterbildung",
-  other: "Sonstiges",
-};
-
-const absenceTypeColors: { [key: string]: string } = {
-  vacation: "bg-blue-500",
-  sick_leave: "bg-yellow-500",
-  training: "bg-purple-500",
-  other: "bg-gray-500",
-};
+import { absenceTypeConfig, typeTranslations } from "@/lib/absence-type-config";
 
 interface MonthDayCellProps {
   day: Date;
@@ -75,7 +62,7 @@ function MonthDayCell({ day, monthStart, employeeId, employee, activeDragId, onA
       className={cn(
         "min-h-[80px] p-1 border border-border/50 transition-all relative",
         !isCurrentMonth && "bg-muted/30 text-muted-foreground",
-        isCurrentDay && "bg-primary/5 border-primary/30",
+        isCurrentDay && "ring-2 ring-red-500 ring-offset-1",
         // Blue background when dragging over
         isOver && "bg-blue-100 border-blue-500 border-2 ring-2 ring-blue-400",
         dayData?.isAbsence && "bg-muted/50",
@@ -93,17 +80,27 @@ function MonthDayCell({ day, monthStart, employeeId, employee, activeDragId, onA
         )}>
           {format(day, "d")}
         </span>
-        {dayData?.isAbsence && (
+        {dayData?.isAbsence && (dayData?.isAvailable || (dayData?.shifts?.length ?? 0) > 0) && (
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
                 <div className={cn(
-                  "w-2 h-2 rounded-full",
-                  absenceTypeColors[dayData.absenceType || 'other']
-                )} />
+                  "flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium",
+                  absenceTypeConfig[dayData.absenceType || 'other']?.bg || absenceTypeConfig.other.bg,
+                  absenceTypeConfig[dayData.absenceType || 'other']?.border || absenceTypeConfig.other.border,
+                  absenceTypeConfig[dayData.absenceType || 'other']?.text || absenceTypeConfig.other.text
+                )}>
+                  {(() => {
+                    const absenceType = dayData.absenceType || 'other';
+                    const config = absenceTypeConfig[absenceType] || absenceTypeConfig.other;
+                    const IconComponent = config.icon;
+                    return <IconComponent className="h-3 w-3" />;
+                  })()}
+                  <span>{typeTranslations[dayData.absenceType || 'other'] || 'Abwesend'}</span>
+                </div>
               </TooltipTrigger>
               <TooltipContent>
-                <p>{absenceTypeTranslations[dayData.absenceType || 'other']}</p>
+                <p className="font-medium">{typeTranslations[dayData.absenceType || 'other'] || 'Abwesend'}</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -223,16 +220,16 @@ export function PlanningCalendarMonth({
       const employee = planningData[employeeId];
       if (!employee) continue;
 
-      // Check if employee has any shifts in the month
-      let hasShifts = false;
+      // Check if employee has any shifts OR absences in the month
+      let hasVisibleContent = false;
       for (const [dateKey, dayData] of Object.entries(employee.schedule)) {
-        if (dayData.shifts && dayData.shifts.length > 0) {
-          hasShifts = true;
+        if ((dayData.shifts && dayData.shifts.length > 0) || dayData.isAbsence) {
+          hasVisibleContent = true;
           break;
         }
       }
 
-      if (hasShifts) {
+      if (hasVisibleContent) {
         visible.push(employeeId);
       } else {
         hidden.push(employeeId);
