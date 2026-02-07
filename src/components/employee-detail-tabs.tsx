@@ -13,6 +13,9 @@ import { Separator } from "@/components/ui/separator";
 import { EmployeeTimeEntriesList } from "./employee-time-entries-list";
 import { EmployeeOrdersList } from "./employee-orders-list";
 import { EmployeeAbsencesList } from "./employee-absences-list";
+import { TimeAccountSummary } from "@/components/time-account-summary";
+import { TimeAccountChart } from "@/components/time-account-chart";
+import { EmployeeAbsenceKPIs } from "@/components/employee-absence-kpis";
 
 interface TimeEntry {
   id: string;
@@ -89,12 +92,13 @@ export function EmployeeDetailTabs({ employee }: EmployeeDetailTabsProps) {
 
   return (
     <Tabs defaultValue="stammdaten" className="w-full">
-      <TabsList className="grid w-full grid-cols-5">
-        <TabsTrigger value="stammdaten">Stammdaten</TabsTrigger>
-        <TabsTrigger value="auftraege">Aufträge</TabsTrigger>
-        <TabsTrigger value="arbeitszeiten">Arbeitszeiten</TabsTrigger>
-        <TabsTrigger value="dokumente">Dokumente</TabsTrigger>
-        <TabsTrigger value="abwesenheiten">Abwesenheiten</TabsTrigger>
+      <TabsList className="flex flex-wrap lg:grid lg:grid-cols-6 w-full gap-1">
+        <TabsTrigger value="stammdaten" className="flex-1 lg:flex-none">Stammdaten</TabsTrigger>
+        <TabsTrigger value="auftraege" className="flex-1 lg:flex-none">Aufträge</TabsTrigger>
+        <TabsTrigger value="arbeitszeiten" className="flex-1 lg:flex-none">Arbeitszeiten</TabsTrigger>
+        <TabsTrigger value="zeitkonto" className="flex-1 lg:flex-none">Zeitkonto</TabsTrigger>
+        <TabsTrigger value="dokumente" className="flex-1 lg:flex-none">Dokumente</TabsTrigger>
+        <TabsTrigger value="abwesenheiten" className="flex-1 lg:flex-none">Abwesenheiten</TabsTrigger>
       </TabsList>
       <TabsContent value="stammdaten">
         <Card className="shadow-neumorphic glassmorphism-card">
@@ -174,6 +178,23 @@ export function EmployeeDetailTabs({ employee }: EmployeeDetailTabsProps) {
           </CardContent>
         </Card>
       </TabsContent>
+      <TabsContent value="zeitkonto">
+        <div className="space-y-6">
+          {/* Time Account Summary Card */}
+          <TimeAccountSummary
+            employeeId={employee.id}
+            employeeName={`${employee.first_name} ${employee.last_name}`}
+            contractHoursPerWeek={employee.contract_hours_per_week}
+          />
+
+          {/* Time Account Charts */}
+          <TimeAccountChart
+            employeeId={employee.id}
+            employeeName={`${employee.first_name} ${employee.last_name}`}
+            contractHoursPerWeek={employee.contract_hours_per_week}
+          />
+        </div>
+      </TabsContent>
       <TabsContent value="dokumente">
         <Card className="shadow-neumorphic glassmorphism-card">
           <CardHeader>
@@ -201,15 +222,24 @@ export function EmployeeDetailTabs({ employee }: EmployeeDetailTabsProps) {
         </Card>
       </TabsContent>
       <TabsContent value="abwesenheiten">
-        <Card className="shadow-neumorphic glassmorphism-card">
-          <CardHeader>
-            <CardTitle>Abwesenheiten</CardTitle>
-            <CardDescription>Eine Liste aller Abwesenheitsanträge für diesen Mitarbeiter.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <EmployeeAbsencesList absences={employee.absence_requests || []} employee={employee} />
-          </CardContent>
-        </Card>
+        <div className="space-y-6">
+          {/* Absence KPIs Summary */}
+          <EmployeeAbsenceKPIs
+            employeeId={employee.id}
+            employeeName={`${employee.first_name} ${employee.last_name}`}
+          />
+
+          {/* Absences List */}
+          <Card className="shadow-neumorphic glassmorphism-card">
+            <CardHeader>
+              <CardTitle>Abwesenheitsanträge</CardTitle>
+              <CardDescription>Eine Liste aller Abwesenheitsanträge für diesen Mitarbeiter.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <EmployeeAbsencesList absences={employee.absence_requests || []} employee={employee} />
+            </CardContent>
+          </Card>
+        </div>
       </TabsContent>
     </Tabs>
   );

@@ -172,7 +172,7 @@ export function OrdersGridView({ orders, employees, onActionSuccess }: OrdersGri
                               </p>
                               <div className="flex flex-wrap gap-1">
                                 {activeDays.map(day => {
-                                  const hours = firstSchedule[day]?.hours || 0;
+                                  const hours = Number(firstSchedule[day]?.hours || 0);
                                   return (
                                     <div key={day} className="flex items-center gap-1 bg-primary/5 px-2 py-1 rounded-md border border-primary/10">
                                       <span className="text-xs font-medium">{dayNames[day]}</span>

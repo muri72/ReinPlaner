@@ -177,7 +177,7 @@ export function OrderDetailTabs({ order }: OrderDetailTabsProps) {
                   return (
                     <div className="space-y-1">
                       <p className="font-medium text-muted-foreground">Monatliche Kosten</p>
-                      <p className="text-2xl font-bold text-green-600">{order.fixed_monthly_price.toFixed(2)} €</p>
+                      <p className="text-2xl font-bold text-green-600">{Number(order.fixed_monthly_price).toFixed(2)} €</p>
                       <p className="text-sm text-muted-foreground">pro Monat</p>
                     </div>
                   );
@@ -188,7 +188,7 @@ export function OrderDetailTabs({ order }: OrderDetailTabsProps) {
                   return (
                     <div className="space-y-1">
                       <p className="font-medium text-muted-foreground">Pauschale</p>
-                      <p className="text-2xl font-bold text-primary">{order.fixed_monthly_price.toFixed(2)} €</p>
+                      <p className="text-2xl font-bold text-primary">{Number(order.fixed_monthly_price).toFixed(2)} €</p>
                       <p className="text-sm text-muted-foreground">pro Auftrag</p>
                     </div>
                   );
@@ -223,7 +223,7 @@ export function OrderDetailTabs({ order }: OrderDetailTabsProps) {
                       <p className="font-medium text-muted-foreground">Zeitaufwand</p>
                       <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
                         <p className="text-lg font-semibold">
-                          {order.total_estimated_hours.toFixed(2)} Std.
+                          {Number(order.total_estimated_hours).toFixed(2)} Std.
                         </p>
                         <p className="text-xs text-muted-foreground mt-1">
                           Stundensatz nicht hinterlegt
@@ -374,7 +374,7 @@ export function OrderDetailTabs({ order }: OrderDetailTabsProps) {
                                     </div>
                                     <div className="space-y-1">
                                       <p className="text-xs text-muted-foreground">Stunden</p>
-                                      <p className="text-sm font-bold">{schedule.hours?.toFixed(2) || 0}h</p>
+                                      <p className="text-sm font-bold">{Number(schedule.hours || 0).toFixed(2)}h</p>
                                       {schedule.start && (
                                         <>
                                           <p className="text-xs text-muted-foreground mt-2">Start</p>

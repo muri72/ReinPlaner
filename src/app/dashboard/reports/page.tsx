@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { WorkTimeReportForm } from "@/components/work-time-report-form";
+import { TimeAccountsAdminTable } from "@/components/time-accounts-admin-table";
 
 export default async function ReportsPage() {
   const supabase = await createClient();
@@ -25,8 +26,19 @@ export default async function ReportsPage() {
 
   return (
     <div className="p-4 md:p-8 space-y-8">
-      <h1 className="text-2xl md:text-3xl font-bold">Arbeitszeitnachweise</h1>
-      <WorkTimeReportForm />
+      <h1 className="text-2xl md:text-3xl font-bold">Berichte & Übersichten</h1>
+
+      {/* Work Time Reports Section */}
+      <section>
+        <h2 className="text-xl font-semibold mb-4">Arbeitszeitnachweise</h2>
+        <WorkTimeReportForm />
+      </section>
+
+      {/* Time Accounts Overview Section */}
+      <section className="mt-8">
+        <h2 className="text-xl font-semibold mb-4">Zeitkonto-Übersicht</h2>
+        <TimeAccountsAdminTable />
+      </section>
     </div>
   );
 }
