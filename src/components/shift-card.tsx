@@ -2,19 +2,53 @@
 
 import * as React from "react";
 import { cn } from "@/lib/utils";
-import { Clock, Repeat, Users, ArrowRightLeft, CheckCircle2, CircleDot, XCircle, MapPin, Calendar, User, Layers, Coffee, Car } from "lucide-react";
+import { Clock, Repeat, Users, ArrowRightLeft, CheckCircle2, CircleDot, XCircle, MapPin, Layers, Coffee, Car } from "lucide-react";
 import { useDraggable } from "@dnd-kit/core";
 import { Badge } from "@/components/ui/badge";
 import { ShiftAssignment } from "@/lib/actions/shift-planning";
 import { isToday, isBefore, isAfter, parseISO, startOfDay, format } from "date-fns";
 import { de } from "date-fns/locale";
 
+// ============================================================================
+// GLOBAL INTERVAL MANAGER - Single interval for all ShiftCards
+// Prevents 350+ individual intervals (one per card)
+// ============================================================================
+
+let globalIntervalId: ReturnType<typeof setInterval> | null = null;
+const globalSubscribers = new Set<() => void>();
+
+function subscribeToGlobalTick(callback: () => void) {
+  globalSubscribers.add(callback);
+
+  // Start global interval on first subscriber
+  if (!globalIntervalId) {
+    globalIntervalId = setInterval(() => {
+      globalSubscribers.forEach(cb => cb());
+    }, 60000); // 1 minute
+  }
+
+  // Return unsubscribe function
+  return () => {
+    globalSubscribers.delete(callback);
+    // Cleanup interval if no subscribers
+    if (globalSubscribers.size === 0 && globalIntervalId) {
+      clearInterval(globalIntervalId);
+      globalIntervalId = null;
+    }
+  };
+}
+
+// ============================================================================
+// TYPES & CONFIG
+// ============================================================================
+
 interface ShiftCardProps {
   shift: ShiftAssignment;
   onSuccess: () => void;
-  onEdit?: (shiftId: string) => void;
+  onEdit?: (shiftId: string, shiftWithMeta: ShiftAssignment & { is_multi_shift: boolean }, dateString: string) => void;
   teamMembers?: { employee_id: string; employee_name: string; avatar_url?: string }[];
   isMultiShift?: boolean;
+  dateString?: string; // Added for proper edit handling
 }
 
 const statusConfig = {
@@ -24,19 +58,23 @@ const statusConfig = {
   cancelled: { border: "border-red-500", icon: XCircle, label: "Abgesagt", color: "text-red-500", bg: "bg-red-50" },
 };
 
-function calculateRealtimeStatus(shift: ShiftAssignment) {
+// ============================================================================
+// STATUS CALCULATION
+// ============================================================================
+
+function calculateRealtimeStatus(shift: ShiftAssignment): "scheduled" | "in_progress" | "completed" | "cancelled" {
+  // Always return the actual DB status to avoid desync
+  // The visual status should match what's in the database
+  const status: "scheduled" | "in_progress" | "completed" | "cancelled" = shift.status || "scheduled";
+
+  if (status === "cancelled") return "cancelled";
+  if (status === "completed") return "completed";
+
+  // Only show "in_progress" for today's shifts that are actually in progress time-wise
   const now = new Date();
-  const today = startOfDay(now);
-
-  if (shift.status === "cancelled") {
-    return shift.status;
-  }
-
   const shiftDate = parseISO(shift.shift_date);
 
-  if (isBefore(shiftDate, today)) {
-    return "completed";
-  } else if (isToday(shiftDate)) {
+  if (isToday(shiftDate)) {
     if (shift.start_time && shift.end_time) {
       const [startHour, startMin] = shift.start_time.split(":").map(Number);
       const [endHour, endMin] = shift.end_time.split(":").map(Number);
@@ -47,21 +85,21 @@ function calculateRealtimeStatus(shift: ShiftAssignment) {
       const shiftEnd = new Date(now);
       shiftEnd.setHours(endHour, endMin, 0, 0);
 
-      if (isBefore(now, shiftStart)) {
-        return "scheduled";
-      } else if (isAfter(now, shiftEnd)) {
-        return "completed";
-      } else {
-        return "in_progress";
-      }
+      if (isBefore(now, shiftStart)) return "scheduled";
+      if (isAfter(now, shiftEnd)) return "scheduled"; // Over today - needs manual completion
+      return "in_progress";
     }
     return "in_progress";
   }
 
-  return "scheduled";
+  return status;
 }
 
-export function ShiftCard({ shift, onSuccess, onEdit, teamMembers, isMultiShift }: ShiftCardProps) {
+// ============================================================================
+// SHIFT CARD COMPONENT
+// ============================================================================
+
+function ShiftCardComponent({ shift, onSuccess, onEdit, teamMembers, isMultiShift, dateString }: ShiftCardProps) {
   const draggableId = shift.id;
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: draggableId,
@@ -70,12 +108,13 @@ export function ShiftCard({ shift, onSuccess, onEdit, teamMembers, isMultiShift 
 
   const [realtimeStatus, setRealtimeStatus] = React.useState(() => calculateRealtimeStatus(shift));
 
+  // Use global interval subscription instead of individual interval
   React.useEffect(() => {
-    const interval = setInterval(() => {
+    const unsubscribe = subscribeToGlobalTick(() => {
       setRealtimeStatus(calculateRealtimeStatus(shift));
-    }, 60000);
-    return () => clearInterval(interval);
-  }, [shift]);
+    });
+    return unsubscribe;
+  }, [shift.id, shift.status, shift.shift_date, shift.start_time, shift.end_time]);
 
   const style = transform
     ? {
@@ -86,7 +125,6 @@ export function ShiftCard({ shift, onSuccess, onEdit, teamMembers, isMultiShift 
 
   const statusInfo = statusConfig[realtimeStatus as keyof typeof statusConfig] || statusConfig.scheduled;
   const StatusIcon = statusInfo.icon;
-
   const serviceColor = shift.service_color || "#6b7280";
 
   const isLightColor = (hexColor: string) => {
@@ -100,12 +138,16 @@ export function ShiftCard({ shift, onSuccess, onEdit, teamMembers, isMultiShift 
 
   const badgeTextColorClass = isLightColor(serviceColor) ? "text-gray-800" : "text-white";
   const isSubstitute = shift.employees.some((e) => e.role === "substitute");
-  const formattedDate = format(parseISO(shift.shift_date), "EEEE, d. MMMM yyyy", { locale: de });
   const allTeamMembers = teamMembers || shift.employees;
 
   const handleClick = (e: React.MouseEvent) => {
     if (onEdit) {
-      onEdit(shift.assignment_id || shift.id);
+      // Construct shift with correct is_multi_shift value
+      const shiftWithMeta = {
+        ...shift,
+        is_multi_shift: isMultiShift || false,
+      };
+      onEdit(shift.assignment_id || shift.id, shiftWithMeta, dateString || shift.shift_date);
     }
   };
 
@@ -223,3 +265,25 @@ export function ShiftCard({ shift, onSuccess, onEdit, teamMembers, isMultiShift 
     </div>
   );
 }
+
+// ============================================================================
+// MEMOIZED EXPORT - Custom comparison for optimal re-render behavior
+// ============================================================================
+
+export const ShiftCard = React.memo(ShiftCardComponent, (prevProps, nextProps) => {
+  // Only re-render if critical props change
+  return (
+    prevProps.shift.id === nextProps.shift.id &&
+    prevProps.shift.status === nextProps.shift.status &&
+    prevProps.shift.shift_date === nextProps.shift.shift_date &&
+    prevProps.shift.start_time === nextProps.shift.start_time &&
+    prevProps.shift.end_time === nextProps.shift.end_time &&
+    prevProps.shift.job_title === nextProps.shift.job_title &&
+    prevProps.isMultiShift === nextProps.isMultiShift &&
+    prevProps.dateString === nextProps.dateString &&
+    prevProps.onEdit === nextProps.onEdit &&
+    prevProps.onSuccess === nextProps.onSuccess
+  );
+});
+
+ShiftCard.displayName = "ShiftCard";

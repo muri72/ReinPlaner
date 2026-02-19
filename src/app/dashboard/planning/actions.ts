@@ -4,7 +4,7 @@
 import { createClient, createAdminClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { sendNotification } from "@/lib/actions/notifications";
-import { generateShiftsFromAssignments, markOverdueShiftsAsCompleted } from "@/lib/actions/shift-planning";
+import { generateShiftsFromAssignments, ensureShiftTimeEntriesSync } from "@/lib/actions/shift-planning";
 import { startOfWeek, endOfWeek, eachDayOfInterval, formatISO, parseISO, getDay, differenceInDays, format, addMinutes, getWeek, subDays, addDays } from 'date-fns';
 import { de } from 'date-fns/locale';
 
@@ -12,6 +12,11 @@ import { de } from 'date-fns/locale';
 // AUTO-COMPLETE OVERDUE SHIFTS ON PAGE VISIT
 // ============================================================================
 
+/**
+ * Ensures shift-time entry synchronization.
+ * This function is called automatically when the planning page loads.
+ * It marks overdue shifts as completed and creates any missing time entries.
+ */
 export async function checkAndCompleteOverdueShifts(): Promise<{
   success: boolean;
   message: string;
@@ -19,7 +24,13 @@ export async function checkAndCompleteOverdueShifts(): Promise<{
   time_entries_created: number;
 }> {
   try {
-    return await markOverdueShiftsAsCompleted();
+    const result = await ensureShiftTimeEntriesSync();
+    return {
+      success: result.success,
+      message: result.message,
+      updated_count: result.shifts_completed,
+      time_entries_created: result.time_entries_created,
+    };
   } catch (error: any) {
     return { success: false, message: error.message, updated_count: 0, time_entries_created: 0 };
   }
@@ -100,39 +111,8 @@ export async function getPlanningDataForRange(startDate: Date, endDate: Date, fi
   const end_date_iso = formatISO(endDate, { representation: 'date' });
 
   try {
-    // 0. Generate shifts for visible week + 2 weeks buffer (before/after)
-    // This creates missing shifts on-demand without duplicates
-    const extendedStartDate = formatISO(subDays(startDate, 14), { representation: 'date' });
-    const extendedEndDate = formatISO(addDays(endDate, 14), { representation: 'date' });
-    const supabaseAdmin = createAdminClient();
-
-    // First: Generate shifts for orders with start_date before the visible range
-    // This ensures orders like "start_date: 2026-01-01" are included even when viewing Jan 20-26
-    const { data: earlyOrders } = await supabaseAdmin
-      .from('orders')
-      .select('id, start_date')
-      .eq('request_status', 'approved')
-      .neq('status', 'completed')
-      .neq('status', 'cancelled')
-      .lt('start_date', extendedStartDate);
-
-    if (earlyOrders && earlyOrders.length > 0) {
-      // Generate shifts from each order's start_date to the extended end date
-      for (const order of earlyOrders) {
-        if (order.start_date) {
-          await supabaseAdmin.rpc('generate_shifts_for_date_range', {
-            p_start_date: order.start_date,
-            p_end_date: extendedEndDate
-          });
-        }
-      }
-    }
-
-    // Second: Generate shifts for the visible range as before
-    await supabaseAdmin.rpc('generate_shifts_for_date_range', {
-      p_start_date: extendedStartDate,
-      p_end_date: extendedEndDate
-    });
+    // NOTE: Auto-generation of shifts removed to prevent duplicate creation
+    // Shifts are now created via the shift edit dialog or manual assignment only
 
     // 1. Fetch all active employees with their default schedules, applying search filter
     let employeesQuery = supabase

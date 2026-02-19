@@ -4,6 +4,61 @@
 import { createClient } from "@/lib/supabase/client";
 import { endOfMonth, startOfMonth } from "date-fns";
 
+/**
+ * Client-side Funktion zum Synchronisieren von abgeschlossenen Einsätzen mit Zeiteinträgen.
+ * Erstellt fehlende Zeiteinträge für alle abgeschlossenen Einsätze, die noch keinen entsprechenden Zeiteintrag haben.
+ *
+ * Hinweis: Nach erfolgreichem Sync sollte router.refresh() aufgerufen werden, um die UI zu aktualisieren.
+ */
+export async function syncShiftsToTimeEntries(): Promise<{
+  success: boolean;
+  message: string;
+  created: number;
+  skipped: number;
+  errors?: string[];
+}> {
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
+
+  const response = await fetch(`${baseUrl}/api/admin/sync-shifts-time-entries`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`API Error: ${response.status} - ${errorText}`);
+  }
+
+  const data = await response.json();
+  return data;
+}
+
+/**
+ * Client-side Funktion zum Abrufen des Sync-Status.
+ * Zeigt an, wie viele Einsätze fehlende Zeiteinträge haben.
+ */
+export async function getSyncStatus(): Promise<{
+  success: boolean;
+  total_completed_shifts: number;
+  shifts_with_entries: number;
+  shifts_missing_entries: number;
+}> {
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000';
+
+  const response = await fetch(`${baseUrl}/api/admin/sync-shifts-time-entries`, {
+    method: "GET",
+    headers: { "Content-Type": "application/json" },
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new Error(`API Error: ${response.status}`);
+  }
+
+  return await response.json();
+}
+
 // Definieren Sie die Schnittstellen hier, damit sie importiert und importiert werden können
 export interface ReportEntry {
   id: string;

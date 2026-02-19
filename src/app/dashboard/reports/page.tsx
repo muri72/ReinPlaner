@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { WorkTimeReportForm } from "@/components/work-time-report-form";
 import { TimeAccountsAdminTable } from "@/components/time-accounts-admin-table";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default async function ReportsPage() {
   const supabase = await createClient();

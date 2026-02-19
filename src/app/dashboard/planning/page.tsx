@@ -43,7 +43,7 @@ import {
 } from "date-fns";
 import { Clock } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { format as formatDateFns } from "date-fns";
 
@@ -58,6 +58,7 @@ interface ObjectOption {
 }
 
 export default function PlanningPage() {
+  const router = useRouter();
   const [currentDate, setCurrentDate] = React.useState(() => startOfDay(new Date()));
   const [viewMode, setViewMode] = React.useState<"day" | "week" | "month">("week");
   const [showUnassigned, setShowUnassigned] = React.useState(false);
@@ -79,6 +80,21 @@ export default function PlanningPage() {
   const [availableEmployees, setAvailableEmployees] = React.useState<{ id: string; name: string }[]>([]);
   const [availableServices, setAvailableServices] = React.useState<{ id: string; name: string }[]>([]);
   const [availableCustomers, setAvailableCustomers] = React.useState<{ id: string; name: string }[]>([]);
+
+  // Refs to track if static data has been loaded (prevents dependency loops)
+  const staticDataLoadedRef = React.useRef({
+    objectsServices: false,
+    customers: false,
+    orders: false,
+    employees: false,
+  });
+
+  // Ref to track the latest fetch request ID for cancellation
+  const fetchIdRef = React.useRef(0);
+
+  // Throttle auto-sync to maximum once per minute
+  const lastAutoSyncRef = React.useRef<number>(0);
+  const AUTO_SYNC_THROTTLE_MS = 60000; // 1 minute
 
   // Series edit dialog state
   const [seriesDialogOpen, setSeriesDialogOpen] = React.useState(false);
@@ -102,17 +118,8 @@ export default function PlanningPage() {
   // Track Alt key for copy mode
   const [isAltPressed, setIsAltPressed] = React.useState(false);
 
-  // Auto-complete overdue shifts on page load
-  React.useEffect(() => {
-    const checkOverdueShifts = async () => {
-      try {
-        await checkAndCompleteOverdueShifts();
-      } catch (error) {
-        console.error("Error checking overdue shifts:", error);
-      }
-    };
-    checkOverdueShifts();
-  }, []);
+  // Auto-sync is now performed when the planning page loads
+  // This ensures 1:1 relationship between completed shifts and time entries
 
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -169,11 +176,18 @@ export default function PlanningPage() {
   }, [currentDate, viewMode]);
 
   const fetchData = React.useCallback(async (start: Date, end: Date, searchQuery: string, displayDays: Date[], currentFilters: FilterValues) => {
+    // Increment fetch ID for cancellation check
+    const currentFetchId = ++fetchIdRef.current;
+
     setLoading(true);
     const supabase = createClient();
     const {
       data: { user },
     } = await supabase.auth.getUser();
+
+    // Early return if this fetch was cancelled
+    if (currentFetchId !== fetchIdRef.current) return;
+
     if (user) {
       setCurrentUser(user);
       const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
@@ -190,82 +204,104 @@ export default function PlanningPage() {
     // Get holidays using batch processing
     const uniqueDates = [...new Set(displayDays.map(day => formatDateFns(day, 'yyyy-MM-dd')))];
     const holidayResults = await settingsService.checkMultipleHolidays(uniqueDates, code);
+
+    if (currentFetchId !== fetchIdRef.current) return;
     setHolidaysMap(holidayResults);
 
-    // Load objects and services (for filters)
-    const [objectsData, fetchedServices] = await Promise.all([
-      supabase.from("objects").select("id, name, address, daily_schedules").order("name"),
-      getServices()
-    ]);
+    // Load objects and services (for filters) - only if not already loaded
+    // Use ref instead of state to avoid dependency loops
+    if (!staticDataLoadedRef.current.objectsServices) {
+      const [objectsData, fetchedServices] = await Promise.all([
+        supabase.from("objects").select("id, name, address, daily_schedules").order("name"),
+        getServices()
+      ]);
 
-    if (objectsData.data) {
-      setObjects(objectsData.data.map((o: any) => ({ id: o.id, name: o.name })));
-      setAvailableObjects(objectsData.data.map((o: any) => ({
-        id: o.id,
-        name: o.name,
-        address: o.address || undefined,
-        daily_schedules: o.daily_schedules || undefined,
-      })));
+      if (currentFetchId !== fetchIdRef.current) return;
+
+      if (objectsData.data) {
+        setObjects(objectsData.data.map((o: any) => ({ id: o.id, name: o.name })));
+        setAvailableObjects(objectsData.data.map((o: any) => ({
+          id: o.id,
+          name: o.name,
+          address: o.address || undefined,
+          daily_schedules: o.daily_schedules || undefined,
+        })));
+      }
+
+      // Store services for shift dialog
+      if (fetchedServices) {
+        setAvailableServices(fetchedServices.map((s: any) => ({
+          id: s.id,
+          name: s.name,
+        })));
+        setServices(fetchedServices);
+      }
+      staticDataLoadedRef.current.objectsServices = true;
     }
 
-    // Store services for shift dialog
-    if (fetchedServices) {
-      setAvailableServices(fetchedServices.map((s: any) => ({
-        id: s.id,
-        name: s.name,
-      })));
+    // Load static reference data only if not already loaded
+    if (!staticDataLoadedRef.current.customers) {
+      const { data: customersData } = await supabase
+        .from("customers")
+        .select("id, name")
+        .order("name");
+
+      if (currentFetchId !== fetchIdRef.current) return;
+
+      if (customersData) {
+        setAvailableCustomers(customersData.map((c: any) => ({
+          id: c.id,
+          name: c.name,
+        })));
+      }
+      staticDataLoadedRef.current.customers = true;
     }
 
-    // Load customers for order creation
-    const { data: customersData } = await supabase
-      .from("customers")
-      .select("id, name")
-      .order("name");
+    if (!staticDataLoadedRef.current.orders) {
+      const { data: ordersData } = await supabase
+        .from("orders")
+        .select(`
+          id,
+          title,
+          object_id,
+          objects(name),
+          customers(name)
+        `)
+        .eq("status", "active")
+        .order("title");
 
-    if (customersData) {
-      setAvailableCustomers(customersData.map((c: any) => ({
-        id: c.id,
-        name: c.name,
-      })));
+      if (currentFetchId !== fetchIdRef.current) return;
+
+      if (ordersData) {
+        const orders = ordersData.map((order: any) => ({
+          id: order.id,
+          title: order.title,
+          object_id: order.object_id,
+          object_name: order.objects?.name || null,
+          customer_name: order.customers?.name || null,
+        }));
+        setAvailableOrders(orders);
+      }
+      staticDataLoadedRef.current.orders = true;
     }
 
-    // Load available orders for shift creation
-    const { data: ordersData } = await supabase
-      .from("orders")
-      .select(`
-        id,
-        title,
-        object_id,
-        objects(name),
-        customers(name)
-      `)
-      .eq("status", "active")
-      .order("title");
+    if (!staticDataLoadedRef.current.employees) {
+      const { data: employeesData } = await supabase
+        .from("employees")
+        .select("id, first_name, last_name")
+        .eq("status", "active")
+        .order("first_name");
 
-    if (ordersData) {
-      const orders = ordersData.map((order: any) => ({
-        id: order.id,
-        title: order.title,
-        object_id: order.object_id,
-        object_name: order.objects?.name || null,
-        customer_name: order.customers?.name || null,
-      }));
-      setAvailableOrders(orders);
-    }
+      if (currentFetchId !== fetchIdRef.current) return;
 
-    // Load employees for shift creation
-    const { data: employeesData } = await supabase
-      .from("employees")
-      .select("id, first_name, last_name")
-      .eq("status", "active")
-      .order("first_name");
-
-    if (employeesData) {
-      const employees = employeesData.map((emp: any) => ({
-        id: emp.id,
-        name: `${emp.first_name} ${emp.last_name}`.trim(),
-      }));
-      setAvailableEmployees(employees);
+      if (employeesData) {
+        const employees = employeesData.map((emp: any) => ({
+          id: emp.id,
+          name: `${emp.first_name} ${emp.last_name}`.trim(),
+        }));
+        setAvailableEmployees(employees);
+      }
+      staticDataLoadedRef.current.employees = true;
     }
 
     const [result] = await Promise.all([
@@ -279,6 +315,9 @@ export default function PlanningPage() {
       }),
     ]);
 
+    // Final cancellation check before updating state
+    if (currentFetchId !== fetchIdRef.current) return;
+
     if (result?.success) {
       setPlanningPageData(result.data);
     } else {
@@ -286,13 +325,28 @@ export default function PlanningPage() {
       toast.error(errorMsg);
       console.error("Planning data error:", errorMsg);
     }
-    setServices(fetchedServices);
+
+    // Auto-sync with throttle: Only run if more than 1 minute has passed since last sync
+    const now = Date.now();
+    if (now - lastAutoSyncRef.current > AUTO_SYNC_THROTTLE_MS) {
+      lastAutoSyncRef.current = now;
+      // This runs silently in the background without blocking the UI
+      checkAndCompleteOverdueShifts().then(syncResult => {
+        if (syncResult.success && syncResult.updated_count > 0) {
+          console.log(`[Auto-Sync] ${syncResult.updated_count} shifts completed, ${syncResult.time_entries_created} time entries created`);
+        }
+      }).catch(err => {
+        console.error("[Auto-Sync] Error:", err);
+      });
+    }
+
     setLoading(false);
-  }, []);
+  }, []); // Empty deps - no dependency loops!
 
   const refreshData = React.useCallback(() => {
     void fetchData(startDate, endDate, query, daysToDisplay, filters);
-  }, [fetchData, startDate, endDate, query, daysToDisplay, filters]);
+    router.refresh();
+  }, [fetchData, startDate, endDate, query, daysToDisplay, filters, router]);
 
   // Load planning data
   React.useEffect(() => {

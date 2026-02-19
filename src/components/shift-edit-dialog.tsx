@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { format, parseISO } from "date-fns";
 import { de } from "date-fns/locale";
-import { ShiftAssignment, deleteShift, deleteSeries, SeriesDeleteMode, copyAssignment, copyShift, updateShift, addEmployeeToShift, removeEmployeeFromShift } from "@/lib/actions/shift-planning";
+import { ShiftAssignment, deleteShift, deleteSeries, SeriesDeleteMode, copyAssignment, copyShift, updateShift, addEmployeeToShift, removeEmployeeFromShift, reassignShift } from "@/lib/actions/shift-planning";
 import { toast } from "sonner";
 import {
   Command,
@@ -268,6 +268,34 @@ export function ShiftEditDialog({
         }
       }
 
+      // Handle single employee change (non-team mode)
+      const currentWorker = shift.employees.find(e => e.role === "worker");
+      const currentEmployeeId = currentWorker?.employee_id;
+
+      // Check if employee changed (and not in team mode handling already)
+      if (!isTeamMode && editEmployeeId && editEmployeeId !== currentEmployeeId) {
+        const reassignResult = await reassignShift(shift.id, editEmployeeId, "single");
+
+        if (!reassignResult.success) {
+          toast.error(reassignResult.message || "Fehler beim Ändern des Mitarbeiters");
+          setSaving(false);
+          return;
+        }
+
+        // If shift is completed, regenerate time entries for new employee
+        if (status === "completed") {
+          const { deleteTimeEntriesForShiftAndEmployee, generateTimeEntriesForShift } = await import("@/app/dashboard/time-tracking/actions");
+
+          // First, delete old time entries for the previous employee
+          if (currentEmployeeId) {
+            await deleteTimeEntriesForShiftAndEmployee(shift.id, currentEmployeeId);
+          }
+
+          // Generate new time entries for the new employee
+          await generateTimeEntriesForShift(shift.id);
+        }
+      }
+
       // Update shift details - check if it's a recurring shift
       const isTrulyRecurring = shift.is_recurring && !shift.is_detached_from_series && !!shift.assignment_id;
 
@@ -479,6 +507,17 @@ export function ShiftEditDialog({
           {/* EDIT ACTION */}
           {action === "edit" && (
             <div className="space-y-3">
+              {/* Info for completed shifts */}
+              {shift.status === "completed" && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <p className="text-xs text-blue-800 flex items-start gap-2">
+                    <svg className="h-4 w-4 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span>Änderungen am abgeschlossenen Einsatz aktualisieren den Zeiteintrag automatisch.</span>
+                  </p>
+                </div>
+              )}
               {/* Edit Mode Selector for Recurring Shifts */}
               {shift.is_recurring && !shift.is_detached_from_series && (
                 <div className="border rounded-lg p-3">
@@ -986,6 +1025,17 @@ export function ShiftEditDialog({
           {/* DELETE ACTION */}
           {action === "delete" && (
             <div className="space-y-3">
+              {/* Warning for completed shifts */}
+              {shift.status === "completed" && (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                  <p className="text-xs text-amber-800 flex items-start gap-2">
+                    <svg className="h-4 w-4 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    <span>Dieser Einsatz ist abgeschlossen. Das Löschen entfernt auch den zugehörigen Zeiteintrag.</span>
+                  </p>
+                </div>
+              )}
               {shift.is_recurring && !shift.is_detached_from_series ? (
                 <div className="border rounded-lg p-3">
                   <p className="text-xs text-muted-foreground mb-2">Wie möchten Sie löschen?</p>

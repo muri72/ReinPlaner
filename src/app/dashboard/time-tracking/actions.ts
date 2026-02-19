@@ -41,8 +41,6 @@ export async function generateShiftsFromAssignments(
   }
 
   try {
-    console.log("[GENERATE-SHIFTS] Starting shift generation:", { startDate, endDate });
-
     // 1. Fetch all active assignments with their schedules
     const { data: assignments, error: assignmentsError } = await supabaseAdmin
       .from("order_employee_assignments")
@@ -156,8 +154,6 @@ export async function generateShiftsFromAssignments(
       }
     }
 
-    console.log(`[GENERATE-SHIFTS] Found ${shiftsToCreate.length} shifts to create`);
-
     // 5. Insert shifts in batches
     let createdCount = 0;
     const batchSize = 50;
@@ -182,7 +178,6 @@ export async function generateShiftsFromAssignments(
         .select("id, assignment_id, shift_date");
 
       if (insertError) {
-        console.error("[GENERATE-SHIFTS] Error inserting shifts:", insertError);
         continue;
       }
 
@@ -202,8 +197,6 @@ export async function generateShiftsFromAssignments(
       }
     }
 
-    console.log(`[GENERATE-SHIFTS] Successfully created ${createdCount} shifts`);
-
     revalidatePath("/dashboard/planning");
     revalidatePath("/dashboard/time-tracking");
 
@@ -213,7 +206,6 @@ export async function generateShiftsFromAssignments(
       created: createdCount,
     };
   } catch (error: any) {
-    console.error("[GENERATE-SHIFTS] Error:", error);
     return { success: false, message: `Fehler: ${error.message}`, created: 0 };
   }
 }
@@ -248,8 +240,6 @@ export async function generateTimeEntriesFromShifts(
   }
 
   try {
-    console.log("[GENERATE-TIME-ENTRIES] Starting time entry generation:", { startDate, endDate });
-
     // 1. Fetch completed shifts with their employees and related data
     // Note: shifts table has order_id, not job_id. Join via orders to get customer_id/object_id
     const { data: shifts, error: shiftsError } = await supabaseAdmin
@@ -291,8 +281,6 @@ export async function generateTimeEntriesFromShifts(
 
     if (shiftsError) throw shiftsError;
 
-    console.log(`[GENERATE-TIME-ENTRIES] Found ${shifts?.length || 0} completed shifts`);
-
     // 2. Fetch existing time entries for these shifts to avoid duplicates
     const shiftIds = (shifts || []).map(s => s.id);
     const { data: existingTimeEntries, error: existingError } = await supabaseAdmin
@@ -322,7 +310,6 @@ export async function generateTimeEntriesFromShifts(
         // Check if time entry already exists for this shift-employee combination
         const entryKey = `${shift.id}_${employee.id}`;
         if (existingEntryMap.has(entryKey)) {
-          console.log(`[GENERATE-TIME-ENTRIES] Skipping shift ${shift.id.slice(0, 8)} for employee ${employee.id.slice(0, 8)} - already exists`);
           continue;
         }
 
@@ -333,8 +320,6 @@ export async function generateTimeEntriesFromShifts(
         }
       }
     }
-
-    console.log(`[GENERATE-TIME-ENTRIES] Found ${timeEntriesToCreate.length} time entries to create`);
 
     // 4. Insert time entries in batches
     let createdCount = 0;
@@ -350,15 +335,12 @@ export async function generateTimeEntriesFromShifts(
         .select("id");
 
       if (insertError) {
-        console.error("[GENERATE-TIME-ENTRIES] Error inserting time entries:", insertError);
         skippedCount += batch.length;
         continue;
       }
 
       createdCount += insertedEntries?.length || 0;
     }
-
-    console.log(`[GENERATE-TIME-ENTRIES] Successfully created ${createdCount} time entries, skipped ${skippedCount}`);
 
     revalidatePath("/dashboard/planning");
     revalidatePath("/dashboard/time-tracking");
@@ -370,7 +352,6 @@ export async function generateTimeEntriesFromShifts(
       skipped: skippedCount,
     };
   } catch (error: any) {
-    console.error("[GENERATE-TIME-ENTRIES] Error:", error);
     return { success: false, message: `Fehler: ${error.message}`, created: 0, skipped: 0 };
   }
 }
@@ -405,13 +386,17 @@ function buildTimeEntryData(shift: any, shiftEmployee: any, employee: any): any 
     // Europe/Berlin is UTC+1 in winter, UTC+2 in summer
     const month = parseInt(shift.shift_date.split('-')[1]);
     const offset = (month >= 3 && month <= 10) ? '+02:00' : '+01:00'; // DST aware
-    startTime = `${shift.shift_date}T${shift.start_time}:00${offset}`;
+    // Handle both HH:mm and HH:mm:ss formats
+    const timePart = shift.start_time.split(':').length === 2 ? `${shift.start_time}:00` : shift.start_time;
+    startTime = `${shift.shift_date}T${timePart}${offset}`;
   }
 
   if (shift.end_time && shift.shift_date) {
     const month = parseInt(shift.shift_date.split('-')[1]);
     const offset = (month >= 3 && month <= 10) ? '+02:00' : '+01:00';
-    let endTimestamp = `${shift.shift_date}T${shift.end_time}:00${offset}`;
+    // Handle both HH:mm and HH:mm:ss formats
+    const timePart = shift.end_time.split(':').length === 2 ? `${shift.end_time}:00` : shift.end_time;
+    let endTimestamp = `${shift.shift_date}T${timePart}${offset}`;
 
     // Handle overnight shifts
     if (shift.start_time && shift.end_time) {
@@ -422,7 +407,7 @@ function buildTimeEntryData(shift: any, shiftEmployee: any, employee: any): any 
         const nextDay = new Date(shift.shift_date);
         nextDay.setDate(nextDay.getDate() + 1);
         const nextDayStr = nextDay.toISOString().split('T')[0];
-        endTimestamp = `${nextDayStr}T${shift.end_time}:00${offset}`;
+        endTimestamp = `${nextDayStr}T${timePart}${offset}`;
       }
     }
 
@@ -458,9 +443,8 @@ export async function generateTimeEntriesForShift(shiftId: string): Promise<{ su
   const supabaseAdmin = createAdminClient();
 
   try {
-    console.log("[GENERATE-TIME-ENTRIES-SINGLE] Generating time entries for shift:", shiftId);
-
     // 1. Fetch the completed shift with its employees and related data
+    // Note: employees!inner changed to employees (left join) to support employees without user_id
     const { data: shift, error: shiftError } = await supabaseAdmin
       .from("shifts")
       .select(`
@@ -481,7 +465,7 @@ export async function generateTimeEntriesForShift(shiftId: string): Promise<{ su
           actual_start_time,
           actual_end_time,
           actual_hours,
-          employees!inner (
+          employees (
             id,
             user_id,
             first_name,
@@ -499,7 +483,6 @@ export async function generateTimeEntriesForShift(shiftId: string): Promise<{ su
       .single();
 
     if (shiftError) {
-      console.error("[GENERATE-TIME-ENTRIES-SINGLE] Shift not found or not completed:", shiftError);
       return { success: false, message: "Shift nicht gefunden oder nicht abgeschlossen.", created: 0 };
     }
 
@@ -525,7 +508,6 @@ export async function generateTimeEntriesForShift(shiftId: string): Promise<{ su
 
       // Check if time entry already exists for this shift-employee combination
       if (existingEmployees.has(employee.id)) {
-        console.log(`[GENERATE-TIME-ENTRIES-SINGLE] Skipping employee ${employee.id.slice(0, 8)} - already has time entry`);
         skippedCount++;
         continue;
       }
@@ -538,7 +520,6 @@ export async function generateTimeEntriesForShift(shiftId: string): Promise<{ su
     }
 
     if (timeEntriesToCreate.length === 0) {
-      console.log("[GENERATE-TIME-ENTRIES-SINGLE] No new time entries to create");
       return { success: true, message: "Keine neuen Zeiteinträge erforderlich.", created: 0 };
     }
 
@@ -549,12 +530,14 @@ export async function generateTimeEntriesForShift(shiftId: string): Promise<{ su
       .select("id");
 
     if (insertError) {
-      console.error("[GENERATE-TIME-ENTRIES-SINGLE] Error inserting time entries:", insertError);
+      // If it's a duplicate key error, the entry already exists - treat as success
+      if (insertError.code === '23505') {
+        return { success: true, message: "Zeiteintrag bereits vorhanden.", created: 0 };
+      }
       return { success: false, message: `Fehler beim Erstellen der Zeiteinträge: ${insertError.message}`, created: 0 };
     }
 
     const createdCount = insertedEntries?.length || 0;
-    console.log(`[GENERATE-TIME-ENTRIES-SINGLE] Successfully created ${createdCount} time entries, skipped ${skippedCount}`);
 
     revalidatePath("/dashboard/planning");
     revalidatePath("/dashboard/time-tracking");
@@ -565,7 +548,6 @@ export async function generateTimeEntriesForShift(shiftId: string): Promise<{ su
       created: createdCount,
     };
   } catch (error: any) {
-    console.error("[GENERATE-TIME-ENTRIES-SINGLE] Error:", error);
     return { success: false, message: `Fehler: ${error.message}`, created: 0 };
   }
 }
@@ -793,6 +775,42 @@ export async function deleteTimeEntry(formData: FormData): Promise<{ success: bo
   revalidatePath("/dashboard/time-tracking");
   revalidatePath("/dashboard/planning"); // Revalidiere Planungsseite
   return { success: true, message: "Zeiteintrag erfolgreich gelöscht!" };
+}
+
+/**
+ * Delete time entries for a specific shift and employee.
+ * Used when reassigning a shift to a different employee.
+ */
+export async function deleteTimeEntriesForShiftAndEmployee(
+  shiftId: string,
+  employeeId: string
+): Promise<{ success: boolean; message: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { success: false, message: "Benutzer nicht authentifiziert." };
+  }
+
+  try {
+    const { error } = await supabase
+      .from('time_entries')
+      .delete()
+      .eq('shift_id', shiftId)
+      .eq('employee_id', employeeId);
+
+    if (error) {
+      console.error("Fehler beim Löschen der Zeiteinträge:", error?.message || error);
+      return { success: false, message: error.message };
+    }
+
+    revalidatePath("/dashboard/time-tracking");
+    revalidatePath("/dashboard/planning");
+    return { success: true, message: "Zeiteinträge erfolgreich gelöscht!" };
+  } catch (error: any) {
+    console.error("Fehler beim Löschen der Zeiteinträge:", error?.message || error);
+    return { success: false, message: `Fehler: ${error.message}` };
+  }
 }
 
 interface TimeEntry {

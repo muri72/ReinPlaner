@@ -18,6 +18,7 @@ import { CreateShiftDialog } from "@/components/create-shift-dialog";
 import { Input } from "@/components/ui/input";
 import { PlanningFilterDialog } from "./planning-filter-dialog";
 import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
 
 export interface FilterValues {
   objects?: string[];

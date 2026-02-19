@@ -1,7 +1,6 @@
 "use server";
 
 import { createClient, createAdminClient } from "@/lib/supabase/server";
-import { generateTimeEntriesForShift } from "@/app/dashboard/time-tracking/actions";
 import { revalidatePath } from "next/cache";
 import { sendNotification } from "@/lib/actions/notifications";
 import {
@@ -170,14 +169,8 @@ export async function getShiftPlanningData(
   const endDateIso = formatISO(endDate, { representation: "date" });
 
   try {
-    // 0. Generate shifts for visible week + 2 weeks buffer (before/after)
-    // This creates missing shifts on-demand without duplicates
-    const extendedStartDate = formatISO(subDays(startDate, 14), { representation: "date" });
-    const extendedEndDate = formatISO(addDays(endDate, 14), { representation: "date" });
-    await supabaseAdmin.rpc("generate_shifts_for_date_range", {
-      p_start_date: extendedStartDate,
-      p_end_date: extendedEndDate,
-    });
+    // NOTE: Auto-generation of shifts disabled to prevent duplicate creation
+    // Shifts are now created manually via shift edit dialog or drag-and-drop assignment
 
     // 1. Fetch all active employees
     let employeesQuery = supabase
@@ -932,7 +925,7 @@ export async function reassignShift(
     // Get shift details
     const { data: shift, error: shiftError } = await supabaseAdmin
       .from("shifts")
-      .select("*, job_series ( id ), shift_employees ( employee_id )")
+      .select("*, shift_employees ( employee_id )")
       .eq("id", shiftId)
       .single();
 
@@ -1032,13 +1025,11 @@ export async function updateShiftStatus(
 
     if (error) throw error;
 
-    // Automatically generate time entries when shift is marked as completed
+    // Generate time entries when status becomes 'completed'
+    // Note: Previously this was handled by a database trigger that doesn't exist
     if (status === "completed") {
-      const timeEntryResult = await generateTimeEntriesForShift(shiftId);
-      if (!timeEntryResult.success) {
-        console.warn("[updateShiftStatus] Time entry generation failed:", timeEntryResult.message);
-        // Don't fail the whole operation if time entry creation fails
-      }
+      const { generateTimeEntriesForShift } = await import("@/app/dashboard/time-tracking/actions");
+      await generateTimeEntriesForShift(shiftId);
     }
 
     revalidatePath("/dashboard/planning");
@@ -1084,44 +1075,71 @@ export async function deleteShift(
 
     console.log("[DELETE] Found shift:", shift);
 
-    // First delete related shift_employees entries
-    console.log("[DELETE] Deleting shift_employees...");
-    const { error: deleteEmployeesError } = await supabaseAdmin
-      .from("shift_employees")
-      .delete()
-      .eq("shift_id", shiftId);
+    // Delete in correct order to avoid foreign key constraint errors
+    console.log("[DELETE] Executing deletes...");
 
-    if (deleteEmployeesError) {
-      console.error("[DELETE] Error deleting shift_employees:", deleteEmployeesError);
-      throw deleteEmployeesError;
+    // First check what exists before deleting
+    const { count: employeesBefore } = await supabaseAdmin
+      .from('shift_employees')
+      .select('*', { count: 'exact', head: true })
+      .eq('shift_id', shiftId);
+
+    const { count: timeEntriesBefore } = await supabaseAdmin
+      .from('time_entries')
+      .select('*', { count: 'exact', head: true })
+      .eq('shift_id', shiftId);
+
+    const { count: shiftsBefore } = await supabaseAdmin
+      .from('shifts')
+      .select('*', { count: 'exact', head: true })
+      .eq('id', shiftId);
+
+    console.log("[DELETE] Before delete - shift_employees:", employeesBefore, "time_entries:", timeEntriesBefore, "shifts:", shiftsBefore);
+
+    // Delete child table records first, then parent
+    const employeesResult = await supabaseAdmin
+      .from('shift_employees')
+      .delete()
+      .eq('shift_id', shiftId);
+
+    console.log("[DELETE] shift_employees delete result:", { error: employeesResult.error, status: employeesResult.status });
+
+    if (employeesResult.error) {
+      console.error("[DELETE] Error deleting shift_employees:", employeesResult.error);
+      throw employeesResult.error;
     }
 
-    console.log("[DELETE] shift_employees deleted, now deleting time_entries...");
-    // Delete related time_entries
-    const { error: deleteTimeEntriesError } = await supabaseAdmin
-      .from("time_entries")
+    const timeEntriesResult = await supabaseAdmin
+      .from('time_entries')
       .delete()
-      .eq("shift_id", shiftId);
+      .eq('shift_id', shiftId);
 
-    if (deleteTimeEntriesError) {
-      console.error("[DELETE] Error deleting time_entries:", deleteTimeEntriesError);
-      throw deleteTimeEntriesError;
+    console.log("[DELETE] time_entries delete result:", { error: timeEntriesResult.error, status: timeEntriesResult.status });
+
+    if (timeEntriesResult.error) {
+      console.error("[DELETE] Error deleting time_entries:", timeEntriesResult.error);
+      throw timeEntriesResult.error;
     }
 
-    console.log("[DELETE] time_entries deleted, now deleting shift...");
-
-    // Then delete the shift itself
-    const { error: deleteError } = await supabaseAdmin
-      .from("shifts")
+    const shiftsResult = await supabaseAdmin
+      .from('shifts')
       .delete()
-      .eq("id", shiftId);
+      .eq('id', shiftId);
 
-    if (deleteError) {
-      console.error("[DELETE] Error deleting shift:", deleteError);
-      throw deleteError;
+    console.log("[DELETE] shifts delete result:", { error: shiftsResult.error, status: shiftsResult.status });
+
+    if (shiftsResult.error) {
+      console.error("[DELETE] Error deleting shifts:", shiftsResult.error);
+      throw shiftsResult.error;
     }
 
-    console.log("[DELETE] Shift deleted successfully");
+    // Verify deletion by checking counts after
+    const { count: shiftsAfter } = await supabaseAdmin
+      .from('shifts')
+      .select('*', { count: 'exact', head: true })
+      .eq('id', shiftId);
+
+    console.log("[DELETE] After delete - shifts count:", shiftsAfter);
 
     revalidatePath("/dashboard/planning");
     return { success: true, message: notes || "Einsatz erfolgreich gelöscht." };
@@ -1140,7 +1158,8 @@ export type SeriesDeleteMode = "single" | "future" | "all";
 export async function deleteSeries(
   assignmentId: string,
   mode: SeriesDeleteMode = "future",
-  fromDate?: string
+  fromDate?: string,
+  skipAutoGeneration: boolean = true
 ): Promise<{ success: boolean; message: string }> {
   const supabaseAdmin = createAdminClient();
   const supabase = await createClient();
@@ -1177,11 +1196,34 @@ export async function deleteSeries(
 
     console.log("[DELETE-SERIES] Query params:", { startDate, endDate, today });
 
-    // Build the query to find shifts
+    // First, get the order_id for this assignment to find all related assignments
+    // This handles recurring series with multiple employees (each has their own assignment_id)
+    const { data: assignmentData } = await supabaseAdmin
+      .from("order_employee_assignments")
+      .select("order_id, employee_id")
+      .eq("id", assignmentId)
+      .single();
+
+    let assignmentIds: string[] = [assignmentId]; // Default to just the provided assignment
+
+    if (assignmentData?.order_id) {
+      // Find all assignments for the same order (different employees in the series)
+      const { data: relatedAssignments } = await supabaseAdmin
+        .from("order_employee_assignments")
+        .select("id")
+        .eq("order_id", assignmentData.order_id);
+
+      if (relatedAssignments && relatedAssignments.length > 0) {
+        assignmentIds = relatedAssignments.map(a => a.id);
+        console.log("[DELETE-SERIES] Found related assignments:", assignmentIds.length, "assignments for order", assignmentData.order_id);
+      }
+    }
+
+    // Build the query to find shifts for all related assignments
     let query = supabaseAdmin
       .from("shifts")
       .select("id, shift_date, status")
-      .eq("assignment_id", assignmentId);
+      .in("assignment_id", assignmentIds);
 
     if (startDate) {
       query = query.gte("shift_date", startDate);
@@ -1209,48 +1251,93 @@ export async function deleteSeries(
     let deletedCount = 0;
     let skippedCompleted = 0;
 
-    for (const shift of shiftsToDelete) {
-      // Skip completed shifts in future mode
+    // Filter out shifts that should be skipped
+    const shiftsToProcess = shiftsToDelete.filter((shift) => {
       if (mode === "future" && (shift.shift_date < today || shift.status === "completed")) {
         console.log("[DELETE-SERIES] Skipping completed shift:", shift.id, shift.shift_date);
         skippedCompleted++;
-        continue;
+        return false;
       }
+      return true;
+    });
 
-      console.log("[DELETE-SERIES] Deleting shift:", shift.id, shift.shift_date);
-
-      // Delete shift_employees first
-      const { error: deleteEmpError } = await supabaseAdmin
-        .from("shift_employees")
-        .delete()
-        .eq("shift_id", shift.id);
-
-      if (deleteEmpError) {
-        console.error("[DELETE-SERIES] Error deleting shift_employees:", deleteEmpError);
-      }
-
-      // Delete related time_entries
-      const { error: deleteTimeEntriesError } = await supabaseAdmin
-        .from("time_entries")
-        .delete()
-        .eq("shift_id", shift.id);
-
-      if (deleteTimeEntriesError) {
-        console.error("[DELETE-SERIES] Error deleting time_entries:", deleteTimeEntriesError);
-      }
-
-      // Delete the shift
-      const { error: deleteShiftError } = await supabaseAdmin
-        .from("shifts")
-        .delete()
-        .eq("id", shift.id);
-
-      if (deleteShiftError) {
-        console.error("[DELETE-SERIES] Error deleting shift:", deleteShiftError);
-      } else {
-        deletedCount++;
-      }
+    if (shiftsToProcess.length === 0) {
+      console.log("[DELETE-SERIES] No shifts to process after filtering");
+      revalidatePath("/dashboard/planning");
+      return { success: true, message: "Kein Einsatz gefunden." };
     }
+
+    // Delete in correct order to avoid foreign key constraint errors
+    const shiftIds = shiftsToProcess.map(s => s.id);
+    console.log("[DELETE-SERIES] Deleting shifts for:", shiftIds);
+
+    console.log("[DELETE-SERIES] Executing deletes...");
+
+    // First check what exists before deleting
+    const { count: employeesBefore } = await supabaseAdmin
+      .from('shift_employees')
+      .select('*', { count: 'exact', head: true })
+      .in('shift_id', shiftIds);
+
+    const { count: timeEntriesBefore } = await supabaseAdmin
+      .from('time_entries')
+      .select('*', { count: 'exact', head: true })
+      .in('shift_id', shiftIds);
+
+    const { count: shiftsBefore } = await supabaseAdmin
+      .from('shifts')
+      .select('*', { count: 'exact', head: true })
+      .in('id', shiftIds);
+
+    console.log("[DELETE-SERIES] Before delete - shift_employees:", employeesBefore, "time_entries:", timeEntriesBefore, "shifts:", shiftsBefore);
+
+    // Delete child table records first for all shifts, then parent records
+    const employeesResult = await supabaseAdmin
+      .from('shift_employees')
+      .delete()
+      .in('shift_id', shiftIds);
+
+    console.log("[DELETE-SERIES] shift_employees delete result:", { error: employeesResult.error, status: employeesResult.status });
+
+    if (employeesResult.error) {
+      console.error("[DELETE-SERIES] Error deleting shift_employees:", employeesResult.error);
+      throw employeesResult.error;
+    }
+
+    const timeEntriesResult = await supabaseAdmin
+      .from('time_entries')
+      .delete()
+      .in('shift_id', shiftIds);
+
+    console.log("[DELETE-SERIES] time_entries delete result:", { error: timeEntriesResult.error, status: timeEntriesResult.status });
+
+    if (timeEntriesResult.error) {
+      console.error("[DELETE-SERIES] Error deleting time_entries:", timeEntriesResult.error);
+      throw timeEntriesResult.error;
+    }
+
+    const shiftsResult = await supabaseAdmin
+      .from('shifts')
+      .delete()
+      .in('id', shiftIds);
+
+    console.log("[DELETE-SERIES] shifts delete result:", { error: shiftsResult.error, status: shiftsResult.status });
+
+    if (shiftsResult.error) {
+      console.error("[DELETE-SERIES] Error deleting shifts:", shiftsResult.error);
+      throw shiftsResult.error;
+    }
+
+    // Verify deletion by checking counts after
+    const { count: shiftsAfter } = await supabaseAdmin
+      .from('shifts')
+      .select('*', { count: 'exact', head: true })
+      .in('id', shiftIds);
+
+    console.log("[DELETE-SERIES] After delete - shifts count:", shiftsAfter, "(should be 0)");
+
+    deletedCount = shiftsBefore || 0;
+    console.log("[DELETE-SERIES] Successfully deleted", deletedCount, "shifts");
 
     revalidatePath("/dashboard/planning");
 
@@ -1264,6 +1351,21 @@ export async function deleteSeries(
     }
 
     console.log("[DELETE-SERIES] Complete:", { deletedCount, skippedCompleted, message });
+
+    // Only mark assignment as deleted when deleting the ENTIRE series (mode="all")
+    // For single/future modes, the assignment should remain active for future shifts
+    if (skipAutoGeneration && mode === "all") {
+      console.log("[DELETE-SERIES] Marking assignment as deleted (entire series):", assignmentId);
+      const { error: updateError } = await supabaseAdmin
+        .from('order_employee_assignments')
+        .update({ deleted: true })
+        .eq('id', assignmentId);
+
+      if (updateError) {
+        console.error("[DELETE-SERIES] Error marking assignment as deleted:", updateError);
+        // Continue anyway - shifts are already deleted
+      }
+    }
 
     return { success: true, message };
   } catch (error: any) {
@@ -2052,6 +2154,9 @@ export async function updateShift(
   try {
     console.log("[UPDATE-SHIFT] Updating shift:", { assignmentId, shiftDate, updates });
 
+    // Track updated shift IDs for time entry generation
+    const updatedShiftIds: string[] = [];
+
     // Get current assignment to check if it's a series
     const { data: assignment, error: fetchError } = await supabaseAdmin
       .from("order_employee_assignments")
@@ -2086,6 +2191,14 @@ export async function updateShift(
         .eq("id", assignmentId);
 
       if (updateError) throw updateError;
+
+      updatedShiftIds.push(assignmentId);
+
+      // Generate time entries when status becomes 'completed' for direct shift update
+      if ((updates.status === "completed" || updates.status === undefined) && shiftData.status !== "completed") {
+        const { generateTimeEntriesForShift } = await import("@/app/dashboard/time-tracking/actions");
+        await generateTimeEntriesForShift(assignmentId);
+      }
 
       revalidatePath("/dashboard/planning");
       return { success: true, message: "Einsatz erfolgreich aktualisiert." };
@@ -2123,6 +2236,8 @@ export async function updateShift(
             .eq("id", shift.id);
 
           if (updateError) throw updateError;
+
+          updatedShiftIds.push(shift.id);
         }
 
         // Also update the assignment's start_week_offset and daily_schedules if needed
@@ -2155,6 +2270,8 @@ export async function updateShift(
           .eq("id", shiftToUpdate.id);
 
         if (updateError) throw updateError;
+
+        updatedShiftIds.push(shiftToUpdate.id);
       }
     } else {
       // Non-recurring assignment - update directly
@@ -2184,6 +2301,17 @@ export async function updateShift(
         .eq("id", shiftData.id);
 
       if (updateError) throw updateError;
+
+      updatedShiftIds.push(shiftData.id);
+    }
+
+    // Generate time entries when status becomes 'completed'
+    // Note: Previously this was handled by a database trigger that doesn't exist
+    if (updates.status === "completed" && updatedShiftIds.length > 0) {
+      const { generateTimeEntriesForShift } = await import("@/app/dashboard/time-tracking/actions");
+      for (const shiftId of updatedShiftIds) {
+        await generateTimeEntriesForShift(shiftId);
+      }
     }
 
     revalidatePath("/dashboard/planning");
@@ -2422,6 +2550,40 @@ export async function addEmployeeToShift(params: {
 
     console.log("[ADD-EMPLOYEE] New shift_employees inserted successfully");
 
+    // Check if shift is completed and generate time entry for this employee
+    const { data: shiftStatus } = await supabaseAdmin
+      .from("shifts")
+      .select("status, start_time, end_time, estimated_hours, travel_time_minutes, break_time_minutes, shift_date, order_id")
+      .eq("id", shiftId)
+      .single();
+
+    if (shiftStatus?.status === "completed") {
+      console.log("[ADD-EMPLOYEE] Shift is completed, creating time entry for new employee");
+      // Get employee details for time entry
+      const { data: empData } = await supabaseAdmin
+        .from("employees")
+        .select("id, first_name, last_name")
+        .eq("id", employeeId)
+        .single();
+
+      if (empData && shiftStatus) {
+        await supabaseAdmin.from("time_entries").insert({
+          employee_id: employeeId,
+          order_id: shiftStatus.order_id,
+          shift_id: shiftId,
+          date: shiftStatus.shift_date,
+          start_time: shiftStatus.start_time,
+          end_time: shiftStatus.end_time,
+          hours: shiftStatus.estimated_hours,
+          travel_time_minutes: shiftStatus.travel_time_minutes,
+          break_time_minutes: shiftStatus.break_time_minutes,
+          type: "shift",
+          description: `${empData.first_name} ${empData.last_name}`,
+          created_at: new Date().toISOString(),
+        });
+      }
+    }
+
     // Send notification to new employee
     const { data: newEmp } = await supabaseAdmin
       .from("employees")
@@ -2610,6 +2772,9 @@ export async function copyShift(params: {
       });
     }
 
+    // Note: Time entries are automatically created by the database trigger trg_shift_completed_time_entry
+    // when a shift is created/updated with status='completed', so no manual generation needed here
+
     revalidatePath("/dashboard/planning");
     return { success: true, message: "Einsatz erfolgreich kopiert." };
   } catch (error: any) {
@@ -2618,8 +2783,137 @@ export async function copyShift(params: {
 }
 
 // ============================================================================
-// MARK OVERDUE SHIFTS AS COMPLETED
-// Automatically updates shift status based on current time and creates time_entries
+// ENSURE SHIFT-TIME ENTRY 1:1 RELATIONSHIP
+// Ensures all completed shifts have corresponding time entries.
+// This function is idempotent and safe to call multiple times.
+// ============================================================================
+
+export async function ensureShiftTimeEntriesSync(): Promise<{
+  success: boolean;
+  message: string;
+  shifts_completed: number;
+  time_entries_created: number;
+}> {
+  const supabaseAdmin = createAdminClient();
+
+  try {
+    const now = new Date();
+
+    // Step 1: Mark overdue shifts as completed - OPTIMIZED with batch UPDATE
+    const today = startOfDay(now);
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+    const currentTimeMinutes = currentHour * 60 + currentMinute;
+    const nowDateStr = formatISO(today, { representation: "date" });
+
+    const { data: shiftsToUpdate, error: fetchError } = await supabaseAdmin
+      .from("shifts")
+      .select("id, shift_date, start_time, end_time, status")
+      .in("status", ["scheduled", "in_progress"]);
+
+    if (fetchError) throw fetchError;
+
+    // Collect all shift IDs that should be marked as completed
+    const shiftIdsToComplete: string[] = [];
+    for (const shift of shiftsToUpdate || []) {
+      const shiftDateStr = shift.shift_date;
+      let shouldBeCompleted = false;
+
+      if (shiftDateStr < nowDateStr) {
+        shouldBeCompleted = true;
+      } else if (shiftDateStr === nowDateStr && shift.end_time) {
+        const [endHour, endMin] = shift.end_time.split(":").map(Number);
+        const endTimeMinutes = endHour * 60 + endMin;
+        if (currentTimeMinutes >= endTimeMinutes) {
+          shouldBeCompleted = true;
+        }
+      }
+
+      if (shouldBeCompleted) {
+        shiftIdsToComplete.push(shift.id);
+      }
+    }
+
+    // Batch UPDATE all shifts at once using .in() clause instead of N+1 individual updates
+    let shiftsCompleted = 0;
+    let newlyCompletedShiftIds: string[] = [];
+    if (shiftIdsToComplete.length > 0) {
+      const { data: updatedShifts, error: updateError } = await supabaseAdmin
+        .from("shifts")
+        .update({
+          status: "completed",
+          completed_at: now.toISOString(),
+          updated_at: now.toISOString(),
+        })
+        .in("id", shiftIdsToComplete)
+        .select("id");
+
+      if (!updateError && updatedShifts) {
+        shiftsCompleted = updatedShifts.length;
+        newlyCompletedShiftIds = updatedShifts.map(s => s.id);
+      }
+    }
+
+    // Step 2: Find ALL completed shifts that don't have time entries
+    const { data: allCompletedShifts, error: completedError } = await supabaseAdmin
+      .from("shifts")
+      .select("id")
+      .eq("status", "completed");
+
+    if (completedError) throw completedError;
+
+    // Get shift IDs that already have time entries
+    const { data: existingEntries, error: entriesError } = await supabaseAdmin
+      .from("time_entries")
+      .select("shift_id")
+      .eq("type", "shift")
+      .not("shift_id", "is", null);
+
+    if (entriesError) throw entriesError;
+
+    const existingShiftIds = new Set(existingEntries?.map(e => e.shift_id) || []);
+
+    // Find shifts missing time entries (includes newly completed shifts)
+    const shiftsMissingEntries = (allCompletedShifts || [])
+      .filter(s => !existingShiftIds.has(s.id))
+      .map(s => s.id);
+
+    // Step 3: Generate time entries for all missing shifts (each shift processed once)
+    let timeEntriesCreated = 0;
+    const { generateTimeEntriesForShift } = await import("@/app/dashboard/time-tracking/actions");
+
+    for (const shiftId of shiftsMissingEntries) {
+      const result = await generateTimeEntriesForShift(shiftId);
+      if (result.success) {
+        timeEntriesCreated += result.created;
+      }
+    }
+
+    revalidatePath("/dashboard/planning");
+    revalidatePath("/dashboard/time-tracking");
+    revalidatePath("/dashboard/reports");
+
+    return {
+      success: true,
+      message: `${shiftsCompleted} Einsätze abgeschlossen, ${timeEntriesCreated} Zeiteinträge erstellt.`,
+      shifts_completed: shiftsCompleted,
+      time_entries_created: timeEntriesCreated,
+    };
+  } catch (error: any) {
+    console.error("[SYNC] Error ensuring shift-time entry sync:", error);
+    return {
+      success: false,
+      message: error.message,
+      shifts_completed: 0,
+      time_entries_created: 0,
+    };
+  }
+}
+
+// ============================================================================
+// MARK OVERDUE SHIFTS AS COMPLETED (Legacy - use ensureShiftTimeEntriesSync instead)
+// Automatically updates shift status based on current time.
+// Database triggers will then create time_entries automatically.
 // This should be called periodically (e.g., via cron job or API endpoint)
 // ============================================================================
 
@@ -2627,7 +2921,6 @@ export async function markOverdueShiftsAsCompleted(): Promise<{
   success: boolean;
   message: string;
   updated_count: number;
-  time_entries_created: number;
 }> {
   const supabaseAdmin = createAdminClient();
 
@@ -2651,13 +2944,11 @@ export async function markOverdueShiftsAsCompleted(): Promise<{
       throw fetchError;
     }
 
-    let updatedCount = 0;
-    let timeEntriesCreated = 0;
     const nowDateStr = formatISO(today, { representation: "date" });
-    const completedShiftIds: string[] = [];
+    const shiftIdsToComplete: string[] = [];
 
+    // Collect all shift IDs that should be marked as completed
     for (const shift of shiftsToUpdate || []) {
-      const shiftDate = parseISO(shift.shift_date);
       const shiftDateStr = shift.shift_date;
 
       let shouldBeCompleted = false;
@@ -2675,39 +2966,54 @@ export async function markOverdueShiftsAsCompleted(): Promise<{
         }
       }
 
-      if (shouldBeCompleted && shift.status !== "completed") {
-        const { error: updateError } = await supabaseAdmin
-          .from("shifts")
-          .update({
-            status: "completed",
-            completed_at: now.toISOString(),
-            updated_at: now.toISOString(),
-          })
-          .eq("id", shift.id);
+      if (shouldBeCompleted) {
+        shiftIdsToComplete.push(shift.id);
+      }
+    }
 
-        if (!updateError) {
-          updatedCount++;
-          completedShiftIds.push(shift.id);
+    // Batch UPDATE all shifts at once using .in() clause instead of N+1 individual updates
+    let updatedCount = 0;
+    let completedShiftIds: string[] = [];
+    if (shiftIdsToComplete.length > 0) {
+      const { data: updatedShifts, error: updateError } = await supabaseAdmin
+        .from("shifts")
+        .update({
+          status: "completed",
+          completed_at: now.toISOString(),
+          updated_at: now.toISOString(),
+        })
+        .in("id", shiftIdsToComplete)
+        .select("id");
+
+      if (!updateError && updatedShifts) {
+        updatedCount = updatedShifts.length;
+        completedShiftIds = updatedShifts.map(s => s.id);
+      }
+    }
+
+    // Generate time entries for completed shifts
+    // Note: The database triggers don't exist, so we need to create entries manually
+    let timeEntriesCreated = 0;
+    if (completedShiftIds.length > 0) {
+      const { generateTimeEntriesForShift } = await import("@/app/dashboard/time-tracking/actions");
+      for (const shiftId of completedShiftIds) {
+        const result = await generateTimeEntriesForShift(shiftId);
+        if (result.success) {
+          timeEntriesCreated += result.created;
         }
       }
     }
 
-    // Generate time entries for all newly completed shifts
-    for (const shiftId of completedShiftIds) {
-      const timeEntryResult = await generateTimeEntriesForShift(shiftId);
-      if (timeEntryResult.success) {
-        timeEntriesCreated += timeEntryResult.created;
-      }
-    }
+    revalidatePath("/dashboard/planning");
+    revalidatePath("/dashboard/time-tracking");
 
     return {
       success: true,
-      message: `${updatedCount} überfällige Einsätze wurden auf "abgeschlossen" gesetzt. ${timeEntriesCreated > 0 ? `${timeEntriesCreated} Zeiteinträge erstellt.` : ''}`,
+      message: `${updatedCount} überfällige Einsätze wurden auf "abgeschlossen" gesetzt. ${timeEntriesCreated} Zeiteinträge erstellt.`,
       updated_count: updatedCount,
-      time_entries_created: timeEntriesCreated,
     };
   } catch (error: any) {
-    return { success: false, message: error.message, updated_count: 0, time_entries_created: 0 };
+    return { success: false, message: error.message, updated_count: 0 };
   }
 }
 

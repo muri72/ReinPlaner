@@ -732,14 +732,8 @@ export function PlanningCalendar({
                               onSuccess={onActionSuccess}
                               teamMembers={shift.order_id ? orderTeamMembersMap[shift.order_id] : shift.employees}
                               isMultiShift={multiShiftShiftIds.has(shift.id)}
-                              onEdit={onEditShift ? (id) => {
-                                // Override is_multi_shift with frontend-calculated value for accurate display
-                                const shiftWithCorrectMultiShift = {
-                                  ...shift,
-                                  is_multi_shift: multiShiftShiftIds.has(shift.id),
-                                };
-                                onEditShift(id, shiftWithCorrectMultiShift, dateString);
-                              } : undefined}
+                              dateString={dateString}
+                              onEdit={onEditShift}
                             />
                           ))}
                         </div>
