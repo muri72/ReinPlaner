@@ -499,7 +499,6 @@ export async function generateTimeEntriesForShift(shiftId: string): Promise<{ su
 
     // 3. Build and insert time entries for employees without existing entries
     const timeEntriesToCreate: any[] = [];
-    let skippedCount = 0;
 
     for (const se of (shift.shift_employees || [])) {
       const empArray = Array.isArray(se.employees) ? se.employees : [se.employees].filter(Boolean);
@@ -508,7 +507,6 @@ export async function generateTimeEntriesForShift(shiftId: string): Promise<{ su
 
       // Check if time entry already exists for this shift-employee combination
       if (existingEmployees.has(employee.id)) {
-        skippedCount++;
         continue;
       }
 
@@ -858,4 +856,84 @@ export async function stopTimeEntry(entryId: string): Promise<{ success: boolean
   revalidatePath("/dashboard/time-tracking");
   revalidatePath("/dashboard/planning");
   return { success: true, message: "Zeiteintrag beendet!", data: entry };
+}
+
+// ============================================================================
+// MIGRATION: Fix existing time entries where break was incorrectly subtracted
+// ============================================================================
+
+export async function migrateExistingTimeEntries(): Promise<{
+  success: boolean;
+  message: string;
+  fixed_count: number;
+}> {
+  const supabaseAdmin = createAdminClient();
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { success: false, message: "Benutzer nicht authentifiziert.", fixed_count: 0 };
+  }
+
+  // Check if user is admin
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single();
+
+  if (profile?.role !== 'admin') {
+    return { success: false, message: "Nur Administratoren können diese Aktion ausführen.", fixed_count: 0 };
+  }
+
+  try {
+    // Alle shift-Zeiträge mit Start/Ende laden
+    const { data: entries, error } = await supabaseAdmin
+      .from("time_entries")
+      .select("id, start_time, end_time, duration_minutes, break_minutes")
+      .eq("type", "shift")
+      .not("start_time", "is", null)
+      .not("end_time", "is", null);
+
+    if (error) throw error;
+
+    let fixedCount = 0;
+
+    for (const entry of entries || []) {
+      // Berechne die tatsächliche Brutto-Dauer aus Start/Ende
+      const start = new Date(entry.start_time);
+      const end = new Date(entry.end_time);
+      const grossDurationMinutes = (end.getTime() - start.getTime()) / (1000 * 60);
+
+      // Wenn die gespeicherte duration kleiner ist als die Brutto-Dauer,
+      // wurde die Pause bereits abgezogen → korrigieren
+      if (entry.duration_minutes && entry.duration_minutes < grossDurationMinutes) {
+        const { error: updateError } = await supabaseAdmin
+          .from("time_entries")
+          .update({ duration_minutes: grossDurationMinutes })
+          .eq("id", entry.id);
+
+        if (!updateError) {
+          fixedCount++;
+        }
+      }
+    }
+
+    revalidatePath("/dashboard/time-tracking");
+    revalidatePath("/dashboard/planning");
+
+    return {
+      success: true,
+      message: `${fixedCount} Zeiteinträge wurden korrigiert.`,
+      fixed_count: fixedCount,
+    };
+  } catch (error: any) {
+    return {
+      success: false,
+      message: `Fehler: ${error.message}`,
+      fixed_count: 0,
+    };
+  }
 }

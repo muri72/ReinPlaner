@@ -429,6 +429,11 @@ export async function assignOrderToEmployee(
 
     if (assignmentError) throw assignmentError;
 
+    // Generate shifts from the new assignment
+    await generateShiftsFromAssignments();
+    // Sync time entries for all completed shifts (including past ones)
+    await ensureShiftTimeEntriesSync();
+
     // 6. Send notification
     const { data: employee } = await supabaseAdmin.from('employees').select('user_id, first_name, last_name').eq('id', employeeId).single();
     if (employee?.user_id) {
@@ -621,6 +626,8 @@ export async function updateOrderAssignments(
 
     // 4. Generate shifts for current and next month based on the updated assignments
     await generateShiftsFromAssignments();
+    // Sync time entries for all completed shifts (including past ones)
+    await ensureShiftTimeEntriesSync();
 
     // 5. Send notifications (optional, can be added later)
 

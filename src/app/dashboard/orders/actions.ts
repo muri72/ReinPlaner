@@ -6,6 +6,7 @@ import { OrderFormValues } from "@/components/order-form";
 import { sendNotification } from "@/lib/actions/notifications";
 import { logDataChange } from "@/lib/audit-log";
 import { formatDateToYMD } from "@/lib/utils";
+import { generateShiftsFromAssignments, ensureShiftTimeEntriesSync } from "@/lib/actions/shift-planning";
 
 export async function createOrder(data: OrderFormValues) {
   const supabase = await createClient();
@@ -43,7 +44,7 @@ export async function createOrder(data: OrderFormValues) {
       user_id: user.id,
       title,
       description,
-      status: status || 'pending',
+      status: status || 'active',
       customer_id: customerId,
       object_id: objectId,
       customer_contact_id: customerContactId,
@@ -90,7 +91,10 @@ export async function createOrder(data: OrderFormValues) {
     if (newOrder?.id && requestStatus === 'approved') {
       try {
         const supabaseAdmin = createAdminClient();
-        await supabaseAdmin.rpc('update_time_entries_from_shifts', { p_order_id: newOrder.id });
+        // Generate shifts for the new order
+        await generateShiftsFromAssignments();
+        // Sync time entries for all completed shifts (including past ones)
+        await ensureShiftTimeEntriesSync();
       } catch (e) {
         console.error("Fehler beim Aktualisieren von Time Entries:", e);
       }
@@ -175,29 +179,38 @@ export async function updateOrder(orderId: string, data: OrderFormValues) {
     .eq('id', orderId)
     .single();
 
-  const { error } = await supabase
+  console.log("[UPDATE-ORDER] Updating order:", { orderId, status: data.status, requestStatus: data.requestStatus, fullData: data });
+
+  // Use admin client to bypass potential RLS issues
+  const supabaseAdmin = createAdminClient();
+
+  const updateData: any = {
+    title: data.title,
+    description: data.description,
+    status: data.status === 'active' || data.status === 'inactive' ? data.status : 'active',
+    customer_id: data.customerId,
+    object_id: data.objectId,
+    customer_contact_id: data.customerContactId,
+    order_type: orderType,
+    start_date: formatDateToYMD(startDate),
+    priority,
+    // Handle numeric fields - convert empty/undefined to null
+    total_estimated_hours: totalEstimatedHours == null || String(totalEstimatedHours).trim() === "" ? null : Number(totalEstimatedHours),
+    fixed_monthly_price: fixedMonthlyPrice == null || String(fixedMonthlyPrice).trim() === "" ? null : Number(fixedMonthlyPrice),
+    notes: data.notes,
+    service_type: serviceType,
+    service_key: serviceKey,
+    markup_percentage: markupPercentage == null || String(markupPercentage).trim() === "" ? null : Number(markupPercentage),
+    custom_hourly_rate: customHourlyRate == null || String(customHourlyRate).trim() === "" ? null : Number(customHourlyRate),
+    request_status: requestStatus,
+    end_date: formatDateToYMD(endDate),
+  };
+
+  console.log("[UPDATE-ORDER] Final update data:", updateData);
+
+  const { error } = await supabaseAdmin
     .from('orders')
-    .update({
-      title: data.title,
-      description: data.description,
-      status: data.status,
-      customer_id: data.customerId,
-      object_id: data.objectId,
-      customer_contact_id: data.customerContactId,
-      order_type: orderType,
-      start_date: formatDateToYMD(startDate),
-      priority,
-      // Handle numeric fields - convert empty/undefined to null
-      total_estimated_hours: totalEstimatedHours == null || String(totalEstimatedHours).trim() === "" ? null : Number(totalEstimatedHours),
-      fixed_monthly_price: fixedMonthlyPrice == null || String(fixedMonthlyPrice).trim() === "" ? null : Number(fixedMonthlyPrice),
-      notes: data.notes,
-      service_type: serviceType,
-      service_key: serviceKey,
-      markup_percentage: markupPercentage == null || String(markupPercentage).trim() === "" ? null : Number(markupPercentage),
-      custom_hourly_rate: customHourlyRate == null || String(customHourlyRate).trim() === "" ? null : Number(customHourlyRate),
-      request_status: requestStatus,
-      end_date: formatDateToYMD(endDate),
-    })
+    .update(updateData)
     .eq('id', orderId);
 
   if (error) {
@@ -238,7 +251,10 @@ export async function updateOrder(orderId: string, data: OrderFormValues) {
   // Update time_entries based on current shift data (in case schedule changed)
   try {
     const supabaseAdmin = await createAdminClient();
-    await supabaseAdmin.rpc('update_time_entries_from_shifts', { p_order_id: orderId });
+    // Generate shifts for the updated order
+    await generateShiftsFromAssignments();
+    // Sync time entries for all completed shifts (including past ones)
+    await ensureShiftTimeEntriesSync();
   } catch (e) {
     console.error("Fehler beim Aktualisieren von Time Entries:", e);
   }
@@ -348,7 +364,7 @@ export async function processOrderRequest(formData: FormData): Promise<{ success
     .from('orders')
     .update({
       request_status: decision,
-      status: decision === 'approved' ? 'pending' : 'pending',
+      status: decision === 'approved' ? 'active' : 'inactive',
     })
     .eq('id', orderId);
 
@@ -385,6 +401,11 @@ export async function processOrderRequest(formData: FormData): Promise<{ success
       console.error("Fehler beim Einfügen neuer Zuweisung:", insertAssignmentError?.message || insertAssignmentError);
       return { success: false, message: `Fehler bei der Zuweisung: ${insertAssignmentError.message}` };
     }
+
+    // Generate shifts from the new assignment
+    await generateShiftsFromAssignments();
+    // Sync time entries for all completed shifts (including past ones)
+    await ensureShiftTimeEntriesSync();
 
     // Notify employee
     const supabaseAdmin = createAdminClient();

@@ -238,7 +238,7 @@ export async function generateProfessionalPDF({
           entry.startTime || '',
           entry.endTime || '',
           formatDuration(entry.breakMinutes),
-          formatDuration(entry.duration - entry.breakMinutes),
+          formatDuration(entry.duration - entry.breakMinutes), // net hours (duration minus break)
         ];
       } else {
         return [
@@ -248,7 +248,7 @@ export async function generateProfessionalPDF({
           entry.startTime || '',
           entry.endTime || '',
           formatDuration(entry.breakMinutes),
-          formatDuration(entry.duration - entry.breakMinutes),
+          formatDuration(entry.duration - entry.breakMinutes), // net hours (duration minus break)
         ];
       }
     });
@@ -347,13 +347,13 @@ export async function generateProfessionalPDF({
     let weekendHours = 0;
 
     entriesWithWorkType.forEach(entry => {
-      const netHours = (entry.duration - entry.breakMinutes) / 60;
+      const hours = (entry.duration - entry.breakMinutes) / 60; // net hours (duration minus break)
       if (entry.workType.type === 'holiday') {
-        holidayHours += netHours;
+        holidayHours += hours;
       } else if (entry.workType.type === 'weekend') {
-        weekendHours += netHours;
+        weekendHours += hours;
       } else {
-        regularHours += netHours;
+        regularHours += hours;
       }
     });
 
@@ -365,11 +365,11 @@ export async function generateProfessionalPDF({
       const employeeHours: { [key: string]: number } = {};
       data.entries.forEach(entry => {
         const employeeName = (entry as any).employeeName;
-        const netHours = (entry.duration - entry.breakMinutes) / 60;
+        const hours = (entry.duration - entry.breakMinutes) / 60; // net hours (duration minus break)
         if (employeeHours[employeeName]) {
-          employeeHours[employeeName] += netHours;
+          employeeHours[employeeName] += hours;
         } else {
-          employeeHours[employeeName] = netHours;
+          employeeHours[employeeName] = hours;
         }
       });
 

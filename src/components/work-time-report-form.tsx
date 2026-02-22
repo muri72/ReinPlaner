@@ -482,15 +482,15 @@ export function WorkTimeReportForm() {
                     let weekendHours = 0;
 
                     objectReportData.entries.forEach(entry => {
-                      const netHours = (entry.duration - entry.breakMinutes) / 60;
+                      const hours = (entry.duration - entry.breakMinutes) / 60; // net hours (duration minus break)
                       const workType = workTypes[entry.id];
 
                       if (workType?.type === 'holiday') {
-                        holidayHours += netHours;
+                        holidayHours += hours;
                       } else if (workType?.type === 'weekend') {
-                        weekendHours += netHours;
+                        weekendHours += hours;
                       } else {
-                        regularHours += netHours;
+                        regularHours += hours;
                       }
                     });
 
@@ -521,11 +521,11 @@ export function WorkTimeReportForm() {
                           const employeeHours: { [key: string]: number } = {};
                           objectReportData.entries.forEach(entry => {
                             const employeeName = entry.employeeName;
-                            const netHours = (entry.duration - entry.breakMinutes) / 60;
+                            const hours = (entry.duration - entry.breakMinutes) / 60; // net hours (duration minus break)
                             if (employeeHours[employeeName]) {
-                              employeeHours[employeeName] += netHours;
+                              employeeHours[employeeName] += hours;
                             } else {
-                              employeeHours[employeeName] = netHours;
+                              employeeHours[employeeName] = hours;
                             }
                           });
 
@@ -601,15 +601,15 @@ export function WorkTimeReportForm() {
                     let weekendHours = 0;
 
                     employeeReportData.entries.forEach(entry => {
-                      const netHours = (entry.duration - entry.breakMinutes) / 60;
+                      const hours = (entry.duration - entry.breakMinutes) / 60; // net hours (duration minus break)
                       const workType = workTypes[entry.id];
 
                       if (workType?.type === 'holiday') {
-                        holidayHours += netHours;
+                        holidayHours += hours;
                       } else if (workType?.type === 'weekend') {
-                        weekendHours += netHours;
+                        weekendHours += hours;
                       } else {
-                        regularHours += netHours;
+                        regularHours += hours;
                       }
                     });
 

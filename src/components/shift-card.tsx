@@ -24,7 +24,7 @@ function subscribeToGlobalTick(callback: () => void) {
   if (!globalIntervalId) {
     globalIntervalId = setInterval(() => {
       globalSubscribers.forEach(cb => cb());
-    }, 60000); // 1 minute
+    }, 30000); // 30 seconds for better realtime UX
   }
 
   // Return unsubscribe function
@@ -63,36 +63,49 @@ const statusConfig = {
 // ============================================================================
 
 function calculateRealtimeStatus(shift: ShiftAssignment): "scheduled" | "in_progress" | "completed" | "cancelled" {
-  // Always return the actual DB status to avoid desync
-  // The visual status should match what's in the database
-  const status: "scheduled" | "in_progress" | "completed" | "cancelled" = shift.status || "scheduled";
-
-  if (status === "cancelled") return "cancelled";
-  if (status === "completed") return "completed";
-
-  // Only show "in_progress" for today's shifts that are actually in progress time-wise
+  // IMPORTANT: Realtime status calculation overrides DB status for better UX
+  // This ensures shifts show correctly even if DB status is outdated
   const now = new Date();
-  const shiftDate = parseISO(shift.shift_date);
+  const shiftDate = startOfDay(parseISO(shift.shift_date));
 
-  if (isToday(shiftDate)) {
-    if (shift.start_time && shift.end_time) {
-      const [startHour, startMin] = shift.start_time.split(":").map(Number);
-      const [endHour, endMin] = shift.end_time.split(":").map(Number);
+  // Cancelled shifts always show as cancelled (no realtime override)
+  if (shift.status === "cancelled") return "cancelled";
 
-      const shiftStart = new Date(now);
-      shiftStart.setHours(startHour, startMin, 0, 0);
+  // Past shifts (before today) - check DB status, default to completed
+  if (isBefore(shiftDate, startOfDay(now))) {
+    // If explicitly marked as scheduled in DB, keep it (manual override)
+    if (shift.status === "scheduled") return "scheduled";
+    return shift.status === "completed" ? "completed" : "completed";
+  }
 
-      const shiftEnd = new Date(now);
-      shiftEnd.setHours(endHour, endMin, 0, 0);
+  // Future shifts (after today) - should be scheduled
+  if (isAfter(shiftDate, startOfDay(now))) {
+    return "scheduled";
+  }
 
-      if (isBefore(now, shiftStart)) return "scheduled";
-      if (isAfter(now, shiftEnd)) return "scheduled"; // Over today - needs manual completion
-      return "in_progress";
-    }
+  // Today's shifts - calculate based on time
+  if (shift.start_time && shift.end_time) {
+    const [startHour, startMin] = shift.start_time.split(":").map(Number);
+    const [endHour, endMin] = shift.end_time.split(":").map(Number);
+
+    const shiftStart = new Date(now);
+    shiftStart.setHours(startHour, startMin, 0, 0);
+
+    const shiftEnd = new Date(now);
+    shiftEnd.setHours(endHour, endMin, 0, 0);
+
+    // Before shift start time
+    if (isBefore(now, shiftStart)) return "scheduled";
+
+    // After shift end time - show as completed (realtime)
+    if (isAfter(now, shiftEnd)) return "completed";
+
+    // During shift time
     return "in_progress";
   }
 
-  return status;
+  // Today but no times set - default to scheduled
+  return "scheduled";
 }
 
 // ============================================================================

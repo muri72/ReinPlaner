@@ -3088,17 +3088,29 @@ export async function createShift(
       }
     }
 
-    // Create the shift
+    // Create the shift - extend end_time by break duration
+    const breakMinutes = params.break_time_minutes || 0;
+    const [startHour, startMin] = params.start_time.split(':').map(Number);
+    const [endHour, endMin] = params.end_time.split(':').map(Number);
+    const startMinutes = startHour * 60 + startMin;
+    let totalEndMinutes = endHour * 60 + endMin + breakMinutes;
+    let durationMinutes = totalEndMinutes - startMinutes;
+    if (durationMinutes < 0) durationMinutes += 24 * 60;
+
+    const adjustedEndHour = Math.floor(totalEndMinutes / 60) % 24;
+    const adjustedEndMin = totalEndMinutes % 60;
+    const adjustedEndTime = `${String(adjustedEndHour).padStart(2, '0')}:${String(adjustedEndMin).padStart(2, '0')}`;
+
     const { data: newShift, error: shiftError } = await supabaseAdmin
       .from("shifts")
       .insert({
         assignment_id: assignmentId,
         shift_date: params.shift_date,
         start_time: params.start_time,
-        end_time: params.end_time,
+        end_time: adjustedEndTime,
         estimated_hours: params.estimated_hours,
         travel_time_minutes: params.travel_time_minutes || 0,
-        break_time_minutes: params.break_time_minutes || 0,
+        break_time_minutes: breakMinutes,
         status: "scheduled",
         notes: params.notes,
         order_id: params.order_id,
@@ -3154,24 +3166,12 @@ export async function createShift(
         .eq("id", params.employee_id)
         .single();
 
-      // Calculate duration in minutes
-      const [startHour, startMin] = params.start_time.split(':').map(Number);
-      const [endHour, endMin] = params.end_time.split(':').map(Number);
-      const startMinutes = startHour * 60 + startMin;
-      const endMinutes = endHour * 60 + endMin;
-      let durationMinutes = endMinutes - startMinutes;
-      if (durationMinutes < 0) durationMinutes += 24 * 60; // Handle overnight
-
-      // Subtract break time
-      const breakMinutes = params.break_time_minutes || 0;
-      durationMinutes = Math.max(0, durationMinutes - breakMinutes);
-
-      // Calculate start and end timestamps
+      // Calculate start and end timestamps (using the already adjusted times)
       const startDateTime = new Date(shiftDate);
       startDateTime.setHours(startHour, startMin, 0, 0);
       const endDateTime = new Date(shiftDate);
-      endDateTime.setHours(endHour, endMin, 0, 0);
-      if (endMinutes < startMinutes) {
+      endDateTime.setHours(adjustedEndHour, adjustedEndMin, 0, 0);
+      if (totalEndMinutes < startMinutes) {
         endDateTime.setDate(endDateTime.getDate() + 1);
       }
 
@@ -3337,16 +3337,29 @@ export async function createShiftWithSchedule(
         const daySchedule = params.schedules[dayName] || { hours: 8, start: "08:00", end: "17:00" };
         console.log(`[CREATE-SCHEDULE] daySchedule used:`, daySchedule);
 
+        // Extend end_time by break duration
+        const breakMinutes = params.break_time_minutes || 0;
+        const [startHour, startMin] = daySchedule.start.split(':').map(Number);
+        const [endHour, endMin] = daySchedule.end.split(':').map(Number);
+        const startMinutes = startHour * 60 + startMin;
+        let totalEndMinutes = endHour * 60 + endMin + breakMinutes;
+        let durationMinutes = totalEndMinutes - startMinutes;
+        if (durationMinutes < 0) durationMinutes += 24 * 60;
+
+        const adjustedEndHour = Math.floor(totalEndMinutes / 60) % 24;
+        const adjustedEndMin = totalEndMinutes % 60;
+        const adjustedEndTime = `${String(adjustedEndHour).padStart(2, '0')}:${String(adjustedEndMin).padStart(2, '0')}`;
+
         const { data: newShift, error: shiftError } = await supabaseAdmin
           .from("shifts")
           .insert({
             assignment_id: null,
             shift_date: date,
             start_time: daySchedule.start,
-            end_time: daySchedule.end,
+            end_time: adjustedEndTime,
             estimated_hours: daySchedule.hours,
             travel_time_minutes: params.travel_time_minutes || 0,
-            break_time_minutes: params.break_time_minutes || 0,
+            break_time_minutes: breakMinutes,
             status: "scheduled",
             notes: params.notes,
             order_id: params.order_id,
@@ -3387,24 +3400,12 @@ export async function createShiftWithSchedule(
             .eq("id", params.order_id)
             .single();
 
-          // Calculate duration in minutes
-          const [startHour, startMin] = daySchedule.start.split(':').map(Number);
-          const [endHour, endMin] = daySchedule.end.split(':').map(Number);
-          const startMinutes = startHour * 60 + startMin;
-          const endMinutes = endHour * 60 + endMin;
-          let durationMinutes = endMinutes - startMinutes;
-          if (durationMinutes < 0) durationMinutes += 24 * 60;
-
-          // Subtract break time
-          const breakMinutes = params.break_time_minutes || 0;
-          durationMinutes = Math.max(0, durationMinutes - breakMinutes);
-
-          // Calculate start and end timestamps
+          // Calculate start and end timestamps (using the already adjusted times)
           const startDateTime = new Date(shiftDate);
           startDateTime.setHours(startHour, startMin, 0, 0);
           const endDateTime = new Date(shiftDate);
-          endDateTime.setHours(endHour, endMin, 0, 0);
-          if (endMinutes < startMinutes) {
+          endDateTime.setHours(adjustedEndHour, adjustedEndMin, 0, 0);
+          if (totalEndMinutes < startMinutes) {
             endDateTime.setDate(endDateTime.getDate() + 1);
           }
 
