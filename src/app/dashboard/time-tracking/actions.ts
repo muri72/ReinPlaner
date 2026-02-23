@@ -262,7 +262,7 @@ export async function generateTimeEntriesFromShifts(
           actual_start_time,
           actual_end_time,
           actual_hours,
-          employees!inner (
+          employees (
             id,
             user_id,
             first_name,
@@ -419,7 +419,8 @@ function buildTimeEntryData(shift: any, shiftEmployee: any, employee: any): any 
   const order = orderArray[0];
 
   return {
-    user_id: employee.user_id,
+    // user_id komplett entfernt - Zeiteinträge werden nur mit employee_id verknüpft
+    // Mitarbeiter können ohne Login-Account (user_id = NULL) Zeiteinträge haben
     employee_id: employee.id,
     customer_id: order?.customer_id || null,
     object_id: order?.object_id || null,
@@ -503,7 +504,9 @@ export async function generateTimeEntriesForShift(shiftId: string): Promise<{ su
     for (const se of (shift.shift_employees || [])) {
       const empArray = Array.isArray(se.employees) ? se.employees : [se.employees].filter(Boolean);
       const employee = empArray[0];
-      if (!employee) continue;
+      if (!employee) {
+        continue;
+      }
 
       // Check if time entry already exists for this shift-employee combination
       if (existingEmployees.has(employee.id)) {
@@ -588,21 +591,19 @@ export async function createTimeEntry(data: TimeEntryFormValues): Promise<{ succ
     notes,
   } = data;
 
-  let finalUserId = user.id;
-
-  // If an admin/manager is creating an entry for a specific employee, find that employee's user_id
+  // Verify employee exists if employeeId is provided
   if (employeeId) {
     const { data: employee, error: employeeError } = await supabase
       .from('employees')
-      .select('user_id')
+      .select('id, first_name, last_name')
       .eq('id', employeeId)
       .single();
 
-    if (employeeError || !employee || !employee.user_id) {
-      console.error("Fehler beim Abrufen des Mitarbeiter-Benutzers für Zeiteintrag:", employeeError?.message || employeeError);
-      return { success: false, message: "Der ausgewählte Mitarbeiter ist keinem Benutzerkonto zugeordnet." };
+    if (employeeError || !employee) {
+      console.error("Fehler beim Abrufen des Mitarbeiters für Zeiteintrag:", employeeError?.message || employeeError);
+      return { success: false, message: "Mitarbeiter nicht gefunden." };
     }
-    finalUserId = employee.user_id;
+    // user_id Prüfung entfernt - Zeiteintrag wird nur mit employee_id verknüpft
   }
 
   // Combine date and time for start_time
@@ -638,7 +639,7 @@ export async function createTimeEntry(data: TimeEntryFormValues): Promise<{ succ
   const { data: newEntry, error } = await supabaseAdmin
     .from('time_entries')
     .insert({
-      user_id: finalUserId, // Use the correct user_id
+      user_id: null, // Kein user_id mehr benötigt - employee_id reicht
       employee_id: employeeId,
       customer_id: customerId,
       object_id: objectId,
@@ -819,7 +820,7 @@ interface TimeEntry {
   break_minutes: number | null;
   type: string;
   notes: string | null;
-  user_id: string;
+  user_id: string | null;  // Optional - Zeiteinträge können ohne Login-Account existieren
   employee_id: string | null;
   customer_id: string | null;
   object_id: string | null;

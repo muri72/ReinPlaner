@@ -92,9 +92,9 @@ export default function PlanningPage() {
   // Ref to track the latest fetch request ID for cancellation
   const fetchIdRef = React.useRef(0);
 
-  // Throttle auto-sync to maximum once per minute
+  // Throttle auto-sync to maximum once per 10 seconds (for better shift/time entry sync)
   const lastAutoSyncRef = React.useRef<number>(0);
-  const AUTO_SYNC_THROTTLE_MS = 60000; // 1 minute
+  const AUTO_SYNC_THROTTLE_MS = 10000; // 10 seconds - ensures faster sync of completed shifts to time entries
 
   // Series edit dialog state
   const [seriesDialogOpen, setSeriesDialogOpen] = React.useState(false);

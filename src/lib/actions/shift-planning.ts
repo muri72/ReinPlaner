@@ -2800,11 +2800,15 @@ export async function ensureShiftTimeEntriesSync(): Promise<{
     const now = new Date();
 
     // Step 1: Mark overdue shifts as completed - OPTIMIZED with batch UPDATE
-    const today = startOfDay(now);
-    const currentHour = now.getHours();
-    const currentMinute = now.getMinutes();
-    const currentTimeMinutes = currentHour * 60 + currentMinute;
-    const nowDateStr = formatISO(today, { representation: "date" });
+    // Get current date in LOCAL timezone (Germany/Europe)
+    // This is important because shift_date is stored in local date, not UTC
+    const localYear = now.getFullYear();
+    const localMonth = now.getMonth();
+    const localDay = now.getDate();
+
+    // Create today's date at midnight LOCAL time
+    const todayLocal = new Date(localYear, localMonth, localDay);
+    const todayLocalStr = formatISO(todayLocal, { representation: "date" });
 
     const { data: shiftsToUpdate, error: fetchError } = await supabaseAdmin
       .from("shifts")
@@ -2815,16 +2819,27 @@ export async function ensureShiftTimeEntriesSync(): Promise<{
 
     // Collect all shift IDs that should be marked as completed
     const shiftIdsToComplete: string[] = [];
+
     for (const shift of shiftsToUpdate || []) {
       const shiftDateStr = shift.shift_date;
       let shouldBeCompleted = false;
 
-      if (shiftDateStr < nowDateStr) {
+      // Compare dates as strings (shift_date is stored in local date)
+      // If shift date is BEFORE today (local date), it should be completed
+      if (shiftDateStr < todayLocalStr) {
         shouldBeCompleted = true;
-      } else if (shiftDateStr === nowDateStr && shift.end_time) {
-        const [endHour, endMin] = shift.end_time.split(":").map(Number);
-        const endTimeMinutes = endHour * 60 + endMin;
-        if (currentTimeMinutes >= endTimeMinutes) {
+      } else if (shiftDateStr === todayLocalStr && shift.end_time) {
+        // For today's shifts, compare the actual end time with current time
+        // Parse shift end time (HH:mm format)
+        const [endHour, endMinute] = shift.end_time.split(':').map(Number);
+        // Create a date object for the shift end time in LOCAL timezone
+        const shiftEndLocal = new Date(localYear, localMonth, localDay, endHour, endMinute, 0);
+
+        // Current time is already in local timezone (because we used getFullYear/getMonth/getDate)
+        // Add 5 minute buffer - shift should be completed 5 min after end time
+        const comparisonTime = new Date(now.getTime() - 5 * 60 * 1000); // 5 min ago
+
+        if (comparisonTime >= shiftEndLocal) {
           shouldBeCompleted = true;
         }
       }
@@ -2851,6 +2866,8 @@ export async function ensureShiftTimeEntriesSync(): Promise<{
       if (!updateError && updatedShifts) {
         shiftsCompleted = updatedShifts.length;
         newlyCompletedShiftIds = updatedShifts.map(s => s.id);
+      } else if (updateError) {
+        console.error(`[SYNC] Failed to mark shifts as completed:`, updateError);
       }
     }
 
@@ -2886,6 +2903,8 @@ export async function ensureShiftTimeEntriesSync(): Promise<{
       const result = await generateTimeEntriesForShift(shiftId);
       if (result.success) {
         timeEntriesCreated += result.created;
+      } else {
+        console.error(`[SYNC] Failed to create time entries for shift ${shiftId.slice(0, 8)}...: ${result.message}`);
       }
     }
 
