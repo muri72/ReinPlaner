@@ -74,7 +74,7 @@ export function WorkTimeReportForm() {
     const fetchDropdownData = async () => {
       const { data: objectsData } = await supabase.from('objects').select('id, name, customer_id').order('name', { ascending: true });
       if (objectsData) setObjects(objectsData);
-      const { data: employeesData } = await supabase.from('employees').select('id, first_name, last_name').order('last_name', { ascending: true });
+      const { data: employeesData } = await supabase.from('employees').select('id, first_name, last_name').eq('status', 'active').order('last_name', { ascending: true });
       if (employeesData) setEmployees(employeesData);
 
       // Load bundesland from settings (default to HH if not found)
