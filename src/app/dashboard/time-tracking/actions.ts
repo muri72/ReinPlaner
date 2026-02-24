@@ -361,21 +361,7 @@ export async function generateTimeEntriesFromShifts(
 // ============================================================================
 
 function buildTimeEntryData(shift: any, shiftEmployee: any, employee: any): any | null {
-  // Calculate duration from actual hours or estimated hours
-  let durationMinutes: number | null = null;
-  if (shiftEmployee.actual_hours) {
-    durationMinutes = Number(shiftEmployee.actual_hours) * 60;
-  } else if (shift.estimated_hours) {
-    durationMinutes = Number(shift.estimated_hours) * 60;
-  }
-
-  // Calculate break based on duration
-  let breakMinutes = 0;
-  if (durationMinutes !== null) {
-    breakMinutes = calculateBreakMinutesFallback(durationMinutes);
-  }
-
-  // Build datetime from shift_date and start_time/end_time
+  // Build datetime from shift_date and start_time/end_time FIRST
   // IMPORTANT: Shift times are stored as local time (TIME type), so we need to preserve them
   // by creating the timestamp with the correct timezone offset (Europe/Berlin = UTC+1 in winter)
   let startTime: string | null = null;
@@ -412,6 +398,24 @@ function buildTimeEntryData(shift: any, shiftEmployee: any, employee: any): any 
     }
 
     endTime = endTimestamp;
+  }
+
+  // Calculate duration from actual timestamp difference (GROSS duration incl. breaks)
+  let durationMinutes: number | null = null;
+  if (startTime && endTime) {
+    const startDate = new Date(startTime);
+    const endDate = new Date(endTime);
+    durationMinutes = (endDate.getTime() - startDate.getTime()) / (1000 * 60);
+  } else if (shiftEmployee.actual_hours) {
+    durationMinutes = Number(shiftEmployee.actual_hours) * 60;
+  } else if (shift.estimated_hours) {
+    durationMinutes = Number(shift.estimated_hours) * 60;
+  }
+
+  // Calculate break based on GROSS duration
+  let breakMinutes = 0;
+  if (durationMinutes !== null) {
+    breakMinutes = calculateBreakMinutesFallback(durationMinutes);
   }
 
   // Get customer_id and object_id from orders (shifts join orders via order_id)
