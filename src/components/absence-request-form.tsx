@@ -6,6 +6,7 @@ import * as z from "zod";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -25,6 +26,21 @@ import { parseLocalDate } from "@/lib/utils";
 import { calculateWorkingDays, formatWorkingDays, getDefaultWorkingDays } from "@/lib/utils/date-utils";
 import { getVacationBalance } from "@/app/dashboard/absence-requests/actions";
 import { Checkbox } from "@/components/ui/checkbox";
+
+// Helper component for labels with required asterisk
+function LabelWithRequired({ htmlFor, children, required, className }: { htmlFor: string; children: React.ReactNode; required?: boolean; className?: string }) {
+  return (
+    <Label
+      htmlFor={htmlFor}
+      className={cn(
+        required && "after:content-['*'] after:ml-0.5 after:text-destructive",
+        className
+      )}
+    >
+      {children}
+    </Label>
+  );
+}
 
 // Define the schema for absence request form values
 export const absenceRequestSchema = z.object({
@@ -229,7 +245,7 @@ export function AbsenceRequestForm({ initialData, onSubmit, submitButtonText, on
             icon={<User className="h-5 w-5 text-primary" />}
           >
             <div>
-              <Label htmlFor="employeeId">Mitarbeiter</Label>
+              <LabelWithRequired htmlFor="employeeId" required>Mitarbeiter</LabelWithRequired>
               <Select onValueChange={(value) => form.setValue("employeeId", value)} value={form.watch("employeeId")} disabled={!isManagerOrAdmin && employees.length > 0}>
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Mitarbeiter auswählen" />
@@ -289,7 +305,7 @@ export function AbsenceRequestForm({ initialData, onSubmit, submitButtonText, on
             icon={<FileText className="h-5 w-5 text-primary" />}
           >
             <div>
-              <Label htmlFor="type">Art der Abwesenheit</Label>
+              <LabelWithRequired htmlFor="type" required>Art der Abwesenheit</LabelWithRequired>
               <Select onValueChange={(value) => {
                 form.setValue("type", value as AbsenceRequestFormValues["type"]);
                 if (value !== "unpaid_leave") {
@@ -426,7 +442,7 @@ export function AbsenceRequestForm({ initialData, onSubmit, submitButtonText, on
               icon={<User className="h-5 w-5 text-primary" />}
             >
               <div>
-                <Label htmlFor="employeeId">Mitarbeiter</Label>
+                <LabelWithRequired htmlFor="employeeId" required>Mitarbeiter</LabelWithRequired>
                 <Select onValueChange={(value) => form.setValue("employeeId", value)} value={form.watch("employeeId")} disabled={!isManagerOrAdmin && employees.length > 0}>
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Mitarbeiter auswählen" />
@@ -486,7 +502,7 @@ export function AbsenceRequestForm({ initialData, onSubmit, submitButtonText, on
               icon={<FileText className="h-5 w-5 text-primary" />}
             >
               <div>
-                <Label htmlFor="type">Art der Abwesenheit</Label>
+                <LabelWithRequired htmlFor="type" required>Art der Abwesenheit</LabelWithRequired>
                 <Select onValueChange={(value) => {
                   form.setValue("type", value as AbsenceRequestFormValues["type"]);
                   if (value !== "unpaid_leave") {

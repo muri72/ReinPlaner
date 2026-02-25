@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { EmployeeFormValues } from "@/components/employee-form";
 import { logDataChange } from "@/lib/audit-log";
+import { trackSupabaseError, addBreadcrumb } from "@/lib/sentry";
 
 // Helper function to format date for database
 const formatDateForDB = (date: Date | null | undefined): string | null => {
@@ -16,57 +17,115 @@ const formatDateForDB = (date: Date | null | undefined): string | null => {
   }
 };
 
+// Helper function to convert empty strings to null for database
+const emptyStringToNull = (value: string | null | undefined): string | null => {
+  if (value === "" || value === undefined || value === null) return null;
+  return value;
+};
+
+// Helper function to convert empty strings to null for numeric fields
+const emptyStringToNullNumber = (value: number | string | null | undefined): number | null => {
+  if (value === "" || value === undefined || value === null) return null;
+  if (typeof value === 'string') {
+    const num = parseFloat(value);
+    return isNaN(num) ? null : num;
+  }
+  return value;
+};
+
 export async function createEmployee(data: EmployeeFormValues) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
+  // Debug logging in development
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[createEmployee] Received data:', JSON.stringify(data, null, 2));
+  }
+
+  // Add breadcrumb for employee creation start
+  addBreadcrumb('Creating new employee', 'employee', 'info', {
+    firstName: data.first_name,
+    lastName: data.last_name,
+    contractType: data.contract_type,
+  });
+
   if (!user) {
+    if (process.env.NODE_ENV === 'development') {
+      console.error('[createEmployee] User not authenticated');
+    }
     return { success: false, message: "Benutzer nicht authentifiziert." };
+  }
+
+  // Build insert data
+  const insertData = {
+    user_id: user.id,
+    first_name: data.first_name,
+    last_name: data.last_name,
+    email: emptyStringToNull(data.email),
+    phone: emptyStringToNull(data.phone),
+    hire_date: formatDateForDB(data.hire_date),
+    status: data.status,
+    // Convert null/undefined to null for database
+    contract_type: data.contract_type || null,
+    contract_end_date: formatDateForDB(data.contract_end_date),
+    hourly_rate: emptyStringToNullNumber(data.hourly_rate),
+    start_date: formatDateForDB(data.start_date),
+    job_title: emptyStringToNull(data.job_title),
+    department: emptyStringToNull(data.department),
+    notes: emptyStringToNull(data.notes),
+    address: emptyStringToNull(data.address),
+    date_of_birth: formatDateForDB(data.date_of_birth),
+    social_security_number: emptyStringToNull(data.social_security_number),
+    tax_id_number: emptyStringToNull(data.tax_id_number),
+    health_insurance_provider: emptyStringToNull(data.health_insurance_provider),
+    can_work_holidays: data.can_work_holidays,
+    default_daily_schedules: data.default_daily_schedules,
+    default_recurrence_interval_weeks: data.default_recurrence_interval_weeks,
+    default_start_week_offset: data.default_start_week_offset,
+    // Vacation & Work settings - convert empty strings to null for database
+    working_days_per_week: emptyStringToNullNumber(data.working_days_per_week),
+    contract_hours_per_week: emptyStringToNullNumber(data.contract_hours_per_week),
+    vacation_balance: emptyStringToNullNumber(data.vacation_balance),
+    // Lohngruppen settings (TV GD 2026)
+    wage_group: data.wage_group || null,
+    qualification: emptyStringToNull(data.qualification),
+    has_professional_education: data.has_professional_education || false,
+    lohngruppen_eingruppung_datum: formatDateForDB(data.lohngruppen_eingruppung_datum),
+    psa_type: data.psa_type || null,
+  };
+
+  // Debug logging insert data
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[createEmployee] Insert data:', JSON.stringify(insertData, null, 2));
   }
 
   const { data: newEmployee, error } = await supabase
     .from('employees')
-    .insert({
-      user_id: user.id,
-      first_name: data.first_name,
-      last_name: data.last_name,
-      email: data.email,
-      phone: data.phone,
-      hire_date: formatDateForDB(data.hire_date),
-      status: data.status,
-      // Convert null/undefined to null for database
-      contract_type: data.contract_type || null,
-      contract_end_date: formatDateForDB(data.contract_end_date),
-      hourly_rate: data.hourly_rate,
-      start_date: formatDateForDB(data.start_date),
-      job_title: data.job_title,
-      department: data.department,
-      notes: data.notes,
-      address: data.address,
-      date_of_birth: formatDateForDB(data.date_of_birth),
-      social_security_number: data.social_security_number,
-      tax_id_number: data.tax_id_number,
-      health_insurance_provider: data.health_insurance_provider,
-      can_work_holidays: data.can_work_holidays,
-      default_daily_schedules: data.default_daily_schedules,
-      default_recurrence_interval_weeks: data.default_recurrence_interval_weeks,
-      default_start_week_offset: data.default_start_week_offset,
-      // Vacation & Work settings
-      working_days_per_week: data.working_days_per_week,
-      contract_hours_per_week: data.contract_hours_per_week,
-      vacation_balance: data.vacation_balance,
-      // Lohngruppen settings (TV GD 2026)
-      wage_group: data.wage_group || null,
-      qualification: data.qualification || null,
-      has_professional_education: data.has_professional_education || false,
-      lohngruppen_eingruppung_datum: formatDateForDB(data.lohngruppen_eingruppung_datum),
-      psa_type: data.psa_type || null,
-    })
+    .insert(insertData)
     .select()
     .single();
 
   if (error) {
+    // Log detailed error in development
+    if (process.env.NODE_ENV === 'development') {
+      console.error('[createEmployee] Supabase error:', error);
+      console.error('[createEmployee] Error details:', {
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+      });
+    }
+
+    // Track Supabase error in Sentry
+    trackSupabaseError(error, 'INSERT', 'employees');
+
     return { success: false, message: error.message };
+  }
+
+  // Debug logging success
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[createEmployee] Employee created successfully:', newEmployee.id);
   }
 
   // Create audit log
@@ -106,32 +165,32 @@ export async function updateEmployee(employeeId: string, data: EmployeeFormValue
   const updateData: any = {
     first_name: data.first_name,
     last_name: data.last_name,
-    email: data.email,
-    phone: data.phone,
+    email: emptyStringToNull(data.email),
+    phone: emptyStringToNull(data.phone),
     hire_date: formatDateForDB(data.hire_date),
     status: data.status,
     contract_end_date: formatDateForDB(data.contract_end_date),
-    hourly_rate: data.hourly_rate,
+    hourly_rate: emptyStringToNullNumber(data.hourly_rate),
     start_date: formatDateForDB(data.start_date),
-    job_title: data.job_title,
-    department: data.department,
-    notes: data.notes,
-    address: data.address,
+    job_title: emptyStringToNull(data.job_title),
+    department: emptyStringToNull(data.department),
+    notes: emptyStringToNull(data.notes),
+    address: emptyStringToNull(data.address),
     date_of_birth: formatDateForDB(data.date_of_birth),
-    social_security_number: data.social_security_number,
-    tax_id_number: data.tax_id_number,
-    health_insurance_provider: data.health_insurance_provider,
+    social_security_number: emptyStringToNull(data.social_security_number),
+    tax_id_number: emptyStringToNull(data.tax_id_number),
+    health_insurance_provider: emptyStringToNull(data.health_insurance_provider),
     can_work_holidays: data.can_work_holidays,
     default_daily_schedules: data.default_daily_schedules,
     default_recurrence_interval_weeks: data.default_recurrence_interval_weeks,
     default_start_week_offset: data.default_start_week_offset,
-    // Vacation & Work settings
-    working_days_per_week: data.working_days_per_week,
-    contract_hours_per_week: data.contract_hours_per_week,
-    vacation_balance: data.vacation_balance,
+    // Vacation & Work settings - convert empty strings to null for database
+    working_days_per_week: emptyStringToNullNumber(data.working_days_per_week),
+    contract_hours_per_week: emptyStringToNullNumber(data.contract_hours_per_week),
+    vacation_balance: emptyStringToNullNumber(data.vacation_balance),
     // Lohngruppen settings (TV GD 2026)
     wage_group: data.wage_group || null,
-    qualification: data.qualification || null,
+    qualification: emptyStringToNull(data.qualification),
     has_professional_education: data.has_professional_education || false,
     lohngruppen_eingruppung_datum: formatDateForDB(data.lohngruppen_eingruppung_datum),
     psa_type: data.psa_type || null,

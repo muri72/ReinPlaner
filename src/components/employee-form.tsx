@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { trackFormError, addBreadcrumb } from "@/lib/sentry";
+import { cn } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useMemo, useState, useEffect } from "react";
@@ -75,6 +77,22 @@ interface EmployeeFormProps {
   onSuccess?: () => void;
   isInDialog?: boolean;
   isCreateMode?: boolean;
+}
+
+// Helper component for labels with required asterisk
+function LabelWithRequired({ htmlFor, children, required, className }: { htmlFor: string; children: React.ReactNode; required?: boolean; className?: string }) {
+  return (
+    <Label
+      htmlFor={htmlFor}
+      className={cn(
+        "text-sm font-medium",
+        required && "after:content-['*'] after:ml-0.5 after:text-destructive",
+        className
+      )}
+    >
+      {children}
+    </Label>
+  );
 }
 
 // Helper function to convert string dates to Date objects
@@ -206,16 +224,64 @@ export function EmployeeForm({ initialData, onSubmit, submitButtonText, onSucces
   const handleFormSubmit: SubmitHandler<EmployeeFormInput> = async (data) => {
     setIsSubmitting(true);
 
+    // Add breadcrumb for form submission start
+    addBreadcrumb('Employee form submission started', 'form', 'info', {
+      hasFirstName: !!data.first_name,
+      hasLastName: !!data.last_name,
+      contractType: data.contract_type,
+      mode: isCreateMode ? 'create' : 'edit',
+    });
+
+    // Debug logging in development
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[EmployeeForm] Submitting form data:', JSON.stringify(data, null, 2));
+      console.log('[EmployeeForm] Form mode:', isCreateMode ? 'create' : 'edit');
+    }
+
     try {
       const result = await onSubmit(data as EmployeeFormValues);
 
       if (result.success) {
         toast.success(result.message);
         onSuccess?.();
+
+        // Debug logging in development
+        if (process.env.NODE_ENV === 'development') {
+          console.log('[EmployeeForm] Submission successful:', result.message);
+        }
       } else {
+        // Log server errors for debugging
+        if (process.env.NODE_ENV === 'development') {
+          console.error('[EmployeeForm] Server error:', result.message);
+        }
+
+        // Add breadcrumb for server error
+        addBreadcrumb('Employee form server error', 'form', 'error', {
+          message: result.message,
+        });
+
         toast.error(result.message);
       }
     } catch (error) {
+      // Send to Sentry with form context
+      trackFormError(
+        error as Error,
+        'employee-form',
+        {
+          ...data,
+          mode: isCreateMode ? 'create' : 'edit',
+        }
+      );
+
+      // Debug logging in development
+      if (process.env.NODE_ENV === 'development') {
+        console.error('[EmployeeForm] Unexpected error:', error);
+        console.error('[EmployeeForm] Error details:', {
+          message: error instanceof Error ? error.message : 'Unknown error',
+          stack: error instanceof Error ? error.stack : undefined,
+        });
+      }
+
       toast.error("Ein unerwarteter Fehler ist aufgetreten.");
     } finally {
       setIsSubmitting(false);
@@ -256,8 +322,13 @@ export function EmployeeForm({ initialData, onSubmit, submitButtonText, onSucces
     }
     loadSettings();
 
-    const subscription = form.watch((value) => {
-      if (value.default_daily_schedules) {
+    // Only watch schedule changes, not all form changes
+    // This prevents infinite loop when we auto-populate other fields
+    const subscription = form.watch((value, { name, type }) => {
+      // Check if the changed field is within the schedule structure
+      // This catches both direct changes to default_daily_schedules AND nested field changes
+      // like default_daily_schedules.0.monday.hours
+      if (name && (name === 'default_daily_schedules' || name.startsWith('default_daily_schedules.')) && type === 'change') {
         setScheduleVersion(v => v + 1);
       }
     });
@@ -291,48 +362,64 @@ export function EmployeeForm({ initialData, onSubmit, submitButtonText, onSucces
   const contractType = (form.watch("contract_type") as string) || "full_time";
   const calculatedVacationDays = calculateVacationDays(baseVacationDays, calculatedDaysPerWeek, contractType).tage;
 
-  // Auto-populate fields from schedule (only when user hasn't manually edited them)
+  // Auto-populate fields from schedule
+  // Always update working_days_per_week and contract_hours_per_week based on schedule
   useEffect(() => {
-    if (calculatedHours > 0) {
-      // Auto-populate working_days_per_week (for both create and edit mode)
-      const currentWorkingDays = form.getValues("working_days_per_week");
-      if (!currentWorkingDays || currentWorkingDays === 5) {
-        form.setValue("working_days_per_week", calculatedDaysPerWeek);
-      }
+    const schedules = form.getValues('default_daily_schedules');
+    const daysPerWeek = getDaysPerWeekFromSchedule(schedules);
 
-      // Auto-populate contract_hours_per_week
-      const currentContractHours = form.getValues("contract_hours_per_week");
-      if (!currentContractHours || currentContractHours === 40) {
-        form.setValue("contract_hours_per_week", calculatedHours);
-      }
-
-      // Auto-populate vacation_balance for all contract types
-      // Always update if calculated value differs from current (handles contract type changes too)
-      const currentVacation = form.getValues("vacation_balance");
-      const currentVacationNum = currentVacation ? Number(currentVacation) : 0;
-
-      // Update if current value is a default/empty OR if it doesn't match calculated value
-      const isDefaultVacation = !currentVacation || currentVacation === null ||
-        currentVacation === undefined || currentVacation === 0 ||
-        currentVacation === 26 || currentVacation === 30;
-
-      if (isDefaultVacation || currentVacationNum !== calculatedVacationDays) {
-        form.setValue("vacation_balance", calculatedVacationDays);
+    // Calculate total hours from schedule
+    let totalHours = 0;
+    if (schedules && schedules.length > 0 && schedules[0]) {
+      const firstWeekSchedule = schedules[0];
+      const dayValues = Object.values(firstWeekSchedule);
+      if (dayValues && dayValues.length > 0) {
+        totalHours = dayValues.reduce((acc: number, day: any) => {
+          const hours = day?.hours;
+          const numHours = typeof hours === 'string' ? parseFloat(hours) : hours;
+          return acc + (typeof numHours === 'number' && !isNaN(numHours) ? numHours : 0);
+        }, 0);
       }
     }
-  }, [calculatedHours, calculatedDaysPerWeek, calculatedVacationDays, contractType, form, baseVacationDays]);
+
+    // Always update these fields based on the schedule (they are derived values)
+    // Use a flag to prevent unnecessary updates
+    const currentWorkingDays = form.getValues("working_days_per_week");
+    const currentContractHours = form.getValues("contract_hours_per_week");
+
+    if (daysPerWeek > 0 && currentWorkingDays !== daysPerWeek) {
+      form.setValue("working_days_per_week", daysPerWeek, { shouldDirty: false });
+    }
+    if (totalHours > 0 && currentContractHours !== totalHours) {
+      form.setValue("contract_hours_per_week", totalHours, { shouldDirty: false });
+    }
+
+    // Auto-populate vacation_balance based on contract type and working days
+    const contractType = (form.watch("contract_type") as string) || "full_time";
+    const calculatedVacationDays = calculateVacationDays(baseVacationDays, daysPerWeek, contractType).tage;
+    const currentVacation = form.getValues("vacation_balance");
+    const currentVacationNum = currentVacation ? Number(currentVacation) : 0;
+    const isDefaultVacation = !currentVacation || currentVacation === null ||
+      currentVacation === undefined || currentVacation === 0 ||
+      currentVacation === 26 || currentVacation === 30;
+
+    if (totalHours > 0 && (isDefaultVacation || currentVacationNum !== calculatedVacationDays)) {
+      form.setValue("vacation_balance", calculatedVacationDays, { shouldDirty: false });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scheduleVersion, baseVacationDays]); // Removed 'form' from deps to prevent infinite loop
 
   return (
     <>
       <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <Label htmlFor="first_name">Vorname</Label>
+          <LabelWithRequired htmlFor="first_name" required>Vorname</LabelWithRequired>
           <Input id="first_name" {...form.register("first_name")} />
           {form.formState.errors.first_name && <p className="text-red-500 text-sm mt-1">{form.formState.errors.first_name.message}</p>}
         </div>
         <div>
-          <Label htmlFor="last_name">Nachname</Label>
+          <LabelWithRequired htmlFor="last_name" required>Nachname</LabelWithRequired>
           <Input id="last_name" {...form.register("last_name")} />
           {form.formState.errors.last_name && <p className="text-red-500 text-sm mt-1">{form.formState.errors.last_name.message}</p>}
         </div>

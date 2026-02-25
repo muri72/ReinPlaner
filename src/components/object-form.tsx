@@ -40,6 +40,21 @@ import {
   weeklyScheduleSchema,
 } from "@/lib/utils/form-utils";
 
+// Helper component for labels with required asterisk
+function LabelWithRequired({ htmlFor, children, required, className }: { htmlFor: string; children: React.ReactNode; required?: boolean; className?: string }) {
+  return (
+    <Label
+      htmlFor={htmlFor}
+      className={cn(
+        required && "after:content-['*'] after:ml-0.5 after:text-destructive",
+        className
+      )}
+    >
+      {children}
+    </Label>
+  );
+}
+
 const assignedEmployeeSchema = z.object({
   employeeId: z.string().uuid("Ungültige Mitarbeiter-ID"),
   assigned_daily_schedules: z.array(weeklyScheduleSchema).default([]),
@@ -342,7 +357,7 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess,
   return (
     <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 w-full">
       <div>
-        <Label htmlFor="name">Objektname</Label>
+        <LabelWithRequired htmlFor="name" required>Objektname</LabelWithRequired>
         <Input
           id="name"
           {...form.register("name")}
@@ -351,7 +366,7 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess,
         {form.formState.errors.name && <p className="text-red-500 text-sm mt-1">{form.formState.errors.name.message}</p>}
       </div>
       <div>
-        <Label htmlFor="address">Adresse</Label>
+        <LabelWithRequired htmlFor="address" required>Adresse</LabelWithRequired>
         <Textarea
           id="address"
           {...form.register("address")}
@@ -371,7 +386,7 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess,
         {form.formState.errors.description && <p className="text-red-500 text-sm mt-1">{form.formState.errors.description.message}</p>}
       </div>
       <div>
-        <Label htmlFor="customerId">Zugehöriger Kunde</Label>
+        <LabelWithRequired htmlFor="customerId" required>Zugehöriger Kunde</LabelWithRequired>
         <Select onValueChange={(value) => {
           form.setValue("customerId", value);
           form.setValue("customerContactId", null); // Reset contact when customer changes

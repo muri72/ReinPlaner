@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState, useEffect, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
@@ -27,6 +28,21 @@ import { AlertTriangle, Building, FileText, Settings, User } from "lucide-react"
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 const MAX_TOTAL_FILES = 5;
+
+// Helper component for labels with required asterisk
+function LabelWithRequired({ htmlFor, children, required, className }: { htmlFor: string; children: React.ReactNode; required?: boolean; className?: string }) {
+  return (
+    <Label
+      htmlFor={htmlFor}
+      className={cn(
+        required && "after:content-['*'] after:ml-0.5 after:text-destructive",
+        className
+      )}
+    >
+      {children}
+    </Label>
+  );
+}
 
 export const ticketSchema = z.object({
   customerId: z.string().uuid("Ungültige Kunden-ID").optional().nullable(),
@@ -260,7 +276,7 @@ export function TicketForm({ initialData, onSubmit, submitButtonText, onSuccess,
             icon={<FileText className="h-5 w-5 text-primary" />}
           >
             <div>
-              <Label htmlFor="title">Titel *</Label>
+              <LabelWithRequired htmlFor="title" required>Titel</LabelWithRequired>
               <Input
                 id="title"
                 {...form.register("title")}
@@ -459,7 +475,7 @@ export function TicketForm({ initialData, onSubmit, submitButtonText, onSuccess,
               icon={<FileText className="h-5 w-5 text-primary" />}
             >
               <div>
-                <Label htmlFor="title">Titel *</Label>
+                <LabelWithRequired htmlFor="title" required>Titel</LabelWithRequired>
                 <Input
                   id="title"
                   {...form.register("title")}

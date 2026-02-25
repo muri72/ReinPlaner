@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useEffect, useState } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -21,6 +22,20 @@ import { Eye, EyeOff } from "lucide-react";
 export type { UserFormInput, UserFormValues } from "@/lib/utils/form-utils";
 export { userSchema } from "@/lib/utils/form-utils";
 
+// Helper component for labels with required asterisk
+function LabelWithRequired({ htmlFor, children, required, className }: { htmlFor: string; children: React.ReactNode; required?: boolean; className?: string }) {
+  return (
+    <Label
+      htmlFor={htmlFor}
+      className={cn(
+        required && "after:content-['*'] after:ml-0.5 after:text-destructive",
+        className
+      )}
+    >
+      {children}
+    </Label>
+  );
+}
 
 interface UserFormProps {
   initialData?: Partial<UserFormInput> & {
@@ -334,7 +349,7 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
       )}
 
       <div>
-        <Label htmlFor="firstName">Vorname</Label>
+        <LabelWithRequired htmlFor="firstName" required>Vorname</LabelWithRequired>
         <Input
           id="firstName"
           {...form.register("firstName")}
@@ -346,7 +361,7 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
         )}
       </div>
       <div>
-        <Label htmlFor="lastName">Nachname</Label>
+        <LabelWithRequired htmlFor="lastName" required>Nachname</LabelWithRequired>
         <Input
           id="lastName"
           {...form.register("lastName")}
@@ -358,7 +373,7 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
         )}
       </div>
       <div>
-        <Label htmlFor="email">E-Mail</Label>
+        <LabelWithRequired htmlFor="email" required>E-Mail</LabelWithRequired>
         <Input
           id="email"
           type="email"
@@ -372,7 +387,7 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
       </div>
       {!isEditMode && (
         <div>
-          <Label htmlFor="password">Passwort</Label>
+          <LabelWithRequired htmlFor="password" required>Passwort</LabelWithRequired>
           <div className="relative">
             <Input
               id="password"
@@ -395,7 +410,7 @@ export function UserForm({ initialData, onSubmit, submitButtonText, onSuccess, i
         </div>
       )}
       <div>
-        <Label htmlFor="role">Rolle</Label>
+        <LabelWithRequired htmlFor="role" required>Rolle</LabelWithRequired>
         <Select
           onValueChange={(value) => {
             form.setValue("role", value as UserFormValues["role"]);

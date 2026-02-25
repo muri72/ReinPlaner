@@ -35,6 +35,21 @@ import {
   weeklyScheduleSchema,
 } from "@/lib/utils/form-utils";
 
+// Helper component for labels with required asterisk
+function LabelWithRequired({ htmlFor, children, required, className }: { htmlFor: string; children: React.ReactNode; required?: boolean; className?: string }) {
+  return (
+    <Label
+      htmlFor={htmlFor}
+      className={cn(
+        required && "after:content-['*'] after:ml-0.5 after:text-destructive",
+        className
+      )}
+    >
+      {children}
+    </Label>
+  );
+}
+
 const assignedEmployeeSchema = z.object({
   employeeId: z.string().uuid("Ungültige Mitarbeiter-ID"),
   assigned_daily_schedules: z.array(weeklyScheduleSchema).default([]),
@@ -889,7 +904,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess, 
       <UnsavedChangesProtection formId="order-form">
         <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 w-full">
           <div>
-            <Label htmlFor="customerId">Kunde</Label>
+            <LabelWithRequired htmlFor="customerId" required>Kunde</LabelWithRequired>
             <Select onValueChange={(value: string) => {
               form.setValue("customerId", value);
               form.setValue("objectId", null);
@@ -944,7 +959,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess, 
           </div>
 
           <div>
-            <Label htmlFor="title">Titel des Auftrags</Label>
+            <LabelWithRequired htmlFor="title" required>Titel des Auftrags</LabelWithRequired>
             <Controller
               name="title"
               control={form.control}
