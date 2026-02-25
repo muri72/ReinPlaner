@@ -232,29 +232,13 @@ export function EmployeeForm({ initialData, onSubmit, submitButtonText, onSucces
       mode: isCreateMode ? 'create' : 'edit',
     });
 
-    // Debug logging in development
-    if (process.env.NODE_ENV === 'development') {
-      console.log('[EmployeeForm] Submitting form data:', JSON.stringify(data, null, 2));
-      console.log('[EmployeeForm] Form mode:', isCreateMode ? 'create' : 'edit');
-    }
-
     try {
       const result = await onSubmit(data as EmployeeFormValues);
 
       if (result.success) {
         toast.success(result.message);
         onSuccess?.();
-
-        // Debug logging in development
-        if (process.env.NODE_ENV === 'development') {
-          console.log('[EmployeeForm] Submission successful:', result.message);
-        }
       } else {
-        // Log server errors for debugging
-        if (process.env.NODE_ENV === 'development') {
-          console.error('[EmployeeForm] Server error:', result.message);
-        }
-
         // Add breadcrumb for server error
         addBreadcrumb('Employee form server error', 'form', 'error', {
           message: result.message,
@@ -272,15 +256,6 @@ export function EmployeeForm({ initialData, onSubmit, submitButtonText, onSucces
           mode: isCreateMode ? 'create' : 'edit',
         }
       );
-
-      // Debug logging in development
-      if (process.env.NODE_ENV === 'development') {
-        console.error('[EmployeeForm] Unexpected error:', error);
-        console.error('[EmployeeForm] Error details:', {
-          message: error instanceof Error ? error.message : 'Unknown error',
-          stack: error instanceof Error ? error.stack : undefined,
-        });
-      }
 
       toast.error("Ein unerwarteter Fehler ist aufgetreten.");
     } finally {

@@ -37,11 +37,6 @@ export async function createEmployee(data: EmployeeFormValues) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  // Debug logging in development
-  if (process.env.NODE_ENV === 'development') {
-    console.log('[createEmployee] Received data:', JSON.stringify(data, null, 2));
-  }
-
   // Add breadcrumb for employee creation start
   addBreadcrumb('Creating new employee', 'employee', 'info', {
     firstName: data.first_name,
@@ -50,9 +45,6 @@ export async function createEmployee(data: EmployeeFormValues) {
   });
 
   if (!user) {
-    if (process.env.NODE_ENV === 'development') {
-      console.error('[createEmployee] User not authenticated');
-    }
     return { success: false, message: "Benutzer nicht authentifiziert." };
   }
 
@@ -94,11 +86,6 @@ export async function createEmployee(data: EmployeeFormValues) {
     psa_type: data.psa_type || null,
   };
 
-  // Debug logging insert data
-  if (process.env.NODE_ENV === 'development') {
-    console.log('[createEmployee] Insert data:', JSON.stringify(insertData, null, 2));
-  }
-
   const { data: newEmployee, error } = await supabase
     .from('employees')
     .insert(insertData)
@@ -106,26 +93,10 @@ export async function createEmployee(data: EmployeeFormValues) {
     .single();
 
   if (error) {
-    // Log detailed error in development
-    if (process.env.NODE_ENV === 'development') {
-      console.error('[createEmployee] Supabase error:', error);
-      console.error('[createEmployee] Error details:', {
-        code: error.code,
-        message: error.message,
-        details: error.details,
-        hint: error.hint,
-      });
-    }
-
     // Track Supabase error in Sentry
     trackSupabaseError(error, 'INSERT', 'employees');
 
     return { success: false, message: error.message };
-  }
-
-  // Debug logging success
-  if (process.env.NODE_ENV === 'development') {
-    console.log('[createEmployee] Employee created successfully:', newEmployee.id);
   }
 
   // Create audit log
