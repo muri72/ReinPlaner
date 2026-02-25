@@ -269,8 +269,8 @@ export function AbsenceRequestForm({ initialData, onSubmit, submitButtonText, on
             icon={<CalendarDays className="h-5 w-5 text-primary" />}
           >
             <div className="grid grid-cols-2 gap-4">
-              <DatePicker label="Startdatum" value={form.watch("startDate")} onChange={(date) => form.setValue("startDate", date || new Date())} error={form.formState.errors.startDate?.message} />
-              <DatePicker label="Enddatum" value={form.watch("endDate")} onChange={(date) => form.setValue("endDate", date || new Date())} error={form.formState.errors.endDate?.message} />
+              <DatePicker label="Startdatum" required value={form.watch("startDate")} onChange={(date) => form.setValue("startDate", date || new Date())} error={form.formState.errors.startDate?.message} />
+              <DatePicker label="Enddatum" required value={form.watch("endDate")} onChange={(date) => form.setValue("endDate", date || new Date())} error={form.formState.errors.endDate?.message} />
             </div>
             {form.formState.errors.endDate && <p className="text-red-500 text-sm mt-1">{form.formState.errors.endDate.message}</p>}
 

@@ -19,9 +19,10 @@ interface DatePickerProps {
   onChange: (date: Date | null) => void;
   disabled?: boolean;
   error?: string;
+  required?: boolean;
 }
 
-export function DatePicker({ label, placeholder, value, onChange, disabled, error }: DatePickerProps) {
+export function DatePicker({ label, placeholder, value, onChange, disabled, error, required }: DatePickerProps) {
   const [inputValue, setInputValue] = React.useState<string>(
     value ? format(value, "dd.MM.yyyy", { locale: de }) : ""
   );
@@ -80,7 +81,7 @@ export function DatePicker({ label, placeholder, value, onChange, disabled, erro
 
   return (
     <div className="space-y-2">
-      {label && <Label>{label}</Label>}
+      {label && <Label className={required && "after:content-['*'] after:ml-0.5 after:text-destructive"}>{label}</Label>}
       <Popover>
         <PopoverTrigger asChild>
           <div className="relative w-full">
