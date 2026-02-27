@@ -2817,38 +2817,6 @@ export async function ensureShiftTimeEntriesSync(): Promise<{
       error: feb25Error?.message
     });
 
-    // DEBUG: Check shift_employees for the problematic shifts
-    const problematicShiftIds = ['32eeddbf', 'ca517544', 'ba139390', '4063695a', 'c35fca43', 'fbacdb85'];
-    const { data: shiftEmployeesData, error: empError } = await supabaseAdmin
-      .from("shift_employees")
-      .select(`
-        shift_id,
-        employee_id,
-        employees (first_name, last_name)
-      `)
-      .in("shift_id", problematicShiftIds);
-
-    console.log('[SYNC] Shift Employees for problematic shifts:');
-    for (const shiftId of problematicShiftIds) {
-      const employees = shiftEmployeesData?.filter(se => se.shift_id === shiftId);
-      console.log(`[SYNC]   ${shiftId}:`, employees?.map(se => ({
-        employee: se.employees?.first_name + ' ' + se.employees?.last_name,
-        id: se.employee_id?.slice(0, 8)
-      })) || []);
-    }
-
-    // DEBUG: Check time_entries for these shifts
-    const { data: timeEntriesData, error: teError } = await supabaseAdmin
-      .from("time_entries")
-      .select("shift_id, employee_id")
-      .in("shift_id", problematicShiftIds);
-
-    console.log('[SYNC] Time Entries for problematic shifts:');
-    for (const shiftId of problematicShiftIds) {
-      const entries = timeEntriesData?.filter(te => te.shift_id === shiftId);
-      console.log(`[SYNC]   ${shiftId}:`, entries?.map(te => te.employee_id?.slice(0, 8)) || []);
-    }
-
     // Step 1: Mark overdue shifts as completed - OPTIMIZED with batch UPDATE
     // Get current date in LOCAL timezone (Germany/Europe)
     // This is important because shift_date is stored in local date, not UTC
