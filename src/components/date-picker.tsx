@@ -81,7 +81,7 @@ export function DatePicker({ label, placeholder, value, onChange, disabled, erro
 
   return (
     <div className="space-y-2">
-      {label && <Label className={required && "after:content-['*'] after:ml-0.5 after:text-destructive"}>{label}</Label>}
+      {label && <Label className={required ? "after:content-['*'] after:ml-0.5 after:text-destructive" : undefined}>{label}</Label>}
       <Popover>
         <PopoverTrigger asChild>
           <div className="relative w-full">
