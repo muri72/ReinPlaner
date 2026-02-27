@@ -400,7 +400,24 @@ function buildTimeEntryData(shift: any, shiftEmployee: any, employee: any): any 
     endTime = endTimestamp;
   }
 
+  // Calculate break based on NET work hours (estimated_hours)
+  // estimated_hours represents the actual work time WITHOUT break
+  let breakMinutes = 0;
+  if (shift.estimated_hours) {
+    const netWorkMinutes = Number(shift.estimated_hours) * 60;
+    breakMinutes = calculateBreakMinutesFallback(netWorkMinutes);
+  }
+
+  // FIX: Extend endTime by breakMinutes to account for break time
+  // The shift's end_time is when work ends, but the time entry should include the break
+  if (endTime && breakMinutes > 0) {
+    const endDate = new Date(endTime);
+    endDate.setMinutes(endDate.getMinutes() + breakMinutes);
+    endTime = endDate.toISOString();
+  }
+
   // Calculate duration from actual timestamp difference (GROSS duration incl. breaks)
+  // This must happen AFTER endTime is extended by breakMinutes
   let durationMinutes: number | null = null;
   if (startTime && endTime) {
     const startDate = new Date(startTime);
@@ -409,13 +426,8 @@ function buildTimeEntryData(shift: any, shiftEmployee: any, employee: any): any 
   } else if (shiftEmployee.actual_hours) {
     durationMinutes = Number(shiftEmployee.actual_hours) * 60;
   } else if (shift.estimated_hours) {
-    durationMinutes = Number(shift.estimated_hours) * 60;
-  }
-
-  // Calculate break based on GROSS duration
-  let breakMinutes = 0;
-  if (durationMinutes !== null) {
-    breakMinutes = calculateBreakMinutesFallback(durationMinutes);
+    // Fallback: use net hours + break as gross duration
+    durationMinutes = Number(shift.estimated_hours) * 60 + breakMinutes;
   }
 
   // Get customer_id and object_id from orders (shifts join orders via order_id)
@@ -438,6 +450,83 @@ function buildTimeEntryData(shift: any, shiftEmployee: any, employee: any): any 
     notes: shift.notes || null,
     created_at: new Date().toISOString(),
   };
+}
+
+// ============================================================================
+// REPAIR SHIFTS WITHOUT EMPLOYEES
+// ============================================================================
+
+/**
+ * Repairs shifts that have empty shift_employees by populating from assignment
+ * Returns the number of shifts repaired
+ */
+export async function repairShiftsWithoutEmployees(
+  shiftIds: string[]
+): Promise<number> {
+  const supabaseAdmin = createAdminClient();
+  let repaired = 0;
+
+  console.log(`[REPAIR] Starting repair for ${shiftIds.length} shifts:`, shiftIds.map(id => id.slice(0, 8)));
+
+  for (const shiftId of shiftIds) {
+    console.log(`[REPAIR] Processing shift ${shiftId.slice(0, 8)}...`);
+
+    // Get shift with assignment_id
+    const { data: shift } = await supabaseAdmin
+      .from("shifts")
+      .select("id, assignment_id")
+      .eq("id", shiftId)
+      .single();
+
+    if (!shift?.assignment_id) {
+      console.log(`[REPAIR] SKIP: Shift ${shiftId.slice(0, 8)} hat kein assignment_id`);
+      continue;
+    }
+
+    // Get employee_id from the assignment
+    const { data: assignment } = await supabaseAdmin
+      .from("order_employee_assignments")
+      .select("employee_id")
+      .eq("id", shift.assignment_id)
+      .single();
+
+    if (!assignment?.employee_id) {
+      console.log(`[REPAIR] SKIP: Assignment ${shift.assignment_id.slice(0, 8)} hat kein employee_id`);
+      continue;
+    }
+
+    // Check if shift_employees already exists
+    const { data: existing } = await supabaseAdmin
+      .from("shift_employees")
+      .select("id")
+      .eq("shift_id", shiftId)
+      .maybeSingle();
+
+    if (existing) {
+      console.log(`[REPAIR] SKIP: Shift ${shiftId.slice(0, 8)} hat bereits employees`);
+      continue;
+    }
+
+    // Create missing shift_employees record
+    const { error: insertError } = await supabaseAdmin
+      .from("shift_employees")
+      .insert({
+        shift_id: shiftId,
+        employee_id: assignment.employee_id,
+        role: "worker",
+        is_confirmed: false,
+      });
+
+    if (insertError) {
+      console.error(`[REPAIR] FAILED für shift ${shiftId.slice(0, 8)}:`, insertError.message);
+    } else {
+      repaired++;
+      console.log(`[REPAIR] SUCCESS: Shift ${shiftId.slice(0, 8)} repariert`);
+    }
+  }
+
+  console.log(`[REPAIR] Completed: ${repaired}/${shiftIds.length} shifts repaired`);
+  return repaired;
 }
 
 // ============================================================================
@@ -477,7 +566,7 @@ export async function generateTimeEntriesForShift(shiftId: string): Promise<{ su
             last_name
           )
         ),
-        orders!inner (
+        orders (
           id,
           customer_id,
           object_id
@@ -491,6 +580,16 @@ export async function generateTimeEntriesForShift(shiftId: string): Promise<{ su
       return { success: false, message: "Shift nicht gefunden oder nicht abgeschlossen.", created: 0 };
     }
 
+    // DEBUG: Log shift_employees for key shifts
+    const isFeb25 = shift.shift_date === '2026-02-25';
+    if (isFeb25) {
+      console.log('[generateTimeEntriesForShift]', shift.shift_date, shiftId.slice(0, 8), {
+        startTime: shift.start_time,
+        endTime: shift.end_time,
+        numEmployees: shift.shift_employees?.length || 0
+      });
+    }
+
     // 2. Fetch existing time entries for this shift to avoid duplicates
     const { data: existingTimeEntries, error: existingError } = await supabaseAdmin
       .from("time_entries")
@@ -501,6 +600,15 @@ export async function generateTimeEntriesForShift(shiftId: string): Promise<{ su
 
     // Build a set of existing employee IDs
     const existingEmployees = new Set((existingTimeEntries || []).map(e => e.employee_id));
+
+    if (isFeb25) {
+      console.log('[generateTimeEntriesForShift] Existing entries check:', {
+        shiftDate: shift.shift_date,
+        shiftId: shiftId.slice(0, 8),
+        existingEntriesCount: existingTimeEntries?.length || 0,
+        existingEmployeeIds: Array.from(existingEmployees)
+      });
+    }
 
     // 3. Build and insert time entries for employees without existing entries
     const timeEntriesToCreate: any[] = [];
@@ -514,6 +622,14 @@ export async function generateTimeEntriesForShift(shiftId: string): Promise<{ su
 
       // Check if time entry already exists for this shift-employee combination
       if (existingEmployees.has(employee.id)) {
+        if (isFeb25) {
+          console.log('[generateTimeEntriesForShift] SKIP (has entry):', {
+            shiftDate: shift.shift_date,
+            shiftId: shiftId.slice(0, 8),
+            employee: `${employee.first_name} ${employee.last_name}`,
+            employeeId: employee.id.slice(0, 8)
+          });
+        }
         continue;
       }
 
@@ -521,10 +637,31 @@ export async function generateTimeEntriesForShift(shiftId: string): Promise<{ su
       const timeEntryData = buildTimeEntryData(shift, se, employee);
       if (timeEntryData) {
         timeEntriesToCreate.push(timeEntryData);
+        if (isFeb25) {
+          console.log('[generateTimeEntriesForShift] WILL CREATE entry:', {
+            shiftDate: shift.shift_date,
+            shiftId: shiftId.slice(0, 8),
+            employee: `${employee.first_name} ${employee.last_name}`,
+            employeeId: employee.id.slice(0, 8)
+          });
+        }
       }
     }
 
+    if (isFeb25 && timeEntriesToCreate.length === 0) {
+      console.log('[generateTimeEntriesForShift] NO entries to create for', shift.shift_date, shiftId.slice(0, 8));
+    }
+
     if (timeEntriesToCreate.length === 0) {
+      // Check if shift has no employees at all - this is an error condition
+      if ((shift.shift_employees || []).length === 0) {
+        console.error(`[generateTimeEntriesForShift] ERROR: Shift ${shiftId.slice(0, 8)} has NO employees assigned`);
+        return {
+          success: false,
+          message: "Shift hat keine zugewiesenen Mitarbeiter.",
+          created: 0
+        };
+      }
       return { success: true, message: "Keine neuen Zeiteinträge erforderlich.", created: 0 };
     }
 

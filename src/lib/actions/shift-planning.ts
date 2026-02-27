@@ -2794,10 +2794,60 @@ export async function ensureShiftTimeEntriesSync(): Promise<{
   shifts_completed: number;
   time_entries_created: number;
 }> {
+  console.log('[SYNC] =========================================== START');
   const supabaseAdmin = createAdminClient();
 
   try {
     const now = new Date();
+
+    // DEBUG: Check for 25.2.2026 shifts specifically
+    const { data: feb25Shifts, error: feb25Error } = await supabaseAdmin
+      .from("shifts")
+      .select("id, shift_date, start_time, end_time, estimated_hours, status")
+      .eq("shift_date", "2026-02-25");
+
+    console.log('[SYNC] 2026-02-25 Shifts in DB:', {
+      found: feb25Shifts?.length || 0,
+      shifts: feb25Shifts?.map(s => ({
+        id: s.id.slice(0, 8),
+        start: s.start_time,
+        end: s.end_time,
+        status: s.status
+      })) || [],
+      error: feb25Error?.message
+    });
+
+    // DEBUG: Check shift_employees for the problematic shifts
+    const problematicShiftIds = ['32eeddbf', 'ca517544', 'ba139390', '4063695a', 'c35fca43', 'fbacdb85'];
+    const { data: shiftEmployeesData, error: empError } = await supabaseAdmin
+      .from("shift_employees")
+      .select(`
+        shift_id,
+        employee_id,
+        employees (first_name, last_name)
+      `)
+      .in("shift_id", problematicShiftIds);
+
+    console.log('[SYNC] Shift Employees for problematic shifts:');
+    for (const shiftId of problematicShiftIds) {
+      const employees = shiftEmployeesData?.filter(se => se.shift_id === shiftId);
+      console.log(`[SYNC]   ${shiftId}:`, employees?.map(se => ({
+        employee: se.employees?.first_name + ' ' + se.employees?.last_name,
+        id: se.employee_id?.slice(0, 8)
+      })) || []);
+    }
+
+    // DEBUG: Check time_entries for these shifts
+    const { data: timeEntriesData, error: teError } = await supabaseAdmin
+      .from("time_entries")
+      .select("shift_id, employee_id")
+      .in("shift_id", problematicShiftIds);
+
+    console.log('[SYNC] Time Entries for problematic shifts:');
+    for (const shiftId of problematicShiftIds) {
+      const entries = timeEntriesData?.filter(te => te.shift_id === shiftId);
+      console.log(`[SYNC]   ${shiftId}:`, entries?.map(te => te.employee_id?.slice(0, 8)) || []);
+    }
 
     // Step 1: Mark overdue shifts as completed - OPTIMIZED with batch UPDATE
     // Get current date in LOCAL timezone (Germany/Europe)
@@ -2871,15 +2921,20 @@ export async function ensureShiftTimeEntriesSync(): Promise<{
       }
     }
 
-    // Step 2: Find ALL completed shifts that don't have time entries
+    // ============================================================================
+    // STEP 2: FIND SHIFTS MISSING TIME ENTRIES
+    // ============================================================================
+
+    // Get ALL completed shifts
     const { data: allCompletedShifts, error: completedError } = await supabaseAdmin
       .from("shifts")
-      .select("id")
-      .eq("status", "completed");
+      .select("id, shift_date")
+      .eq("status", "completed")
+      .order("shift_date", { ascending: false });
 
     if (completedError) throw completedError;
 
-    // Get shift IDs that already have time entries
+    // Get ALL time_entries that reference a shift
     const { data: existingEntries, error: entriesError } = await supabaseAdmin
       .from("time_entries")
       .select("shift_id")
@@ -2888,23 +2943,24 @@ export async function ensureShiftTimeEntriesSync(): Promise<{
 
     if (entriesError) throw entriesError;
 
+    // Build set of shift IDs that have entries
     const existingShiftIds = new Set(existingEntries?.map(e => e.shift_id) || []);
 
-    // Find shifts missing time entries (includes newly completed shifts)
+    // Find shifts WITHOUT entries
     const shiftsMissingEntries = (allCompletedShifts || [])
       .filter(s => !existingShiftIds.has(s.id))
       .map(s => s.id);
 
-    // Step 3: Generate time entries for all missing shifts (each shift processed once)
+    // Step 3: Generate time entries for shifts that don't have any
     let timeEntriesCreated = 0;
     const { generateTimeEntriesForShift } = await import("@/app/dashboard/time-tracking/actions");
 
     for (const shiftId of shiftsMissingEntries) {
       const result = await generateTimeEntriesForShift(shiftId);
-      if (result.success) {
+      if (result.success && result.created > 0) {
         timeEntriesCreated += result.created;
-      } else {
-        console.error(`[SYNC] Failed to create time entries for shift ${shiftId.slice(0, 8)}...: ${result.message}`);
+      } else if (!result.success) {
+        console.error(`[SYNC] Failed for shift ${shiftId.slice(0, 8)}...: ${result.message}`);
       }
     }
 
@@ -2912,14 +2968,24 @@ export async function ensureShiftTimeEntriesSync(): Promise<{
     revalidatePath("/dashboard/time-tracking");
     revalidatePath("/dashboard/reports");
 
-    return {
+    const result = {
       success: true,
       message: `${shiftsCompleted} Einsätze abgeschlossen, ${timeEntriesCreated} Zeiteinträge erstellt.`,
       shifts_completed: shiftsCompleted,
       time_entries_created: timeEntriesCreated,
     };
+
+    console.log('[SYNC] FINISH', {
+      shiftsCompleted,
+      timeEntriesCreated,
+      shiftsMissingEntriesCount: shiftsMissingEntries.length
+    });
+    console.log('[SYNC] =========================================== END');
+
+    return result;
   } catch (error: any) {
-    console.error("[SYNC] Error ensuring shift-time entry sync:", error);
+    console.error("[SYNC] Error:", error.message);
+    console.log('[SYNC] =========================================== ERROR');
     return {
       success: false,
       message: error.message,

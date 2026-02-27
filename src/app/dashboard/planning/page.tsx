@@ -332,7 +332,7 @@ export default function PlanningPage() {
       lastAutoSyncRef.current = now;
       // This runs silently in the background without blocking the UI
       checkAndCompleteOverdueShifts().then(syncResult => {
-        if (syncResult.success && syncResult.updated_count > 0) {
+        if (syncResult.success && (syncResult.updated_count > 0 || syncResult.time_entries_created > 0)) {
           console.log(`[Auto-Sync] ${syncResult.updated_count} shifts completed, ${syncResult.time_entries_created} time entries created`);
         }
       }).catch(err => {
