@@ -384,6 +384,26 @@ export function EmployeeForm({ initialData, onSubmit, submitButtonText, onSucces
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scheduleVersion, baseVacationDays]); // Removed 'form' from deps to prevent infinite loop
 
+  // Auto-update vacation_balance when contract_type changes
+  // This ensures the vacation days field updates when switching between Minijob (proportional) and full-time (full)
+  useEffect(() => {
+    const schedules = form.getValues('default_daily_schedules');
+    const daysPerWeek = getDaysPerWeekFromSchedule(schedules);
+    const contractType = (form.watch("contract_type") as string) || "full_time";
+
+    if (daysPerWeek > 0) {
+      const calculatedVacationDays = calculateVacationDays(baseVacationDays, daysPerWeek, contractType).tage;
+      const currentVacation = form.getValues("vacation_balance");
+      const currentVacationNum = currentVacation ? Number(currentVacation) : 0;
+
+      // Update when contract type changes and vacation differs from calculated
+      if (currentVacationNum !== calculatedVacationDays) {
+        form.setValue("vacation_balance", calculatedVacationDays, { shouldDirty: true });
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.watch("contract_type"), scheduleVersion, baseVacationDays, form]);
+
   return (
     <>
       <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-6">
