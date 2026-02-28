@@ -1,13 +1,12 @@
 import { format, isWeekend, isSameDay } from "date-fns";
 import { de } from "date-fns/locale";
 
-// German holidays (fixed dates)
+// German holidays (fixed dates) - nationwide holidays only
 const FIXED_HOLIDAYS = [
   { month: 1, day: 1, name: "Neujahr" },
-  { month: 1, day: 6, name: "Heilige Drei Könige" },
   { month: 5, day: 1, name: "Tag der Arbeit" },
   { month: 10, day: 3, name: "Tag der Deutschen Einheit" },
-  { month: 11, day: 1, name: "Allerheiligen" },
+  { month: 10, day: 31, name: "Reformationstag" },
   { month: 12, day: 25, name: "1. Weihnachtstag" },
   { month: 12, day: 26, name: "2. Weihnachtstag" },
 ];

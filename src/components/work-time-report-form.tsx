@@ -13,6 +13,7 @@ import { createClient } from "@/lib/supabase/client";
 import { getWorkTimeReport, WorkTimeReportData, getEmployeeWorkTimeReport, EmployeeWorkTimeReportData, sendWorkTimeReportToCustomer } from "@/app/dashboard/reports/actions";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatDuration, formatDateWithWeekday } from "@/lib/utils";
+import { isGermanHoliday } from "@/lib/date-utils";
 import { generateProfessionalPDF } from "@/components/pdf-generator";
 import { Download, Send, Calendar, FileText } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -111,9 +112,14 @@ export function WorkTimeReportForm() {
         console.log(`[REPORTS] Batch processing ${result.data.entries.length} entries with ${uniqueDates.length} unique dates`);
         console.log(`[REPORTS] Unique dates:`, uniqueDates);
 
-        // Get all holidays for these dates in ONE database call
-        const { settingsService } = await import('@/lib/services/settings-service');
-        const holidayResults = await settingsService.checkMultipleHolidays(uniqueDates, bundeslandCode);
+        // Get all holidays for these dates using local calculation (sync, no DB calls)
+        const holidayResults: Record<string, { name: string } | null> = {};
+        for (const dateStr of uniqueDates) {
+          const result = isGermanHoliday(new Date(dateStr));
+          if (result.isHoliday) {
+            holidayResults[dateStr] = { name: result.name! };
+          }
+        }
 
         // Build work types map
         const workTypesMap: { [key: string]: { type: 'normal' | 'holiday' | 'weekend'; label: string; color: string; holidayName?: string } } = {};
@@ -179,9 +185,14 @@ export function WorkTimeReportForm() {
 
         console.log(`[REPORTS] Batch processing ${result.data.entries.length} entries with ${uniqueDates.length} unique dates`);
 
-        // Get all holidays for these dates in ONE database call
-        const { settingsService } = await import('@/lib/services/settings-service');
-        const holidayResults = await settingsService.checkMultipleHolidays(uniqueDates, bundeslandCode);
+        // Get all holidays for these dates using local calculation (sync, no DB calls)
+        const holidayResults: Record<string, { name: string } | null> = {};
+        for (const dateStr of uniqueDates) {
+          const result = isGermanHoliday(new Date(dateStr));
+          if (result.isHoliday) {
+            holidayResults[dateStr] = { name: result.name! };
+          }
+        }
 
         // Build work types map
         const workTypesMap: { [key: string]: { type: 'normal' | 'holiday' | 'weekend'; label: string; color: string; holidayName?: string } } = {};

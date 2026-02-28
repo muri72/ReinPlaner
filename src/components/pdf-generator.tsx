@@ -2,7 +2,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { WorkTimeReportData, EmployeeWorkTimeReportData } from '@/app/dashboard/reports/actions';
 import { formatDuration, formatDateWithWeekday } from '@/lib/utils';
-import { settingsService } from '@/lib/services/settings-service';
+import { isGermanHoliday } from '@/lib/date-utils';
 
 interface PdfGeneratorProps {
   data: WorkTimeReportData | EmployeeWorkTimeReportData;
@@ -170,8 +170,14 @@ export async function generateProfessionalPDF({
     console.log(`[PDF] Batch processing ${data.entries.length} entries with ${uniqueDates.length} unique dates`);
     console.log(`[PDF] Unique dates:`, uniqueDates);
 
-    // Get holidays using batch processing (single database call)
-    const holidayResults = await settingsService.checkMultipleHolidays(uniqueDates, bundeslandCode);
+    // Get holidays using local calculation (sync, no DB calls)
+    const holidayResults: Record<string, { name: string } | null> = {};
+    for (const dateStr of uniqueDates) {
+      const result = isGermanHoliday(new Date(dateStr));
+      if (result.isHoliday) {
+        holidayResults[dateStr] = { name: result.name! };
+      }
+    }
 
     console.log(`[PDF] Checking ${data.entries.length} entries for holidays (Bundesland: ${bundeslandCode})...`);
 

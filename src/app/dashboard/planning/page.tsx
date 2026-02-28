@@ -43,6 +43,7 @@ import {
 } from "date-fns";
 import { Clock } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { isGermanHoliday } from "@/lib/date-utils";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { format as formatDateFns } from "date-fns";
@@ -201,12 +202,18 @@ export default function PlanningPage() {
     const code = await settingsService.getSetting('default_bundesland') || 'HH';
     setBundeslandCode(code);
 
-    // Get holidays using batch processing
-    const uniqueDates = [...new Set(displayDays.map(day => formatDateFns(day, 'yyyy-MM-dd')))];
-    const holidayResults = await settingsService.checkMultipleHolidays(uniqueDates, code);
-
     if (currentFetchId !== fetchIdRef.current) return;
-    setHolidaysMap(holidayResults);
+
+    // Get holidays using local calculation (sync, no DB calls)
+    const uniqueDates = [...new Set(displayDays.map(day => formatDateFns(day, 'yyyy-MM-dd')))];
+    const holidaysMap: Record<string, { name: string } | null> = {};
+    for (const dateStr of uniqueDates) {
+      const result = isGermanHoliday(new Date(dateStr));
+      if (result.isHoliday) {
+        holidaysMap[dateStr] = { name: result.name! };
+      }
+    }
+    setHolidaysMap(holidaysMap);
 
     // Load objects and services (for filters) - only if not already loaded
     // Use ref instead of state to avoid dependency loops

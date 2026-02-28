@@ -580,16 +580,6 @@ export async function generateTimeEntriesForShift(shiftId: string): Promise<{ su
       return { success: false, message: "Shift nicht gefunden oder nicht abgeschlossen.", created: 0 };
     }
 
-    // DEBUG: Log shift_employees for key shifts
-    const isFeb25 = shift.shift_date === '2026-02-25';
-    if (isFeb25) {
-      console.log('[generateTimeEntriesForShift]', shift.shift_date, shiftId.slice(0, 8), {
-        startTime: shift.start_time,
-        endTime: shift.end_time,
-        numEmployees: shift.shift_employees?.length || 0
-      });
-    }
-
     // 2. Fetch existing time entries for this shift to avoid duplicates
     const { data: existingTimeEntries, error: existingError } = await supabaseAdmin
       .from("time_entries")
@@ -600,15 +590,6 @@ export async function generateTimeEntriesForShift(shiftId: string): Promise<{ su
 
     // Build a set of existing employee IDs
     const existingEmployees = new Set((existingTimeEntries || []).map(e => e.employee_id));
-
-    if (isFeb25) {
-      console.log('[generateTimeEntriesForShift] Existing entries check:', {
-        shiftDate: shift.shift_date,
-        shiftId: shiftId.slice(0, 8),
-        existingEntriesCount: existingTimeEntries?.length || 0,
-        existingEmployeeIds: Array.from(existingEmployees)
-      });
-    }
 
     // 3. Build and insert time entries for employees without existing entries
     const timeEntriesToCreate: any[] = [];
@@ -622,14 +603,6 @@ export async function generateTimeEntriesForShift(shiftId: string): Promise<{ su
 
       // Check if time entry already exists for this shift-employee combination
       if (existingEmployees.has(employee.id)) {
-        if (isFeb25) {
-          console.log('[generateTimeEntriesForShift] SKIP (has entry):', {
-            shiftDate: shift.shift_date,
-            shiftId: shiftId.slice(0, 8),
-            employee: `${employee.first_name} ${employee.last_name}`,
-            employeeId: employee.id.slice(0, 8)
-          });
-        }
         continue;
       }
 
@@ -637,25 +610,12 @@ export async function generateTimeEntriesForShift(shiftId: string): Promise<{ su
       const timeEntryData = buildTimeEntryData(shift, se, employee);
       if (timeEntryData) {
         timeEntriesToCreate.push(timeEntryData);
-        if (isFeb25) {
-          console.log('[generateTimeEntriesForShift] WILL CREATE entry:', {
-            shiftDate: shift.shift_date,
-            shiftId: shiftId.slice(0, 8),
-            employee: `${employee.first_name} ${employee.last_name}`,
-            employeeId: employee.id.slice(0, 8)
-          });
-        }
       }
-    }
-
-    if (isFeb25 && timeEntriesToCreate.length === 0) {
-      console.log('[generateTimeEntriesForShift] NO entries to create for', shift.shift_date, shiftId.slice(0, 8));
     }
 
     if (timeEntriesToCreate.length === 0) {
       // Check if shift has no employees at all - this is an error condition
       if ((shift.shift_employees || []).length === 0) {
-        console.error(`[generateTimeEntriesForShift] ERROR: Shift ${shiftId.slice(0, 8)} has NO employees assigned`);
         return {
           success: false,
           message: "Shift hat keine zugewiesenen Mitarbeiter.",

@@ -1,24 +1,22 @@
-import { settingsService } from '@/lib/services/settings-service';
+import { isGermanHoliday as isGermanHolidayDateUtils } from '@/lib/date-utils';
 
 /**
  * Check if a date is a German public holiday
+ * @param date The date to check
+ * @param bundeslandCode Optional - for nationwide holidays, this parameter is ignored
  */
-export async function isHoliday(date: Date, bundeslandCode: string): Promise<boolean> {
-  const holiday = await settingsService.isHoliday(
-    date.toISOString().split('T')[0],
-    bundeslandCode
-  );
-  return holiday !== null;
+export function isHoliday(date: Date, bundeslandCode?: string): boolean {
+  return isGermanHolidayDateUtils(date).isHoliday;
 }
 
 /**
  * Get holiday info for a date
+ * @param date The date to check
+ * @param bundeslandCode Optional - for nationwide holidays, this parameter is ignored
  */
-export async function getHolidayInfo(date: Date, bundeslandCode: string) {
-  return await settingsService.isHoliday(
-    date.toISOString().split('T')[0],
-    bundeslandCode
-  );
+export function getHolidayInfo(date: Date, bundeslandCode?: string) {
+  const result = isGermanHolidayDateUtils(date);
+  return result.isHoliday ? { name: result.name, date: date.toISOString().split('T')[0] } : null;
 }
 
 /**
@@ -31,14 +29,16 @@ export function isWeekend(date: Date): boolean {
 
 /**
  * Get work type for a date (Normal, Holiday, Weekend)
+ * @param date The date to check
+ * @param bundeslandCode Optional - for nationwide holidays, this parameter is ignored
  */
-export async function getWorkType(date: Date, bundeslandCode: string): Promise<{
+export function getWorkType(date: Date, bundeslandCode?: string): {
   type: 'normal' | 'holiday' | 'weekend';
   label: string;
   color: string;
   holidayName?: string;
-}> {
-  const holiday = await getHolidayInfo(date, bundeslandCode);
+} {
+  const holiday = getHolidayInfo(date, bundeslandCode);
 
   if (holiday) {
     return {
@@ -66,13 +66,15 @@ export async function getWorkType(date: Date, bundeslandCode: string): Promise<{
 
 /**
  * Add holiday indicator to a date string
+ * @param dateStr The date string to check
+ * @param bundeslandCode Optional - for nationwide holidays, this parameter is ignored
  */
-export async function addHolidayIndicator(
+export function addHolidayIndicator(
   dateStr: string,
-  bundeslandCode: string
-): Promise<{ date: string; isHoliday: boolean; holidayName?: string }> {
+  bundeslandCode?: string
+): { date: string; isHoliday: boolean; holidayName?: string } {
   const date = new Date(dateStr);
-  const holiday = await getHolidayInfo(date, bundeslandCode);
+  const holiday = getHolidayInfo(date, bundeslandCode);
 
   return {
     date: dateStr,
