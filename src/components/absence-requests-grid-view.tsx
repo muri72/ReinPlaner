@@ -10,6 +10,7 @@ import { format, differenceInDays } from "date-fns";
 import { de } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { absenceTypeConfig, typeTranslations, statusConfig } from "@/lib/absence-type-config";
+import { formatEmployeeName } from "@/lib/utils/employee-utils";
 import { calculateWorkingDays } from "@/lib/utils/date-utils";
 import { createClient } from "@/lib/supabase/client";
 import * as React from "react";
@@ -104,7 +105,7 @@ function RequestCard({
           <div className="flex items-center gap-1.5 text-sm">
             <User className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
             <span className="font-medium truncate">
-              {request.employees.first_name} {request.employees.last_name}
+              {formatEmployeeName(request.employees)}
             </span>
           </div>
         )}

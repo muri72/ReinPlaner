@@ -5,7 +5,7 @@ import { format, parseISO, isWeekend, isToday, isSameDay } from "date-fns";
 import { de } from "date-fns/locale";
 import { getDateStyling, getHolidayTooltip } from "@/lib/date-utils";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipPortal, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useDroppable } from "@dnd-kit/core";
@@ -526,10 +526,26 @@ export function PlanningCalendar({
                               </Tooltip>
                             </TooltipProvider>
                           )}
-                          <div className="text-sm font-semibold cursor-pointer hover:text-primary truncate">
-                            <EmployeeEditDialog employee={employee.raw as any} />
-                            {employee.name}
-                          </div>
+                          <TooltipProvider delayDuration={200}>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="text-sm font-semibold cursor-pointer hover:text-primary truncate">
+                                  <EmployeeEditDialog employee={employee.raw as any} />
+                                  {employee.name}
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipPortal>
+                                <TooltipContent className="z-[99999]" side="right" align="start">
+                                  <div className="space-y-1">
+                                    <p className="font-medium">{employee.name}</p>
+                                    {employee.raw.employee_id && (
+                                      <p className="text-xs text-muted-foreground">ID: {employee.raw.employee_id}</p>
+                                    )}
+                                  </div>
+                                </TooltipContent>
+                              </TooltipPortal>
+                            </Tooltip>
+                          </TooltipProvider>
                         </div>
                         <p className="text-xs text-muted-foreground">{employee.raw.job_title || 'Mitarbeiter'}</p>
 

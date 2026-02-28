@@ -4,6 +4,7 @@ import * as React from "react";
 import { Check, ChevronsUpDown, X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { sortEmployeesByName, formatEmployeeName } from "@/lib/utils/employee-utils";
 import { Button } from "@/components/ui/button";
 import {
   Command,
@@ -58,7 +59,7 @@ export function MultiSelectEmployees({
 
   const getEmployeeName = (id: string) => {
     const employee = employees.find((emp) => emp.id === id);
-    return employee ? `${employee.first_name} ${employee.last_name}` : "Unbekannt";
+    return employee ? formatEmployeeName(employee) : "Unbekannt";
   };
 
   const getEmployeeStatus = (id: string) => {
@@ -67,7 +68,7 @@ export function MultiSelectEmployees({
   };
 
   // Separate active employees (selectable) from already selected inactive employees (read-only)
-  const selectableEmployees = employees.filter(emp => emp.status === 'active');
+  const selectableEmployees = sortEmployeesByName(employees.filter(emp => emp.status === 'active'));
   const selectedInactiveEmployees = selectedEmployeeIds.filter(id => getEmployeeStatus(id) !== 'active');
 
   return (
@@ -118,7 +119,7 @@ export function MultiSelectEmployees({
               {selectableEmployees.map((employee) => (
                 <CommandItem
                   key={employee.id}
-                  value={`${employee.first_name} ${employee.last_name}`}
+                  value={`${employee.last_name}, ${employee.first_name}`}
                   onSelect={() => {
                     handleSelect(employee.id);
                   }}
@@ -131,7 +132,7 @@ export function MultiSelectEmployees({
                         : "opacity-0"
                     )}
                   />
-                  {employee.first_name} {employee.last_name}
+                  {formatEmployeeName(employee)}
                 </CommandItem>
               ))}
             </CommandGroup>

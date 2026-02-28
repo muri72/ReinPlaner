@@ -23,6 +23,7 @@ import { handleActionResponse } from "@/lib/toast-utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FormSection } from "@/components/ui/form-section";
 import { FormActions } from "@/components/ui/form-actions";
+import { formatEmployeeName } from "@/lib/utils/employee-utils";
 
 const reportSchema = z.object({
   reportType: z.enum(['object', 'employee']),
@@ -391,7 +392,7 @@ export function WorkTimeReportForm() {
                   <Label htmlFor="employeeId">Mitarbeiter</Label>
                   <Select onValueChange={(value) => form.setValue("employeeId", value)} value={form.watch("employeeId") || ""}>
                     <SelectTrigger><SelectValue placeholder="Mitarbeiter auswählen" /></SelectTrigger>
-                    <SelectContent>{employees.map(emp => <SelectItem key={emp.id} value={emp.id}>{emp.first_name} {emp.last_name}</SelectItem>)}</SelectContent>
+                    <SelectContent>{employees.map(emp => <SelectItem key={emp.id} value={emp.id}>{formatEmployeeName(emp)}</SelectItem>)}</SelectContent>
                   </Select>
                   {form.formState.errors.employeeId && <p className="text-red-500 text-sm mt-1">{form.formState.errors.employeeId.message}</p>}
                 </TabsContent>

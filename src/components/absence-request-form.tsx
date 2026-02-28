@@ -24,6 +24,7 @@ import { CalendarDays, FileText, Settings, User, AlertTriangle, Info } from "luc
 import { useRouter } from "next/navigation";
 import { parseLocalDate } from "@/lib/utils";
 import { calculateWorkingDays, formatWorkingDays, getDefaultWorkingDays } from "@/lib/utils/date-utils";
+import { formatEmployeeName } from "@/lib/utils/employee-utils";
 import { getVacationBalance } from "@/app/dashboard/absence-requests/actions";
 import { Checkbox } from "@/components/ui/checkbox";
 
@@ -252,7 +253,7 @@ export function AbsenceRequestForm({ initialData, onSubmit, submitButtonText, on
                 </SelectTrigger>
                 <SelectContent>
                   {employees.map(emp => (
-                    <SelectItem key={emp.id} value={emp.id}>{emp.first_name} {emp.last_name}</SelectItem>
+                    <SelectItem key={emp.id} value={emp.id}>{formatEmployeeName(emp)}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -449,7 +450,7 @@ export function AbsenceRequestForm({ initialData, onSubmit, submitButtonText, on
                   </SelectTrigger>
                   <SelectContent>
                     {employees.map(emp => (
-                      <SelectItem key={emp.id} value={emp.id}>{emp.first_name} {emp.last_name}</SelectItem>
+                      <SelectItem key={emp.id} value={emp.id}>{formatEmployeeName(emp)}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>

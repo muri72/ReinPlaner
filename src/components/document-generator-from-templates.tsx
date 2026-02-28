@@ -15,6 +15,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
 import { documentService, DocumentTemplate } from "@/lib/services/document-service";
 import { createClient } from "@/lib/supabase/client";
+import { formatEmployeeName } from "@/lib/utils/employee-utils";
 import {
   FileText,
   Download,
@@ -116,8 +117,8 @@ export function DocumentGeneratorFromTemplates() {
 
       // Load entities
       const [employeesRes, customersRes, objectsRes] = await Promise.all([
-        supabase.from('employees').select('id, first_name, last_name').eq('status', 'active').order('first_name'),
-        supabase.from('customers').select('id, first_name, last_name, company_name').eq('status', 'active').order('first_name'),
+        supabase.from('employees').select('id, first_name, last_name').eq('status', 'active').order('last_name', { ascending: true }),
+        supabase.from('customers').select('id, first_name, last_name, company_name').eq('status', 'active').order('last_name', { ascending: true }),
         supabase.from('objects').select('id, name').order('name'),
       ]);
 
@@ -239,7 +240,7 @@ export function DocumentGeneratorFromTemplates() {
           <SelectItem key={emp.id} value={emp.id}>
             <div className="flex items-center gap-2">
               <User className="h-4 w-4" />
-              <span>{emp.first_name} {emp.last_name}</span>
+              <span>{formatEmployeeName(emp)}</span>
             </div>
           </SelectItem>
         ));

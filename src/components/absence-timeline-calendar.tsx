@@ -11,6 +11,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { absenceTypeConfig, typeTranslations } from "@/lib/absence-type-config";
+import { formatEmployeeName } from "@/lib/utils/employee-utils";
 
 interface AbsenceData {
   id: string;
@@ -167,7 +168,7 @@ export function AbsenceTimelineCalendar() {
 
           const workingDays = workingDaysMap[employeeId] || [1, 2, 3, 4, 5];
           const employeeName = absence.employees
-            ? `${absence.employees.first_name || ''} ${absence.employees.last_name || ''}`.trim()
+            ? formatEmployeeName(absence.employees)
             : 'Unknown';
 
           if (!processedData[employeeId]) {

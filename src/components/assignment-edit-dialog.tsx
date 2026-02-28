@@ -102,7 +102,7 @@ export function AssignmentEditDialog({ orderId, children, onSuccess }: Assignmen
       setLoading(true);
       const supabase = createClient();
 
-      const { data: employeesData } = await supabase.from('employees').select('id, first_name, last_name').eq('status', 'active');
+      const { data: employeesData } = await supabase.from('employees').select('id, first_name, last_name').eq('status', 'active').order('last_name', { ascending: true });
       setAllEmployees(employeesData || []);
 
       const { data: orderData } = await supabase.from('orders').select('title, order_employee_assignments(*), objects ( daily_schedules )').eq('id', orderId).single();

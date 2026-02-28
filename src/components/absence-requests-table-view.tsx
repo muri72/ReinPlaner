@@ -8,6 +8,7 @@ import { AbsenceRequestEditDialog } from "@/components/absence-request-edit-dial
 import { DeleteAbsenceRequestButton } from "@/components/delete-absence-request-button";
 import { RecordDetailsDialog } from "@/components/record-details-dialog";
 import { cn } from "@/lib/utils";
+import { formatEmployeeName } from "@/lib/utils/employee-utils";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 import { absenceTypeConfig, typeTranslations, statusConfig } from "@/lib/absence-type-config";
@@ -127,7 +128,7 @@ export function AbsenceRequestsTableView({
                 <TableRow key={request.id} className="hover:bg-muted/50">
                   {currentUserRole !== 'employee' && (
                     <TableCell className="font-medium text-sm py-2">
-                      {request.employees ? `${request.employees.first_name} ${request.employees.last_name}` : 'N/A'}
+                      {request.employees ? formatEmployeeName(request.employees) : 'N/A'}
                     </TableCell>
                   )}
                   <TableCell className="text-sm py-2">{format(new Date(request.start_date), 'dd.MM.yy', { locale: de })}</TableCell>

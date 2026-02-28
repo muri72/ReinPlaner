@@ -2794,28 +2794,10 @@ export async function ensureShiftTimeEntriesSync(): Promise<{
   shifts_completed: number;
   time_entries_created: number;
 }> {
-  console.log('[SYNC] =========================================== START');
   const supabaseAdmin = createAdminClient();
 
   try {
     const now = new Date();
-
-    // DEBUG: Check for 25.2.2026 shifts specifically
-    const { data: feb25Shifts, error: feb25Error } = await supabaseAdmin
-      .from("shifts")
-      .select("id, shift_date, start_time, end_time, estimated_hours, status")
-      .eq("shift_date", "2026-02-25");
-
-    console.log('[SYNC] 2026-02-25 Shifts in DB:', {
-      found: feb25Shifts?.length || 0,
-      shifts: feb25Shifts?.map(s => ({
-        id: s.id.slice(0, 8),
-        start: s.start_time,
-        end: s.end_time,
-        status: s.status
-      })) || [],
-      error: feb25Error?.message
-    });
 
     // Step 1: Mark overdue shifts as completed - OPTIMIZED with batch UPDATE
     // Get current date in LOCAL timezone (Germany/Europe)
@@ -2884,8 +2866,6 @@ export async function ensureShiftTimeEntriesSync(): Promise<{
       if (!updateError && updatedShifts) {
         shiftsCompleted = updatedShifts.length;
         newlyCompletedShiftIds = updatedShifts.map(s => s.id);
-      } else if (updateError) {
-        console.error(`[SYNC] Failed to mark shifts as completed:`, updateError);
       }
     }
 
@@ -2927,8 +2907,6 @@ export async function ensureShiftTimeEntriesSync(): Promise<{
       const result = await generateTimeEntriesForShift(shiftId);
       if (result.success && result.created > 0) {
         timeEntriesCreated += result.created;
-      } else if (!result.success) {
-        console.error(`[SYNC] Failed for shift ${shiftId.slice(0, 8)}...: ${result.message}`);
       }
     }
 
@@ -2943,17 +2921,8 @@ export async function ensureShiftTimeEntriesSync(): Promise<{
       time_entries_created: timeEntriesCreated,
     };
 
-    console.log('[SYNC] FINISH', {
-      shiftsCompleted,
-      timeEntriesCreated,
-      shiftsMissingEntriesCount: shiftsMissingEntries.length
-    });
-    console.log('[SYNC] =========================================== END');
-
     return result;
   } catch (error: any) {
-    console.error("[SYNC] Error:", error.message);
-    console.log('[SYNC] =========================================== ERROR');
     return {
       success: false,
       message: error.message,
