@@ -121,9 +121,9 @@ export async function calculateTimeAccountForMonth(
   const contractHoursPerWeek = employee.contract_hours_per_week ?? 40;
   const targetHours = (contractHoursPerWeek / 40) * 160;
 
-  // Calculate actual hours from time_entries
-  const startDate = new Date(year, month - 1, 1);
-  const endDate = new Date(year, month, 0, 23, 59, 59);
+  // Calculate actual hours from time_entries (UTC-konform für Zeitzone-Fix)
+  const startDate = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0));
+  const endDate = new Date(Date.UTC(year, month, 0, 23, 59, 59));
 
   const { data: timeEntries, error: entriesError } = await supabase
     .from('time_entries')
@@ -150,7 +150,7 @@ export async function calculateTimeAccountForMonth(
     .from('time_accounts')
     .select('balance_after')
     .eq('employee_id', employeeId)
-    .or(`and(year.lt.${year},and(year.eq.${year},month.lt.${month}))`)
+    .or(`year.lt.${year},and(year.eq.${year},month.lt.${month})`)
     .order('year', { ascending: false })
     .order('month', { ascending: false })
     .limit(1)
@@ -310,7 +310,7 @@ export async function getAllTimeAccountsForMonth(
 
 /**
  * Get all employees with their time account data for a specific month (admin only)
- * Includes employees without time account entries
+ * Includes employees without time account entries - calculates missing values on-the-fly
  */
 export async function getAllEmployeesWithTimeAccounts(
   year: number,
@@ -360,6 +360,35 @@ export async function getAllEmployeesWithTimeAccounts(
     return { success: false, error: timeAccountsError.message };
   }
 
+  // Get all previous month balances for employees without current entries
+  const employeeIdsWithoutAccount = employees
+    .filter(emp => !timeAccounts?.find(ta => ta.employee_id === emp.id))
+    .map(emp => emp.id);
+
+  let previousBalances: Record<string, number> = {};
+  if (employeeIdsWithoutAccount.length > 0) {
+    const { data: previousAccounts } = await supabase
+      .from('time_accounts')
+      .select('employee_id, balance_after')
+      .in('employee_id', employeeIdsWithoutAccount)
+      .or(`year.lt.${year},and(year.eq.${year},month.lt.${month})`)
+      .order('year', { ascending: false })
+      .order('month', { ascending: false });
+
+    // Get the latest balance for each employee
+    if (previousAccounts) {
+      for (const empId of employeeIdsWithoutAccount) {
+        const empPrevious = previousAccounts
+          .filter(pa => pa.employee_id === empId)
+          .sort((a, b) => {
+            if (b.year !== a.year) return b.year - a.year;
+            return b.month - a.month;
+          })[0];
+        previousBalances[empId] = empPrevious?.balance_after ?? 0;
+      }
+    }
+  }
+
   // Merge employees with their time accounts
   const mergedData = employees.map(emp => {
     const timeAccount = timeAccounts?.find(ta => ta.employee_id === emp.id);
@@ -369,11 +398,71 @@ export async function getAllEmployeesWithTimeAccounts(
         employee: emp,
       };
     }
+    // For employees without time account, provide calculated values
     return {
       employee: emp,
       time_account: null,
+      // Provide balance_before for display
+      balance_before: previousBalances[emp.id] ?? 0,
     };
   });
+
+  // FIX: Validate and correct balance_before for ALL employees
+  // This ensures that even employees with existing entries get corrected values
+  // if their balance_before was incorrectly persisted (e.g., when previous month
+  // entry didn't exist at creation time)
+  const employeeIds = employees.map(e => e.id);
+
+  // Fetch all previous month balances in one query for efficiency
+  // Using Supabase filter syntax: (year < X) OR (year = X AND month < Y)
+  const { data: allPreviousAccounts } = await supabase
+    .from('time_accounts')
+    .select('employee_id, year, month, balance_after')
+    .in('employee_id', employeeIds)
+    .or(`year.lt.${year},and(year.eq.${year},month.lt.${month})`)
+    .order('year', { ascending: false })
+    .order('month', { ascending: false });
+
+  // Build a map of correct balance_before values for all employees
+  const correctBalances: Record<string, number> = {};
+  if (allPreviousAccounts && allPreviousAccounts.length > 0) {
+    for (const empId of employeeIds) {
+      // Filter this employee's previous accounts
+      const empAccounts = allPreviousAccounts.filter(pa => pa.employee_id === empId);
+
+      if (empAccounts.length > 0) {
+        // Sort by year desc, then month desc to get the most recent entry
+        empAccounts.sort((a, b) => {
+          const aYear = a.year ?? 0;
+          const bYear = b.year ?? 0;
+          if (bYear !== aYear) return bYear - aYear;
+          return (b.month ?? 0) - (a.month ?? 0);
+        });
+        // Get the most recent entry's balance_after as balance_before
+        correctBalances[empId] = empAccounts[0].balance_after ?? 0;
+      } else {
+        correctBalances[empId] = 0;
+      }
+    }
+  } else {
+    // No previous accounts found - all balances are 0
+    for (const empId of employeeIds) {
+      correctBalances[empId] = 0;
+    }
+  }
+
+  // Apply corrections to all employees in mergedData
+  for (const item of mergedData) {
+    if (!item.employee) continue;
+    const empId = item.employee.id;
+    const correctBalanceBefore = correctBalances[empId] ?? 0;
+    const currentBalanceBefore = item.balance_before ?? 0;
+
+    // Correct if different (with tolerance for floating point)
+    if (Math.abs(currentBalanceBefore - correctBalanceBefore) > 0.01) {
+      item.balance_before = correctBalanceBefore;
+    }
+  }
 
   return { success: true, data: mergedData as any };
 }
@@ -647,6 +736,126 @@ export async function getTimeAccountTransactions(
   }
 
   return { success: true, data };
+}
+
+/**
+ * Get incremental updates for time accounts (for auto-refresh)
+ * NOW PERSISTS calculated values to database to fix reload issues
+ */
+export async function getEmployeesTimeAccountUpdates(
+  year: number,
+  month: number
+): Promise<{ success: boolean; data?: Record<string, { actual_hours: number; balance_after: number }>; error?: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { success: false, error: "Nicht authentifiziert" };
+  }
+
+  // Get all active employees with contract hours
+  const { data: employees } = await supabase
+    .from('employees')
+    .select('id, contract_hours_per_week')
+    .in('status', ['active', 'on_leave']);
+
+  if (!employees) {
+    return { success: true, data: {} };
+  }
+
+  const updates: Record<string, { actual_hours: number; balance_after: number }> = {};
+
+  for (const emp of employees) {
+    // Calculate current actual hours with UTC fix
+    const startDate = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0));
+    const endDate = new Date(Date.UTC(year, month, 0, 23, 59, 59));
+
+    const { data: timeEntries } = await supabase
+      .from('time_entries')
+      .select('duration_minutes, break_minutes')
+      .eq('employee_id', emp.id)
+      .gte('start_time', startDate.toISOString())
+      .lte('start_time', endDate.toISOString())
+      .not('end_time', 'is', null);
+
+    let actualHours = 0;
+    if (timeEntries) {
+      actualHours = timeEntries.reduce((sum, entry) => {
+        return sum + (entry.duration_minutes - entry.break_minutes) / 60;
+      }, 0);
+    }
+
+    // Calculate target hours (pro-rated for part-time)
+    const contractHoursPerWeek = emp.contract_hours_per_week ?? 40;
+    const targetHours = (contractHoursPerWeek / 40) * 160;
+
+    // Get previous month's ending balance
+    const { data: previousAccount } = await supabase
+      .from('time_accounts')
+      .select('balance_after')
+      .eq('employee_id', emp.id)
+      .or(`year.lt.${year},and(year.eq.${year},month.lt.${month})`)
+      .order('year', { ascending: false })
+      .order('month', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const balanceBefore = previousAccount?.balance_after ?? 0;
+    const monthlyDelta = actualHours - targetHours;
+    const balanceAfter = balanceBefore + monthlyDelta;
+
+    // **FIX: Persist to database (only when values changed for efficiency)**
+    const { data: existingAccount } = await supabase
+      .from('time_accounts')
+      .select('id, actual_hours, balance_after')
+      .eq('employee_id', emp.id)
+      .eq('year', year)
+      .eq('month', month)
+      .maybeSingle();
+
+    // Only update if values have changed (efficiency optimization)
+    const needsUpdate = !existingAccount ||
+      Math.abs((existingAccount.actual_hours ?? 0) - actualHours) > 0.01 ||
+      Math.abs((existingAccount.balance_after ?? 0) - balanceAfter) > 0.01;
+
+    if (needsUpdate) {
+      if (existingAccount) {
+        // Update existing record
+        await supabase
+          .from('time_accounts')
+          .update({
+            target_hours: targetHours,
+            actual_hours: actualHours,
+            monthly_delta: monthlyDelta,
+            balance_before: balanceBefore,
+            balance_after: balanceAfter,
+            calculated_at: new Date().toISOString(),
+          })
+          .eq('id', existingAccount.id);
+      } else {
+        // Insert new record
+        await supabase
+          .from('time_accounts')
+          .insert({
+            employee_id: emp.id,
+            year,
+            month,
+            target_hours: targetHours,
+            actual_hours: actualHours,
+            monthly_delta: monthlyDelta,
+            balance_before: balanceBefore,
+            balance_after: balanceAfter,
+          });
+      }
+    }
+
+    updates[emp.id] = {
+      actual_hours: actualHours,
+      balance_after: balanceAfter,
+    };
+  }
+
+  return { success: true, data: updates };
 }
 
 /**

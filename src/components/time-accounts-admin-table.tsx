@@ -1,13 +1,15 @@
 "use client";
 
 import * as React from "react";
-import { getAllEmployeesWithTimeAccounts, recalculateAllTimeAccountsForMonth } from "@/app/dashboard/time-accounts/actions";
+import { getAllEmployeesWithTimeAccounts, adjustTimeAccountBalance, getEmployeesTimeAccountUpdates } from "@/app/dashboard/time-accounts/actions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Calendar, TrendingUp, TrendingDown, ChevronLeft, ChevronRight, RefreshCw, AlertCircle, Search, CalendarDays } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Calendar, TrendingUp, TrendingDown, ChevronLeft, ChevronRight, AlertCircle, Search, CalendarDays, Pencil, Check, X } from "lucide-react";
+import { toast } from "sonner";
 import {
   formatHours,
   getBalanceWarningLevel,
@@ -44,8 +46,12 @@ interface EmployeeWithTimeAccount {
 }
 
 // Helper to calculate effective values for current month
-function calculateEffectiveValues(row: EmployeeWithTimeAccount) {
-  const hasData = row.time_account !== null || row.target_hours !== undefined;
+function calculateEffectiveValues(
+  row: EmployeeWithTimeAccount,
+  updates: Record<string, { actual_hours?: number; balance_after?: number }>
+) {
+  // hasData is true if we have a time_account OR if we have balance_before (for employees without entries but with previous balance)
+  const hasData = row.time_account !== null || row.target_hours !== undefined || row.balance_before !== undefined;
   const isCurrent = isCurrentMonth(row.year ?? new Date().getFullYear(), row.month ?? new Date().getMonth() + 1);
   const contractHours = row.employee?.contract_hours_per_week ?? 40;
 
@@ -58,17 +64,22 @@ function calculateEffectiveValues(row: EmployeeWithTimeAccount) {
     };
   }
 
+  // Verwende optimistische Updates wenn verfügbar
+  const employeeId = row.employee?.id;
+  const actualHours = (employeeId ? (updates[employeeId]?.actual_hours ?? row.actual_hours) : row.actual_hours) ?? 0;
+  const balanceAfter = (employeeId ? (updates[employeeId]?.balance_after ?? row.balance_after) : row.balance_after) ?? 0;
+
   if (!isCurrent) {
     return {
       effectiveSoll: row.target_hours ?? 0,
       effectiveDelta: row.monthly_delta ?? 0,
-      effectiveSaldo: row.balance_after ?? 0,
+      effectiveSaldo: balanceAfter ?? 0,
       hasData: true,
     };
   }
 
   const proRatedTarget = calculateProRatedTargetHours(contractHours, row.year ?? new Date().getFullYear(), row.month ?? new Date().getMonth() + 1);
-  const proRatedDelta = (row.actual_hours ?? 0) - proRatedTarget.targetSoFar;
+  const proRatedDelta = actualHours - proRatedTarget.targetSoFar;
   const effectiveSaldo = (row.balance_before ?? 0) + proRatedDelta;
 
   return {
@@ -88,7 +99,6 @@ const PAGE_SIZE_OPTIONS = [10, 25, 50];
 export function TimeAccountsAdminTable({ year: initialYear, month: initialMonth }: TimeAccountsAdminTableProps) {
   const [data, setData] = React.useState<EmployeeWithTimeAccount[]>([]);
   const [loading, setLoading] = React.useState(true);
-  const [recalculating, setRecalculating] = React.useState(false);
   const [selectedYear, setSelectedYear] = React.useState(initialYear ?? new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = React.useState(initialMonth ?? new Date().getMonth() + 1);
 
@@ -97,6 +107,20 @@ export function TimeAccountsAdminTable({ year: initialYear, month: initialMonth 
   const [statusFilter, setStatusFilter] = React.useState<StatusFilter>('all');
   const [currentPage, setCurrentPage] = React.useState(1);
   const [pageSize, setPageSize] = React.useState(25);
+
+  // Auto-Refresh state
+  const [lastRefresh, setLastRefresh] = React.useState(new Date());
+  // Optimistic updates for smooth refresh
+  const [optimisticUpdates, setOptimisticUpdates] = React.useState<Record<string, { actual_hours?: number; balance_after?: number }>>({});
+  // Track which cells were updated for animation
+  const [updatedCells, setUpdatedCells] = React.useState<Set<string>>(new Set());
+
+  // Inline-Edit states
+  const [editingEmployee, setEditingEmployee] = React.useState<string | null>(null);
+  const [editValue, setEditValue] = React.useState('');
+  const [saving, setSaving] = React.useState(false);
+  const [showConfirmDialog, setShowConfirmDialog] = React.useState(false);
+  const [pendingAdjustment, setPendingAdjustment] = React.useState<{ employeeId: string; newValue: number; oldValue: number } | null>(null);
 
   const currentYear = new Date().getFullYear();
   const currentMonth = new Date().getMonth() + 1;
@@ -107,7 +131,14 @@ export function TimeAccountsAdminTable({ year: initialYear, month: initialMonth 
     const result = await getAllEmployeesWithTimeAccounts(selectedYear, selectedMonth);
     if (result.success && result.data) {
       setData(result.data);
+      // Clear optimistic updates after full refresh
+      setOptimisticUpdates({});
     }
+
+    // Also trigger time account updates to persist calculated values
+    // This ensures that after page reload, the correct values are shown
+    await getEmployeesTimeAccountUpdates(selectedYear, selectedMonth);
+
     setLoading(false);
   }, [selectedYear, selectedMonth]);
 
@@ -119,12 +150,76 @@ export function TimeAccountsAdminTable({ year: initialYear, month: initialMonth 
     setCurrentPage(1); // Reset to page 1 when filters change
   }, [searchQuery, statusFilter, pageSize]);
 
-  const handleRecalculate = async () => {
-    setRecalculating(true);
-    const result = await recalculateAllTimeAccountsForMonth(selectedYear, selectedMonth);
-    setRecalculating(false);
+  // Auto-Refresh für aktuellen Monat (inkrementell ohne Flackern)
+  React.useEffect(() => {
+    if (!isCurrentMonthSelected) return; // Nur für aktuellen Monat
+
+    const interval = setInterval(async () => {
+      // Nur Updates abrufen (kein komplettes Neuladen)
+      const result = await getEmployeesTimeAccountUpdates(selectedYear, selectedMonth);
+
+      if (result.success && result.data) {
+        // Update State ohne komplettes Neuladen
+        setOptimisticUpdates(result.data);
+        setLastRefresh(new Date());
+
+        // Zellen kurz markieren für Animation
+        const newKeys = Object.keys(result.data);
+        setUpdatedCells(new Set(newKeys));
+        setTimeout(() => setUpdatedCells(new Set()), 500);
+      }
+    }, 60000); // Alle 60 Sekunden
+
+    return () => clearInterval(interval); // Cleanup
+  }, [selectedYear, selectedMonth, isCurrentMonthSelected]);
+
+  // Inline-Edit Handler
+  const startEdit = (employeeId: string, currentSaldo: number) => {
+    // Zukünftige Monate nicht bearbeitbar, aktueller Monat schon
+    if (selectedYear > currentYear || (selectedYear === currentYear && selectedMonth > currentMonth)) return;
+    setEditingEmployee(employeeId);
+    setEditValue(currentSaldo.toFixed(2).replace('.', ','));
+  };
+
+  const cancelEdit = () => {
+    setEditingEmployee(null);
+    setEditValue('');
+  };
+
+  const submitEdit = async (employeeId: string, currentSaldo: number) => {
+    const newValue = parseFloat(editValue.replace(',', '.'));
+    if (isNaN(newValue)) {
+      toast.error("Ungültiger Wert", { description: "Bitte geben Sie eine gültige Zahl ein." });
+      return;
+    }
+
+    const difference = newValue - currentSaldo;
+    setPendingAdjustment({ employeeId, newValue, oldValue: currentSaldo });
+    setShowConfirmDialog(true);
+  };
+
+  const confirmAdjustment = async () => {
+    if (!pendingAdjustment) return;
+
+    setSaving(true);
+    const result = await adjustTimeAccountBalance(
+      pendingAdjustment.employeeId,
+      selectedYear,
+      selectedMonth,
+      pendingAdjustment.newValue - pendingAdjustment.oldValue,
+      "Manuelle Korrektur durch Admin"
+    );
+
+    setSaving(false);
+    setShowConfirmDialog(false);
+    setEditingEmployee(null);
+    setPendingAdjustment(null);
+
     if (result.success) {
+      toast.success("Zeitkonto wurde aktualisiert.");
       fetchData();
+    } else {
+      toast.error(result.error || "Fehler beim Aktualisieren des Zeitkontos.");
     }
   };
 
@@ -157,9 +252,9 @@ export function TimeAccountsAdminTable({ year: initialYear, month: initialMonth 
   const dataWithEffective = React.useMemo(() => {
     return data.map(row => ({
       ...row,
-      effective: calculateEffectiveValues(row),
+      effective: calculateEffectiveValues(row, optimisticUpdates),
     }));
-  }, [data]);
+  }, [data, optimisticUpdates]);
 
   // Filter and search
   const filteredData = React.useMemo(() => {
@@ -302,16 +397,12 @@ export function TimeAccountsAdminTable({ year: initialYear, month: initialMonth 
                 </Button>
               )}
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleRecalculate}
-              disabled={recalculating || isCurrentOrFuture}
-              className="gap-2"
-            >
-              <RefreshCw className={`h-4 w-4 ${recalculating ? 'animate-spin' : ''}`} />
-              Neu berechnen
-            </Button>
+            {isCurrentMonthSelected && (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <span>Zuletzt aktualisiert:</span>
+                <span className="font-medium">{lastRefresh.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}</span>
+              </div>
+            )}
           </div>
 
           {/* Summary Stats */}
@@ -357,6 +448,13 @@ export function TimeAccountsAdminTable({ year: initialYear, month: initialMonth 
                 </span>
               </div>
             )}
+          </div>
+
+          {/* Legend */}
+          <div className="flex items-center gap-4 text-xs text-muted-foreground border-t border-border/50 pt-2">
+            <span>Saldo = Vormonat + Delta</span>
+            <span className="text-emerald-600">Positiv = Überstunden</span>
+            <span className="text-rose-600">Negativ = Minusstunden</span>
           </div>
 
           {/* Search and Filters */}
@@ -464,6 +562,7 @@ export function TimeAccountsAdminTable({ year: initialYear, month: initialMonth 
                 <thead>
                   <tr className="border-b border-border bg-muted/30">
                     <th className="text-left py-2 px-3 text-xs font-semibold text-muted-foreground">Mitarbeiter</th>
+                    <th className="text-right py-2 px-3 text-xs font-semibold text-muted-foreground">Vormonat</th>
                     <th className="text-right py-2 px-3 text-xs font-semibold text-muted-foreground">
                       Soll {isCurrentMonthSelected && <span className="text-xs text-blue-600">(bisher)</span>}
                     </th>
@@ -484,9 +583,11 @@ export function TimeAccountsAdminTable({ year: initialYear, month: initialMonth 
 
                     if (!row.employee) return null;
 
+                    const employeeId = row.employee.id;
+
                     return (
                       <tr
-                        key={row.employee.id}
+                        key={employeeId}
                         className="border-b border-border hover:bg-muted/30 transition-colors"
                       >
                         <td className="py-2 px-3">
@@ -498,6 +599,15 @@ export function TimeAccountsAdminTable({ year: initialYear, month: initialMonth 
                               {row.employee.contract_hours_per_week ?? 40}h/Woche
                             </div>
                           </div>
+                        </td>
+                        <td className={`text-right py-2 px-3 text-sm ${updatedCells.has(employeeId) ? 'value-updated' : ''}`}>
+                          {row.balance_before !== undefined && row.balance_before !== null ? (
+                            <span className={row.balance_before >= 0 ? 'text-emerald-600' : 'text-rose-600'}>
+                              {row.balance_before > 0 ? '+' : ''}{formatHours(row.balance_before)}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground text-xs">—</span>
+                          )}
                         </td>
                         <td className="text-right py-2 px-3 text-sm">
                           {effective.hasData ? (
@@ -513,12 +623,12 @@ export function TimeAccountsAdminTable({ year: initialYear, month: initialMonth 
                             <span className="text-muted-foreground text-xs">—</span>
                           )}
                         </td>
-                        <td className="text-right py-2 px-3 text-sm">
-                          {effective.hasData ? formatHours(row.actual_hours ?? 0) : (
+                        <td className={`text-right py-2 px-3 text-sm ${updatedCells.has(employeeId) ? 'value-updated' : ''}`}>
+                          {effective.hasData ? formatHours(optimisticUpdates[employeeId]?.actual_hours ?? row.actual_hours ?? 0) : (
                             <span className="text-muted-foreground text-xs">—</span>
                           )}
                         </td>
-                        <td className={`text-right py-2 px-3 text-sm font-medium ${effective.effectiveDelta >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                        <td className={`text-right py-2 px-3 text-sm font-medium ${effective.effectiveDelta >= 0 ? 'text-emerald-600' : 'text-rose-600'} ${updatedCells.has(employeeId) ? 'value-updated' : ''}`}>
                           {effective.hasData ? (
                             <>
                               {effective.effectiveDelta >= 0 ? '+' : ''}{formatHours(effective.effectiveDelta)}
@@ -527,11 +637,47 @@ export function TimeAccountsAdminTable({ year: initialYear, month: initialMonth 
                             <span className="text-muted-foreground text-xs">—</span>
                           )}
                         </td>
-                        <td className={`text-right py-2 px-3 text-sm font-semibold ${isNeutral ? 'text-muted-foreground' : isPositive ? 'text-emerald-600' : 'text-rose-600'}`}>
-                          {effective.hasData ? (
-                            isNeutral ? '0,00h' : (isPositive ? '+' : '') + formatHours(Math.abs(effective.effectiveSaldo))
+                        <td className={`text-right py-2 px-3 text-sm font-semibold ${isNeutral ? 'text-muted-foreground' : isPositive ? 'text-emerald-600' : 'text-rose-600'} relative`}>
+                          {editingEmployee === row.employee.id ? (
+                            <div className="flex items-center justify-end gap-1">
+                              <Input
+                                type="text"
+                                value={editValue}
+                                onChange={(e) => setEditValue(e.target.value)}
+                                className="w-20 h-7 text-right text-xs"
+                                autoFocus
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') submitEdit(employeeId, effective.effectiveSaldo);
+                                  if (e.key === 'Escape') cancelEdit();
+                                }}
+                              />
+                              <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => submitEdit(employeeId, effective.effectiveSaldo)}>
+                                <Check className="h-3 w-3 text-emerald-600" />
+                              </Button>
+                              <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={cancelEdit}>
+                                <X className="h-3 w-3 text-rose-600" />
+                              </Button>
+                            </div>
                           ) : (
-                            <span className="text-muted-foreground text-xs">Keine Daten</span>
+                            <>
+                              <span className={updatedCells.has(employeeId) ? 'value-updated inline-block' : ''}>
+                                {effective.hasData ? (
+                                  isNeutral ? '0,00h' : (isPositive ? '+' : '-') + formatHours(Math.abs(effective.effectiveSaldo))
+                                ) : (
+                                  <span className="text-muted-foreground text-xs">Keine Daten</span>
+                                )}
+                              </span>
+                              {effective.hasData && !(selectedYear > currentYear || (selectedYear === currentYear && selectedMonth > currentMonth)) && (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity absolute right-1 top-1/2 -translate-y-1/2"
+                                  onClick={() => startEdit(employeeId, effective.effectiveSaldo)}
+                                >
+                                  <Pencil className="h-3 w-3" />
+                                </Button>
+                              )}
+                            </>
                           )}
                         </td>
                         <td className="text-center py-2 px-3">
@@ -547,12 +693,12 @@ export function TimeAccountsAdminTable({ year: initialYear, month: initialMonth 
                               Achtung
                             </Badge>
                           ) : (
-                            <Badge variant="outline" className={`${
+                            <Badge className={`${
                               isNeutral
-                                ? timeAccountStatusConfig.neutral.border + ' ' + timeAccountStatusConfig.neutral.text
+                                ? timeAccountStatusConfig.neutral.bg + ' ' + timeAccountStatusConfig.neutral.text + ' ' + timeAccountStatusConfig.neutral.border
                                 : isPositive
-                                ? timeAccountStatusConfig.positive.border + ' ' + timeAccountStatusConfig.positive.text
-                                : timeAccountStatusConfig.negative.border + ' ' + timeAccountStatusConfig.negative.text
+                                ? timeAccountStatusConfig.positive.solidBg + ' text-white hover:bg-emerald-700'
+                                : timeAccountStatusConfig.negative.bg + ' ' + timeAccountStatusConfig.negative.text + ' ' + timeAccountStatusConfig.negative.border
                             } text-xs`}>
                               {isNeutral ? 'Ausgeglichen' : isPositive ? 'Positiv' : 'Negativ'}
                             </Badge>
@@ -617,6 +763,35 @@ export function TimeAccountsAdminTable({ year: initialYear, month: initialMonth 
           </>
         )}
       </CardContent>
+
+      {/* Confirmation Dialog for Manual Adjustment */}
+      <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Zeitkonto anpassen?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingAdjustment && (
+                <div className="space-y-2">
+                  <p>Änderung wird protokolliert und kann nicht rückgängig gemacht werden.</p>
+                  <div className="bg-muted p-3 rounded space-y-1 text-sm">
+                    <div>Alter Wert: <span className="font-semibold">{pendingAdjustment.oldValue.toFixed(2)}h</span></div>
+                    <div>Neuer Wert: <span className="font-semibold">{pendingAdjustment.newValue.toFixed(2)}h</span></div>
+                    <div>Differenz: <span className={`font-semibold ${(pendingAdjustment.newValue - pendingAdjustment.oldValue) >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                      {(pendingAdjustment.newValue - pendingAdjustment.oldValue) >= 0 ? '+' : ''}{(pendingAdjustment.newValue - pendingAdjustment.oldValue).toFixed(2)}h
+                    </span></div>
+                  </div>
+                </div>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={saving}>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmAdjustment} disabled={saving}>
+              {saving ? 'Wird gespeichert...' : 'Bestätigen'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }
