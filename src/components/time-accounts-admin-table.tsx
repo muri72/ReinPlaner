@@ -92,7 +92,7 @@ function calculateEffectiveValues(
   };
 }
 
-type StatusFilter = 'all' | 'critical' | 'warning' | 'neutral' | 'positive' | 'no-data';
+type StatusFilter = 'all' | 'critical' | 'warning' | 'neutral' | 'positive';
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50];
 
@@ -285,8 +285,6 @@ export function TimeAccountsAdminTable({ year: initialYear, month: initialMonth 
           return warningLevel === 'none' && Math.abs(effective.effectiveSaldo) < 0.1;
         case 'positive':
           return effective.effectiveSaldo > 0.1;
-        case 'no-data':
-          return !effective.hasData;
         default:
           return true;
       }
@@ -511,14 +509,6 @@ export function TimeAccountsAdminTable({ year: initialYear, month: initialMonth 
                 onClick={() => setStatusFilter('neutral')}
               >
                 Ausgeglichen
-              </Button>
-              <Button
-                variant={statusFilter === 'no-data' ? 'default' : 'outline'}
-                size="sm"
-                className="h-9 text-xs"
-                onClick={() => setStatusFilter('no-data')}
-              >
-                Keine Daten
               </Button>
             </div>
 

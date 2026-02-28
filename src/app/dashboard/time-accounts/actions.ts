@@ -369,7 +369,7 @@ export async function getAllEmployeesWithTimeAccounts(
   if (employeeIdsWithoutAccount.length > 0) {
     const { data: previousAccounts } = await supabase
       .from('time_accounts')
-      .select('employee_id, balance_after')
+      .select('employee_id, year, month, balance_after')
       .in('employee_id', employeeIdsWithoutAccount)
       .or(`year.lt.${year},and(year.eq.${year},month.lt.${month})`)
       .order('year', { ascending: false })
