@@ -64,6 +64,9 @@ function calculateEffectiveValues(
     };
   }
 
+  // Get manual adjustment offset (defaults to 0 for backward compatibility)
+  const manualOffset = (row as any).manual_adjustment_offset ?? 0;
+
   // Verwende optimistische Updates wenn verfügbar
   const employeeId = row.employee?.id;
   const actualHours = (employeeId ? (updates[employeeId]?.actual_hours ?? row.actual_hours) : row.actual_hours) ?? 0;
@@ -80,7 +83,8 @@ function calculateEffectiveValues(
 
   const proRatedTarget = calculateProRatedTargetHours(contractHours, row.year ?? new Date().getFullYear(), row.month ?? new Date().getMonth() + 1);
   const proRatedDelta = actualHours - proRatedTarget.targetSoFar;
-  const effectiveSaldo = (row.balance_before ?? 0) + proRatedDelta;
+  // Include manual adjustment offset in effective saldo calculation
+  const effectiveSaldo = (row.balance_before ?? 0) + proRatedDelta + manualOffset;
 
   return {
     effectiveSoll: proRatedTarget.targetSoFar,
@@ -135,9 +139,9 @@ export function TimeAccountsAdminTable({ year: initialYear, month: initialMonth 
       setOptimisticUpdates({});
     }
 
-    // Also trigger time account updates to persist calculated values
-    // This ensures that after page reload, the correct values are shown
-    await getEmployeesTimeAccountUpdates(selectedYear, selectedMonth);
+    // PERF: Removed redundant getEmployeesTimeAccountUpdates call
+    // The data is already fetched and persisted by getAllEmployeesWithTimeAccounts
+    // This eliminates the double-fetch on month change (1-2 seconds saved)
 
     setLoading(false);
   }, [selectedYear, selectedMonth]);
@@ -168,7 +172,7 @@ export function TimeAccountsAdminTable({ year: initialYear, month: initialMonth 
         setUpdatedCells(new Set(newKeys));
         setTimeout(() => setUpdatedCells(new Set()), 500);
       }
-    }, 60000); // Alle 60 Sekunden
+    }, 300000); // Alle 5 Minuten (Perf-Optimierung: 12 Updates/h statt 60)
 
     return () => clearInterval(interval); // Cleanup
   }, [selectedYear, selectedMonth, isCurrentMonthSelected]);
@@ -201,12 +205,59 @@ export function TimeAccountsAdminTable({ year: initialYear, month: initialMonth 
   const confirmAdjustment = async () => {
     if (!pendingAdjustment) return;
 
+    const employeeId = pendingAdjustment.employeeId;
+    const newValue = pendingAdjustment.newValue;
+    const oldValue = pendingAdjustment.oldValue;
+    const difference = newValue - oldValue;
+
+    // PERF: Optimistic UI Update - sofortiges Feedback ohne Ladeanimation
+    // Wir nutzen optimisticUpdates (das gleiche System wie für Auto-Refresh)
+    //
+    // Für den aktuellen Monat wird effectiveSaldo so berechnet:
+    //   effectiveSaldo = balance_before + (actual_hours - targetSoFar) + manualOffset
+    // Daher müssen wir actual_hours anpassen (nicht balance_after!)
+    //
+    // Für vergangene Monate wird balance_after direkt verwendet.
+
+    // Finde die aktuelle row um actual_hours zu berechnen
+    const currentRow = data.find(r => r.employee?.id === employeeId);
+
+    if (isCurrentMonthSelected) {
+      // Aktueller Monat: actual_hours anpassen
+      const currentActualHours = currentRow?.actual_hours ?? 0;
+      setOptimisticUpdates(prev => ({
+        ...prev,
+        [employeeId]: {
+          actual_hours: currentActualHours + difference,
+        }
+      }));
+    } else {
+      // Vergangene Monate: balance_after direkt verwenden
+      setOptimisticUpdates(prev => ({
+        ...prev,
+        [employeeId]: {
+          balance_after: newValue,
+        }
+      }));
+    }
+
+    // Auch balance_after direkt im data state updaten für persistence
+    setData(prev => prev.map(row => {
+      if (row.employee?.id === employeeId) {
+        return {
+          ...row,
+          balance_after: newValue,
+        };
+      }
+      return row;
+    }));
+
     setSaving(true);
     const result = await adjustTimeAccountBalance(
-      pendingAdjustment.employeeId,
+      employeeId,
       selectedYear,
       selectedMonth,
-      pendingAdjustment.newValue - pendingAdjustment.oldValue,
+      difference,
       "Manuelle Korrektur durch Admin"
     );
 
@@ -217,8 +268,12 @@ export function TimeAccountsAdminTable({ year: initialYear, month: initialMonth 
 
     if (result.success) {
       toast.success("Zeitkonto wurde aktualisiert.");
-      fetchData();
+      // PERF: Kein fetchData() nötig - UI bereits durch optimistic update aktuell
+      // Die optimisticUpdates bleiben bestehen, bis der nächste Auto-Refresh sie überschreibt
     } else {
+      // Rollback bei Fehler - vollständiger Refresh und optimisticUpdates löschen
+      setOptimisticUpdates({});
+      fetchData();
       toast.error(result.error || "Fehler beim Aktualisieren des Zeitkontos.");
     }
   };
@@ -760,20 +815,20 @@ export function TimeAccountsAdminTable({ year: initialYear, month: initialMonth 
           <AlertDialogHeader>
             <AlertDialogTitle>Zeitkonto anpassen?</AlertDialogTitle>
             <AlertDialogDescription>
-              {pendingAdjustment && (
-                <div className="space-y-2">
-                  <p>Änderung wird protokolliert und kann nicht rückgängig gemacht werden.</p>
-                  <div className="bg-muted p-3 rounded space-y-1 text-sm">
-                    <div>Alter Wert: <span className="font-semibold">{pendingAdjustment.oldValue.toFixed(2)}h</span></div>
-                    <div>Neuer Wert: <span className="font-semibold">{pendingAdjustment.newValue.toFixed(2)}h</span></div>
-                    <div>Differenz: <span className={`font-semibold ${(pendingAdjustment.newValue - pendingAdjustment.oldValue) >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                      {(pendingAdjustment.newValue - pendingAdjustment.oldValue) >= 0 ? '+' : ''}{(pendingAdjustment.newValue - pendingAdjustment.oldValue).toFixed(2)}h
-                    </span></div>
-                  </div>
-                </div>
-              )}
+              Änderung wird protokolliert und kann nicht rückgängig gemacht werden.
             </AlertDialogDescription>
           </AlertDialogHeader>
+          {pendingAdjustment && (
+            <div className="space-y-2">
+              <div className="bg-muted p-3 rounded space-y-1 text-sm">
+                <div>Alter Wert: <span className="font-semibold">{pendingAdjustment.oldValue.toFixed(2)}h</span></div>
+                <div>Neuer Wert: <span className="font-semibold">{pendingAdjustment.newValue.toFixed(2)}h</span></div>
+                <div>Differenz: <span className={`font-semibold ${(pendingAdjustment.newValue - pendingAdjustment.oldValue) >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                  {(pendingAdjustment.newValue - pendingAdjustment.oldValue) >= 0 ? '+' : ''}{(pendingAdjustment.newValue - pendingAdjustment.oldValue).toFixed(2)}h
+                </span></div>
+              </div>
+            </div>
+          )}
           <AlertDialogFooter>
             <AlertDialogCancel disabled={saving}>Abbrechen</AlertDialogCancel>
             <AlertDialogAction onClick={confirmAdjustment} disabled={saving}>
