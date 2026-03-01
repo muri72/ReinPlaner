@@ -840,9 +840,18 @@ export async function getEmployeesTimeAccountUpdates(
 
   const existingAccountsMap = new Map(existingAccounts?.map(a => [a.employee_id, a]));
 
+  // Type for existing account records
+  type ExistingAccount = {
+    id: string;
+    employee_id: string;
+    actual_hours: number | null;
+    balance_after: number | null;
+    manual_adjustment_offset: number | null;
+  };
+
   const updates: Record<string, { actual_hours: number; balance_after: number }> = {};
   const accountsToUpdate: Array<{
-    existingAccount: typeof existingAccounts[0] | null;
+    existingAccount: ExistingAccount | null;
     empId: string;
     targetHours: number;
     actualHours: number;
