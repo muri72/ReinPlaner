@@ -921,7 +921,7 @@ export async function reassignShift(
   shiftId: string,
   newEmployeeId: string,
   mode: ShiftSeriesEditMode = "single"
-): Promise<{ success: boolean; message: string }> {
+): Promise<{ success: boolean; message: string; affectedCount?: number }> {
   const supabaseAdmin = createAdminClient();
   const supabase = await createClient();
   const {
