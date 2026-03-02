@@ -19,7 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
-import { Calendar, ChevronLeft, ChevronRight, Filter, MoreHorizontal, Plus } from "lucide-react";
+import { Calendar, ChevronLeft, ChevronRight, Filter, MoreHorizontal, Plus, Loader2 } from "lucide-react";
 import { SearchInput } from "./search-input";
 import { CreateShiftDialog } from "@/components/create-shift-dialog";
 
@@ -33,6 +33,7 @@ interface MobilePlanningToolbarProps {
   unassignedCount?: number;
   onCreateOrder?: () => void;
   onOpenFilters?: () => void;
+  isNavigating?: boolean;
 }
 
 const MODE_OPTIONS: Array<{ mode: "day" | "week" | "month"; label: string }> = [
@@ -51,6 +52,7 @@ export function MobilePlanningToolbar({
   unassignedCount = 0,
   onCreateOrder,
   onOpenFilters,
+  isNavigating = false,
 }: MobilePlanningToolbarProps) {
   const [isSheetOpen, setIsSheetOpen] = React.useState(false);
   const [createShiftOpen, setCreateShiftOpen] = React.useState(false);
@@ -222,8 +224,9 @@ export function MobilePlanningToolbar({
           size="icon"
           className="h-11 w-11 flex-shrink-0"
           onClick={handlePrev}
+          disabled={isNavigating}
         >
-          <ChevronLeft className="h-5 w-5" />
+          {isNavigating ? <Loader2 className="h-5 w-5 animate-spin" /> : <ChevronLeft className="h-5 w-5" />}
         </Button>
 
         <div className="flex flex-col items-center text-center">
@@ -242,8 +245,9 @@ export function MobilePlanningToolbar({
           size="icon"
           className="h-11 w-11 flex-shrink-0"
           onClick={handleNext}
+          disabled={isNavigating}
         >
-          <ChevronRight className="h-5 w-5" />
+          {isNavigating ? <Loader2 className="h-5 w-5 animate-spin" /> : <ChevronRight className="h-5 w-5" />}
         </Button>
       </div>
 

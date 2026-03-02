@@ -68,6 +68,7 @@ export default function PlanningPage() {
   const [planningPageData, setPlanningPageData] = React.useState<ShiftPlanningPageData | null>(null);
   const [services, setServices] = React.useState<Service[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [isNavigating, setIsNavigating] = React.useState(false); // Track navigation state for optimistic feedback
   const [activeDragId, setActiveDragId] = React.useState<string | null>(null);
   const [currentUser, setCurrentUser] = React.useState<any>(null);
   const [currentUserRole, setCurrentUserRole] = React.useState<'admin' | 'manager' | 'employee' | 'customer'>('employee');
@@ -88,6 +89,8 @@ export default function PlanningPage() {
     customers: false,
     orders: false,
     employees: false,
+    profile: false,      // User role (admin/manager/employee)
+    bundesland: false,   // Default bundesland setting
   });
 
   // Ref to track the latest fetch request ID for cancellation
@@ -181,6 +184,7 @@ export default function PlanningPage() {
     const currentFetchId = ++fetchIdRef.current;
 
     setLoading(true);
+    setIsNavigating(true); // Track navigation state for optimistic feedback
     const supabase = createClient();
     const {
       data: { user },
@@ -189,18 +193,21 @@ export default function PlanningPage() {
     // Early return if this fetch was cancelled
     if (currentFetchId !== fetchIdRef.current) return;
 
-    if (user) {
-      setCurrentUser(user);
+    // Load profile role and bundesland only once (static data)
+    if (user && !staticDataLoadedRef.current.profile) {
       const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
       const role = profile?.role as 'admin' | 'manager' | 'employee' | 'customer' || 'employee';
       setCurrentUserRole(role);
       setIsAdmin(role === "admin");
+      staticDataLoadedRef.current.profile = true;
     }
 
-    // Load bundesland from settings (default to HH if not found)
-    const { settingsService } = await import('@/lib/services/settings-service');
-    const code = await settingsService.getSetting('default_bundesland') || 'HH';
-    setBundeslandCode(code);
+    if (!staticDataLoadedRef.current.bundesland) {
+      const { settingsService } = await import('@/lib/services/settings-service');
+      const code = await settingsService.getSetting('default_bundesland') || 'HH';
+      setBundeslandCode(code);
+      staticDataLoadedRef.current.bundesland = true;
+    }
 
     if (currentFetchId !== fetchIdRef.current) return;
 
@@ -348,17 +355,18 @@ export default function PlanningPage() {
     }
 
     setLoading(false);
+    setIsNavigating(false); // Navigation complete
   }, []); // Empty deps - no dependency loops!
 
   const refreshData = React.useCallback(() => {
     void fetchData(startDate, endDate, query, daysToDisplay, filters);
-    router.refresh();
-  }, [fetchData, startDate, endDate, query, daysToDisplay, filters, router]);
+    // router.refresh() removed - client-side updates are sufficient for planning page
+  }, [fetchData, startDate, endDate, query, daysToDisplay, filters]);
 
-  // Load planning data
+  // Load planning data (daysToDisplay is derived from startDate/endDate - not needed in deps)
   React.useEffect(() => {
     fetchData(startDate, endDate, query, daysToDisplay, filters);
-  }, [startDate, endDate, query, daysToDisplay, filters]);
+  }, [startDate, endDate, query, filters]);
 
   React.useEffect(() => {
     setMobileSelectedDate((previous) => {
@@ -672,6 +680,7 @@ export default function PlanningPage() {
               onShowUnassignedChange={handleMobileShowUnassignedChange}
               unassignedCount={mobileUnassignedCount}
               onCreateOrder={openOrderDialog}
+              isNavigating={isNavigating}
             />
             <PlanningKpiSummary
               planningData={planningData}
@@ -710,6 +719,7 @@ export default function PlanningPage() {
               onShowUnassignedChange={setShowUnassigned}
               currentUserId={currentUser?.id}
               isAdmin={isAdmin}
+              isNavigating={isNavigating}
               onActionSuccess={refreshData}
               filters={filters}
               onFiltersChange={(newFilters) => {

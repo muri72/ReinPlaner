@@ -192,57 +192,13 @@ export async function getShiftPlanningData(
     const { data: employees, error: employeesError } = await employeesQuery;
     if (employeesError) throw employeesError;
 
-    // Get avatars
+    // PERFORMANCE OPTIMIZATION: Parallelize all independent queries
+    // Get user IDs for profiles query (depends on employees result)
     const userIds = employees
       .map((e) => e.user_id)
       .filter((id): id is string => id !== null);
-    const { data: profiles } = await supabase
-      .from("profiles")
-      .select("id, avatar_url")
-      .in("id", userIds);
 
-    const profilesMap = new Map(profiles?.map((p) => [p.id, p.avatar_url]) || []);
-
-    // Fetch services for colors
-    const { data: services } = await supabase
-      .from("services")
-      .select("key, title, color");
-
-    const servicesMap = new Map(
-      (services || []).map((s: any) => [s.key, s.color])
-    );
-    const servicesByTitle = new Map(
-      (services || []).map((s: any) => [s.title?.toLowerCase(), s.color])
-    );
-
-    // 2. Fetch absences
-    const { data: absences } = await supabase
-      .from("absence_requests")
-      .select("employee_id, start_date, end_date, type")
-      .eq("status", "approved")
-      .lte("start_date", endDateIso)
-      .gte("end_date", startDateIso);
-
-    // 3. Fetch existing shifts from DB for this period
-    // Use left join to include shifts even if they have no employee assignment yet
-    const { data: existingShifts, error: shiftsError } = await supabase
-      .from("shifts")
-      .select(`
-        *,
-        shift_employees (
-          employee_id,
-          role,
-          is_confirmed
-        )
-      `)
-      .gte("shift_date", startDateIso)
-      .lte("shift_date", endDateIso);
-
-    if (shiftsError) {
-      // Continue without shifts - we'll generate them
-    }
-
-    // 4. Fetch assignments for the period (include inactive to show completed shifts after employee removal)
+    // Build assignments query with filters (must be built before Promise.all)
     let assignmentsQuery = supabase
       .from("order_employee_assignments")
       .select(`
@@ -281,7 +237,62 @@ export async function getShiftPlanningData(
       assignmentsQuery = assignmentsQuery.in("orders.service_type", filters.filters.services);
     }
 
-    const { data: assignmentsData, error: assignmentsError } = await assignmentsQuery;
+    // Execute all independent queries in parallel (5 queries → 1 parallel batch)
+    const [
+      profilesResult,
+      servicesResult,
+      absencesResult,
+      shiftsResult,
+      assignmentsResult
+    ] = await Promise.all([
+      // Profiles for avatars
+      supabase.from("profiles").select("id, avatar_url").in("id", userIds),
+      // Services for colors
+      supabase.from("services").select("key, title, color"),
+      // Absences for the period
+      supabase
+        .from("absence_requests")
+        .select("employee_id, start_date, end_date, type")
+        .eq("status", "approved")
+        .lte("start_date", endDateIso)
+        .gte("end_date", startDateIso),
+      // Existing shifts from DB for this period
+      supabase
+        .from("shifts")
+        .select(`
+          *,
+          shift_employees (
+            employee_id,
+            role,
+            is_confirmed
+          )
+        `)
+        .gte("shift_date", startDateIso)
+        .lte("shift_date", endDateIso),
+      // Assignments for the period
+      assignmentsQuery,
+    ]);
+
+    // Process results
+    const profilesMap = new Map(profilesResult.data?.map((p) => [p.id, p.avatar_url]) || []);
+    if (profilesResult.error) console.warn("Profiles query error:", profilesResult.error);
+
+    const servicesMap = new Map(
+      (servicesResult.data || []).map((s: any) => [s.key, s.color])
+    );
+    const servicesByTitle = new Map(
+      (servicesResult.data || []).map((s: any) => [s.title?.toLowerCase(), s.color])
+    );
+
+    const absences = absencesResult.data;
+    if (absencesResult.error) console.warn("Absences query error:", absencesResult.error);
+
+    const existingShifts = shiftsResult.data;
+    if (shiftsResult.error && !shiftsResult.error.message.includes("FetchError")) {
+      console.warn("Shifts query error:", shiftsResult.error);
+    }
+
+    const { data: assignmentsData, error: assignmentsError } = assignmentsResult;
     if (assignmentsError) throw assignmentsError;
 
     // OPTIONAL: Load additional assignments for completed shifts whose assignment was removed
@@ -921,11 +932,13 @@ export async function reassignShift(
     return { success: false, message: "Benutzer nicht authentifiziert." };
   }
 
+  console.log("[REASSIGN-SHIFT] Starting reassignment:", { shiftId, newEmployeeId, mode });
+
   try {
-    // Get shift details
+    // Get shift details including assignment_id
     const { data: shift, error: shiftError } = await supabaseAdmin
       .from("shifts")
-      .select("*, shift_employees ( employee_id )")
+      .select("*, shift_employees ( employee_id ), assignment_id")
       .eq("id", shiftId)
       .single();
 
@@ -935,6 +948,18 @@ export async function reassignShift(
 
     const oldEmployeeId = shift.shift_employees?.[0]?.employee_id;
     const isRecurring = !!shift.series_id && !shift.is_detached_from_series;
+
+    console.log("[REASSIGN-SHIFT] Shift details:", {
+      shiftId: shift.id,
+      shiftDate: shift.shift_date,
+      assignmentId: shift.assignment_id,
+      seriesId: shift.series_id,
+      isDetached: shift.is_detached_from_series,
+      oldEmployeeId,
+      newEmployeeId,
+      mode,
+      isRecurring,
+    });
 
     if (mode === "single" && isRecurring) {
       // Detach from series and update
@@ -961,31 +986,69 @@ export async function reassignShift(
       role: "worker",
     });
 
+    // Track affected shifts for the response message
+    let affectedCount = 1; // Default: current shift only
+
     // For "future" mode, also update future shifts in the series
-    if (mode === "future" && shift.series_id) {
-      const { data: futureShifts } = await supabaseAdmin
+    if (mode === "future") {
+      // Use assignment_id to find future shifts (same approach as updateShift)
+      // This works even when series_id is null (shifts created from assignments)
+
+      let futureShiftsQuery = supabaseAdmin
         .from("shifts")
-        .select("id, shift_employees ( employee_id )")
-        .eq("series_id", shift.series_id)
-        .eq("is_detached_from_series", false)
-        .gt("shift_date", shift.shift_date);
+        .select("id, shift_date, status, shift_employees ( employee_id )");
+
+      // Apply filters conditionally
+      if (shift.series_id) {
+        futureShiftsQuery = futureShiftsQuery
+          .eq("series_id", shift.series_id)
+          .eq("is_detached_from_series", false);
+      } else if (shift.assignment_id) {
+        futureShiftsQuery = futureShiftsQuery.eq("assignment_id", shift.assignment_id);
+      }
+
+      const { data: futureShifts } = await futureShiftsQuery
+        .gte("shift_date", shift.shift_date) // Include current shift
+        .neq("status", "completed"); // Exclude completed shifts
+
+      console.log("[REASSIGN-SHIFT] Found future shifts:", (futureShifts || []).length, "shifts to update");
+      affectedCount = (futureShifts || []).length;
 
       for (const futureShift of futureShifts || []) {
-        const futureOldEmployeeId = futureShift.shift_employees?.[0]?.employee_id;
-        if (futureOldEmployeeId === oldEmployeeId) {
-          await supabaseAdmin
-            .from("shift_employees")
-            .delete()
-            .eq("shift_id", futureShift.id)
-            .eq("employee_id", futureOldEmployeeId);
+        // Skip the current shift (already handled above)
+        if (futureShift.id === shiftId) continue;
 
-          await supabaseAdmin.from("shift_employees").insert({
-            shift_id: futureShift.id,
-            employee_id: newEmployeeId,
-            role: "worker",
-          });
+        // Remove any existing employee assignment for this shift
+        await supabaseAdmin
+          .from("shift_employees")
+          .delete()
+          .eq("shift_id", futureShift.id);
+
+        // Assign the new employee
+        await supabaseAdmin.from("shift_employees").insert({
+          shift_id: futureShift.id,
+          employee_id: newEmployeeId,
+          role: "worker",
+        });
+      }
+
+      // ALSO update order_employee_assignments for the entire series
+      // This ensures that when shifts are fetched, they show the correct employee
+      if (shift.assignment_id) {
+        console.log("[REASSIGN-SHIFT] Updating order_employee_assignments for assignment:", shift.assignment_id);
+        const { error: updateAssignError } = await supabaseAdmin
+          .from("order_employee_assignments")
+          .update({ employee_id: newEmployeeId })
+          .eq("id", shift.assignment_id);
+
+        if (updateAssignError) {
+          console.error("[REASSIGN-SHIFT] Failed to update order_employee_assignments:", updateAssignError);
+        } else {
+          console.log("[REASSIGN-SHIFT] Successfully updated order_employee_assignments");
         }
       }
+
+      console.log("[REASSIGN-SHIFT] Total affected shifts:", affectedCount);
     }
 
     revalidatePath("/dashboard/planning");
@@ -994,7 +1057,8 @@ export async function reassignShift(
       message:
         mode === "single"
           ? "Einsatz erfolgreich neu zugewiesen."
-          : "Alle zukünftigen Einsätze wurden neu zugewiesen.",
+          : `${affectedCount} ${affectedCount === 1 ? 'Einsatz' : 'Einsätze'} erfolgreich neu zugewiesen (aktueller + alle zukünftigen).`,
+      affectedCount,
     };
   } catch (error: any) {
     console.error("Fehler beim Neuzuweisen:", error.message);

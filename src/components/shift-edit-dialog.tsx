@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Calendar, Clock, Users, Repeat, Trash2, Copy, Edit3, ArrowRightLeft, Check, Save, UserPlus, X, ChevronsUpDown, Layers, MapPin, User, Coffee, Car } from "lucide-react";
+import { Calendar, Clock, Users, Repeat, Trash2, Copy, Edit3, Check, Save, UserPlus, X, ChevronsUpDown, Layers, MapPin, User, Coffee, Car } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
@@ -34,7 +34,7 @@ interface ShiftEditDialogProps {
   onMoveToEmployee?: (employeeId: string, currentDate: string, newDate?: string) => void;
 }
 
-type ActionType = "edit" | "copy" | "delete" | "move";
+type ActionType = "edit" | "copy" | "delete";
 
 interface ActionOption {
   id: ActionType;
@@ -273,14 +273,30 @@ export function ShiftEditDialog({
       const currentEmployeeId = currentWorker?.employee_id;
 
       // Check if employee changed (and not in team mode handling already)
+      let employeeChanged = false;
+      let reassignMessage = "";
       if (!isTeamMode && editEmployeeId && editEmployeeId !== currentEmployeeId) {
-        const reassignResult = await reassignShift(shift.id, editEmployeeId, "single");
+        employeeChanged = true;
+        // Use editMode for reassignment: "series" → "future", "single" → "single"
+        const reassignMode = editMode === "series" ? "future" : "single";
+        console.log("[HANDLE-SAVE] Calling reassignShift:", {
+          shiftId: shift.id,
+          shiftDate: shift.shift_date,
+          oldEmployeeId: currentEmployeeId,
+          newEmployeeId: editEmployeeId,
+          reassignMode,
+          editMode,
+        });
+        const reassignResult = await reassignShift(shift.id, editEmployeeId, reassignMode);
 
         if (!reassignResult.success) {
           toast.error(reassignResult.message || "Fehler beim Ändern des Mitarbeiters");
           setSaving(false);
           return;
         }
+
+        // Store the reassign message to show later
+        reassignMessage = reassignResult.message;
 
         // If shift is completed, regenerate time entries for new employee
         if (status === "completed") {
@@ -325,7 +341,12 @@ export function ShiftEditDialog({
       }
 
       if (result.success) {
-        toast.success(result.message);
+        // Combine messages if both employee and time were changed
+        if (employeeChanged && reassignMessage) {
+          toast.success(`${reassignMessage} ${result.message}`);
+        } else {
+          toast.success(result.message);
+        }
         onSuccess();
         onOpenChange(false);
       } else {
@@ -340,7 +361,6 @@ export function ShiftEditDialog({
 
   const actionOptions: ActionOption[] = [
     { id: "edit", label: "Bearbeiten", icon: Edit3 },
-    { id: "move", label: "Verschieben", icon: ArrowRightLeft },
     { id: "copy", label: "Kopieren", icon: Copy },
     { id: "delete", label: "Löschen", icon: Trash2, destructive: true },
   ];
@@ -520,15 +540,20 @@ export function ShiftEditDialog({
               )}
               {/* Edit Mode Selector for Recurring Shifts */}
               {shift.is_recurring && !shift.is_detached_from_series && (
-                <div className="border rounded-lg p-3">
+                <div className={cn(
+                  "border rounded-lg p-3 transition-all",
+                  editMode === "series" ? "border-primary/50 bg-primary/5" : ""
+                )}>
                   <p className="text-xs text-muted-foreground mb-2">Was möchten Sie bearbeiten?</p>
                   <div className="grid grid-cols-2 gap-2">
                     <button
                       type="button"
                       onClick={() => setEditMode("single")}
                       className={cn(
-                        "p-2 rounded border text-center text-sm",
-                        editMode === "single" ? "border-primary bg-primary/10" : "hover:bg-muted/50"
+                        "p-2 rounded border text-center text-sm transition-all",
+                        editMode === "single"
+                          ? "border-primary bg-primary/15 ring-2 ring-primary/20"
+                          : "border-muted hover:bg-muted/50"
                       )}
                     >
                       <div className="font-medium">Dieses Datum</div>
@@ -538,23 +563,35 @@ export function ShiftEditDialog({
                       type="button"
                       onClick={() => setEditMode("series")}
                       className={cn(
-                        "p-2 rounded border text-center text-sm",
-                        editMode === "series" ? "border-primary bg-primary/10" : "hover:bg-muted/50"
+                        "p-2 rounded border text-center text-sm transition-all relative",
+                        editMode === "series"
+                          ? "border-primary bg-primary/15 ring-2 ring-primary/20"
+                          : "border-muted hover:bg-muted/50"
                       )}
                     >
                       <div className="font-medium">Gesamte Serie</div>
-                      <div className="text-xs text-muted-foreground mt-0.5">Alle Termine</div>
+                      <div className="text-xs text-muted-foreground mt-0.5">Alle zukünftigen Termine</div>
                     </button>
                   </div>
                   {editMode === "single" && (
-                    <p className="text-[10px] text-amber-600 mt-2">
-                      ⚠️ Änderungen gelten nur für dieses Datum
-                    </p>
+                    <div className="flex items-start gap-2 mt-2.5 p-2 bg-amber-50 border border-amber-200 rounded">
+                      <svg className="h-3.5 w-3.5 text-amber-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      </svg>
+                      <p className="text-[11px] text-amber-700">
+                        <span className="font-medium">Nur dieser Einsatz:</span> Änderungen gelten nur für {formattedDate}
+                      </p>
+                    </div>
                   )}
                   {editMode === "series" && (
-                    <p className="text-[10px] text-green-600 mt-2">
-                      ✓ Änderungen gelten für alle zukünftigen Termine
-                    </p>
+                    <div className="flex items-start gap-2 mt-2.5 p-2 bg-green-50 border border-green-200 rounded">
+                      <svg className="h-3.5 w-3.5 text-green-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <p className="text-[11px] text-green-700">
+                        <span className="font-medium">Gesamte Serie:</span> Änderungen gelten für diesen und alle zukünftigen Einsätze (abgeschlossene bleiben unverändert)
+                      </p>
+                    </div>
                   )}
                 </div>
               )}
@@ -805,98 +842,6 @@ export function ShiftEditDialog({
                     Speichern
                   </>
                 )}
-              </Button>
-            </div>
-          )}
-
-          {/* MOVE ACTION */}
-          {action === "move" && (
-            <div className="space-y-3">
-              <div>
-                <label className="text-xs text-muted-foreground mb-1.5 block">Datum auswählen</label>
-                <input
-                  type="date"
-                  value={copyDate || ""}
-                  onChange={(e) => setCopyDate(e.target.value)}
-                  className="w-full px-3 py-2 text-sm border rounded-md bg-background focus:outline-none focus:ring-1 focus:ring-primary"
-                  min={format(new Date(), "yyyy-MM-dd")}
-                />
-              </div>
-
-              {availableEmployees.length > 0 && (
-                <div>
-                  <label className="text-xs text-muted-foreground mb-1.5 block">Zu Mitarbeiter verschieben</label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        role="combobox"
-                        className="w-full justify-between"
-                      >
-                        {selectedEmployee ? (
-                          <span>{getEmployeeName(selectedEmployee)}</span>
-                        ) : (
-                          <span className="text-muted-foreground">Mitarbeiter auswählen...</span>
-                        )}
-                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                      <Command>
-                        <CommandInput placeholder="Mitarbeiter suchen..." />
-                        <CommandList>
-                          <CommandEmpty>Keine Mitarbeiter gefunden.</CommandEmpty>
-                          <CommandGroup heading="Mitarbeiter">
-                            {availableEmployees.map((emp) => {
-                              const currentId = shift.employees[0]?.employee_id;
-                              const isCurrent = emp.id === currentId;
-                              return (
-                                <CommandItem
-                                  key={emp.id}
-                                  value={emp.name}
-                                  onSelect={() => {
-                                    setSelectedEmployee(emp.id);
-                                  }}
-                                  disabled={isCurrent}
-                                >
-                                  <Check
-                                    className={cn(
-                                      "mr-2 h-4 w-4",
-                                      selectedEmployee === emp.id ? "opacity-100" : "opacity-0"
-                                    )}
-                                  />
-                                  {emp.name}
-                                  {isCurrent && <span className="ml-1 text-xs text-muted-foreground">(aktuell)</span>}
-                                </CommandItem>
-                              );
-                            })}
-                          </CommandGroup>
-                        </CommandList>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
-                </div>
-              )}
-
-              {/* Confirm Move Button */}
-              <Button
-                onClick={() => {
-                  if (selectedEmployee && copyDate && onMoveToEmployee) {
-                    onMoveToEmployee(selectedEmployee, shift.shift_date, copyDate);
-                    onOpenChange(false);
-                  } else if (selectedEmployee && onMoveToEmployee) {
-                    onMoveToEmployee(selectedEmployee, shift.shift_date);
-                    onOpenChange(false);
-                  } else if (copyDate && onMoveToDate) {
-                    onMoveToDate(copyDate);
-                    onOpenChange(false);
-                  }
-                }}
-                disabled={!selectedEmployee && !copyDate}
-                className="w-full text-sm"
-              >
-                <ArrowRightLeft className="h-3.5 w-3.5 mr-1.5" />
-                Verschieben
               </Button>
             </div>
           )}
