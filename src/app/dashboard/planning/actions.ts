@@ -606,6 +606,7 @@ export async function updateOrderAssignments(
     }
 
     // 3. Create new assignments for all selected employees with the new shared schedule
+    let insertedAssignments: any[] = [];
     if (employeeIds.length > 0) {
       const newAssignments = employeeIds.map(employeeId => ({
         order_id: orderId,
@@ -615,21 +616,38 @@ export async function updateOrderAssignments(
         assigned_start_week_offset,
       }));
 
-      const { error: insertError } = await supabaseAdmin
+      const { data: insertedData, error: insertError } = await supabaseAdmin
         .from('order_employee_assignments')
-        .insert(newAssignments);
+        .insert(newAssignments)
+        .select('id, employee_id');
 
       if (insertError) {
         throw new Error(`Fehler beim Erstellen neuer Zuweisungen: ${insertError.message}`);
       }
+      insertedAssignments = insertedData || [];
     }
 
-    // 4. Generate shifts for current and next month based on the updated assignments
+    // 4. Sync new assignments to existing future shifts (solves "two truths" problem)
+    // This ensures that already-generated shifts reflect the new employee assignments
+    if (insertedAssignments.length > 0) {
+      const { syncAssignmentToShifts } = await import("@/lib/actions/shift-planning");
+
+      for (const assignment of insertedAssignments) {
+        const syncResult = await syncAssignmentToShifts(assignment.id, assignment.employee_id, "future");
+        if (!syncResult.success) {
+          console.warn(`[UPDATE-ASSIGNMENTS] Sync fehlgeschlagen für Assignment ${assignment.id}:`, syncResult.message);
+        } else if (syncResult.updated_count > 0) {
+          console.log(`[UPDATE-ASSIGNMENTS] ${syncResult.updated_count} Shifts synchronisiert für Assignment ${assignment.id}`);
+        }
+      }
+    }
+
+    // 5. Generate shifts for current and next month based on the updated assignments
     await generateShiftsFromAssignments();
     // Sync time entries for all completed shifts (including past ones)
     await ensureShiftTimeEntriesSync();
 
-    // 5. Send notifications (optional, can be added later)
+    // 6. Send notifications (optional, can be added later)
 
     revalidatePath("/dashboard/planning");
     revalidatePath("/dashboard/orders");
@@ -753,9 +771,22 @@ export async function reassignSeriesAssignment(
         throw new Error(`Fehler beim Aktualisieren der Serie: ${updateError.message}`);
       }
 
+      // Sync to existing future shifts (solves "two truths" problem)
+      const { syncAssignmentToShifts } = await import("@/lib/actions/shift-planning");
+      const syncResult = await syncAssignmentToShifts(assignmentId, newEmployeeId, "future");
+
+      if (!syncResult.success) {
+        console.warn(`[REASSIGN-SERIES] Sync fehlgeschlagen:`, syncResult.message);
+      }
+
       revalidatePath("/dashboard/planning");
       revalidatePath("/dashboard/orders");
-      return { success: true, message: "Alle zukünftigen Termine wurden aktualisiert." };
+      return {
+        success: true,
+        message: syncResult.updated_count > 0
+          ? `Alle zukünftigen Termine wurden aktualisiert (${syncResult.updated_count} Shifts synchronisiert).`
+          : "Alle zukünftigen Termine wurden aktualisiert."
+      };
     }
     else {
       // "all" mode - update entire series (same as future for now)
@@ -771,9 +802,22 @@ export async function reassignSeriesAssignment(
         throw new Error(`Fehler beim Aktualisieren der Serie: ${updateError.message}`);
       }
 
+      // Sync to all shifts (solves "two truths" problem)
+      const { syncAssignmentToShifts } = await import("@/lib/actions/shift-planning");
+      const syncResult = await syncAssignmentToShifts(assignmentId, newEmployeeId, "all");
+
+      if (!syncResult.success) {
+        console.warn(`[REASSIGN-SERIES] Sync fehlgeschlagen:`, syncResult.message);
+      }
+
       revalidatePath("/dashboard/planning");
       revalidatePath("/dashboard/orders");
-      return { success: true, message: "Gesamte Serie wurde aktualisiert." };
+      return {
+        success: true,
+        message: syncResult.updated_count > 0
+          ? `Gesamte Serie wurde aktualisiert (${syncResult.updated_count} Shifts synchronisiert).`
+          : "Gesamte Serie wurde aktualisiert."
+      };
     }
   } catch (error: any) {
     console.error("Fehler beim Bearbeiten der Serie:", error.message);

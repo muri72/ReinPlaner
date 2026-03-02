@@ -18,6 +18,7 @@ import {
 import { getServices, Service } from "@/app/dashboard/services/actions";
 import { toast } from "sonner";
 import { DndContext, DragEndEvent, useSensor, useSensors, PointerSensor, DragOverlay, useDraggable } from "@dnd-kit/core";
+import { usePlanningData } from "@/hooks/use-planning-data";
 import { PlanningToolbar } from "@/components/planning-toolbar";
 import type { FilterValues } from "@/components/planning-toolbar";
 import { PlanningCalendar } from "@/components/planning-calendar";
@@ -67,8 +68,8 @@ export default function PlanningPage() {
   const [objects, setObjects] = React.useState<ObjectOption[]>([]);
   const [planningPageData, setPlanningPageData] = React.useState<ShiftPlanningPageData | null>(null);
   const [services, setServices] = React.useState<Service[]>([]);
-  const [loading, setLoading] = React.useState(true);
-  const [isNavigating, setIsNavigating] = React.useState(false); // Track navigation state for optimistic feedback
+  const [loading, setLoading] = React.useState(true); // Initial load only (true → false, never back to true)
+  const [isRefreshing, setIsRefreshing] = React.useState(false); // Background refresh for navigation
   const [activeDragId, setActiveDragId] = React.useState<string | null>(null);
   const [currentUser, setCurrentUser] = React.useState<any>(null);
   const [currentUserRole, setCurrentUserRole] = React.useState<'admin' | 'manager' | 'employee' | 'customer'>('employee');
@@ -158,6 +159,20 @@ export default function PlanningPage() {
   const searchParams = useSearchParams();
   const query = searchParams.get("query") || "";
 
+  // React Query for planning data - provides caching and automatic refetching
+  const planningQuery = usePlanningData({
+    currentDate,
+    viewMode,
+    query,
+    filters,
+  });
+
+  // Use React Query values - data is cached, isLoading only for initial load
+  const planningDataFromQuery = planningQuery.data?.data ?? null;
+  const isLoadingFromQuery = planningQuery.isLoading;
+  const isRefetchingFromQuery = planningQuery.isFetching && !planningQuery.isLoading;
+  const refetchQuery = planningQuery.refetch;
+
   const { startDate, endDate, daysToDisplay } = React.useMemo(() => {
     let start: Date;
     let end: Date;
@@ -179,12 +194,30 @@ export default function PlanningPage() {
     return { startDate: start, endDate: end, daysToDisplay: eachDayOfInterval({ start, end }) };
   }, [currentDate, viewMode]);
 
-  const fetchData = React.useCallback(async (start: Date, end: Date, searchQuery: string, displayDays: Date[], currentFilters: FilterValues) => {
+  // Debounced dates for non-blocking navigation - data loads only after user stops clicking
+  const [debouncedStartDate, setDebouncedStartDate] = React.useState(startDate);
+  const [debouncedEndDate, setDebouncedEndDate] = React.useState(endDate);
+
+  // Keep debounced dates in sync when startDate/endDate change (with 300ms delay)
+  React.useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedStartDate(startDate);
+      setDebouncedEndDate(endDate);
+    }, 300); // 300ms pause means user stopped clicking
+
+    return () => clearTimeout(handler);
+  }, [startDate, endDate]);
+
+  const fetchData = React.useCallback(async (start: Date, end: Date, searchQuery: string, displayDays: Date[], currentFilters: FilterValues, isInitialLoad = false) => {
     // Increment fetch ID for cancellation check
     const currentFetchId = ++fetchIdRef.current;
 
-    setLoading(true);
-    setIsNavigating(true); // Track navigation state for optimistic feedback
+    // Only use setLoading for initial load, use isRefreshing for subsequent loads (optimistic UI)
+    if (isInitialLoad) {
+      setLoading(true);
+    } else {
+      setIsRefreshing(true);
+    }
     const supabase = createClient();
     const {
       data: { user },
@@ -355,18 +388,62 @@ export default function PlanningPage() {
     }
 
     setLoading(false);
-    setIsNavigating(false); // Navigation complete
+    setIsRefreshing(false);
   }, []); // Empty deps - no dependency loops!
 
+  // Refresh data using React Query refetch - invalidates cache and refetches
   const refreshData = React.useCallback(() => {
-    void fetchData(startDate, endDate, query, daysToDisplay, filters);
-    // router.refresh() removed - client-side updates are sufficient for planning page
-  }, [fetchData, startDate, endDate, query, daysToDisplay, filters]);
+    void refetchQuery();
+  }, [refetchQuery]);
 
-  // Load planning data (daysToDisplay is derived from startDate/endDate - not needed in deps)
+  // React Query automatically manages data fetching based on query keys
+  // No manual useEffect needed for date/filter changes
+
+  // Auto-generate shifts if none exist for this month (Admin/Manager only, month view only)
   React.useEffect(() => {
-    fetchData(startDate, endDate, query, daysToDisplay, filters);
-  }, [startDate, endDate, query, filters]);
+    const checkAndGenerateMissingShifts = async () => {
+      // Only for admins and managers
+      if (!isAdmin && currentUserRole !== 'manager') return;
+
+      // Only check when viewing a full month
+      if (viewMode !== 'month') return;
+
+      // Check if we have any shifts for this month
+      const hasShifts = planningDataFromQuery?.planningData &&
+        Object.values(planningDataFromQuery.planningData).some(
+          employee => Object.values(employee.schedule).some(
+            day => day.shifts.length > 0
+          )
+        );
+
+      // If no shifts found, generate them
+      if (!hasShifts && !isLoadingFromQuery) {
+        console.log('[AUTO-GENERATE] No shifts found for', format(debouncedStartDate, 'MMMM yyyy'), '- generating...');
+        try {
+          const { generateShiftsFromAssignments } = await import('@/lib/actions/shift-planning');
+          const result = await generateShiftsFromAssignments();
+
+          if (result.success) {
+            console.log('[AUTO-GENERATE] Generated', result.created_count, 'shifts');
+            toast.success(`${result.created_count || 0} Shifts automatisch generiert`);
+            // Refresh data to show newly generated shifts
+            refreshData();
+          } else {
+            console.warn('[AUTO-GENERATE] Failed:', result.message);
+          }
+        } catch (err) {
+          console.error('[AUTO-GENERATE] Error:', err);
+        }
+      }
+    };
+
+    // Small delay to ensure planningDataFromQuery is populated
+    const timeoutId = setTimeout(() => {
+      checkAndGenerateMissingShifts();
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
+  }, [debouncedStartDate, debouncedEndDate, viewMode, planningDataFromQuery, isAdmin, currentUserRole, isLoadingFromQuery, refreshData]);
 
   React.useEffect(() => {
     setMobileSelectedDate((previous) => {
@@ -431,9 +508,9 @@ export default function PlanningPage() {
     console.log('Open create order dialog');
   }, []);
 
-  const planningData = planningPageData?.planningData ?? {};
-  const unassignedShifts = planningPageData?.unassignedShifts ?? [];
-  const weekNumber = planningPageData?.weekNumber ?? 0;
+  const planningData = planningDataFromQuery?.planningData ?? {};
+  const unassignedShifts = planningDataFromQuery?.unassignedShifts ?? [];
+  const weekNumber = planningDataFromQuery?.weekNumber ?? 0;
 
   const mobileUnassignedCount = React.useMemo(() => {
     if (unassignedShifts.length === 0) {
@@ -680,17 +757,16 @@ export default function PlanningPage() {
               onShowUnassignedChange={handleMobileShowUnassignedChange}
               unassignedCount={mobileUnassignedCount}
               onCreateOrder={openOrderDialog}
-              isNavigating={isNavigating}
             />
             <PlanningKpiSummary
               planningData={planningData}
               unassignedOrders={unassignedShifts}
               selectedDate={selectedDateForMetrics}
               dateRange={dateRangeForMetrics}
-              isLoading={loading}
+              isLoading={isLoadingFromQuery}
             />
             <div className="flex-1 min-h-0">
-              {loading ? (
+              {isLoadingFromQuery ? (
                 <Skeleton className="h-full w-full" />
               ) : (
                 <MobilePlanningCalendar
@@ -719,7 +795,6 @@ export default function PlanningPage() {
               onShowUnassignedChange={setShowUnassigned}
               currentUserId={currentUser?.id}
               isAdmin={isAdmin}
-              isNavigating={isNavigating}
               onActionSuccess={refreshData}
               filters={filters}
               onFiltersChange={(newFilters) => {
@@ -737,10 +812,10 @@ export default function PlanningPage() {
               unassignedOrders={unassignedShifts}
               selectedDate={selectedDateForMetrics}
               dateRange={dateRangeForMetrics}
-              isLoading={loading}
+              isLoading={isLoadingFromQuery}
             />
             <div className="flex-1 min-h-0">
-              {loading ? (
+              {isLoadingFromQuery ? (
                 <Skeleton className="h-full w-full" />
               ) : viewMode === "month" ? (
                 <PlanningCalendarMonth

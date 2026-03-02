@@ -295,19 +295,27 @@ export async function getShiftPlanningData(
     const { data: assignmentsData, error: assignmentsError } = assignmentsResult;
     if (assignmentsError) throw assignmentsError;
 
-    // OPTIONAL: Load additional assignments for completed shifts whose assignment was removed
-    // This ensures completed shifts are still shown after employee removal
+    // PERFORMANCE OPTIMIZATION: Create a Map of assignments for O(1) lookups
+    const assignmentsMap = new Map(
+      (assignmentsData || []).map((a: any) => [a.id, a])
+    );
+
+    // OPTIMIZATION: Check if we need additional assignments (for completed shifts with removed assignments)
+    // Only fetch if there are shifts with assignment_id not in our assignments data
     let assignments = assignmentsData;
     if (existingShifts && existingShifts.length > 0) {
-      const existingIds = new Set(assignments?.map((a: any) => a.id) || []);
-      const shiftAssignmentIds = [...new Set(existingShifts.map((s: any) => s.assignment_id).filter(Boolean))];
-      const missingAssignmentIds = shiftAssignmentIds.filter((id: any) => !existingIds.has(id));
+      const shiftAssignmentIds = new Set(
+        existingShifts.map((s: any) => s.assignment_id).filter(Boolean)
+      );
+
+      // Check if any shift assignment IDs are not in our assignments map
+      const missingAssignmentIds = [...shiftAssignmentIds].filter(id => !assignmentsMap.has(id));
 
       if (missingAssignmentIds.length > 0) {
         const { data: additionalAssignments, error: additionalError } = await supabaseAdmin
           .from("order_employee_assignments")
           .select(`
-            *,
+            id,
             orders!inner (
               id, title, priority, object_id, service_type, total_estimated_hours,
               objects (id, name, address)
@@ -317,12 +325,21 @@ export async function getShiftPlanningData(
           .in("id", missingAssignmentIds);
 
         if (!additionalError && additionalAssignments && additionalAssignments.length > 0) {
-          // Merge additional assignments with the main list
-          const newAssignments = (additionalAssignments as any[]).filter(a => !existingIds.has(a.id));
-          assignments = [...(assignments || []), ...newAssignments];
+          // Merge additional assignments and update map
+          const newAssignments = additionalAssignments.filter((a: any) => !assignmentsMap.has(a.id));
+          assignments = [...assignments, ...newAssignments];
+          // Update map with new assignments
+          for (const a of newAssignments) {
+            assignmentsMap.set(a.id, a);
+          }
         }
       }
     }
+
+    // PERFORMANCE OPTIMIZATION: Create a Map of employees for O(1) lookups
+    const employeesMap = new Map(
+      (employees || []).map((e: any) => [e.id, e])
+    );
 
     // 5. PRE-BUILD TEAM MEMBERS LOOKUP MAP (Performance Optimization)
     // Instead of O(n²) nested loops, build a lookup map once
@@ -339,7 +356,8 @@ export async function getShiftPlanningData(
     for (const shift of (existingShifts || [])) {
       if (!shift?.shift_date || !shift?.assignment_id) continue;
 
-      const assignment = assignments?.find((a: any) => a.id === shift.assignment_id);
+      // O(1) lookup instead of O(n) find
+      const assignment = assignmentsMap.get(shift.assignment_id);
       if (!assignment) continue;
 
       const orderId = assignment.order_id;
@@ -357,7 +375,8 @@ export async function getShiftPlanningData(
 
       // Add each employee to the team member list for this order/date
       for (const se of shiftEmployees) {
-        const empData = employees.find((e: any) => e.id === se.employee_id);
+        // O(1) lookup instead of O(n) find
+        const empData = employeesMap.get(se.employee_id);
         if (empData) {
           teamMembersByOrderDate[orderId][dateKey].push({
             employeeId: se.employee_id,
@@ -391,8 +410,8 @@ export async function getShiftPlanningData(
         // Direct shift with order_id
         orderId = shift.order_id;
       } else if (shift?.assignment_id) {
-        // Shift from assignment
-        const shiftAssignment = (assignments || []).find((a: any) => a.id === shift.assignment_id);
+        // Shift from assignment - O(1) lookup
+        const shiftAssignment = assignmentsMap.get(shift.assignment_id);
         orderId = shiftAssignment?.orders?.id || null;
       }
 
@@ -468,7 +487,8 @@ export async function getShiftPlanningData(
         let order: any = null;
 
         if (shift?.assignment_id) {
-          assignment = assignments?.find((a: any) => a.id === shift.assignment_id);
+          // O(1) lookup instead of O(n) find
+          assignment = assignmentsMap.get(shift.assignment_id);
           order = assignment?.orders;
         }
 
@@ -635,7 +655,8 @@ export async function getShiftPlanningData(
           employeeSchedule[dateString].totalHours += hours;
 
           // Check if this is a recurring assignment (has daily schedules defined)
-          const assignment = assignments?.find((a: any) => a.id === shiftData.assignmentId);
+          // O(1) lookup instead of O(n) find
+          const assignment = shiftData.assignmentId ? assignmentsMap.get(shiftData.assignmentId) : null;
           const isRecurring = !!(
             assignment &&
             assignment.assigned_daily_schedules &&
@@ -1100,6 +1121,117 @@ export async function updateShiftStatus(
     return { success: true, message: "Status erfolgreich aktualisiert." };
   } catch (error: any) {
     return { success: false, message: `Fehler: ${error.message}` };
+  }
+}
+
+// ============================================================================
+// SYNC ASSIGNMENT TO SHIFTS (solves "two truths" problem)
+// ============================================================================
+
+/**
+ * Synchronisiert Mitarbeiter-Änderungen von order_employee_assignments zu shift_employees
+ *
+ * Löst das "zwei Wahrheiten" Problem durch Synchronisation bei Assignment-Änderungen.
+ * Stellt sicher, dass sowohl bereits generierte Shifts als auch zukünftige Generierung
+ * konsistent sind.
+ *
+ * @param assignmentId - Die ID des order_employee_assignments Datensatzes
+ * @param newEmployeeId - Der neue Mitarbeiter für alle Shifts
+ * @param mode - "future" (ab heute) oder "all"
+ * @returns success, message, updated_count
+ */
+export async function syncAssignmentToShifts(
+  assignmentId: string,
+  newEmployeeId: string,
+  mode: "future" | "all" = "future"
+): Promise<{ success: boolean; message: string; updated_count: number }> {
+  const supabaseAdmin = createAdminClient();
+  const today = format(new Date(), "yyyy-MM-dd");
+
+  console.log("[SYNC-ASSIGNMENT] Starting sync:", { assignmentId, newEmployeeId, mode });
+
+  try {
+    // 1. Race Condition Check: Ist Assignment noch aktuell?
+    const { data: assignment } = await supabaseAdmin
+      .from("order_employee_assignments")
+      .select("employee_id")
+      .eq("id", assignmentId)
+      .single();
+
+    if (!assignment) {
+      console.warn("[SYNC-ASSIGNMENT] Assignment nicht gefunden:", assignmentId);
+      return { success: false, message: "Assignment nicht gefunden", updated_count: 0 };
+    }
+
+    // 2. Finde alle betroffenen Shifts (mit Limits für Performance)
+    let shiftsQuery = supabaseAdmin
+      .from("shifts")
+      .select("id, status")
+      .eq("assignment_id", assignmentId)
+      .neq("status", "completed")  // Abgeschlossene Shifts schützen
+      .limit(1000);  // Safety limit
+
+    if (mode === "future") {
+      shiftsQuery = shiftsQuery.gte("shift_date", today);
+    }
+
+    const { data: shifts, error: shiftsError } = await shiftsQuery;
+
+    if (shiftsError) {
+      console.error("[SYNC-ASSIGNMENT] Error fetching shifts:", shiftsError);
+      throw shiftsError;
+    }
+
+    if (!shifts || shifts.length === 0) {
+      console.log("[SYNC-ASSIGNMENT] Keine Shifts zu aktualisieren");
+      return { success: true, message: "Keine Shifts zu aktualisieren", updated_count: 0 };
+    }
+
+    // 3. Batch-Update von shift_employees (delete + insert für alle betroffenen Shifts)
+    const shiftIds = shifts.map(shift => shift.id);
+
+    // Zuerst alle alten Einträge für diese Shifts löschen
+    const { error: deleteError } = await supabaseAdmin
+      .from("shift_employees")
+      .delete()
+      .in("shift_id", shiftIds);
+
+    if (deleteError) {
+      console.error("[SYNC-ASSIGNMENT] Error deleting old assignments:", deleteError);
+      throw deleteError;
+    }
+
+    // Dann neue Einträge mit dem neuen Mitarbeiter erstellen
+    const shiftEmployees = shiftIds.map(shiftId => ({
+      shift_id: shiftId,
+      employee_id: newEmployeeId,
+      role: "worker" as const
+    }));
+
+    const { error: insertError } = await supabaseAdmin
+      .from("shift_employees")
+      .insert(shiftEmployees);
+
+    if (insertError) {
+      console.error("[SYNC-ASSIGNMENT] Error inserting new assignments:", insertError);
+      throw insertError;
+    }
+
+    console.log(`[SYNC-ASSIGNMENT] ${shifts.length} Shifts aktualisiert für Assignment ${assignmentId}`);
+
+    return {
+      success: true,
+      message: `${shifts.length} Shift(s) aktualisiert`,
+      updated_count: shifts.length
+    };
+
+  } catch (error: any) {
+    console.error("[SYNC-ASSIGNMENT] Error:", error);
+    return {
+      success: false,
+      message: `Fehler beim Synchronisieren: ${error.message}`,
+      updated_count: 0
+    };
   }
 }
 

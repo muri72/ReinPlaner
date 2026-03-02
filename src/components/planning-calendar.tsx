@@ -416,6 +416,8 @@ export function PlanningCalendar({
           </TableRow>
         </TableHeader>
         <TableBody>
+          <TooltipProvider>
+            {/* TooltipProvider wrapper to avoid Hooks order issues inside .map() loops */}
           {/* Unassigned Orders Row */}
           {showUnassigned && (
             <TableRow className="bg-amber-50/50">
@@ -499,7 +501,8 @@ export function PlanningCalendar({
               const isAbsentToday = todayData?.isAbsence;
 
               // Calculate absence ranges for Outlook-style display
-              const absenceRanges = React.useMemo(() => getAbsenceRanges(employee, weekDays), [employee, weekDays, getAbsenceRanges]);
+              // Note: useMemo not used here as it would violate Rules of Hooks (called inside .map)
+              const absenceRanges = getAbsenceRanges(employee, weekDays);
 
               return (
                 <TableRow key={id}>
@@ -760,6 +763,7 @@ export function PlanningCalendar({
               );
             })
           )}
+          </TooltipProvider>
         </TableBody>
       </Table>
     </div>

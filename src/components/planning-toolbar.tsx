@@ -4,7 +4,7 @@ import * as React from "react";
 import { format, addDays, subDays, startOfWeek, endOfWeek, addMonths, subMonths, startOfMonth, startOfDay } from "date-fns";
 import { de } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Filter, Eye, EyeOff, PlusCircle, Users, Building2, Briefcase, Clock, Loader2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Filter, Eye, EyeOff, PlusCircle, Users, Building2, Briefcase, Clock, CalendarPlus } from "lucide-react";
 import { DatePicker } from "@/components/date-picker";
 import {
   DropdownMenu,
@@ -47,7 +47,6 @@ interface PlanningToolbarProps {
   availableEmployees?: { id: string; name: string }[];
   availableServices?: { id: string; name: string }[];
   availableCustomers?: { id: string; name: string }[];
-  isNavigating?: boolean; // Show loading state on navigation buttons
 }
 
 export function PlanningToolbar({
@@ -70,7 +69,6 @@ export function PlanningToolbar({
   availableEmployees = [],
   availableServices = [],
   availableCustomers = [],
-  isNavigating = false,
 }: PlanningToolbarProps) {
   const [createShiftOpen, setCreateShiftOpen] = React.useState(false);
   const [filterDialogOpen, setFilterDialogOpen] = React.useState(false);
@@ -161,11 +159,35 @@ export function PlanningToolbar({
             <span className="text-xs">Heute</span>
             <span className="text-xs font-mono">{format(new Date(), "dd.MM.yyyy", { locale: de })}</span>
           </Button>
-          <Button variant="outline" size="icon" onClick={handlePrev} disabled={isNavigating}>
-            {isNavigating ? <Loader2 className="h-4 w-4 animate-spin" /> : <ChevronLeft className="h-4 w-4" />}
+          {isAdmin && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                toast.info("Generiere Shifts...");
+                try {
+                  const { generateShiftsFromAssignments } = await import('@/lib/actions/shift-planning');
+                  const result = await generateShiftsFromAssignments();
+                  if (result.success) {
+                    toast.success(`${result.created_count || 0} Shifts generiert`);
+                    onActionSuccess?.();
+                  } else {
+                    toast.error(result.message);
+                  }
+                } catch (err) {
+                  toast.error("Fehler beim Generieren der Shifts");
+                }
+              }}
+            >
+              <CalendarPlus className="h-4 w-4 mr-2" />
+              Shifts generieren
+            </Button>
+          )}
+          <Button variant="outline" size="icon" onClick={handlePrev}>
+            <ChevronLeft className="h-4 w-4" />
           </Button>
-          <Button variant="outline" size="icon" onClick={handleNext} disabled={isNavigating}>
-            {isNavigating ? <Loader2 className="h-4 w-4 animate-spin" /> : <ChevronRight className="h-4 w-4" />}
+          <Button variant="outline" size="icon" onClick={handleNext}>
+            <ChevronRight className="h-4 w-4" />
           </Button>
           <DatePicker
             value={currentDate}
