@@ -276,7 +276,7 @@ export function PlanningFilterDialog({
                         color: service.color ? "white" : undefined,
                       }}
                     >
-                      {service.title || service.name}
+                      {service.title}
                       <X
                         className="h-3 w-3 cursor-pointer"
                         onClick={() => {
