@@ -33,6 +33,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { cn } from "@/lib/utils";
+import { useDebouncedCallback } from "use-debounce";
 
 const formSchema = z.object({
   objects: z.array(z.string()).optional(),
@@ -89,9 +90,14 @@ export function PlanningFilterDialog({
   const prevValuesRef = React.useRef<FilterValues>(formValues);
 
   React.useEffect(() => {
-    // Only update if values actually changed (deep comparison)
-    const hasChanged = JSON.stringify(formValues) !== JSON.stringify(prevValuesRef.current);
-    if (hasChanged) {
+    // Only update if values actually changed - compare only filter values that matter
+    const hasFilterChanges =
+      JSON.stringify(formValues.objects) !== JSON.stringify(prevValuesRef.current.objects) ||
+      JSON.stringify(formValues.services) !== JSON.stringify(prevValuesRef.current.services) ||
+      formValues.shiftStatus !== prevValuesRef.current.shiftStatus ||
+      formValues.showAvailableOnly !== prevValuesRef.current.showAvailableOnly;
+
+    if (hasFilterChanges) {
       setLocalFilters(formValues);
       prevValuesRef.current = formValues;
     }
@@ -103,6 +109,50 @@ export function PlanningFilterDialog({
     setIsOpen(false);
     onOpenChange(false);
   };
+
+  // Debounced filter apply - prevents rapid changes from triggering multiple refetches
+  const debouncedOnFiltersChange = React.useCallback(
+    useDebouncedCallback(
+      (filters: FilterValues) => {
+        onFiltersChange(filters);
+      },
+      300 // 300ms delay - user can continue adjusting filters before fetch triggers
+    ),
+    [onFiltersChange]
+  );
+
+  // Memoized handlers for badge removal - prevents new function creation on each render
+  const handleRemoveObject = React.useCallback((id: string) => {
+    setLocalFilters(prev => {
+      const newObjects = prev.objects?.filter((o) => o !== id) || [];
+      const updated = { ...prev, objects: newObjects.length > 0 ? newObjects : undefined };
+      form.setValue("objects", updated.objects);
+      return updated;
+    });
+  }, [form]);
+
+  const handleRemoveService = React.useCallback((id: string) => {
+    setLocalFilters(prev => {
+      const newServices = prev.services?.filter((s) => s !== id) || [];
+      const updated = { ...prev, services: newServices.length > 0 ? newServices : undefined };
+      form.setValue("services", updated.services);
+      return updated;
+    });
+  }, [form]);
+
+  const handleRemoveShiftStatus = React.useCallback(() => {
+    setLocalFilters(prev => {
+      form.setValue("shiftStatus", undefined);
+      return { ...prev, shiftStatus: undefined };
+    });
+  }, [form]);
+
+  const handleRemoveShowAvailableOnly = React.useCallback(() => {
+    setLocalFilters(prev => {
+      form.setValue("showAvailableOnly", false);
+      return { ...prev, showAvailableOnly: false };
+    });
+  }, [form]);
 
   const activeFilterCount = React.useMemo(() => {
     let count = 0;
@@ -251,16 +301,7 @@ export function PlanningFilterDialog({
                   return obj ? (
                     <Badge key={id} variant="secondary" className="gap-1">
                       {obj.name}
-                      <X
-                        className="h-3 w-3 cursor-pointer"
-                        onClick={() => {
-                          // Update local state and form synchronously
-                          const newObjects = localFilters.objects?.filter((o) => o !== id) || [];
-                          const updatedFilters = { ...localFilters, objects: newObjects.length > 0 ? newObjects : undefined };
-                          setLocalFilters(updatedFilters);
-                          form.setValue('objects', newObjects.length > 0 ? newObjects : undefined);
-                        }}
-                      />
+                      <X className="h-3 w-3 cursor-pointer" onClick={() => handleRemoveObject(id)} />
                     </Badge>
                   ) : null;
                 })}
@@ -277,16 +318,7 @@ export function PlanningFilterDialog({
                       }}
                     >
                       {service.title}
-                      <X
-                        className="h-3 w-3 cursor-pointer"
-                        onClick={() => {
-                          // Update local state and form synchronously
-                          const newServices = localFilters.services?.filter((s) => s !== id) || [];
-                          const updatedFilters = { ...localFilters, services: newServices.length > 0 ? newServices : undefined };
-                          setLocalFilters(updatedFilters);
-                          form.setValue('services', newServices.length > 0 ? newServices : undefined);
-                        }}
-                      />
+                      <X className="h-3 w-3 cursor-pointer" onClick={() => handleRemoveService(id)} />
                     </Badge>
                   ) : null;
                 })}
@@ -295,27 +327,13 @@ export function PlanningFilterDialog({
                     {localFilters.shiftStatus === 'scheduled' && 'Geplant'}
                     {localFilters.shiftStatus === 'in_progress' && 'In Bearbeitung'}
                     {localFilters.shiftStatus === 'completed' && 'Abgeschlossen'}
-                    <X
-                      className="h-3 w-3 cursor-pointer"
-                      onClick={() => {
-                        const updatedFilters = { ...localFilters, shiftStatus: undefined };
-                        setLocalFilters(updatedFilters);
-                        form.setValue('shiftStatus', undefined);
-                      }}
-                    />
+                    <X className="h-3 w-3 cursor-pointer" onClick={handleRemoveShiftStatus} />
                   </Badge>
                 )}
                 {localFilters.showAvailableOnly && (
                   <Badge variant="outline" className="gap-1">
                     Nur verfügbar
-                    <X
-                      className="h-3 w-3 cursor-pointer"
-                      onClick={() => {
-                        const updatedFilters = { ...localFilters, showAvailableOnly: false };
-                        setLocalFilters(updatedFilters);
-                        form.setValue('showAvailableOnly', false);
-                      }}
-                    />
+                    <X className="h-3 w-3 cursor-pointer" onClick={handleRemoveShowAvailableOnly} />
                   </Badge>
                 )}
                 <Button

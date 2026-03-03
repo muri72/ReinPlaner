@@ -805,7 +805,8 @@ export default function PlanningPage() {
               filters={filters}
               onFiltersChange={(newFilters) => {
                 setFilters(newFilters);
-                refreshData();
+                // React Query automatically refetches when filters change (query key dependency)
+                // No need to call refreshData() - it would cause a duplicate fetch
               }}
               objects={objects}
               services={services.map(s => ({ id: s.id, title: s.name, color: s.color }))}
