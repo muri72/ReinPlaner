@@ -174,7 +174,7 @@ export function PlanningFilterDialog({
                     Service-Typen
                   </FormLabel>
                   <MultiSelect
-                    items={services.map(s => ({ id: s.id, name: s.title || s.name || '', color: s.color }))}
+                    items={services.map(s => ({ id: s.id, name: s.title, color: s.color }))}
                     selectedIds={field.value || []}
                     onSelectionChange={(ids) => field.onChange(ids.length > 0 ? ids : undefined)}
                     placeholder="Services auswählen..."
