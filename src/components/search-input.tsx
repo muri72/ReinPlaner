@@ -32,7 +32,7 @@ export function SearchInput({ placeholder, className }: SearchInputProps) {
       params.delete("query");
     }
     replace(`${pathname}?${params.toString()}`);
-  }, 300);
+  }, 200); // Reduced from 300ms for faster feedback
 
   return (
     <div className={cn("relative w-full", className)}>
@@ -45,9 +45,9 @@ export function SearchInput({ placeholder, className }: SearchInputProps) {
           handleSearch(e.target.value);
         }}
         ref={inputRef}
-        className="pl-10 pr-4 py-2 text-sm w-full"
+        className={cn("pl-10 pr-4 w-full", className)}
       />
-      <SearchIcon className="absolute left-3 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-muted-foreground" />
+      <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
     </div>
   );
 }

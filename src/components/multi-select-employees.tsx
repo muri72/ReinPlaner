@@ -113,7 +113,7 @@ export function MultiSelectEmployees({
       <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
         <Command>
           <CommandInput placeholder="Mitarbeiter suchen..." />
-          <CommandList>
+          <CommandList className="max-h-[250px] overflow-y-auto">
             <CommandEmpty>Keine Mitarbeiter gefunden.</CommandEmpty>
             <CommandGroup heading="Aktive Mitarbeiter">
               {selectableEmployees.map((employee) => (

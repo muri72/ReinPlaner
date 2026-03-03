@@ -46,9 +46,11 @@ export function usePlanningData({ currentDate, viewMode, query, filters }: Plann
       startDate: startDate.toISOString(),
       endDate: endDate.toISOString(),
       query,
-      objectFilters: filters.objects?.sort(),
-      serviceFilters: filters.services?.sort(),
+      // Create copies before sorting to avoid mutating the original filter arrays
+      objectFilters: filters.objects ? [...filters.objects].sort() : undefined,
+      serviceFilters: filters.services ? [...filters.services].sort() : undefined,
       showAvailableOnly: filters.showAvailableOnly,
+      shiftStatus: filters.shiftStatus,
     }
   ] as const;
 
@@ -61,6 +63,7 @@ export function usePlanningData({ currentDate, viewMode, query, filters }: Plann
           objects: filters.objects,
           services: filters.services,
           showAvailableOnly: filters.showAvailableOnly,
+          shiftStatus: filters.shiftStatus,
         }
       }),
     // React Query handles caching automatically

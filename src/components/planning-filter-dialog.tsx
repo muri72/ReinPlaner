@@ -27,6 +27,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { MultiSelect } from "@/components/ui/multi-select";
 import { Filter, X, Building2, Briefcase, Calendar, Clock } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -70,13 +71,34 @@ export function PlanningFilterDialog({
   const form = useForm<FilterValues>({
     resolver: zodResolver(formSchema),
     defaultValues: filters,
+    mode: "all", // Validate on submit, not on every change
   });
 
+  // Local state for temporary filter values (updated by badges, form changes)
+  const [localFilters, setLocalFilters] = React.useState<FilterValues>(filters);
+
+  // Sync local filters when filters prop changes (dialog opens, etc.)
   React.useEffect(() => {
+    setLocalFilters(filters);
     form.reset(filters);
   }, [filters, form]);
 
+  // IMPORTANT: Watch form changes and update localFilters
+  // Use deep comparison to avoid infinite loops
+  const formValues = form.watch();
+  const prevValuesRef = React.useRef<FilterValues>(formValues);
+
+  React.useEffect(() => {
+    // Only update if values actually changed (deep comparison)
+    const hasChanged = JSON.stringify(formValues) !== JSON.stringify(prevValuesRef.current);
+    if (hasChanged) {
+      setLocalFilters(formValues);
+      prevValuesRef.current = formValues;
+    }
+  }, [formValues]);
+
   const onSubmit = (values: FilterValues) => {
+    // Use current form values which include all MultiSelect changes
     onFiltersChange(values);
     setIsOpen(false);
     onOpenChange(false);
@@ -84,12 +106,12 @@ export function PlanningFilterDialog({
 
   const activeFilterCount = React.useMemo(() => {
     let count = 0;
-    if (filters.objects?.length) count++;
-    if (filters.services?.length) count++;
-    if (filters.shiftStatus && filters.shiftStatus !== "all") count++;
-    if (filters.showAvailableOnly) count++;
+    if (localFilters.objects?.length) count++;
+    if (localFilters.services?.length) count++;
+    if (localFilters.shiftStatus && localFilters.shiftStatus !== "all") count++;
+    if (localFilters.showAvailableOnly) count++;
     return count;
-  }, [filters]);
+  }, [localFilters]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -128,30 +150,14 @@ export function PlanningFilterDialog({
                     <Building2 className="h-4 w-4" />
                     Objekte
                   </FormLabel>
-                  <Select
-                    value={field.value?.[0] || ""}
-                    onValueChange={(value) => {
-                      if (value === "all" || !value) {
-                        field.onChange(undefined);
-                      } else {
-                        field.onChange([value]);
-                      }
-                    }}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Alle Objekte" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="all">Alle Objekte</SelectItem>
-                      {objects.map((obj) => (
-                        <SelectItem key={obj.id} value={obj.id}>
-                          {obj.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <MultiSelect
+                    items={objects.map(o => ({ id: o.id, name: o.name }))}
+                    selectedIds={field.value || []}
+                    onSelectionChange={(ids) => field.onChange(ids.length > 0 ? ids : undefined)}
+                    placeholder="Objekte auswählen..."
+                    searchPlaceholder="Objekt suchen..."
+                    emptyMessage="Keine Objekte gefunden."
+                  />
                 </FormItem>
               )}
             />
@@ -167,39 +173,14 @@ export function PlanningFilterDialog({
                     <Briefcase className="h-4 w-4" />
                     Service-Typen
                   </FormLabel>
-                  <div className="flex flex-wrap gap-2 mt-2 max-h-32 overflow-y-auto">
-                    {services.map((service) => (
-                      <label
-                        key={service.id}
-                        className={cn(
-                          "cursor-pointer inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm border transition-colors",
-                          field.value?.includes(service.id)
-                            ? "text-white"
-                            : "bg-background hover:bg-muted"
-                        )}
-                        style={{
-                          backgroundColor: field.value?.includes(service.id)
-                            ? service.color || "var(--primary)"
-                            : undefined,
-                          borderColor: service.color || "var(--border)",
-                        }}
-                      >
-                        <Checkbox
-                          checked={field.value?.includes(service.id) || false}
-                          onCheckedChange={(checked) => {
-                            const current = field.value || [];
-                            if (checked) {
-                              field.onChange([...current, service.id]);
-                            } else {
-                              field.onChange(current.filter((id: string) => id !== service.id));
-                            }
-                          }}
-                          className="sr-only"
-                        />
-                        {service.title}
-                      </label>
-                    ))}
-                  </div>
+                  <MultiSelect
+                    items={services.map(s => ({ id: s.id, name: s.title || s.name || '', color: s.color }))}
+                    selectedIds={field.value || []}
+                    onSelectionChange={(ids) => field.onChange(ids.length > 0 ? ids : undefined)}
+                    placeholder="Services auswählen..."
+                    searchPlaceholder="Service suchen..."
+                    emptyMessage="Keine Services gefunden."
+                  />
                 </FormItem>
               )}
             />
@@ -265,7 +246,7 @@ export function PlanningFilterDialog({
             {activeFilterCount > 0 && (
               <div className="flex flex-wrap gap-2 items-center">
                 <span className="text-sm text-muted-foreground">Aktiv:</span>
-                {filters.objects?.map((id) => {
+                {localFilters.objects?.map((id) => {
                   const obj = objects.find((o) => o.id === id);
                   return obj ? (
                     <Badge key={id} variant="secondary" className="gap-1">
@@ -273,13 +254,17 @@ export function PlanningFilterDialog({
                       <X
                         className="h-3 w-3 cursor-pointer"
                         onClick={() => {
-                          onFiltersChange({ ...filters, objects: undefined });
+                          // Update local state and form synchronously
+                          const newObjects = localFilters.objects?.filter((o) => o !== id) || [];
+                          const updatedFilters = { ...localFilters, objects: newObjects.length > 0 ? newObjects : undefined };
+                          setLocalFilters(updatedFilters);
+                          form.setValue('objects', newObjects.length > 0 ? newObjects : undefined);
                         }}
                       />
                     </Badge>
                   ) : null;
                 })}
-                {filters.services?.map((id) => {
+                {localFilters.services?.map((id) => {
                   const service = services.find((s) => s.id === id);
                   return service ? (
                     <Badge
@@ -291,22 +276,58 @@ export function PlanningFilterDialog({
                         color: service.color ? "white" : undefined,
                       }}
                     >
-                      {service.title}
+                      {service.title || service.name}
                       <X
                         className="h-3 w-3 cursor-pointer"
                         onClick={() => {
-                          const newServices = filters.services?.filter((s) => s !== id);
-                          onFiltersChange({ ...filters, services: newServices });
+                          // Update local state and form synchronously
+                          const newServices = localFilters.services?.filter((s) => s !== id) || [];
+                          const updatedFilters = { ...localFilters, services: newServices.length > 0 ? newServices : undefined };
+                          setLocalFilters(updatedFilters);
+                          form.setValue('services', newServices.length > 0 ? newServices : undefined);
                         }}
                       />
                     </Badge>
                   ) : null;
                 })}
+                {localFilters.shiftStatus && localFilters.shiftStatus !== 'all' && (
+                  <Badge variant="outline" className="gap-1">
+                    {localFilters.shiftStatus === 'scheduled' && 'Geplant'}
+                    {localFilters.shiftStatus === 'in_progress' && 'In Bearbeitung'}
+                    {localFilters.shiftStatus === 'completed' && 'Abgeschlossen'}
+                    <X
+                      className="h-3 w-3 cursor-pointer"
+                      onClick={() => {
+                        const updatedFilters = { ...localFilters, shiftStatus: undefined };
+                        setLocalFilters(updatedFilters);
+                        form.setValue('shiftStatus', undefined);
+                      }}
+                    />
+                  </Badge>
+                )}
+                {localFilters.showAvailableOnly && (
+                  <Badge variant="outline" className="gap-1">
+                    Nur verfügbar
+                    <X
+                      className="h-3 w-3 cursor-pointer"
+                      onClick={() => {
+                        const updatedFilters = { ...localFilters, showAvailableOnly: false };
+                        setLocalFilters(updatedFilters);
+                        form.setValue('showAvailableOnly', false);
+                      }}
+                    />
+                  </Badge>
+                )}
                 <Button
                   variant="ghost"
                   size="sm"
                   className="ml-auto text-muted-foreground"
-                  onClick={onClearAll}
+                  onClick={() => {
+                    onClearAll();
+                    const emptyFilters: FilterValues = {};
+                    setLocalFilters(emptyFilters);
+                    form.reset(emptyFilters);
+                  }}
                 >
                   <X className="h-3 w-3 mr-1" />
                   Alle löschen
@@ -318,7 +339,12 @@ export function PlanningFilterDialog({
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Abbrechen
               </Button>
-              <Button type="button" variant="outline" onClick={onClearAll}>
+              <Button type="button" variant="outline" onClick={() => {
+                onClearAll();
+                const emptyFilters: FilterValues = {};
+                setLocalFilters(emptyFilters);
+                form.reset(emptyFilters);
+              }}>
                 Zurücksetzen
               </Button>
               <Button type="submit">Anwenden</Button>

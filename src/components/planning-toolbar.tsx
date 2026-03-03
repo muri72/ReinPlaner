@@ -4,7 +4,7 @@ import * as React from "react";
 import { format, addDays, subDays, startOfWeek, endOfWeek, addMonths, subMonths, startOfMonth, startOfDay } from "date-fns";
 import { de } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Filter, Eye, EyeOff, PlusCircle, Users, Building2, Briefcase, Clock, CalendarPlus } from "lucide-react";
+import { ChevronLeft, ChevronRight, Filter, Eye, EyeOff, PlusCircle, Users, Building2, Briefcase, Clock, Calendar, CalendarPlus, XCircle } from "lucide-react";
 import { DatePicker } from "@/components/date-picker";
 import {
   DropdownMenu,
@@ -17,6 +17,8 @@ import { cn } from "@/lib/utils";
 import { CreateShiftDialog } from "@/components/create-shift-dialog";
 import { Input } from "@/components/ui/input";
 import { PlanningFilterDialog } from "./planning-filter-dialog";
+import { SearchInput } from "@/components/search-input";
+import { List, CheckCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 
@@ -153,52 +155,60 @@ export function PlanningToolbar({
 
   return (
     <div className="flex flex-col gap-3 p-4 border rounded-lg shadow-neumorphic glassmorphism-card">
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={() => onDateChange(new Date())} className="flex flex-col items-center h-auto py-2 px-3">
-            <span className="text-xs">Heute</span>
-            <span className="text-xs font-mono">{format(new Date(), "dd.MM.yyyy", { locale: de })}</span>
-          </Button>
-          {isAdmin && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={async () => {
-                toast.info("Generiere Shifts...");
-                try {
-                  const { generateShiftsFromAssignments } = await import('@/lib/actions/shift-planning');
-                  const result = await generateShiftsFromAssignments();
-                  if (result.success) {
-                    toast.success(`${result.created_count || 0} Shifts generiert`);
-                    onActionSuccess?.();
-                  } else {
-                    toast.error(result.message);
-                  }
-                } catch (err) {
-                  toast.error("Fehler beim Generieren der Shifts");
+      {/* Prominent Date Display - Centered */}
+      <div className="flex items-center justify-center gap-3 py-1 bg-gradient-to-r from-transparent via-primary/5 to-transparent rounded-lg">
+        <Button variant="outline" size="icon" onClick={handlePrev} className="h-9 w-9">
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
+        <Button variant="outline" onClick={() => onDateChange(new Date())} className="flex flex-col items-center h-auto py-1.5 px-3">
+          <span className="text-xs">Heute</span>
+          <span className="text-xs font-mono">{format(new Date(), "dd.MM.yyyy", { locale: de })}</span>
+        </Button>
+        <DatePicker
+          value={currentDate}
+          onChange={(date) => date && onDateChange(date)}
+        />
+        <h2 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/70">
+          {dateDisplay}
+        </h2>
+        <Button variant="outline" size="icon" onClick={handleNext} className="h-9 w-9">
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+        {isAdmin && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={async () => {
+              toast.info("Generiere Shifts...");
+              try {
+                const { generateShiftsFromAssignments } = await import('@/lib/actions/shift-planning');
+                const result = await generateShiftsFromAssignments();
+                if (result.success) {
+                  toast.success(`${result.created_count || 0} Shifts generiert`);
+                  onActionSuccess?.();
+                } else {
+                  toast.error(result.message);
                 }
-              }}
-            >
-              <CalendarPlus className="h-4 w-4 mr-2" />
-              Shifts generieren
-            </Button>
-          )}
-          <Button variant="outline" size="icon" onClick={handlePrev}>
-            <ChevronLeft className="h-4 w-4" />
+              } catch (err) {
+                toast.error("Fehler beim Generieren der Shifts");
+              }
+            }}
+          >
+            <CalendarPlus className="h-4 w-4 mr-2" />
+            Shifts
           </Button>
-          <Button variant="outline" size="icon" onClick={handleNext}>
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-          <DatePicker
-            value={currentDate}
-            onChange={(date) => date && onDateChange(date)}
-          />
-          <h2 className="text-lg font-semibold hidden md:block">
-            {dateDisplay}
-          </h2>
+        )}
+      </div>
+
+      {/* Search and Filters Row */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+        {/* Prominent Search Bar */}
+        <div className="flex-1 w-full max-w-2xl">
+          <SearchInput placeholder="Mitarbeiter suchen..." className="w-full h-11 text-base" />
         </div>
+
+        {/* Action Buttons */}
         <div className="flex items-center gap-2">
-          <Input placeholder="Mitarbeiter suchen..." className="w-full sm:w-auto" />
           <PlanningFilterDialog
             open={filterDialogOpen}
             onOpenChange={setFilterDialogOpen}
@@ -256,6 +266,42 @@ export function PlanningToolbar({
             </Button>
           ))}
 
+          {/* Status Quick Access - permanent buttons */}
+          <div className="flex items-center gap-1 ml-auto">
+            <Button
+              variant={!filters.shiftStatus || filters.shiftStatus === 'all' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => onFiltersChange?.({ ...filters, shiftStatus: 'all' })}
+            >
+              <List className="h-3.5 w-3.5 mr-1" />
+              Alle
+            </Button>
+            <Button
+              variant={filters.shiftStatus === 'scheduled' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => onFiltersChange?.({ ...filters, shiftStatus: filters.shiftStatus === 'scheduled' ? 'all' : 'scheduled' })}
+            >
+              <Calendar className="h-3.5 w-3.5 mr-1" />
+              Geplant
+            </Button>
+            <Button
+              variant={filters.shiftStatus === 'in_progress' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => onFiltersChange?.({ ...filters, shiftStatus: filters.shiftStatus === 'in_progress' ? 'all' : 'in_progress' })}
+            >
+              <Clock className="h-3.5 w-3.5 mr-1" />
+              In Bearbeitung
+            </Button>
+            <Button
+              variant={filters.shiftStatus === 'completed' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => onFiltersChange?.({ ...filters, shiftStatus: filters.shiftStatus === 'completed' ? 'all' : 'completed' })}
+            >
+              <CheckCircle className="h-3.5 w-3.5 mr-1" />
+              Erledigt
+            </Button>
+          </div>
+
           {/* Active Filters Display */}
           {activeFilterCount > 0 && (
             <div className="flex flex-wrap items-center gap-2 ml-auto">
@@ -290,6 +336,18 @@ export function PlanningToolbar({
                 <Badge variant="outline" className="text-[10px] gap-1">
                   <Clock className="h-3 w-3" />
                   Nur verfügbar
+                </Badge>
+              )}
+              {filters.shiftStatus && filters.shiftStatus !== 'all' && (
+                <Badge variant="outline" className="text-[10px] gap-1">
+                  {filters.shiftStatus === 'scheduled' && <Calendar className="h-3 w-3" />}
+                  {filters.shiftStatus === 'in_progress' && <Clock className="h-3 w-3" />}
+                  {filters.shiftStatus === 'completed' && <CheckCircle className="h-3 w-3" />}
+                  {filters.shiftStatus === 'cancelled' && <XCircle className="h-3 w-3" />}
+                  {filters.shiftStatus === 'scheduled' && 'Geplant'}
+                  {filters.shiftStatus === 'in_progress' && 'In Bearbeitung'}
+                  {filters.shiftStatus === 'completed' && 'Erledigt'}
+                  {filters.shiftStatus === 'cancelled' && 'Abgesagt'}
                 </Badge>
               )}
               <Button

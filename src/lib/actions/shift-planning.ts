@@ -247,8 +247,8 @@ export async function getShiftPlanningData(
     ] = await Promise.all([
       // Profiles for avatars
       supabase.from("profiles").select("id, avatar_url").in("id", userIds),
-      // Services for colors
-      supabase.from("services").select("key, title, color"),
+      // Services for colors and filtering (include id for filter matching)
+      supabase.from("services").select("id, key, title, color"),
       // Absences for the period
       supabase
         .from("absence_requests")
@@ -277,11 +277,24 @@ export async function getShiftPlanningData(
     const profilesMap = new Map(profilesResult.data?.map((p) => [p.id, p.avatar_url]) || []);
     if (profilesResult.error) console.warn("Profiles query error:", profilesResult.error);
 
+    // Create service mappings for color lookup and filtering
     const servicesMap = new Map(
       (servicesResult.data || []).map((s: any) => [s.key, s.color])
     );
     const servicesByTitle = new Map(
       (servicesResult.data || []).map((s: any) => [s.title?.toLowerCase(), s.color])
+    );
+    // NEW: Create service ID → key/title mapping for filter matching
+    // The filter uses service IDs, but orders store service_type as key/title string
+    const servicesById = new Map(
+      (servicesResult.data || []).map((s: any) => [s.id, { key: s.key, title: s.title }])
+    );
+    // Create inverse lookup: key/title → service ID
+    const serviceKeyToId = new Map(
+      (servicesResult.data || []).flatMap((s: any) => [
+        [s.key, s.id],
+        [s.title?.toLowerCase(), s.id],
+      ])
     );
 
     const absences = absencesResult.data;
@@ -443,6 +456,7 @@ export async function getShiftPlanningData(
           shiftId: string;
           orderId: string;
           orderTitle: string;
+          objectId: string | null;
           objectName: string;
           objectAddress: string | null;
           serviceType: string;
@@ -471,7 +485,7 @@ export async function getShiftPlanningData(
     if (directOrderIds.size > 0) {
       const { data: directOrders } = await supabaseAdmin
         .from("orders")
-        .select("id, title, service_type, objects(id, name, address)")
+        .select("id, title, service_type, object_id, objects(id, name, address)")
         .in("id", Array.from(directOrderIds));
       for (const order of (directOrders || [])) {
         directOrdersMap.set(order.id, order);
@@ -527,6 +541,7 @@ export async function getShiftPlanningData(
             shiftId: shift.id,
             orderId: order.id,
             orderTitle: order.title || "Unbekannt",
+            objectId: (order as any).object_id || (order as any).objects?.id || null,
             objectName: (order as any).objects?.name || null,
             objectAddress: (order as any).objects?.address || null,
             serviceType: order.service_type || null,
@@ -690,24 +705,28 @@ export async function getShiftPlanningData(
           //   shiftId: shiftData.shiftId
           // });
 
-          // Determine status based on date AND time (PlanD style):
+          // Determine status based on date AND time:
           // - Past dates → "completed" (green)
           // - Today and current time within shift time → "in_progress" (yellow)
-          // - Today before start time or future dates → "scheduled" (blue)
+          // - Today before start time, after end time, or no time → "scheduled" (blue)
+          // - Future dates → "scheduled" (blue)
           const shiftDateObj = parseISO(dateString);
           const now = new Date();
           const today = startOfDay(now);
 
           let shiftStatus: "scheduled" | "in_progress" | "completed" = "scheduled";
 
-          if (isPast(shiftDateObj)) {
-            // Date is in the past
-            shiftStatus = "completed";
-          } else if (isToday(shiftDateObj)) {
+          // IMPORTANT: Check isToday() FIRST because isPast() returns true for today after midnight
+          // (shiftDateObj is at 00:00:00, so isPast would incorrectly mark today's shifts as completed)
+          if (isToday(shiftDateObj)) {
             // Date is today - check the actual time
             if (shiftData.startTime && shiftData.endTime) {
               const [startHour, startMin] = shiftData.startTime.split(":").map(Number);
               const [endHour, endMin] = shiftData.endTime.split(":").map(Number);
+
+              // Create clean time objects WITHOUT seconds/milliseconds for accurate comparison
+              const nowTime = new Date(now);
+              nowTime.setSeconds(0, 0); // Remove seconds and milliseconds from now
 
               const shiftStart = new Date(now);
               shiftStart.setHours(startHour, startMin, 0, 0);
@@ -715,10 +734,10 @@ export async function getShiftPlanningData(
               const shiftEnd = new Date(now);
               shiftEnd.setHours(endHour, endMin, 0, 0);
 
-              if (isBefore(now, shiftStart)) {
+              if (isBefore(nowTime, shiftStart)) {
                 // Before shift starts
                 shiftStatus = "scheduled";
-              } else if (isAfter(now, shiftEnd)) {
+              } else if (isAfter(nowTime, shiftEnd)) {
                 // After shift ends
                 shiftStatus = "completed";
               } else {
@@ -726,11 +745,40 @@ export async function getShiftPlanningData(
                 shiftStatus = "in_progress";
               }
             } else {
-              // No time specified, assume in_progress for today
-              shiftStatus = "in_progress";
+              // No time specified → treat as scheduled (not in_progress)
+              shiftStatus = "scheduled";
             }
+          } else if (isPast(shiftDateObj)) {
+            // Date is in the past (NOT today)
+            shiftStatus = "completed";
           }
           // Future dates remain "scheduled"
+
+          // Apply shiftStatus filter if specified
+          if (filters.filters?.shiftStatus && filters.filters.shiftStatus !== 'all' && shiftStatus !== filters.filters.shiftStatus) {
+            continue; // Skip this shift if it doesn't match the status filter
+          }
+
+          // Apply objects filter if specified
+          if (filters.filters?.objects && filters.filters.objects.length > 0) {
+            // shiftData.objectId contains the object ID from the order
+            const objectMatches = shiftData.objectId && filters.filters.objects.includes(shiftData.objectId);
+            if (!objectMatches) {
+              continue; // Skip this shift if it doesn't match the objects filter
+            }
+          }
+
+          // Apply services filter if specified
+          if (filters.filters?.services && filters.filters.services.length > 0) {
+            // The filter uses service IDs, but shiftData.serviceType is a string (key/title)
+            // Use the serviceKeyToId mapping to check if this shift's service matches any filtered service
+            const serviceTypeLower = shiftData.serviceType?.toLowerCase() || '';
+            const serviceIdForShift = serviceKeyToId.get(serviceTypeLower);
+            const serviceMatches = serviceIdForShift && filters.filters.services.includes(serviceIdForShift);
+            if (!serviceMatches) {
+              continue; // Skip this shift if it doesn't match the services filter
+            }
+          }
 
           employeeSchedule[dateString].shifts.push({
             id: shiftData.shiftId,

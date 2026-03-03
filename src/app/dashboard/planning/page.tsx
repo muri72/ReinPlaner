@@ -208,6 +208,12 @@ export default function PlanningPage() {
     return () => clearTimeout(handler);
   }, [startDate, endDate]);
 
+  // Load static data (objects, services, etc.) on mount
+  React.useEffect(() => {
+    fetchData(startDate, endDate, query, daysToDisplay, filters, true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run on mount (empty dependencies)
+
   const fetchData = React.useCallback(async (start: Date, end: Date, searchQuery: string, displayDays: Date[], currentFilters: FilterValues, isInitialLoad = false) => {
     // Increment fetch ID for cancellation check
     const currentFetchId = ++fetchIdRef.current;
