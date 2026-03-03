@@ -249,49 +249,6 @@ export function PlanningCalendar({
     return map;
   }, [planningData]);
 
-  // Helper function to calculate consecutive absence ranges for Outlook-style display
-  // This groups adjacent days with the same absence type into ranges
-  const getAbsenceRanges = React.useCallback((employee: ShiftPlanningData[string], days: Date[]) => {
-    const ranges: { start: Date; end: Date; type: string }[] = [];
-    let currentRange: { start: Date; end: Date; type: string } | null = null;
-
-    for (const day of days) {
-      const dateKey = format(day, 'yyyy-MM-dd');
-      const dayData = employee.schedule[dateKey];
-
-      if (dayData?.isAbsence && dayData.absenceType) {
-        if (!currentRange) {
-          // Start a new range
-          currentRange = { start: day, end: day, type: dayData.absenceType };
-        } else if (currentRange.type === dayData.absenceType) {
-          // Same type - check if consecutive
-          const prevDay = new Date(currentRange.end);
-          const diffDays = Math.round((day.getTime() - prevDay.getTime()) / (1000 * 60 * 60 * 24));
-          if (diffDays === 1) {
-            // Consecutive day - extend range
-            currentRange.end = day;
-          } else {
-            // Gap in days - start new range
-            ranges.push(currentRange);
-            currentRange = { start: day, end: day, type: dayData.absenceType };
-          }
-        } else {
-          // Different absence type - start new range
-          ranges.push(currentRange);
-          currentRange = { start: day, end: day, type: dayData.absenceType };
-        }
-      } else if (currentRange) {
-        // End of absence - close current range
-        ranges.push(currentRange);
-        currentRange = null;
-      }
-    }
-
-    // Don't forget the last range
-    if (currentRange) ranges.push(currentRange);
-    return ranges;
-  }, []);
-
   // Calculate which shifts are multi-shift (different hours for employees at same order on SAME date)
   // Multi-shift: same order, same date, but 2+ employees with different hours
   const multiShiftShiftIds = React.useMemo(() => {
@@ -343,36 +300,84 @@ export function PlanningCalendar({
     return result;
   }, [planningData]);
 
+  // Pre-calculate ALL absence ranges for ALL employees in ONE pass
+  // This avoids calling getAbsenceRanges for each employee inside the .map() loop
+  const allAbsenceRanges = React.useMemo(() => {
+    const result = new Map<string, Array<{ start: Date; end: Date; type: string }>>();
+
+    for (const [employeeId, employee] of Object.entries(planningData)) {
+      const ranges: { start: Date; end: Date; type: string }[] = [];
+      let currentRange: { start: Date; end: Date; type: string } | null = null;
+
+      for (const day of weekDays) {
+        const dateKey = format(day, 'yyyy-MM-dd');
+        const dayData = employee.schedule[dateKey];
+
+        if (dayData?.isAbsence && dayData.absenceType) {
+          if (!currentRange) {
+            // Start a new range
+            currentRange = { start: day, end: day, type: dayData.absenceType };
+          } else if (currentRange.type === dayData.absenceType) {
+            // Same type - check if consecutive
+            const prevDay = new Date(currentRange.end);
+            const diffDays = Math.round((day.getTime() - prevDay.getTime()) / (1000 * 60 * 60 * 24));
+            if (diffDays === 1) {
+              // Consecutive day - extend range
+              currentRange.end = day;
+            } else {
+              // Gap in days - start new range
+              ranges.push(currentRange);
+              currentRange = { start: day, end: day, type: dayData.absenceType };
+            }
+          } else {
+            // Different absence type - start new range
+            ranges.push(currentRange);
+            currentRange = { start: day, end: day, type: dayData.absenceType };
+          }
+        } else if (currentRange) {
+          // End of absence - close current range
+          ranges.push(currentRange);
+          currentRange = null;
+        }
+      }
+
+      // Don't forget the last range
+      if (currentRange) ranges.push(currentRange);
+      result.set(employeeId, ranges);
+    }
+
+    return result;
+  }, [planningData, weekDays]);
+
   return (
     <div className="border rounded-lg shadow-neumorphic glassmorphism-card h-full overflow-auto custom-scrollbar relative">
-      <Table className="min-w-full border-collapse table-fixed">
+      <TooltipProvider delayDuration={200}>
+        <Table className="min-w-full border-collapse table-fixed">
         <TableHeader>
           <TableRow>
             <TableHead className="sticky left-0 bg-card z-20 w-[200px] text-sm" rowSpan={2}>
               <div className="flex items-center justify-between">
                 <span>Mitarbeiter</span>
                 {hiddenEmployeeIds.length > 0 && (
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6"
-                          onClick={() => onShowHiddenEmployeesChange?.(!showHiddenEmployees)}
-                        >
-                          {showHiddenEmployees ? (
-                            <Eye className="h-3.5 w-3.5 text-muted-foreground" />
-                          ) : (
-                            <EyeOff className="h-3.5 w-3.5 text-amber-600" />
-                          )}
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent className="!z-[99999]">
-                        <p>{showHiddenEmployees ? 'Mitarbeiter ohne Einsätze ausblenden' : 'Alle Mitarbeiter anzeigen'}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={() => onShowHiddenEmployeesChange?.(!showHiddenEmployees)}
+                      >
+                        {showHiddenEmployees ? (
+                          <Eye className="h-3.5 w-3.5 text-muted-foreground" />
+                        ) : (
+                          <EyeOff className="h-3.5 w-3.5 text-amber-600" />
+                        )}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent className="!z-[99999]">
+                      <p>{showHiddenEmployees ? 'Mitarbeiter ohne Einsätze ausblenden' : 'Alle Mitarbeiter anzeigen'}</p>
+                    </TooltipContent>
+                  </Tooltip>
                 )}
               </div>
               {/* Hidden employees count */}
@@ -416,8 +421,6 @@ export function PlanningCalendar({
           </TableRow>
         </TableHeader>
         <TableBody>
-          <TooltipProvider>
-            {/* TooltipProvider wrapper to avoid Hooks order issues inside .map() loops */}
           {/* Unassigned Orders Row */}
           {showUnassigned && (
             <TableRow className="bg-amber-50/50">
@@ -448,31 +451,29 @@ export function PlanningCalendar({
                   >
                     <div className="space-y-1">
                       {ordersForDay.map((shift) => (
-                        <TooltipProvider key={shift.id} delayDuration={100}>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <div className="p-2 rounded-md border border-amber-300 bg-amber-50 hover:bg-amber-100 transition-colors cursor-pointer">
-                                <div className="flex items-center gap-1.5">
-                                  <UserX className="h-3 w-3 text-amber-600 shrink-0" />
-                                  <span className="text-sm font-medium truncate">{shift.job_title}</span>
-                                </div>
-                                <div className="flex items-center justify-between mt-1">
-                                  {shift.estimated_hours && (
-                                    <span className="text-xs text-muted-foreground flex items-center gap-1">
-                                      <Clock className="h-3 w-3" />
-                                      {shift.estimated_hours}h
-                                    </span>
-                                  )}
-                                  <Badge variant="outline" className="text-[10px] px-1 py-0">{shift.service_title || 'N/A'}</Badge>
-                                </div>
+                        <Tooltip key={shift.id} delayDuration={100}>
+                          <TooltipTrigger asChild>
+                            <div className="p-2 rounded-md border border-amber-300 bg-amber-50 hover:bg-amber-100 transition-colors cursor-pointer">
+                              <div className="flex items-center gap-1.5">
+                                <UserX className="h-3 w-3 text-amber-600 shrink-0" />
+                                <span className="text-sm font-medium truncate">{shift.job_title}</span>
                               </div>
-                            </TooltipTrigger>
-                            <TooltipContent side="top">
-                              <p className="font-medium">{shift.job_title}</p>
-                              <p className="text-xs text-muted-foreground">Ziehen Sie diesen Einsatz auf einen Mitarbeiter</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
+                              <div className="flex items-center justify-between mt-1">
+                                {shift.estimated_hours && (
+                                  <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                    <Clock className="h-3 w-3" />
+                                    {shift.estimated_hours}h
+                                  </span>
+                                )}
+                                <Badge variant="outline" className="text-[10px] px-1 py-0">{shift.service_title || 'N/A'}</Badge>
+                              </div>
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent side="top">
+                            <p className="font-medium">{shift.job_title}</p>
+                            <p className="text-xs text-muted-foreground">Ziehen Sie diesen Einsatz auf einen Mitarbeiter</p>
+                          </TooltipContent>
+                        </Tooltip>
                       ))}
                     </div>
                   </DroppableCell>
@@ -500,9 +501,8 @@ export function PlanningCalendar({
               const todayData = employee.schedule[todayKey];
               const isAbsentToday = todayData?.isAbsence;
 
-              // Calculate absence ranges for Outlook-style display
-              // Note: useMemo not used here as it would violate Rules of Hooks (called inside .map)
-              const absenceRanges = getAbsenceRanges(employee, weekDays);
+              // Get pre-calculated absence ranges from memoized Map (O(1) lookup)
+              const absenceRanges = allAbsenceRanges.get(id) || [];
 
               return (
                 <TableRow key={id}>
@@ -515,88 +515,80 @@ export function PlanningCalendar({
                       <div className="flex-1 space-y-2 min-w-0">
                         <div className="flex items-center gap-2">
                           {isAbsentToday && (
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Badge variant="outline" className="text-xs px-2 py-0.5 h-6 bg-red-100 border-red-300 text-red-900 dark:bg-red-900/50 dark:border-red-700 dark:text-red-100 font-medium">
-                                    <CalendarX className="h-3 w-3 mr-1" />
-                                    Abwesend
-                                  </Badge>
-                                </TooltipTrigger>
-                                <TooltipContent className="z-[100]">
-                                  <p>{typeTranslations[todayData.absenceType || 'other'] || 'Abwesend'}</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          )}
-                          <TooltipProvider delayDuration={200}>
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <div className="text-sm font-semibold cursor-pointer hover:text-primary truncate">
-                                  <EmployeeEditDialog employee={employee.raw as any} />
-                                  {employee.name}
-                                </div>
+                                <Badge variant="outline" className="text-xs px-2 py-0.5 h-6 bg-red-100 border-red-300 text-red-900 dark:bg-red-900/50 dark:border-red-700 dark:text-red-100 font-medium">
+                                  <CalendarX className="h-3 w-3 mr-1" />
+                                  Abwesend
+                                </Badge>
                               </TooltipTrigger>
-                              <TooltipPortal>
-                                <TooltipContent className="z-[99999]" side="right" align="start">
-                                  <div className="space-y-1">
-                                    <p className="font-medium">{employee.name}</p>
-                                    {employee.raw.employee_id && (
-                                      <p className="text-xs text-muted-foreground">ID: {employee.raw.employee_id}</p>
-                                    )}
-                                  </div>
-                                </TooltipContent>
-                              </TooltipPortal>
+                              <TooltipContent className="z-[100]">
+                                <p>{typeTranslations[todayData.absenceType || 'other'] || 'Abwesend'}</p>
+                              </TooltipContent>
                             </Tooltip>
-                          </TooltipProvider>
+                          )}
+                          <Tooltip delayDuration={200}>
+                            <TooltipTrigger asChild>
+                              <div className="text-sm font-semibold cursor-pointer hover:text-primary truncate">
+                                <EmployeeEditDialog employee={employee.raw as any} />
+                                {employee.name}
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipPortal>
+                              <TooltipContent className="z-[99999]" side="right" align="start">
+                                <div className="space-y-1">
+                                  <p className="font-medium">{employee.name}</p>
+                                  {employee.raw.employee_id && (
+                                    <p className="text-xs text-muted-foreground">ID: {employee.raw.employee_id}</p>
+                                  )}
+                                </div>
+                              </TooltipContent>
+                            </TooltipPortal>
+                          </Tooltip>
                         </div>
                         <p className="text-xs text-muted-foreground">{employee.raw.job_title || 'Mitarbeiter'}</p>
 
                         {/* Monthly workload */}
-                        <TooltipProvider delayDuration={100} disableHoverableContent>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <div className="space-y-1">
-                                <Progress
-                                  value={monthlyHours.available > 0 ? (monthlyHours.planned / monthlyHours.available) * 100 : 0}
-                                  className="h-2"
-                                />
-                                <p className="text-xs text-muted-foreground">
-                                  Mo: {monthlyHours.planned.toFixed(2)}h / {monthlyHours.available.toFixed(2)}h
-                                </p>
-                              </div>
-                            </TooltipTrigger>
-                            <TooltipContent className="z-[100]">
-                              <div className="text-sm space-y-1">
-                                <p>Monat: {monthlyHours.planned.toFixed(2)}h / {monthlyHours.available.toFixed(2)}h</p>
-                                <p>Noch verfügbar: {(monthlyHours.available - monthlyHours.planned).toFixed(2)}h</p>
-                              </div>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
+                        <Tooltip delayDuration={100} disableHoverableContent>
+                          <TooltipTrigger asChild>
+                            <div className="space-y-1">
+                              <Progress
+                                value={monthlyHours.available > 0 ? (monthlyHours.planned / monthlyHours.available) * 100 : 0}
+                                className="h-2"
+                              />
+                              <p className="text-xs text-muted-foreground">
+                                Mo: {monthlyHours.planned.toFixed(2)}h / {monthlyHours.available.toFixed(2)}h
+                              </p>
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent className="z-[100]">
+                            <div className="text-sm space-y-1">
+                              <p>Monat: {monthlyHours.planned.toFixed(2)}h / {monthlyHours.available.toFixed(2)}h</p>
+                              <p>Noch verfügbar: {(monthlyHours.available - monthlyHours.planned).toFixed(2)}h</p>
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
 
                         {/* Weekly workload */}
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <div className="space-y-1">
-                                <Progress
-                                  value={employee.totalHoursAvailable > 0 ? (employee.totalHoursPlanned / employee.totalHoursAvailable) * 100 : 0}
-                                  className="h-2"
-                                />
-                                <p className="text-xs text-muted-foreground">
-                                  Wo: {employee.totalHoursPlanned.toFixed(2)}h / {employee.totalHoursAvailable.toFixed(2)}h
-                                </p>
-                              </div>
-                            </TooltipTrigger>
-                            <TooltipContent className="z-[100]">
-                              <div className="text-sm space-y-1">
-                                <p>Woche: {employee.totalHoursPlanned.toFixed(2)}h / {employee.totalHoursAvailable.toFixed(2)}h</p>
-                                <p>Noch verfügbar: {available.toFixed(2)}h</p>
-                              </div>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="space-y-1">
+                              <Progress
+                                value={employee.totalHoursAvailable > 0 ? (employee.totalHoursPlanned / employee.totalHoursAvailable) * 100 : 0}
+                                className="h-2"
+                              />
+                              <p className="text-xs text-muted-foreground">
+                                Wo: {employee.totalHoursPlanned.toFixed(2)}h / {employee.totalHoursAvailable.toFixed(2)}h
+                              </p>
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent className="z-[100]">
+                            <div className="text-sm space-y-1">
+                              <p>Woche: {employee.totalHoursPlanned.toFixed(2)}h / {employee.totalHoursAvailable.toFixed(2)}h</p>
+                              <p>Noch verfügbar: {available.toFixed(2)}h</p>
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
                       </div>
                     </div>
                   </TableCell>
@@ -640,94 +632,88 @@ export function PlanningCalendar({
                         <TableCell key={dateString} className={cn("p-0 relative", isTodayColumn && "ring-2 ring-red-500 ring-offset-1")}>
                           {/* Outlook-style bar - only render on first day of range */}
                           {isFirstDayOfRange && (
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <div
-                                    className={cn(
-                                      "absolute top-0 left-0 h-3 rounded-b-md shadow-sm flex items-center justify-center cursor-help z-20",
-                                      config.solidBg || "bg-gray-500"
-                                    )}
-                                    style={{
-                                      width: `${((weekDays.findIndex(d => isSameDay(d, isFirstDayOfRange.end)) - dayIndex + 1) * 100)}%`
-                                    }}
-                                  >
-                                    <span className={cn("text-[9px] font-semibold text-white truncate px-1", config.text)}>
-                                      {typeTranslations[isFirstDayOfRange.type] || isFirstDayOfRange.type}
-                                    </span>
-                                  </div>
-                                </TooltipTrigger>
-                                <TooltipContent className="max-w-[200px] z-[100]" side="top">
-                                  <p className="font-medium">{typeTranslations[isFirstDayOfRange.type] || isFirstDayOfRange.type}</p>
-                                  <p className="text-xs text-muted-foreground">
-                                    {format(isFirstDayOfRange.start, "dd.MM.", { locale: de })} – {format(isFirstDayOfRange.end, "dd.MM.", { locale: de })}
-                                  </p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          )}
-                          <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <div className={cn(
-                                  "w-full h-full flex flex-col items-center justify-center font-semibold text-xs sm:text-sm p-1 gap-0.5",
-                                  config.bg,
-                                  config.border,
-                                  config.text
-                                )}>
-                                  <div className="flex items-center gap-1">
-                                    <IconComponent className="h-3.5 w-3.5" />
-                                    <span>{typeTranslations[absenceType] || absenceType}</span>
-                                  </div>
-                                  {absenceDays > 1 && (
-                                    <span className="text-[9px] opacity-75">{absenceDays} Tage</span>
+                                <div
+                                  className={cn(
+                                    "absolute top-0 left-0 h-3 rounded-b-md shadow-sm flex items-center justify-center cursor-help z-20",
+                                    config.solidBg || "bg-gray-500"
                                   )}
+                                  style={{
+                                    width: `${((weekDays.findIndex(d => isSameDay(d, isFirstDayOfRange.end)) - dayIndex + 1) * 100)}%`
+                                  }}
+                                >
+                                  <span className={cn("text-[9px] font-semibold text-white truncate px-1", config.text)}>
+                                    {typeTranslations[isFirstDayOfRange.type] || isFirstDayOfRange.type}
+                                  </span>
                                 </div>
                               </TooltipTrigger>
-                              <TooltipContent className="max-w-[200px] z-[100]">
-                                <div className="space-y-1">
-                                  <p className="font-semibold flex items-center gap-1">
-                                    <IconComponent className="h-3 w-3" />
-                                    {typeTranslations[absenceType] || absenceType}
-                                  </p>
-                                  <p className="text-xs text-muted-foreground">
-                                    {absenceDays > 1 ? `${absenceDays} aufeinanderfolgende Tage` : '1 Tag'}
-                                  </p>
-                                </div>
+                              <TooltipContent className="max-w-[200px] z-[100]" side="top">
+                                <p className="font-medium">{typeTranslations[isFirstDayOfRange.type] || isFirstDayOfRange.type}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {format(isFirstDayOfRange.start, "dd.MM.", { locale: de })} – {format(isFirstDayOfRange.end, "dd.MM.", { locale: de })}
+                                </p>
                               </TooltipContent>
                             </Tooltip>
-                          </TooltipProvider>
+                          )}
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className={cn(
+                                "w-full h-full flex flex-col items-center justify-center font-semibold text-xs sm:text-sm p-1 gap-0.5",
+                                config.bg,
+                                config.border,
+                                config.text
+                              )}>
+                                <div className="flex items-center gap-1">
+                                  <IconComponent className="h-3.5 w-3.5" />
+                                  <span>{typeTranslations[absenceType] || absenceType}</span>
+                                </div>
+                                {absenceDays > 1 && (
+                                  <span className="text-[9px] opacity-75">{absenceDays} Tage</span>
+                                )}
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-[200px] z-[100]">
+                              <div className="space-y-1">
+                                <p className="font-semibold flex items-center gap-1">
+                                  <IconComponent className="h-3 w-3" />
+                                  {typeTranslations[absenceType] || absenceType}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  {absenceDays > 1 ? `${absenceDays} aufeinanderfolgende Tage` : '1 Tag'}
+                                </p>
+                              </div>
+                            </TooltipContent>
+                          </Tooltip>
                         </TableCell>
                       );
                     }
 
                     // Regular day cell (with shifts or available)
                     const absenceBar = isFirstDayOfRange ? (
-                      <TooltipProvider key="absence-bar">
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <div
-                              className={cn(
-                                "absolute top-0 left-0 h-3 rounded-b-md shadow-sm flex items-center justify-center cursor-help z-20 pointer-events-auto",
-                                (absenceTypeConfig[isFirstDayOfRange.type] || { solidBg: "bg-gray-500" }).solidBg
-                              )}
-                              style={{
-                                width: `${((weekDays.findIndex(d => isSameDay(d, isFirstDayOfRange.end)) - dayIndex + 1) * 100)}%`
-                              }}
-                            >
-                              <span className={cn("text-[9px] font-semibold text-white truncate px-1", "text-white")}>
-                                {typeTranslations[isFirstDayOfRange.type] || isFirstDayOfRange.type}
-                              </span>
-                            </div>
-                          </TooltipTrigger>
-                          <TooltipContent className="max-w-[200px] z-[100]" side="top">
-                            <p className="font-medium">{typeTranslations[isFirstDayOfRange.type] || isFirstDayOfRange.type}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {format(isFirstDayOfRange.start, "dd.MM.", { locale: de })} – {format(isFirstDayOfRange.end, "dd.MM.", { locale: de })}
-                            </p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
+                      <Tooltip key="absence-bar">
+                        <TooltipTrigger asChild>
+                          <div
+                            className={cn(
+                              "absolute top-0 left-0 h-3 rounded-b-md shadow-sm flex items-center justify-center cursor-help z-20 pointer-events-auto",
+                              (absenceTypeConfig[isFirstDayOfRange.type] || { solidBg: "bg-gray-500" }).solidBg
+                            )}
+                            style={{
+                              width: `${((weekDays.findIndex(d => isSameDay(d, isFirstDayOfRange.end)) - dayIndex + 1) * 100)}%`
+                            }}
+                          >
+                            <span className={cn("text-[9px] font-semibold text-white truncate px-1", "text-white")}>
+                              {typeTranslations[isFirstDayOfRange.type] || isFirstDayOfRange.type}
+                            </span>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-[200px] z-[100]" side="top">
+                          <p className="font-medium">{typeTranslations[isFirstDayOfRange.type] || isFirstDayOfRange.type}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {format(isFirstDayOfRange.start, "dd.MM.", { locale: de })} – {format(isFirstDayOfRange.end, "dd.MM.", { locale: de })}
+                          </p>
+                        </TooltipContent>
+                      </Tooltip>
                     ) : null;
 
                     return (
@@ -763,9 +749,9 @@ export function PlanningCalendar({
               );
             })
           )}
-          </TooltipProvider>
         </TableBody>
       </Table>
+      </TooltipProvider>
     </div>
   );
 }

@@ -556,6 +556,19 @@ export async function getShiftPlanningData(
       }
     }
 
+    // Pre-process absences into a Map for O(1) lookups
+    // Structure: Map<employee_id, Array<{start: Date, end: Date, type: string}>>
+    const absenceMap = new Map<string, Array<{ start: Date; end: Date; type: string }>>();
+    absences?.forEach((absence) => {
+      const employeeAbsences = absenceMap.get(absence.employee_id) || [];
+      employeeAbsences.push({
+        start: parseISO(absence.start_date),
+        end: parseISO(absence.end_date),
+        type: absence.type,
+      });
+      absenceMap.set(absence.employee_id, employeeAbsences);
+    });
+
     // 5. Build the final planning data structure
     for (const employee of employees) {
       let totalHoursAvailable = 0;
@@ -577,12 +590,10 @@ export async function getShiftPlanningData(
           shifts: [],
         };
 
-        // Check for absence
-        const absence = absences?.find(
-          (a) =>
-            a.employee_id === employee.id &&
-            parseISO(a.start_date) <= day &&
-            parseISO(a.end_date) >= day
+        // Check for absence using pre-processed map (O(1) lookup)
+        const employeeAbsences = absenceMap.get(employee.id);
+        const absence = employeeAbsences?.find(
+          (a) => a.start <= day && a.end >= day
         );
 
         if (absence) {

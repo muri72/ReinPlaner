@@ -81,100 +81,92 @@ function MonthDayCell({ day, monthStart, employeeId, employee, activeDragId, onA
           {format(day, "d")}
         </span>
         {dayData?.isAbsence && (dayData?.isAvailable || (dayData?.shifts?.length ?? 0) > 0) && (
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className={cn(
-                  "flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium",
-                  absenceTypeConfig[dayData.absenceType || 'other']?.bg || absenceTypeConfig.other.bg,
-                  absenceTypeConfig[dayData.absenceType || 'other']?.border || absenceTypeConfig.other.border,
-                  absenceTypeConfig[dayData.absenceType || 'other']?.text || absenceTypeConfig.other.text
-                )}>
-                  {(() => {
-                    const absenceType = dayData.absenceType || 'other';
-                    const config = absenceTypeConfig[absenceType] || absenceTypeConfig.other;
-                    const IconComponent = config.icon;
-                    return <IconComponent className="h-3 w-3" />;
-                  })()}
-                  <span>{typeTranslations[dayData.absenceType || 'other'] || 'Abwesend'}</span>
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p className="font-medium">{typeTranslations[dayData.absenceType || 'other'] || 'Abwesend'}</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className={cn(
+                "flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium",
+                absenceTypeConfig[dayData.absenceType || 'other']?.bg || absenceTypeConfig.other.bg,
+                absenceTypeConfig[dayData.absenceType || 'other']?.border || absenceTypeConfig.other.border,
+                absenceTypeConfig[dayData.absenceType || 'other']?.text || absenceTypeConfig.other.text
+              )}>
+                {(() => {
+                  const absenceType = dayData.absenceType || 'other';
+                  const config = absenceTypeConfig[absenceType] || absenceTypeConfig.other;
+                  const IconComponent = config.icon;
+                  return <IconComponent className="h-3 w-3" />;
+                })()}
+                <span>{typeTranslations[dayData.absenceType || 'other'] || 'Abwesend'}</span>
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p className="font-medium">{typeTranslations[dayData.absenceType || 'other'] || 'Abwesend'}</p>
+            </TooltipContent>
+          </Tooltip>
         )}
       </div>
 
       {/* Holiday indicator */}
       {isCurrentMonth && holidayInfo && (
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div className="text-xs text-red-600 font-medium truncate">
-                {holidayInfo.name}
-              </div>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>{holidayInfo.name}</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className="text-xs text-red-600 font-medium truncate">
+              {holidayInfo.name}
+            </div>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>{holidayInfo.name}</p>
+          </TooltipContent>
+        </Tooltip>
       )}
 
       {/* Assignment summary */}
       {totalAssignments > 0 && (
         <div className="space-y-1">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className="flex items-center gap-1">
-                  <Badge variant="secondary" className="text-xs px-1 py-0 h-4">
-                    {totalAssignments}
-                  </Badge>
-                  <span className="text-xs text-muted-foreground">
-                    {totalHours.toFixed(2)}h
-                  </span>
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                <div className="text-xs space-y-1 max-w-48">
-                  {dayData.shifts.map((shift: any) => (
-                    <div key={shift.id} className="flex items-center gap-1">
-                      <span className="font-medium truncate">{shift.job_title}</span>
-                      <span className="text-muted-foreground">({shift.estimated_hours.toFixed(2)}h)</span>
-                    </div>
-                  ))}
-                </div>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </div>
-      )}
-
-      {/* Unassigned orders indicator */}
-      {ordersForDay.length > 0 && (
-        <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
-              <div className="mt-1">
-                <Badge variant="outline" className="text-xs px-1 py-0 h-4 border-orange-200 text-orange-600">
-                  {ordersForDay.length} offen
+              <div className="flex items-center gap-1">
+                <Badge variant="secondary" className="text-xs px-1 py-0 h-4">
+                  {totalAssignments}
                 </Badge>
+                <span className="text-xs text-muted-foreground">
+                  {totalHours.toFixed(2)}h
+                </span>
               </div>
             </TooltipTrigger>
             <TooltipContent>
               <div className="text-xs space-y-1 max-w-48">
-                {ordersForDay.map((shift) => (
-                  <div key={shift.id} className="truncate">
-                    {shift.job_title}
+                {dayData.shifts.map((shift: any) => (
+                  <div key={shift.id} className="flex items-center gap-1">
+                    <span className="font-medium truncate">{shift.job_title}</span>
+                    <span className="text-muted-foreground">({shift.estimated_hours.toFixed(2)}h)</span>
                   </div>
                 ))}
               </div>
             </TooltipContent>
           </Tooltip>
-        </TooltipProvider>
+        </div>
+      )}
+
+      {/* Unassigned orders indicator */}
+      {ordersForDay.length > 0 && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className="mt-1">
+              <Badge variant="outline" className="text-xs px-1 py-0 h-4 border-orange-200 text-orange-600">
+                {ordersForDay.length} offen
+              </Badge>
+            </div>
+          </TooltipTrigger>
+          <TooltipContent>
+            <div className="text-xs space-y-1 max-w-48">
+              {ordersForDay.map((shift) => (
+                <div key={shift.id} className="truncate">
+                  {shift.job_title}
+                </div>
+              ))}
+            </div>
+          </TooltipContent>
+        </Tooltip>
       )}
       </div>
     </div>
@@ -362,6 +354,7 @@ export function PlanningCalendarMonth({
         )}
 
         {/* Calendar Grid */}
+        <TooltipProvider delayDuration={200}>
         <div className="space-y-4">
           {/* Day headers */}
           <div className="grid grid-cols-7 gap-1">
@@ -487,6 +480,7 @@ export function PlanningCalendarMonth({
             })
           )}
         </div>
+        </TooltipProvider>
       </div>
     </div>
   );
