@@ -1187,6 +1187,77 @@ export async function updateShiftStatus(
 // SYNC ASSIGNMENT TO SHIFTS (solves "two truths" problem)
 // ============================================================================
 
+
+/**
+ * Sanitize assigned_daily_schedules to prevent PostgreSQL errors.
+ * Filters out schedules with invalid hours values (null, empty, <= 0).
+ */
+function sanitizeScheduleData(schedules: any[] | null | undefined): any[] {
+  if (!schedules || !Array.isArray(schedules)) return [];
+
+  return schedules.map(schedule => {
+    if (!schedule || typeof schedule !== 'object') return {};
+
+    const sanitized: any = {};
+    for (const [dayKey, daySchedule] of Object.entries(schedule)) {
+      if (daySchedule && typeof daySchedule === 'object') {
+        const day = daySchedule as { hours?: any; start?: string; end?: string };
+        // Only include days with valid, positive hours
+        const hours = Number(day.hours);
+        if (day.hours != null && String(day.hours).trim() !== "" && !isNaN(hours) && hours > 0) {
+          sanitized[dayKey] = {
+            hours: hours,
+            start: day.start || "08:00",
+            end: day.end || "17:00"
+          };
+        }
+      }
+    }
+    return sanitized;
+  }).filter(s => Object.keys(s).length > 0);
+}
+
+/**
+ * Clean up existing assignments with invalid schedule data before calling RPC.
+ * This prevents PostgreSQL error 22P02 when generate_shifts_from_assignments
+ * processes assignments with null/empty hours values.
+ */
+async function sanitizeExistingAssignments(supabaseAdmin: any): Promise<void> {
+  const { data: assignments } = await supabaseAdmin
+    .from('order_employee_assignments')
+    .select('id, assigned_daily_schedules')
+    .not('assigned_daily_schedules', 'is', null);
+
+  if (!assignments || assignments.length === 0) {
+    return;
+  }
+
+  let cleanedCount = 0;
+
+  for (const assignment of assignments) {
+    const sanitized = sanitizeScheduleData(assignment.assigned_daily_schedules);
+    
+    // Debug log to see what's being sanitized
+    const originalIsEmpty = !assignment.assigned_daily_schedules || 
+                          assignment.assigned_daily_schedules.length === 0 || 
+                          Object.keys(assignment.assigned_daily_schedules[0] || {}).length === 0;
+    const sanitizedIsEmpty = !sanitized || sanitized.length === 0 || 
+                             Object.keys(sanitized[0] || {}).length === 0;
+    
+
+    // Only update if sanitization changed the data
+    if (JSON.stringify(sanitized) !== JSON.stringify(assignment.assigned_daily_schedules)) {
+      await supabaseAdmin
+        .from('order_employee_assignments')
+        .update({ assigned_daily_schedules: sanitized })
+        .eq('id', assignment.id);
+
+      cleanedCount++;
+    }
+  }
+  
+}
+
 /**
  * Synchronisiert Mitarbeiter-Änderungen von order_employee_assignments zu shift_employees
  *
@@ -3734,6 +3805,8 @@ export async function generateShiftsFromAssignments(): Promise<{ success: boolea
   const supabaseAdmin = createAdminClient();
 
   try {
+    // Before calling RPC, sanitize existing assignments to prevent PostgreSQL errors
+    await sanitizeExistingAssignments(supabaseAdmin);
     const { data, error } = await supabaseAdmin.rpc("generate_shifts_from_assignments");
 
     if (error) {

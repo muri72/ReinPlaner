@@ -1146,7 +1146,9 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess, 
             <DatePicker
               label="Enddatum (optional)"
               value={form.watch("endDate")}
-              onChange={(date: Date | null) => form.setValue("endDate", date)}
+              onChange={(date: Date | null) => {
+                form.setValue("endDate", date);
+              }}
               error={form.formState.errors.endDate?.message}
             />
             <p className="text-xs text-muted-foreground">

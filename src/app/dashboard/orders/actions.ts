@@ -8,6 +8,36 @@ import { logDataChange } from "@/lib/audit-log";
 import { formatDateToYMD } from "@/lib/utils";
 import { generateShiftsFromAssignments, ensureShiftTimeEntriesSync } from "@/lib/actions/shift-planning";
 
+/**
+ * Sanitize assigned_daily_schedules to prevent PostgreSQL errors.
+ * Filters out schedules with invalid hours values (null, empty, <= 0).
+ * This prevents error code 22P02 when the RPC generates shifts.
+ */
+function sanitizeAssignedDailySchedules(schedules: any[] | null | undefined): any[] {
+  if (!schedules || !Array.isArray(schedules)) return [];
+
+  return schedules.map(schedule => {
+    if (!schedule || typeof schedule !== 'object') return {};
+
+    const sanitized: any = {};
+    for (const [dayKey, daySchedule] of Object.entries(schedule)) {
+      if (daySchedule && typeof daySchedule === 'object') {
+        const day = daySchedule as { hours?: any; start?: string; end?: string };
+        // Only include days with valid, positive hours
+        const hours = Number(day.hours);
+        if (day.hours != null && String(day.hours).trim() !== "" && !isNaN(hours) && hours > 0) {
+          sanitized[dayKey] = {
+            hours: hours,
+            start: day.start || "08:00",
+            end: day.end || "17:00"
+          };
+        }
+      }
+    }
+    return sanitized;
+  }).filter(s => Object.keys(s).length > 0); // Remove completely empty schedules
+}
+
 export async function createOrder(data: OrderFormValues) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -59,7 +89,7 @@ export async function createOrder(data: OrderFormValues) {
       markup_percentage: markupPercentage,
       custom_hourly_rate: customHourlyRate,
       request_status: requestStatus,
-      end_date: formatDateToYMD(endDate),
+      end_date: !endDate || String(endDate).trim() === "" ? null : formatDateToYMD(endDate),
     })
     .select('id')
     .single();
@@ -71,13 +101,16 @@ export async function createOrder(data: OrderFormValues) {
 
   // Mitarbeiterzuweisungen speichern
   if (newOrder?.id && assignedEmployees && assignedEmployees.length > 0) {
-    const assignmentsToInsert = assignedEmployees.map(assignment => ({
-      order_id: newOrder.id,
-      employee_id: assignment.employeeId,
-      assigned_daily_schedules: assignment.assigned_daily_schedules,
-      assigned_recurrence_interval_weeks: assignment.assigned_recurrence_interval_weeks,
-      assigned_start_week_offset: assignment.assigned_start_week_offset,
-    }));
+    const assignmentsToInsert = assignedEmployees.map(assignment => {
+      const sanitizedSchedules = sanitizeAssignedDailySchedules(assignment.assigned_daily_schedules);
+          return {
+        order_id: newOrder.id,
+        employee_id: assignment.employeeId,
+        assigned_daily_schedules: sanitizedSchedules,
+        assigned_recurrence_interval_weeks: assignment.assigned_recurrence_interval_weeks,
+        assigned_start_week_offset: assignment.assigned_start_week_offset,
+      };
+    });
 
     const { error: assignError } = await supabase
       .from('order_employee_assignments')
@@ -179,7 +212,6 @@ export async function updateOrder(orderId: string, data: OrderFormValues) {
     .eq('id', orderId)
     .single();
 
-  console.log("[UPDATE-ORDER] Updating order:", { orderId, status: data.status, requestStatus: data.requestStatus, fullData: data });
 
   // Use admin client to bypass potential RLS issues
   const supabaseAdmin = createAdminClient();
@@ -202,11 +234,9 @@ export async function updateOrder(orderId: string, data: OrderFormValues) {
     service_key: serviceKey,
     markup_percentage: markupPercentage == null || String(markupPercentage).trim() === "" ? null : Number(markupPercentage),
     custom_hourly_rate: customHourlyRate == null || String(customHourlyRate).trim() === "" ? null : Number(customHourlyRate),
-    request_status: requestStatus,
-    end_date: formatDateToYMD(endDate),
+    end_date: !endDate || String(endDate).trim() === "" ? null : formatDateToYMD(endDate),
   };
 
-  console.log("[UPDATE-ORDER] Final update data:", updateData);
 
   const { error } = await supabaseAdmin
     .from('orders')
@@ -230,13 +260,16 @@ export async function updateOrder(orderId: string, data: OrderFormValues) {
   }
 
   if (assignedEmployees && assignedEmployees.length > 0) {
-    const assignmentsToInsert = assignedEmployees.map(assignment => ({
-      order_id: orderId,
-      employee_id: assignment.employeeId,
-      assigned_daily_schedules: assignment.assigned_daily_schedules,
-      assigned_recurrence_interval_weeks: assignment.assigned_recurrence_interval_weeks,
-      assigned_start_week_offset: assignment.assigned_start_week_offset,
-    }));
+    const assignmentsToInsert = assignedEmployees.map(assignment => {
+      const sanitizedSchedules = sanitizeAssignedDailySchedules(assignment.assigned_daily_schedules);
+          return {
+        order_id: orderId,
+        employee_id: assignment.employeeId,
+        assigned_daily_schedules: sanitizedSchedules,
+        assigned_recurrence_interval_weeks: assignment.assigned_recurrence_interval_weeks,
+        assigned_start_week_offset: assignment.assigned_start_week_offset,
+      };
+    });
 
     const { error: insertAssignError } = await supabase
       .from('order_employee_assignments')
@@ -392,7 +425,7 @@ export async function processOrderRequest(formData: FormData): Promise<{ success
       .insert({
         order_id: orderId,
         employee_id: employeeId,
-        assigned_daily_schedules: assignedDailySchedules,
+        assigned_daily_schedules: sanitizeAssignedDailySchedules(assignedDailySchedules),
         assigned_recurrence_interval_weeks,
         assigned_start_week_offset,
       });

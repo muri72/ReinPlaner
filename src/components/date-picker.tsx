@@ -35,6 +35,12 @@ export function DatePicker({ label, placeholder, value, onChange, disabled, erro
     const text = e.target.value;
     setInputValue(text);
 
+    // When input is cleared, explicitly set null
+    if (text.length === 0 || text.trim() === "") {
+      onChange(null);
+      return;
+    }
+
     // Parse date when length is 10 (DD.MM.YYYY format)
     if (text.length === 10) {
       const referenceDate = new Date(Date.UTC(
@@ -92,11 +98,27 @@ export function DatePicker({ label, placeholder, value, onChange, disabled, erro
               onChange={handleInputChange}
               disabled={disabled}
               className={cn(
-                "w-full pl-10",
+                "w-full pl-10 pr-10",
                 !value && "text-muted-foreground"
               )}
             />
             <CalendarIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            {value && !disabled && (
+              <button
+                type="button"
+                onClick={() => {
+                  onChange(null);
+                  setInputValue("");
+                }}
+                className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                aria-label="Datum löschen"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+            )}
           </div>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0">
