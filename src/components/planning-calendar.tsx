@@ -104,8 +104,8 @@ function DroppableCell({ id, children, isOver, isAvailable, day, holidaysMap, on
         // Unavailable days have striped pattern
         !isAvailable && !isOverCell && "bg-muted/50 bg-[repeating-linear-gradient(-45deg,transparent,transparent_4px,hsl(var(--border))_4px,hsl(var(--border))_5px)]",
         styling,
-        // Red ring for today's column
-        effectiveIsTodayColumn && "ring-2 ring-red-500 ring-offset-1"
+        // Red background and ring for today's column
+        effectiveIsTodayColumn && "bg-red-50 ring-2 ring-red-500 ring-offset-1"
       )}
     >
       {absenceBar}
@@ -157,7 +157,9 @@ export function PlanningCalendar({
   showHiddenEmployees = false,
   onShowHiddenEmployeesChange,
 }: PlanningCalendarProps) {
-  const employeeIds = Object.keys(planningData);
+  const employeeIds = Object.keys(planningData).sort((a, b) => 
+    planningData[a].name.localeCompare(planningData[b].name)
+  );
   const canManageSubstitutions = currentUserRole === 'admin' || currentUserRole === 'manager';
 
   // Calculate hidden employees (those with no shifts in the week)
@@ -350,12 +352,13 @@ export function PlanningCalendar({
   }, [planningData, weekDays]);
 
   return (
-    <div className="border rounded-lg shadow-neumorphic glassmorphism-card h-full overflow-auto custom-scrollbar relative">
+    <div className="flex flex-col h-full overflow-hidden border rounded-lg shadow-neumorphic glassmorphism-card">
       <TooltipProvider delayDuration={200}>
-        <Table className="min-w-full border-collapse table-fixed">
-        <TableHeader>
-          <TableRow>
-            <TableHead className="sticky left-0 bg-card z-20 w-[200px] text-sm" rowSpan={2}>
+        <div className="overflow-auto custom-scrollbar flex-1">
+          <Table className="min-w-full border-collapse table-fixed">
+          <TableHeader className="sticky top-0 z-30 bg-card shadow-sm">
+            <TableRow>
+              <TableHead className="sticky left-0 bg-card z-30 w-[200px] text-sm border-r" rowSpan={2}>
               <div className="flex items-center justify-between">
                 <span>Mitarbeiter</span>
                 {hiddenEmployeeIds.length > 0 && (
@@ -407,8 +410,9 @@ export function PlanningCalendar({
             {weekDays.map((day) => {
               const dayKey = format(day, "yyyy-MM-dd");
               const holidayInfo = holidaysMap[dayKey];
+              const isTodayDay = isToday(day);
               return (
-                <TableHead key={day.toString()} className="text-center text-sm w-[120px] min-w-[120px]">
+                <TableHead key={day.toString()} className={cn("text-center text-sm w-[120px] min-w-[120px] border-l", isTodayDay && "bg-red-50 ring-2 ring-red-500")}>
                   <div>
                     {format(day, "E dd.", { locale: de })}
                     {holidayInfo && (
@@ -424,7 +428,7 @@ export function PlanningCalendar({
           {/* Unassigned Orders Row */}
           {showUnassigned && (
             <TableRow className="bg-amber-50/50">
-              <TableCell className="font-semibold sticky left-0 bg-amber-50 z-10 align-top">
+              <TableCell className="font-semibold sticky left-0 bg-amber-50 z-20 align-top border-r">
                 <div className="flex items-center gap-2">
                   <div className="p-1.5 rounded-full bg-amber-100">
                     <CircleDashed className="h-4 w-4 text-amber-600" />
@@ -506,7 +510,7 @@ export function PlanningCalendar({
 
               return (
                 <TableRow key={id}>
-                  <TableCell className="font-normal sticky left-0 bg-card z-10 align-top p-2 w-[200px]">
+                  <TableCell className="font-normal sticky left-0 bg-card z-20 align-top p-2 w-[200px] border-r">
                     <div className="flex items-start gap-2">
                       <Avatar>
                         <AvatarImage src={employee.raw.avatar_url} alt={employee.name} />
@@ -730,7 +734,15 @@ export function PlanningCalendar({
                         absenceBar={absenceBar}
                       >
                         <div className="space-y-1 pt-5">
-                          {dayData.shifts.map((shift) => (
+                          {dayData.shifts
+                            .slice()
+                            .sort((a, b) => {
+                              if (!a.start_time && !b.start_time) return 0;
+                              if (!a.start_time) return 1;
+                              if (!b.start_time) return -1;
+                              return a.start_time.localeCompare(b.start_time);
+                            })
+                            .map((shift) => (
                             <ShiftCard
                               key={shift.id}
                               shift={shift}
@@ -750,7 +762,8 @@ export function PlanningCalendar({
             })
           )}
         </TableBody>
-      </Table>
+          </Table>
+        </div>
       </TooltipProvider>
     </div>
   );

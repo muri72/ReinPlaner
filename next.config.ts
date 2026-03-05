@@ -228,7 +228,14 @@ const nextConfig: NextConfig = {
       };
     }
 
-    return config;
+    return {
+      ...config,
+      treeshake: {
+        ...config.treeshake,
+        removeDebugLogging: true,
+      },
+      automaticVercelMonitors: true,
+    };
   },
 
   // ============================================
@@ -333,12 +340,6 @@ const sentryWebpackPluginOptions = {
 
   // Hides source maps from client browser
   hideSourceMaps: true,
-
-  // Automatically tree-shake Sentry logger statements
-  disableLogger: true,
-
-  // Enables automatic instrumentation of Vercel Cron Monitors
-  automaticVercelMonitors: true,
 
   // Supabase authentication for sourcemap uploads
   authToken: process.env.SENTRY_AUTH_TOKEN,

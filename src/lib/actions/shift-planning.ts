@@ -950,6 +950,53 @@ export async function assignEmployeeToShift(
       return { success: false, message: "Mitarbeiter ist bereits zugewiesen." };
     }
 
+    // Get the shift details to check for overlaps
+    const { data: shiftData, error: shiftError } = await supabaseAdmin
+      .from("shifts")
+      .select("shift_date, start_time, end_time")
+      .eq("id", shiftId)
+      .single();
+
+    if (shiftError) throw shiftError;
+
+    // Check for overlapping shifts on the same day
+    if (shiftData.shift_date && shiftData.start_time && shiftData.end_time) {
+      const { data: existingShifts, error: overlapError } = await supabaseAdmin
+        .from("shifts")
+        .select("id, shift_date, start_time, end_time")
+        .eq("shift_date", shiftData.shift_date)
+        .neq("id", shiftId);
+
+      if (!overlapError && existingShifts && existingShifts.length > 0) {
+        // Get all employees assigned to these shifts
+        const shiftIds = existingShifts.map(s => s.id);
+        const { data: shiftEmployees } = await supabaseAdmin
+          .from("shift_employees")
+          .select("shift_id, employee_id")
+          .in("shift_id", shiftIds)
+          .eq("employee_id", employeeId);
+
+        if (shiftEmployees && shiftEmployees.length > 0) {
+          // Find overlapping shift
+          const assignedShiftIds = shiftEmployees.map(se => se.shift_id);
+          const overlappingShift = existingShifts.find(s => 
+            assignedShiftIds.includes(s.id) &&
+            s.start_time && s.end_time &&
+            ((shiftData.start_time >= s.start_time && shiftData.start_time < s.end_time) ||
+             (shiftData.end_time > s.start_time && shiftData.end_time <= s.end_time) ||
+             (shiftData.start_time <= s.start_time && shiftData.end_time >= s.end_time))
+          );
+
+          if (overlappingShift) {
+            return { 
+              success: false, 
+              message: `Überschneidung mit bestehendem Einsatz am ${shiftData.shift_date} (${overlappingShift.start_time}-${overlappingShift.end_time}).` 
+            };
+          }
+        }
+      }
+    }
+
     // Create assignment
     const { error: assignError } = await supabaseAdmin
       .from("shift_employees")
@@ -2695,6 +2742,48 @@ export async function simpleReassignShift(params: {
       throw new Error("Einsatz nicht gefunden.");
     }
 
+    // Determine target employee and date for overlap check
+    const targetEmployeeId = newEmployeeId || shift.shift_employees?.[0]?.employee_id;
+    const targetDate = newDate || shift.shift_date;
+    const targetStartTime = newStartTime || shift.start_time;
+    const targetEndTime = newEndTime || shift.end_time;
+
+    // Check for overlapping shifts on the same day for the target employee
+    if (targetEmployeeId && targetDate && targetStartTime && targetEndTime) {
+      const { data: existingShifts, error: overlapError } = await supabaseAdmin
+        .from("shifts")
+        .select("id, shift_date, start_time, end_time")
+        .eq("shift_date", targetDate)
+        .neq("id", shiftId);
+
+      if (!overlapError && existingShifts && existingShifts.length > 0) {
+        const shiftIds = existingShifts.map(s => s.id);
+        const { data: shiftEmployees } = await supabaseAdmin
+          .from("shift_employees")
+          .select("shift_id, employee_id")
+          .in("shift_id", shiftIds)
+          .eq("employee_id", targetEmployeeId);
+
+        if (shiftEmployees && shiftEmployees.length > 0) {
+          const assignedShiftIds = shiftEmployees.map(se => se.shift_id);
+          const overlappingShift = existingShifts.find(s => 
+            assignedShiftIds.includes(s.id) &&
+            s.start_time && s.end_time &&
+            ((targetStartTime >= s.start_time && targetStartTime < s.end_time) ||
+             (targetEndTime > s.start_time && targetEndTime <= s.end_time) ||
+             (targetStartTime <= s.start_time && targetEndTime >= s.end_time))
+          );
+
+          if (overlappingShift) {
+            return { 
+              success: false, 
+              message: `Überschneidung mit bestehendem Einsatz am ${targetDate} (${overlappingShift.start_time}-${overlappingShift.end_time}).` 
+            };
+          }
+        }
+      }
+    }
+
     console.log("[SIMPLE-REASSIGN] Current shift:", {
       id: shift.id,
       shift_date: shift.shift_date,
@@ -2838,6 +2927,53 @@ export async function addEmployeeToShift(params: {
 
     if (checkError && checkError.code !== 'PGRST116') {
       throw checkError;
+    }
+
+    // Get shift details for overlap check
+    const { data: shiftForCheck, error: shiftCheckError } = await supabaseAdmin
+      .from("shifts")
+      .select("shift_date, start_time, end_time")
+      .eq("id", shiftId)
+      .single();
+
+    if (shiftCheckError || !shiftForCheck) {
+      throw shiftCheckError || new Error("Einsatz nicht gefunden");
+    }
+
+    // Check for overlapping shifts on the same day
+    if (shiftForCheck.shift_date && shiftForCheck.start_time && shiftForCheck.end_time) {
+      const { data: existingShifts } = await supabaseAdmin
+        .from("shifts")
+        .select("id, shift_date, start_time, end_time")
+        .eq("shift_date", shiftForCheck.shift_date)
+        .neq("id", shiftId);
+
+      if (existingShifts && existingShifts.length > 0) {
+        const shiftIds = existingShifts.map(s => s.id);
+        const { data: shiftEmployees } = await supabaseAdmin
+          .from("shift_employees")
+          .select("shift_id, employee_id")
+          .in("shift_id", shiftIds)
+          .eq("employee_id", employeeId);
+
+        if (shiftEmployees && shiftEmployees.length > 0) {
+          const assignedShiftIds = shiftEmployees.map(se => se.shift_id);
+          const overlappingShift = existingShifts.find(s => 
+            assignedShiftIds.includes(s.id) &&
+            s.start_time && s.end_time &&
+            ((shiftForCheck.start_time >= s.start_time && shiftForCheck.start_time < s.end_time) ||
+             (shiftForCheck.end_time > s.start_time && shiftForCheck.end_time <= s.end_time) ||
+             (shiftForCheck.start_time <= s.start_time && shiftForCheck.end_time >= s.end_time))
+          );
+
+          if (overlappingShift) {
+            return { 
+              success: false, 
+              message: `Überschneidung mit bestehendem Einsatz am ${shiftForCheck.shift_date} (${overlappingShift.start_time}-${overlappingShift.end_time}).` 
+            };
+          }
+        }
+      }
     }
 
     // Get shift details for notification and time_entry cleanup
@@ -3051,6 +3187,44 @@ export async function copyShift(params: {
 
     if (fetchError || !sourceShift) {
       throw new Error("Quell-Einsatz nicht gefunden.");
+    }
+
+    // Check for overlapping shifts on the same day for the new employee
+    const newStartTime = params.newStartTime || sourceShift.start_time;
+    const newEndTime = params.newEndTime || sourceShift.end_time;
+
+    if (params.newDate && newStartTime && newEndTime) {
+      const { data: existingShifts } = await supabaseAdmin
+        .from("shifts")
+        .select("id, shift_date, start_time, end_time")
+        .eq("shift_date", params.newDate);
+
+      if (existingShifts && existingShifts.length > 0) {
+        const shiftIds = existingShifts.map(s => s.id);
+        const { data: shiftEmployees } = await supabaseAdmin
+          .from("shift_employees")
+          .select("shift_id, employee_id")
+          .in("shift_id", shiftIds)
+          .eq("employee_id", params.newEmployeeId);
+
+        if (shiftEmployees && shiftEmployees.length > 0) {
+          const assignedShiftIds = shiftEmployees.map(se => se.shift_id);
+          const overlappingShift = existingShifts.find(s => 
+            assignedShiftIds.includes(s.id) &&
+            s.start_time && s.end_time &&
+            ((newStartTime >= s.start_time && newStartTime < s.end_time) ||
+             (newEndTime > s.start_time && newEndTime <= s.end_time) ||
+             (newStartTime <= s.start_time && newEndTime >= s.end_time))
+          );
+
+          if (overlappingShift) {
+            return { 
+              success: false, 
+              message: `Überschneidung mit bestehendem Einsatz am ${params.newDate} (${overlappingShift.start_time}-${overlappingShift.end_time}).` 
+            };
+          }
+        }
+      }
     }
 
     // Create a copy of the shift (without is_manual since column may not exist)
