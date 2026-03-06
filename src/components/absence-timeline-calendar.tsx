@@ -130,25 +130,28 @@ export function AbsenceTimelineCalendar() {
                   // The schedules is an array with one object containing all days
                   const daySchedule = Array.isArray(schedules) ? schedules[0] : schedules;
 
-                  // Map day names to ISO day numbers (1=Mon, 7=Sun)
-                  const dayNameToNumber: Record<string, number> = {
-                    monday: 1,
-                    tuesday: 2,
-                    wednesday: 3,
-                    thursday: 4,
-                    friday: 5,
-                    saturday: 6,
-                    sunday: 7,
-                  };
+                  // Only process if daySchedule is a valid object
+                  if (daySchedule && typeof daySchedule === 'object') {
+                    // Map day names to ISO day numbers (1=Mon, 7=Sun)
+                    const dayNameToNumber: Record<string, number> = {
+                      monday: 1,
+                      tuesday: 2,
+                      wednesday: 3,
+                      thursday: 4,
+                      friday: 5,
+                      saturday: 6,
+                      sunday: 7,
+                    };
 
-                  // Find days with non-null hours
-                  workingDays = Object.entries(daySchedule)
+                    // Find days with non-null hours
+                    workingDays = Object.entries(daySchedule)
                     .filter(([dayName, dayData]: [string, any]) => {
                       const hours = dayData?.hours;
                       return hours !== null && hours !== undefined && hours !== '';
                     })
                     .map(([dayName]) => dayNameToNumber[dayName.toLowerCase()] || 0)
                     .filter(day => day >= 1 && day <= 7);
+                  }
                 } catch (e) {
                   console.error('Error parsing schedules:', e);
                 }

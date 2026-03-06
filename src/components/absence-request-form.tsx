@@ -345,7 +345,7 @@ export function AbsenceRequestForm({ initialData, onSubmit, submitButtonText, on
                     >
                       {excessDays} Tag{excessDays !== 1 ? 'e' : ''} als unbezahlten Urlaub beantragen
                     </Label>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-slate-700 dark:text-slate-300">
                       Die {excessDays} überschreitenden Tage werden nicht von Ihrem Urlaubskontingent abgezogen.
                     </p>
                   </div>
@@ -362,7 +362,7 @@ export function AbsenceRequestForm({ initialData, onSubmit, submitButtonText, on
                     {requestedDays} Tag{requestedDays !== 1 ? 'e' : ''} unbezahlter Urlaub
                   </span>
                 </div>
-                <p className="mt-1 text-xs text-muted-foreground">
+                <p className="mt-1 text-xs text-slate-700 dark:text-slate-300 font-medium">
                   Diese Tage werden nicht von Ihrem Urlaubskontingent abgezogen.
                 </p>
               </div>
@@ -542,7 +542,7 @@ export function AbsenceRequestForm({ initialData, onSubmit, submitButtonText, on
                       >
                         {excessDays} Tag{excessDays !== 1 ? 'e' : ''} als unbezahlten Urlaub beantragen
                       </Label>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs text-slate-700 dark:text-slate-300">
                         Die {excessDays} überschreitenden Tage werden nicht von Ihrem Urlaubskontingent abgezogen.
                       </p>
                     </div>
@@ -559,7 +559,7 @@ export function AbsenceRequestForm({ initialData, onSubmit, submitButtonText, on
                       {requestedDays} Tag{requestedDays !== 1 ? 'e' : ''} unbezahlter Urlaub
                     </span>
                   </div>
-                  <p className="mt-1 text-xs text-muted-foreground">
+                  <p className="mt-1 text-xs text-slate-700 dark:text-slate-300 font-medium">
                     Diese Tage werden nicht von Ihrem Urlaubskontingent abgezogen.
                   </p>
                 </div>

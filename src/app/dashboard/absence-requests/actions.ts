@@ -22,9 +22,15 @@ export async function createAbsenceRequest(data: AbsenceRequestFormValues): Prom
     .eq('id', data.employeeId)
     .single();
 
-  if (employeeError || !employee || !employee.user_id) {
-    console.error("Fehler beim Abrufen des Mitarbeiter-Benutzers:", employeeError?.message || employeeError);
-    return { success: false, message: "Der ausgewählte Mitarbeiter ist keinem Benutzerkonto zugeordnet." };
+  if (employeeError || !employee) {
+    console.error("Fehler beim Abrufen des Mitarbeiters:", employeeError?.message || employeeError);
+    return { success: false, message: "Mitarbeiter nicht gefunden." };
+  }
+
+  // Auto-approve requests created by admins/managers for other employees
+  const { data: creatorProfile } = await supabase.from('profiles').select('role').eq('id', creator.id).single();
+  if (creatorProfile?.role === 'admin' || creatorProfile?.role === 'manager') {
+    data.status = 'approved';
   }
 
   const { error } = await supabase
@@ -45,17 +51,19 @@ export async function createAbsenceRequest(data: AbsenceRequestFormValues): Prom
     return { success: false, message: `Fehler beim Erstellen des Antrags: ${error.message}` };
   }
 
-  // Notify admins and managers
-  const supabaseAdmin = createAdminClient();
-  const { data: adminsAndManagers } = await supabaseAdmin.from('profiles').select('id').in('role', ['admin', 'manager']);
-  if (adminsAndManagers) {
-    for (const admin of adminsAndManagers) {
-      await sendNotification({
-        userId: admin.id,
-        title: "Neuer Abwesenheitsantrag",
-        message: `Ein neuer Antrag von ${employee.first_name} ${employee.last_name} wurde eingereicht.`,
-        link: "/dashboard/absence-requests"
-      });
+  // Only notify admins/managers if request is pending (not auto-approved by admin)
+  if (data.status !== 'approved') {
+    const supabaseAdmin = createAdminClient();
+    const { data: adminsAndManagers } = await supabaseAdmin.from('profiles').select('id').in('role', ['admin', 'manager']);
+    if (adminsAndManagers) {
+      for (const admin of adminsAndManagers) {
+        await sendNotification({
+          userId: admin.id,
+          title: "Neuer Abwesenheitsantrag",
+          message: `Ein neuer Antrag von ${employee.first_name} ${employee.last_name} wurde eingereicht.`,
+          link: "/dashboard/absence-requests"
+        });
+      }
     }
   }
 
