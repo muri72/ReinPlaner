@@ -367,19 +367,44 @@ function buildTimeEntryData(shift: any, shiftEmployee: any, employee: any): any 
   let startTime: string | null = null;
   let endTime: string | null = null;
 
+  // Helper function to get correct timezone offset for Europe/Berlin
+  // DST starts: last Sunday in March at 02:00 CET → 03:00 CEST
+  // DST ends: last Sunday in October at 03:00 CEST → 02:00 CET
+  const getBerlinOffset = (dateString: string): string => {
+    const date = new Date(dateString + 'T12:00:00Z'); // Noon UTC to avoid DST boundary issues
+    const year = date.getUTCFullYear();
+    const month = date.getUTCMonth();
+    const day = date.getUTCDate();
+
+    // Calculate last Sunday in March
+    const marchLastDay = new Date(Date.UTC(year, 2, 31));
+    const marchLastSunday = 31 - ((marchLastDay.getUTCDay() + 1) % 7); // 0=Sunday, so +1 makes Sunday=1, then 31-x
+
+    // Calculate last Sunday in October
+    const octLastDay = new Date(Date.UTC(year, 9, 31));
+    const octLastSunday = 31 - ((octLastDay.getUTCDay() + 1) % 7);
+
+    // DST is active from last Sunday in March (02:00 CET) to last Sunday in October (03:00 CEST)
+    const isDST = (
+      (month === 2 && day >= marchLastSunday) || // March - from last Sunday
+      (month > 2 && month < 9) || // April to September
+      (month === 9 && day <= octLastSunday) // October - until last Sunday
+    );
+
+    return isDST ? '+02:00' : '+01:00';
+  };
+
   if (shift.start_time && shift.shift_date) {
     // Create timestamp with explicit timezone offset to preserve local time
     // Europe/Berlin is UTC+1 in winter, UTC+2 in summer
-    const month = parseInt(shift.shift_date.split('-')[1]);
-    const offset = (month >= 3 && month <= 10) ? '+02:00' : '+01:00'; // DST aware
+    const offset = getBerlinOffset(shift.shift_date);
     // Handle both HH:mm and HH:mm:ss formats
     const timePart = shift.start_time.split(':').length === 2 ? `${shift.start_time}:00` : shift.start_time;
     startTime = `${shift.shift_date}T${timePart}${offset}`;
   }
 
   if (shift.end_time && shift.shift_date) {
-    const month = parseInt(shift.shift_date.split('-')[1]);
-    const offset = (month >= 3 && month <= 10) ? '+02:00' : '+01:00';
+    const offset = getBerlinOffset(shift.shift_date);
     // Handle both HH:mm and HH:mm:ss formats
     const timePart = shift.end_time.split(':').length === 2 ? `${shift.end_time}:00` : shift.end_time;
     let endTimestamp = `${shift.shift_date}T${timePart}${offset}`;
@@ -393,7 +418,9 @@ function buildTimeEntryData(shift: any, shiftEmployee: any, employee: any): any 
         const nextDay = new Date(shift.shift_date);
         nextDay.setDate(nextDay.getDate() + 1);
         const nextDayStr = nextDay.toISOString().split('T')[0];
-        endTimestamp = `${nextDayStr}T${timePart}${offset}`;
+        // Use offset for the next day (could be different if DST change happens overnight)
+        const nextDayOffset = getBerlinOffset(nextDayStr);
+        endTimestamp = `${nextDayStr}T${timePart}${nextDayOffset}`;
       }
     }
 

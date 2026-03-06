@@ -150,10 +150,32 @@ async function generateTimeEntryForShift(supabaseAdmin: any, shiftId: string): P
         durationMinutes = Number(shift.estimated_hours) * 60;
       }
 
-      // Build start/end times with timezone
-      const month = parseInt(shift.shift_date.split("-")[1]);
-      const offset = month >= 3 && month <= 10 ? "+02:00" : "+01:00";
+      // Build start/end times with timezone - correct DST calculation
+      const getBerlinOffset = (dateString: string): string => {
+        const date = new Date(dateString + 'T12:00:00Z');
+        const year = date.getUTCFullYear();
+        const month = date.getUTCMonth();
+        const day = date.getUTCDate();
 
+        // Calculate last Sunday in March
+        const marchLastDay = new Date(Date.UTC(year, 2, 31));
+        const marchLastSunday = 31 - ((marchLastDay.getUTCDay() + 1) % 7);
+
+        // Calculate last Sunday in October
+        const octLastDay = new Date(Date.UTC(year, 9, 31));
+        const octLastSunday = 31 - ((octLastDay.getUTCDay() + 1) % 7);
+
+        // DST is active from last Sunday in March to last Sunday in October
+        const isDST = (
+          (month === 2 && day >= marchLastSunday) ||
+          (month > 2 && month < 9) ||
+          (month === 9 && day <= octLastSunday)
+        );
+
+        return isDST ? "+02:00" : "+01:00";
+      };
+
+      const offset = getBerlinOffset(shift.shift_date);
       const startTime = `${shift.shift_date}T${shift.start_time}:00${offset}`;
       let endTime = `${shift.shift_date}T${shift.end_time}:00${offset}`;
 
@@ -165,7 +187,8 @@ async function generateTimeEntryForShift(supabaseAdmin: any, shiftId: string): P
           const nextDay = new Date(shift.shift_date);
           nextDay.setDate(nextDay.getDate() + 1);
           const nextDayStr = nextDay.toISOString().split("T")[0];
-          endTime = `${nextDayStr}T${shift.end_time}:00${offset}`;
+          const nextDayOffset = getBerlinOffset(nextDayStr);
+          endTime = `${nextDayStr}T${shift.end_time}:00${nextDayOffset}`;
         }
       }
 
