@@ -393,7 +393,7 @@ export function PlanningCalendarMonth({
                       </AvatarFallback>
                     </Avatar>
                     <div className="cursor-pointer hover:text-primary">
-                      <EmployeeEditDialog employee={employee.raw as any} />
+                      <EmployeeEditDialog employee={employee.raw as any} onActionSuccess={onActionSuccess} />
                       <span className="text-sm font-medium">{employee.name}</span>
                       <span className="text-xs text-muted-foreground ml-2">
                         {employee.raw.job_title || 'Mitarbeiter'}

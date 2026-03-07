@@ -534,7 +534,7 @@ export function PlanningCalendar({
                           <Tooltip delayDuration={200}>
                             <TooltipTrigger asChild>
                               <div className="text-sm font-semibold cursor-pointer hover:text-primary truncate">
-                                <EmployeeEditDialog employee={employee.raw as any} />
+                                <EmployeeEditDialog employee={employee.raw as any} onActionSuccess={onActionSuccess} />
                                 {employee.name}
                               </div>
                             </TooltipTrigger>
