@@ -193,11 +193,21 @@ export function EmployeeForm({ initialData, onSubmit, submitButtonText, onSucces
     }
 
     // For edit mode, use initialData values to avoid uncontrolled→controlled switch
-    return {
+    const result = {
       ...baseDefaults,
       ...processedInitialData,
       can_work_holidays: (processedInitialData as any)?.can_work_holidays ?? false,
     };
+
+    // Ensure default_daily_schedules has correct structure (array with at least one week object)
+    // If it's null, undefined, or empty array, use default structure
+    if (!result.default_daily_schedules ||
+        !Array.isArray(result.default_daily_schedules) ||
+        result.default_daily_schedules.length === 0) {
+      result.default_daily_schedules = [{}];
+    }
+
+    return result;
   };
 
   const form = useForm<EmployeeFormInput>({
@@ -209,6 +219,14 @@ export function EmployeeForm({ initialData, onSubmit, submitButtonText, onSucces
   // Register with unsaved changes context
   // Use special hook for create forms to avoid false positives from prefills
   useFormUnsavedChangesForCreate("employee-form", form.formState.isDirty, isCreateMode);
+
+  // IMPORTANT: Reset form when initialData changes (e.g., after fetching fresh data)
+  // This ensures the form displays the latest values including default_daily_schedules
+  useEffect(() => {
+    if (initialData) {
+      form.reset(buildDefaultValues());
+    }
+  }, [initialData, form]);
 
   // Reset form dirty state after initial setup for create mode
   useEffect(() => {
