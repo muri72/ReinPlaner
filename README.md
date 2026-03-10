@@ -398,7 +398,7 @@ All API routes are in `src/app/api/`:
 
 ## 📄 License
 
-This project is licensed under the MIT License.
+This project is licensed under the MIT License...
 
 ---
 
