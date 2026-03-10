@@ -47,3 +47,4 @@ next-env.d.ts
 .env.sentry-build-plugin
 .mcp.json
 .gemini/settings.json
+ubuntu.code-workspace
