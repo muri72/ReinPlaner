@@ -97,7 +97,9 @@ jobs:
         run: rm -rf node_modules/.cache .next
 
       - name: Run build
-        run: pnpm run build
+        run: |
+          cp .env.production.template .env.production
+          pnpm run build
         env:
           NODE_ENV: production
 
