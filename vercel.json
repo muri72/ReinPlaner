@@ -1,0 +1,7 @@
+{
+  "name": "reinplaner-dashboard",
+  "project": "reinplaner-dashboard",
+  "buildCommand": "pnpm run build",
+  "devCommand": "pnpm run dev",
+  "installCommand": "pnpm install"
+}
