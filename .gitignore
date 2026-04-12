@@ -48,3 +48,7 @@ next-env.d.ts
 .mcp.json
 .gemini/settings.json
 ubuntu.code-workspace
+
+# Vercel / CI Cache
+.vercel
+.next
