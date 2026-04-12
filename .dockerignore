@@ -1,0 +1,57 @@
+# Dependencies
+node_modules
+.pnp
+.pnp.*
+
+# Next.js build output
+.next
+out
+build
+
+# Production
+/build
+
+# Testing
+/coverage
+
+# Environment files
+.env
+.env.*
+!.env.example
+!.env.production.template
+!.env.local.template
+
+# Git
+.git
+.gitignore
+
+# Misc
+.DS_Store
+*.pem
+*.log
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# Vercel
+.vercel
+
+# Sentry
+.env.sentry-build-plugin
+
+# Claude
+.claude
+
+# Monaco/TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# OpenClaw
+.mcp*
+ubuntu.code-workspace
+
+# Cache files
+*.cache

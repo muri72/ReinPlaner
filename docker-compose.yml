@@ -1,0 +1,115 @@
+# ==============================================
+# ARIS Dashboard - Local Development Stack
+# ==============================================
+# Run: docker-compose up
+# Opens: http://localhost:3000
+# Supabase Studio: http://localhost:3001
+
+services:
+  # ---- Next.js Application ----
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - NEXT_TELEMETRY_DISABLED=1
+      # Supabase Local
+      - NEXT_PUBLIC_SUPABASE_URL=http://localhost:54321
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnHhReUlPGIlHJ0_Nc
+      - SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU
+      - NEXT_PUBLIC_BASE_URL=http://localhost:3000
+      # Optional: Sentry
+      - SENTRY_AUTH_TOKEN=${SENTRY_AUTH_TOKEN:-}
+      - SENTRY_ORG=${SENTRY_ORG:-}
+      - SENTRY_PROJECT=${SENTRY_PROJECT:-}
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      supabase-db:
+        condition: service_healthy
+      supabase-kong:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - supabase_network
+
+  # ---- Supabase Local Stack ----
+  # Reference: https://supabase.com/docs/guides/local-development
+
+  supabase-db:
+    image: supabase/postgres:15.6.1.147
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    volumes:
+      - supabase-db-data:/var/lib/postgresql/data
+      - ./supabase/migrations:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - supabase_network
+
+  supabase-kong:
+    image: supabase/kong:2.8.1
+    ports:
+      - "54321:54321"
+      - "8001:8001"  # Kong Admin API
+    environment:
+      KONG_DATABASE: postgres
+      KONG_PG_HOST: supabase-db
+      KONG_PG_USER: postgres
+      KONG_PG_PASSWORD: postgres
+      KONG_ADMIN_LISTEN: 0.0.0.0:8001
+      KONG_DECLARATIVE_CONFIG: /var/lib/kong/kong.yml
+      KONG_PLUGINS: request-transformer,cors,key-auth,acl
+    depends_on:
+      supabase-db:
+        condition: service_healthy
+    volumes:
+      - ./supabase/kong.yml:/var/lib/kong/kong.yml:ro
+    restart: unless-stopped
+    networks:
+      - supabase_network
+
+  supabase-studio:
+    image: supabase/studio:20241028-91ff1ce
+    ports:
+      - "3001:3000"
+    environment:
+      STUDIO_PG_META_URL: http://supabase-db:5432
+      POSTGRES_USER: postgres
+      POSTGRES_HOST: supabase-db
+      POSTGRES_PORT: 5432
+      POSTGRES_PASSWORD: postgres
+      SUPABASE_URL: http://supabase-kong:54321
+      SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnHhReUlPGIlHJ0_Nc
+      SUPABASE_SERVICE_ROLE_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU
+    depends_on:
+      supabase-kong:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - supabase_network
+
+  # Supabase Auth (Realtime is handled separately)
+  # Note: For full local development, use `npx supabase start`
+  # This docker-compose provides minimal Kong + DB for API testing
+
+volumes:
+  supabase-db-data:
+    driver: local
+
+networks:
+  supabase_network:
+    driver: bridge

@@ -1,6 +1,6 @@
+/** @type {import('next').NextConfig} */
 import type { NextConfig } from "next";
 import { withSentryConfig } from "@sentry/nextjs";
-
 
 const nextConfig: NextConfig = {
   // ============================================
@@ -30,14 +30,15 @@ const nextConfig: NextConfig = {
   // ============================================
   // OUTPUT CONFIGURATION
   // ============================================
-  // Optimize for CDN deployment
-  // Temporarily disabled due to Turbopack .nft.json issue
-  // output: process.env.NODE_ENV === 'production' ? 'standalone' : undefined,
+  // Standalone output for Docker deployments (NOT used with Turbopack in dev)
+  // Builds a minimal self-contained Next.js server for production Docker images
+  output: process.env.NODE_ENV === 'production' && process.env.DOCKER_BUILD === 'true'
+    ? 'standalone'
+    : undefined,
 
   // ============================================
   // SERVER EXTERNAL PACKAGES
   // ============================================
-  // Specify packages that should be processed server-side
   serverExternalPackages: ['@supabase/supabase-js', '@supabase/ssr'],
 
   // ============================================
@@ -46,57 +47,27 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
-        // Security headers for all routes
         source: '/(.*)',
         headers: [
-          {
-            key: 'X-DNS-Prefetch-Control',
-            value: 'on',
-          },
-          {
-            key: 'Strict-Transport-Security',
-            value: 'max-age=63072000; includeSubDomains; preload',
-          },
-          {
-            key: 'X-Frame-Options',
-            value: 'SAMEORIGIN',
-          },
-          {
-            key: 'X-Content-Type-Options',
-            value: 'nosniff',
-          },
-          {
-            key: 'X-XSS-Protection',
-            value: '1; mode=block',
-          },
-          {
-            key: 'Referrer-Policy',
-            value: 'origin-when-cross-origin',
-          },
-          {
-            key: 'Permissions-Policy',
-            value: 'camera=(), microphone=(), geolocation=()',
-          },
+          { key: 'X-DNS-Prefetch-Control', value: 'on' },
+          { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
+          { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'X-XSS-Protection', value: '1; mode=block' },
+          { key: 'Referrer-Policy', value: 'origin-when-cross-origin' },
+          { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
         ],
       },
       {
-        // Cache static assets for 1 year
         source: '/_next/static/(.*)',
         headers: [
-          {
-            key: 'Cache-Control',
-            value: 'public, max-age=31536000, immutable',
-          },
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
         ],
       },
       {
-        // Cache images for 30 days
         source: '/_next/image(.*)',
         headers: [
-          {
-            key: 'Cache-Control',
-            value: 'public, max-age=2592000',
-          },
+          { key: 'Cache-Control', value: 'public, max-age=2592000' },
         ],
       },
     ];
@@ -108,43 +79,42 @@ const nextConfig: NextConfig = {
   webpack: (config, { buildId, dev, isServer, defaultLoaders, nextRuntime, webpack }) => {
     // Production optimizations
     if (!dev && !isServer) {
-      // ============================================
       // OPTIMIZE BUNDLE SPLITTING
-      // ============================================
       config.optimization.splitChunks = {
         chunks: 'all',
         minSize: 20000,
         maxSize: 244000,
         cacheGroups: {
-          // React and related libraries
           react: {
             name: 'react',
             test: /[\\/]node_modules[\\/](react|react-dom|react-is)[\\/]/,
             chunks: 'all',
             priority: 30,
           },
-          // Supabase client libraries
           supabase: {
             name: 'supabase',
             test: /[\\/]node_modules[\\/]@supabase[\\/]/,
             chunks: 'all',
             priority: 25,
           },
-          // UI component libraries
           ui: {
             name: 'ui',
             test: /[\\/]node_modules[\\/]@radix-ui[\\/]/,
             chunks: 'all',
             priority: 20,
           },
-          // Icons and fonts
           icons: {
             name: 'icons',
             test: /[\\/]node_modules[\\/]lucide-react[\\/]/,
             chunks: 'all',
             priority: 20,
           },
-          // Large vendor libraries
+          recharts: {
+            name: 'recharts',
+            test: /[\\/]node_modules[\\/]recharts[\\/]/,
+            chunks: 'all',
+            priority: 20,
+          },
           vendor: {
             name: 'vendors',
             test: /[\\/]node_modules[\\/]/,
@@ -152,7 +122,6 @@ const nextConfig: NextConfig = {
             priority: 10,
             reuseExistingChunk: true,
           },
-          // Common patterns
           common: {
             name: 'common',
             minChunks: 2,
@@ -163,20 +132,10 @@ const nextConfig: NextConfig = {
         },
       };
 
-      // ============================================
-      // OPTIMIZE MODULE CONCATENATION
-      // ============================================
       config.optimization.concatenateModules = true;
-
-      // ============================================
-      // IMPROVE TREE SHAKING
-      // ============================================
       config.optimization.usedExports = true;
       config.optimization.sideEffects = false;
 
-      // ============================================
-      // COMPILATION OPTIMIZATION
-      // ============================================
       config.resolve.fallback = {
         ...config.resolve.fallback,
         fs: false,
@@ -184,20 +143,13 @@ const nextConfig: NextConfig = {
         tls: false,
       };
 
-      // ============================================
-      // IGNORE UNUSED FILES
-      // ============================================
       config.module.rules.push({
         test: /\.md$/,
         use: 'ignore-loader',
       });
     }
 
-    // ============================================
-    // PERFORMANCE OPTIMIZATIONS FOR SERVER
-    // ============================================
     if (isServer) {
-      // Optimize for server-side rendering
       config.optimization = {
         ...config.optimization,
         splitChunks: {
@@ -221,7 +173,6 @@ const nextConfig: NextConfig = {
         },
       };
 
-      // Reduce memory usage on server
       config.experiments = {
         ...config.experiments,
         topLevelAwait: true,
@@ -239,29 +190,17 @@ const nextConfig: NextConfig = {
   },
 
   // ============================================
-  // REDIRECTS FOR SEO AND UX
+  // REDIRECTS & REWRITES
   // ============================================
   async redirects() {
     return [
-      // Redirect root to dashboard
-      {
-        source: '/',
-        destination: '/dashboard',
-        permanent: true,
-      },
+      { source: '/', destination: '/dashboard', permanent: true },
     ];
   },
 
-  // ============================================
-  // REWRITES FOR API AND ASSETS
-  // ============================================
   async rewrites() {
     return [
-      // PWA manifest
-      {
-        source: '/manifest.json',
-        destination: '/manifest.json',
-      },
+      { source: '/manifest.json', destination: '/manifest.json' },
     ];
   },
 
@@ -276,10 +215,7 @@ const nextConfig: NextConfig = {
   // EXPERIMENTAL FEATURES
   // ============================================
   experimental: {
-    // CSS optimization
     optimizeCss: true,
-
-    // Optimize package imports
     optimizePackageImports: [
       '@radix-ui/react-icons',
       'lucide-react',
@@ -288,66 +224,37 @@ const nextConfig: NextConfig = {
       '@radix-ui/react-dropdown-menu',
       '@radix-ui/react-select',
       '@radix-ui/react-tabs',
+      'recharts',
+      'date-fns',
+      'jspdf',
+      'html2canvas',
     ],
   },
 
   // ============================================
-  // TYPESCRIPT OPTIMIZATION
-  // ============================================
-  typescript: {
-    // Ignore build errors in development
-    ignoreBuildErrors: false,
-  },
-
-  // ============================================
-  // SWC OPTIMIZATION
+  // COMPILER OPTIMIZATIONS
   // ============================================
   compiler: {
-    // Remove console logs in production
     removeConsole: process.env.NODE_ENV === 'production' ? {
       exclude: ['error', 'warn'],
     } : false,
-
-    // React optimization
     reactRemoveProperties: process.env.NODE_ENV === 'production',
-
-    // Styled components
     styledComponents: true,
   },
-
-  // ============================================
-  // ON-DEMAND REVALIDATION
-  // ============================================
-  // Enable on-demand revalidation for better performance
-  // revalidate: 60, // Revalidate every minute
 };
 
 // ============================================
 // SENTRY WEBPACK PLUGIN CONFIGURATION
 // ============================================
 const sentryWebpackPluginOptions = {
-  // Only print logs for uploading source maps in CI
   silent: !process.env.CI,
-
-  // Upload a larger set of source maps for prettier stack traces
   widenClientFileUpload: true,
-
-  // Transpiles SDK to be compatible with IE11
   transpileClientSDK: true,
-
-  // Routes browser requests through Next.js rewrite to circumvent ad-blockers
   tunnelRoute: "/monitoring",
-
-  // Hides source maps from client browser
   hideSourceMaps: true,
-
-  // Supabase authentication for sourcemap uploads
   authToken: process.env.SENTRY_AUTH_TOKEN,
-
-  // Organization and project
   org: process.env.SENTRY_ORG,
   project: process.env.SENTRY_PROJECT,
 };
 
-// Export with Sentry configuration
 export default withSentryConfig(nextConfig, sentryWebpackPluginOptions);
