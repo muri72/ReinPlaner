@@ -47,9 +47,10 @@ export function isValidTaxId(taxId: string): boolean {
 
 // Social security number (Sozialversicherungsnummer) validation
 export function isValidSocialSecurityNumber(ssn: string): boolean {
-  // Format: XXDDMMYY-NNNNN-NNN
-  const ssnRegex = /^[0-9]{2}[0-9]{2}[0-9]{2}[0-9]{5}[0-9]{1}[0-9]{3}$/;
-  return ssnRegex.test(ssn.replace(/[-\s]/g, ''));
+  // German Sozialversicherungsnummer: 12 digits + check digit
+  // Format typically: XXDDMMYYXXXXXNNN (12-16 alphanumeric chars)
+  const cleaned = ssn.replace(/[-\s]/g, '');
+  return /^[0-9]{10,18}$/.test(cleaned); // Accept 10-18 digits
 }
 
 // URL validation
