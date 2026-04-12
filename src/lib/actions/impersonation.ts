@@ -221,7 +221,7 @@ export async function startImpersonation(targetUserId: string): Promise<ActionRe
         title: "Impersonierung gestartet",
         message: `Administrator ${adminFullName} hat am ${new Date().toLocaleDateString('de-DE')} um ${new Date().toLocaleTimeString('de-DE')} eine Impersonierung Ihrer Sitzung gestartet.`,
         link: "/dashboard/profile",
-        type: "security",
+        type: "system",
       });
     } catch (notificationError) {
       // Log but don't fail the impersonation if notification fails

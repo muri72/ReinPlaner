@@ -3,14 +3,10 @@
 import { useForm, Controller } from "react-hook-form";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
-import { cn } from "@/lib/utils";
 import { dayNames, germanDayNames } from "@/lib/utils/form-utils";
-import { EmployeeFormValues } from "../employee-form";
 
 interface EmployeeScheduleSectionProps {
-  form: ReturnType<typeof useForm<EmployeeFormValues>>;
+  form: any;
   totalWeeklyHours: string;
   scheduleVersion: number;
 }

@@ -13,9 +13,8 @@ import { FormActions } from "@/components/ui/form-actions";
 import {
   preprocessNumber,
   dayNames,
-  getDaysPerWeekFromSchedule,
 } from "@/lib/utils/form-utils";
-import { calculateVacationDays } from "@/lib/lohngruppen-config";
+import { calculateVacationDays, getDaysPerWeekFromSchedule } from "@/lib/lohngruppen-config";
 import {
   EmployeeBasicInfoSection,
   EmployeeDatesSection,
@@ -23,7 +22,7 @@ import {
   EmployeeScheduleSection,
   EmployeeVacationSection,
   EmployeeWageSection,
-} from "./index";
+} from "./employee-form/index";
 
 export const employeeSchema = z.object({
   first_name: z.string().min(1, "Vorname ist erforderlich"),

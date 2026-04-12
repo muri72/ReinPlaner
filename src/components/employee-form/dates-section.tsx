@@ -5,10 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DatePicker } from "@/components/date-picker";
-import { EmployeeFormValues } from "../employee-form";
 
 interface EmployeeDatesSectionProps {
-  form: ReturnType<typeof useForm<EmployeeFormValues>>;
+  form: any;
 }
 
 export function EmployeeDatesSection({ form }: EmployeeDatesSectionProps) {

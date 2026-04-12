@@ -3,10 +3,9 @@
 import { useForm } from "react-hook-form";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { EmployeeFormValues } from "../employee-form";
 
 interface EmployeeVacationSectionProps {
-  form: ReturnType<typeof useForm<EmployeeFormValues>>;
+  form: any;
 }
 
 export function EmployeeVacationSection({ form }: EmployeeVacationSectionProps) {

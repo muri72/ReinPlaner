@@ -7,10 +7,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { DatePicker } from "@/components/date-picker";
 import { getLohngruppenOptions, psaZuschlaege } from "@/lib/lohngruppen-config";
-import { EmployeeFormValues } from "../employee-form";
 
 interface EmployeeWageSectionProps {
-  form: ReturnType<typeof useForm<EmployeeFormValues>>;
+  form: any;
 }
 
 export function EmployeeWageSection({ form }: EmployeeWageSectionProps) {

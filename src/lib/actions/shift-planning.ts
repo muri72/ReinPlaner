@@ -1915,7 +1915,7 @@ export async function reassignAssignment(
           shift_date: actualOriginalDate,
           action: "deleted",
           notes: `Einzeltermin verschoben auf ${targetDate}`,
-          created_by: user.id,
+          created_by: authCheck.userId,
         });
 
         // Get the current assignment data
@@ -2059,7 +2059,7 @@ export async function reassignAssignment(
           shift_date: targetDate,
           action: "deleted",
           notes: "Mitarbeiter geändert (einzelner Termin)",
-          created_by: user.id,
+          created_by: authCheck.userId,
         });
       }
 
@@ -2232,7 +2232,7 @@ export async function reassignAssignment(
             shift_date: targetDate,
             action: "deleted",
             notes: `Mitarbeiter geändert auf bestehenden Assignment ${existingAssignment.id}`,
-            created_by: user.id,
+            created_by: authCheck.userId,
           });
         } else if (isReassigningToOriginalEmployee) {
           console.log("[REASSIGN] Reassigning back to original employee - no deleted override needed");
@@ -2324,7 +2324,7 @@ export async function reassignAssignment(
           shift_date: targetDate,
           action: "deleted",
           notes: `Mitarbeiter geändert auf neuen Assignment ${newAssignment.id}`,
-          created_by: user.id,
+          created_by: authCheck.userId,
         });
       }
     } else if (mode === "future") {
@@ -3766,7 +3766,7 @@ export async function createShift(
       }
 
       await supabaseAdmin.from("time_entries").insert({
-        user_id: user.id,
+        user_id: authCheck.userId,
         employee_id: params.employee_id,
         customer_id: order.customer_id,
         object_id: order.object_id,
@@ -3999,7 +3999,7 @@ export async function createShiftWithSchedule(
           }
 
           await supabaseAdmin.from("time_entries").insert({
-            user_id: user.id,
+            user_id: authCheck.userId,
             employee_id: employeeId,
             customer_id: orderInfo?.customer_id,
             object_id: orderInfo?.object_id,
