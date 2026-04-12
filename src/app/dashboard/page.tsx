@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
+import { OpenInvoicesWidget } from "@/components/open-invoices-widget";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -496,6 +497,11 @@ export default function DashboardPage() {
         </Card>
         </div>
       )}
+
+      {/* Open Invoices Widget */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <OpenInvoicesWidget />
+      </div>
 
       {/* Quick Actions */}
       <div className="flex flex-wrap gap-2">

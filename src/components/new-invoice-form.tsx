@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Debtor } from '@/lib/invoicing/types';
 import { createInvoiceAction, createInvoiceFromOrderAction } from '@/lib/invoicing/actions';
-import { parseCurrencyInput } from '@/lib/invoicing/actions';
+import { parseCurrencyInput } from '@/lib/invoicing/formatters';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';

@@ -215,7 +215,7 @@ const nextConfig: NextConfig = {
   // EXPERIMENTAL FEATURES
   // ============================================
   experimental: {
-    optimizeCss: true,
+    optimizeCss: false,
     optimizePackageImports: [
       '@radix-ui/react-icons',
       'lucide-react',

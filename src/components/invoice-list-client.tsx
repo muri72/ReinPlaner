@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { Invoice } from '@/lib/invoicing/types';
-import { formatCurrency } from '@/lib/invoicing/invoice-service';
+import { formatCurrency } from '@/lib/invoicing/formatters';
 import { format, parseISO, isPast } from 'date-fns';
 import {
   Table,

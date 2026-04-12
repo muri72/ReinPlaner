@@ -7,6 +7,7 @@ import { Resend } from 'resend';
 import { Invoice } from './types';
 import { formatCurrency } from './invoice-service';
 import { format, parseISO } from 'date-fns';
+import { de } from 'date-fns/locale';
 
 interface SendInvoiceEmailParams {
   invoice: Invoice;
@@ -47,11 +48,11 @@ export async function sendInvoiceEmail({
   }
 
   const invoiceDate = invoice.issue_date
-    ? format(parseISO(invoice.issue_date), 'dd. MMMM yyyy', { locale: require('date-fns/locale/de') })
+    ? format(parseISO(invoice.issue_date), 'dd. MMMM yyyy', { locale: de })
     : new Date().toLocaleDateString('de-DE');
 
   const dueDate = invoice.due_date
-    ? format(parseISO(invoice.due_date), 'dd. MMMM yyyy', { locale: require('date-fns/locale/de') })
+    ? format(parseISO(invoice.due_date), 'dd. MMMM yyyy', { locale: de })
     : '—';
 
   const defaultSubject = `Rechnung ${invoice.invoice_number} vom ${invoiceDate}`;
@@ -128,7 +129,7 @@ wir möchten Sie freundlich daran erinnern, dass die Rechnung ${invoice.invoice_
 
 Rechnungsdetails:
 - Rechnungsnummer: ${invoice.invoice_number}
-- Fälligkeitsdatum: ${invoice.due_date ? format(parseISO(invoice.due_date), 'dd. MMMM yyyy', { locale: require('date-fns/locale/de') }) : '—'}
+- Fälligkeitsdatum: ${invoice.due_date ? format(parseISO(invoice.due_date), 'dd. MMMM yyyy', { locale: de }) : '—'}
 - Offener Betrag: ${formatCurrency(invoice.total_amount_cents - invoice.paid_amount_cents, invoice.currency)}
 
 Bitte begleichen Sie den offenen Betrag schnellstmöglich.

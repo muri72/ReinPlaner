@@ -65,6 +65,7 @@ const navItems: NavItem[] = [
       { title: "Planung", href: "/dashboard/planning", icon: CalendarCheck, roles: ['admin', 'manager'] },
       { title: "Berichte", href: "/dashboard/reports", icon: FileText, roles: ['admin'] },
       { title: "Finanzen", href: "/dashboard/finances", icon: DollarSign, roles: ['admin', 'manager'] }, // Moved here
+      { title: "Rechnungen", href: "/dashboard/invoices", icon: FileText, roles: ['admin', 'manager'] },
     ],
   },
   {

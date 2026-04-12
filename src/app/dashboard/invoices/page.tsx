@@ -1,8 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { getInvoicesAction } from '@/lib/invoicing/actions';
-import { INVOICE_STATUS_LABELS } from '@/lib/invoicing/invoice-service';
-import { formatCurrency } from '@/lib/invoicing/invoice-service';
+import { INVOICE_STATUS_LABELS, formatCurrency } from '@/lib/invoicing/formatters';
 import { format, parseISO } from 'date-fns';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';

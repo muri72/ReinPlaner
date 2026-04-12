@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { redirect, notFound } from 'next/navigation';
 import { getInvoiceByIdAction, sendInvoiceEmailAction, exportZUGFeRDAction } from '@/lib/invoicing/actions';
-import { formatCurrency, INVOICE_STATUS_LABELS } from '@/lib/invoicing/invoice-service';
+import { formatCurrency, INVOICE_STATUS_LABELS } from '@/lib/invoicing/formatters';
 import { format, parseISO } from 'date-fns';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { InvoiceStatusBadge } from '@/components/invoice-status-badge';
 import { InvoiceDetailClient } from '@/components/invoice-detail-client';
+import { InvoiceItem } from '@/lib/invoicing/types';
 import { InvoiceActionsClient } from '@/components/invoice-actions-client';
 
 export default async function InvoiceDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -104,7 +105,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
                       </tr>
                     </thead>
                     <tbody>
-                      {items.map((item, idx) => (
+                      {items.map((item: InvoiceItem, idx: number) => (
                         <tr key={item.id} className="border-t">
                           <td className="p-3 text-muted-foreground">{idx + 1}</td>
                           <td className="p-3">

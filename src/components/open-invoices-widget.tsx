@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { getInvoiceStatsAction, formatCurrency } from '@/lib/invoicing/actions';
+import { getInvoiceStatsAction } from '@/lib/invoicing/actions';
+import { formatCurrency } from '@/lib/invoicing/formatters';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AlertCircle, FileText, TrendingUp, Clock } from 'lucide-react';
