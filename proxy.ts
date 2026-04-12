@@ -8,10 +8,14 @@ export async function proxy(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   const { pathname } = request.nextUrl;
 
+  // --- Öffentliche Pfade (Marketing Seiten) ---
+  const publicPaths = ['/', '/pricing', '/register', '/impressum', '/datenschutz', '/agb'];
+  const isPublicPath = publicPaths.includes(pathname);
+
   // --- 1. Behandlung von nicht authentifizierten Benutzern ---
   if (!user) {
-    // Erlaube Zugriff auf öffentliche Pfade (Login, Auth Callback)
-    if (pathname === '/login' || pathname.startsWith('/auth/callback')) {
+    // Erlaube Zugriff auf öffentliche Pfade und Auth-Routen
+    if (isPublicPath || pathname === '/login' || pathname.startsWith('/auth/callback')) {
       return response;
     }
     // Leite alle anderen Pfade zum Login um
