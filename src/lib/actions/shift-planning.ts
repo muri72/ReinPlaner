@@ -131,6 +131,68 @@ const dayNames = [
 ] as const;
 
 // ============================================================================
+// AUTHORIZATION HELPERS
+// ============================================================================
+
+/**
+ * Sanitize user input to prevent SQL injection.
+ * Used for search queries and filter values.
+ */
+function sanitizeInput(input: string, maxLength: number = 100): string {
+  if (!input || typeof input !== 'string') return '';
+  // Remove potentially dangerous characters for ilike queries
+  return input
+    .slice(0, maxLength)
+    .replace(/[\x00-\x1F\x7F]/g, '') // Remove control characters
+    .trim();
+}
+
+/**
+ * Check if user is authenticated and has admin or manager role.
+ * Returns the user profile if authorized, null otherwise.
+ */
+async function requireAdminOrManager(supabase: Awaited<ReturnType<typeof createClient>>): Promise<{ authorized: true; userId: string; role: string } | { authorized: false; message: string }> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { authorized: false, message: "Benutzer nicht authentifiziert." };
+  }
+
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("id, role")
+    .eq("id", user.id)
+    .single();
+
+  if (profileError || !profile) {
+    return { authorized: false, message: "Profil nicht gefunden." };
+  }
+
+  if (profile.role !== "admin" && profile.role !== "manager") {
+    return { authorized: false, message: "Nur Administratoren oder Manager dürfen diese Aktion ausführen." };
+  }
+
+  return { authorized: true, userId: user.id, role: profile.role };
+}
+
+/**
+ * Check if user is authenticated (any role).
+ */
+async function requireAuth(supabase: Awaited<ReturnType<typeof createClient>>): Promise<{ authorized: true; userId: string } | { authorized: false; message: string }> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { authorized: false, message: "Benutzer nicht authentifiziert." };
+  }
+
+  return { authorized: true, userId: user.id };
+}
+
+// ============================================================================
 // GET SHIFT PLANNING DATA (with real shifts from DB)
 // ============================================================================
 
@@ -929,12 +991,11 @@ export async function assignEmployeeToShift(
 ): Promise<{ success: boolean; message: string }> {
   const supabaseAdmin = createAdminClient();
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
 
-  if (!user) {
-    return { success: false, message: "Benutzer nicht authentifiziert." };
+  // Authorization check - only admin or manager can assign employees
+  const authCheck = await requireAdminOrManager(supabase);
+  if (!authCheck.authorized) {
+    return { success: false, message: authCheck.message };
   }
 
   try {
@@ -1051,12 +1112,11 @@ export async function reassignShift(
 ): Promise<{ success: boolean; message: string; affectedCount?: number }> {
   const supabaseAdmin = createAdminClient();
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
 
-  if (!user) {
-    return { success: false, message: "Benutzer nicht authentifiziert." };
+  // Authorization check - only admin or manager can reassign shifts
+  const authCheck = await requireAdminOrManager(supabase);
+  if (!authCheck.authorized) {
+    return { success: false, message: authCheck.message };
   }
 
   console.log("[REASSIGN-SHIFT] Starting reassignment:", { shiftId, newEmployeeId, mode });
@@ -1202,6 +1262,13 @@ export async function updateShiftStatus(
   status: "scheduled" | "in_progress" | "completed" | "cancelled" | "no_show"
 ): Promise<{ success: boolean; message: string }> {
   const supabaseAdmin = createAdminClient();
+  const supabase = await createClient();
+
+  // Authorization check - only admin or manager can update shift status
+  const authCheck = await requireAdminOrManager(supabase);
+  if (!authCheck.authorized) {
+    return { success: false, message: authCheck.message };
+  }
 
   try {
     const updateData: any = { status };
@@ -1323,7 +1390,14 @@ export async function syncAssignmentToShifts(
   mode: "future" | "all" = "future"
 ): Promise<{ success: boolean; message: string; updated_count: number }> {
   const supabaseAdmin = createAdminClient();
+  const supabase = await createClient();
   const today = format(new Date(), "yyyy-MM-dd");
+
+  // Authorization check - only admin or manager can sync assignments
+  const authCheck = await requireAdminOrManager(supabase);
+  if (!authCheck.authorized) {
+    return { success: false, message: authCheck.message, updated_count: 0 };
+  }
 
   console.log("[SYNC-ASSIGNMENT] Starting sync:", { assignmentId, newEmployeeId, mode });
 
@@ -1423,12 +1497,11 @@ export async function deleteShift(
 ): Promise<{ success: boolean; message: string }> {
   const supabaseAdmin = createAdminClient();
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
 
-  if (!user) {
-    return { success: false, message: "Benutzer nicht authentifiziert." };
+  // Authorization check - only admin or manager can delete shifts
+  const authCheck = await requireAdminOrManager(supabase);
+  if (!authCheck.authorized) {
+    return { success: false, message: authCheck.message };
   }
 
   try {
@@ -1536,12 +1609,11 @@ export async function deleteSeries(
 ): Promise<{ success: boolean; message: string }> {
   const supabaseAdmin = createAdminClient();
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
 
-  if (!user) {
-    return { success: false, message: "Benutzer nicht authentifiziert." };
+  // Authorization check - only admin or manager can delete series
+  const authCheck = await requireAdminOrManager(supabase);
+  if (!authCheck.authorized) {
+    return { success: false, message: authCheck.message };
   }
 
   try {
@@ -1763,12 +1835,11 @@ export async function reassignAssignment(
 ): Promise<{ success: boolean; message: string }> {
   const supabaseAdmin = createAdminClient();
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
 
-  if (!user) {
-    return { success: false, message: "Benutzer nicht authentifiziert." };
+  // Authorization check - only admin or manager can reassign assignments
+  const authCheck = await requireAdminOrManager(supabase);
+  if (!authCheck.authorized) {
+    return { success: false, message: authCheck.message };
   }
 
   try {
@@ -2323,12 +2394,11 @@ export async function copyAssignment(
 ): Promise<{ success: boolean; message: string }> {
   const supabaseAdmin = createAdminClient();
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
 
-  if (!user) {
-    return { success: false, message: "Benutzer nicht authentifiziert." };
+  // Authorization check - only admin or manager can copy assignments
+  const authCheck = await requireAdminOrManager(supabase);
+  if (!authCheck.authorized) {
+    return { success: false, message: authCheck.message };
   }
 
   try {
@@ -2516,12 +2586,11 @@ export async function updateShift(
 ): Promise<{ success: boolean; message: string }> {
   const supabaseAdmin = createAdminClient();
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
 
-  if (!user) {
-    return { success: false, message: "Benutzer nicht authentifiziert." };
+  // Authorization check - only admin or manager can update shifts
+  const authCheck = await requireAdminOrManager(supabase);
+  if (!authCheck.authorized) {
+    return { success: false, message: authCheck.message };
   }
 
   try {
@@ -2714,12 +2783,11 @@ export async function simpleReassignShift(params: {
 }): Promise<{ success: boolean; message: string }> {
   const supabaseAdmin = createAdminClient();
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
 
-  if (!user) {
-    return { success: false, message: "Benutzer nicht authentifiziert." };
+  // Authorization check - only admin or manager can reassign shifts
+  const authCheck = await requireAdminOrManager(supabase);
+  if (!authCheck.authorized) {
+    return { success: false, message: authCheck.message };
   }
 
   const { shiftId, newEmployeeId, newDate, newStartTime, newEndTime } = params;
@@ -2899,12 +2967,11 @@ export async function addEmployeeToShift(params: {
 }): Promise<{ success: boolean; message: string }> {
   const supabaseAdmin = createAdminClient();
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
 
-  if (!user) {
-    return { success: false, message: "Benutzer nicht authentifiziert." };
+  // Authorization check - only admin or manager can add employees to shifts
+  const authCheck = await requireAdminOrManager(supabase);
+  if (!authCheck.authorized) {
+    return { success: false, message: authCheck.message };
   }
 
   const { shiftId, employeeId } = params;
@@ -3080,12 +3147,11 @@ export async function removeEmployeeFromShift(params: {
 }): Promise<{ success: boolean; message: string }> {
   const supabaseAdmin = createAdminClient();
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
 
-  if (!user) {
-    return { success: false, message: "Benutzer nicht authentifiziert." };
+  // Authorization check - only admin or manager can remove employees from shifts
+  const authCheck = await requireAdminOrManager(supabase);
+  if (!authCheck.authorized) {
+    return { success: false, message: authCheck.message };
   }
 
   const { shiftId, employeeId } = params;
@@ -3161,12 +3227,11 @@ export async function copyShift(params: {
 }): Promise<{ success: boolean; message: string }> {
   const supabaseAdmin = createAdminClient();
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
 
-  if (!user) {
-    return { success: false, message: "Benutzer nicht authentifiziert." };
+  // Authorization check - only admin or manager can copy shifts
+  const authCheck = await requireAdminOrManager(supabase);
+  if (!authCheck.authorized) {
+    return { success: false, message: authCheck.message };
   }
 
   try {
@@ -3558,12 +3623,11 @@ export async function createShift(
 ): Promise<{ success: boolean; message: string; shift_id?: string }> {
   const supabaseAdmin = createAdminClient();
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
 
-  if (!user) {
-    return { success: false, message: "Benutzer nicht authentifiziert." };
+  // Authorization check - only admin or manager can create shifts
+  const authCheck = await requireAdminOrManager(supabase);
+  if (!authCheck.authorized) {
+    return { success: false, message: authCheck.message };
   }
 
   try {
@@ -3756,12 +3820,11 @@ export async function createShiftWithSchedule(
 ): Promise<{ success: boolean; message: string; created_shift_ids?: string[] }> {
   const supabaseAdmin = createAdminClient();
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
 
-  if (!user) {
-    return { success: false, message: "Benutzer nicht authentifiziert." };
+  // Authorization check - only admin or manager can create shifts with schedule
+  const authCheck = await requireAdminOrManager(supabase);
+  if (!authCheck.authorized) {
+    return { success: false, message: authCheck.message };
   }
 
   try {
