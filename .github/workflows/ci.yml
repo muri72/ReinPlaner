@@ -93,6 +93,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
 
+      - name: Clear Turbopack cache
+        run: rm -rf node_modules/.cache .next
+
       - name: Run build
         run: pnpm run build
         env:
