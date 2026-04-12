@@ -344,3 +344,53 @@ git push origin production # Deploy to production
 ```
 # Dev Build Trigger Sun Apr 12 04:08:34 CEST 2026
 # Build Trigger Sun Apr 12 13:50:09 CEST 2026
+
+---
+
+## New Vercel Project Setup
+
+To deploy ReinPlaner as a **separate Vercel project** (keeping dyad-aris-dashboard intact):
+
+### Step 1: Create New Vercel Project
+
+1. Go to: https://vercel.com/new
+2. Import your GitHub repo: `muri72/ReinPlaner`
+3. Project Name: `ReinPlaner`
+4. Framework: Next.js
+5. Click "Deploy"
+
+### Step 2: Add Environment Variables
+
+In Vercel Dashboard → Project Settings → Environment Variables:
+
+```
+NEXT_PUBLIC_SUPABASE_URL=https://ignrqqicnhlaysqxuejz.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<your-anon-key>
+SUPABASE_SERVICE_ROLE_KEY=<your-service-role-key>
+RESEND_API_KEY=<your-resend-key>
+SENTRY_DSN=<your-sentry-dsn>
+SENTRY_AUTH_TOKEN=<your-sentry-token>
+SENTRY_ORG=<your-org>
+SENTRY_PROJECT=ReinPlaner
+NEXT_PUBLIC_BASE_URL=https://reinplaner.de
+```
+
+### Step 3: Custom Domain (Optional)
+
+1. Project Settings → Domains
+2. Add: `reinplaner.de`
+3. Configure DNS records as shown
+
+### Step 4: Redeploy
+
+After setting environment variables, Vercel will automatically redeploy.
+
+---
+
+## Keeping Old Project Intact
+
+The old project (`dyad-aris-dashboard`) continues to work at:
+- Vercel: https://vercel.com/dashboard (select old project)
+- Supabase: https://svuwldxhgifuctfehfao.supabase.co
+
+Both projects are completely independent after this setup.
