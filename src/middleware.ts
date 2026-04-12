@@ -1,105 +1,77 @@
-import { NextResponse, type NextRequest } from 'next/server'
-import { createClient } from '@/lib/supabase/middleware'
+/**
+ * Multi-Tenant Middleware
+ * 
+ * Extracts tenant information from subdomain and adds it to request headers.
+ * This runs before the request reaches the application.
+ * 
+ * Routing:
+ * - https://firma1.reinplaner.de -> Tenant: firma1
+ * - https://reinplaner.de -> Tenant: reinplaner (default)
+ * - https://customdomain.com -> Tenant resolved via custom domain lookup
+ */
 
-export async function middleware(request: NextRequest) {
-  const { supabase, response } = createClient(request)
-  const { pathname } = request.nextUrl;
+import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
 
-  // --- 1. Behandlung von nicht authentifizierten Benutzern ---
-  // Use getUser() to get an authenticated user object
-  const { data: { user } } = await supabase.auth.getUser()
+// Base domain for subdomain extraction
+const BASE_DOMAIN = process.env.NEXT_PUBLIC_BASE_DOMAIN || 'reinplaner.de';
 
-  if (!user) {
-    // Erlaube Zugriff auf öffentliche Pfade (Login, Auth Callback)
-    if (pathname === '/login' || pathname.startsWith('/auth/callback')) {
-      return response;
-    }
-    // Leite alle anderen Pfade zum Login um
-    return NextResponse.redirect(new URL('/login', request.url));
-  }
-
-  // --- 2. Behandlung von authentifizierten Benutzern ---
-  // Benutzerrolle abrufen
-  const { data: profileData, error: profileError } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single();
-
-  if (profileError) {
-    console.error("Fehler beim Abrufen des Benutzerprofils:", profileError?.message || JSON.stringify(profileError));
-  }
-
-  const userRole = profileData?.role || 'employee'; // Standard auf 'employee', falls Rolle nicht gefunden
-
-  // NEU: Überprüfe den Mitarbeiterstatus, wenn die Rolle 'employee' ist
-  if (userRole === 'employee') {
-    const { data: employeeData, error: employeeError } = await supabase
-      .from('employees')
-      .select('status')
-      .eq('user_id', user.id)
-      .single();
-
-    if (employeeError && employeeError.code !== 'PGRST116') { // PGRST116 = no rows found
-      console.error("Fehler beim Abrufen des Mitarbeiterstatus:", employeeError?.message || JSON.stringify(employeeError));
-    }
-
-    // Wenn der Mitarbeiterstatus 'inactive' oder 'on_leave' ist, Leite zum Login um
-    if (employeeData?.status === 'inactive' || employeeData?.status === 'on_leave') {
-      console.log(`Mitarbeiter ${user.id} ist ${employeeData.status}. Umleitung zum Login.`);
-      await supabase.auth.signOut(); // Melde den Benutzer ab
-      return NextResponse.redirect(new URL('/login', request.url));
+/**
+ * Extract tenant slug from hostname
+ */
+function extractTenantSlug(hostname: string): string | null {
+  // Remove port if present
+  const host = hostname.split(':')[0];
+  
+  // Check for subdomain pattern: tenant.reinplaner.de
+  if (host.endsWith(`.${BASE_DOMAIN}`)) {
+    const subdomain = host.replace(`.${BASE_DOMAIN}`, '');
+    // Skip common non-tenant subdomains
+    if (subdomain && subdomain !== 'www' && subdomain !== 'app' && subdomain !== 'api') {
+      return subdomain;
     }
   }
-
-  // Den korrekten Basis-Dashboard-Pfad für die Benutzerrolle bestimmen
-  let baseDashboardPath: string;
-  if (userRole === 'customer') {
-    baseDashboardPath = '/portal/dashboard';
-  } else if (userRole === 'employee') {
-    baseDashboardPath = '/employee/dashboard';
-  } else { // admin oder manager
-    baseDashboardPath = '/dashboard';
+  
+  // Check if it's the base domain itself (default/main tenant)
+  if (host === BASE_DOMAIN || host === `www.${BASE_DOMAIN}`) {
+    return process.env.DEFAULT_TENANT_SLUG || 'reinplaner';
   }
+  
+  // Custom domain - return null (will be resolved via header)
+  return null;
+}
 
-  // --- 3. Rollenbasierte Routen-Erzwingung ---
-
-  // Wenn der Benutzer auf '/login' oder '/' ist, leite ihn zu seinem korrekten Basis-Dashboard um
-  if (pathname === '/login' || pathname === '/') {
-    return NextResponse.redirect(new URL(baseDashboardPath, request.url));
+/**
+ * Main middleware handler
+ */
+export function middleware(request: NextRequest) {
+  const hostname = request.headers.get('host') || '';
+  const tenantSlug = extractTenantSlug(hostname);
+  
+  // Create response with tenant header
+  const response = NextResponse.next();
+  
+  // Add tenant slug to headers for downstream use
+  if (tenantSlug) {
+    response.headers.set('x-tenant-slug', tenantSlug);
   }
-
-  // Spezifische Regeln für jede Rolle, um sicherzustellen, dass sie in ihren erlaubten Bereichen bleiben
-  if (userRole === 'customer') {
-    // Kunden MÜSSEN sich in /portal/* befinden
-    if (!pathname.startsWith('/portal')) {
-      return NextResponse.redirect(new URL('/portal/dashboard', request.url));
-    }
-  } else if (userRole === 'employee') {
-    // Mitarbeiter MÜSSEN sich in /employee/* befinden
-    if (!pathname.startsWith('/employee')) {
-      return NextResponse.redirect(new URL('/employee/dashboard', request.url));
-    }
-  } else if (userRole === 'admin' || userRole === 'manager') {
-    // Admins/Manager DÜRFEN NICHT in /portal/* oder /employee/* sein
-    if (pathname.startsWith('/portal') || pathname.startsWith('/employee')) {
-      return NextResponse.redirect(new URL('/dashboard', request.url));
-    }
-  }
-
-  // Wenn keine der oben genannten Umleitungsregeln zutrifft, erlaube die Anfrage.
+  
+  // Add request ID for tracing
+  const requestId = request.headers.get('x-request-id') || crypto.randomUUID();
+  response.headers.set('x-request-id', requestId);
+  
+  // Add timestamp
+  response.headers.set('x-timestamp', new Date().toISOString());
+  
   return response;
 }
 
+/**
+ * Configure which paths the middleware should run on
+ */
 export const config = {
   matcher: [
-    /*
-     * Alle Anfragewege abgleichen, außer denen, die beginnen mit:
-     * - _next/static (statische Dateien)
-     * - _next/image (Bildoptimierungsdateien)
-     * - favicon.ico (Favicon-Datei)
-     * - beliebige Dateien im öffentlichen Ordner (z.B. /vercel.svg)
-     */
+    // Match all paths except static files and api routes that don't need tenant context
     '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
-}
+};
