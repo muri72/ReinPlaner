@@ -1,6 +1,6 @@
 # Security Audit Report
 
-**Project:** dyad-aris-dashboard  
+**Project:** aris-dashboard  
 **Date:** 2026-04-12  
 **Auditor:** dev-security agent
 

@@ -2,7 +2,7 @@
 
 ## Übersicht
 
-Dieses Dokument definiert die Teststrategie für das dyad-aris-dashboard.
+Dieses Dokument definiert die Teststrategie für das aris-dashboard.
 
 ---
 
