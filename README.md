@@ -1,4 +1,4 @@
-# 🧹 ARIS Management Platform
+# 🧹 ReinPlaner
 
 > **Modern Management Dashboard for Cleaning Companies** - Built with Next.js 15, Supabase, and TypeScript
 
@@ -12,7 +12,7 @@
 
 ## 🎯 Overview
 
-ARIS is a comprehensive management platform designed specifically for cleaning companies. It provides a complete suite of tools for managing orders, employees, customers, time tracking, and business operations.
+ReinPlaner is a comprehensive management platform designed specifically for cleaning companies. It provides a complete suite of tools for managing orders, employees, customers, time tracking, and business operations.
 
 ### ✨ Key Features
 
@@ -56,7 +56,7 @@ ARIS is a comprehensive management platform designed specifically for cleaning c
 ## 📁 Project Structure
 
 ```
-aris-dashboard/
+ReinPlaner/
 ├── src/
 │   ├── app/                    # Next.js 13+ App Router
 │   │   ├── (auth)/            # Authentication routes
@@ -105,7 +105,7 @@ aris-dashboard/
 1. **Clone the repository**
    ```bash
    git clone <repository-url>
-   cd aris-dashboard
+   cd ReinPlaner
    ```
 
 2. **Install dependencies**
@@ -128,7 +128,7 @@ aris-dashboard/
    SENTRY_DSN=your_sentry_dsn
    SENTRY_AUTH_TOKEN=your_sentry_auth_token
    SENTRY_ORG=your_org
-   SENTRY_PROJECT=aris-dashboard
+   SENTRY_PROJECT=ReinPlaner
 
    # Other
    RESEND_API_KEY=your_resend_api_key

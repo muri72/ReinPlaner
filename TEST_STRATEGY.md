@@ -2,7 +2,7 @@
 
 ## Übersicht
 
-Dieses Dokument definiert die Teststrategie für das aris-dashboard.
+Dieses Dokument definiert die Teststrategie für das ReinPlaner.
 
 ---
 

@@ -307,7 +307,7 @@ class PDFService {
           author: opts.author || branding.company_name,
           subject: opts.subject,
           keywords: opts.keywords,
-          creator: 'ARIS Management System',
+          creator: 'ReinPlaner Management System',
         });
       }
 

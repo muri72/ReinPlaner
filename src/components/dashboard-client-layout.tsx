@@ -65,7 +65,7 @@ export function DashboardClientLayout({ children, onSignOut }: DashboardClientLa
         <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b px-4 py-3">
           <div className="flex items-center justify-between">
             <Link href={getHomeLink()} passHref>
-              <h1 className="text-xl font-bold text-primary">ARIS</h1>
+              <h1 className="text-xl font-bold text-primary">ReinPlaner</h1>
             </Link>
             <div className="flex items-center gap-2">
               <NotificationBell />
@@ -122,7 +122,7 @@ export function DashboardClientLayout({ children, onSignOut }: DashboardClientLa
                 <VisuallyHidden>Navigation und Benutzeroptionen für mobile Geräte.</VisuallyHidden>
               </SheetDescription>
               <Link href={getHomeLink()} passHref onClick={() => setIsSheetOpen(false)}>
-                <h2 className="text-xl font-bold text-primary tracking-tight cursor-pointer">ARIS</h2>
+                <h2 className="text-xl font-bold text-primary tracking-tight cursor-pointer">ReinPlaner</h2>
               </Link>
               {/* Removed SheetClose button */}
             </SheetHeader>
@@ -140,9 +140,9 @@ export function DashboardClientLayout({ children, onSignOut }: DashboardClientLa
             </div>
           </SheetContent>
         </Sheet>
-        {/* ARIS Text im mobilen Haupt-Header, zentriert */}
+        {/* ReinPlaner Text im mobilen Haupt-Header, zentriert */}
         <Link href={getHomeLink()} passHref>
-          <h2 className="text-xl font-bold text-primary tracking-tight absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 cursor-pointer">ARIS</h2>
+          <h2 className="text-xl font-bold text-primary tracking-tight absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 cursor-pointer">ReinPlaner</h2>
         </Link>
         <div className="flex items-center space-x-2">
           <NotificationBell />
@@ -158,10 +158,10 @@ export function DashboardClientLayout({ children, onSignOut }: DashboardClientLa
           "bg-gradient-to-br from-sidebar-background to-sidebar-accent glassmorphism-card"
         )}
       >
-        {/* ARIS Text und Toggle-Button, immer zentriert */}
+        {/* ReinPlaner Text und Toggle-Button, immer zentriert */}
         <div className="flex flex-col items-center justify-center mb-4">
           <Link href={getHomeLink()} passHref>
-            <h2 className="text-xl font-bold text-primary tracking-tight cursor-pointer">ARIS</h2>
+            <h2 className="text-xl font-bold text-primary tracking-tight cursor-pointer">ReinPlaner</h2>
           </Link>
           <Button
             variant="ghost"

@@ -47,7 +47,7 @@ export function SettingsForm() {
   const companyInfoForm = useForm<CompanyInfoForm>({
     resolver: zodResolver(companyInfoSchema),
     defaultValues: {
-      company_name: "ARIS Management",
+      company_name: "ReinPlaner Management",
       company_logo_url: "/logo.png",
     },
   });
@@ -446,7 +446,7 @@ export function SettingsForm() {
                 <Input
                   id="company_name"
                   {...companyInfoForm.register('company_name')}
-                  placeholder="ARIS Management"
+                  placeholder="ReinPlaner Management"
                 />
                 {companyInfoForm.formState.errors.company_name && (
                   <p className="text-sm text-red-500">

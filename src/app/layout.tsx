@@ -15,13 +15,13 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ARIS Management",
+  title: "ReinPlaner Management",
   description: "Management-Plattform für Reinigungsunternehmen",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "ARIS"
+    title: "ReinPlaner"
   },
   formatDetection: {
     telephone: false

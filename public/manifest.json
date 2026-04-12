@@ -1,6 +1,6 @@
 {
-  "name": "ARIS Management",
-  "short_name": "ARIS",
+  "name": "ReinPlaner Management",
+  "short_name": "ReinPlan",
   "description": "Management-Plattform für Reinigungsunternehmen",
   "start_url": "/",
   "display": "standalone",

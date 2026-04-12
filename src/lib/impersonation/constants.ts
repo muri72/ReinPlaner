@@ -1,4 +1,4 @@
-export const IMPERSONATION_STORAGE_KEY = "aris.impersonation.meta";
+export const IMPERSONATION_STORAGE_KEY = "ReinPlaner.impersonation.meta";
 
 export interface ImpersonationMeta {
   sessionId: string;

@@ -117,7 +117,7 @@ export default function LoginPage() {
               <div className="relative">
                 <Image
                   src="/logo.png"
-                  alt="ARIS Management Logo"
+                  alt="ReinPlaner Management Logo"
                   width={320}
                   height={320}
                   className="drop-shadow-2xl"
@@ -130,7 +130,7 @@ export default function LoginPage() {
           {/* Brand Text */}
           <div className="text-center">
             <h1 className="text-4xl font-bold mb-3 tracking-tight">
-              ARIS Management
+              ReinPlaner Management
             </h1>
             <p className="text-blue-200/80 text-lg mb-8">
               Glas- und Gebäudereinigung
@@ -167,13 +167,13 @@ export default function LoginPage() {
               <div className="absolute inset-0 bg-blue-500/20 blur-xl rounded-full" />
               <Image
                 src="/logo.png"
-                alt="ARIS Management Logo"
+                alt="ReinPlaner Management Logo"
                 width={120}
                 height={120}
                 className="relative"
               />
             </div>
-            <h1 className="text-2xl font-bold mt-4 text-slate-800">ARIS Management</h1>
+            <h1 className="text-2xl font-bold mt-4 text-slate-800">ReinPlaner Management</h1>
             <p className="text-blue-600 text-sm">Glas- und Gebäudereinigung</p>
           </div>
 

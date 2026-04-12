@@ -339,7 +339,7 @@ export async function registerUser(data: UserFormValues) {
   // Send a welcome notification to the new user
   await sendNotification({
     userId: newUserId,
-    title: "Willkommen bei ARIS Management!",
+    title: "Willkommen bei ReinPlaner Management!",
     message: "Ihr Konto wurde erfolgreich erstellt. Erkunden Sie das Dashboard, um loszulegen.",
     link: "/dashboard"
   });

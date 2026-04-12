@@ -35,7 +35,7 @@ export function MobileDashboardLayout({
       <header className="md:hidden fixed top-0 left-0 right-0 bg-background/95 backdrop-blur-sm border-b border-border z-40 px-4 py-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <h1 className="text-lg font-bold text-primary">ARIS</h1>
+            <h1 className="text-lg font-bold text-primary">ReinPlaner</h1>
             <div className="text-sm text-muted-foreground">
               {format(new Date(), 'HH:mm')}
             </div>

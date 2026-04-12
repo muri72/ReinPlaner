@@ -1,6 +1,6 @@
 # Security Audit Report
 
-**Project:** aris-dashboard  
+**Project:** ReinPlaner  
 **Date:** 2026-04-12  
 **Auditor:** dev-security agent
 

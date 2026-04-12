@@ -1,4 +1,4 @@
-# Contributing to ARIS Management Platform
+# Contributing to ReinPlaner
 
 > **Last updated:** 2026-04-12
 
@@ -18,7 +18,7 @@
 ```bash
 # 1. Clone the repository
 git clone <your-fork-url>
-cd aris-dashboard
+cd ReinPlaner
 
 # 2. Install dependencies
 pnpm install

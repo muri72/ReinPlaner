@@ -1,11 +1,11 @@
-# Deployment Guide - ARIS Dashboard
+# Deployment Guide - ReinPlaner Dashboard
 
 ## Quick Reference
 
 | Platform | Command | URL |
 |----------|---------|-----|
 | Vercel | `git push` (automatic) | `https://*.vercel.app` |
-| Docker | `docker build -t aris . && docker run` | `http://localhost:3000` |
+| Docker | `docker build -t ReinPlaner . && docker run` | `http://localhost:3000` |
 | Local Dev | `docker-compose up` | `http://localhost:3000` |
 
 ---
@@ -37,12 +37,12 @@ docker-compose up --build
 DOCKER_BUILD=true NODE_ENV=production pnpm build
 
 # Build Docker image
-docker build -t aris-dashboard .
+docker build -t ReinPlaner .
 
 # Run container
 docker run -p 3000:3000 \
   --env-file .env.production \
-  aris-dashboard
+  ReinPlaner
 ```
 
 ---
@@ -65,11 +65,11 @@ docker run -p 3000:3000 \
 ssh user@your-server.com
 
 # Create project directory
-mkdir -p /opt/aris-dashboard
-cd /opt/aris-dashboard
+mkdir -p /opt/ReinPlaner
+cd /opt/ReinPlaner
 
 # Clone repository
-git clone https://github.com/your-org/aris-dashboard.git .
+git clone https://github.com/your-org/ReinPlaner.git .
 git checkout production
 ```
 
@@ -101,7 +101,7 @@ NEXT_PUBLIC_BASE_URL=https://your-production-domain.com
 # Sentry (Error Tracking)
 SENTRY_AUTH_TOKEN=your_sentry_token
 SENTRY_ORG=your_org
-SENTRY_PROJECT=aris-dashboard-prod
+SENTRY_PROJECT=ReinPlaner-prod
 
 # Email (Resend)
 RESEND_API_KEY=re_your_api_key
@@ -117,18 +117,18 @@ CRON_API_KEY=sk_cron_your_secure_key
 git pull origin production
 
 # Build with Docker
-docker build -t aris-dashboard .
+docker build -t ReinPlaner .
 
 # Stop old container (if running)
 docker-compose down
 
 # Start new container
 docker run -d \
-  --name aris-dashboard \
+  --name ReinPlaner \
   --restart unless-stopped \
   -p 3000:3000 \
   --env-file .env \
-  aris-dashboard
+  ReinPlaner
 ```
 
 #### 4. Setup with Docker Compose (Recommended for Production)
@@ -152,10 +152,10 @@ services:
       timeout: 10s
       retries: 3
     networks:
-      - aris_network
+      - ReinPlaner_network
 
 networks:
-  aris_network:
+  ReinPlaner_network:
     driver: bridge
 ```
 
@@ -220,7 +220,7 @@ Set these in Vercel Dashboard → Settings → Environment Variables:
 | `NEXT_PUBLIC_BASE_URL` | `https://your-domain.com` | Production |
 | `SENTRY_AUTH_TOKEN` | `eyJxxx` | Build Time |
 | `SENTRY_ORG` | `your-org` | Build Time |
-| `SENTRY_PROJECT` | `aris-dashboard-prod` | Build Time |
+| `SENTRY_PROJECT` | `ReinPlaner-prod` | Build Time |
 | `SENTRY_DSN` | `https://xxx@sentry.io/xxx` | Production, Preview, Development |
 | `RESEND_API_KEY` | `re_xxx` | Production, Preview |
 | `CRON_API_KEY` | `sk_xxx` | Production, Preview |
@@ -273,7 +273,7 @@ curl http://localhost:3000/health
 
 ```bash
 # Check logs
-docker logs aris-dashboard
+docker logs ReinPlaner
 
 # Common issues:
 # - Port 3000 already in use
@@ -334,7 +334,7 @@ pnpm lint                   # Lint code
 # Docker
 docker-compose up           # Start local stack
 docker-compose down         # Stop local stack
-docker build -t aris .       # Build image
+docker build -t ReinPlaner .       # Build image
 docker run -p 3000:3000 aris # Run container
 
 # Git

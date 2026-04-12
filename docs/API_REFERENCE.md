@@ -1,8 +1,8 @@
-# ARIS API Reference – Server Actions
+# ReinPlaner API Reference – Server Actions
 
 > **Last updated:** 2026-04-12
 
-All mutations in ARIS go through **Server Actions** (`"use server"`). They run on the server with full Supabase Admin access and return `{ success: boolean; message: string; ... }`.
+All mutations in ReinPlaner go through **Server Actions** (`"use server"`). They run on the server with full Supabase Admin access and return `{ success: boolean; message: string; ... }`.
 
 **Response pattern:**
 ```typescript

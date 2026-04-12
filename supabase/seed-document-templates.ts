@@ -43,11 +43,11 @@ zwischen
 {{company.company_phone}}
 E-Mail: {{company.company_email}}
 {{else}}
-ARIS Management GmbH
+ReinPlaner GmbH
 Musterstraße 123
 20095 Hamburg
 Telefon: +49 40 1234567
-E-Mail: office@aris-management.de
+E-Mail: office@reinplaner.de
 {{/if}}
 
 - nachfolgend "Arbeitgeber" genannt -

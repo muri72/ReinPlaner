@@ -63,7 +63,7 @@ export async function generateProfessionalPDF({
     pdf.setTextColor(26, 54, 93);
     pdf.setFontSize(24);
     pdf.setFont('helvetica', 'bold');
-    pdf.text('ARIS', margin, 15);
+    pdf.text('ReinPlaner', margin, 15);
 
     pdf.setFontSize(11);
     pdf.setFont('helvetica', 'normal');
@@ -116,7 +116,7 @@ export async function generateProfessionalPDF({
       pdf.rect(pageWidth - margin - logoWidth, 5, logoWidth, logoHeight);
       pdf.setTextColor(26, 54, 93);
       pdf.setFontSize(8);
-      pdf.text('ARIS', pageWidth - margin - logoWidth + 5, 5 + logoHeight / 2);
+      pdf.text('ReinPlaner', pageWidth - margin - logoWidth + 5, 5 + logoHeight / 2);
     }
 
     yPosition = 45;

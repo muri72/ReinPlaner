@@ -1,4 +1,4 @@
-# ARIS Management Platform – Architecture
+# ReinPlaner – Architecture
 
 > **Last updated:** 2026-04-12
 
@@ -6,7 +6,7 @@
 
 ## 1. Overview
 
-ARIS is a Next.js 15 full-stack application for cleaning-company management. It provides order scheduling, employee shift planning, time tracking, customer management, and financial reporting — all backed by Supabase (PostgreSQL + Auth + Row Level Security).
+ReinPlaner is a Next.js 15 full-stack application for cleaning-company management. It provides order scheduling, employee shift planning, time tracking, customer management, and financial reporting — all backed by Supabase (PostgreSQL + Auth + Row Level Security).
 
 ### Tech Stack
 
@@ -25,7 +25,7 @@ ARIS is a Next.js 15 full-stack application for cleaning-company management. It 
 ## 2. Directory Structure
 
 ```
-aris-dashboard/
+ReinPlaner/
 ├── src/
 │   ├── app/                          # Next.js App Router pages
 │   │   ├── (auth)/                  # Auth group: login

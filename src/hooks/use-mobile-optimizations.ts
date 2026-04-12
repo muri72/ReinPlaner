@@ -121,7 +121,7 @@ export function useMobileOptimizations(): UseMobileOptimizationsReturn {
       body,
       icon: '/icon-192x192.png',
       badge: '/icon-192x192.png',
-      tag: 'aris-notification',
+      tag: 'reinplaner-notification',
       requireInteraction: false,
       ...options,
     });

@@ -337,7 +337,7 @@ export async function sendWorkTimeReportToCustomer(
     <p>Sie können den vollständigen Bericht jederzeit in Ihrem Kundenportal einsehen:</p>
     <p><a href="${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/portal/reports?reportType=${reportType}&id=${id}&month=${month}&year=${year}">Bericht im Portal ansehen</a></p>
     <p>Mit freundlichen Grüßen,</p>
-    <p>Ihr ARIS Management Team</p>
+    <p>Ihr ReinPlaner Management Team</p>
   `;
 
   try {

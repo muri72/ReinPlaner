@@ -6,21 +6,21 @@
     "configurations": [
         {
             "type": "node-terminal",
-            "name": "ARIS: dev",
+            "name": "ReinPlaner: dev",
             "request": "launch",
             "command": "pnpm run dev",
             "cwd": "${workspaceFolder}"
         },
         {
             "type": "node-terminal",
-            "name": "ARIS: build",
+            "name": "ReinPlaner: build",
             "request": "launch",
             "command": "pnpm build",
             "cwd": "${workspaceFolder}"
         },
         {
             "type": "node-terminal",
-            "name": "ARIS: start",
+            "name": "ReinPlaner: start",
             "request": "launch",
             "command": "pnpm start",
             "cwd": "${workspaceFolder}"

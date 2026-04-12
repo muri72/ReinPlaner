@@ -2,8 +2,8 @@ import { redirect } from "next/navigation";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "ARIS Dashboard",
-  description: "ARIS - Auftragsverwaltung und Ressourcenplanung",
+  title: "ReinPlaner Dashboard",
+  description: "ReinPlaner - Auftragsverwaltung und Ressourcenplanung",
 };
 
 export default async function HomePage() {

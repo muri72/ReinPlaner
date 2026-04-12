@@ -25,7 +25,7 @@ serve(async (req: Request) => {
     const { to, subject, html } = await req.json();
 
     const { data, error } = await resend.emails.send({
-      from: "ARIS Management <onboarding@resend.dev>", // Absenderadresse konfigurieren
+      from: "ReinPlaner Management <onboarding@resend.dev>", // Absenderadresse konfigurieren
       to: [to],
       subject: subject,
       html: html,
