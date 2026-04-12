@@ -66,18 +66,15 @@ class PerformanceMonitor {
   getSummary(): Record<string, { count: number; total: number; avg: number; min: number; max: number }> {
     const grouped = this.metrics.reduce((acc, metric) => {
       if (!acc[metric.name]) {
-        acc[metric.name] = { count: 0, total: 0, min: Infinity, max: -Infinity };
+        acc[metric.name] = { count: 0, total: 0, min: Infinity, max: -Infinity, avg: 0 };
       }
       acc[metric.name].count++;
       acc[metric.name].total += metric.duration;
       acc[metric.name].min = Math.min(acc[metric.name].min, metric.duration);
       acc[metric.name].max = Math.max(acc[metric.name].max, metric.duration);
+      acc[metric.name].avg = acc[metric.name].total / acc[metric.name].count;
       return acc;
-    }, {} as Record<string, { count: number; total: number; min: number; max: number }>);
-
-    for (const key of Object.keys(grouped)) {
-      grouped[key].avg = grouped[key].total / grouped[key].count;
-    }
+    }, {} as Record<string, { count: number; total: number; avg: number; min: number; max: number }>);
 
     return grouped;
   }

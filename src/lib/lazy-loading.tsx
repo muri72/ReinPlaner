@@ -1,7 +1,7 @@
 /**
  * Lazy loading utilities for heavy components
  */
-import { lazy, Suspense } from 'react';
+import React, { lazy, Suspense } from 'react';
 
 // Lazy-loaded components for code splitting
 export const LazyPlanningCalendar = lazy(() => import('@/components/planning-calendar').then(m => ({ default: m.PlanningCalendar })));

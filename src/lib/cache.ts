@@ -32,7 +32,7 @@ class ResponseCache {
 
     const now = Date.now();
     const age = now - entry.timestamp;
-    const isStale = age > entry.ttl;
+    const isStale = age > entry.maxAge;
     const isExpired = age > entry.staleTime;
 
     if (isExpired) {
