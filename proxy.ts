@@ -48,8 +48,9 @@ export async function proxy(request: NextRequest) {
 
   // --- 3. Rollenbasierte Routen-Erzwingung ---
 
-  // Wenn der Benutzer auf '/login' oder '/' ist, leite ihn zu seinem korrekten Basis-Dashboard um
-  if (pathname === '/login' || pathname === '/') {
+  // Wenn der Benutzer auf '/login' ist, leite ihn zu seinem korrekten Basis-Dashboard um
+  // WICHTIG: '/' NICHT hier redirecten, da '/' die öffentliche Landing Page ist!
+  if (pathname === '/login') {
     return NextResponse.redirect(new URL(baseDashboardPath, request.url));
   }
 
