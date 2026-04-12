@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { Trash2, Copy, Edit3, Check, ChevronDown, ChevronUp, X, Car, Coffee, Users, Layers } from "lucide-react";
+import { Trash2, Copy, Edit3, Check, ChevronDown, ChevronUp, X, Car, Coffee, Users, Layers, ChevronsLeftRight, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ShiftAssignment } from "@/lib/actions/shift-planning";
 import { toast } from "sonner";

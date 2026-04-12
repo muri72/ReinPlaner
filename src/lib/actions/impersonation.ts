@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { headers } from "next/headers";
 import { createClient as createSupabaseAdminClient } from '@supabase/supabase-js';
+import { sendNotification } from "@/lib/actions/notifications";
 
 interface ActionResponse<T> {
   success: boolean;
@@ -208,6 +209,24 @@ export async function startImpersonation(targetUserId: string): Promise<ActionRe
 
   if (insertError || !newSessionRecord) {
     return { success: false, message: insertError?.message ?? "Impersonation konnte nicht protokolliert werden." };
+  }
+
+  // Send notification to the impersonated user about the impersonation session
+  // Get the target user's user_id from auth to send notification
+  const targetUserAuthId = authUserResult.user?.id;
+  if (targetUserAuthId) {
+    try {
+      await sendNotification({
+        userId: targetUserAuthId,
+        title: "Impersonierung gestartet",
+        message: `Administrator ${adminFullName} hat am ${new Date().toLocaleDateString('de-DE')} um ${new Date().toLocaleTimeString('de-DE')} eine Impersonierung Ihrer Sitzung gestartet.`,
+        link: "/dashboard/profile",
+        type: "security",
+      });
+    } catch (notificationError) {
+      // Log but don't fail the impersonation if notification fails
+      console.error("[IMPERSONATION] Failed to send notification:", notificationError);
+    }
   }
 
   // Note: We use a "view as" pattern for impersonation.

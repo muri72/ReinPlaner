@@ -241,9 +241,13 @@ export async function getShiftPlanningData(
       .eq("status", "active");
 
     if (filters.query) {
-      employeesQuery = employeesQuery.or(
-        `first_name.ilike.%${filters.query}%,last_name.ilike.%${filters.query}%`
-      );
+      // Sanitize input to prevent SQL injection
+      const sanitizedQuery = sanitizeInput(filters.query, 100);
+      if (sanitizedQuery) {
+        employeesQuery = employeesQuery.or(
+          `first_name.ilike.%${sanitizedQuery}%,last_name.ilike.%${sanitizedQuery}%`
+        );
+      }
     }
 
     // Filter by employee groups

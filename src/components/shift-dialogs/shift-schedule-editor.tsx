@@ -6,7 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
-import { calculateEndTime, calculateStartTime, dayNames, germanDayNames, timeRegex } from "@/lib/utils/form-utils";
+import { dayNames, germanDayNames, timeRegex } from "@/lib/utils/form-utils";
+import { calculateEndTime, calculateStartTime } from "@/lib/utils";
 import { Building2 } from "lucide-react";
 
 interface ObjectOption {

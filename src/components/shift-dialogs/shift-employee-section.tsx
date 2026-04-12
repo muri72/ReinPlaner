@@ -21,7 +21,6 @@ interface ShiftEmployeeSectionProps {
   setEmployeeSelectOpen: (open: boolean) => void;
   getEmployeeName: (id: string) => string;
   label?: string;
-  mode?: "single" | "multi";
   placeholder?: string;
 }
 
@@ -33,17 +32,14 @@ export function ShiftEmployeeSection({
   setEmployeeSelectOpen,
   getEmployeeName,
   label = "Mitarbeiter",
-  mode = "multi",
   placeholder = "Mitarbeiter auswählen...",
 }: ShiftEmployeeSectionProps) {
-  const hasSelection = mode === "multi" ? selectedEmployeeIds.length > 0 : !!selectedEmployeeIds;
-
   return (
     <div>
       {label && (
         <p className="text-sm text-muted-foreground mb-1.5 block">
           {label}
-          {mode === "multi" && selectedEmployeeIds.length > 0 && (
+          {selectedEmployeeIds.length > 0 && (
             <span className="ml-1">({selectedEmployeeIds.length} ausgewählt)</span>
           )}
         </p>
@@ -54,31 +50,23 @@ export function ShiftEmployeeSection({
             variant="outline"
             role="combobox"
             aria-expanded={employeeSelectOpen}
-            className={cn(
-              "w-full justify-between",
-              mode === "multi" ? "h-auto min-h-[36px] flex-wrap" : "",
-              !hasSelection && "text-muted-foreground"
-            )}
+            className="w-full justify-between h-auto min-h-[38px] flex-wrap"
           >
-            {hasSelection ? (
-              mode === "multi" ? (
-                <div className="flex flex-wrap gap-1">
-                  {selectedEmployeeIds.map((id) => (
-                    <Badge key={id} variant="secondary" className="flex items-center gap-1">
-                      {getEmployeeName(id)}
-                      <X
-                        className="h-3 w-3 cursor-pointer"
-                        onClick={(e: React.MouseEvent) => {
-                          e.stopPropagation();
-                          onEmployeeSelect(id);
-                        }}
-                      />
-                    </Badge>
-                  ))}
-                </div>
-              ) : (
-                <span>{getEmployeeName(selectedEmployeeIds as string)}</span>
-              )
+            {selectedEmployeeIds.length > 0 ? (
+              <div className="flex flex-wrap gap-1">
+                {selectedEmployeeIds.map((id) => (
+                  <Badge key={id} variant="secondary" className="flex items-center gap-1">
+                    {getEmployeeName(id)}
+                    <X
+                      className="h-3 w-3 cursor-pointer"
+                      onClick={(e: React.MouseEvent) => {
+                        e.stopPropagation();
+                        onEmployeeSelect(id);
+                      }}
+                    />
+                  </Badge>
+                ))}
+              </div>
             ) : (
               <span className="text-muted-foreground">{placeholder}</span>
             )}
@@ -87,7 +75,7 @@ export function ShiftEmployeeSection({
         </PopoverTrigger>
         <PopoverContent
           className="w-[--radix-popover-trigger-width] p-0"
-          style={{ maxHeight: mode === "multi" ? "300px" : undefined }}
+          style={{ maxHeight: "300px" }}
           align="start"
         >
           <Command>
@@ -96,31 +84,21 @@ export function ShiftEmployeeSection({
               <CommandEmpty>Keine Mitarbeiter gefunden.</CommandEmpty>
               <CommandGroup heading="Mitarbeiter">
                 {availableEmployees.map((emp) => {
-                  const isSelected =
-                    mode === "multi"
-                      ? selectedEmployeeIds.includes(emp.id)
-                      : selectedEmployeeIds === emp.id;
-
+                  const isSelected = selectedEmployeeIds.includes(emp.id);
                   return (
                     <CommandItem
                       key={emp.id}
                       value={emp.name}
                       onSelect={() => onEmployeeSelect(emp.id)}
                     >
-                      {mode === "multi" ? (
-                        <div
-                          className={cn(
-                            "mr-2 h-4 w-4 rounded border flex items-center justify-center",
-                            isSelected ? "bg-primary border-primary" : "border-muted-foreground"
-                          )}
-                        >
-                          {isSelected && <Plus className="h-3 w-3 text-primary-foreground mx-auto" />}
-                        </div>
-                      ) : (
-                        <Check
-                          className={cn("mr-2 h-4 w-4", isSelected ? "opacity-100" : "opacity-0")}
-                        />
-                      )}
+                      <div
+                        className={cn(
+                          "mr-2 h-4 w-4 rounded border flex items-center justify-center",
+                          isSelected ? "bg-primary border-primary" : "border-muted-foreground"
+                        )}
+                      >
+                        {isSelected && <Plus className="h-3 w-3 text-primary-foreground mx-auto" />}
+                      </div>
                       {emp.name}
                     </CommandItem>
                   );
