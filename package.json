@@ -84,6 +84,7 @@
   },
   "devDependencies": {
     "@dyad-sh/nextjs-webpack-component-tagger": "latest",
+    "@playwright/test": "^1.59.1",
     "@tailwindcss/postcss": "^4.1.17",
     "@types/node": "latest",
     "@types/react": "^19",
