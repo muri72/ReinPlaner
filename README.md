@@ -1,6 +1,6 @@
 # 🧹 ReinPlaner
 
-> **Modern Management Dashboard for Cleaning Companies** - Built with Next.js 15, Supabase, and TypeScript
+> **Modern Management Dashboard for Cleaning Companies** - Die Software für Gebäudereinigung - https://reinplaner.de
 
 [![Next.js](https://img.shields.io/badge/Next.js-15.3-black?&logo=next.js)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue?&logo=typescript)](https://www.typescriptlang.org/)
