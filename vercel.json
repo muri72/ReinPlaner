@@ -1,6 +1,4 @@
 {
-  "name": "reinplaner",
-  "project": "reinplaner",
   "buildCommand": "pnpm run build",
   "devCommand": "pnpm run dev",
   "installCommand": "pnpm install"
