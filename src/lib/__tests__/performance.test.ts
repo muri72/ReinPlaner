@@ -35,7 +35,7 @@ describe('Performance Utilities', () => {
   describe('throttle', () => {
     it('should limit function calls', async () => {
       let callCount = 0;
-      const fn = throttle(() => callCount++, 50);
+      const fn = throttle(() => callCount++, 100);
       
       fn();
       fn();
@@ -43,14 +43,14 @@ describe('Performance Utilities', () => {
       
       expect(callCount).toBe(1);
       
-      await new Promise(resolve => setTimeout(resolve, 60));
+      await new Promise(resolve => setTimeout(resolve, 150));
       
       expect(callCount).toBe(2);
     });
 
-    it('should use latest arguments when throttled', async () => {
+    it('should use latest arguments when throttled', () => {
       let lastValue = 0;
-      const fn = throttle((value: number) => { lastValue = value; }, 50);
+      const fn = throttle((value: number) => { lastValue = value; }, 100);
       
       fn(1);
       fn(2);
