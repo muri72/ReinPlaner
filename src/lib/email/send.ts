@@ -5,7 +5,19 @@
 
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Lazy initialization - only create Resend client when actually sending
+// This prevents build failures when RESEND_API_KEY is not set
+let resend: Resend | null = null;
+
+function getResendClient(): Resend | null {
+  if (!process.env.RESEND_API_KEY) {
+    return null;
+  }
+  if (!resend) {
+    resend = new Resend(process.env.RESEND_API_KEY);
+  }
+  return resend;
+}
 
 const FROM_EMAIL = process.env.EMAIL_FROM || "ReinPlaner <noreply@reinplaner.de>";
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://reinplaner.de";
@@ -23,8 +35,8 @@ export interface SendEmailOptions {
 export async function sendEmail(options: SendEmailOptions): Promise<{ success: boolean; error?: string }> {
   const { to, subject, html, replyTo } = options;
 
-  // Skip sending in development if no API key is set
-  if (!process.env.RESEND_API_KEY) {
+  const resendClient = getResendClient();
+  if (!resendClient) {
     console.log("[Email] RESEND_API_KEY not set, skipping email send:");
     console.log(`  To: ${to}`);
     console.log(`  Subject: ${subject}`);
@@ -32,7 +44,7 @@ export async function sendEmail(options: SendEmailOptions): Promise<{ success: b
   }
 
   try {
-    const { data, error } = await resend.emails.send({
+    const { data, error } = await resendClient.emails.send({
       from: FROM_EMAIL,
       to: [to],
       subject,
