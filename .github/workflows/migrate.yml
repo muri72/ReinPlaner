@@ -16,9 +16,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      - name: Setup Supabase CLI
+      - name: Install Supabase CLI
         run: |
-          npm install -g supabase@latest
+          # Download and install Supabase CLI binary directly
+          curl -sL https://github.com/supabase/cli/releases/download/v2.84.2/supabase_2.84.2_linux_amd64.tar.gz | tar xz
+          mv supabase /usr/local/bin/
           supabase --version
       
       - name: Get migration file
