@@ -12,7 +12,9 @@
  */
 
 import { createClient } from '@/lib/supabase/server';
-import type { SupabaseClient } from '@supabase/supabase-js';
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type AnyQuery = { eq: (col: string, val: string) => any };
 
 /**
  * Get the current tenant ID from the user's profile
@@ -60,16 +62,10 @@ export function assertRecordTenant<T extends { tenant_id?: string | null }>(
 }
 
 /**
- * Supabase query helper - adds tenant_id filter automatically
- * 
- * IMPORTANT: This only works if the table has a tenant_id column
- * and the user is authenticated. RLS will also enforce this.
+ * Adds tenant_id filter to any query builder
  */
-export function addTenantFilter<T>(
-  query: SupabaseClient['from']['select'],
-  tenantId: string
-): SupabaseClient['from']['select'] {
-  return query.eq('tenant_id', tenantId);
+export function addTenantFilter<Q extends AnyQuery>(query: Q, tenantId: string): Q {
+  return query.eq('tenant_id', tenantId) as Q;
 }
 
 /**
@@ -83,14 +79,12 @@ export function addTenantFilter<T>(
  * }
  * ```
  */
-export async function tenantScopedQuery(
-  tableName: string,
-  tenantId?: string | null
-) {
+// Note: tenant_id must be added at insert time via addTenantToPayload
+export async function tenantScopedQuery(tableName: string) {
+  const tenantId = await requireTenantId();
   const supabase = await createClient();
-  const tid = tenantId ?? await requireTenantId();
-  
-  return supabase.from(tableName).eq('tenant_id', tid);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (supabase.from(tableName) as any).eq('tenant_id', tenantId);
 }
 
 /**
