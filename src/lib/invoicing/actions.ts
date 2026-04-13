@@ -19,10 +19,29 @@ import { sendInvoiceEmail } from './email-service';
 // ============================================
 
 export async function getInvoicesAction(filters: InvoiceFilters = {}) {
-  const supabase = createAdminClient();
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { success: false, message: 'Nicht authentifiziert.' };
+  }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('tenant_id')
+    .eq('id', user.id)
+    .single();
+
+  const tenantId = profile?.tenant_id;
+
+  if (!tenantId) {
+    return { success: true, data: [] };
+  }
+
+  const supabaseAdmin = createAdminClient();
 
   try {
-    let query = supabase
+    let query = supabaseAdmin
       .from('invoices')
       .select(`
         *,
@@ -30,6 +49,7 @@ export async function getInvoicesAction(filters: InvoiceFilters = {}) {
         order:orders(id, title, customer_id),
         items:invoice_items(*)
       `)
+      .eq('tenant_id', tenantId)
       .order('created_at', { ascending: false });
 
     if (filters.status) {
@@ -80,10 +100,29 @@ export async function getInvoicesAction(filters: InvoiceFilters = {}) {
 }
 
 export async function getInvoiceByIdAction(id: string) {
-  const supabase = createAdminClient();
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { success: false, message: 'Nicht authentifiziert.' };
+  }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('tenant_id')
+    .eq('id', user.id)
+    .single();
+
+  const tenantId = profile?.tenant_id;
+
+  if (!tenantId) {
+    return { success: false, message: 'Tenant nicht gefunden.' };
+  }
+
+  const supabaseAdmin = createAdminClient();
 
   try {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('invoices')
       .select(`
         *,
@@ -92,6 +131,7 @@ export async function getInvoiceByIdAction(id: string) {
         items:invoice_items(*)
       `)
       .eq('id', id)
+      .eq('tenant_id', tenantId)
       .single();
 
     if (error) throw error;
@@ -447,9 +487,40 @@ export async function updateInvoiceAction(invoiceId: string, data: UpdateInvoice
 }
 
 export async function updateInvoiceStatusAction(invoiceId: string, status: InvoiceStatus) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { success: false, message: 'Nicht authentifiziert.' };
+  }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('tenant_id')
+    .eq('id', user.id)
+    .single();
+
+  const tenantId = profile?.tenant_id;
+
+  if (!tenantId) {
+    return { success: false, message: 'Tenant nicht gefunden.' };
+  }
+
   const supabaseAdmin = createAdminClient();
 
   try {
+    // First verify this invoice belongs to the tenant
+    const { data: invoice } = await supabaseAdmin
+      .from('invoices')
+      .select('tenant_id, total_amount_cents')
+      .eq('id', invoiceId)
+      .eq('tenant_id', tenantId)
+      .single();
+
+    if (!invoice) {
+      throw new Error('Invoice nicht gefunden oder keine Berechtigung.');
+    }
+
     const updateData: any = {
       status,
       updated_at: new Date().toISOString(),
@@ -461,18 +532,14 @@ export async function updateInvoiceStatusAction(invoiceId: string, status: Invoi
 
     if (status === 'paid') {
       updateData.paid_at = new Date().toISOString();
-      const { data: inv } = await supabaseAdmin
-        .from('invoices')
-        .select('total_amount_cents')
-        .eq('id', invoiceId)
-        .single();
-      updateData.paid_amount_cents = inv?.total_amount_cents || 0;
+      updateData.paid_amount_cents = invoice.total_amount_cents;
     }
 
     const { error } = await supabaseAdmin
       .from('invoices')
       .update(updateData)
-      .eq('id', invoiceId);
+      .eq('id', invoiceId)
+      .eq('tenant_id', tenantId);
 
     if (error) throw error;
 
@@ -487,13 +554,45 @@ export async function updateInvoiceStatusAction(invoiceId: string, status: Invoi
 }
 
 export async function deleteInvoiceAction(invoiceId: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { success: false, message: 'Nicht authentifiziert.' };
+  }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('tenant_id')
+    .eq('id', user.id)
+    .single();
+
+  const tenantId = profile?.tenant_id;
+
+  if (!tenantId) {
+    return { success: false, message: 'Tenant nicht gefunden.' };
+  }
+
   const supabaseAdmin = createAdminClient();
 
   try {
+    // First verify this invoice belongs to the tenant
+    const { data: invoice } = await supabaseAdmin
+      .from('invoices')
+      .select('id')
+      .eq('id', invoiceId)
+      .eq('tenant_id', tenantId)
+      .single();
+
+    if (!invoice) {
+      throw new Error('Invoice nicht gefunden oder keine Berechtigung.');
+    }
+
     const { error } = await supabaseAdmin
       .from('invoices')
       .delete()
-      .eq('id', invoiceId);
+      .eq('id', invoiceId)
+      .eq('tenant_id', tenantId);
 
     if (error) throw error;
 
@@ -727,12 +826,32 @@ export async function recordPaymentAction(
 }
 
 export async function getPaymentsForInvoiceAction(invoiceId: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { success: false, message: 'Nicht authentifiziert.' };
+  }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('tenant_id')
+    .eq('id', user.id)
+    .single();
+
+  const tenantId = profile?.tenant_id;
+
+  if (!tenantId) {
+    return { success: false, message: 'Tenant nicht gefunden.' };
+  }
+
   const supabaseAdmin = createAdminClient();
 
   try {
     const { data, error } = await supabaseAdmin
       .from('payments')
       .select('*')
+      .eq('tenant_id', tenantId)
       .eq('invoice_id', invoiceId)
       .order('payment_date', { ascending: false });
 
@@ -750,12 +869,32 @@ export async function getPaymentsForInvoiceAction(invoiceId: string) {
 // ============================================
 
 export async function getDebtorsAction() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { success: false, message: 'Nicht authentifiziert.' };
+  }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('tenant_id')
+    .eq('id', user.id)
+    .single();
+
+  const tenantId = profile?.tenant_id;
+
+  if (!tenantId) {
+    return { success: true, data: [] };
+  }
+
   const supabaseAdmin = createAdminClient();
 
   try {
     const { data, error } = await supabaseAdmin
       .from('debtors')
       .select('*')
+      .eq('tenant_id', tenantId)
       .order('billing_name');
 
     if (error) throw error;
@@ -768,6 +907,25 @@ export async function getDebtorsAction() {
 }
 
 export async function getDebtorByIdAction(id: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { success: false, message: 'Nicht authentifiziert.' };
+  }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('tenant_id')
+    .eq('id', user.id)
+    .single();
+
+  const tenantId = profile?.tenant_id;
+
+  if (!tenantId) {
+    return { success: false, message: 'Tenant nicht gefunden.' };
+  }
+
   const supabaseAdmin = createAdminClient();
 
   try {
@@ -775,6 +933,7 @@ export async function getDebtorByIdAction(id: string) {
       .from('debtors')
       .select('*')
       .eq('id', id)
+      .eq('tenant_id', tenantId)
       .single();
 
     if (error) throw error;
@@ -791,6 +950,25 @@ export async function getDebtorByIdAction(id: string) {
 // ============================================
 
 export async function getInvoiceStatsAction() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { success: false, message: 'Nicht authentifiziert.' };
+  }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('tenant_id')
+    .eq('id', user.id)
+    .single();
+
+  const tenantId = profile?.tenant_id;
+
+  if (!tenantId) {
+    return { success: true, data: { total_open: 0, total_overdue: 0, total_paid_this_month: 0, total_draft: 0, currency: 'EUR' } };
+  }
+
   const supabaseAdmin = createAdminClient();
 
   try {
@@ -801,16 +979,19 @@ export async function getInvoiceStatsAction() {
     const { count: openCount } = await supabaseAdmin
       .from('invoices')
       .select('*', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId)
       .in('status', ['sent', 'partial', 'overdue']);
 
     const { count: overdueCount } = await supabaseAdmin
       .from('invoices')
       .select('*', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId)
       .eq('status', 'overdue');
 
     const { data: paidData } = await supabaseAdmin
       .from('invoices')
       .select('paid_amount_cents')
+      .eq('tenant_id', tenantId)
       .eq('status', 'paid')
       .gte('paid_at', startOfMonth.toISOString());
 
@@ -819,6 +1000,7 @@ export async function getInvoiceStatsAction() {
     const { count: draftCount } = await supabaseAdmin
       .from('invoices')
       .select('*', { count: 'exact', head: true })
+      .eq('tenant_id', tenantId)
       .eq('status', 'draft');
 
     return {
@@ -905,4 +1087,58 @@ export async function sendInvoiceEmailAction(invoiceId: string, recipientEmail?:
   }
 
   return emailResult;
+}
+
+// ============================================
+// PDF Download
+// ============================================
+
+export async function downloadInvoicePDFAction(invoiceId: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { success: false, message: 'Nicht authentifiziert.' };
+  }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('tenant_id')
+    .eq('id', user.id)
+    .single();
+
+  const tenantId = profile?.tenant_id;
+
+  if (!tenantId) {
+    return { success: false, message: 'Tenant nicht gefunden.' };
+  }
+
+  // Get invoice with tenant verification
+  const supabaseAdmin = createAdminClient();
+  const { data: invoice, error } = await supabaseAdmin
+    .from('invoices')
+    .select(`
+      *,
+      debtor:debtors(*),
+      items:invoice_items(*)
+    `)
+    .eq('id', invoiceId)
+    .eq('tenant_id', tenantId)
+    .single();
+
+  if (error || !invoice) {
+    return { success: false, message: 'Rechnung nicht gefunden oder keine Berechtigung.' };
+  }
+
+  const pdfResult = await generateInvoicePDF(invoice);
+
+  if (!pdfResult.success) {
+    return { success: false, message: pdfResult.message || 'PDF konnte nicht generiert werden.' };
+  }
+
+  return {
+    success: true,
+    data: pdfResult.data,
+    filename: pdfResult.filename,
+  };
 }

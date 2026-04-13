@@ -16,7 +16,7 @@ export default async function NewInvoicePage() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role')
+    .select('role, tenant_id')
     .eq('id', user.id)
     .single();
 
@@ -24,19 +24,26 @@ export default async function NewInvoicePage() {
     redirect('/dashboard');
   }
 
+  const tenantId = profile?.tenant_id;
+
   const [debtorsResult, ordersResult] = await Promise.all([
     getDebtorsAction(),
     getInvoicesAction({ status: ['draft'] }),
   ]);
 
-  // Fetch available orders
-  const { data: orders } = await supabase
-    .from('orders')
-    .select('id, title, customer_id, order_type, fixed_monthly_price, objects(customer_id, customers(name))')
-    .eq('status', 'active')
-    .order('created_at', { ascending: false });
+  // Fetch available orders with tenant filter
+  let orders: any[] = [];
+  if (tenantId) {
+    const { data: ordersData } = await supabase
+      .from('orders')
+      .select('id, title, customer_id, order_type, fixed_monthly_price, objects(customer_id, customers(name))')
+      .eq('tenant_id', tenantId)
+      .eq('status', 'active')
+      .order('created_at', { ascending: false });
+    orders = ordersData || [];
+  }
 
-  const processedOrders = (orders || []).map((o: any) => ({
+  const processedOrders = orders.map((o: any) => ({
     ...o,
     customer_name: o.objects?.customers?.name || 'Unbekannt',
   }));
