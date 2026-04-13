@@ -57,7 +57,7 @@ export default function CustomerDashboard() {
     const fetchUserData = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        redirect("/");
+        redirect("/login");
         return;
       }
       setCurrentUser(user);
@@ -162,7 +162,7 @@ export default function CustomerDashboard() {
     <MobileDashboardLayout
       onSignOut={async () => {
         await supabase.auth.signOut();
-        redirect("/");
+        redirect("/login");
       }}
     >
       <div className="space-y-4">
