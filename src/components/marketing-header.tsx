@@ -22,7 +22,7 @@ export function MarketingHeader() {
               height={36}
               className="rounded-lg"
             />
-            <span className="text-xl font-bold text-slate-900">
+            <span className="text-xl font-bold text-slate-900 dark:text-white">
               ReinPlaner
             </span>
           </Link>
@@ -79,7 +79,7 @@ export function MarketingHeader() {
 
       {/* Mobile Navigation */}
       {mobileMenuOpen && (
-        <div className="md:hidden bg-white border-b border-slate-200">
+        <div className="md:hidden bg-white border-b border-slate-200 dark:border-slate-700">
           <div className="px-4 py-4 space-y-3">
             <Link
               href="/#features"

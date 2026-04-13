@@ -182,7 +182,7 @@ export function LandingPage() {
                   <Link href="/pricing">Preise ansehen</Link>
                 </Button>
               </div>
-              <p className="mt-4 text-sm text-slate-500">
+              <p className="mt-4 text-sm text-slate-500 dark:text-slate-400 dark:text-slate-500">
                 Keine Kreditkarte erforderlich. Jederzeit kündbar.
               </p>
             </div>
@@ -198,7 +198,7 @@ export function LandingPage() {
                     <div className="w-3 h-3 rounded-full bg-green-400" />
                   </div>
                   <div className="flex-1 text-center">
-                    <div className="inline-flex items-center bg-white rounded-md px-3 py-1 text-xs text-slate-500 border border-slate-200">
+                    <div className="inline-flex items-center bg-white rounded-md px-3 py-1 text-xs text-slate-500 border border-slate-200 dark:border-slate-700">
                       app.reinplaner.de
                     </div>
                   </div>
@@ -208,10 +208,10 @@ export function LandingPage() {
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <div>
-                        <h3 className="font-semibold text-slate-800">
+                        <h3 className="font-semibold text-slate-800 dark:text-slate-100">
                           Dashboard
                         </h3>
-                        <p className="text-xs text-slate-500">
+                        <p className="text-xs text-slate-500 dark:text-slate-400 dark:text-slate-500">
                           Heute, {new Date().toLocaleDateString("de-DE")}
                         </p>
                       </div>
@@ -241,10 +241,10 @@ export function LandingPage() {
                       ].map((kpi) => (
                         <div
                           key={kpi.label}
-                          className="bg-white rounded-lg p-3 border border-slate-200"
+                          className="bg-white rounded-lg p-3 border border-slate-200 dark:border-slate-700"
                         >
-                          <p className="text-xs text-slate-500">{kpi.label}</p>
-                          <p className="text-xl font-bold text-slate-800">
+                          <p className="text-xs text-slate-500 dark:text-slate-400 dark:text-slate-500">{kpi.label}</p>
+                          <p className="text-xl font-bold text-slate-800 dark:text-slate-100">
                             {kpi.value}
                           </p>
                           <div
@@ -254,10 +254,10 @@ export function LandingPage() {
                       ))}
                     </div>
                     {/* Calendar placeholder */}
-                    <div className="bg-white rounded-lg p-3 border border-slate-200">
+                    <div className="bg-white rounded-lg p-3 border border-slate-200 dark:border-slate-700">
                       <div className="flex items-center gap-2 mb-2">
                         <Calendar className="w-4 h-4 text-blue-600" />
-                        <span className="text-sm font-medium text-slate-700">
+                        <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
                           Einsatzplanung
                         </span>
                       </div>
@@ -270,7 +270,7 @@ export function LandingPage() {
                                 ? "bg-blue-100 text-blue-700"
                                 : i % 3 === 1
                                 ? "bg-green-100 text-green-700"
-                                : "bg-slate-100 text-slate-500"
+                                : "bg-slate-100 text-slate-500 dark:text-slate-400 dark:text-slate-500"
                             }`}
                           >
                             {`${8 + i}:00`}
@@ -294,22 +294,22 @@ export function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row items-center justify-center gap-8 md:gap-16">
             <div className="text-center">
-              <p className="text-3xl font-bold text-slate-900">150+</p>
-              <p className="text-sm text-slate-500">Reinigungsfirmen</p>
+              <p className="text-3xl font-bold text-slate-900 dark:text-white">150+</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400 dark:text-slate-500">Reinigungsfirmen</p>
             </div>
-            <div className="hidden md:block w-px h-12 bg-slate-200" />
+            <div className="hidden md:block w-px h-12 bg-slate-200 dark:bg-slate-700" />
             <div className="text-center">
-              <p className="text-3xl font-bold text-slate-900">2.500+</p>
-              <p className="text-sm text-slate-500">Aktive Mitarbeiter</p>
+              <p className="text-3xl font-bold text-slate-900 dark:text-white">2.500+</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400 dark:text-slate-500">Aktive Mitarbeiter</p>
             </div>
-            <div className="hidden md:block w-px h-12 bg-slate-200" />
+            <div className="hidden md:block w-px h-12 bg-slate-200 dark:bg-slate-700" />
             <div className="text-center">
-              <p className="text-3xl font-bold text-slate-900">50.000+</p>
-              <p className="text-sm text-slate-500">
+              <p className="text-3xl font-bold text-slate-900 dark:text-white">50.000+</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400 dark:text-slate-500">
                 Erfasste Einsätze pro Monat
               </p>
             </div>
-            <div className="hidden md:block w-px h-12 bg-slate-200" />
+            <div className="hidden md:block w-px h-12 bg-slate-200 dark:bg-slate-700" />
             <div className="text-center">
               <div className="flex items-center justify-center gap-1 mb-1">
                 {[...Array(5)].map((_, i) => (
@@ -319,21 +319,21 @@ export function LandingPage() {
                   />
                 ))}
               </div>
-              <p className="text-sm text-slate-500">4.9 / 5 Bewertung</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400 dark:text-slate-500">4.9 / 5 Bewertung</p>
             </div>
           </div>
         </div>
       </section>
 
       {/* ============ FEATURES SECTION ============ */}
-      <section id="features" className="py-20 bg-white">
+      <section id="features" className="py-20 bg-white dark:bg-slate-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-3xl mx-auto mb-16">
             <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 tracking-tight">
               Alles, was Sie für Ihre{" "}
               <span className="text-blue-600">Reinigungsfirma</span> brauchen
             </h2>
-            <p className="mt-4 text-lg text-slate-600">
+            <p className="mt-4 text-lg text-slate-600 dark:text-slate-300">
               Von der Planung bis zur Abrechnung — ReinPlaner deckt alle
               Bereiche Ihres Unternehmens ab.
             </p>
@@ -343,7 +343,7 @@ export function LandingPage() {
             {features.map((feature) => (
               <Card
                 key={feature.title}
-                className="group hover:shadow-lg hover:border-blue-200 transition-all duration-300 border-slate-200"
+                className="group hover:shadow-lg hover:border-blue-200 transition-all duration-300 border-slate-200 dark:border-slate-700"
               >
                 <CardHeader>
                   <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center mb-2 group-hover:bg-blue-100 transition-colors">
@@ -369,7 +369,7 @@ export function LandingPage() {
             <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 tracking-tight">
               Was unsere Kunden sagen
             </h2>
-            <p className="mt-4 text-lg text-slate-600">
+            <p className="mt-4 text-lg text-slate-600 dark:text-slate-300">
               Über 150 Reinigungsfirmen vertrauen auf ReinPlaner.
             </p>
           </div>
@@ -396,7 +396,7 @@ export function LandingPage() {
                     <p className="font-semibold text-slate-900 text-sm">
                       {testimonial.author}
                     </p>
-                    <p className="text-sm text-slate-500">
+                    <p className="text-sm text-slate-500 dark:text-slate-400 dark:text-slate-500">
                       {testimonial.company}
                     </p>
                   </div>
@@ -408,13 +408,13 @@ export function LandingPage() {
       </section>
 
       {/* ============ PRICING PREVIEW ============ */}
-      <section className="py-20 bg-white">
+      <section className="py-20 bg-white dark:bg-slate-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-3xl mx-auto mb-16">
             <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 tracking-tight">
               Transparente Preise, kein Kleingedrucktes
             </h2>
-            <p className="mt-4 text-lg text-slate-600">
+            <p className="mt-4 text-lg text-slate-600 dark:text-slate-300">
               Wählen Sie den Plan, der zu Ihrem Unternehmen passt. Alle Pläne
               mit 14 Tagen kostenlos testen.
             </p>
@@ -439,10 +439,10 @@ export function LandingPage() {
                   <CardTitle className="text-xl">{plan.name}</CardTitle>
                   <CardDescription>{plan.description}</CardDescription>
                   <div className="mt-4">
-                    <span className="text-4xl font-bold text-slate-900">
+                    <span className="text-4xl font-bold text-slate-900 dark:text-white">
                       €{plan.price}
                     </span>
-                    <span className="text-slate-500">/Monat</span>
+                    <span className="text-slate-500 dark:text-slate-400 dark:text-slate-500">/Monat</span>
                   </div>
                 </CardHeader>
                 <CardContent>
@@ -450,7 +450,7 @@ export function LandingPage() {
                     {plan.features.map((feature) => (
                       <li
                         key={feature}
-                        className="flex items-start gap-2 text-sm text-slate-600"
+                        className="flex items-start gap-2 text-sm text-slate-600 dark:text-slate-300"
                       >
                         <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
                         {feature}
@@ -486,14 +486,14 @@ export function LandingPage() {
       </section>
 
       {/* ============ TRUST SECTION ============ */}
-      <section className="py-16 bg-slate-50">
+      <section className="py-16 bg-slate-50 dark:bg-slate-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid sm:grid-cols-3 gap-8 text-center">
             <div className="flex flex-col items-center gap-3">
               <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
                 <Shield className="w-6 h-6 text-blue-600" />
               </div>
-              <h3 className="font-semibold text-slate-900">
+              <h3 className="font-semibold text-slate-900 dark:text-white">
                 DSGVO-konform
               </h3>
               <p className="text-sm text-slate-600 max-w-xs">
@@ -505,7 +505,7 @@ export function LandingPage() {
               <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
                 <Zap className="w-6 h-6 text-blue-600" />
               </div>
-              <h3 className="font-semibold text-slate-900">
+              <h3 className="font-semibold text-slate-900 dark:text-white">
                 In 5 Minuten startklar
               </h3>
               <p className="text-sm text-slate-600 max-w-xs">
@@ -517,7 +517,7 @@ export function LandingPage() {
               <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
                 <Headphones className="w-6 h-6 text-blue-600" />
               </div>
-              <h3 className="font-semibold text-slate-900">
+              <h3 className="font-semibold text-slate-900 dark:text-white">
                 Persönlicher Support
               </h3>
               <p className="text-sm text-slate-600 max-w-xs">
