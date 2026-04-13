@@ -6,9 +6,10 @@ import { createClient } from "@/lib/supabase/client";
 import { useUserProfile } from "@/components/user-profile-provider";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { getSuperOptimizedDashboardData, getUnresolvedFeedback } from "@/lib/super-optimized-dashboard";
+import { getSuperOptimizedDashboardData } from "@/lib/super-optimized-dashboard";
 import { TodaysOrdersOverview } from "@/components/todays-orders-overview";
-import { captureError, trackApiError } from "@/lib/sentry";
+import { OpenInvoicesWidget } from "@/components/open-invoices-widget";
+import { captureError } from "@/lib/sentry";
 import {
   Calendar,
   TrendingUp,
@@ -19,18 +20,21 @@ import {
   Bell,
   ArrowRight,
   BarChart3,
-  Activity
+  Activity,
+  Plus,
+  Settings,
+  FileText,
+  UserPlus,
 } from "lucide-react";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
-import { OpenInvoicesWidget } from "@/components/open-invoices-widget";
 
 export default function DashboardPage() {
   const router = useRouter();
   const supabase = createClient();
   const { userProfile, currentUserRole, displayName, loading, authenticated, refresh } = useUserProfile();
 
-  const [dashboardData, setDashboardData] = useState<any>(null);
+  const [dashboardData, setDashboardData] = useState<Record<string, unknown> | null>(null);
   const [dataLoading, setDataLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -40,142 +44,59 @@ export default function DashboardPage() {
       setError(null);
       const data = await getSuperOptimizedDashboardData();
       setDashboardData(data);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error loading dashboard data:', err);
-      setError(err.message || "Fehler beim Laden der Dashboard-Daten");
-      // Send error to Sentry
-      captureError(err, {
-        tags: {
-          component: 'DashboardPage',
-          function: 'loadDashboardData',
-        },
-        extra: {
-          userId: userProfile ? Object.keys(userProfile).length > 0 ? 'user_exists' : null : null,
-          userRole: currentUserRole,
-        },
-      });
+      const errorMessage = err instanceof Error ? err.message : "Fehler beim Laden der Dashboard-Daten";
+      setError(errorMessage);
+      if (err instanceof Error) {
+        captureError(err, {
+          tags: {
+            component: 'DashboardPage',
+            function: 'loadDashboardData',
+          },
+        });
+      }
     } finally {
       setDataLoading(false);
     }
-  }, [userProfile, currentUserRole]);
+  }, []);
 
   const today = useMemo(() => new Date(), []);
   const formattedDate = useMemo(() => {
     return format(today, 'EEEE, dd. MMMM yyyy', { locale: de });
   }, [today]);
 
-  // Memoized data processing to prevent unnecessary re-calculations
   const processedDashboardData = useMemo(() => {
     if (!dashboardData) return null;
-
     return {
       ...dashboardData,
-      recentActivities: dashboardData.recentActivities?.slice(0, 5) || [],
-      upcomingTasks: dashboardData.upcomingTasks?.slice(0, 5) || [],
-      feedback: dashboardData.feedback?.slice(0, 3) || []
+      recentActivities: (dashboardData.recentActivities as Array<Record<string, unknown>>)?.slice(0, 5) || [],
+      upcomingTasks: (dashboardData.upcomingTasks as Array<Record<string, unknown>>)?.slice(0, 5) || [],
     };
   }, [dashboardData]);
 
-  // Memoized stats calculation
   const stats = useMemo(() => {
     if (!processedDashboardData) {
       return [
-        {
-          title: "Aktive Aufträge",
-          value: 0,
-          change: "0%",
-          changeType: "increase" as const,
-          icon: <Activity className="h-4 w-4" />,
-          description: "Daten werden geladen..."
-        },
-        {
-          title: "Abgeschlossene Aufträge",
-          value: 0,
-          change: "0%",
-          changeType: "increase" as const,
-          icon: <CheckCircle className="h-4 w-4" />,
-          description: "Daten werden geladen..."
-        },
-        {
-          title: "Mitarbeiter aktiv",
-          value: 0,
-          change: "0%",
-          changeType: "increase" as const,
-          icon: <Users className="h-4 w-4" />,
-          description: "Daten werden geladen..."
-        },
-        {
-          title: "Durchschn. Bewertung",
-          value: "N/A",
-          change: "0",
-          changeType: "increase" as const,
-          icon: <TrendingUp className="h-4 w-4" />,
-          description: "Daten werden geladen..."
-        },
-        {
-          title: "Umsatz (Monat)",
-          value: "€0",
-          change: "0%",
-          changeType: "increase" as const,
-          icon: <BarChart3 className="h-4 w-4" />,
-          description: "Daten werden geladen..."
-        }
+        { title: "Aktive Aufträge", value: 0, change: "+12%", changeType: "increase" as const, icon: Activity, description: "Daten werden geladen..." },
+        { title: "Abgeschlossene Aufträge", value: 0, change: "+8%", changeType: "increase" as const, icon: CheckCircle, description: "Daten werden geladen..." },
+        { title: "Mitarbeiter aktiv", value: 0, change: "+5%", changeType: "increase" as const, icon: Users, description: "Daten werden geladen..." },
+        { title: "Ausstehende Anfragen", value: 0, change: "-3", changeType: "decrease" as const, icon: Clock, description: "Daten werden geladen..." },
+        { title: "Neue Beschwerden", value: 0, change: "-2", changeType: "decrease" as const, icon: AlertCircle, description: "heute" },
       ];
     }
 
-    // Use the ACTUAL data structure from getSuperOptimizedDashboardData
-    const {
-      statusCounts,
-      activeEmployeesCount,
-      completedScheduledToday,
-      pendingRequestsCount,
-      employeeCount,
-      totalScheduledToday,
-      revenueLast7Days,
-      totalNewComplaintsToday
-    } = processedDashboardData;
+    const statusCounts = processedDashboardData.statusCounts as Record<string, number> || {};
+    const activeEmployeesCount = processedDashboardData.activeEmployeesCount as number || 0;
+    const pendingRequestsCount = processedDashboardData.pendingRequestsCount as number || 0;
+    const totalNewComplaintsToday = processedDashboardData.totalNewComplaintsToday as number || 0;
 
     return [
-      {
-        title: "Aktive Aufträge",
-        value: statusCounts?.pending || 0,
-        change: "+12%",
-        changeType: "increase" as const,
-        icon: <Activity className="h-4 w-4" />,
-        description: "vs. letzter Monat"
-      },
-      {
-        title: "Abgeschlossene Aufträge",
-        value: statusCounts?.completed || 0,
-        change: "+8%",
-        changeType: "increase" as const,
-        icon: <CheckCircle className="h-4 w-4" />,
-        description: "vs. letzter Monat"
-      },
-      {
-        title: "Mitarbeiter aktiv",
-        value: activeEmployeesCount || 0,
-        change: "+5%",
-        changeType: "increase" as const,
-        icon: <Users className="h-4 w-4" />,
-        description: "vs. letzter Monat"
-      },
-      {
-        title: "Ausstehende Anfragen",
-        value: pendingRequestsCount || 0,
-        change: "-3",
-        changeType: "decrease" as const,
-        icon: <Clock className="h-4 w-4" />,
-        description: "vs. letzter Monat"
-      },
-      {
-        title: "Neue Beschwerden",
-        value: totalNewComplaintsToday || 0,
-        change: "-2",
-        changeType: "decrease" as const,
-        icon: <AlertCircle className="h-4 w-4" />,
-        description: "heute"
-      }
+      { title: "Aktive Aufträge", value: statusCounts?.pending || 0, change: "+12%", changeType: "increase" as const, icon: Activity, description: "vs. letzter Monat" },
+      { title: "Abgeschlossene Aufträge", value: statusCounts?.completed || 0, change: "+8%", changeType: "increase" as const, icon: CheckCircle, description: "vs. letzter Monat" },
+      { title: "Mitarbeiter aktiv", value: activeEmployeesCount, change: "+5%", changeType: "increase" as const, icon: Users, description: "vs. letzter Monat" },
+      { title: "Ausstehende Anfragen", value: pendingRequestsCount, change: "-3", changeType: "decrease" as const, icon: Clock, description: "vs. letzter Monat" },
+      { title: "Neue Beschwerden", value: totalNewComplaintsToday, change: "-2", changeType: "decrease" as const, icon: AlertCircle, description: "heute" },
     ];
   }, [processedDashboardData]);
 
@@ -191,114 +112,127 @@ export default function DashboardPage() {
     }
   }, [loading, authenticated, userProfile, loadDashboardData]);
 
-  // Create loading skeletons for stats
   const loadingStats = [
-    {
-      title: "Aktive Aufträge",
-      icon: <Activity className="h-4 w-4" />,
-    },
-    {
-      title: "Abgeschlossene Aufträge",
-      icon: <CheckCircle className="h-4 w-4" />,
-    },
-    {
-      title: "Mitarbeiter aktiv",
-      icon: <Users className="h-4 w-4" />,
-    },
-    {
-      title: "Durchschn. Bewertung",
-      icon: <TrendingUp className="h-4 w-4" />,
-    },
-    {
-      title: "Umsatz (Monat)",
-      icon: <BarChart3 className="h-4 w-4" />,
-    },
+    { title: "Aktive Aufträge", icon: Activity },
+    { title: "Abgeschlossene Aufträge", icon: CheckCircle },
+    { title: "Mitarbeiter aktiv", icon: Users },
+    { title: "Durchschn. Bewertung", icon: TrendingUp },
+    { title: "Umsatz (Monat)", icon: BarChart3 },
   ];
 
-  // Show error if not authenticated
   if (!loading && !authenticated) {
     return (
-      <div className="p-8 text-center">
-        <p className="text-lg font-semibold">Nicht authentifiziert</p>
-        <p className="text-sm text-muted-foreground">Sie werden zum Login weitergeleitet...</p>
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="glass-card p-8 text-center max-w-md">
+          <AlertCircle className="w-12 h-12 text-amber-500 mx-auto mb-4" />
+          <p className="text-lg font-semibold text-white mb-2">Nicht authentifiziert</p>
+          <p className="text-sm text-slate-400">Sie werden zum Login weitergeleitet...</p>
+        </div>
       </div>
     );
   }
 
-  // Show error if authenticated but no profile
   if (authenticated && !userProfile) {
     return (
-      <div className="p-8 text-center">
-        <p className="text-lg font-semibold">Fehler beim Laden des Profils</p>
-        <p className="text-sm text-muted-foreground mb-4">
-          Ihr Profil konnte nicht geladen werden.
-        </p>
-        <Button onClick={() => refresh()} variant="default">
-          Erneut versuchen
-        </Button>
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="glass-card p-8 text-center max-w-md">
+          <AlertCircle className="w-12 h-12 text-amber-500 mx-auto mb-4" />
+          <p className="text-lg font-semibold text-white mb-2">Fehler beim Laden des Profils</p>
+          <p className="text-sm text-slate-400 mb-4">Ihr Profil konnte nicht geladen werden.</p>
+          <Button onClick={() => refresh()} className="btn-primary">
+            Erneut versuchen
+          </Button>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col gap-8 p-4 md:p-8">
+    <div className="min-h-screen section-dark p-4 md:p-8">
       {/* Welcome Header */}
-      <div className="space-y-2">
+      <div className="mb-8">
         {loading || !displayName ? (
-          <>
-            <div className="h-10 bg-muted rounded w-1/3 animate-pulse"></div>
-            <div className="h-4 bg-muted rounded w-1/2 animate-pulse"></div>
-          </>
+          <div className="space-y-2">
+            <div className="h-10 bg-white/5 rounded w-1/3 animate-pulse" />
+            <div className="h-4 bg-white/5 rounded w-1/2 animate-pulse" />
+          </div>
         ) : (
-          <>
-            <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-              Willkommen zurück, {displayName}!
-            </h1>
-            <p className="text-sm md:text-base text-muted-foreground">
-              Heute ist der {formattedDate}.
-            </p>
-          </>
+          <div className="flex items-start justify-between">
+            <div>
+              <h1 className="text-3xl md:text-4xl font-bold text-white tracking-tight">
+                Willkommen zurück, {displayName}!
+              </h1>
+              <p className="text-sm md:text-base text-slate-400 mt-1">
+                Heute ist der {formattedDate}.
+              </p>
+            </div>
+            <Button variant="outline" size="icon" className="glass-btn hidden md:flex">
+              <Bell className="w-5 h-5 text-slate-400" />
+            </Button>
+          </div>
         )}
       </div>
 
-      {/* Heutige Einsätze Section */}
-      <TodaysOrdersOverview />
+      {/* Quick Actions */}
+      <div className="flex flex-wrap gap-3 mb-8">
+        <Button onClick={() => router.push("/dashboard/orders/new")} className="btn-primary h-10 px-4 text-sm font-medium">
+          <Plus className="w-4 h-4 mr-2" />
+          Neuer Auftrag
+        </Button>
+        <Button onClick={() => router.push("/dashboard/employees/new")} variant="outline" className="glass-btn h-10 px-4 text-sm font-medium">
+          <UserPlus className="w-4 h-4 mr-2" />
+          Mitarbeiter hinzufügen
+        </Button>
+        <Button onClick={() => router.push("/dashboard/reports")} variant="outline" className="glass-btn h-10 px-4 text-sm font-medium">
+          <BarChart3 className="w-4 h-4 mr-2" />
+          Berichte
+        </Button>
+        <Button onClick={() => router.push("/dashboard/settings")} variant="outline" className="glass-btn h-10 px-4 text-sm font-medium">
+          <Settings className="w-4 h-4 mr-2" />
+          Einstellungen
+        </Button>
+      </div>
 
-      {/* Quick Stats Grid */}
+      {/* Heutige Einsätze Section */}
+      <div className="mb-8">
+        <TodaysOrdersOverview />
+      </div>
+
+      {/* Stats Grid */}
       {dataLoading ? (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5 mb-8">
           {loadingStats.map((stat, index) => (
-            <Card key={index}>
+            <Card key={index} className="glass-card">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <div className="h-4 bg-muted rounded w-24 animate-pulse"></div>
-                <div className="h-4 w-4 bg-muted rounded animate-pulse"></div>
+                <div className="h-4 bg-white/5 rounded w-24 animate-pulse" />
+                <div className="h-4 w-4 bg-white/5 rounded animate-pulse" />
               </CardHeader>
               <CardContent>
-                <div className="h-8 bg-muted rounded w-16 mb-2 animate-pulse"></div>
-                <div className="h-3 bg-muted rounded w-32 animate-pulse"></div>
+                <div className="h-8 bg-white/5 rounded w-16 mb-2 animate-pulse" />
+                <div className="h-3 bg-white/5 rounded w-32 animate-pulse" />
               </CardContent>
             </Card>
           ))}
         </div>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5 mb-8">
           {stats.map((stat) => (
-            <Card key={stat.title}>
+            <Card key={stat.title} className="glass-card-hover">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
+                <CardTitle className="text-sm font-medium text-slate-400">
                   {stat.title}
                 </CardTitle>
-                {stat.icon}
+                <stat.icon className="h-4 w-4 text-slate-500" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{stat.value}</div>
-                <div className="flex items-center space-x-2 text-xs">
+                <div className="text-2xl font-bold text-white">{stat.value}</div>
+                <div className="flex items-center space-x-2 text-xs mt-1">
                   <span className={`font-medium ${
-                    stat.changeType === "increase" ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
+                    stat.changeType === "increase" ? "text-emerald-400" : "text-rose-400"
                   }`}>
                     {stat.change}
                   </span>
-                  <span className="text-muted-foreground">
+                  <span className="text-slate-500">
                     {stat.description}
                   </span>
                 </div>
@@ -309,91 +243,106 @@ export default function DashboardPage() {
       )}
 
       {/* Main Content Grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7 mb-8">
         {/* Recent Activity */}
-        <Card className="col-span-4">
+        <Card className="col-span-4 glass-card">
           <CardHeader>
-            <CardTitle>Aktuelle Aktivitäten</CardTitle>
-            <CardDescription>
-              Die neuesten Aktivitäten im Unternehmen
-            </CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-white">Aktuelle Aktivitäten</CardTitle>
+                <CardDescription className="text-slate-500">
+                  Die neuesten Aktivitäten im Unternehmen
+                </CardDescription>
+              </div>
+              <Button variant="ghost" size="sm" className="text-slate-400 hover:text-white">
+                Alle anzeigen
+                <ArrowRight className="w-4 h-4 ml-1" />
+              </Button>
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
             {dataLoading ? (
               Array.from({ length: 5 }).map((_, index) => (
-                <div key={index} className="flex items-center space-x-4 animate-pulse">
-                  <div className="rounded-full bg-muted p-2 h-8 w-8"></div>
+                <div key={index} className="flex items-center space-x-4">
+                  <div className="rounded-full bg-white/5 p-2 h-10 w-10 animate-pulse" />
                   <div className="flex-1 space-y-2">
-                    <div className="h-4 bg-muted rounded w-3/4"></div>
-                    <div className="h-3 bg-muted rounded w-1/2"></div>
+                    <div className="h-4 bg-white/5 rounded w-3/4" />
+                    <div className="h-3 bg-white/5 rounded w-1/2" />
                   </div>
-                  <div className="h-4 w-4 bg-muted rounded"></div>
                 </div>
               ))
             ) : processedDashboardData?.recentActivities?.length > 0 ? (
-              dashboardData.recentActivities.slice(0, 5).map((activity: any, index: number) => (
-                <div key={index} className="flex items-center space-x-4">
-                  <div className="rounded-full bg-primary/10 p-2">
-                    <AlertCircle className="h-4 w-4 text-primary" />
+              (dashboardData?.recentActivities as Array<{ description?: string; created_at?: string }>)?.slice(0, 5).map((activity, index) => (
+                <div key={index} className="flex items-center space-x-4 p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
+                  <div className="rounded-full bg-blue-500/20 p-2">
+                    <AlertCircle className="h-4 w-4 text-blue-400" />
                   </div>
                   <div className="flex-1 space-y-1">
-                    <p className="text-sm font-medium leading-none">
+                    <p className="text-sm font-medium text-slate-200 leading-none">
                       {activity.description}
                     </p>
-                    <p className="text-xs text-muted-foreground">
-                      {format(new Date(activity.created_at), 'dd.MM.yyyy HH:mm', { locale: de })}
+                    <p className="text-xs text-slate-500">
+                      {activity.created_at ? format(new Date(activity.created_at), 'dd.MM.yyyy HH:mm', { locale: de }) : ''}
                     </p>
                   </div>
-                  <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                  <ArrowRight className="h-4 w-4 text-slate-600" />
                 </div>
               ))
             ) : (
-              <p className="text-sm text-muted-foreground">Keine aktuellen Aktivitäten</p>
+              <div className="text-center py-8">
+                <Activity className="w-12 h-12 text-slate-600 mx-auto mb-3" />
+                <p className="text-sm text-slate-500">Keine aktuellen Aktivitäten</p>
+              </div>
             )}
           </CardContent>
         </Card>
 
         {/* Upcoming Tasks */}
-        <Card className="col-span-3">
+        <Card className="col-span-3 glass-card">
           <CardHeader>
-            <CardTitle>Anstehende Aufgaben</CardTitle>
-            <CardDescription>
-              Aufgaben für die nächsten 7 Tage
-            </CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-white">Anstehende Aufgaben</CardTitle>
+                <CardDescription className="text-slate-500">
+                  Aufgaben für die nächsten 7 Tage
+                </CardDescription>
+              </div>
+              <Button variant="ghost" size="sm" className="text-slate-400 hover:text-white">
+                Alle anzeigen
+                <ArrowRight className="w-4 h-4 ml-1" />
+              </Button>
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
             {dataLoading ? (
               Array.from({ length: 5 }).map((_, index) => (
-                <div key={index} className="flex items-center space-x-4 animate-pulse">
-                  <div className="rounded-full bg-muted p-2 h-8 w-8"></div>
+                <div key={index} className="flex items-center space-x-4">
+                  <div className="rounded-full bg-white/5 p-2 h-10 w-10 animate-pulse" />
                   <div className="flex-1 space-y-2">
-                    <div className="h-4 bg-muted rounded w-3/4"></div>
-                    <div className="flex items-center space-x-2">
-                      <div className="h-3 bg-muted rounded w-24"></div>
-                      <div className="h-5 bg-muted rounded w-16"></div>
-                    </div>
+                    <div className="h-4 bg-white/5 rounded w-3/4" />
+                    <div className="h-3 bg-white/5 rounded w-24" />
                   </div>
                 </div>
               ))
             ) : processedDashboardData?.upcomingTasks?.length > 0 ? (
-              dashboardData.upcomingTasks.slice(0, 5).map((task: any, index: number) => (
-                <div key={index} className="flex items-center space-x-4">
-                  <div className="rounded-full bg-blue-100 dark:bg-blue-900/50 p-2">
-                    <Clock className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+              (dashboardData?.upcomingTasks as Array<{ title?: string; due_date?: string; priority?: string }>)?.slice(0, 5).map((task, index) => (
+                <div key={index} className="flex items-center space-x-4 p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
+                  <div className="rounded-full bg-blue-500/20 p-2">
+                    <Clock className="h-4 w-4 text-blue-400" />
                   </div>
                   <div className="flex-1 space-y-1">
-                    <p className="text-sm font-medium leading-none">
+                    <p className="text-sm font-medium text-slate-200 leading-none">
                       {task.title}
                     </p>
                     <div className="flex items-center space-x-2">
-                      <p className="text-xs text-muted-foreground">
-                        {format(new Date(task.due_date), 'dd.MM.yyyy', { locale: de })}
+                      <p className="text-xs text-slate-500">
+                        {task.due_date ? format(new Date(task.due_date), 'dd.MM.yyyy', { locale: de }) : ''}
                       </p>
                       {task.priority && (
-                        <span className={`text-xs px-2 py-1 rounded ${
-                          task.priority === 'high' ? 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-200' :
-                          task.priority === 'medium' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-200' :
-                          'bg-gray-100 text-gray-800 dark:bg-gray-900/50 dark:text-gray-200'
+                        <span className={`text-xs px-2 py-0.5 rounded ${
+                          task.priority === 'high' ? 'bg-rose-500/20 text-rose-400' :
+                          task.priority === 'medium' ? 'bg-amber-500/20 text-amber-400' :
+                          'bg-slate-500/20 text-slate-400'
                         }`}>
                           {task.priority === 'high' ? 'Hoch' :
                            task.priority === 'medium' ? 'Mittel' : 'Niedrig'}
@@ -404,7 +353,10 @@ export default function DashboardPage() {
                 </div>
               ))
             ) : (
-              <p className="text-sm text-muted-foreground">Keine anstehenden Aufgaben</p>
+              <div className="text-center py-8">
+                <Clock className="w-12 h-12 text-slate-600 mx-auto mb-3" />
+                <p className="text-sm text-slate-500">Keine anstehenden Aufgaben</p>
+              </div>
             )}
           </CardContent>
         </Card>
@@ -412,118 +364,125 @@ export default function DashboardPage() {
 
       {/* Performance Overview */}
       {dataLoading ? (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
           {Array.from({ length: 4 }).map((_, index) => (
-            <Card key={index}>
+            <Card key={index} className="glass-card">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <div className="h-4 bg-muted rounded w-32 animate-pulse"></div>
-                <div className="h-4 w-4 bg-muted rounded animate-pulse"></div>
+                <div className="h-4 bg-white/5 rounded w-32 animate-pulse" />
+                <div className="h-4 w-4 bg-white/5 rounded animate-pulse" />
               </CardHeader>
               <CardContent>
-                <div className="h-8 bg-muted rounded w-16 mb-2 animate-pulse"></div>
-                <div className="h-3 bg-muted rounded w-40 animate-pulse"></div>
+                <div className="h-8 bg-white/5 rounded w-16 mb-2 animate-pulse" />
+                <div className="h-3 bg-white/5 rounded w-40 animate-pulse" />
               </CardContent>
             </Card>
           ))}
         </div>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <Card>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
+          <Card className="glass-card-hover">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
+              <CardTitle className="text-sm font-medium text-slate-400">
                 Geplante Aufträge heute
               </CardTitle>
-              <Calendar className="h-4 w-4 text-muted-foreground" />
+              <Calendar className="h-4 w-4 text-slate-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
-                {processedDashboardData?.totalScheduledToday || 0}
+              <div className="text-2xl font-bold text-white">
+                {(processedDashboardData?.totalScheduledToday as number) || 0}
               </div>
-              <p className="text-xs text-muted-foreground">
-                Davon {processedDashboardData?.completedScheduledToday || 0} abgeschlossen
+              <p className="text-xs text-slate-500 mt-1">
+                Davon {(processedDashboardData?.completedScheduledToday as number) || 0} abgeschlossen
               </p>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="glass-card-hover">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
+              <CardTitle className="text-sm font-medium text-slate-400">
                 Mitarbeiter gesamt
               </CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
+              <Users className="h-4 w-4 text-slate-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
-                {processedDashboardData?.employeeCount || 0}
+              <div className="text-2xl font-bold text-white">
+                {(processedDashboardData?.employeeCount as number) || 0}
               </div>
-              <p className="text-xs text-muted-foreground">
-                {processedDashboardData?.activeEmployeesCount || 0} heute aktiv
+              <p className="text-xs text-slate-500 mt-1">
+                {(processedDashboardData?.activeEmployeesCount as number) || 0} heute aktiv
               </p>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="glass-card-hover">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
+              <CardTitle className="text-sm font-medium text-slate-400">
                 Kunden gesamt
               </CardTitle>
-              <CheckCircle className="h-4 w-4 text-muted-foreground" />
+              <CheckCircle className="h-4 w-4 text-slate-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
-                {processedDashboardData?.customerCount || 0}
+              <div className="text-2xl font-bold text-white">
+                {(processedDashboardData?.customerCount as number) || 0}
               </div>
-              <p className="text-xs text-muted-foreground">
-                {processedDashboardData?.objectCount || 0} Objekte betreut
+              <p className="text-xs text-slate-500 mt-1">
+                {(processedDashboardData?.objectCount as number) || 0} Objekte betreut
               </p>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="glass-card-hover">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
+              <CardTitle className="text-sm font-medium text-slate-400">
                 Beschwerden heute
               </CardTitle>
-              <AlertCircle className="h-4 w-4 text-muted-foreground" />
+              <AlertCircle className="h-4 w-4 text-slate-500" />
             </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {processedDashboardData?.totalNewComplaintsToday || 0}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Ungelöste Tickets
-            </p>
-          </CardContent>
-        </Card>
+            <CardContent>
+              <div className="text-2xl font-bold text-white">
+                {(processedDashboardData?.totalNewComplaintsToday as number) || 0}
+              </div>
+              <p className="text-xs text-slate-500 mt-1">
+                Ungelöste Tickets
+              </p>
+            </CardContent>
+          </Card>
         </div>
       )}
 
       {/* Open Invoices Widget */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
         <OpenInvoicesWidget />
       </div>
 
       {/* Quick Actions */}
       <div className="flex flex-wrap gap-2">
-        <Button variant="outline" size="sm" onClick={() => router.push("/dashboard/orders")}>
+        <Button variant="outline" size="sm" onClick={() => router.push("/dashboard/orders")} className="glass-btn text-slate-300">
+          <FileText className="w-4 h-4 mr-2" />
           Aufträge verwalten
         </Button>
-        <Button variant="outline" size="sm" onClick={() => router.push("/dashboard/employees")}>
+        <Button variant="outline" size="sm" onClick={() => router.push("/dashboard/employees")} className="glass-btn text-slate-300">
+          <Users className="w-4 h-4 mr-2" />
           Mitarbeiter verwalten
         </Button>
-        <Button variant="outline" size="sm" onClick={() => router.push("/dashboard/planning")}>
+        <Button variant="outline" size="sm" onClick={() => router.push("/dashboard/planning")} className="glass-btn text-slate-300">
+          <Calendar className="w-4 h-4 mr-2" />
           Planung anzeigen
         </Button>
-        <Button variant="outline" size="sm" onClick={() => router.push("/dashboard/reports")}>
+        <Button variant="outline" size="sm" onClick={() => router.push("/dashboard/reports")} className="glass-btn text-slate-300">
+          <BarChart3 className="w-4 h-4 mr-2" />
           Berichte erstellen
         </Button>
       </div>
 
       {/* Error Display */}
       {error && (
-        <Card className="border-red-200 bg-red-50 dark:bg-red-900/20 dark:border-red-800">
+        <Card className="mt-8 border-rose-500/30 bg-rose-500/10">
           <CardContent className="pt-6">
-            <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
+            <div className="flex items-center gap-3">
+              <AlertCircle className="w-5 h-5 text-rose-400" />
+              <p className="text-sm text-rose-300">{error}</p>
+            </div>
           </CardContent>
         </Card>
       )}
