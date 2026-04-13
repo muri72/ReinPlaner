@@ -1,0 +1,39 @@
+name: Database Migration
+
+on:
+  workflow_dispatch:
+    inputs:
+      migration_file:
+        description: 'Migration file to run'
+        required: true
+        default: '20260413135246_tenant_isolation.sql'
+
+jobs:
+  migrate:
+    name: Run Database Migration
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Supabase CLI
+        run: |
+          npm install -g supabase@latest
+          supabase --version
+      
+      - name: Get migration file
+        run: |
+          echo "Using migration: ${{ inputs.migration_file }}"
+          ls -la supabase/migrations/${{ inputs.migration_file }}
+      
+      - name: Link project
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          supabase link --project-ref ignrqqicnhlaysqxuejz --access-token "$SUPABASE_ACCESS_TOKEN"
+      
+      - name: Push migration
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          supabase db push --yes --force
