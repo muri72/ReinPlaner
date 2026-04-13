@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useUserProfile } from "@/components/user-profile-provider";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { getSuperOptimizedDashboardData } from "@/lib/super-optimized-dashboard";
+import { getSuperOptimizedDashboardData, type DashboardData } from "@/lib/super-optimized-dashboard";
 import { TodaysOrdersOverview } from "@/components/todays-orders-overview";
 import { OpenInvoicesWidget } from "@/components/open-invoices-widget";
 import { captureError } from "@/lib/sentry";
@@ -34,7 +34,7 @@ export default function DashboardPage() {
   const supabase = createClient();
   const { userProfile, currentUserRole, displayName, loading, authenticated, refresh } = useUserProfile();
 
-  const [dashboardData, setDashboardData] = useState<Record<string, unknown> | null>(null);
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [dataLoading, setDataLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -70,8 +70,8 @@ export default function DashboardPage() {
     if (!dashboardData) return null;
     return {
       ...dashboardData,
-      recentActivities: (dashboardData.recentActivities as Array<Record<string, unknown>>)?.slice(0, 5) || [],
-      upcomingTasks: (dashboardData.upcomingTasks as Array<Record<string, unknown>>)?.slice(0, 5) || [],
+      recentActivities: dashboardData.recentActivities?.slice(0, 5) || [],
+      upcomingTasks: dashboardData.upcomingTasks?.slice(0, 5) || [],
     };
   }, [dashboardData]);
 
