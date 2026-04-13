@@ -52,7 +52,7 @@ const features = [
     icon: FileText,
     title: "Abrechnung",
     description:
-      "Automatische Rechnungserstellung aus erfassten Daten. (Coming Soon)",
+      "Automatische Rechnungserstellung aus erfassten Daten. 🎉 Jetzt mit Frühjahrsaktion: 3 Monate gratis!",
   },
   {
     icon: MapPin,
@@ -74,7 +74,7 @@ const pricingPlans = [
       "Zeiterfassung",
       "E-Mail Support",
     ],
-    cta: "Kostenlos testen",
+    cta: "Jetzt Early Access sichern",
     highlighted: false,
   },
   {
@@ -89,7 +89,7 @@ const pricingPlans = [
       "Erweiterte Berichte",
       "Multi-Standort",
     ],
-    cta: "Kostenlos testen",
+    cta: "Jetzt Early Access sichern",
     highlighted: true,
   },
   {
