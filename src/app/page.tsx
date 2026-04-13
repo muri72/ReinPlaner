@@ -1,12 +1,23 @@
 /**
  * Root page - serves as entry point
  * If user is authenticated → redirect to /dashboard
- * If user is not authenticated → show landing page (via (marketing) route group)
+ * If user is not authenticated → show landing page
  */
-import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { LandingPage } from '@/components/landing-page';
 import type { Metadata } from 'next';
+
+// Lazy import to avoid build-time errors
+async function getUser(): Promise<{ user: any; error: any }> {
+  try {
+    const { createClient } = await import('@/lib/supabase/server');
+    const supabase = await createClient();
+    return await supabase.auth.getUser();
+  } catch {
+    // If Supabase fails (e.g., env vars not set during build), assume not authenticated
+    return { user: null, error: { message: 'Supabase not configured' } };
+  }
+}
 
 export const metadata: Metadata = {
   title: 'ReinPlaner – Die Software für Gebäudereinigung',
@@ -14,10 +25,7 @@ export const metadata: Metadata = {
 };
 
 export default async function HomePage() {
-  const supabase = await createClient();
-  
-  // Check if user is actually authenticated (not just has a session)
-  const { data: { user }, error } = await supabase.auth.getUser();
+  const { user, error } = await getUser();
 
   // If authenticated (has user and no error), redirect to dashboard
   if (user && !error) {
