@@ -39,3 +39,13 @@ export {
   useTenantLimits,
   isFeatureAvailableForPlan,
 } from './context';
+
+// Tenant-safe query helpers (DEFENSE-IN-DEPTH)
+export {
+  getCurrentTenantId,
+  requireTenantId,
+  assertRecordTenant,
+  addTenantFilter,
+  tenantScopedQuery,
+  addTenantToPayload,
+} from './safety';
