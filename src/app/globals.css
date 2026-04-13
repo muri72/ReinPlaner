@@ -335,3 +335,96 @@ input[type="password"] {
 .value-updated {
   animation: flash-update 0.5s ease-out;
 }
+/* ============================================
+   SPRINT 6: DARK MODE CONSISTENCY FIX
+   ============================================ */
+
+/* Force dark mode as default for consistent look */
+/* Remove the .dark class requirement for basic colors */
+
+/* Base dark mode colors - high contrast */
+.dark {
+  --background: 220 15% 8%;    /* Deep blue-black */
+  --foreground: 220 10% 95%; /* High contrast white */
+  
+  --card: 220 15% 12%;        /* Slightly lighter card */
+  --card-foreground: 220 10% 95%;
+  
+  --popover: 220 15% 12%;
+  --popover-foreground: 220 10% 95%;
+  
+  --primary: 217 90% 60%;     /* Brighter blue for dark */
+  --primary-foreground: 0 0% 100%;
+  
+  --secondary: 210 15% 20%;
+  --secondary-foreground: 220 10% 90%;
+  
+  --muted: 220 10% 20%;
+  --muted-foreground: 220 5% 60%;
+  
+  --accent: 217 70% 60%;
+  --accent-foreground: 0 0% 100%;
+  
+  --destructive: 0 70% 50%;
+  --destructive-foreground: 0 0% 100%;
+  
+  --success: 150 70% 40%;
+  --success-foreground: 0 0% 100%;
+  
+  --warning: 45 90% 50%;
+  --warning-foreground: 0 0% 100%;
+  
+  --border: 220 10% 25%;
+  --input: 220 10% 20%;
+  --ring: 217 90% 60%;
+}
+
+/* Make the html element respond to theme */
+.dark html {
+  color-scheme: dark;
+}
+
+/* Ensure text is always readable in dark mode */
+.dark body,
+.dark p,
+.dark span,
+.dark div {
+  --foreground: 220 10% 95%;
+}
+
+/* High contrast text for dark backgrounds */
+.dark .text-slate-900,
+.dark .text-gray-900 {
+  color: #f1f5f9 !important;
+}
+
+.dark .text-slate-800,
+.dark .text-gray-800 {
+  color: #e2e8f0 !important;
+}
+
+.dark .text-slate-700,
+.dark .text-gray-700 {
+  color: #cbd5e1 !important;
+}
+
+.dark .text-slate-600,
+.dark .text-gray-600 {
+  color: #94a3b8 !important;
+}
+
+.dark .text-slate-500,
+.dark .text-gray-500 {
+  color: #64748b !important;
+}
+
+/* Ensure cards are readable in dark mode */
+.dark .bg-white {
+  background-color: hsl(var(--card)) !important;
+}
+
+/* Fix button contrast */
+.dark button,
+.dark .btn {
+  color: #ffffff;
+}
