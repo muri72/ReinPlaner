@@ -18,9 +18,13 @@ jobs:
       
       - name: Install Supabase CLI
         run: |
-          rm -f /usr/local/bin/supabase
+          rm -rf ./supabase_bin
+          mkdir -p ./supabase_bin
+          cd ./supabase_bin
           curl -sL https://github.com/supabase/cli/releases/download/v2.90.0/supabase_linux_amd64.tar.gz | tar xz
           mv supabase /usr/local/bin/
+          cd ..
+          rm -rf ./supabase_bin
           supabase --version
       
       - name: Get migration file
