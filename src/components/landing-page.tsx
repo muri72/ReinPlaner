@@ -133,11 +133,14 @@ const testimonials = [
   },
 ];
 
+import { MarketingHeader } from "./marketing-header";
+
 export function LandingPage() {
   return (
     <main className="min-h-screen">
+      <MarketingHeader />
       {/* ============ HERO SECTION ============ */}
-      <section className="relative pt-24 pb-16 sm:pt-32 sm:pb-24 overflow-hidden">
+      <section className="relative pt-16 pb-16 sm:pt-16 sm:pb-24 overflow-hidden">
         {/* Background gradient */}
         <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-white to-slate-50" />
         <div className="absolute top-20 right-0 w-[600px] h-[600px] bg-blue-400/10 rounded-full blur-3xl" />
