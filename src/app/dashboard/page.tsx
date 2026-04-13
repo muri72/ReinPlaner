@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useUserProfile } from "@/components/user-profile-provider";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { getSuperOptimizedDashboardData, type DashboardData } from "@/lib/super-optimized-dashboard";
+import { getSuperOptimizedDashboardData } from "@/lib/super-optimized-dashboard";
 import { TodaysOrdersOverview } from "@/components/todays-orders-overview";
 import { OpenInvoicesWidget } from "@/components/open-invoices-widget";
 import { captureError } from "@/lib/sentry";
@@ -34,7 +34,8 @@ export default function DashboardPage() {
   const supabase = createClient();
   const { userProfile, currentUserRole, displayName, loading, authenticated, refresh } = useUserProfile();
 
-  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [dashboardData, setDashboardData] = useState<any>(null);
   const [dataLoading, setDataLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -70,8 +71,8 @@ export default function DashboardPage() {
     if (!dashboardData) return null;
     return {
       ...dashboardData,
-      recentActivities: dashboardData.recentActivities?.slice(0, 5) || [],
-      upcomingTasks: dashboardData.upcomingTasks?.slice(0, 5) || [],
+      recentActivities: (dashboardData.recentActivities || [])?.slice(0, 5),
+      upcomingTasks: (dashboardData.upcomingTasks || [])?.slice(0, 5),
     };
   }, [dashboardData]);
 
@@ -272,7 +273,7 @@ export default function DashboardPage() {
                 </div>
               ))
             ) : processedDashboardData?.recentActivities?.length > 0 ? (
-              (dashboardData?.recentActivities as Array<{ description?: string; created_at?: string }>)?.slice(0, 5).map((activity, index) => (
+              (processedDashboardData?.recentActivities as Array<{ description?: string; created_at?: string }>)?.slice(0, 5).map((activity, index) => (
                 <div key={index} className="flex items-center space-x-4 p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
                   <div className="rounded-full bg-blue-500/20 p-2">
                     <AlertCircle className="h-4 w-4 text-blue-400" />
@@ -325,7 +326,7 @@ export default function DashboardPage() {
                 </div>
               ))
             ) : processedDashboardData?.upcomingTasks?.length > 0 ? (
-              (dashboardData?.upcomingTasks as Array<{ title?: string; due_date?: string; priority?: string }>)?.slice(0, 5).map((task, index) => (
+              (processedDashboardData?.upcomingTasks as Array<{ title?: string; due_date?: string; priority?: string }>)?.slice(0, 5).map((task, index) => (
                 <div key={index} className="flex items-center space-x-4 p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
                   <div className="rounded-full bg-blue-500/20 p-2">
                     <Clock className="h-4 w-4 text-blue-400" />
