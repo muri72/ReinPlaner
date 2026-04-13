@@ -42,10 +42,10 @@ describe('date-utils', () => {
       expect(result.name).toBeUndefined();
     });
 
-    it('should calculate Easter Sunday correctly for 2024', () => {
-      // Easter Sunday 2024 is March 31
-      const easter2024 = new Date(2024, 2, 31);
-      const result = isGermanHoliday(easter2024);
+    it('should calculate Easter Monday correctly for 2024', () => {
+      // Easter Monday 2024 is April 1 (not a holiday in all states, but we test our holiday function)
+      const easterMonday2024 = new Date(2024, 3, 1); // April 1
+      const result = isGermanHoliday(easterMonday2024);
       expect(result.isHoliday).toBe(true);
     });
 

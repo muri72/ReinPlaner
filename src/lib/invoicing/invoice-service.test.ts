@@ -952,8 +952,8 @@ describe('Utility functions', () => {
     });
 
     it('should round to nearest cent', () => {
-      expect(parseCurrencyInput('119.009')).toBe(11900);
-      expect(parseCurrencyInput('119.999')).toBe(12000);
+      expect(parseCurrencyInput('119.009')).toBe(11901); // 0.009 -> 0.9 cent -> rounds UP
+      expect(parseCurrencyInput('119.999')).toBe(12000); // 0.999 -> 99.9 cent -> rounds UP
     });
   });
 });

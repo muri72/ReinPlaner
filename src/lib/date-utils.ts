@@ -34,34 +34,22 @@ function getEasterSunday(year: number): Date {
 // Get movable holidays based on Easter
 function getMovableHolidays(year: number): Array<{ month: number; day: number; name: string }> {
   const easter = getEasterSunday(year);
-  const easterDay = easter.getDate();
-  const easterMonth = easter.getMonth() + 1;
+  
+  // Helper to add days and get month/day avoiding overflow issues
+  const addDays = (base: Date, days: number) => {
+    const result = new Date(base.getTime() + days * 86400000);
+    return { month: result.getMonth() + 1, day: result.getDate() };
+  };
   
   return [
     // Karfreitag (Good Friday) - 2 days before Easter
-    { 
-      month: easterMonth, 
-      day: easterDay - 2, 
-      name: "Karfreitag" 
-    },
+    { ...addDays(easter, -2), name: "Karfreitag" },
     // Ostermontag (Easter Monday) - 1 day after Easter
-    { 
-      month: easterMonth, 
-      day: easterDay + 1, 
-      name: "Ostermontag" 
-    },
+    { ...addDays(easter, 1), name: "Ostermontag" },
     // Christi Himmelfahrt (Ascension Day) - 39 days after Easter
-    { 
-      month: easterMonth, 
-      day: easterDay + 39, 
-      name: "Christi Himmelfahrt" 
-    },
+    { ...addDays(easter, 39), name: "Christi Himmelfahrt" },
     // Pfingstmontag (Whit Monday) - 50 days after Easter
-    { 
-      month: easterMonth, 
-      day: easterDay + 50, 
-      name: "Pfingstmontag" 
-    },
+    { ...addDays(easter, 50), name: "Pfingstmontag" },
   ];
 }
 
