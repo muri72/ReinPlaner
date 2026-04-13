@@ -7,7 +7,7 @@ import { revalidatePath } from "next/cache";
 export async function signOut() {
   const supabase = await createClient();
   await supabase.auth.signOut();
-  redirect("/login");
+  redirect("/");
 }
 
 export async function updateProfile(formData: FormData) {

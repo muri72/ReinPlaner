@@ -75,7 +75,7 @@ export default function EmployeeDashboard() {
   const fetchDashboardData = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
-      redirect("/login");
+      redirect("/");
       return;
     }
     setCurrentUser(user);
@@ -221,7 +221,7 @@ export default function EmployeeDashboard() {
       <MobileDashboardLayout
         onSignOut={async () => {
           await supabase.auth.signOut();
-          redirect("/login");
+          redirect("/");
         }}
         notificationCount={0}
       >
@@ -248,7 +248,7 @@ export default function EmployeeDashboard() {
     <MobileDashboardLayout
       onSignOut={async () => {
         await supabase.auth.signOut();
-        redirect("/login");
+        redirect("/");
       }}
       notificationCount={stats.pendingNotifications}
     >
