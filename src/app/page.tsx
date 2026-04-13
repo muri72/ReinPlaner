@@ -15,10 +15,12 @@ export const metadata: Metadata = {
 
 export default async function HomePage() {
   const supabase = await createClient();
-  const { data: { session } } = await supabase.auth.getSession();
+  
+  // Check if user is actually authenticated (not just has a session)
+  const { data: { user }, error } = await supabase.auth.getUser();
 
-  // If authenticated, redirect to dashboard
-  if (session?.user) {
+  // If authenticated (has user and no error), redirect to dashboard
+  if (user && !error) {
     redirect('/dashboard');
   }
 
