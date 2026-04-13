@@ -192,11 +192,12 @@ const nextConfig: NextConfig = {
   // ============================================
   // REDIRECTS & REWRITES
   // ============================================
-  async redirects() {
-    return [
-      { source: '/', destination: '/dashboard', permanent: true },
-    ];
-  },
+  // NOTE: Root redirect moved to page.tsx (auth-aware)
+  // async redirects() {
+  //   return [
+  //     { source: '/', destination: '/dashboard', permanent: true },
+  //   ];
+  // },
 
   async rewrites() {
     return [
