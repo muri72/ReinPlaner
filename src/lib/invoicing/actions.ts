@@ -1031,7 +1031,18 @@ export async function exportDATEVAction(dateFrom: string, dateTo: string) {
     return { success: false, message: 'Nicht authentifiziert.' };
   }
 
-  return exportDATEV(dateFrom, dateTo);
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('tenant_id')
+    .eq('id', user.id)
+    .single();
+
+  const tenantId = profile?.tenant_id;
+  if (!tenantId) {
+    return { success: false, message: 'Tenant nicht gefunden.' };
+  }
+
+  return exportDATEV(dateFrom, dateTo, tenantId);
 }
 
 export async function exportZUGFeRDAction(invoiceId: string) {

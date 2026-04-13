@@ -73,12 +73,13 @@ function truncate(text: string, maxLength: number): string {
 export async function exportDATEV(
   dateFrom: string,
   dateTo: string,
+  tenantId: string,
   format: 'csv' = 'csv'
 ): Promise<DATEVExportResult> {
   try {
     const supabase = createAdminClient();
 
-    // Fetch paid/sent invoices in date range
+    // Fetch paid/sent invoices in date range for THIS TENANT ONLY
     const { data: invoices, error } = await supabase
       .from('invoices')
       .select(`
@@ -86,6 +87,7 @@ export async function exportDATEV(
         debtor:debtors(*),
         items:invoice_items(*)
       `)
+      .eq('tenant_id', tenantId)
       .in('status', ['paid', 'sent', 'partial'])
       .gte('issue_date', dateFrom)
       .lte('issue_date', dateTo)

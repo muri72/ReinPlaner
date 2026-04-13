@@ -8,7 +8,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- DEBTORS (Debitoren)
 -- ============================================
 CREATE TABLE IF NOT EXISTS debtors (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
     customer_id UUID REFERENCES customers(id) ON DELETE SET NULL,
     invoice_email TEXT,
@@ -36,7 +36,7 @@ CREATE INDEX IF NOT EXISTS idx_debtors_customer ON debtors(customer_id);
 -- INVOICES (Rechnungen)
 -- ============================================
 CREATE TABLE IF NOT EXISTS invoices (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
     invoice_number VARCHAR(50) UNIQUE NOT NULL,
     debtor_id UUID REFERENCES debtors(id) ON DELETE SET NULL,
@@ -96,7 +96,7 @@ CREATE INDEX IF NOT EXISTS idx_invoices_invoice_number ON invoices(invoice_numbe
 -- INVOICE ITEMS (Rechnungspositionen)
 -- ============================================
 CREATE TABLE IF NOT EXISTS invoice_items (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     invoice_id UUID REFERENCES invoices(id) ON DELETE CASCADE NOT NULL,
     line_number INTEGER NOT NULL DEFAULT 1,
     service_date DATE,
@@ -118,7 +118,7 @@ CREATE INDEX IF NOT EXISTS idx_invoice_items_sort ON invoice_items(invoice_id, s
 -- PAYMENTS (Zahlungseingänge)
 -- ============================================
 CREATE TABLE IF NOT EXISTS payments (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
     invoice_id UUID REFERENCES invoices(id) ON DELETE CASCADE NOT NULL,
     payment_date DATE NOT NULL DEFAULT CURRENT_DATE,
@@ -139,7 +139,7 @@ CREATE INDEX IF NOT EXISTS idx_payments_date ON payments(payment_date);
 -- INVOICE SEQUENCE (Rechnungsnummernkreis)
 -- ============================================
 CREATE TABLE IF NOT EXISTS invoice_sequences (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE UNIQUE,
     prefix VARCHAR(10) DEFAULT 'R',
     current_number INTEGER DEFAULT 0,

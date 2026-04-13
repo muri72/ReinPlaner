@@ -1,24 +1,13 @@
 import { createClient } from '@/lib/supabase/server';
 import { redirect, notFound } from 'next/navigation';
-import { getInvoiceByIdAction, sendInvoiceEmailAction, exportZUGFeRDAction } from '@/lib/invoicing/actions';
-import { formatCurrency, INVOICE_STATUS_LABELS } from '@/lib/invoicing/formatters';
+import { getInvoiceByIdAction } from '@/lib/invoicing/actions';
+import { formatCurrency } from '@/lib/invoicing/formatters';
 import { format, parseISO } from 'date-fns';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import {
   ArrowLeft,
-  Send,
-  Download,
-  Printer,
-  CheckCircle,
-  XCircle,
-  Edit,
-  Trash2,
-  FileText,
-  Clock,
-  AlertCircle,
   Euro,
   Building2,
   Calendar,
@@ -26,8 +15,7 @@ import {
 } from 'lucide-react';
 import { InvoiceStatusBadge } from '@/components/invoice-status-badge';
 import { InvoiceDetailClient } from '@/components/invoice-detail-client';
-import { InvoiceItem } from '@/lib/invoicing/types';
-import { InvoiceActionsClient } from '@/components/invoice-actions-client';
+import { Invoice, InvoiceItem } from '@/lib/invoicing/types';
 
 export default async function InvoiceDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -78,88 +66,14 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
           </div>
         </div>
 
-        <InvoiceActionsClient invoiceId={invoice.id} invoiceStatus={invoice.status} />
       </div>
+
+      {/* Interactive Invoice Card with Actions */}
+      <InvoiceDetailClient invoice={invoice as Invoice} items={items as InvoiceItem[]} />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Content */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Invoice Items */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Rechnungspositionen</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {items.length === 0 ? (
-                <p className="text-muted-foreground text-sm">Keine Positionen vorhanden.</p>
-              ) : (
-                <div className="border rounded-lg overflow-hidden">
-                  <table className="w-full text-sm">
-                    <thead className="bg-muted">
-                      <tr>
-                        <th className="text-left p-3 font-medium">#</th>
-                        <th className="text-left p-3 font-medium">Beschreibung</th>
-                        <th className="text-right p-3 font-medium">Menge</th>
-                        <th className="text-right p-3 font-medium">Einzelpreis</th>
-                        <th className="text-right p-3 font-medium">Netto</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {items.map((item: InvoiceItem, idx: number) => (
-                        <tr key={item.id} className="border-t">
-                          <td className="p-3 text-muted-foreground">{idx + 1}</td>
-                          <td className="p-3">
-                            <div>{item.service_description}</div>
-                            {item.service_date && (
-                              <div className="text-xs text-muted-foreground">
-                                Datum: {format(parseISO(item.service_date), 'dd.MM.yyyy')}
-                              </div>
-                            )}
-                          </td>
-                          <td className="p-3 text-right">
-                            {item.quantity} {item.unit}
-                          </td>
-                          <td className="p-3 text-right">
-                            {formatCurrency(item.unit_price_cents, invoice.currency)}
-                          </td>
-                          <td className="p-3 text-right font-medium">
-                            {formatCurrency(item.net_amount_cents, invoice.currency)}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-
-              {/* Totals */}
-              <div className="mt-4 flex justify-end">
-                <div className="w-64 space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Netto:</span>
-                    <span>{formatCurrency(invoice.net_amount_cents, invoice.currency)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">MwSt. ({invoice.tax_rate}%):</span>
-                    <span>{formatCurrency(invoice.tax_amount_cents, invoice.currency)}</span>
-                  </div>
-                  <div className="flex justify-between border-t pt-2 font-bold text-base">
-                    <span>Gesamtbetrag:</span>
-                    <span className="text-primary">
-                      {formatCurrency(invoice.total_amount_cents, invoice.currency)}
-                    </span>
-                  </div>
-                  {invoice.paid_amount_cents > 0 && invoice.paid_amount_cents < invoice.total_amount_cents && (
-                    <div className="flex justify-between text-green-600">
-                      <span>Bereits bezahlt:</span>
-                      <span>{formatCurrency(invoice.paid_amount_cents, invoice.currency)}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
           {/* Notes */}
           {invoice.notes && (
             <Card>

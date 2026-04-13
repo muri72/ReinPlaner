@@ -4,7 +4,6 @@ import { getInvoicesAction } from '@/lib/invoicing/actions';
 import { INVOICE_STATUS_LABELS, formatCurrency } from '@/lib/invoicing/formatters';
 import { format, parseISO } from 'date-fns';
 import Link from 'next/link';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import {
   DropdownMenu,
@@ -13,22 +12,11 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
-import {
-  Plus,
-  FileText,
-  Send,
-  Download,
-  Eye,
-  MoreHorizontal,
-  Search,
-  Filter,
-  AlertCircle,
-  CheckCircle,
-  Clock,
-  XCircle,
-} from 'lucide-react';
+import { Plus, FileText, Send, Download, Eye, MoreHorizontal, Search, Filter, AlertCircle, CheckCircle, Clock, XCircle } from 'lucide-react';
 import { InvoiceStatusBadge } from '@/components/invoice-status-badge';
 import { InvoiceListClient } from '@/components/invoice-list-client';
+import { DATEVDialog } from '@/components/datev-dialog';
+import { Button } from '@/components/ui/button';
 
 export default async function InvoicesPage() {
   const supabase = await createClient();
@@ -69,12 +57,12 @@ export default async function InvoicesPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" asChild>
-            <Link href="/dashboard/finances">
+          <DATEVDialog>
+            <Button variant="outline">
               <Download className="mr-2 h-4 w-4" />
               DATEV Export
-            </Link>
-          </Button>
+            </Button>
+          </DATEVDialog>
           <Button asChild>
             <Link href="/dashboard/invoices/new">
               <Plus className="mr-2 h-4 w-4" />

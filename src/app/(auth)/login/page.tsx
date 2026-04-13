@@ -34,7 +34,7 @@ export default function LoginPage() {
             console.error('Failed to log login:', error);
           }
 
-          router.push("/");
+          router.push("/dashboard");
           router.refresh();
         } else if (event === "SIGNED_OUT") {
           toast.info("Sie wurden abgemeldet.");

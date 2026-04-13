@@ -9,7 +9,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- TENANTS TABLE - Main tenant registry
 -- =============================================================================
 CREATE TABLE IF NOT EXISTS tenants (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     slug VARCHAR(50) UNIQUE NOT NULL,
     name VARCHAR(255) NOT NULL,
     domain VARCHAR(255) UNIQUE,
@@ -49,7 +49,7 @@ CREATE INDEX IF NOT EXISTS idx_tenants_plan ON tenants(plan);
 -- TENANT DOMAINS - Custom domain mapping
 -- =============================================================================
 CREATE TABLE IF NOT EXISTS tenant_domains (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
     domain VARCHAR(255) NOT NULL,
     is_primary BOOLEAN DEFAULT false,
@@ -69,7 +69,7 @@ CREATE INDEX IF NOT EXISTS idx_tenant_domains_verified ON tenant_domains(verifie
 -- TENANT USERS - Links users to tenants (for users in meta-DB)
 -- =============================================================================
 CREATE TABLE IF NOT EXISTS tenant_users (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
     email VARCHAR(255) NOT NULL,
     role VARCHAR(50) NOT NULL DEFAULT 'member' CHECK (role IN ('owner', 'admin', 'member', 'viewer')),
@@ -93,7 +93,7 @@ CREATE INDEX IF NOT EXISTS idx_tenant_users_auth ON tenant_users(auth_id);
 -- AUDIT LOG - Tenant-level audit trail
 -- =============================================================================
 CREATE TABLE IF NOT EXISTS tenant_audit_log (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
     actor_id UUID, -- User who performed the action
     actor_email VARCHAR(255),

@@ -66,6 +66,18 @@ export function InvoiceListClient({ invoices }: InvoiceListClientProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [sortField, setSortField] = useState<'issue_date' | 'due_date'>('issue_date');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleSort = (field: 'issue_date' | 'due_date') => {
+    if (sortField === field) {
+      setSortDir(sortDir === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDir('desc');
+    }
+  };
 
   const filteredInvoices = invoices.filter(invoice => {
     const matchesSearch =
@@ -112,6 +124,12 @@ export function InvoiceListClient({ invoices }: InvoiceListClientProps) {
     }
   };
 
+  const sortedAndFiltered = [...filteredInvoices].sort((a, b) => {
+    const dateA = a[sortField] ? new Date(a[sortField]).getTime() : 0;
+    const dateB = b[sortField] ? new Date(b[sortField]).getTime() : 0;
+    return sortDir === 'asc' ? dateA - dateB : dateB - dateA;
+  });
+
   const downloadBuffer = (buffer: Buffer, filename: string) => {
     const blob = new Blob([new Uint8Array(buffer)], { type: 'application/octet-stream' });
     const url = URL.createObjectURL(blob);
@@ -135,23 +153,43 @@ export function InvoiceListClient({ invoices }: InvoiceListClientProps) {
             className="pl-9"
           />
         </div>
-        <select
-          value={statusFilter}
-          onChange={e => setStatusFilter(e.target.value)}
-          className="px-3 py-2 border rounded-md text-sm bg-background"
-        >
-          <option value="all">Alle Status</option>
-          <option value="draft">Entwurf</option>
-          <option value="sent">Versendet</option>
-          <option value="paid">Bezahlt</option>
-          <option value="partial">Teilweise bezahlt</option>
-          <option value="overdue">Überfällig</option>
-          <option value="cancelled">Storniert</option>
-        </select>
+        <div className="flex gap-2">
+          <select
+            value={statusFilter}
+            onChange={e => setStatusFilter(e.target.value)}
+            className="px-3 py-2 border rounded-md text-sm bg-background"
+          >
+            <option value="all">Alle Status</option>
+            <option value="draft">Entwurf</option>
+            <option value="sent">Versendet</option>
+            <option value="paid">Bezahlt</option>
+            <option value="partial">Teilweise bezahlt</option>
+            <option value="overdue">Überfällig</option>
+            <option value="cancelled">Storniert</option>
+          </select>
+          <button
+            onClick={() => handleSort('issue_date')}
+            className={`px-3 py-2 border rounded-md text-sm bg-background hover:bg-muted transition-colors ${
+              sortField === 'issue_date' ? 'border-primary text-primary' : ''
+            }`}
+            title="Nach Rechnungsdatum sortieren"
+          >
+            Datum {sortField === 'issue_date' ? (sortDir === 'asc' ? '↑' : '↓') : ''}
+          </button>
+          <button
+            onClick={() => handleSort('due_date')}
+            className={`px-3 py-2 border rounded-md text-sm bg-background hover:bg-muted transition-colors ${
+              sortField === 'due_date' ? 'border-primary text-primary' : ''
+            }`}
+            title="Nach Fälligkeitsdatum sortieren"
+          >
+            Fällig {sortField === 'due_date' ? (sortDir === 'asc' ? '↑' : '↓') : ''}
+          </button>
+        </div>
       </div>
 
       {/* Table */}
-      {filteredInvoices.length === 0 ? (
+      {sortedAndFiltered.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground">
           <FileText className="mx-auto h-12 w-12 mb-4 opacity-50" />
           <p className="text-lg font-medium">Keine Rechnungen gefunden</p>
@@ -176,7 +214,7 @@ export function InvoiceListClient({ invoices }: InvoiceListClientProps) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredInvoices.map(invoice => (
+              {sortedAndFiltered.map(invoice => (
                 <TableRow key={invoice.id} className="cursor-pointer hover:bg-muted/50">
                   <TableCell>
                     <Link
@@ -275,7 +313,7 @@ export function InvoiceListClient({ invoices }: InvoiceListClientProps) {
       )}
 
       <p className="text-sm text-muted-foreground">
-        {filteredInvoices.length} von {invoices.length} Rechnungen angezeigt
+        {sortedAndFiltered.length} von {invoices.length} Rechnungen angezeigt
       </p>
     </div>
   );
