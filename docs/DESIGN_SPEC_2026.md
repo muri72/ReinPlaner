@@ -350,6 +350,54 @@ Glass card:
 - Input fields: glass style with focus glow
 - Plan cards: selectable with visual highlight
 
+### Registration Form Contrast Requirements
+```css
+/* Labels must be white for WCAG AA compliance */
+Label { className: "text-white" }  /* was text-slate-300 */
+
+/* Placeholder text must be visible */
+Input { className: "placeholder:text-slate-300" }  /* was text-slate-500 */
+
+/* Focus ring stronger */
+Input.focused { ring-4 ring-blue-500/20 }  /* was ring-blue-500/10 */
+```
+
+---
+
+## 9b. LOGIN PAGE — BRANDING FIX
+
+### Branding Corrections
+| Element | Before (WRONG) | After (CORRECT) |
+|---------|----------------|----------------|
+| Headline | "ReinPlaner Management" | "ReinPlaner" |
+| Subline | "Glas- und Gebäudereinigung" | "Software für Gebäudereinigung" |
+| Bottom tagline | "Ihr Partner für zuverlässige Sauberkeit" | "Für Reinigungsfirmen jeder Größe" |
+
+### Login Page Glow Enhancement
+```css
+/* More dynamic, multi-colored glow effects */
+.gradient-orb-1 {  // blue
+  w-[600px] h-[600px]
+  bg-blue-500/25
+  blur-[120px]
+}
+.gradient-orb-2 {  // cyan
+  w-[500px] h-[500px]
+  bg-cyan-400/20
+  blur-[100px]
+}
+.gradient-orb-3 {  // violet (NEW)
+  w-[400px] h-[400px]
+  bg-violet-500/15
+  blur-[80px]
+}
+.gradient-orb-4 {  // blue-600 (NEW)
+  w-[350px] h-[350px]
+  bg-blue-600/15
+  blur-[70px]
+}
+```
+
 ---
 
 ## 10. GLOBAL DESIGN TOKENS
@@ -474,3 +522,38 @@ Glass card:
 | Award-winning feel | ❌ | ❌ | ❌ | ✅ |
 | Modern color palette | ❌ | ❌ | ❌ | ✅ |
 | Floating glass cards | ❌ | ❌ | ❌ | ✅ |
+
+---
+
+## 13. CONTRAST REQUIREMENTS (WCAG AA+)
+
+### Light Background (Login right panel, Register form)
+```
+Body text on light bg:     text-slate-900  (#0f172a) ✅ 14.4:1
+Subtext on light bg:        text-slate-800  (#1e293b) ✅ 11.5:1  
+Labels on light bg:          text-slate-800  (#1e293b) ✅ 11.5:1
+Muted text on light bg:     text-slate-700  (#334155) ✅ 7.9:1
+Descriptions on light bg:    text-slate-600  (#475569) ✅ 5.3:1
+```
+
+### Dark Background (Landing Page, Dashboard, Login left panel)
+```
+Headlines on dark bg:        text-white     (#f1f5f9) ✅ 18.1:1
+Primary text on dark bg:      text-slate-100  (#f1f5f9) ✅ 18.1:1
+Secondary text on dark bg:    text-slate-300  (#cbd5e1) ✅ 9.1:1
+Muted text on dark bg:       text-slate-400  (#94a3b8) ✅ 5.7:1
+Label text on dark bg:       text-slate-200  (#e2e8f0) ✅ 12.6:1
+```
+
+### NEVER USE (Too Low Contrast)
+- text-slate-500 (#64748b) on dark backgrounds — FAIL
+- text-slate-400 (#94a3b8) on light backgrounds — FAIL
+- text-slate-500 (#64748b) as input placeholder on dark backgrounds — FAIL
+- text-white on white/light backgrounds — FAIL
+- #94a3b8 as primary label on glass inputs — FAIL
+
+### Input Focus States
+- Border: var(--accent-blue) — always visible
+- Ring: 4px ring with 20% opacity blue + 30px glow spread
+- Background: slightly lighter on focus
+- Icon color: blue-400 or blue-500
