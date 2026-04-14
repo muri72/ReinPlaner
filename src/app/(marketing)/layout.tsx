@@ -1,16 +1,9 @@
-import { MarketingHeader } from "@/components/marketing-header";
-import { MarketingFooter } from "@/components/marketing-footer";
-
+// Minimal layout - each page uses <MarketingPage> for full design system
+// This wrapper just provides segment-level context
 export default function MarketingLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  return (
-    <div className="min-h-screen flex flex-col">
-      <MarketingHeader />
-      <div className="flex-1">{children}</div>
-      <MarketingFooter />
-    </div>
-  );
+  return children;
 }
