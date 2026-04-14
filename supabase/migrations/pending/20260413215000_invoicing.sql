@@ -26,7 +26,10 @@ CREATE TABLE IF NOT EXISTS debtors (
     credit_limit_cents INTEGER,
     notes TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+    -- Soft delete for GOBD compliance
+    deleted_at TIMESTAMPTZ
 );
 
 CREATE INDEX IF NOT EXISTS idx_debtors_tenant ON debtors(tenant_id);
@@ -81,7 +84,10 @@ CREATE TABLE IF NOT EXISTS invoices (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     sent_at TIMESTAMPTZ,
-    paid_at TIMESTAMPTZ
+    paid_at TIMESTAMPTZ,
+
+    -- Soft delete for GOBD compliance
+    deleted_at TIMESTAMPTZ
 );
 
 CREATE INDEX IF NOT EXISTS idx_invoices_tenant ON invoices(tenant_id);
@@ -108,7 +114,10 @@ CREATE TABLE IF NOT EXISTS invoice_items (
     tax_rate DECIMAL(5,2) DEFAULT 19.00,
     tax_amount_cents INTEGER DEFAULT 0,
     sort_order INTEGER DEFAULT 0,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+    -- Soft delete for GOBD compliance
+    deleted_at TIMESTAMPTZ
 );
 
 CREATE INDEX IF NOT EXISTS idx_invoice_items_invoice ON invoice_items(invoice_id);
@@ -128,7 +137,10 @@ CREATE TABLE IF NOT EXISTS payments (
     reference TEXT,
     bank_reference TEXT,
     created_by UUID REFERENCES profiles(id),
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+    -- Soft delete for GOBD compliance
+    deleted_at TIMESTAMPTZ
 );
 
 CREATE INDEX IF NOT EXISTS idx_payments_tenant ON payments(tenant_id);
@@ -188,8 +200,8 @@ BEGIN
         v_prefix,
         v_year;
 
-    -- Format: PREFIX/YEAR/NUMBER (e.g. R/2025/00042)
-    v_result := v_prefix || '/' || v_year || '/' || LPAD(v_next_num::TEXT, 5, '0');
+    -- Format: YEAR-NUMBER (e.g. 2025-00042)
+    v_result := v_year || '-' || LPAD(v_next_num::TEXT, 5, '0');
     RETURN v_result;
 END;
 $$;
@@ -249,6 +261,37 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- ============================================
+-- FUNCTION: Get consolidated invoice stats in one query
+-- ============================================
+CREATE OR REPLACE FUNCTION get_invoice_stats(p_tenant_id UUID)
+RETURNS JSON AS $$
+DECLARE
+    v_result JSON;
+    v_start_of_month DATE;
+BEGIN
+    v_start_of_month := DATE_TRUNC('month', CURRENT_DATE);
+
+    SELECT json_build_object(
+        'total_open',
+            COUNT(*) FILTER (WHERE i.status IN ('sent', 'partial', 'overdue')),
+        'total_overdue',
+            COUNT(*) FILTER (WHERE i.status = 'overdue'),
+        'total_paid_this_month',
+            COALESCE(SUM(i.paid_amount_cents) FILTER (WHERE i.status = 'paid' AND i.paid_at >= v_start_of_month), 0),
+        'total_draft',
+            COUNT(*) FILTER (WHERE i.status = 'draft'),
+        'currency',
+            'EUR'
+    ) INTO v_result
+    FROM invoices i
+    WHERE i.tenant_id = p_tenant_id
+      AND i.deleted_at IS NULL;
+
+    RETURN v_result;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- ============================================
 -- RLS POLICIES FOR INVOICING TABLES
 -- ============================================
 ALTER TABLE debtors ENABLE ROW LEVEL SECURITY;
@@ -257,29 +300,49 @@ ALTER TABLE invoice_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE payments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE invoice_sequences ENABLE ROW LEVEL SECURITY;
 
--- Debtors: Admin/Manager can do everything
+-- Debtors: Admin/Manager can do everything, exclude soft-deleted
 DROP POLICY IF EXISTS "debtors_admin_all" ON debtors;
 CREATE POLICY "debtors_admin_all" ON debtors
     FOR ALL TO authenticated
-    USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('admin', 'manager')));
+    USING (
+        deleted_at IS NULL
+        AND EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('admin', 'manager'))
+    );
 
--- Invoices: Admin/Manager can do everything
+-- Invoices: Admin/Manager can do everything, exclude soft-deleted
 DROP POLICY IF EXISTS "invoices_admin_all" ON invoices;
 CREATE POLICY "invoices_admin_all" ON invoices
     FOR ALL TO authenticated
-    USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('admin', 'manager')));
+    USING (
+        deleted_at IS NULL
+        AND EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('admin', 'manager'))
+    );
 
--- Invoice items: Admin/Manager can do everything
+-- Invoice items: Admin/Manager can do everything, exclude soft-deleted via invoice FK
 DROP POLICY IF EXISTS "invoice_items_admin_all" ON invoice_items;
 CREATE POLICY "invoice_items_admin_all" ON invoice_items
     FOR ALL TO authenticated
-    USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('admin', 'manager')));
+    USING (
+        EXISTS (
+            SELECT 1 FROM invoices i
+            WHERE i.id = invoice_items.invoice_id
+              AND i.deleted_at IS NULL
+              AND EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('admin', 'manager'))
+        )
+    );
 
--- Payments: Admin/Manager can do everything
+-- Payments: Admin/Manager can do everything, exclude soft-deleted via invoice FK
 DROP POLICY IF EXISTS "payments_admin_all" ON payments;
 CREATE POLICY "payments_admin_all" ON payments
     FOR ALL TO authenticated
-    USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('admin', 'manager')));
+    USING (
+        EXISTS (
+            SELECT 1 FROM invoices i
+            WHERE i.id = payments.invoice_id
+              AND i.deleted_at IS NULL
+              AND EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('admin', 'manager'))
+        )
+    );
 
 -- Invoice sequences: Admin only
 DROP POLICY IF EXISTS "invoice_sequences_admin_all" ON invoice_sequences;

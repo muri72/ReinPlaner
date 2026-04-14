@@ -511,9 +511,9 @@ describe('updateInvoiceStatus', () => {
 describe('deleteInvoice', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('should delete an invoice successfully', async () => {
+  it('should soft-delete an invoice successfully', async () => {
     mockSupabase.from.mockReturnValue({
-      delete: vi.fn().mockReturnThis(),
+      update: vi.fn().mockReturnThis(),
       eq: vi.fn().mockResolvedValue({ data: null, error: null }),
     });
 
@@ -523,9 +523,9 @@ describe('deleteInvoice', () => {
     expect(result.message).toBe('Rechnung erfolgreich gelöscht.');
   });
 
-  it('should return error on delete failure', async () => {
+  it('should return error on soft-delete failure', async () => {
     mockSupabase.from.mockReturnValue({
-      delete: vi.fn().mockReturnThis(),
+      update: vi.fn().mockReturnThis(),
       eq: vi.fn().mockResolvedValue({ data: null, error: new Error('Delete failed') }),
     });
 
@@ -878,36 +878,20 @@ describe('getDebtorById', () => {
 // ============================================
 
 describe('getInvoiceStats', () => {
-  beforeEach(() => vi.clearAllMocks());
+  it('should return consolidated invoice stats via RPC', async () => {
+    // RPC is called via supabase.rpc() - mock the method directly on the supabase object
+    const mockData = {
+      total_open: 10,
+      total_overdue: 3,
+      total_paid_this_month: 8000,
+      total_draft: 2,
+      currency: 'EUR',
+    };
+    // Store and restore rpc mock to avoid cross-test pollution
+    const prevRpc = (mockSupabase as any).rpc;
+    (mockSupabase as any).rpc = vi.fn(() => Promise.resolve(mockData));
 
-  it('should return invoice statistics', async () => {
-    mockSupabase.from
-      .mockReturnValueOnce({
-        select: vi.fn().mockReturnThis(),
-        in: vi.fn().mockReturnThis(),
-        count: 'exact',
-        then: vi.fn((resolve: Function) => resolve({ data: null, count: 10, error: null })),
-      })
-      .mockReturnValueOnce({
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        count: 'exact',
-        then: vi.fn((resolve: Function) => resolve({ data: null, count: 3, error: null })),
-      })
-      .mockReturnValueOnce({
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        gte: vi.fn().mockReturnThis(),
-        then: vi.fn((resolve: Function) => resolve({ data: [{ paid_amount_cents: 5000 }, { paid_amount_cents: 3000 }], error: null })),
-      })
-      .mockReturnValueOnce({
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        count: 'exact',
-        then: vi.fn((resolve: Function) => resolve({ data: null, count: 2, error: null })),
-      });
-
-    const result = await getInvoiceStats();
+    const result = await getInvoiceStats('tenant-1');
 
     expect(result.success).toBe(true);
     expect(result.data!.total_open).toBe(10);
@@ -915,6 +899,19 @@ describe('getInvoiceStats', () => {
     expect(result.data!.total_paid_this_month).toBe(8000);
     expect(result.data!.total_draft).toBe(2);
     expect(result.data!.currency).toBe('EUR');
+
+    (mockSupabase as any).rpc = prevRpc;
+  });
+
+  it('should return error on RPC failure', async () => {
+    const prevRpc = (mockSupabase as any).rpc;
+    (mockSupabase as any).rpc = vi.fn(() => Promise.reject(new Error('RPC failed')));
+
+    const result = await getInvoiceStats('tenant-1');
+
+    expect(result.success).toBe(false);
+
+    (mockSupabase as any).rpc = prevRpc;
   });
 });
 

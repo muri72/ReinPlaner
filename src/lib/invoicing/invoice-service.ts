@@ -43,6 +43,7 @@ export async function getInvoices(filters: InvoiceFilters = {}): Promise<{ succe
         order:orders(id, title, customer_id),
         items:invoice_items(*)
       `)
+      .is('deleted_at', null)
       .order('created_at', { ascending: false });
 
     if (filters.status) {
@@ -106,6 +107,7 @@ export async function getInvoiceById(id: string): Promise<{ success: boolean; da
         items:invoice_items(*)
       `)
       .eq('id', id)
+      .is('deleted_at', null)
       .single();
 
     if (error) throw error;
@@ -485,10 +487,10 @@ export async function deleteInvoice(invoiceId: string): Promise<{ success: boole
   const supabase = createAdminClient();
 
   try {
-    // Items are deleted via CASCADE
+    // Soft delete for GOBD compliance - set deleted_at timestamp
     const { error } = await supabase
       .from('invoices')
-      .delete()
+      .update({ deleted_at: new Date().toISOString(), updated_at: new Date().toISOString() })
       .eq('id', invoiceId);
 
     if (error) throw error;
@@ -793,7 +795,7 @@ export async function createOrUpdateDebtor(
 // Dashboard Stats
 // ============================================
 
-export async function getInvoiceStats(): Promise<{
+export async function getInvoiceStats(tenantId?: string): Promise<{
   success: boolean;
   data?: {
     total_open: number;
@@ -807,45 +809,20 @@ export async function getInvoiceStats(): Promise<{
   const supabase = createAdminClient();
 
   try {
-    const today = new Date().toISOString().split('T')[0];
-    const startOfMonth = new Date();
-    startOfMonth.setDate(1);
+    const { data, error } = await supabase.rpc('get_invoice_stats', {
+      p_tenant_id: tenantId || null,
+    });
 
-    // Open invoices (sent but not fully paid)
-    const { count: openCount } = await supabase
-      .from('invoices')
-      .select('*', { count: 'exact', head: true })
-      .in('status', ['sent', 'partial', 'overdue']);
-
-    // Overdue
-    const { count: overdueCount } = await supabase
-      .from('invoices')
-      .select('*', { count: 'exact', head: true })
-      .eq('status', 'overdue');
-
-    // Paid this month
-    const { data: paidData } = await supabase
-      .from('invoices')
-      .select('paid_amount_cents')
-      .eq('status', 'paid')
-      .gte('paid_at', startOfMonth.toISOString());
-
-    const paidThisMonth = (paidData || []).reduce((sum, inv) => sum + inv.paid_amount_cents, 0);
-
-    // Draft
-    const { count: draftCount } = await supabase
-      .from('invoices')
-      .select('*', { count: 'exact', head: true })
-      .eq('status', 'draft');
+    if (error) throw error;
 
     return {
       success: true,
       data: {
-        total_open: openCount || 0,
-        total_overdue: overdueCount || 0,
-        total_paid_this_month: paidThisMonth,
-        total_draft: draftCount || 0,
-        currency: 'EUR',
+        total_open: data.total_open || 0,
+        total_overdue: data.total_overdue || 0,
+        total_paid_this_month: data.total_paid_this_month || 0,
+        total_draft: data.total_draft || 0,
+        currency: data.currency || 'EUR',
       },
     };
   } catch (error: any) {
