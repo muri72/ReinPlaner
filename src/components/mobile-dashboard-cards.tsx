@@ -32,7 +32,7 @@ export function DashboardStatCard({
   return (
     <Card
       className={cn(
-        "bg-card cursor-pointer transition-all duration-200",
+        "glassmorphism-card cursor-pointer transition-all duration-200",
         "hover:shadow-md active:scale-[0.98]",
         onClick && "select-none touch-manipulation",
         className
@@ -127,7 +127,7 @@ export function DashboardTaskCard({
   return (
     <Card
       className={cn(
-        "bg-card transition-all duration-200",
+        "glassmorphism-card transition-all duration-200",
         "hover:shadow-md active:scale-[0.98]",
         onClick && "cursor-pointer select-none touch-manipulation",
         className
