@@ -1,151 +1,129 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
+import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
+import { Menu, X, Zap, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Menu, X, Zap } from "lucide-react";
+
+const navLinks = [
+  { href: "/", label: "Startseite" },
+  { href: "/#features", label: "Features" },
+  { href: "/pricing", label: "Preise" },
+  { href: "/#testimonials", label: "Bewertungen" },
+];
 
 export function MarketingHeader() {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
+  const pathname = usePathname();
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
-      setScrolled(window.scrollY > 20);
+      setIsScrolled(window.scrollY > 20);
     };
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  // Close mobile menu on route change
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [pathname]);
+
   return (
-    <header
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        scrolled
-          ? "glass-nav py-2"
-          : "bg-transparent py-4"
-      }`}
-    >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between">
-          {/* Logo */}
-          <Link href="/" className="flex items-center gap-3 group">
-            <div className="relative">
-              <Image
-                src="/logo.png"
-                alt="ReinPlaner"
-                width={36}
-                height={36}
-                className="rounded-xl transition-transform group-hover:scale-105"
-              />
-              <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border-2 border-[#05080F]" />
+    <>
+      {/* Glass Navbar */}
+      <header
+        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+          isScrolled
+            ? "bg-[#0A0E1A]/80 backdrop-blur-xl border-b border-white/5 shadow-lg"
+            : "bg-transparent"
+        }`}
+      >
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16 md:h-20">
+            {/* Logo */}
+            <Link href="/" className="flex items-center gap-2 group">
+              <div className="relative">
+                <div className="absolute inset-0 bg-blue-500/30 blur-xl rounded-full group-hover:bg-blue-500/50 transition-all" />
+                <div className="relative w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-cyan-500 flex items-center justify-center shadow-lg">
+                  <Zap className="w-5 h-5 text-white" />
+                </div>
+              </div>
+              <span className="text-xl font-bold text-white tracking-tight">
+                ReinPlaner
+              </span>
+            </Link>
+
+            {/* Desktop Nav */}
+            <nav className="hidden md:flex items-center gap-1">
+              {navLinks.map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
+                    pathname === link.href
+                      ? "text-blue-400 bg-blue-500/10"
+                      : "text-slate-300 hover:text-white hover:bg-white/5"
+                  }`}
+                >
+                  {link.label}
+                </Link>
+              ))}
+            </nav>
+
+            {/* Desktop CTA */}
+            <div className="hidden md:flex items-center gap-3">
+              <Button asChild variant="ghost" size="sm" className="text-slate-300 hover:text-white">
+                <Link href="/login">Anmelden</Link>
+              </Button>
+              <Button asChild size="sm" className="btn-primary">
+                <Link href="/register">
+                  Kostenlos testen
+                  <Zap className="w-4 h-4 ml-1" />
+                </Link>
+              </Button>
             </div>
-            <span className="text-xl font-bold text-white tracking-tight">
-              ReinPlaner
-            </span>
-          </Link>
 
-          {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center gap-8">
-            <Link
-              href="/#features"
-              className="text-sm font-medium text-slate-300 hover:text-white transition-colors relative group"
+            {/* Mobile Menu Button */}
+            <button
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="md:hidden p-2 text-slate-300 hover:text-white"
             >
-              Features
-              <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-blue-500 transition-all group-hover:w-full" />
-            </Link>
-            <Link
-              href="/pricing"
-              className="text-sm font-medium text-slate-300 hover:text-white transition-colors relative group"
-            >
-              Preise
-              <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-blue-500 transition-all group-hover:w-full" />
-            </Link>
-            <Link
-              href="/#contact"
-              className="text-sm font-medium text-slate-300 hover:text-white transition-colors relative group"
-            >
-              Kontakt
-              <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-blue-500 transition-all group-hover:w-full" />
-            </Link>
-          </nav>
+              {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            </button>
+          </div>
+        </div>
+      </header>
 
-          {/* Desktop CTA */}
-          <div className="hidden md:flex items-center gap-3">
-            <Button
-              variant="ghost"
-              asChild
-              className="text-slate-300 hover:text-white hover:bg-white/10"
+      {/* Mobile Menu */}
+      <div
+        className={`fixed inset-0 z-40 bg-[#05080F] md:hidden transition-all duration-300 ${
+          isMobileMenuOpen ? "opacity-100 visible" : "opacity-0 invisible"
+        }`}
+      >
+        <div className="flex flex-col items-center justify-center h-full space-y-8">
+          {navLinks.map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="text-2xl font-semibold text-white hover:text-blue-400 transition-colors"
             >
+              {link.label}
+            </Link>
+          ))}
+          <div className="flex flex-col gap-4 mt-8">
+            <Button asChild variant="outline" className="glass-btn border-slate-700 text-white">
               <Link href="/login">Anmelden</Link>
             </Button>
-            <Button
-              asChild
-              className="btn-primary h-10 px-5 text-sm font-semibold"
-            >
-              <Link href="/register">
-                <Zap className="w-4 h-4 mr-1.5" />
-                Kostenlos testen
-              </Link>
+            <Button asChild className="btn-primary">
+              <Link href="/register">Kostenlos testen</Link>
             </Button>
           </div>
-
-          {/* Mobile menu button */}
-          <button
-            type="button"
-            className="md:hidden p-2 text-slate-300 hover:text-white transition-colors glass-btn rounded-lg"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          >
-            {mobileMenuOpen ? (
-              <X className="w-6 h-6" />
-            ) : (
-              <Menu className="w-6 h-6" />
-            )}
-          </button>
         </div>
       </div>
-
-      {/* Mobile Navigation */}
-      {mobileMenuOpen && (
-        <div className="md:hidden absolute top-full left-0 right-0 glass-nav border-t border-white/5">
-          <div className="px-4 py-6 space-y-4">
-            <Link
-              href="/#features"
-              className="block text-base font-medium text-slate-300 hover:text-white py-2 transition-colors"
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              Features
-            </Link>
-            <Link
-              href="/pricing"
-              className="block text-base font-medium text-slate-300 hover:text-white py-2 transition-colors"
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              Preise
-            </Link>
-            <Link
-              href="/#contact"
-              className="block text-base font-medium text-slate-300 hover:text-white py-2 transition-colors"
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              Kontakt
-            </Link>
-            <div className="pt-4 border-t border-white/10 space-y-3">
-              <Button variant="outline" asChild className="w-full glass-btn border-slate-700 text-slate-300">
-                <Link href="/login" onClick={() => setMobileMenuOpen(false)}>
-                  Anmelden
-                </Link>
-              </Button>
-              <Button asChild className="w-full btn-primary">
-                <Link href="/register" onClick={() => setMobileMenuOpen(false)}>
-                  <Zap className="w-4 h-4 mr-1.5" />
-                  Kostenlos testen
-                </Link>
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-    </header>
+    </>
   );
 }
