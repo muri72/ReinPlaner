@@ -565,3 +565,59 @@ Label text on dark bg:       text-slate-200  (#e2e8f0) ✅ 12.6:1
 - Ring: 4px ring with 20% opacity blue + 30px glow spread
 - Background: slightly lighter on focus
 - Icon color: blue-400 or blue-500
+
+---
+
+## 14. UNIFIED MARKETING DESIGN SYSTEM
+
+### Marketing Pages Architecture
+```
+src/app/(marketing)/
+├── layout.tsx          → MarketingLayout (Header + Footer Wrapper)
+├── page.tsx           → Landing Page (/)
+├── pricing/page.tsx    → Pricing (/pricing)
+├── register/
+│   ├── page.tsx       → Registration (/register)
+│   └── confirmation/   → Email Confirmation (/register/confirmation)
+├── impressum/page.tsx → Legal (/impressum)
+├── datenschutz/page.tsx → Privacy (/datenschutz)
+└── agb/page.tsx       → Terms (/agb)
+```
+
+### Components
+| Component | Purpose | Location |
+|-----------|---------|----------|
+| `MarketingHeader` | Glass navbar with scroll effect | `src/components/marketing-header.tsx` |
+| `MarketingFooter` | Footer with nav links | `src/components/marketing-footer.tsx` |
+| `GlassCard` | Glassmorphism card with variants | `src/components/ui/glass-card.tsx` |
+| `AnimatedSection` | Scroll-triggered animations | `src/components/ui/animated-section.tsx` |
+| `LandingPage` | Full landing page component | `src/components/landing-page.tsx` |
+
+### GlassCard Variants
+```tsx
+<GlassCard variant="default" glow="blue" padding="lg">
+  {/* Default glass card with blue glow */}
+</GlassCard>
+
+<GlassCard variant="interactive" padding="md">
+  {/* Hover-interactive card */}
+</GlassCard>
+```
+
+### Section Backgrounds
+```tsx
+<section className="relative grain">           // Grain texture overlay
+  <div className="absolute inset-0 bg-[#0A0E1A]" /> // Dark base
+  <div className="absolute top-0 w-[600px] h-[600px] bg-blue-600/15 rounded-full blur-[120px]" /> // Glow orb
+  <div className="relative ...">...</div>       // Content layer
+</section>
+```
+
+### Page Template
+```tsx
+<main className="min-h-screen section-dark">
+  <MarketingHeader />
+  {/* Content */}
+  <MarketingFooter />
+</main>
+```
