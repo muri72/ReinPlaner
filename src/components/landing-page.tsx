@@ -170,52 +170,56 @@ export function LandingPage() {
       <MarketingHeader />
       
       {/* ============ HERO SECTION ============ */}
-      <section className="relative pt-32 pb-20 md:pt-40 md:pb-32 overflow-hidden grain">
-        {/* Background Effects */}
+      <section className="relative pt-24 pb-20 md:pt-32 md:pb-28 overflow-hidden grain">
+        {/* Background Effects - STRONGER GLOWS */}
         <div className="absolute inset-0 bg-gradient-to-br from-[#05080F] via-[#0A0E1A] to-[#0F1524]" />
-        <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-blue-600/10 rounded-full blur-[120px]" />
-        <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-cyan-500/10 rounded-full blur-[100px]" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-violet-600/10 rounded-full blur-[80px]" />
+        {/* Large animated glow orbs */}
+        <div className="absolute -top-40 -right-40 w-[700px] h-[700px] bg-blue-600/20 rounded-full blur-[150px] animate-pulse" />
+        <div className="absolute -bottom-40 -left-40 w-[500px] h-[500px] bg-cyan-500/15 rounded-full blur-[120px] animate-pulse" style={{animationDelay: '1s'}} />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-violet-600/10 rounded-full blur-[100px] animate-pulse" style={{animationDelay: '2s'}} />
+        <div className="absolute top-20 left-1/4 w-[300px] h-[300px] bg-emerald-500/8 rounded-full blur-[80px] animate-pulse" style={{animationDelay: '0.5s'}} />
+        {/* Subtle grid pattern */}
+        <div className="absolute inset-0 opacity-[0.03]" style={{backgroundImage: 'linear-gradient(rgba(255,255,255,0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.15) 1px, transparent 1px)', backgroundSize: '60px 60px'}} />
         
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
             {/* Left: Text */}
             <div className="text-center lg:text-left">
               {/* Badge */}
-              <div className="inline-flex items-center gap-2 glass-card px-4 py-2 mb-8 animate-fade-up stagger-1">
-                <Zap className="w-4 h-4 text-cyan-400" />
-                <span className="text-sm font-medium text-slate-300">14 Tage kostenlos · Keine Kreditkarte</span>
+              <div className="inline-flex items-center gap-2 glass-card px-4 py-2 mb-8 animate-fade-up stagger-1 border border-blue-500/20">
+                <Zap className="w-4 h-4 text-blue-400" />
+                <span className="text-sm font-medium text-slate-200">14 Tage kostenlos · Keine Kreditkarte</span>
               </div>
               
-              {/* Headline */}
-              <h1 className="text-display text-white mb-6 animate-fade-up stagger-2">
-                DIE SOFTWARE<br />
-                <span className="gradient-text">FÜR GEBÄUDE</span><br />
-                REINIGUNG
+              {/* Headline - MORE IMPACT */}
+              <h1 className="text-display text-white mb-6 animate-fade-up stagger-2 leading-[1.0]" style={{textShadow: '0 0 60px rgba(37,99,235,0.3)'}}>
+                <span className="block">DIE SOFTWARE</span>
+                <span className="block gradient-text">FÜR GEBÄUDE</span>
+                <span className="block">REINIGUNG</span>
               </h1>
               
               {/* Subline */}
-              <p className="text-lg md:text-xl text-slate-400 leading-relaxed max-w-xl mx-auto lg:mx-0 mb-8 animate-fade-up stagger-3">
+              <p className="text-lg md:text-xl text-slate-300 leading-relaxed max-w-xl mx-auto lg:mx-0 mb-8 animate-fade-up stagger-3">
                 Planung, Zeiterfassung, Abrechnung — alles in einem. Für Reinigungsfirmen jeder Größe.
               </p>
               
               {/* CTAs */}
-              <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start mb-6 animate-fade-up stagger-4">
-                <Button asChild size="lg" className="btn-primary h-12 px-8 text-base font-semibold btn-pulse">
+              <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start mb-8 animate-fade-up stagger-4">
+                <Button asChild size="lg" className="btn-primary h-12 px-8 text-base font-semibold btn-pulse shadow-[0_0_30px_rgba(37,99,235,0.4)]">
                   <Link href="/register">
                     14 Tage kostenlos testen
                     <ArrowRight className="w-5 h-5 ml-2" />
                   </Link>
                 </Button>
-                <Button asChild variant="outline" size="lg" className="glass-btn h-12 px-8 text-base font-medium border-slate-700 hover:border-slate-500">
+                <Button asChild variant="outline" size="lg" className="glass-btn h-12 px-8 text-base font-medium border-slate-600 hover:border-slate-400 hover:bg-white/5">
                   <Link href="/pricing">Preise ansehen</Link>
                 </Button>
               </div>
               
               {/* Social Proof */}
-              <div className="flex items-center gap-4 justify-center lg:justify-start text-sm text-slate-500 animate-fade-up stagger-5">
+              <div className="flex items-center gap-4 justify-center lg:justify-start text-sm text-slate-400 animate-fade-up stagger-5">
                 <span>150+ Unternehmen</span>
-                <span className="w-1 h-1 rounded-full bg-slate-600" />
+                <span className="w-1 h-1 rounded-full bg-slate-500" />
                 <div className="flex items-center gap-1">
                   {[...Array(5)].map((_, i) => (
                     <Star key={i} className="w-4 h-4 fill-amber-400 text-amber-400" />
@@ -225,9 +229,11 @@ export function LandingPage() {
               </div>
             </div>
 
-            {/* Right: Dashboard Preview */}
+            {/* Right: Dashboard Preview - FLOATING EFFECT */}
             <div className="relative animate-fade-up stagger-3">
-              <div className="relative glass-card p-1 overflow-hidden">
+              {/* Glow behind the card */}
+              <div className="absolute -inset-4 bg-gradient-to-r from-blue-600/20 via-violet-600/10 to-cyan-500/20 rounded-3xl blur-xl" />
+              <div className="relative glass-card p-1 overflow-hidden shadow-[0_8px_60px_rgba(0,0,0,0.5)] animate-float">
                 {/* Browser chrome */}
                 <div className="flex items-center gap-2 px-4 py-3 bg-[#0A0E1A] border-b border-white/5">
                   <div className="flex gap-1.5">
@@ -236,7 +242,7 @@ export function LandingPage() {
                     <div className="w-3 h-3 rounded-full bg-green-500/80" />
                   </div>
                   <div className="flex-1 text-center">
-                    <div className="inline-flex items-center glass-card rounded-md px-3 py-1 text-xs text-slate-400">
+                    <div className="inline-flex items-center glass-card rounded-md px-3 py-1 text-xs text-slate-300">
                       app.reinplaner.de
                     </div>
                   </div>

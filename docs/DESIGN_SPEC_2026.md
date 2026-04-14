@@ -441,7 +441,28 @@ Glass card:
 
 ---
 
-## 12. COMPETITIVE ADVANTAGE MATRIX
+## 12. CONTRAST REQUIREMENTS (WCAG AA)
+
+### Text Contrast Ratios
+| Element | Color | Background | Ratio | Status |
+|---------|-------|------------|-------|--------|
+| Primary Labels (Light BG) | `text-white` | Glass bg `rgba(26,34,53,0.6)` | ~9:1 | ✅ Pass |
+| Primary Labels (Dark BG) | `text-slate-100` | Dark `bg-[#0A0E1A]` | ~12:1 | ✅ Pass |
+| Placeholder Text | `placeholder:text-slate-300` | Glass bg | ~4.5:1 | ✅ Pass (AA) |
+| Trust Badges | `text-slate-200` | Dark section | ~8:1 | ✅ Pass |
+| Input Focus Ring | `ring-blue-500/20` | Glass bg | ~5:1 | ✅ Pass |
+| Muted Text | `text-slate-400` | Dark `bg-[#05080F]` | ~6:1 | ✅ Pass |
+
+### Requirements
+- All normal text must meet WCAG AA (4.5:1 contrast ratio)
+- Large text (18px+) must meet WCAG AA (3:1 contrast ratio)
+- Interactive elements (buttons, inputs) must have clear focus states
+- Never use `text-slate-500` on glass/dark backgrounds — use `text-slate-300` minimum
+- Never use `placeholder:text-slate-500` — use `placeholder:text-slate-300` minimum
+
+---
+
+## 13. COMPETITIVE ADVANTAGE MATRIX
 
 | Feature | Timesafe | CleanManager | Swept | **ReinPlaner** |
 |---------|---------|--------------|-------|--------------|

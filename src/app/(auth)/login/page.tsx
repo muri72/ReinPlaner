@@ -93,9 +93,10 @@ export default function LoginPage() {
         {/* Animated background */}
         <div className="absolute inset-0 overflow-hidden">
           {/* Gradient orbs matching logo colors */}
-          <div className="absolute top-1/3 left-1/3 w-[500px] h-[500px] bg-blue-500/20 rounded-full blur-[100px] animate-pulse-slow" />
-          <div className="absolute bottom-1/3 right-1/3 w-[400px] h-[400px] bg-cyan-400/15 rounded-full blur-[80px] animate-pulse-slow delay-700" />
-          <div className="absolute top-1/2 right-1/4 w-[300px] h-[300px] bg-blue-600/10 rounded-full blur-[60px] animate-pulse-slow delay-300" />
+          <div className="absolute top-1/4 left-1/4 w-[600px] h-[600px] bg-blue-500/25 rounded-full blur-[120px] animate-pulse-slow" />
+          <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-cyan-400/20 rounded-full blur-[100px] animate-pulse-slow delay-700" />
+          <div className="absolute top-1/2 right-1/3 w-[400px] h-[400px] bg-violet-500/15 rounded-full blur-[80px] animate-pulse-slow delay-300" />
+          <div className="absolute top-2/3 left-1/3 w-[350px] h-[350px] bg-blue-600/15 rounded-full blur-[70px] animate-pulse-slow delay-500" />
 
           {/* Subtle grid */}
           <div className="absolute inset-0 opacity-5"
@@ -129,11 +130,11 @@ export default function LoginPage() {
 
           {/* Brand Text */}
           <div className="text-center">
-            <h1 className="text-4xl font-bold mb-3 tracking-tight">
-              ReinPlaner Management
+            <h1 className="text-4xl font-bold mb-3 tracking-tight text-white">
+              ReinPlaner
             </h1>
-            <p className="text-blue-200/80 text-lg mb-8">
-              Glas- und Gebäudereinigung
+            <p className="text-blue-300/80 text-lg mb-8">
+              Software für Gebäudereinigung
             </p>
 
             {/* Value props with icons */}
@@ -154,7 +155,7 @@ export default function LoginPage() {
 
         {/* Bottom tagline */}
         <div className="absolute bottom-8 left-0 right-0 text-center text-white/30 text-sm">
-          Ihr Partner für zuverlässige Sauberkeit
+          Für Reinigungsfirmen jeder Größe
         </div>
       </div>
 
@@ -173,8 +174,8 @@ export default function LoginPage() {
                 className="relative"
               />
             </div>
-            <h1 className="text-2xl font-bold mt-4 text-slate-800">ReinPlaner Management</h1>
-            <p className="text-blue-600 text-sm">Glas- und Gebäudereinigung</p>
+            <h1 className="text-2xl font-bold mt-4 text-slate-900">ReinPlaner</h1>
+            <p className="text-blue-600 text-sm">Software für Gebäudereinigung</p>
           </div>
 
           {/* Login Card */}
@@ -187,19 +188,19 @@ export default function LoginPage() {
               <div className="text-center mb-8">
                 {isResetMode ? (
                   <>
-                    <h2 className="text-2xl font-bold text-slate-800 mb-2">
+                    <h2 className="text-2xl font-bold text-slate-900 mb-2">
                       Passwort zurücksetzen
                     </h2>
-                    <p className="text-slate-500">
+                    <p className="text-slate-600">
                       Geben Sie Ihre E-Mail-Adresse ein, um einen Link zum Zurücksetzen Ihres Passworts zu erhalten.
                     </p>
                   </>
                 ) : (
                   <>
-                    <h2 className="text-2xl font-bold text-slate-800 mb-2">
+                    <h2 className="text-2xl font-bold text-slate-900 mb-2">
                       Willkommen zurück
                     </h2>
-                    <p className="text-slate-500">
+                    <p className="text-slate-600">
                       Melden Sie sich an, um fortzufahren
                     </p>
                   </>
@@ -211,14 +212,14 @@ export default function LoginPage() {
                 <form onSubmit={handlePasswordReset} className="space-y-6">
                   {/* Email Field */}
                   <div className="space-y-2">
-                    <Label htmlFor="reset-email" className="text-sm font-semibold text-slate-700 ml-1">
+                    <Label htmlFor="reset-email" className="text-sm font-semibold text-slate-800 ml-1">
                       E-Mail-Adresse
                     </Label>
                     <div className={`relative transition-all duration-300 ${
                       focusedField === 'reset-email' ? 'scale-[1.01]' : ''
                     }`}>
                       <Mail className={`absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 transition-colors ${
-                        focusedField === 'reset-email' ? 'text-blue-500' : 'text-slate-400'
+                        focusedField === 'reset-email' ? 'text-blue-600' : 'text-slate-500'
                       }`} />
                       <Input
                         id="reset-email"
@@ -243,7 +244,7 @@ export default function LoginPage() {
                     type="button"
                     variant="ghost"
                     onClick={() => setIsResetMode(false)}
-                    className="w-full h-12 font-medium text-slate-600 hover:text-slate-800 hover:bg-slate-100"
+                    className="w-full h-12 font-medium text-slate-700 hover:text-slate-900 hover:bg-slate-100"
                   >
                     <ArrowLeft className="w-5 h-5 mr-2" />
                     Zurück zur Anmeldung
@@ -275,14 +276,14 @@ export default function LoginPage() {
                 <form onSubmit={handleLogin} className="space-y-6">
                   {/* Email Field */}
                   <div className="space-y-2">
-                    <Label htmlFor="email" className="text-sm font-semibold text-slate-700 ml-1">
+                    <Label htmlFor="email" className="text-sm font-semibold text-slate-800 ml-1">
                       E-Mail-Adresse
                     </Label>
                     <div className={`relative transition-all duration-300 ${
                       focusedField === 'email' ? 'scale-[1.01]' : ''
                     }`}>
                       <Mail className={`absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 transition-colors ${
-                        focusedField === 'email' ? 'text-blue-500' : 'text-slate-400'
+                        focusedField === 'email' ? 'text-blue-600' : 'text-slate-500'
                       }`} />
                       <Input
                         id="email"
@@ -305,7 +306,7 @@ export default function LoginPage() {
                   {/* Password Field */}
                   <div className="space-y-2">
                     <div className="flex justify-between items-center ml-1">
-                      <Label htmlFor="password" className="text-sm font-semibold text-slate-700">
+                      <Label htmlFor="password" className="text-sm font-semibold text-slate-800">
                         Passwort
                       </Label>
                       <button
@@ -320,7 +321,7 @@ export default function LoginPage() {
                       focusedField === 'password' ? 'scale-[1.01]' : ''
                     }`}>
                       <Lock className={`absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 transition-colors ${
-                        focusedField === 'password' ? 'text-blue-500' : 'text-slate-400'
+                        focusedField === 'password' ? 'text-blue-600' : 'text-slate-500'
                       }`} />
                       <Input
                         id="password"
@@ -342,7 +343,7 @@ export default function LoginPage() {
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
                         className={`absolute right-4 top-1/2 -translate-y-1/2 transition-colors ${
-                          focusedField === 'password' ? 'text-blue-500' : 'text-slate-400 hover:text-slate-600'
+                          focusedField === 'password' ? 'text-blue-600' : 'text-slate-500 hover:text-slate-700'
                         }`}
                       >
                         {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
@@ -355,9 +356,9 @@ export default function LoginPage() {
                     <input
                       type="checkbox"
                       id="remember"
-                      className="w-4 h-4 rounded border-slate-300 text-blue-500 focus:ring-blue-500/20 cursor-pointer"
+                      className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500/20 cursor-pointer"
                     />
-                    <Label htmlFor="remember" className="text-sm text-slate-600 cursor-pointer">
+                    <Label htmlFor="remember" className="text-sm text-slate-700 cursor-pointer">
                       Angemeldet bleiben
                     </Label>
                   </div>
@@ -393,8 +394,8 @@ export default function LoginPage() {
           </div>
 
           {/* Mobile footer */}
-          <div className="lg:hidden mt-8 text-center text-sm text-slate-400">
-            <p>Ihr Partner für zuverlässige Sauberkeit</p>
+          <div className="lg:hidden mt-8 text-center text-sm text-slate-500">
+            <p>Für Reinigungsfirmen jeder Größe</p>
           </div>
         </div>
       </div>
