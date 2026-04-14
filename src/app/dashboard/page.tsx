@@ -26,6 +26,9 @@ import {
   Settings,
   FileText,
   UserPlus,
+  Sparkles,
+  Target,
+  DollarSign,
 } from "lucide-react";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
@@ -80,11 +83,11 @@ export default function DashboardPage() {
   const stats = useMemo(() => {
     if (!processedDashboardData) {
       return [
-        { title: "Aktive Aufträge", value: 0, change: "+12%", changeType: "increase" as const, icon: Activity, description: "Daten werden geladen..." },
-        { title: "Abgeschlossene Aufträge", value: 0, change: "+8%", changeType: "increase" as const, icon: CheckCircle, description: "Daten werden geladen..." },
-        { title: "Mitarbeiter aktiv", value: 0, change: "+5%", changeType: "increase" as const, icon: Users, description: "Daten werden geladen..." },
-        { title: "Ausstehende Anfragen", value: 0, change: "-3", changeType: "decrease" as const, icon: Clock, description: "Daten werden geladen..." },
-        { title: "Neue Beschwerden", value: 0, change: "-2", changeType: "decrease" as const, icon: AlertCircle, description: "heute" },
+        { title: "Aktive Aufträge", value: 0, change: "+12%", changeType: "increase" as const, icon: Activity, color: "blue", description: "Daten werden geladen..." },
+        { title: "Abgeschlossene Aufträge", value: 0, change: "+8%", changeType: "increase" as const, icon: CheckCircle, color: "emerald", description: "Daten werden geladen..." },
+        { title: "Mitarbeiter aktiv", value: 0, change: "+5%", changeType: "increase" as const, icon: Users, color: "violet", description: "Daten werden geladen..." },
+        { title: "Ausstehende Anfragen", value: 0, change: "-3", changeType: "decrease" as const, icon: Clock, color: "amber", description: "Daten werden geladen..." },
+        { title: "Neue Beschwerden", value: 0, change: "-2", changeType: "decrease" as const, icon: AlertCircle, color: "rose", description: "heute" },
       ];
     }
 
@@ -94,11 +97,11 @@ export default function DashboardPage() {
     const totalNewComplaintsToday = processedDashboardData.totalNewComplaintsToday as number || 0;
 
     return [
-      { title: "Aktive Aufträge", value: statusCounts?.pending || 0, change: "+12%", changeType: "increase" as const, icon: Activity, description: "vs. letzter Monat" },
-      { title: "Abgeschlossene Aufträge", value: statusCounts?.completed || 0, change: "+8%", changeType: "increase" as const, icon: CheckCircle, description: "vs. letzter Monat" },
-      { title: "Mitarbeiter aktiv", value: activeEmployeesCount, change: "+5%", changeType: "increase" as const, icon: Users, description: "vs. letzter Monat" },
-      { title: "Ausstehende Anfragen", value: pendingRequestsCount, change: "-3", changeType: "decrease" as const, icon: Clock, description: "vs. letzter Monat" },
-      { title: "Neue Beschwerden", value: totalNewComplaintsToday, change: "-2", changeType: "decrease" as const, icon: AlertCircle, description: "heute" },
+      { title: "Aktive Aufträge", value: statusCounts?.pending || 0, change: "+12%", changeType: "increase" as const, icon: Activity, color: "blue", description: "vs. letzter Monat" },
+      { title: "Abgeschlossene Aufträge", value: statusCounts?.completed || 0, change: "+8%", changeType: "increase" as const, icon: CheckCircle, color: "emerald", description: "vs. letzter Monat" },
+      { title: "Mitarbeiter aktiv", value: activeEmployeesCount, change: "+5%", changeType: "increase" as const, icon: Users, color: "violet", description: "vs. letzter Monat" },
+      { title: "Ausstehende Anfragen", value: pendingRequestsCount, change: "-3", changeType: "decrease" as const, icon: Clock, color: "amber", description: "vs. letzter Monat" },
+      { title: "Neue Beschwerden", value: totalNewComplaintsToday, change: "-2", changeType: "decrease" as const, icon: AlertCircle, color: "rose", description: "heute" },
     ];
   }, [processedDashboardData]);
 
@@ -122,12 +125,23 @@ export default function DashboardPage() {
     { title: "Umsatz (Monat)", icon: BarChart3 },
   ];
 
+  const colorMap: Record<string, { bg: string; text: string; glow: string }> = {
+    blue: { bg: "bg-blue-500/20", text: "text-blue-400", glow: "shadow-blue-500/20" },
+    emerald: { bg: "bg-emerald-500/20", text: "text-emerald-400", glow: "shadow-emerald-500/20" },
+    violet: { bg: "bg-violet-500/20", text: "text-violet-400", glow: "shadow-violet-500/20" },
+    amber: { bg: "bg-amber-500/20", text: "text-amber-400", glow: "shadow-amber-500/20" },
+    rose: { bg: "bg-rose-500/20", text: "text-rose-400", glow: "shadow-rose-500/20" },
+    cyan: { bg: "bg-cyan-500/20", text: "text-cyan-400", glow: "shadow-cyan-500/20" },
+  };
+
   if (!loading && !authenticated) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4">
-        <div className="glass-card p-8 text-center max-w-md">
-          <AlertCircle className="w-12 h-12 text-amber-500 mx-auto mb-4" />
-          <p className="text-lg font-semibold text-white mb-2">Nicht authentifiziert</p>
+        <div className="glass-card p-8 text-center max-w-md border border-amber-500/20">
+          <div className="w-16 h-16 rounded-2xl bg-amber-500/20 flex items-center justify-center mx-auto mb-4">
+            <AlertCircle className="w-8 h-8 text-amber-400" />
+          </div>
+          <p className="text-lg font-bold text-white mb-2">Nicht authentifiziert</p>
           <p className="text-sm text-slate-400">Sie werden zum Login weitergeleitet...</p>
         </div>
       </div>
@@ -137,11 +151,13 @@ export default function DashboardPage() {
   if (authenticated && !userProfile) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4">
-        <div className="glass-card p-8 text-center max-w-md">
-          <AlertCircle className="w-12 h-12 text-amber-500 mx-auto mb-4" />
-          <p className="text-lg font-semibold text-white mb-2">Fehler beim Laden des Profils</p>
+        <div className="glass-card p-8 text-center max-w-md border border-rose-500/20">
+          <div className="w-16 h-16 rounded-2xl bg-rose-500/20 flex items-center justify-center mx-auto mb-4">
+            <AlertCircle className="w-8 h-8 text-rose-400" />
+          </div>
+          <p className="text-lg font-bold text-white mb-2">Fehler beim Laden des Profils</p>
           <p className="text-sm text-slate-400 mb-4">Ihr Profil konnte nicht geladen werden.</p>
-          <Button onClick={() => refresh()} className="btn-primary">
+          <Button onClick={() => refresh()} className="bg-blue-600 hover:bg-blue-700 text-white">
             Erneut versuchen
           </Button>
         </div>
@@ -150,9 +166,9 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen section-dark p-4 md:p-8">
-      {/* Welcome Header */}
-      <div className="mb-8 page-enter">
+    <div className="min-h-screen bg-gradient-to-br from-[#05080F] via-[#0A0E1A] to-[#0F1524] p-4 md:p-6 lg:p-8">
+      {/* Page Header */}
+      <div className="mb-8">
         {loading || !displayName ? (
           <div className="space-y-2">
             <div className="h-10 bg-white/5 rounded w-1/3 animate-pulse" />
@@ -165,39 +181,34 @@ export default function DashboardPage() {
                 Willkommen zurück, {displayName}!
               </h1>
               <p className="text-sm md:text-base text-slate-400 mt-1">
-                Heute ist der {formattedDate}.
+                {formattedDate}
               </p>
             </div>
-            <Button variant="outline" size="icon" className="glass-btn hidden md:flex">
-              <Bell className="w-5 h-5 text-slate-400" />
+            <Button variant="outline" size="icon" className="border-white/10 bg-white/5 hover:bg-white/10 text-slate-300">
+              <Bell className="w-5 h-5" />
             </Button>
           </div>
         )}
       </div>
 
       {/* Quick Actions */}
-      <div className="flex flex-wrap gap-3 mb-8 page-enter stagger-2">
-        <Button onClick={() => router.push("/dashboard/orders/new")} className="btn-primary h-10 px-4 text-sm font-medium">
+      <div className="flex flex-wrap gap-3 mb-8">
+        <Button onClick={() => router.push("/dashboard/orders/new")} className="h-11 px-5 text-sm font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-lg shadow-blue-500/25 transition-all">
           <Plus className="w-4 h-4 mr-2" />
           Neuer Auftrag
         </Button>
-        <Button onClick={() => router.push("/dashboard/employees/new")} variant="outline" className="glass-btn h-10 px-4 text-sm font-medium">
+        <Button onClick={() => router.push("/dashboard/employees/new")} variant="outline" className="h-11 px-5 text-sm font-medium border-white/10 bg-white/5 hover:bg-white/10 text-slate-200 rounded-xl transition-all">
           <UserPlus className="w-4 h-4 mr-2" />
-          Mitarbeiter hinzufügen
+          Mitarbeiter
         </Button>
-        <Button onClick={() => router.push("/dashboard/reports")} variant="outline" className="glass-btn h-10 px-4 text-sm font-medium">
+        <Button onClick={() => router.push("/dashboard/reports")} variant="outline" className="h-11 px-5 text-sm font-medium border-white/10 bg-white/5 hover:bg-white/10 text-slate-200 rounded-xl transition-all">
           <BarChart3 className="w-4 h-4 mr-2" />
           Berichte
         </Button>
-        <Button onClick={() => router.push("/dashboard/settings")} variant="outline" className="glass-btn h-10 px-4 text-sm font-medium">
+        <Button onClick={() => router.push("/dashboard/settings")} variant="outline" className="h-11 px-5 text-sm font-medium border-white/10 bg-white/5 hover:bg-white/10 text-slate-200 rounded-xl transition-all">
           <Settings className="w-4 h-4 mr-2" />
           Einstellungen
         </Button>
-      </div>
-
-      {/* Heutige Einsätze Section */}
-      <div className="mb-8 page-enter stagger-3">
-        <TodaysOrdersOverview />
       </div>
 
       {/* Stats Grid */}
@@ -217,58 +228,71 @@ export default function DashboardPage() {
           ))}
         </div>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5 mb-8 page-enter stagger-4">
-          {stats.map((stat) => (
-            <Card key={stat.title} className="glass-card-hover">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-slate-400">
-                  {stat.title}
-                </CardTitle>
-                <stat.icon className="h-4 w-4 text-slate-500" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-white">
-                  <AnimatedNumber value={stat.value} />
-                </div>
-                <div className="flex items-center space-x-2 text-xs mt-1">
-                  <span className={`font-medium ${
-                    stat.changeType === "increase" ? "text-emerald-400" : "text-rose-400"
-                  }`}>
-                    {stat.change}
-                  </span>
-                  <span className="text-slate-500">
-                    {stat.description}
-                  </span>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5 mb-8">
+          {stats.map((stat, index) => {
+            const colors = colorMap[stat.color] || colorMap.blue;
+            return (
+              <Card key={stat.title} className="glass-card group hover:border-white/12 transition-all duration-300">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium text-slate-400">
+                    {stat.title}
+                  </CardTitle>
+                  <div className={`w-10 h-10 rounded-xl ${colors.bg} flex items-center justify-center group-hover:scale-110 transition-transform`}>
+                    <stat.icon className={`h-5 w-5 ${colors.text}`} />
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold text-white mb-1">
+                    <AnimatedNumber value={stat.value} />
+                  </div>
+                  <div className="flex items-center space-x-2 text-xs">
+                    <span className={`font-semibold ${
+                      stat.changeType === "increase" ? "text-emerald-400" : "text-rose-400"
+                    }`}>
+                      {stat.change}
+                    </span>
+                    <span className="text-slate-500">
+                      {stat.description}
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
+
+      {/* Heutige Einsätze Section */}
+      <div className="mb-8">
+        <TodaysOrdersOverview />
+      </div>
 
       {/* Main Content Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7 mb-8">
         {/* Recent Activity */}
-        <Card className="col-span-4 glass-card page-enter stagger-5">
+        <Card className="col-span-4 glass-card">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle className="text-white">Aktuelle Aktivitäten</CardTitle>
+                <CardTitle className="text-white flex items-center gap-2">
+                  <Activity className="w-5 h-5 text-blue-400" />
+                  Aktuelle Aktivitäten
+                </CardTitle>
                 <CardDescription className="text-slate-500">
                   Die neuesten Aktivitäten im Unternehmen
                 </CardDescription>
               </div>
               <Button variant="ghost" size="sm" className="text-slate-400 hover:text-white">
-                Alle anzeigen
+                Alle
                 <ArrowRight className="w-4 h-4 ml-1" />
               </Button>
             </div>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-3">
             {dataLoading ? (
               Array.from({ length: 5 }).map((_, index) => (
                 <div key={index} className="flex items-center space-x-4">
-                  <div className="rounded-full bg-white/5 p-2 h-10 w-10 animate-pulse" />
+                  <div className="rounded-xl bg-white/5 p-2.5 h-12 w-12 animate-pulse" />
                   <div className="flex-1 space-y-2">
                     <div className="h-4 bg-white/5 rounded w-3/4" />
                     <div className="h-3 bg-white/5 rounded w-1/2" />
@@ -277,24 +301,26 @@ export default function DashboardPage() {
               ))
             ) : processedDashboardData?.recentActivities?.length > 0 ? (
               (processedDashboardData?.recentActivities as Array<{ description?: string; created_at?: string }>)?.slice(0, 5).map((activity, index) => (
-                <div key={index} className="flex items-center space-x-4 p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
-                  <div className="rounded-full bg-blue-500/20 p-2">
-                    <AlertCircle className="h-4 w-4 text-blue-400" />
+                <div key={index} className="flex items-center space-x-4 p-3 rounded-xl bg-white/[0.02] hover:bg-white/5 transition-colors cursor-pointer">
+                  <div className="w-12 h-12 rounded-xl bg-blue-500/15 flex items-center justify-center shrink-0">
+                    <AlertCircle className="h-5 w-5 text-blue-400" />
                   </div>
-                  <div className="flex-1 space-y-1">
-                    <p className="text-sm font-medium text-slate-200 leading-none">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-slate-200 leading-tight truncate">
                       {activity.description}
                     </p>
-                    <p className="text-xs text-slate-500">
+                    <p className="text-xs text-slate-500 mt-1">
                       {activity.created_at ? format(new Date(activity.created_at), 'dd.MM.yyyy HH:mm', { locale: de }) : ''}
                     </p>
                   </div>
-                  <ArrowRight className="h-4 w-4 text-slate-600" />
+                  <ArrowRight className="h-4 w-4 text-slate-600 shrink-0" />
                 </div>
               ))
             ) : (
-              <div className="text-center py-8">
-                <Activity className="w-12 h-12 text-slate-600 mx-auto mb-3" />
+              <div className="text-center py-12">
+                <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center mx-auto mb-4">
+                  <Activity className="w-8 h-8 text-slate-600" />
+                </div>
                 <p className="text-sm text-slate-500">Keine aktuellen Aktivitäten</p>
               </div>
             )}
@@ -302,26 +328,29 @@ export default function DashboardPage() {
         </Card>
 
         {/* Upcoming Tasks */}
-        <Card className="col-span-3 glass-card page-enter stagger-6">
+        <Card className="col-span-3 glass-card">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle className="text-white">Anstehende Aufgaben</CardTitle>
+                <CardTitle className="text-white flex items-center gap-2">
+                  <Target className="w-5 h-5 text-violet-400" />
+                  Anstehende Aufgaben
+                </CardTitle>
                 <CardDescription className="text-slate-500">
                   Aufgaben für die nächsten 7 Tage
                 </CardDescription>
               </div>
               <Button variant="ghost" size="sm" className="text-slate-400 hover:text-white">
-                Alle anzeigen
+                Alle
                 <ArrowRight className="w-4 h-4 ml-1" />
               </Button>
             </div>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-3">
             {dataLoading ? (
               Array.from({ length: 5 }).map((_, index) => (
                 <div key={index} className="flex items-center space-x-4">
-                  <div className="rounded-full bg-white/5 p-2 h-10 w-10 animate-pulse" />
+                  <div className="rounded-xl bg-white/5 p-2.5 h-12 w-12 animate-pulse" />
                   <div className="flex-1 space-y-2">
                     <div className="h-4 bg-white/5 rounded w-3/4" />
                     <div className="h-3 bg-white/5 rounded w-24" />
@@ -330,20 +359,20 @@ export default function DashboardPage() {
               ))
             ) : processedDashboardData?.upcomingTasks?.length > 0 ? (
               (processedDashboardData?.upcomingTasks as Array<{ title?: string; due_date?: string; priority?: string }>)?.slice(0, 5).map((task, index) => (
-                <div key={index} className="flex items-center space-x-4 p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
-                  <div className="rounded-full bg-blue-500/20 p-2">
-                    <Clock className="h-4 w-4 text-blue-400" />
+                <div key={index} className="flex items-center space-x-4 p-3 rounded-xl bg-white/[0.02] hover:bg-white/5 transition-colors cursor-pointer">
+                  <div className="w-12 h-12 rounded-xl bg-violet-500/15 flex items-center justify-center shrink-0">
+                    <Clock className="h-5 w-5 text-violet-400" />
                   </div>
-                  <div className="flex-1 space-y-1">
-                    <p className="text-sm font-medium text-slate-200 leading-none">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-slate-200 leading-tight truncate">
                       {task.title}
                     </p>
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center gap-2 mt-1">
                       <p className="text-xs text-slate-500">
                         {task.due_date ? format(new Date(task.due_date), 'dd.MM.yyyy', { locale: de }) : ''}
                       </p>
                       {task.priority && (
-                        <span className={`text-xs px-2 py-0.5 rounded ${
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                           task.priority === 'high' ? 'bg-rose-500/20 text-rose-400' :
                           task.priority === 'medium' ? 'bg-amber-500/20 text-amber-400' :
                           'bg-slate-500/20 text-slate-400'
@@ -357,8 +386,10 @@ export default function DashboardPage() {
                 </div>
               ))
             ) : (
-              <div className="text-center py-8">
-                <Clock className="w-12 h-12 text-slate-600 mx-auto mb-3" />
+              <div className="text-center py-12">
+                <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center mx-auto mb-4">
+                  <Clock className="w-8 h-8 text-slate-600" />
+                </div>
                 <p className="text-sm text-slate-500">Keine anstehenden Aufgaben</p>
               </div>
             )}
@@ -383,33 +414,37 @@ export default function DashboardPage() {
           ))}
         </div>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8 page-enter stagger-7">
-          <Card className="glass-card-hover">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
+          <Card className="glass-card group hover:border-white/12 transition-all">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-slate-400">
-                Geplante Aufträge heute
+                Geplante Aufträge
               </CardTitle>
-              <Calendar className="h-4 w-4 text-slate-500" />
+              <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Calendar className="h-5 w-5 text-blue-400" />
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-white">
+              <div className="text-3xl font-bold text-white mb-1">
                 <AnimatedNumber value={(processedDashboardData?.totalScheduledToday as number) || 0} />
               </div>
               <p className="text-xs text-slate-500 mt-1">
-                Davon {(processedDashboardData?.completedScheduledToday as number) || 0} abgeschlossen
+                {(processedDashboardData?.completedScheduledToday as number) || 0} heute abgeschlossen
               </p>
             </CardContent>
           </Card>
 
-          <Card className="glass-card-hover">
+          <Card className="glass-card group hover:border-white/12 transition-all">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-slate-400">
-                Mitarbeiter gesamt
+                Mitarbeiter
               </CardTitle>
-              <Users className="h-4 w-4 text-slate-500" />
+              <div className="w-10 h-10 rounded-xl bg-violet-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Users className="h-5 w-5 text-violet-400" />
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-white">
+              <div className="text-3xl font-bold text-white mb-1">
                 <AnimatedNumber value={(processedDashboardData?.employeeCount as number) || 0} />
               </div>
               <p className="text-xs text-slate-500 mt-1">
@@ -418,15 +453,17 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
 
-          <Card className="glass-card-hover">
+          <Card className="glass-card group hover:border-white/12 transition-all">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-slate-400">
-                Kunden gesamt
+                Kunden
               </CardTitle>
-              <CheckCircle className="h-4 w-4 text-slate-500" />
+              <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <CheckCircle className="h-5 w-5 text-emerald-400" />
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-white">
+              <div className="text-3xl font-bold text-white mb-1">
                 <AnimatedNumber value={(processedDashboardData?.customerCount as number) || 0} />
               </div>
               <p className="text-xs text-slate-500 mt-1">
@@ -435,15 +472,17 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
 
-          <Card className="glass-card-hover">
+          <Card className="glass-card group hover:border-white/12 transition-all">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-slate-400">
-                Beschwerden heute
+                Beschwerden
               </CardTitle>
-              <AlertCircle className="h-4 w-4 text-slate-500" />
+              <div className="w-10 h-10 rounded-xl bg-rose-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <AlertCircle className="h-5 w-5 text-rose-400" />
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-white">
+              <div className="text-3xl font-bold text-white mb-1">
                 <AnimatedNumber value={(processedDashboardData?.totalNewComplaintsToday as number) || 0} />
               </div>
               <p className="text-xs text-slate-500 mt-1">
@@ -459,32 +498,12 @@ export default function DashboardPage() {
         <OpenInvoicesWidget />
       </div>
 
-      {/* Quick Actions */}
-      <div className="flex flex-wrap gap-2">
-        <Button variant="outline" size="sm" onClick={() => router.push("/dashboard/orders")} className="glass-btn text-slate-300">
-          <FileText className="w-4 h-4 mr-2" />
-          Aufträge verwalten
-        </Button>
-        <Button variant="outline" size="sm" onClick={() => router.push("/dashboard/employees")} className="glass-btn text-slate-300">
-          <Users className="w-4 h-4 mr-2" />
-          Mitarbeiter verwalten
-        </Button>
-        <Button variant="outline" size="sm" onClick={() => router.push("/dashboard/planning")} className="glass-btn text-slate-300">
-          <Calendar className="w-4 h-4 mr-2" />
-          Planung anzeigen
-        </Button>
-        <Button variant="outline" size="sm" onClick={() => router.push("/dashboard/reports")} className="glass-btn text-slate-300">
-          <BarChart3 className="w-4 h-4 mr-2" />
-          Berichte erstellen
-        </Button>
-      </div>
-
       {/* Error Display */}
       {error && (
-        <Card className="mt-8 border-rose-500/30 bg-rose-500/10">
+        <Card className="border border-rose-500/30 bg-rose-500/10 mb-8">
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
-              <AlertCircle className="w-5 h-5 text-rose-400" />
+              <AlertCircle className="w-5 h-5 text-rose-400 shrink-0" />
               <p className="text-sm text-rose-300">{error}</p>
             </div>
           </CardContent>
