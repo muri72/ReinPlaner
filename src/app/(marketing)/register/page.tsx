@@ -200,7 +200,7 @@ function RegisterForm() {
   };
 
   const inputClass = (fieldName: string) =>
-    `h-12 glass-input rounded-xl transition-all duration-300 placeholder:text-slate-200 ${
+    `h-12 glass-input rounded-xl transition-all duration-300 placeholder:text-slate-400/60 ${
       focusedField === fieldName
         ? "border-blue-500 ring-4 ring-blue-500/20"
         : "hover:border-white/12"

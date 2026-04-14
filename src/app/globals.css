@@ -267,18 +267,33 @@
   }
   
   /* Glass Card */
+  /* Glass Card - Enhanced with Inner Glow + Stronger Blur */
   .glass-card {
-    background: rgba(26, 34, 53, 0.6);
-    backdrop-filter: blur(20px) saturate(180%);
-    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    background: rgba(26, 34, 53, 0.55);
+    backdrop-filter: blur(24px) saturate(200%);
+    -webkit-backdrop-filter: blur(24px) saturate(200%);
     border: 1px solid rgba(255, 255, 255, 0.08);
-    box-shadow: var(--shadow-glass);
+    box-shadow: 
+      0 4px 24px rgba(0, 0, 0, 0.4),
+      inset 0 1px 0 rgba(255, 255, 255, 0.06),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.1);
     border-radius: var(--radius-lg);
     position: relative;
     overflow: hidden;
   }
   
   .glass-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.25) 30%, rgba(255,255,255,0.25) 70%, transparent);
+    z-index: 2;
+  }
+  
+  .glass-card::after {
     content: '';
     position: absolute;
     inset: 0;
@@ -331,6 +346,7 @@
   
   .glass-input::placeholder {
     color: var(--text-secondary);
+    opacity: 0.9;
   }
   
   /* Glass Button */
@@ -462,66 +478,61 @@
   }
 }
 
+/* ==========================================
+   ENTRANCE ANIMATIONS
+   ========================================== */
+
+.page-enter {
+  opacity: 0;
+  transform: translateY(20px);
+  animation: pageEnter 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.page-enter-left {
+  opacity: 0;
+  transform: translateX(-30px);
+  animation: pageEnterLeft 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.page-enter-right {
+  opacity: 0;
+  transform: translateX(30px);
+  animation: pageEnterRight 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes pageEnter {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pageEnterLeft {
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes pageEnterRight {
+  to { opacity: 1; transform: translateX(0); }
+}
+
 @keyframes countUp {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-/* Animation Classes */
-.animate-fade-up {
-  animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+.count-up {
+  animation: countUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   opacity: 0;
-}
-
-.animate-fade-in {
-  animation: fadeIn 0.4s ease-out forwards;
-  opacity: 0;
-}
-
-.animate-slide-in-left {
-  animation: slideInLeft 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  opacity: 0;
-}
-
-.animate-float {
-  animation: float 6s ease-in-out infinite;
-}
-
-.animate-shimmer {
-  background: linear-gradient(
-    90deg,
-    rgba(255, 255, 255, 0) 0%,
-    rgba(255, 255, 255, 0.05) 50%,
-    rgba(255, 255, 255, 0) 100%
-  );
-  background-size: 200% 100%;
-  animation: shimmer 2s infinite;
-}
-
-.gradient-animated {
-  background-size: 200% 200%;
-  animation: gradientShift 8s ease infinite;
-}
-
-.btn-pulse {
-  animation: pulse-glow 2s infinite;
 }
 
 /* Stagger Delays */
-.stagger-1 { animation-delay: 0ms; }
-.stagger-2 { animation-delay: 100ms; }
-.stagger-3 { animation-delay: 200ms; }
-.stagger-4 { animation-delay: 300ms; }
-.stagger-5 { animation-delay: 400ms; }
-.stagger-6 { animation-delay: 500ms; }
-.stagger-7 { animation-delay: 600ms; }
-.stagger-8 { animation-delay: 700ms; }
+.stagger-1  { animation-delay: 50ms; }
+.stagger-2  { animation-delay: 120ms; }
+.stagger-3  { animation-delay: 190ms; }
+.stagger-4  { animation-delay: 260ms; }
+.stagger-5  { animation-delay: 330ms; }
+.stagger-6  { animation-delay: 400ms; }
+.stagger-7  { animation-delay: 470ms; }
+.stagger-8  { animation-delay: 540ms; }
+.stagger-9  { animation-delay: 610ms; }
+.stagger-10 { animation-delay: 680ms; }
 
 /* Magnetic Button Effect */
 .magnetic-btn {

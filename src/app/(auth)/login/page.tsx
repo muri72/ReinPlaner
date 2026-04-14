@@ -89,7 +89,7 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex">
       {/* Left Side - Hero with Logo */}
-      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 page-enter-left">
         {/* Animated background */}
         <div className="absolute inset-0 overflow-hidden">
           {/* Gradient orbs matching logo colors */}
@@ -160,7 +160,7 @@ export default function LoginPage() {
       </div>
 
       {/* Right Side - Login Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-8 lg:p-12 bg-gradient-to-br from-slate-50 via-white to-blue-50/30">
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-8 lg:p-12 bg-gradient-to-br from-slate-50 via-white to-blue-50/30 page-enter-right">
         <div className="w-full max-w-md">
           {/* Mobile Logo Header */}
           <div className="lg:hidden text-center mb-8">
@@ -179,13 +179,13 @@ export default function LoginPage() {
           </div>
 
           {/* Login Card */}
-          <div className="relative">
+          <div className="relative page-enter stagger-3">
             {/* Gradient accent line */}
             <div className="absolute -top-px left-8 right-8 h-px bg-gradient-to-r from-transparent via-blue-400 to-transparent" />
 
-            <div className="bg-white/90 backdrop-blur-xl rounded-3xl shadow-2xl border border-slate-200/60 p-8 lg:p-10">
+            <div className="bg-white/90 backdrop-blur-xl rounded-3xl shadow-2xl border border-slate-200/60 p-8 lg:p-10 page-enter stagger-4">
               {/* Header */}
-              <div className="text-center mb-8">
+              <div className="text-center mb-8 page-enter stagger-4">
                 {isResetMode ? (
                   <>
                     <h2 className="text-2xl font-bold text-slate-900 mb-2">
@@ -209,7 +209,7 @@ export default function LoginPage() {
 
               {/* Form */}
               {isResetMode ? (
-                <form onSubmit={handlePasswordReset} className="space-y-6">
+                <form onSubmit={handlePasswordReset} className="space-y-6 page-enter stagger-5">
                   {/* Email Field */}
                   <div className="space-y-2">
                     <Label htmlFor="reset-email" className="text-sm font-semibold text-slate-800 ml-1">
@@ -273,7 +273,7 @@ export default function LoginPage() {
                   </Button>
                 </form>
               ) : (
-                <form onSubmit={handleLogin} className="space-y-6">
+                <form onSubmit={handleLogin} className="space-y-6 page-enter stagger-5">
                   {/* Email Field */}
                   <div className="space-y-2">
                     <Label htmlFor="email" className="text-sm font-semibold text-slate-800 ml-1">

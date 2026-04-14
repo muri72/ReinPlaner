@@ -148,45 +148,51 @@ CREATE TABLE IF NOT EXISTS invoice_sequences (
 );
 
 -- ============================================
--- FUNCTION: Generate next invoice number
+-- FUNCTION: Generate next invoice number (RACE-SAFE)
+-- Uses SELECT FOR UPDATE to lock the sequence row during increment.
+-- For new tenants, INSERT ... ON CONFLICT handles the race where
+-- two requests try to create the sequence simultaneously.
 -- ============================================
 CREATE OR REPLACE FUNCTION generate_invoice_number(p_tenant_id UUID)
-RETURNS TEXT AS $$
+RETURNS TEXT
+LANGUAGE plpgsql
+AS $$
 DECLARE
-    v_seq RECORD;
     v_next_num INTEGER;
     v_prefix TEXT;
     v_year INTEGER;
     v_result TEXT;
 BEGIN
-    SELECT * INTO v_seq FROM invoice_sequences WHERE tenant_id = p_tenant_id;
-
-    IF NOT FOUND THEN
-        INSERT INTO invoice_sequences (tenant_id, prefix, current_number, year)
-        VALUES (p_tenant_id, 'R', 1, EXTRACT(YEAR FROM CURRENT_DATE)::INTEGER)
-        RETURNING current_number + 1, prefix, year INTO v_next_num, v_prefix, v_year;
-    ELSE
+    -- Use INSERT ... ON CONFLICT DO UPDATE for new tenant sequences.
+    -- The ON CONFLICT clause prevents unique violation when two requests
+    -- try to insert the same tenant_id simultaneously.
+    INSERT INTO invoice_sequences (tenant_id, prefix, current_number, year)
+    VALUES (p_tenant_id, 'R', 1, EXTRACT(YEAR FROM CURRENT_DATE)::INTEGER)
+    ON CONFLICT (tenant_id) DO UPDATE
+    SET
         -- Reset counter if year changed
-        IF v_seq.year != EXTRACT(YEAR FROM CURRENT_DATE)::INTEGER THEN
-            v_next_num := 1;
-            v_prefix := v_seq.prefix;
-            v_year := EXTRACT(YEAR FROM CURRENT_DATE)::INTEGER;
-        ELSE
-            v_next_num := v_seq.current_number + 1;
-            v_prefix := v_seq.prefix;
-            v_year := v_seq.year;
-        END IF;
-
-        UPDATE invoice_sequences
-        SET current_number = v_next_num, year = v_year, updated_at = NOW()
-        WHERE tenant_id = p_tenant_id;
-    END IF;
+        current_number = CASE
+            WHEN invoice_sequences.year != EXTRACT(YEAR FROM CURRENT_DATE)::INTEGER
+            THEN 1
+            ELSE invoice_sequences.current_number + 1
+        END,
+        year = EXTRACT(YEAR FROM CURRENT_DATE)::INTEGER,
+        updated_at = NOW()
+    RETURNING
+        -- Return the NEW current_number after increment (or 1 for new/reset)
+        current_number,
+        prefix,
+        year
+    INTO
+        v_next_num,
+        v_prefix,
+        v_year;
 
     -- Format: PREFIX/YEAR/NUMBER (e.g. R/2025/00042)
     v_result := v_prefix || '/' || v_year || '/' || LPAD(v_next_num::TEXT, 5, '0');
     RETURN v_result;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 -- ============================================
 -- FUNCTION: Update invoice totals after item changes

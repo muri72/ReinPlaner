@@ -233,15 +233,23 @@ overflow: hidden;
 **Left:**
 - Badge: "14 Tage kostenlos · Keine Kreditkarte" (glass pill)
 - Headline: "DIE SOFTWARE FÜR GEBÄUDEREINIGUNG" (Display, 6rem, tight tracking)
+- Headline uses `<span className="block">` for responsive line breaks
 - Subline: Lead paragraph, muted color
 - CTAs: Primary (blue gradient) + Secondary (outline glass)
 - Social proof micro-line: "150+ Unternehmen · 4.9★ Bewertung"
 
 **Right:**
-- Glass dashboard preview card floating in space
+- Glass dashboard preview card floating in space with `animate-float`
 - Browser chrome (minimal dots)
 - Inside: animated KPI grid + mini calendar + mini schedule
-- Glow orbs behind it (blue + cyan)
+- Multiple large glow orbs behind it (blue + cyan + violet + emerald)
+
+**Wow-Factor Enhancements:**
+- Headline textShadow: `0 0 60px rgba(37,99,235,0.3)`
+- Animated gradient background with gradient-shift
+- Large dynamic orbs with pulse-slow animations and delays
+- Dashboard preview floats with shadow-[0_8px_60px_rgba(0,0,0,0.5)]
+- Multiple decorative glows: `-inset-4 bg-gradient-to-r from-blue-600/20 via-violet-600/10 to-cyan-500/20`
 
 ### STATS BAR
 - Full-width glass bar, 4 stats side by side

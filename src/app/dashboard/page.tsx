@@ -10,6 +10,7 @@ import { getSuperOptimizedDashboardData } from "@/lib/super-optimized-dashboard"
 import { TodaysOrdersOverview } from "@/components/todays-orders-overview";
 import { OpenInvoicesWidget } from "@/components/open-invoices-widget";
 import { captureError } from "@/lib/sentry";
+import { AnimatedNumber } from "@/components/ui/animated-number";
 import {
   Calendar,
   TrendingUp,
@@ -151,7 +152,7 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen section-dark p-4 md:p-8">
       {/* Welcome Header */}
-      <div className="mb-8">
+      <div className="mb-8 page-enter">
         {loading || !displayName ? (
           <div className="space-y-2">
             <div className="h-10 bg-white/5 rounded w-1/3 animate-pulse" />
@@ -175,7 +176,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Quick Actions */}
-      <div className="flex flex-wrap gap-3 mb-8">
+      <div className="flex flex-wrap gap-3 mb-8 page-enter stagger-2">
         <Button onClick={() => router.push("/dashboard/orders/new")} className="btn-primary h-10 px-4 text-sm font-medium">
           <Plus className="w-4 h-4 mr-2" />
           Neuer Auftrag
@@ -195,7 +196,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Heutige Einsätze Section */}
-      <div className="mb-8">
+      <div className="mb-8 page-enter stagger-3">
         <TodaysOrdersOverview />
       </div>
 
@@ -216,7 +217,7 @@ export default function DashboardPage() {
           ))}
         </div>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5 mb-8">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5 mb-8 page-enter stagger-4">
           {stats.map((stat) => (
             <Card key={stat.title} className="glass-card-hover">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -226,7 +227,9 @@ export default function DashboardPage() {
                 <stat.icon className="h-4 w-4 text-slate-500" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-white">{stat.value}</div>
+                <div className="text-2xl font-bold text-white">
+                  <AnimatedNumber value={stat.value} />
+                </div>
                 <div className="flex items-center space-x-2 text-xs mt-1">
                   <span className={`font-medium ${
                     stat.changeType === "increase" ? "text-emerald-400" : "text-rose-400"
@@ -246,7 +249,7 @@ export default function DashboardPage() {
       {/* Main Content Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7 mb-8">
         {/* Recent Activity */}
-        <Card className="col-span-4 glass-card">
+        <Card className="col-span-4 glass-card page-enter stagger-5">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
@@ -299,7 +302,7 @@ export default function DashboardPage() {
         </Card>
 
         {/* Upcoming Tasks */}
-        <Card className="col-span-3 glass-card">
+        <Card className="col-span-3 glass-card page-enter stagger-6">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
@@ -380,7 +383,7 @@ export default function DashboardPage() {
           ))}
         </div>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8 page-enter stagger-7">
           <Card className="glass-card-hover">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-slate-400">
@@ -390,7 +393,7 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-white">
-                {(processedDashboardData?.totalScheduledToday as number) || 0}
+                <AnimatedNumber value={(processedDashboardData?.totalScheduledToday as number) || 0} />
               </div>
               <p className="text-xs text-slate-500 mt-1">
                 Davon {(processedDashboardData?.completedScheduledToday as number) || 0} abgeschlossen
@@ -407,7 +410,7 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-white">
-                {(processedDashboardData?.employeeCount as number) || 0}
+                <AnimatedNumber value={(processedDashboardData?.employeeCount as number) || 0} />
               </div>
               <p className="text-xs text-slate-500 mt-1">
                 {(processedDashboardData?.activeEmployeesCount as number) || 0} heute aktiv
@@ -424,7 +427,7 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-white">
-                {(processedDashboardData?.customerCount as number) || 0}
+                <AnimatedNumber value={(processedDashboardData?.customerCount as number) || 0} />
               </div>
               <p className="text-xs text-slate-500 mt-1">
                 {(processedDashboardData?.objectCount as number) || 0} Objekte betreut
@@ -441,7 +444,7 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-white">
-                {(processedDashboardData?.totalNewComplaintsToday as number) || 0}
+                <AnimatedNumber value={(processedDashboardData?.totalNewComplaintsToday as number) || 0} />
               </div>
               <p className="text-xs text-slate-500 mt-1">
                 Ungelöste Tickets
