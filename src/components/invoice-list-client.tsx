@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Invoice } from '@/lib/invoicing/types';
 import { formatCurrency } from '@/lib/invoicing/formatters';
 import { format, parseISO, isPast } from 'date-fns';
+import { escapeHtml } from '@/lib/security';
 import {
   Table,
   TableBody,
@@ -83,7 +84,7 @@ export function InvoiceListClient({ invoices }: InvoiceListClientProps) {
     const matchesSearch =
       searchTerm === '' ||
       invoice.invoice_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      invoice.debtor?.billing_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      escapeHtml(invoice.debtor?.billing_name)?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       invoice.reference_text?.toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesStatus = statusFilter === 'all' || invoice.status === statusFilter;
@@ -225,7 +226,7 @@ export function InvoiceListClient({ invoices }: InvoiceListClientProps) {
                     </Link>
                   </TableCell>
                   <TableCell className="text-muted-foreground">
-                    {invoice.debtor?.billing_name || '—'}
+                    {escapeHtml(invoice.debtor?.billing_name) || '—'}
                   </TableCell>
                   <TableCell>
                     {invoice.issue_date

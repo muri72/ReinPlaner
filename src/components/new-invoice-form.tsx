@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Debtor } from '@/lib/invoicing/types';
 import { createInvoiceAction, createInvoiceFromOrderAction } from '@/lib/invoicing/actions';
 import { parseCurrencyInput } from '@/lib/invoicing/formatters';
+import { escapeHtml } from '@/lib/security';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -211,7 +212,7 @@ export function NewInvoiceForm({ debtors, orders }: NewInvoiceFormProps) {
                       )}
                       {debtors.map(d => (
                         <SelectItem key={d.id} value={d.id}>
-                          {d.billing_name || 'Unbenannt'} {d.billing_postal_code ? `(${d.billing_postal_code} ${d.billing_city || ''})` : ''}
+                          {escapeHtml(d.billing_name) || 'Unbenannt'}{d.billing_postal_code ? `(${escapeHtml(d.billing_postal_code)} ${escapeHtml(d.billing_city) || ''})` : ''}
                         </SelectItem>
                       ))}
                     </SelectContent>

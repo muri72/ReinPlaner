@@ -7,6 +7,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { Invoice } from './types';
 import { formatCurrency } from './invoice-service';
+import { escapeHtml } from '@/lib/security';
 import { format, parseISO } from 'date-fns';
 
 interface PDFResult {
@@ -169,12 +170,12 @@ export async function generateInvoicePDF(invoice: Invoice): Promise<PDFResult> {
 
     const debtor = invoice.debtor;
     const lines = [
-      debtor?.billing_name || '—',
-      debtor?.billing_street || '',
+      escapeHtml(debtor?.billing_name) || '—',
+      escapeHtml(debtor?.billing_street) || '',
       debtor?.billing_postal_code && debtor?.billing_city
-        ? `${debtor.billing_postal_code} ${debtor.billing_city}`
+        ? `${escapeHtml(debtor.billing_postal_code)} ${escapeHtml(debtor.billing_city)}`
         : debtor?.billing_postal_code || debtor?.billing_city || '',
-      debtor?.billing_country || '',
+      escapeHtml(debtor?.billing_country) || '',
     ].filter(l => l.trim());
 
     lines.forEach(line => {
@@ -331,12 +332,12 @@ export async function generateInvoicePDF(invoice: Invoice): Promise<PDFResult> {
       pdf.setFontSize(9);
 
       if (debtor?.payment_terms_days) {
-        pdf.text(`Zahlbar innerhalb von ${debtor.payment_terms_days} Tagen.`, margin, y);
+        pdf.text(`Zahlbar innerhalb von ${Number(debtor.payment_terms_days)} Tagen.`, margin, y);
       } else {
         pdf.text('Zahlbar innerhalb von 30 Tagen.', margin, y);
       }
       y += 5;
-      pdf.text(`Bankverbindung: IBAN: ${debtor?.bank_iban || 'DE89 3704 0044 0532 0130 00'}, BIC: ${debtor?.bank_bic || 'COBADEFFXXX'}`, margin, y);
+      pdf.text(`Bankverbindung: IBAN: ${escapeHtml(debtor?.bank_iban) || 'DE89 3704 0044 0532 0130 00'}, BIC: ${escapeHtml(debtor?.bank_bic) || 'COBADEFFXXX'}`, margin, y);
       y += 5;
       pdf.text(`Bei Überweisung bitte Rechnungsnummer ${invoice.invoice_number} angeben.`, margin, y);
     }
@@ -356,7 +357,7 @@ export async function generateInvoicePDF(invoice: Invoice): Promise<PDFResult> {
       pdf.setTextColor(...textColor);
       pdf.setFontSize(9);
 
-      const noteLines = pdf.splitTextToSize(invoice.notes, pageWidth - margin * 2);
+      const noteLines = pdf.splitTextToSize(escapeHtml(invoice.notes), pageWidth - margin * 2);
       pdf.text(noteLines, margin, y);
       y += noteLines.length * 4;
     }
