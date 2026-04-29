@@ -13,6 +13,7 @@ import { generateInvoicePDF } from './pdf-generator';
 import { exportDATEV } from './datev-export';
 import { exportZUGFeRD } from './zugferd-export';
 import { sendInvoiceEmail } from './email-service';
+import { validateAmountCents, validateQuantity, validateTaxRate, MAX_AMOUNT_CENTS } from '@/lib/security';
 
 // ============================================
 // Invoice CRUD
@@ -167,6 +168,49 @@ export async function createInvoiceAction(data: CreateInvoiceData) {
 
   const supabaseAdmin = createAdminClient();
   const tenantId = profile?.tenant_id || null;
+
+  // Validate financial field bounds
+  const taxRateValidation = validateTaxRate(data.tax_rate ?? 19.0);
+  if (!taxRateValidation.valid) {
+    return { success: false, message: `Steuersatz: ${taxRateValidation.message}` };
+  }
+
+  for (const item of data.items || []) {
+    const qty = Number(item.quantity) || 1;
+    const unitPrice = Number(item.unit_price_cents) || 0;
+
+    const qtyValidation = validateQuantity(qty);
+    if (!qtyValidation.valid) {
+      return { success: false, message: `Menge: ${qtyValidation.message}` };
+    }
+
+    const priceValidation = validateAmountCents(unitPrice);
+    if (!priceValidation.valid) {
+      return { success: false, message: `Einzelpreis: ${priceValidation.message}` };
+    }
+
+    const lineTotal = Math.round(qty * unitPrice);
+    if (lineTotal > MAX_AMOUNT_CENTS) {
+      return { success: false, message: `Positionssumme überschreitet Maximum von ${(MAX_AMOUNT_CENTS / 100).toFixed(2)} €.` };
+    }
+  }
+
+  // Validate debtor ownership (debtor must belong to same tenant)
+  if (data.debtor_id && tenantId) {
+    const { data: debtor } = await supabaseAdmin
+      .from('debtors')
+      .select('tenant_id')
+      .eq('id', data.debtor_id)
+      .single();
+
+    if (!debtor) {
+      return { success: false, message: 'Debitor nicht gefunden.' };
+    }
+
+    if (debtor.tenant_id !== tenantId) {
+      return { success: false, message: 'Keine Berechtigung für diesen Debitor.' };
+    }
+  }
 
   try {
     // Generate invoice number
