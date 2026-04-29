@@ -5,6 +5,7 @@
 import { createAdminClient, createClient } from '@/lib/supabase/server';
 import { Invoice, InvoiceItem, Debtor, Payment, InvoiceFilters, CreateInvoiceData, UpdateInvoiceData } from './types';
 import { addDays, format } from 'date-fns';
+import { validateAmountCents, validateQuantity, validateTaxRate, MAX_AMOUNT_CENTS } from '@/lib/security';
 
 const INVOICE_STATUS_LABELS: Record<string, string> = {
   draft: 'Entwurf',
@@ -136,6 +137,38 @@ export async function createInvoice(
   const supabase = createAdminClient();
 
   try {
+    // Validate financial field upper bounds
+    const taxRateValidation = validateTaxRate(data.tax_rate ?? 19.0);
+    if (!taxRateValidation.valid) {
+      return { success: false, message: `Steuersatz: ${taxRateValidation.message}` };
+    }
+
+    for (const item of data.items || []) {
+      const qty = Number(item.quantity) || 1;
+      const unitPrice = Number(item.unit_price_cents) || 0;
+
+      const qtyValidation = validateQuantity(qty);
+      if (!qtyValidation.valid) {
+        return { success: false, message: `Menge: ${qtyValidation.message}` };
+      }
+
+      const priceValidation = validateAmountCents(unitPrice);
+      if (!priceValidation.valid) {
+        return { success: false, message: `Einzelpreis: ${priceValidation.message}` };
+      }
+
+      // Check line item total
+      const lineTotal = Math.round(qty * unitPrice);
+      const lineTotalValidation = validateAmountCents(lineTotal);
+      if (!lineTotalValidation.valid) {
+        return { success: false, message: `Positionssumme überschreitet Maximum.` };
+      }
+
+      if (lineTotal > MAX_AMOUNT_CENTS) {
+        return { success: false, message: `Positionssumme überschreitet Maximum von ${(MAX_AMOUNT_CENTS / 100).toFixed(2)} €.` };
+      }
+    }
+
     // Generate invoice number
     let invoiceNumber = 'R/00001';
 
@@ -534,7 +567,26 @@ export async function addInvoiceItem(
     const taxRate = item.tax_rate || invoice?.tax_rate || 19.0;
     const qty = Number(item.quantity) || 1;
     const unitPrice = Number(item.unit_price_cents) || 0;
+
+    // Validate financial field bounds
+    const qtyValidation = validateQuantity(qty);
+    if (!qtyValidation.valid) {
+      return { success: false, message: `Menge: ${qtyValidation.message}` };
+    }
+    const priceValidation = validateAmountCents(unitPrice);
+    if (!priceValidation.valid) {
+      return { success: false, message: `Einzelpreis: ${priceValidation.message}` };
+    }
+    const taxRateValidation = validateTaxRate(taxRate);
+    if (!taxRateValidation.valid) {
+      return { success: false, message: `MwSt-Satz: ${taxRateValidation.message}` };
+    }
+
     const netAmount = Math.round(qty * unitPrice);
+    const netAmountValidation = validateAmountCents(netAmount);
+    if (!netAmountValidation.valid) {
+      return { success: false, message: `Positionssumme überschreitet Maximum.` };
+    }
     const taxAmount = Math.round(netAmount * (taxRate / 100));
 
     const { data: newItem, error } = await supabase
@@ -579,10 +631,29 @@ export async function updateInvoiceItem(
 
     if (!existingItem) throw new Error('Item not found');
 
-    const taxRate = updates.tax_rate || (existingItem as any).invoices?.tax_rate || 19.0;
+    const taxRate = updates.tax_rate !== undefined ? Number(updates.tax_rate) : (existingItem as any).invoices?.tax_rate || 19.0;
     const qty = updates.quantity !== undefined ? Number(updates.quantity) : existingItem.quantity;
     const unitPrice = updates.unit_price_cents !== undefined ? Number(updates.unit_price_cents) : existingItem.unit_price_cents;
+
+    // Validate financial field bounds
+    const qtyValidation = validateQuantity(qty);
+    if (!qtyValidation.valid) {
+      return { success: false, message: `Menge: ${qtyValidation.message}` };
+    }
+    const priceValidation = validateAmountCents(unitPrice);
+    if (!priceValidation.valid) {
+      return { success: false, message: `Einzelpreis: ${priceValidation.message}` };
+    }
+    const taxRateValidation = validateTaxRate(taxRate);
+    if (!taxRateValidation.valid) {
+      return { success: false, message: `MwSt-Satz: ${taxRateValidation.message}` };
+    }
+
     const netAmount = Math.round(qty * unitPrice);
+    const netAmountValidation = validateAmountCents(netAmount);
+    if (!netAmountValidation.valid) {
+      return { success: false, message: `Positionssumme überschreitet Maximum.` };
+    }
     const taxAmount = Math.round(netAmount * (taxRate / 100));
 
     const { data: updatedItem, error } = await supabase
