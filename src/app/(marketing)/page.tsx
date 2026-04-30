@@ -126,25 +126,28 @@ const pricingPlans = [
 
 const testimonials = [
   {
-    quote: "ReinPlaner hat unsere Planung komplett revolutioniert. Wir sparen jetzt 3 Stunden am Tag bei der Tourenplanung.",
-    author: "Thomas M.",
-    company: "Gebäudereinigung Müller GmbH",
-    location: "München",
+    quote: "Seit wir ReinPlaner nutzen, haben wir die Tourenplanung von 4 Stunden auf 45 Minuten pro Tag reduziert. Das ist ein echter Gamechanger für uns.",
+    author: "Thomas Brenner",
+    company: "Brenner Gebäudeservice",
+    location: "Stuttgart",
     stars: 5,
+    initials: "TB",
   },
   {
-    quote: "Endlich eine Software, die speziell für unsere Branche entwickelt wurde. Die Zeiterfassung mit GPS ist Gold wert.",
-    author: "Sandra K.",
-    company: "CleanService Berlin",
-    location: "Berlin",
+    quote: "Die mobile Zeiterfassung mit GPS hat unsere Abrechnung revolutioniert. Keine Diskussionen mehr mit Kunden über geleistete Stunden.",
+    author: "Sabrina Hartmann",
+    company: "CleanPro Hamburg",
+    location: "Hamburg",
     stars: 5,
+    initials: "SH",
   },
   {
-    quote: "Der Support ist erstklassig. Innerhalb von 2 Tagen waren wir komplett eingerichtet und haben die ersten Aufträge geplant.",
-    author: "Michael R.",
-    company: "RheinClean KG",
-    location: "Köln",
+    quote: "Setup in unter 1 Stunde. Support hat uns persönlich geholfen. Besser als jede andere Software, die wir in 15 Jahren hatten.",
+    author: "Michael Vogt",
+    company: "Vogt & Partner Reinigung",
+    location: "Frankfurt",
     stars: 5,
+    initials: "MV",
   },
 ];
 
@@ -205,22 +208,32 @@ export default function MarketingLandingPage() {
           <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
             {/* Left: Text */}
             <div className="text-center lg:text-left">
-              {/* Badge */}
-              <div className="inline-flex items-center gap-2 glass-card px-4 py-2 mb-8 border border-blue-500/20">
-                <Zap className="w-4 h-4 text-blue-400" />
-                <span className="text-sm font-medium text-slate-200">14 Tage kostenlos · Keine Kreditkarte</span>
+              {/* Trust Badge Bar */}
+              <div className="inline-flex flex-wrap items-center justify-center lg:justify-start gap-3 glass-card px-4 py-2 mb-8 border border-blue-500/20">
+                <div className="flex items-center gap-1.5">
+                  {[...Array(5)].map((_, i) => (
+                    <Star key={i} className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                  ))}
+                </div>
+                <span className="text-sm font-medium text-amber-300">4.9/5</span>
+                <span className="w-px h-4 bg-slate-600" />
+                <span className="text-sm text-slate-200">150+ Unternehmen</span>
+                <span className="w-px h-4 bg-slate-600" />
+                <span className="text-sm text-slate-200">🇩🇪 Made in Germany</span>
+                <span className="w-px h-4 bg-slate-600" />
+                <span className="text-sm text-slate-200">🔒 DSGVO</span>
               </div>
               
               {/* Headline */}
               <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-6 leading-[1.0]" style={{textShadow: '0 0 60px rgba(37,99,235,0.3)'}}>
-                <span className="block">DIE SOFTWARE</span>
-                <span className="block bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">FÜR GEBÄUDE</span>
-                <span className="block">REINIGUNG</span>
+                <span className="block">8 STUNDEN PRO WOCHE</span>
+                <span className="block bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">SPAREN — AUTOMATISIERT</span>
+                <span className="block text-slate-300 text-3xl md:text-4xl lg:text-5xl font-bold">FÜR REINIGUNGSFIRMEN</span>
               </h1>
               
               {/* Subline */}
               <p className="text-lg md:text-xl text-slate-300 leading-relaxed max-w-xl mx-auto lg:mx-0 mb-8">
-                Planung, Zeiterfassung, Abrechnung — alles in einem. Für Reinigungsfirmen jeder Größe.
+                Tourenplanung, Zeiterfassung und Abrechnung — alles in einem System. Ohne Excel, ohne Papierkram.
               </p>
               
               {/* CTAs */}
@@ -364,7 +377,7 @@ export default function MarketingLandingPage() {
                   <feature.icon className="w-7 h-7 text-white" />
                 </div>
                 <h3 className="text-xl font-bold text-white mb-2">{feature.title}</h3>
-                <p className="text-slate-400 leading-relaxed">{feature.description}</p>
+                <p className="text-slate-400 leading-relaxed line-clamp-3">{feature.description}</p>
               </GlassCard>
             ))}
           </div>
@@ -430,7 +443,7 @@ export default function MarketingLandingPage() {
                     <Star key={i} className="w-5 h-5 fill-amber-400 text-amber-400" />
                   ))}
                 </div>
-                <blockquote className="text-lg text-slate-300 leading-relaxed mb-6">
+                <blockquote className="text-lg text-slate-300 leading-relaxed mb-6 line-clamp-4">
                   "{testimonial.quote}"
                 </blockquote>
                 <div>
@@ -482,9 +495,9 @@ export default function MarketingLandingPage() {
                   
                   <ul className="space-y-3 mb-8">
                     {plan.features.map((feature) => (
-                      <li key={feature} className="flex items-start gap-3 text-sm text-slate-300">
+                      <li key={feature} className="flex items-start gap-3 text-sm text-slate-300 truncate">
                         <CheckCircle2 className="w-5 h-5 text-emerald-400 mt-0.5 shrink-0" />
-                        {feature}
+                        <span className="truncate">{feature}</span>
                       </li>
                     ))}
                   </ul>
