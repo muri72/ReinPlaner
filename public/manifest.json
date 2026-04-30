@@ -1,6 +1,6 @@
 {
   "name": "ReinPlaner Management",
-  "short_name": "ReinPlan",
+  "short_name": "ReinPlaner",
   "description": "Management-Plattform für Reinigungsunternehmen",
   "start_url": "/",
   "display": "standalone",
@@ -8,5 +8,12 @@
   "theme_color": "#3B82F6",
   "orientation": "portrait-primary",
   "scope": "/",
-  "lang": "de"
+  "lang": "de",
+  "icons": [
+    {
+      "src": "/reinplaner-logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
 }

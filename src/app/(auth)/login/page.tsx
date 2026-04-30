@@ -117,10 +117,10 @@ export default function LoginPage() {
               <div className="absolute inset-0 bg-blue-500/30 blur-3xl rounded-full" />
               <div className="relative">
                 <Image
-                  src="/logo.png"
+                  src="/reinplaner-logo.png"
                   alt="ReinPlaner Management Logo"
-                  width={320}
-                  height={320}
+                  width={280}
+                  height={280}
                   className="drop-shadow-2xl"
                   priority
                 />
@@ -131,10 +131,10 @@ export default function LoginPage() {
           {/* Brand Text */}
           <div className="text-center">
             <h1 className="text-4xl font-bold mb-3 tracking-tight text-white">
-              ReinPlaner
+              ARIS
             </h1>
             <p className="text-blue-300/80 text-lg mb-8">
-              Software für Gebäudereinigung
+              Glas- und Gebäudereinigung
             </p>
 
             {/* Value props with icons */}
@@ -167,7 +167,7 @@ export default function LoginPage() {
             <div className="relative inline-block">
               <div className="absolute inset-0 bg-blue-500/20 blur-xl rounded-full" />
               <Image
-                src="/logo.png"
+                src="/reinplaner-logo.png"
                 alt="ReinPlaner Management Logo"
                 width={120}
                 height={120}
