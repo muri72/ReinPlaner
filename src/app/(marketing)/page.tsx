@@ -177,6 +177,14 @@ const faqs = [
     answer: "Ja, alle Ihre Daten können Sie jederzeit als CSV oder Excel exportieren. Zusätzlich bieten wir einen direkten DATEV-Export für Ihre Buchhaltung.",
   },
   {
+    question: "Was passiert, wenn ich nicht zufrieden bin?",
+    answer: "Sie können jederzeit zum Monatsende kündigen — ohne lange Vertragslaufzeiten. Zusätzlich bieten wir eine Geld-zurück-Garantie für die ersten 30 Tage.",
+  },
+  {
+    question: "Gibt es Unterstützung beim Start?",
+    answer: "Ja! Unser persönlicher Support hilft Ihnen direkt beim Setup. Professional- und Enterprise-Kunden erhalten Priority-Support mit garantierter Antwortzeit unter 4 Stunden.",
+  },
+  {
     question: "Wie sicher sind meine Daten?",
     answer: "Alle Daten werden in Deutschland auf Servern gehostet, die der DSGVO entsprechen. Wir nutzen moderne TLS-Verschlüsselung und regelmäßige Backups.",
   },
@@ -384,6 +392,27 @@ export default function MarketingLandingPage() {
         </div>
       </section>
 
+      {/* ====== FEATURES CTA ====== */}
+      <section className="py-16 md:py-20 relative">
+        <div className="absolute inset-0 bg-gradient-to-b from-[#0A0E1A] to-[#0F1524]" />
+        <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <div className="glass-card p-8 md:p-12 glow-blue">
+            <h2 className="text-2xl md:text-3xl font-bold text-white mb-4">
+              Bereit, 8 Stunden pro Woche zu sparen?
+            </h2>
+            <p className="text-slate-400 mb-8 max-w-xl mx-auto">
+              In unter 5 Minuten eingerichtet. Keine Kreditkarte. Keine Installation.
+            </p>
+            <Button asChild size="lg" className="h-12 px-8 text-base font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-[0_0_30px_rgba(37,99,235,0.4)]">
+              <Link href="/register">
+                Jetzt 14 Tage kostenlos testen
+                <ArrowRight className="w-5 h-5 ml-2" />
+              </Link>
+            </Button>
+          </div>
+        </div>
+      </section>
+
       {/* ====== HOW IT WORKS ====== */}
       <section className="py-20 md:py-32 relative grain">
         <div className="absolute inset-0 bg-[#0A0E1A]" />
@@ -437,7 +466,11 @@ export default function MarketingLandingPage() {
 
           <div className="grid md:grid-cols-3 gap-6">
             {testimonials.map((testimonial, index) => (
-              <GlassCard key={index} padding="lg">
+              <GlassCard key={index} padding="lg" className="relative">
+                {/* Avatar */}
+                <div className="absolute -top-3 -right-3 w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-white font-bold text-sm shadow-lg">
+                  {testimonial.initials}
+                </div>
                 <div className="flex gap-1 mb-4">
                   {[...Array(testimonial.stars)].map((_, i) => (
                     <Star key={i} className="w-5 h-5 fill-amber-400 text-amber-400" />
@@ -580,6 +613,34 @@ export default function MarketingLandingPage() {
               ))}
             </Accordion>
           </GlassCard>
+        </div>
+      </section>
+
+      {/* ====== FAQ CTA ====== */}
+      <section className="py-16 md:py-20 relative">
+        <div className="absolute inset-0 bg-[#0F1524]" />
+        <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <div className="glass-card p-8 md:p-12">
+            <h2 className="text-2xl md:text-3xl font-bold text-white mb-4">
+              Noch Fragen? Wir helfen gern.
+            </h2>
+            <p className="text-slate-400 mb-8">
+              Unser Support-Team antwortet innerhalb von 4 Stunden — auch am Wochenende.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Button asChild size="lg" className="h-12 px-8 text-base font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-[0_0_30px_rgba(37,99,235,0.4)]">
+                <Link href="/register">
+                  Kostenlos starten
+                  <ArrowRight className="w-5 h-5 ml-2" />
+                </Link>
+              </Button>
+              <Button asChild variant="outline" size="lg" className="h-12 px-8 text-base font-medium border-slate-600 text-slate-200 hover:bg-white/5 rounded-xl">
+                <Link href="/pricing">
+                  Alle Preise ansehen
+                </Link>
+              </Button>
+            </div>
+          </div>
         </div>
       </section>
 

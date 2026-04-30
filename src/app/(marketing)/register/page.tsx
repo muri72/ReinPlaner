@@ -24,6 +24,7 @@ import {
   Zap,
   Shield,
   Globe,
+  Headphones,
 } from "lucide-react";
 
 const plans = [
@@ -320,6 +321,31 @@ function RegisterForm() {
               <div className="text-center mb-8">
                 <h1 className="text-h2 text-white mb-2">KONTO ERSTELLEN</h1>
                 <p className="text-slate-200">Geben Sie Ihre Firmen- und Kontodaten ein</p>
+              </div>
+
+              {/* Why ReinPlaner Benefits */}
+              <div className="grid grid-cols-3 gap-4 mb-8 p-4 glass-card rounded-xl border border-white/5">
+                <div className="text-center">
+                  <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center mx-auto mb-2">
+                    <Zap className="w-5 h-5 text-blue-400" />
+                  </div>
+                  <p className="text-xs font-medium text-white">5 Min. Setup</p>
+                  <p className="text-xs text-slate-500 mt-0.5">Sofort einsatzbereit</p>
+                </div>
+                <div className="text-center border-x border-white/5">
+                  <div className="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center mx-auto mb-2">
+                    <Shield className="w-5 h-5 text-emerald-400" />
+                  </div>
+                  <p className="text-xs font-medium text-white">DSGVO-konform</p>
+                  <p className="text-xs text-slate-500 mt-0.5">Daten in Deutschland</p>
+                </div>
+                <div className="text-center">
+                  <div className="w-10 h-10 rounded-lg bg-violet-500/20 flex items-center justify-center mx-auto mb-2">
+                    <Headphones className="w-5 h-5 text-violet-400" />
+                  </div>
+                  <p className="text-xs font-medium text-white">Persönlicher Support</p>
+                  <p className="text-xs text-slate-500 mt-0.5">Antwort in &lt;4 Std.</p>
+                </div>
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-6">
