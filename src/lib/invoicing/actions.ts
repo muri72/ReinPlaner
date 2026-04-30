@@ -12,7 +12,8 @@ import { addDays, format } from 'date-fns';
 import { generateInvoicePDF } from './pdf-generator';
 import { exportDATEV } from './datev-export';
 import { exportZUGFeRD } from './zugferd-export';
-import { sendInvoiceEmail } from './email-service';
+import { exportXRechnung } from './xrechnung-export';
+import { sendInvoiceEmail, sendReminderEmail } from './email-service';
 import { validateAmountCents, validateQuantity, validateTaxRate, MAX_AMOUNT_CENTS } from '@/lib/security';
 
 // ============================================
@@ -1100,6 +1101,17 @@ export async function exportZUGFeRDAction(invoiceId: string) {
   return exportZUGFeRD(invoiceId);
 }
 
+export async function exportXRechnungAction(invoiceId: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { success: false, message: 'Nicht authentifiziert.' };
+  }
+
+  return exportXRechnung(invoiceId);
+}
+
 // ============================================
 // Email Actions
 // ============================================
@@ -1142,6 +1154,50 @@ export async function sendInvoiceEmailAction(invoiceId: string, recipientEmail?:
   }
 
   return emailResult;
+}
+
+// ============================================
+// Reminder Action
+// ============================================
+
+export async function sendInvoiceReminderAction(invoiceId: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { success: false, message: 'Nicht authentifiziert.' };
+  }
+
+  const invoiceResult = await getInvoiceByIdAction(invoiceId);
+  if (!invoiceResult.success || !invoiceResult.data) {
+    return { success: false, message: 'Rechnung nicht gefunden.' };
+  }
+
+  const invoice = invoiceResult.data;
+  const email = invoice.debtor?.invoice_email;
+
+  if (!email) {
+    return { success: false, message: 'Keine Empfänger-E-Mail gefunden.' };
+  }
+
+  const result = await sendReminderEmail(invoice, email);
+
+  if (result.success) {
+    // Increment reminder count
+    const supabaseAdmin = createAdminClient();
+    await supabaseAdmin
+      .from('invoices')
+      .update({
+        reminder_count: (invoice.reminder_count || 0) + 1,
+        last_reminder_at: new Date().toISOString(),
+      })
+      .eq('id', invoiceId);
+
+    revalidatePath('/dashboard/invoices');
+    revalidatePath(`/dashboard/invoices/${invoiceId}`);
+  }
+
+  return result;
 }
 
 // ============================================

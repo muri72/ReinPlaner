@@ -24,6 +24,21 @@ export interface TenantSettings {
     max_orders_per_month?: number;
     storage_mb?: number;
   };
+  // Invoicing / Company details
+  address?: {
+    street?: string;
+    postal_code?: string;
+    city?: string;
+    country?: string;
+  };
+  vat_id?: string;
+  bank?: {
+    name?: string;
+    iban?: string;
+    bic?: string;
+  };
+  email?: string;
+  legal_representative?: string;
 }
 
 export interface Tenant {

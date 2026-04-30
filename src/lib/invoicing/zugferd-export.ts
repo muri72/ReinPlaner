@@ -5,7 +5,7 @@
 
 import { createAdminClient } from '@/lib/supabase/server';
 import { Invoice } from './types';
-import { formatCurrency } from './invoice-service';
+import { getTenantById } from '@/lib/tenant/registry';
 
 interface ZUGFeRDResult {
   success: boolean;
@@ -29,11 +29,62 @@ function formatDateYYYYMMDD(dateStr: string | null | undefined): string {
   return dateStr.replace(/-/g, '');
 }
 
-function formatDateCCYYMMDD(dateStr: string | null | undefined): string {
-  if (!dateStr) {
-    return new Date().toISOString().split('T')[0];
+interface SellerParty {
+  name: string;
+  street: string;
+  postalCode: string;
+  city: string;
+  country: string;
+  vatId: string;
+  bankIban?: string;
+  bankBic?: string;
+  bankName?: string;
+  email?: string;
+}
+
+async function getSellerParty(invoice: Invoice): Promise<SellerParty> {
+  // Try to get tenant data
+  const tenantId = invoice.tenant_id;
+  let tenantName = 'Ihr Unternehmen';
+  let tenantStreet = '';
+  let tenantPostalCode = '';
+  let tenantCity = '';
+  let tenantCountry = 'DE';
+  let tenantVatId = '';
+  let tenantBankIban: string | undefined;
+  let tenantBankBic: string | undefined;
+  let tenantBankName: string | undefined;
+  let tenantEmail: string | undefined;
+
+  if (tenantId) {
+    const tenant = await getTenantById(tenantId);
+    if (tenant) {
+      tenantName = tenant.settings?.branding?.company_name || tenant.name || 'Ihr Unternehmen';
+      tenantStreet = tenant.settings?.address?.street || '';
+      tenantPostalCode = tenant.settings?.address?.postal_code || '';
+      tenantCity = tenant.settings?.address?.city || '';
+      tenantCountry = tenant.settings?.address?.country || 'DE';
+      tenantVatId = tenant.settings?.vat_id || '';
+      tenantBankIban = tenant.settings?.bank?.iban;
+      tenantBankBic = tenant.settings?.bank?.bic;
+      tenantBankName = tenant.settings?.bank?.name;
+      tenantEmail = tenant.settings?.email;
+    }
   }
-  return dateStr;
+
+  // Fallback to hardcoded defaults only when no tenant data available
+  return {
+    name: tenantName || 'Ihr Unternehmen',
+    street: tenantStreet || '',
+    postalCode: tenantPostalCode || '',
+    city: tenantCity || '',
+    country: tenantCountry || 'DE',
+    vatId: tenantVatId || '',
+    bankIban: tenantBankIban,
+    bankBic: tenantBankBic,
+    bankName: tenantBankName,
+    email: tenantEmail,
+  };
 }
 
 export async function exportZUGFeRD(invoiceId: string): Promise<ZUGFeRDResult> {
@@ -54,7 +105,7 @@ export async function exportZUGFeRD(invoiceId: string): Promise<ZUGFeRDResult> {
       return { success: false, message: 'Rechnung nicht gefunden.' };
     }
 
-    const xml = generateZUGFeRD21XML(invoice);
+    const xml = await generateZUGFeRD21XML(invoice);
 
     return {
       success: true,
@@ -67,14 +118,16 @@ export async function exportZUGFeRD(invoiceId: string): Promise<ZUGFeRDResult> {
   }
 }
 
-export function generateZUGFeRD21XML(invoice: Invoice): string {
+export async function generateZUGFeRD21XML(invoice: Invoice): Promise<string> {
   const debtor = invoice.debtor;
   const items = invoice.items || [];
 
   const issueDate = invoice.issue_date || new Date().toISOString().split('T')[0];
   const dueDate = invoice.due_date || issueDate;
   const deliveryStart = invoice.delivery_date_start || issueDate;
-  const deliveryEnd = invoice.delivery_date_end || deliveryStart;
+
+  // Get seller party from tenant
+  const seller = await getSellerParty(invoice);
 
   // Build line items
   const lineItems = items.map((item, idx) => {
@@ -117,14 +170,20 @@ export function generateZUGFeRD21XML(invoice: Invoice): string {
   const paidAmount = (invoice.paid_amount_cents / 100).toFixed(2);
   const taxRate = (invoice.tax_rate || 19).toFixed(2);
 
-  // Seller address
-  const sellerAddress = `
+  // Seller address — only include if we have real data
+  const sellerAddressXML = seller.street && seller.postalCode && seller.city ? `
         <ram:PostalTradeAddress>
-          <ram:StreetName>Musterstraße 1</ram:StreetName>
-          <ram:PostcodeCode>20095</ram:PostcodeCode>
-          <ram:CityName>Hamburg</ram:CityName>
-          <ram:CountryID>DE</ram:CountryID>
-        </ram:PostalTradeAddress>`;
+          <ram:StreetName>${escapeXML(seller.street)}</ram:StreetName>
+          <ram:PostcodeCode>${escapeXML(seller.postalCode)}</ram:PostcodeCode>
+          <ram:CityName>${escapeXML(seller.city)}</ram:CityName>
+          <ram:CountryID>${escapeXML(seller.country)}</ram:CountryID>
+        </ram:PostalTradeAddress>` : '';
+
+  // VAT ID only if available
+  const sellerVatXML = seller.vatId ? `
+        <ram:TaxRegistration>
+          <ram:ID schemeID="VA">${escapeXML(seller.vatId)}</ram:ID>
+        </ram:TaxRegistration>` : '';
 
   // Buyer address
   const buyerAddress = debtor ? `
@@ -137,6 +196,27 @@ export function generateZUGFeRD21XML(invoice: Invoice): string {
 
   // Payment terms
   const paymentDueDays = debtor?.payment_terms_days || 30;
+
+  // SEPA Payment Means — only if IBAN available
+  const sepaPaymentMeansXML = seller.bankIban ? `
+      <!-- SEPA Payment Means -->
+      <ram:SpecifiedTradePaymentTerms>
+        <ram:DueDateDateTime>
+          <udt:DateTimeString format="102">${formatDateYYYYMMDD(dueDate)}</udt:DateTimeString>
+        </ram:DueDateDateTime>
+        <ram:Description>Zahlbar innerhalb von ${paymentDueDays} Tagen nach Rechnungsdatum</ram:Description>
+      </ram:SpecifiedTradePaymentTerms>
+      <ram:CreditorFinancialAccount>
+        <ram:IBANID>${escapeXML(seller.bankIban)}</ram:IBANID>
+        ${seller.bankName ? `<ram:BankName>${escapeXML(seller.bankName)}</ram:BankName>` : ''}
+      </ram:CreditorFinancialAccount>
+      ${seller.bankBic ? `<ram:CreditorFinancialInstitution><ram:BICID>${escapeXML(seller.bankBic)}</ram:BICID></ram:CreditorFinancialInstitution>` : ''}` : `
+      <ram:SpecifiedTradePaymentTerms>
+        <ram:DueDateDateTime>
+          <udt:DateTimeString format="102">${formatDateYYYYMMDD(dueDate)}</udt:DateTimeString>
+        </ram:DueDateDateTime>
+        <ram:Description>Zahlbar innerhalb von ${paymentDueDays} Tagen nach Rechnungsdatum</ram:Description>
+      </ram:SpecifiedTradePaymentTerms>`;
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <rsm:CrossIndustryInvoice xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -170,11 +250,9 @@ export function generateZUGFeRD21XML(invoice: Invoice): string {
     <!-- HEADER AGREEMENT -->
     <ram:ApplicableHeaderTradeAgreement>
       <ram:SellerTradeParty>
-        <ram:Name>ReinPlaner GmbH</ram:Name>
-        ${sellerAddress}
-        <ram:TaxRegistration>
-          <ram:ID schemeID="VA">DE123456789</ram:ID>
-        </ram:TaxRegistration>
+        <ram:Name>${escapeXML(seller.name)}</ram:Name>
+        ${sellerAddressXML}
+        ${sellerVatXML}
       </ram:SellerTradeParty>
 
       ${debtor ? `
@@ -221,22 +299,7 @@ export function generateZUGFeRD21XML(invoice: Invoice): string {
         <ram:TaxAmount>${taxAmount}</ram:TaxAmount>
       </ram:ApplicableTradeTax>
 
-      <!-- Payment terms -->
-      <ram:SpecifiedTradePaymentTerms>
-        <ram:DueDateDateTime>
-          <udt:DateTimeString format="102">${formatDateYYYYMMDD(dueDate)}</udt:DateTimeString>
-        </ram:DueDateDateTime>
-        <ram:Description>Zahlbar innerhalb von ${paymentDueDays} Tagen</ram:Description>
-      </ram:SpecifiedTradePaymentTerms>
-
-      ${(debtor?.bank_iban) ? `
-      <!-- Bank info -->
-      <ram:CreditorFinancialAccount>
-        <ram:IBANID>${escapeXML(debtor.bank_iban)}</ram:IBANID>
-        <ram:BankName>${escapeXML(debtor.bank_name)}</ram:BankName>
-      </ram:CreditorFinancialAccount>
-      ${debtor?.bank_bic ? `<ram:CreditorFinancialInstitution><ram:BICID>${escapeXML(debtor.bank_bic)}</ram:BICID></ram:CreditorFinancialInstitution>` : ''}
-      ` : ''}
+      ${sepaPaymentMeansXML}
 
     </ram:ApplicableHeaderTradeSettlement>
 
