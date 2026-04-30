@@ -2,8 +2,6 @@
 // Security Utilities - Input Sanitization & Validation
 // ============================================
 
-import DOMPurify from 'dompurify';
-
 // ============================================
 // HTML Escaping (XSS Prevention)
 // ============================================
@@ -21,18 +19,6 @@ export function escapeHtml(text: string | null | undefined): string {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
-}
-
-/**
- * Sanitize HTML content using DOMPurify.
- * Use this for rich text fields where some HTML is allowed.
- */
-export function sanitizeHtml(dirty: string | null | undefined): string {
-  if (dirty == null) return '';
-  return DOMPurify.sanitize(dirty, {
-    ALLOWED_TAGS: ['b', 'i', 'u', 'em', 'strong', 'br', 'p'],
-    ALLOWED_ATTR: [],
-  });
 }
 
 // ============================================
