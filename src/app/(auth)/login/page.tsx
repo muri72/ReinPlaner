@@ -117,8 +117,8 @@ export default function LoginPage() {
               <div className="absolute inset-0 bg-blue-500/30 blur-3xl rounded-full" />
               <div className="relative">
                 <Image
-                  src="/reinplaner-logo.png"
-                  alt="ReinPlaner Management Logo"
+                  src="/tenant-logos/aris.png"
+                  alt="ARIS Logo"
                   width={280}
                   height={280}
                   className="drop-shadow-2xl"
