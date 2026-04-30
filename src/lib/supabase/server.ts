@@ -5,9 +5,28 @@ import { cookies } from 'next/headers'
 export async function createClient() {
   const cookieStore = await cookies()
 
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    // Return a mock server client for preview deployments without env vars
+    console.warn('Supabase env vars not set — using mock client');
+    return createServerClient(
+      'https://placeholder.supabase.co',
+      'placeholder_anon_key',
+      {
+        cookies: {
+          get: () => undefined,
+          set: () => {},
+          remove: () => {},
+        },
+      }
+    );
+  }
+
   return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    supabaseUrl,
+    supabaseAnonKey,
     {
       cookies: {
         get(name: string) {
@@ -18,8 +37,6 @@ export async function createClient() {
             cookieStore.set({ name, value, ...options })
           } catch (error) {
             // The `set` method was called from a Server Component.
-            // This can be ignored if you have middleware refreshing
-            // user sessions.
           }
         },
         remove(name: string, options: CookieOptions) {
@@ -27,8 +44,6 @@ export async function createClient() {
             cookieStore.set({ name, value: '', ...options })
           } catch (error) {
             // The `delete` method was called from a Server Component.
-            // This can be ignored if you have middleware refreshing
-            // user sessions.
           }
         },
       },
@@ -36,30 +51,20 @@ export async function createClient() {
   )
 }
 
-// Neue Funktion für den Supabase Admin Client
 export function createAdminClient() {
-  // Dieser Client ist für serverseitige Operationen und verwendet den Service Role Key.
-  // Er benötigt kein Cookie-Management, da er RLS umgeht.
-  // Wir verwenden hier den Standard-Client von @supabase/supabase-js.
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-  if (!supabaseUrl) {
-    throw new Error('Environment variable NEXT_PUBLIC_SUPABASE_URL is not set.');
-  }
-  if (!serviceRoleKey) {
-    throw new Error('Environment variable SUPABASE_SERVICE_ROLE_KEY is not set.');
+  if (!supabaseUrl || !serviceRoleKey) {
+    console.warn('Supabase admin env vars not set — using fallback');
+    return createStandardClient(
+      'https://placeholder.supabase.co',
+      'placeholder_service_role_key',
+      { auth: { persistSession: false, autoRefreshToken: false } }
+    );
   }
 
-  return createStandardClient(
-    supabaseUrl,
-    serviceRoleKey,
-    {
-      auth: {
-        // Es ist wichtig, die Sitzungspersistenz auf dem Server zu deaktivieren.
-        persistSession: false,
-        autoRefreshToken: false,
-      },
-    }
-  )
+  return createStandardClient(supabaseUrl, serviceRoleKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
 }
