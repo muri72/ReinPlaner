@@ -62,8 +62,9 @@ export const test = base.extend<AuthenticatedPage>({
     testObjectId = obj?.id || '';
     
     // Create test user auth and login
-    const testEmail = `e2e-test-${Date.now()}@test.reinplaner.de`;
-    const testPassword = 'TestPassword123!';
+    // Test Credentials
+const TEST_EMAIL = process.env.E2E_TEST_EMAIL || 'aris@reinplaner.de';
+const TEST_PASSWORD = process.env.E2E_TEST_PASSWORD || 'ARIS2026Secure!';
     
     // Try to sign up or get existing user
     let { data: authUser } = await supabase.auth.admin.listUsers();

@@ -70,9 +70,10 @@ test.describe('📊 Dashboard', () => {
     const passwordInput = page.getByLabel(/passwort|password/i);
     
     if (await emailInput.isVisible()) {
-      // Use test credentials from env or seed data
-      const testEmail = process.env.E2E_TEST_EMAIL || 'admin@reinplaner.de';
-      const testPassword = process.env.E2E_TEST_PASSWORD || 'TestPassword123!';
+      // Test Credentials
+// Admin: aris@reinplaner.de / ARIS2026Secure!
+const TEST_EMAIL = process.env.E2E_TEST_EMAIL || 'aris@reinplaner.de';
+const TEST_PASSWORD = process.env.E2E_TEST_PASSWORD || 'ARIS2026Secure!';
       
       await emailInput.fill(testEmail);
       await passwordInput.fill(testPassword);

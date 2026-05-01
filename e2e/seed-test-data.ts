@@ -371,9 +371,7 @@ async function seedTestData() {
 
   console.log('\n✅ Test data seeding complete!');
   console.log('\n📝 Test credentials:');
-  console.log('   Admin: admin@reinplaner.de / TestPassword123!');
-  console.log('   Manager: manager@reinplaner.de / TestPassword123!');
-  console.log('   Employee: employee@reinplaner.de / TestPassword123!');
+  console.log('   admin: aris@reinplaner.de / ARIS2026Secure!');
   console.log('\n🔗 Run E2E tests with: npx playwright test');
 }
 
