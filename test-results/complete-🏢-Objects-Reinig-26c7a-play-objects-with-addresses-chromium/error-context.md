@@ -1,0 +1,223 @@
+# Instructions
+
+- Following Playwright test failed.
+- Explain why, be concise, respect Playwright best practices.
+- Provide a snippet of code with the fix, if possible.
+
+# Test info
+
+- Name: complete.spec.ts >> 🏢 Objects (Reinigungsobjekte) >> should display objects with addresses
+- Location: e2e/complete.spec.ts:506:7
+
+# Error details
+
+```
+Error: write EPIPE
+```
+
+# Test source
+
+```ts
+  414 |     
+  415 |     // Customer selector
+  416 |     await expect(page.getByLabel(/kunde|customer|debitor/i).first()).toBeAttached();
+  417 |   });
+  418 | 
+  419 |   test('should view invoice details', async ({ page }) => {
+  420 |     await page.goto('/dashboard/invoices');
+  421 |     await page.waitForLoadState('networkidle');
+  422 |     await page.waitForTimeout(2000);
+  423 |     
+  424 |     // Click on first invoice if exists
+  425 |     const invoiceLink = page.locator('a[href*="/dashboard/invoices/"][href$!="/new"]').first();
+  426 |     
+  427 |     if (await invoiceLink.isVisible().catch(() => false)) {
+  428 |       await invoiceLink.click();
+  429 |       await page.waitForLoadState('networkidle');
+  430 |       
+  431 |       // Should show invoice details
+  432 |       const detailContent = page.locator('main, [role="main"]').first();
+  433 |       await expect(detailContent).toBeVisible();
+  434 |     }
+  435 |   });
+  436 | });
+  437 | 
+  438 | // ============================================
+  439 | // PLANNING
+  440 | // ============================================
+  441 | 
+  442 | test.describe('📅 Planning (Dienstplanung)', () => {
+  443 |   test('should load planning page', async ({ page }) => {
+  444 |     await page.goto('/dashboard/planning');
+  445 |     await page.waitForLoadState('networkidle');
+  446 |     await page.waitForTimeout(2000);
+  447 |     
+  448 |     const heading = page.getByRole('heading', { name: /planung|planning/i }).first();
+  449 |     await expect(heading).toBeVisible({ timeout: 10000 });
+  450 |   });
+  451 | 
+  452 |   test('should display calendar view', async ({ page }) => {
+  453 |     await page.goto('/dashboard/planning');
+  454 |     await page.waitForLoadState('networkidle');
+  455 |     await page.waitForTimeout(2000);
+  456 |     
+  457 |     // Calendar or week view
+  458 |     const calendar = page.locator('[class*="calendar"], [class*="plan"], table').first();
+  459 |     await expect(calendar).toBeVisible({ timeout: 5000 });
+  460 |   });
+  461 | 
+  462 |   test('should show week navigation', async ({ page }) => {
+  463 |     await page.goto('/dashboard/planning');
+  464 |     await page.waitForLoadState('networkidle');
+  465 |     
+  466 |     // Week indicator
+  467 |     const weekIndicator = page.getByText(/kw|kalenderwoche|woche/i).first();
+  468 |     await expect(weekIndicator).toBeVisible({ timeout: 5000 }).catch(() => {});
+  469 |     
+  470 |     // Navigation buttons
+  471 |     const prevBtn = page.getByLabel(/vorher|back|previous/i).first();
+  472 |     const nextBtn = page.getByLabel(/nächste|next|forward/i).first();
+  473 |     
+  474 |     // At least one should exist
+  475 |     const prevExists = await prevBtn.isVisible().catch(() => false);
+  476 |     const nextExists = await nextBtn.isVisible().catch(() => false);
+  477 |     
+  478 |     expect(prevExists || nextExists).toBeTruthy();
+  479 |   });
+  480 | 
+  481 |   test('should display employee shifts', async ({ page }) => {
+  482 |     await page.goto('/dashboard/planning');
+  483 |     await page.waitForLoadState('networkidle');
+  484 |     await page.waitForTimeout(3000);
+  485 |     
+  486 |     // Employee or shift content should exist
+  487 |     const shiftContent = page.locator('main, [role="main"]').first();
+  488 |     await expect(shiftContent).toBeVisible();
+  489 |   });
+  490 | });
+  491 | 
+  492 | // ============================================
+  493 | // OBJECTS (Cleaning Objects/Locations)
+  494 | // ============================================
+  495 | 
+  496 | test.describe('🏢 Objects (Reinigungsobjekte)', () => {
+  497 |   test('should load objects list', async ({ page }) => {
+  498 |     await page.goto('/dashboard/objects');
+  499 |     await page.waitForLoadState('networkidle');
+  500 |     await page.waitForTimeout(2000);
+  501 |     
+  502 |     // Page should load
+  503 |     expect(page.locator('main')).toBeVisible({ timeout: 10000 });
+  504 |   });
+  505 | 
+  506 |   test('should display objects with addresses', async ({ page }) => {
+  507 |     await page.goto('/dashboard/objects');
+  508 |     await page.waitForLoadState('networkidle');
+  509 |     await page.waitForTimeout(3000);
+  510 |     
+  511 |     // List of objects
+  512 |     const objectsList = page.locator('table, [class*="object"], [class*="standort"]').first();
+  513 |     await expect(objectsList).toBeVisible({ timeout: 5000 }).catch(() => {
+> 514 |       expect(page.locator('main')).toBeVisible();
+      |                                    ^ Error: write EPIPE
+  515 |     });
+  516 |   });
+  517 | 
+  518 |   test('should navigate to object details', async ({ page }) => {
+  519 |     await page.goto('/dashboard/objects');
+  520 |     await page.waitForLoadState('networkidle');
+  521 |     await page.waitForTimeout(2000);
+  522 |     
+  523 |     const objectLink = page.locator('a[href*="/objects/"]').first();
+  524 |     
+  525 |     if (await objectLink.isVisible().catch(() => false)) {
+  526 |       await objectLink.click();
+  527 |       await page.waitForLoadState('networkidle');
+  528 |       
+  529 |       expect(page.locator('main')).toBeVisible();
+  530 |     }
+  531 |   });
+  532 | });
+  533 | 
+  534 | // ============================================
+  535 | // TIME TRACKING
+  536 | // ============================================
+  537 | 
+  538 | test.describe('⏱️ Time Tracking', () => {
+  539 |   test('should load time tracking page', async ({ page }) => {
+  540 |     await page.goto('/dashboard/time-tracking');
+  541 |     await page.waitForLoadState('networkidle');
+  542 |     await page.waitForTimeout(2000);
+  543 |     
+  544 |     const heading = page.getByRole('heading', { name: /zeit|time/i }).first();
+  545 |     await expect(heading).toBeVisible({ timeout: 10000 });
+  546 |   });
+  547 | 
+  548 |   test('should display time entries', async ({ page }) => {
+  549 |     await page.goto('/dashboard/time-tracking');
+  550 |     await page.waitForLoadState('networkidle');
+  551 |     await page.waitForTimeout(3000);
+  552 |     
+  553 |     // Time entries list
+  554 |     const timeList = page.locator('table, [class*="time"], [class*="zeit"]').first();
+  555 |     await expect(timeList).toBeVisible({ timeout: 5000 }).catch(() => {
+  556 |       expect(page.locator('main')).toBeVisible();
+  557 |     });
+  558 |   });
+  559 | 
+  560 |   test('should have create time entry option', async ({ page }) => {
+  561 |     await page.goto('/dashboard/time-tracking');
+  562 |     await page.waitForLoadState('networkidle');
+  563 |     
+  564 |     const addButton = page.getByRole('link', { name: /neue.*zeit|eintrag.*hinzufügen/i })
+  565 |       .or(page.getByRole('button', { name: /\+.+/ }))
+  566 |       .first();
+  567 |     
+  568 |     await expect(addButton).toBeAttached();
+  569 |   });
+  570 | });
+  571 | 
+  572 | // ============================================
+  573 | // FINANCES
+  574 | // ============================================
+  575 | 
+  576 | test.describe('💵 Finances (Finanzen)', () => {
+  577 |   test('should load finances overview', async ({ page }) => {
+  578 |     await page.goto('/dashboard/finances');
+  579 |     await page.waitForLoadState('networkidle');
+  580 |     await page.waitForTimeout(2000);
+  581 |     
+  582 |     // Page should load
+  583 |     expect(page.locator('main')).toBeVisible({ timeout: 10000 });
+  584 |   });
+  585 | 
+  586 |   test('should display financial summary', async ({ page }) => {
+  587 |     await page.goto('/dashboard/finances');
+  588 |     await page.waitForLoadState('networkidle');
+  589 |     await page.waitForTimeout(3000);
+  590 |     
+  591 |     // Should show some financial data or charts
+  592 |     const financeContent = page.locator('main, [role="main"]').first();
+  593 |     await expect(financeContent).toBeVisible();
+  594 |   });
+  595 | });
+  596 | 
+  597 | // ============================================
+  598 | // ADMIN
+  599 | // ============================================
+  600 | 
+  601 | test.describe('⚙️ Admin', () => {
+  602 |   test('should load admin page', async ({ page }) => {
+  603 |     await page.goto('/dashboard/admin');
+  604 |     await page.waitForLoadState('networkidle');
+  605 |     await page.waitForTimeout(2000);
+  606 |     
+  607 |     // Page should load
+  608 |     expect(page.locator('main')).toBeVisible({ timeout: 10000 });
+  609 |   });
+  610 | 
+  611 |   test('should show tenant settings', async ({ page }) => {
+  612 |     await page.goto('/dashboard/admin');
+  613 |     await page.waitForLoadState('networkidle');
+  614 |     await page.waitForTimeout(2000);
+```

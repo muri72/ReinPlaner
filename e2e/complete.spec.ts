@@ -25,8 +25,8 @@ test.describe('🔐 Authentication', () => {
     await page.waitForLoadState('networkidle');
     
     // Check logo is visible
-    const logo = page.locator('img[alt*="ReinPlaner"], text=ReinPlaner').first();
-    await expect(logo).toBeVisible({ timeout: 5000 });
+    const logo = page.locator('img').filter({ has: page.locator('[alt*="ReinPlaner"], [alt*="ARIS"]') }).first();
+    await expect(page.locator('img[alt*="ReinPlaner"], img[alt*="ARIS"]').first()).toBeVisible({ timeout: 5000 });
     
     // Check form elements
     await expect(page.getByLabel(/email|e-mail/i)).toBeVisible();
@@ -75,8 +75,8 @@ test.describe('📊 Dashboard', () => {
 const TEST_EMAIL = process.env.E2E_TEST_EMAIL || 'aris@reinplaner.de';
 const TEST_PASSWORD = process.env.E2E_TEST_PASSWORD || 'ARIS2026Secure!';
       
-      await emailInput.fill(testEmail);
-      await passwordInput.fill(testPassword);
+      await emailInput.fill(TEST_EMAIL);
+      await passwordInput.fill(TEST_PASSWORD);
       await page.getByRole('button', { name: /anmelden|sign in/i }).click();
       
       // Wait for redirect
