@@ -167,7 +167,7 @@ export default function LoginPage() {
             <div className="relative inline-block">
               <div className="absolute inset-0 bg-blue-500/20 blur-xl rounded-full" />
               <Image
-                src="/reinplaner-logo.png"
+                src="/reinplaner-logo.svg"
                 alt="ReinPlaner Management Logo"
                 width={120}
                 height={120}

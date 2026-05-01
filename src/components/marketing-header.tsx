@@ -47,7 +47,7 @@ export function MarketingHeader() {
             {/* Logo */}
             <Link href="/" className="flex items-center gap-2 group">
               <Image
-                src="/reinplaner-logo.png"
+                src="/reinplaner-logo.svg"
                 alt="ReinPlaner"
                 width={36}
                 height={36}
