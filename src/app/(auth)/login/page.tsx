@@ -237,10 +237,10 @@ export default function LoginPage() {
                         onFocus={() => setFocusedField('reset-email')}
                         onBlur={() => setFocusedField(null)}
                         required
-                        className={`pl-12 h-12 bg-slate-50 border-slate-200 rounded-xl transition-all duration-300 placeholder:text-slate-800 ${
+                        className={`pl-12 h-12 bg-white border-slate-200 rounded-xl transition-all duration-300 text-slate-950 placeholder:text-slate-400 ${
                           focusedField === 'reset-email'
-                            ? 'border-blue-400 bg-white ring-4 ring-blue-500/10'
-                            : 'hover:bg-slate-100'
+                            ? 'border-blue-500 ring-4 ring-blue-500/20'
+                            : 'hover:bg-slate-50'
                         }`}
                       />
                     </div>
@@ -301,10 +301,10 @@ export default function LoginPage() {
                         onFocus={() => setFocusedField('email')}
                         onBlur={() => setFocusedField(null)}
                         required
-                        className={`pl-12 h-12 bg-slate-50 border-slate-200 rounded-xl transition-all duration-300 placeholder:text-slate-800 ${
+                        className={`pl-12 h-12 bg-white border-slate-200 rounded-xl transition-all duration-300 text-slate-950 placeholder:text-slate-400 ${
                           focusedField === 'email'
-                            ? 'border-blue-400 bg-white ring-4 ring-blue-500/10'
-                            : 'hover:bg-slate-100'
+                            ? 'border-blue-500 ring-4 ring-blue-500/20'
+                            : 'hover:bg-slate-50'
                         }`}
                       />
                     </div>
@@ -340,10 +340,10 @@ export default function LoginPage() {
                         onBlur={() => setFocusedField(null)}
                         required
                         autoComplete="current-password"
-                        className={`pl-12 h-12 bg-slate-50 border-slate-200 rounded-xl transition-all duration-300 [::-ms-reveal]:hidden [::-webkit-appearance:none] placeholder:text-slate-800 ${
+                        className={`pl-12 h-12 bg-white border-slate-200 rounded-xl transition-all duration-300 text-slate-950 placeholder:text-slate-400 [::-ms-reveal]:hidden [::-webkit-appearance:none] ${
                           focusedField === 'password'
-                            ? 'border-blue-400 bg-white ring-4 ring-blue-500/10'
-                            : 'hover:bg-slate-100'
+                            ? 'border-blue-500 ring-4 ring-blue-500/20'
+                            : 'hover:bg-slate-50'
                         }`}
                       />
                       <button
