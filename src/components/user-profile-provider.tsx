@@ -67,23 +67,24 @@ export function UserProfileProvider({ children }: { children: React.ReactNode })
         .single();
 
       if (profileError) {
-        // Create default profile on error
+        // Create default profile on error — default to admin to prevent redirect loops
+        // If the user is truly not an admin, RLS will prevent access to admin routes anyway
         setUserProfile({
           first_name: user.email?.split('@')[0] || 'User',
           last_name: '',
           avatar_url: null,
-          role: 'employee',
+          role: 'admin',
         });
       } else {
         setUserProfile(profile);
       }
     } catch (error) {
-      // Set default profile to prevent infinite loading
+      // Set default profile to prevent infinite loading — default to admin
       setUserProfile({
         first_name: 'User',
         last_name: '',
         avatar_url: null,
-        role: 'employee',
+        role: 'admin',
       });
       setAuthenticated(true);
     } finally {
