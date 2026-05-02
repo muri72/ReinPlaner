@@ -506,10 +506,39 @@ export async function createInvoiceFromOrderAction(
 }
 
 export async function updateInvoiceAction(invoiceId: string, data: UpdateInvoiceData) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { success: false, message: 'Nicht authentifiziert.' };
+  }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('tenant_id')
+    .eq('id', user.id)
+    .single();
+  const tenantId = profile?.tenant_id;
+  if (!tenantId) {
+    return { success: false, message: 'Tenant nicht gefunden.' };
+  }
+
   const supabaseAdmin = createAdminClient();
 
   try {
-    const { data: invoice, error } = await supabaseAdmin
+    // First verify this invoice belongs to the tenant
+    const { data: invoice } = await supabaseAdmin
+      .from('invoices')
+      .select('id')
+      .eq('id', invoiceId)
+      .eq('tenant_id', tenantId)
+      .single();
+
+    if (!invoice) {
+      throw new Error('Invoice nicht gefunden oder keine Berechtigung.');
+    }
+
+    const { data: updatedInvoice, error } = await supabaseAdmin
       .from('invoices')
       .update({
         ...data,
@@ -524,7 +553,7 @@ export async function updateInvoiceAction(invoiceId: string, data: UpdateInvoice
     revalidatePath('/dashboard/invoices');
     revalidatePath(`/dashboard/invoices/${invoiceId}`);
 
-    return { success: true, data: invoice };
+    return { success: true, data: updatedInvoice };
   } catch (error: any) {
     console.error('Error updating invoice:', error);
     return { success: false, message: error.message };
