@@ -138,7 +138,7 @@ export default function LoginPage() {
           {/* Brand Text */}
           <div className="text-center">
             <h1 className="text-4xl font-bold mb-3 tracking-tight text-white">
-              ARIS
+              ReinPlaner
             </h1>
             <p className="text-blue-300/80 text-lg mb-8">
               Glas- und Gebäudereinigung
@@ -237,7 +237,7 @@ export default function LoginPage() {
                         onFocus={() => setFocusedField('reset-email')}
                         onBlur={() => setFocusedField(null)}
                         required
-                        className={`pl-12 h-12 bg-slate-50 border-slate-200 rounded-xl transition-all duration-300 placeholder:text-slate-500 ${
+                        className={`pl-12 h-12 bg-slate-50 border-slate-200 rounded-xl transition-all duration-300 placeholder:text-slate-700 ${
                           focusedField === 'reset-email'
                             ? 'border-blue-400 bg-white ring-4 ring-blue-500/10'
                             : 'hover:bg-slate-100'
@@ -301,7 +301,7 @@ export default function LoginPage() {
                         onFocus={() => setFocusedField('email')}
                         onBlur={() => setFocusedField(null)}
                         required
-                        className={`pl-12 h-12 bg-slate-50 border-slate-200 rounded-xl transition-all duration-300 placeholder:text-slate-500 ${
+                        className={`pl-12 h-12 bg-slate-50 border-slate-200 rounded-xl transition-all duration-300 placeholder:text-slate-700 ${
                           focusedField === 'email'
                             ? 'border-blue-400 bg-white ring-4 ring-blue-500/10'
                             : 'hover:bg-slate-100'
@@ -340,7 +340,7 @@ export default function LoginPage() {
                         onBlur={() => setFocusedField(null)}
                         required
                         autoComplete="current-password"
-                        className={`pl-12 h-12 bg-slate-50 border-slate-200 rounded-xl transition-all duration-300 [::-ms-reveal]:hidden [::-webkit-appearance:none] placeholder:text-slate-500 ${
+                        className={`pl-12 h-12 bg-slate-50 border-slate-200 rounded-xl transition-all duration-300 [::-ms-reveal]:hidden [::-webkit-appearance:none] placeholder:text-slate-700 ${
                           focusedField === 'password'
                             ? 'border-blue-400 bg-white ring-4 ring-blue-500/10'
                             : 'hover:bg-slate-100'
