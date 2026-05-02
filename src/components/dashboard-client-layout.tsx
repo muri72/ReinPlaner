@@ -53,6 +53,8 @@ export function DashboardClientLayout({ children, onSignOut }: DashboardClientLa
       return '/portal/dashboard';
     } else if (currentUserRole === 'employee') {
       return '/employee/dashboard';
+    } else if (currentUserRole === 'manager') {
+      return '/dashboard/planning';
     }
     return '/dashboard';
   };
