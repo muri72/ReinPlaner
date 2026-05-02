@@ -34,7 +34,14 @@ export default function LoginPage() {
             console.error('Failed to log login:', error);
           }
 
-          router.push("/dashboard");
+          // Role-based redirect
+          try {
+            const res = await fetch('/api/auth/redirect')
+            const data = await res.json()
+            router.push(data.redirectUrl || '/dashboard')
+          } catch {
+            router.push('/dashboard')
+          }
           router.refresh();
         } else if (event === "SIGNED_OUT") {
           toast.info("Sie wurden abgemeldet.");
@@ -191,7 +198,7 @@ export default function LoginPage() {
                     <h2 className="text-2xl font-bold text-slate-900 mb-2">
                       Passwort zurücksetzen
                     </h2>
-                    <p className="text-slate-600">
+                    <p className="text-slate-700">
                       Geben Sie Ihre E-Mail-Adresse ein, um einen Link zum Zurücksetzen Ihres Passworts zu erhalten.
                     </p>
                   </>
@@ -200,7 +207,7 @@ export default function LoginPage() {
                     <h2 className="text-2xl font-bold text-slate-900 mb-2">
                       Willkommen zurück
                     </h2>
-                    <p className="text-slate-600">
+                    <p className="text-slate-700">
                       Melden Sie sich an, um fortzufahren
                     </p>
                   </>
@@ -230,7 +237,7 @@ export default function LoginPage() {
                         onFocus={() => setFocusedField('reset-email')}
                         onBlur={() => setFocusedField(null)}
                         required
-                        className={`pl-12 h-12 bg-slate-50 border-slate-200 rounded-xl transition-all duration-300 ${
+                        className={`pl-12 h-12 bg-slate-50 border-slate-200 rounded-xl transition-all duration-300 placeholder:text-slate-500 ${
                           focusedField === 'reset-email'
                             ? 'border-blue-400 bg-white ring-4 ring-blue-500/10'
                             : 'hover:bg-slate-100'
@@ -294,7 +301,7 @@ export default function LoginPage() {
                         onFocus={() => setFocusedField('email')}
                         onBlur={() => setFocusedField(null)}
                         required
-                        className={`pl-12 h-12 bg-slate-50 border-slate-200 rounded-xl transition-all duration-300 ${
+                        className={`pl-12 h-12 bg-slate-50 border-slate-200 rounded-xl transition-all duration-300 placeholder:text-slate-500 ${
                           focusedField === 'email'
                             ? 'border-blue-400 bg-white ring-4 ring-blue-500/10'
                             : 'hover:bg-slate-100'
@@ -333,7 +340,7 @@ export default function LoginPage() {
                         onBlur={() => setFocusedField(null)}
                         required
                         autoComplete="current-password"
-                        className={`pl-12 h-12 bg-slate-50 border-slate-200 rounded-xl transition-all duration-300 [::-ms-reveal]:hidden [::-webkit-appearance:none] ${
+                        className={`pl-12 h-12 bg-slate-50 border-slate-200 rounded-xl transition-all duration-300 [::-ms-reveal]:hidden [::-webkit-appearance:none] placeholder:text-slate-500 ${
                           focusedField === 'password'
                             ? 'border-blue-400 bg-white ring-4 ring-blue-500/10'
                             : 'hover:bg-slate-100'
