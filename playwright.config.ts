@@ -1,4 +1,5 @@
 import { defineConfig, devices } from '@playwright/test';
+import type { FullConfig } from '@playwright/test';
 
 export default defineConfig({
   testDir: './e2e',
@@ -33,10 +34,11 @@ export default defineConfig({
       use: { ...devices['Pixel 5'] },
     },
   ],
-  webServer: process.env.CI ? undefined : {
+  webServer: {
     command: 'npm run dev',
     url: 'http://localhost:3000',
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: true,
     timeout: 120000,
   },
+  outputDir: 'test-results',
 });
