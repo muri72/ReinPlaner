@@ -149,14 +149,18 @@ const db = new InMemoryDB();
 // Build In-Memory Query Builder
 // ============================================
 
-function buildQueryBuilder(tableName: string) {
+// Shared query builder state - accessed by both builder methods and update/delete
+interface QueryState {
+  appliedEq: { field: string; value: any } | null;
+  appliedIn: { field: string; values: any[] } | null;
+  appliedGte: { field: string; value: any } | null;
+  appliedLte: { field: string; value: any } | null;
+  appliedOrder: { field: string; ascending: boolean } | null;
+  appliedOr: string | null;
+}
+
+function buildQueryBuilder(tableName: string, state: QueryState) {
   let filteredData: any[] = [];
-  let appliedEq: { field: string; value: any } | null = null;
-  let appliedIn: { field: string; values: any[] } | null = null;
-  let appliedGte: { field: string; value: any } | null = null;
-  let appliedLte: { field: string; value: any } | null = null;
-  let appliedOrder: { field: string; ascending: boolean } | null = null;
-  let appliedOr: string | null = null;
 
   function getTableData(): any[] {
     switch (tableName) {
@@ -169,9 +173,13 @@ function buildQueryBuilder(tableName: string) {
   }
 
   const builder: any = {
-    select: (_fields?: string) => builder,
+    select: (_fields?: string) => {
+      // Populate filteredData immediately on select
+      filteredData = getTableData();
+      return builder;
+    },
     eq: (field: string, value: any) => {
-      appliedEq = { field, value };
+      state.appliedEq = { field, value };
       if (field === 'id') {
         filteredData = [getTableData().find(r => r.id === value)].filter(Boolean);
       } else if (field === 'invoice_id') {
@@ -181,23 +189,35 @@ function buildQueryBuilder(tableName: string) {
       }
       return builder;
     },
+    is: (field: string, value: any) => {
+      // Handle null check on potentially undefined fields
+      filteredData = filteredData.filter(r => {
+        const fieldValue = (r as any)[field];
+        // If checking for null, match both null and undefined (missing property)
+        if (value === null) {
+          return fieldValue === null || fieldValue === undefined;
+        }
+        return fieldValue === value;
+      });
+      return builder;
+    },
     in: (field: string, values: any[]) => {
-      appliedIn = { field, values };
+      state.appliedIn = { field, values };
       filteredData = getTableData().filter(r => values.includes((r as any)[field]));
       return builder;
     },
     gte: (field: string, value: any) => {
-      appliedGte = { field, value };
+      state.appliedGte = { field, value };
       filteredData = getTableData().filter(r => (r as any)[field] >= value);
       return builder;
     },
     lte: (field: string, value: any) => {
-      appliedLte = { field, value };
+      state.appliedLte = { field, value };
       filteredData = getTableData().filter(r => (r as any)[field] <= value);
       return builder;
     },
     or: (condition: string) => {
-      appliedOr = condition;
+      state.appliedOr = condition;
       const parts = condition.split(',');
       const patterns = parts.map((p: string) => {
         const match = p.match(/(\w+)\.ilike\.%(.+)%/);
@@ -209,11 +229,11 @@ function buildQueryBuilder(tableName: string) {
       return builder;
     },
     order: (field: string, options?: { ascending: boolean }) => {
-      appliedOrder = { field, ascending: options?.ascending ?? true };
+      state.appliedOrder = { field, ascending: options?.ascending ?? true };
       filteredData = [...filteredData].sort((a: any, b: any) => {
         const aVal = a[field];
         const bVal = b[field];
-        return appliedOrder!.ascending ? (aVal > bVal ? 1 : -1) : (aVal < bVal ? 1 : -1);
+        return state.appliedOrder!.ascending ? (aVal > bVal ? 1 : -1) : (aVal < bVal ? 1 : -1);
       });
       return builder;
     },
@@ -236,9 +256,10 @@ function buildQueryBuilder(tableName: string) {
 // ============================================
 
 function createMockSupabase() {
+  const state: QueryState = { appliedEq: null, appliedIn: null, appliedGte: null, appliedLte: null, appliedOrder: null, appliedOr: null };
   return {
     from: vi.fn((table: string) => {
-      const builder = buildQueryBuilder(table);
+      const builder = buildQueryBuilder(table, state);
 
       const insert = vi.fn().mockImplementation((data: any) => {
         const now = new Date().toISOString();
@@ -298,28 +319,95 @@ function createMockSupabase() {
       });
 
       const update = vi.fn().mockImplementation((data: any) => {
-        if (table === 'invoices' && appliedEq?.field === 'id') {
-          const existing = db.invoices.get(appliedEq.value);
-          if (existing) {
-            db.invoices.set(appliedEq.value, { ...existing, ...data, updated_at: new Date().toISOString() });
+        const updateData = data;
+        let updatedId: string | null = null;
+        
+        // Create a mock chain that defers all operations
+        const mockChain: any = {
+          eq: vi.fn().mockImplementation((field: string, value: any) => {
+            if ((table === 'invoices' || table === 'invoice_items') && field === 'id') {
+              updatedId = value;
+              const exists = table === 'invoices' ? db.invoices.has(value) : db.invoiceItems.has(value);
+              if (!exists) {
+                // Return error object that has .select() and .single() methods
+                return {
+                  error: new Error('Not found'),
+                  select: vi.fn().mockReturnThis(),
+                  single: vi.fn().mockResolvedValue({ data: null, error: new Error('Not found') }),
+                };
+              }
+              // Perform update
+              if (table === 'invoices') {
+                const existing = db.invoices.get(value);
+                if (existing) db.invoices.set(value, { ...existing, ...updateData, updated_at: new Date().toISOString() });
+              }
+              if (table === 'invoice_items') {
+                const existing = db.invoiceItems.get(value);
+                if (existing) db.invoiceItems.set(value, { ...existing, ...updateData });
+              }
+            }
+            return mockChain;
+          }),
+          select: vi.fn().mockImplementation(() => {
+            // Return the same mock chain for continued chaining
+            return mockChain;
+          }),
+          single: vi.fn().mockImplementation(() => {
+            if (updatedId) {
+              const item = table === 'invoices' ? db.invoices.get(updatedId) : db.invoiceItems.get(updatedId);
+              if (item) return Promise.resolve({ data: item, error: null });
+              return Promise.resolve({ data: null, error: new Error('Item not found') });
+            }
+            return Promise.resolve({ data: null, error: null });
+          }),
+        };
+        
+        return mockChain;
+      });
+
+      const delete_fn = vi.fn().mockImplementation((invoiceId?: string) => {
+        // Support both .delete() and .delete(id) patterns
+        if (invoiceId) {
+          if (table === 'invoices') {
+            if (!db.invoices.has(invoiceId)) {
+              return { error: new Error('Not found') };
+            }
+            db.invoices.delete(invoiceId);
+            return { error: null };
+          }
+          if (table === 'invoice_items') {
+            if (!db.invoiceItems.has(invoiceId)) {
+              return { error: new Error('Item not found') };
+            }
+            db.invoiceItems.delete(invoiceId);
+            return { error: null };
           }
         }
         return {
-          eq: vi.fn().mockReturnThis(),
-          select: vi.fn().mockReturnThis(),
-          single: vi.fn().mockResolvedValue({ data: null, error: null }),
+          eq: vi.fn().mockImplementation((field: string, value: any) => {
+            if (field === 'id') {
+              if (table === 'invoices') {
+                if (!db.invoices.has(value)) {
+                  return { error: new Error('Not found') };
+                }
+                db.invoices.delete(value);
+                return { error: null };
+              }
+              if (table === 'invoice_items') {
+                if (!db.invoiceItems.has(value)) {
+                  return { error: new Error('Item not found') };
+                }
+                db.invoiceItems.delete(value);
+                return { error: null };
+              }
+            }
+            return builder;
+          }),
         };
       });
-
-      const delete_fn = vi.fn().mockImplementation(() => {
-        if (table === 'invoices' && appliedEq?.field === 'id') db.invoices.delete(appliedEq.value);
-        if (table === 'invoice_items' && appliedEq?.field === 'id') db.invoiceItems.delete(appliedEq.value);
-        return { eq: vi.fn().mockResolvedValue({ data: null, error: null }) };
-      });
-
       return {
         select: builder.select, insert, update, delete: delete_fn,
-        eq: builder.eq, in: builder.in, gte: builder.gte, lte: builder.lte,
+        eq: builder.eq, is: builder.is, in: builder.in, gte: builder.gte, lte: builder.lte,
         or: builder.or, order: builder.order, limit: builder.limit,
         single: builder.single, then: builder.then,
       };
@@ -334,9 +422,10 @@ function createMockSupabase() {
 // ============================================
 
 const mockSupabase = vi.hoisted(() => {
+  const state: QueryState = { appliedEq: null, appliedIn: null, appliedGte: null, appliedLte: null, appliedOrder: null, appliedOr: null };
   return {
     from: vi.fn((table: string) => {
-      const builder = buildQueryBuilder(table);
+      const builder = buildQueryBuilder(table, state);
 
       const insert = vi.fn().mockImplementation((data: any) => {
         const now = new Date().toISOString();
@@ -395,28 +484,96 @@ const mockSupabase = vi.hoisted(() => {
       });
 
       const update = vi.fn().mockImplementation((data: any) => {
-        if (table === 'invoices' && appliedEq?.field === 'id') {
-          const existing = db.invoices.get(appliedEq.value);
-          if (existing) {
-            db.invoices.set(appliedEq.value, { ...existing, ...data, updated_at: new Date().toISOString() });
+        const updateData = data;
+        let updatedId: string | null = null;
+        
+        // Create a mock chain that defers all operations
+        const mockChain: any = {
+          eq: vi.fn().mockImplementation((field: string, value: any) => {
+            if ((table === 'invoices' || table === 'invoice_items') && field === 'id') {
+              updatedId = value;
+              const exists = table === 'invoices' ? db.invoices.has(value) : db.invoiceItems.has(value);
+              if (!exists) {
+                // Return error object that has .select() and .single() methods
+                return {
+                  error: new Error('Not found'),
+                  select: vi.fn().mockReturnThis(),
+                  single: vi.fn().mockResolvedValue({ data: null, error: new Error('Not found') }),
+                };
+              }
+              // Perform update
+              if (table === 'invoices') {
+                const existing = db.invoices.get(value);
+                if (existing) db.invoices.set(value, { ...existing, ...updateData, updated_at: new Date().toISOString() });
+              }
+              if (table === 'invoice_items') {
+                const existing = db.invoiceItems.get(value);
+                if (existing) db.invoiceItems.set(value, { ...existing, ...updateData });
+              }
+            }
+            return mockChain;
+          }),
+          select: vi.fn().mockImplementation(() => {
+            // Return the same mock chain for continued chaining
+            return mockChain;
+          }),
+          single: vi.fn().mockImplementation(() => {
+            if (updatedId) {
+              const item = table === 'invoices' ? db.invoices.get(updatedId) : db.invoiceItems.get(updatedId);
+              if (item) return Promise.resolve({ data: item, error: null });
+              return Promise.resolve({ data: null, error: new Error('Item not found') });
+            }
+            return Promise.resolve({ data: null, error: null });
+          }),
+        };
+        
+        return mockChain;
+      });
+
+
+      const delete_fn = vi.fn().mockImplementation((invoiceId?: string) => {
+        // Support both .delete() and .delete(id) patterns
+        if (invoiceId) {
+          if (table === 'invoices') {
+            if (!db.invoices.has(invoiceId)) {
+              return { error: new Error('Not found') };
+            }
+            db.invoices.delete(invoiceId);
+            return { error: null };
+          }
+          if (table === 'invoice_items') {
+            if (!db.invoiceItems.has(invoiceId)) {
+              return { error: new Error('Item not found') };
+            }
+            db.invoiceItems.delete(invoiceId);
+            return { error: null };
           }
         }
         return {
-          eq: vi.fn().mockReturnThis(),
-          select: vi.fn().mockReturnThis(),
-          single: vi.fn().mockResolvedValue({ data: null, error: null }),
+          eq: vi.fn().mockImplementation((field: string, value: any) => {
+            if (field === 'id') {
+              if (table === 'invoices') {
+                if (!db.invoices.has(value)) {
+                  return { error: new Error('Not found') };
+                }
+                db.invoices.delete(value);
+                return { error: null };
+              }
+              if (table === 'invoice_items') {
+                if (!db.invoiceItems.has(value)) {
+                  return { error: new Error('Item not found') };
+                }
+                db.invoiceItems.delete(value);
+                return { error: null };
+              }
+            }
+            return builder;
+          }),
         };
       });
-
-      const delete_fn = vi.fn().mockImplementation(() => {
-        if (table === 'invoices' && appliedEq?.field === 'id') db.invoices.delete(appliedEq.value);
-        if (table === 'invoice_items' && appliedEq?.field === 'id') db.invoiceItems.delete(appliedEq.value);
-        return { eq: vi.fn().mockResolvedValue({ data: null, error: null }) };
-      });
-
       return {
         select: builder.select, insert, update, delete: delete_fn,
-        eq: builder.eq, in: builder.in, gte: builder.gte, lte: builder.lte,
+        eq: builder.eq, is: builder.is, in: builder.in, gte: builder.gte, lte: builder.lte,
         or: builder.or, order: builder.order, limit: builder.limit,
         single: builder.single, then: builder.then,
       };

@@ -11,6 +11,7 @@ import { revalidatePath } from 'next/cache';
 // ============================================
 
 const mockSupabaseFrom = vi.fn();
+const mockSupabaseRpc = vi.fn();
 const mockAuthGetUser = vi.fn();
 
 vi.mock('@/lib/supabase/server', () => ({
@@ -19,6 +20,7 @@ vi.mock('@/lib/supabase/server', () => ({
     auth: { getUser: mockAuthGetUser },
   })),
   createAdminClient: vi.fn(() => ({
+    rpc: mockSupabaseRpc,
     from: mockSupabaseFrom,
     auth: { getUser: mockAuthGetUser },
   })),
@@ -81,6 +83,7 @@ function resetMock() {
   vi.clearAllMocks();
   revalidatePath.mockClear();
   mockSupabaseFrom.mockReset();
+  mockSupabaseRpc.mockReset();
   mockAuthGetUser.mockReset();
 }
 
@@ -90,12 +93,14 @@ function mockUnauthenticated() {
   const passthrough = {
     select: vi.fn().mockReturnThis(),
     eq: vi.fn().mockReturnThis(),
+    is: vi.fn().mockReturnThis(),
     in: vi.fn().mockReturnThis(),
     gte: vi.fn().mockReturnThis(),
     order: vi.fn().mockReturnThis(),
     limit: vi.fn().mockReturnThis(),
     single: vi.fn().mockResolvedValue({ data: null, error: null }),
     insert: vi.fn().mockReturnThis(),
+    rpc: vi.fn().mockReturnThis(),
     update: vi.fn().mockReturnThis(),
     delete: vi.fn().mockReturnThis(),
     then: vi.fn((resolve: Function) => resolve({ data: [], error: null })),
@@ -113,16 +118,19 @@ function mockAuthenticated(userId = 'user-1') {
     select: vi.fn().mockReturnThis(),
     eq: vi.fn().mockReturnThis(),
     in: vi.fn().mockReturnThis(),
+    is: vi.fn().mockReturnThis(),
     gte: vi.fn().mockReturnThis(),
     order: vi.fn().mockReturnThis(),
     limit: vi.fn().mockReturnThis(),
     single: vi.fn().mockResolvedValue({ data: null, error: null }),
+    rpc: vi.fn().mockReturnThis(),
     insert: vi.fn().mockReturnThis(),
     update: vi.fn().mockReturnThis(),
     delete: vi.fn().mockReturnThis(),
     then: vi.fn((resolve: Function) => resolve({ data: [], error: null })),
   };
   mockSupabaseFrom.mockReturnValue(passthrough);
+  mockSupabaseRpc.mockReturnValue({ data: null, error: null });
 }
 
 // ============================================
@@ -211,8 +219,18 @@ describe('Authenticated action behavior', () => {
     it('should create invoice with tenant from profile and revalidate', async () => {
       mockAuthenticated();
 
-      // Mock invoice insert + items insert + final fetch
+      // Mock chain: profile (supabase) -> debtor check (supabaseAdmin) -> invoice insert (supabaseAdmin) -> items insert (supabaseAdmin) -> invoice fetch (supabaseAdmin)
       mockSupabaseFrom
+        .mockReturnValueOnce({
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          single: vi.fn().mockResolvedValue({ data: { tenant_id: 'tenant-1' }, error: null }),
+        })
+        .mockReturnValueOnce({
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          single: vi.fn().mockResolvedValue({ data: { id: 'deb-1', tenant_id: 'tenant-1' }, error: null }),
+        })
         .mockReturnValueOnce({
           insert: vi.fn().mockReturnThis(),
           select: vi.fn().mockReturnThis(),
@@ -253,12 +271,24 @@ describe('Authenticated action behavior', () => {
     it('should update invoice and revalidate paths on success', async () => {
       mockAuthenticated();
 
-      mockSupabaseFrom.mockReturnValueOnce({
-        update: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        select: vi.fn().mockReturnThis(),
-        single: vi.fn().mockResolvedValue({ data: { id: 'inv-1', notes: 'Updated' }, error: null }),
-      });
+      // Mock chain: profile fetch (tenant) -> invoice verify -> update -> select updated
+      mockSupabaseFrom
+        .mockReturnValueOnce({
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          single: vi.fn().mockResolvedValue({ data: { tenant_id: 'tenant-1' }, error: null }),
+        })
+        .mockReturnValueOnce({
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          single: vi.fn().mockResolvedValue({ data: { id: 'inv-1' }, error: null }),
+        })
+        .mockReturnValueOnce({
+          update: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          select: vi.fn().mockReturnThis(),
+          single: vi.fn().mockResolvedValue({ data: { id: 'inv-1', notes: 'Updated' }, error: null }),
+        });
 
       const result = await updateInvoiceAction('inv-1', { notes: 'Updated' });
 
@@ -276,11 +306,17 @@ describe('Authenticated action behavior', () => {
         .mockReturnValueOnce({
           select: vi.fn().mockReturnThis(),
           eq: vi.fn().mockReturnThis(),
-          single: vi.fn().mockResolvedValue({ data: { total_amount_cents: 11900 }, error: null }),
+          single: vi.fn().mockResolvedValue({ data: { tenant_id: 'tenant-1' }, error: null }),
+        })
+        .mockReturnValueOnce({
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          single: vi.fn().mockResolvedValue({ data: { tenant_id: 'tenant-1', total_amount_cents: 11900 }, error: null }),
         })
         .mockReturnValueOnce({
           update: vi.fn().mockReturnThis(),
-          eq: vi.fn().mockResolvedValue({ data: null, error: null }),
+          eq: vi.fn().mockReturnThis(),
+          single: vi.fn().mockResolvedValue({ data: null, error: null }),
         });
 
       const result = await updateInvoiceStatusAction('inv-1', 'sent');
@@ -295,11 +331,23 @@ describe('Authenticated action behavior', () => {
     it('should delete invoice and revalidate dashboard/invoices', async () => {
       mockAuthenticated();
 
-      mockSupabaseFrom.mockReturnValueOnce({
-        delete: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        single: vi.fn().mockResolvedValue({ data: null, error: null }),
-      });
+      // Mock chain: profile fetch (user tenant) -> invoice verify -> delete
+      mockSupabaseFrom
+        .mockReturnValueOnce({
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          single: vi.fn().mockResolvedValue({ data: { tenant_id: 'tenant-1' }, error: null }),
+        })
+        .mockReturnValueOnce({
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          single: vi.fn().mockResolvedValue({ data: { id: 'inv-1' }, error: null }),
+        })
+        .mockReturnValueOnce({
+          delete: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          single: vi.fn().mockResolvedValue({ data: null, error: null }),
+        });
 
       const result = await deleteInvoiceAction('inv-1');
 
@@ -425,10 +473,17 @@ describe('Authenticated action behavior', () => {
       mockAuthenticated();
       const { exportDATEV } = await import('./datev-export');
 
+      // Mock profile fetch for tenant_id
+      mockSupabaseFrom.mockReturnValueOnce({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({ data: { tenant_id: 'tenant-1' }, error: null }),
+      });
+
       const result = await exportDATEVAction('2026-01-01', '2026-12-31');
 
       expect(result.success).toBe(true);
-      expect(exportDATEV).toHaveBeenCalledWith('2026-01-01', '2026-12-31');
+      expect(exportDATEV).toHaveBeenCalledWith('2026-01-01', '2026-12-31', 'tenant-1');
     });
   });
 
@@ -463,14 +518,22 @@ describe('Authenticated action behavior', () => {
     it('should return error when no recipient email', async () => {
       mockAuthenticated();
 
-      mockSupabaseFrom.mockReturnValueOnce({
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        single: vi.fn().mockResolvedValue({
-          data: { id: 'inv-1', debtor: { invoice_email: null } },
-          error: null,
-        }),
-      });
+      // First call: getProfile (tenant_id)
+      // Second call: getInvoiceById (admin client - fetches invoice with debtor)
+      mockSupabaseFrom
+        .mockReturnValueOnce({
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          single: vi.fn().mockResolvedValue({ data: { tenant_id: 'tenant-1' }, error: null }),
+        })
+        .mockReturnValueOnce({
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          single: vi.fn().mockResolvedValue({
+            data: { id: 'inv-1', debtor: { invoice_email: null } },
+            error: null,
+          }),
+        });
 
       const result = await sendInvoiceEmailAction('inv-1');
 
@@ -484,6 +547,11 @@ describe('Authenticated action behavior', () => {
       mockAuthenticated();
 
       mockSupabaseFrom
+        .mockReturnValueOnce({
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          single: vi.fn().mockResolvedValue({ data: { tenant_id: 'tenant-1' }, error: null }),
+        })
         .mockReturnValueOnce({
           select: vi.fn().mockReturnThis(),
           in: vi.fn().mockReturnThis(),
@@ -530,7 +598,11 @@ describe('Read-only action delegation', () => {
     it('should query payments table', async () => {
       mockAuthenticated();
 
-      mockSupabaseFrom.mockReturnValue({
+      mockSupabaseFrom.mockReturnValueOnce({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({ data: { tenant_id: 'tenant-1' }, error: null }),
+      }).mockReturnValueOnce({
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
         order: vi.fn().mockReturnThis(),
@@ -547,7 +619,11 @@ describe('Read-only action delegation', () => {
     it('should query debtors table', async () => {
       mockAuthenticated();
 
-      mockSupabaseFrom.mockReturnValue({
+      mockSupabaseFrom.mockReturnValueOnce({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({ data: { tenant_id: 'tenant-1' }, error: null }),
+      }).mockReturnValueOnce({
         select: vi.fn().mockReturnThis(),
         order: vi.fn().mockReturnThis(),
         then: (resolve: Function) => resolve({ data: [{ id: 'deb-1' }], error: null }),
@@ -563,7 +639,11 @@ describe('Read-only action delegation', () => {
     it('should query debtor by id', async () => {
       mockAuthenticated();
 
-      mockSupabaseFrom.mockReturnValue({
+      mockSupabaseFrom.mockReturnValueOnce({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({ data: { tenant_id: 'tenant-1' }, error: null }),
+      }).mockReturnValueOnce({
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
         single: vi.fn().mockResolvedValue({ data: { id: 'deb-1', billing_name: 'Mustermann' }, error: null }),

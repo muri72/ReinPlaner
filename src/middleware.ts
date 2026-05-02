@@ -2,18 +2,14 @@
  * Multi-Tenant Middleware
  * 
  * Extracts tenant information from subdomain and adds it to request headers.
- * Handles auth redirects: unauthenticated users going to /dashboard -> /login
+ * Auth and RBAC are handled in dashboard/layout.tsx
  */
 
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-// Base domain for subdomain extraction
 const BASE_DOMAIN = process.env.NEXT_PUBLIC_BASE_DOMAIN || 'reinplaner.de';
 
-/**
- * Extract tenant slug from hostname
- */
 function extractTenantSlug(hostname: string): string | null {
   const host = hostname.split(':')[0];
   
@@ -31,15 +27,11 @@ function extractTenantSlug(hostname: string): string | null {
   return null;
 }
 
-/**
- * Main middleware handler
- */
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const hostname = request.headers.get('host') || '';
   const tenantSlug = extractTenantSlug(hostname);
   
-  // Create response with tenant header
   const response = NextResponse.next();
   
   if (tenantSlug) {
