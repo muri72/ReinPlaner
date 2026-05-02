@@ -46,10 +46,10 @@ export async function GET() {
         redirectUrl = '/dashboard/planning'
         break
       case 'employee':
-        redirectUrl = '/dashboard/time-tracking'
+        redirectUrl = '/employee/dashboard'
         break
       case 'customer':
-        redirectUrl = '/dashboard'
+        redirectUrl = '/portal/dashboard'
         break
       default:
         redirectUrl = '/dashboard'
