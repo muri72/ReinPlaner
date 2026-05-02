@@ -120,7 +120,7 @@ export function MarketingPage({
       {/* Mobile Menu */}
       {showNav && (
         <div
-          className={`fixed inset-0 z-40 bg-[#05080F] md:hidden transition-all duration-300 ${
+          className={`fixed inset-0 z-40 bg-[#05080F]/90 backdrop-blur-md md:hidden transition-all duration-300 ${
             isMobileMenuOpen ? "opacity-100 visible" : "opacity-0 invisible pointer-events-none"
           }`}
         >

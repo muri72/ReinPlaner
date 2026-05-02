@@ -18,6 +18,10 @@ export const metadata: Metadata = {
   title: "ReinPlaner Management",
   description: "Management-Plattform für Reinigungsunternehmen",
   manifest: "/manifest.json",
+  icons: {
+    icon: "/reinplaner-logo.svg",
+    apple: "/reinplaner-logo.svg",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",

@@ -25,6 +25,8 @@ import {
   sendInvoiceEmailAction,
   updateInvoiceStatusAction,
   recordPaymentAction,
+  sendInvoiceReminderAction,
+  exportXRechnungAction,
 } from '@/lib/invoicing/actions';
 import {
   Dialog,
@@ -121,6 +123,61 @@ export function InvoiceDetailClient({ invoice, items }: InvoiceDetailClientProps
     }
   };
 
+  const handleDownloadXRechnung = async () => {
+    setIsDownloading(true);
+    setMessage(null);
+    try {
+      const result = await exportXRechnungAction(invoice.id);
+      if (result.success && result.data) {
+        downloadBuffer(result.data, result.filename || `XRechnung_${invoice.invoice_number.replace(/\//g, '-')}.xml`);
+        setMessage({ type: 'success', text: 'X-Rechnung wurde heruntergeladen.' });
+      } else {
+        setMessage({ type: 'error', text: result.message || 'X-Rechnung konnte nicht generiert werden.' });
+      }
+    } catch {
+      setMessage({ type: 'error', text: 'Ein unerwarteter Fehler ist aufgetreten.' });
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  const handleDownloadZUGFeRD = async () => {
+    setIsDownloading(true);
+    setMessage(null);
+    try {
+      const { exportZUGFeRDAction } = await import('@/lib/invoicing/actions');
+      const result = await exportZUGFeRDAction(invoice.id);
+      if (result.success && result.data) {
+        downloadBuffer(result.data, result.filename || `ZUGFeRD_${invoice.invoice_number.replace(/\//g, '-')}.xml`);
+        setMessage({ type: 'success', text: 'ZUGFeRD wurde heruntergeladen.' });
+      } else {
+        setMessage({ type: 'error', text: result.message || 'ZUGFeRD konnte nicht generiert werden.' });
+      }
+    } catch {
+      setMessage({ type: 'error', text: 'Ein unerwarteter Fehler ist aufgetreten.' });
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  const handleSendReminder = async () => {
+    setIsSending(true);
+    setMessage(null);
+    try {
+      const result = await sendInvoiceReminderAction(invoice.id);
+      if (result.success) {
+        setMessage({ type: 'success', text: 'Erinnerung wurde erfolgreich versendet.' });
+        router.refresh();
+      } else {
+        setMessage({ type: 'error', text: result.message || 'Fehler beim Senden der Erinnerung.' });
+      }
+    } catch {
+      setMessage({ type: 'error', text: 'Ein unerwarteter Fehler ist aufgetreten.' });
+    } finally {
+      setIsSending(false);
+    }
+  };
+
   const downloadBuffer = (buffer: Buffer, filename: string) => {
     const blob = new Blob([new Uint8Array(buffer)], { type: 'application/octet-stream' });
     const url = URL.createObjectURL(blob);
@@ -171,7 +228,32 @@ export function InvoiceDetailClient({ invoice, items }: InvoiceDetailClientProps
           PDF herunterladen
         </Button>
 
-        {/* Send Email */}
+        {/* X-Rechnung Download */}
+        {(invoice.status === 'draft' || invoice.status === 'sent' || invoice.status === 'paid') && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleDownloadXRechnung}
+            disabled={isDownloading}
+          >
+            <FileText className="mr-2 h-4 w-4" />
+            X-Rechnung (XML)
+          </Button>
+        )}
+
+        {/* ZUGFeRD Download */}
+        {(invoice.status === 'draft' || invoice.status === 'sent' || invoice.status === 'paid') && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleDownloadZUGFeRD}
+            disabled={isDownloading}
+          >
+            <FileText className="mr-2 h-4 w-4" />
+            ZUGFeRD (XML)
+          </Button>
+        )}
+
         {(invoice.status === 'draft' || invoice.status === 'sent') && (
           <Button
             variant="outline"
@@ -185,6 +267,23 @@ export function InvoiceDetailClient({ invoice, items }: InvoiceDetailClientProps
               <Send className="mr-2 h-4 w-4" />
             )}
             Per E-Mail senden
+          </Button>
+        )}
+
+        {/* Send Reminder */}
+        {(invoice.status === 'sent' || invoice.status === 'overdue' || invoice.status === 'partial') && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleSendReminder}
+            disabled={isSending}
+          >
+            {isSending ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Send className="mr-2 h-4 w-4" />
+            )}
+            Erinnerung senden
           </Button>
         )}
 

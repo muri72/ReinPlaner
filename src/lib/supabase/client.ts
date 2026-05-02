@@ -6,17 +6,13 @@ export function createClient() {
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!supabaseUrl || !supabaseAnonKey) {
-    // Return a mock client for build-time static generation
-    // The actual client will be created on the client side when needed
-    if (typeof window === 'undefined') {
-      // Server-side during build: return a placeholder
-      return createBrowserClient(
-        'https://placeholder.supabase.co',
-        'placeholder_anon_key'
-      );
-    }
-    // Client-side: throw helpful error
-    throw new Error('Environment variable NEXT_PUBLIC_SUPABASE_URL is not set.');
+    // Return a mock client for build-time static generation / preview deployments
+    // This prevents the entire app from crashing when env vars aren't configured
+    console.warn('Supabase env vars not set — using placeholder client');
+    return createBrowserClient(
+      'https://placeholder.supabase.co',
+      'placeholder_anon_key'
+    );
   }
 
   return createBrowserClient(
