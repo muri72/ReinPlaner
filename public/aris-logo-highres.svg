@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="blueGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a4b8c"/>
+      <stop offset="50%" style="stop-color:#2e6bc9"/>
+      <stop offset="100%" style="stop-color:#3a7ec2"/>
+    </linearGradient>
+    <linearGradient id="iconGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a4b8c"/>
+      <stop offset="50%" style="stop-color:#3a7ec2"/>
+      <stop offset="100%" style="stop-color:#00b4d8"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Background circle (optional, can be removed for transparent) -->
+  <!-- <circle cx="256" cy="180" r="140" fill="url(#iconGradient)" opacity="0.1"/> -->
+  
+  <!-- Geometric diamond/crystal icon -->
+  <g transform="translate(256, 170)">
+    <!-- Main diamond shape -->
+    <path d="M0,-100 L80,0 L0,100 L-80,0 Z" fill="none" stroke="url(#blueGradient)" stroke-width="8" stroke-linejoin="round"/>
+    
+    <!-- Inner diamond -->
+    <path d="M0,-70 L56,0 L0,70 L-56,0 Z" fill="url(#iconGradient)" opacity="0.3"/>
+    
+    <!-- Center highlight -->
+    <path d="M0,-50 L40,0 L0,50 L-40,0 Z" fill="url(#iconGradient)"/>
+    
+    <!-- Top accent lines -->
+    <line x1="0" y1="-100" x2="0" y2="-130" stroke="url(#blueGradient)" stroke-width="4" stroke-linecap="round"/>
+    <line x1="-60" y1="-70" x2="-85" y2="-85" stroke="url(#blueGradient)" stroke-width="4" stroke-linecap="round"/>
+    <line x1="60" y1="-70" x2="85" y2="-85" stroke="url(#blueGradient)" stroke-width="4" stroke-linecap="round"/>
+  </g>
+  
+  <!-- ARIS text -->
+  <text x="256" y="320" 
+        font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" 
+        font-size="72" 
+        font-weight="700" 
+        fill="url(#blueGradient)" 
+        text-anchor="middle"
+        letter-spacing="8">ARIS</text>
+  
+  <!-- Tagline -->
+  <text x="256" y="360" 
+        font-family="'Helvetica Neue', Helvetica, Arial, sans-serif" 
+        font-size="16" 
+        font-weight="400" 
+        fill="#4a5568" 
+        text-anchor="middle"
+        letter-spacing="2">Glas- und Gebäudereinigung</text>
+</svg>

@@ -84,6 +84,12 @@ export async function createEmployee(data: EmployeeFormValues) {
     has_professional_education: data.has_professional_education || false,
     lohngruppen_eingruppung_datum: formatDateForDB(data.lohngruppen_eingruppung_datum),
     psa_type: data.psa_type || null,
+    // Wage surcharges (TV GD 2026)
+    wage_surcharges: JSON.stringify({
+      night_enabled: data.wage_surcharge_night_enabled ?? false,
+      weekend_enabled: data.wage_surcharge_weekend_enabled ?? false,
+      holiday_enabled: data.wage_surcharge_holiday_enabled ?? false,
+    }),
   };
 
   const { data: newEmployee, error } = await supabase
@@ -165,6 +171,12 @@ export async function updateEmployee(employeeId: string, data: EmployeeFormValue
     has_professional_education: data.has_professional_education || false,
     lohngruppen_eingruppung_datum: formatDateForDB(data.lohngruppen_eingruppung_datum),
     psa_type: data.psa_type || null,
+    // Wage surcharges (TV GD 2026)
+    wage_surcharges: JSON.stringify({
+      night_enabled: data.wage_surcharge_night_enabled ?? false,
+      weekend_enabled: data.wage_surcharge_weekend_enabled ?? false,
+      holiday_enabled: data.wage_surcharge_holiday_enabled ?? false,
+    }),
   };
 
   // Conditionally add contract_type only if it has a value

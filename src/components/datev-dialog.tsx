@@ -55,7 +55,7 @@ export function DATEVDialog({ children }: DATEVDialogProps) {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = result.filename || 'DATEV_Export.csv';
+        a.download = result.filename || 'CSV_Export.csv';
         a.click();
         URL.revokeObjectURL(url);
         setOpen(false);
@@ -74,9 +74,9 @@ export function DATEVDialog({ children }: DATEVDialogProps) {
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>DATEV Export</DialogTitle>
+          <DialogTitle>CSV Export</DialogTitle>
           <DialogDescription>
-            Exportieren Sie Ihre Rechnungen im DATEV-Format (CSV) für die Übergabe an Ihren Steuerberater.
+            Exportieren Sie Ihre Rechnungen als CSV-Datei für die Übergabe an Ihren Steuerberater.
           </DialogDescription>
         </DialogHeader>
 

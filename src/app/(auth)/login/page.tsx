@@ -34,7 +34,14 @@ export default function LoginPage() {
             console.error('Failed to log login:', error);
           }
 
-          router.push("/dashboard");
+          // Role-based redirect
+          try {
+            const res = await fetch('/api/auth/redirect')
+            const data = await res.json()
+            router.push(data.redirectUrl || '/dashboard')
+          } catch {
+            router.push('/dashboard')
+          }
           router.refresh();
         } else if (event === "SIGNED_OUT") {
           toast.info("Sie wurden abgemeldet.");
@@ -117,10 +124,10 @@ export default function LoginPage() {
               <div className="absolute inset-0 bg-blue-500/30 blur-3xl rounded-full" />
               <div className="relative">
                 <Image
-                  src="/logo.png"
-                  alt="ReinPlaner Management Logo"
-                  width={320}
-                  height={320}
+                  src="/tenant-logos/aris.png"
+                  alt="ARIS Logo"
+                  width={280}
+                  height={280}
                   className="drop-shadow-2xl"
                   priority
                 />
@@ -134,7 +141,7 @@ export default function LoginPage() {
               ReinPlaner
             </h1>
             <p className="text-blue-300/80 text-lg mb-8">
-              Software für Gebäudereinigung
+              Glas- und Gebäudereinigung
             </p>
 
             {/* Value props with icons */}
@@ -167,14 +174,14 @@ export default function LoginPage() {
             <div className="relative inline-block">
               <div className="absolute inset-0 bg-blue-500/20 blur-xl rounded-full" />
               <Image
-                src="/logo.png"
+                src="/reinplaner-logo.svg"
                 alt="ReinPlaner Management Logo"
                 width={120}
                 height={120}
                 className="relative"
               />
             </div>
-            <h1 className="text-2xl font-bold mt-4 text-slate-900">ReinPlaner</h1>
+            <h1 className="text-2xl font-bold mt-4 text-slate-950">ReinPlaner</h1>
             <p className="text-blue-600 text-sm">Software für Gebäudereinigung</p>
           </div>
 
@@ -188,19 +195,19 @@ export default function LoginPage() {
               <div className="text-center mb-8 page-enter stagger-4">
                 {isResetMode ? (
                   <>
-                    <h2 className="text-2xl font-bold text-slate-900 mb-2">
+                    <h2 className="text-2xl font-bold text-slate-950 mb-2">
                       Passwort zurücksetzen
                     </h2>
-                    <p className="text-slate-600">
+                    <p className="text-slate-950">
                       Geben Sie Ihre E-Mail-Adresse ein, um einen Link zum Zurücksetzen Ihres Passworts zu erhalten.
                     </p>
                   </>
                 ) : (
                   <>
-                    <h2 className="text-2xl font-bold text-slate-900 mb-2">
+                    <h2 className="text-2xl font-bold text-slate-950 mb-2">
                       Willkommen zurück
                     </h2>
-                    <p className="text-slate-600">
+                    <p className="text-slate-950">
                       Melden Sie sich an, um fortzufahren
                     </p>
                   </>
@@ -212,7 +219,7 @@ export default function LoginPage() {
                 <form onSubmit={handlePasswordReset} className="space-y-6 page-enter stagger-5">
                   {/* Email Field */}
                   <div className="space-y-2">
-                    <Label htmlFor="reset-email" className="text-sm font-semibold text-slate-800 ml-1">
+                    <Label htmlFor="reset-email" className="text-sm font-semibold text-slate-950 ml-1">
                       E-Mail-Adresse
                     </Label>
                     <div className={`relative transition-all duration-300 ${
@@ -230,7 +237,7 @@ export default function LoginPage() {
                         onFocus={() => setFocusedField('reset-email')}
                         onBlur={() => setFocusedField(null)}
                         required
-                        className={`pl-12 h-12 bg-slate-50 border-slate-200 rounded-xl transition-all duration-300 ${
+                        className={`pl-12 h-12 bg-slate-50 border-slate-200 rounded-xl transition-all duration-300 placeholder:text-slate-800 ${
                           focusedField === 'reset-email'
                             ? 'border-blue-400 bg-white ring-4 ring-blue-500/10'
                             : 'hover:bg-slate-100'
@@ -244,7 +251,7 @@ export default function LoginPage() {
                     type="button"
                     variant="ghost"
                     onClick={() => setIsResetMode(false)}
-                    className="w-full h-12 font-medium text-slate-700 hover:text-slate-900 hover:bg-slate-100"
+                    className="w-full h-12 font-medium text-slate-950 hover:text-slate-950 hover:bg-slate-100"
                   >
                     <ArrowLeft className="w-5 h-5 mr-2" />
                     Zurück zur Anmeldung
@@ -276,7 +283,7 @@ export default function LoginPage() {
                 <form onSubmit={handleLogin} className="space-y-6 page-enter stagger-5">
                   {/* Email Field */}
                   <div className="space-y-2">
-                    <Label htmlFor="email" className="text-sm font-semibold text-slate-800 ml-1">
+                    <Label htmlFor="email" className="text-sm font-semibold text-slate-950 ml-1">
                       E-Mail-Adresse
                     </Label>
                     <div className={`relative transition-all duration-300 ${
@@ -294,7 +301,7 @@ export default function LoginPage() {
                         onFocus={() => setFocusedField('email')}
                         onBlur={() => setFocusedField(null)}
                         required
-                        className={`pl-12 h-12 bg-slate-50 border-slate-200 rounded-xl transition-all duration-300 ${
+                        className={`pl-12 h-12 bg-slate-50 border-slate-200 rounded-xl transition-all duration-300 placeholder:text-slate-800 ${
                           focusedField === 'email'
                             ? 'border-blue-400 bg-white ring-4 ring-blue-500/10'
                             : 'hover:bg-slate-100'
@@ -306,7 +313,7 @@ export default function LoginPage() {
                   {/* Password Field */}
                   <div className="space-y-2">
                     <div className="flex justify-between items-center ml-1">
-                      <Label htmlFor="password" className="text-sm font-semibold text-slate-800">
+                      <Label htmlFor="password" className="text-sm font-semibold text-slate-950">
                         Passwort
                       </Label>
                       <button
@@ -333,7 +340,7 @@ export default function LoginPage() {
                         onBlur={() => setFocusedField(null)}
                         required
                         autoComplete="current-password"
-                        className={`pl-12 h-12 bg-slate-50 border-slate-200 rounded-xl transition-all duration-300 [::-ms-reveal]:hidden [::-webkit-appearance:none] ${
+                        className={`pl-12 h-12 bg-slate-50 border-slate-200 rounded-xl transition-all duration-300 [::-ms-reveal]:hidden [::-webkit-appearance:none] placeholder:text-slate-800 ${
                           focusedField === 'password'
                             ? 'border-blue-400 bg-white ring-4 ring-blue-500/10'
                             : 'hover:bg-slate-100'
@@ -343,7 +350,7 @@ export default function LoginPage() {
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
                         className={`absolute right-4 top-1/2 -translate-y-1/2 transition-colors ${
-                          focusedField === 'password' ? 'text-blue-600' : 'text-slate-500 hover:text-slate-700'
+                          focusedField === 'password' ? 'text-blue-600' : 'text-slate-500 hover:text-slate-950'
                         }`}
                       >
                         {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
@@ -358,7 +365,7 @@ export default function LoginPage() {
                       id="remember"
                       className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500/20 cursor-pointer"
                     />
-                    <Label htmlFor="remember" className="text-sm text-slate-700 cursor-pointer">
+                    <Label htmlFor="remember" className="text-sm text-slate-950 cursor-pointer">
                       Angemeldet bleiben
                     </Label>
                   </div>

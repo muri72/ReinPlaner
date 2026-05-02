@@ -2,10 +2,11 @@
 
 import * as React from "react";
 import { getVacationBalance } from "@/app/dashboard/absence-requests/actions";
+import { calculateBurlOVacation, formatBurlOVacation } from "@/lib/vacation-calculation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Calendar, TrendingDown, TrendingUp } from "lucide-react";
+import { Calendar, TrendingDown, TrendingUp, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface VacationBalanceData {
@@ -106,6 +107,33 @@ export function VacationBalanceSummary({ employeeId }: VacationBalanceSummaryPro
           <span>Vertrag: {data.contractHoursPerWeek}h / Woche</span>
           <span>{data.workingDaysPerWeek} Tage/Woche</span>
         </div>
+        {/* BUrlO calculation info */}
+        {(() => {
+          const burlO = calculateBurlOVacation({
+            contractHoursPerWeek: data.contractHoursPerWeek,
+            workingDaysPerWeek: data.workingDaysPerWeek,
+          });
+          const isDifferent = burlO.totalDays !== data.totalDays;
+          return (
+            <div className={cn(
+              "mt-3 p-2 rounded-lg text-xs",
+              isDifferent ? "bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800" : "bg-muted/50"
+            )}>
+              <div className="flex items-center gap-1.5 mb-1">
+                <Info className="h-3 w-3 text-amber-600 dark:text-amber-400" />
+                <span className="font-medium text-amber-800 dark:text-amber-200">BUrlO-Berechnung</span>
+              </div>
+              <div className="text-muted-foreground">
+                {formatBurlOVacation(burlO)}
+              </div>
+              {isDifferent && (
+                <div className="mt-1 text-amber-700 dark:text-amber-300 font-medium">
+                  Abweichung: DB={data.totalDays} vs BUrlO={burlO.totalDays}
+                </div>
+              )}
+            </div>
+          );
+        })()}
       </CardContent>
     </Card>
   );

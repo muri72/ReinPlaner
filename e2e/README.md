@@ -1,84 +1,188 @@
-# E2E Tests with Playwright
+# E2E Testing for ReinPlaner
+
+This directory contains end-to-end tests using Playwright to verify that all features work correctly.
 
 ## Setup
 
-```bash
-# Install dependencies
-pnpm install
+1. **Install dependencies:**
+   ```bash
+   npm install
+   npx playwright install
+   ```
 
-# Install Playwright browsers
-pnpm exec playwright install
-```
+2. **Configure environment:**
+   ```bash
+   cp .env.local.template .env.local
+   # Edit .env.local with your Supabase credentials
+   ```
+
+3. **Seed test data:**
+   ```bash
+   npx tsx e2e/seed-test-data.ts
+   ```
 
 ## Running Tests
 
+### Quick Start (uses defaults)
 ```bash
-# Run all tests in headless mode
-pnpm test:e2e
-
-# Run with UI (headed mode)
-pnpm test:e2e:ui
-
-# Run specific test file
-pnpm exec playwright test e2e/login.spec.ts
-
-# Run with debug mode
-pnpm test:e2e:debug
+./e2e/run-tests.sh
 ```
 
-## Test Structure
-
-```
-e2e/
-├── login.spec.ts         # Login page tests
-├── dashboard.spec.ts      # Dashboard navigation tests
-├── employee-form.spec.ts  # Employee CRUD tests
-├── orders.spec.ts         # Order management tests
-├── planning.spec.ts       # Planning/shift management tests
-└── README.md              # This file
+### With visible browser
+```bash
+./e2e/run-tests.sh --headed
 ```
 
-## Writing New Tests
-
-```typescript
-import { test, expect } from '@playwright/test';
-
-test.describe('Feature Name', () => {
-  test('should do something', async ({ page }) => {
-    await page.goto('/path/to/page');
-    // ...
-  });
-});
+### Open Playwright UI
+```bash
+./e2e/run-tests.sh --ui
 ```
 
-## CI/CD Integration
-
-Tests run automatically on Vercel Preview deployments. Add to your CI workflow:
-
-```yaml
-- name: Run E2E Tests
-  run: pnpm test:e2e
-  env:
-    BASE_URL: ${{ env.DEPLOYMENT_URL }}
+### Skip seeding (if data already exists)
+```bash
+./e2e/run-tests.sh --skip-seed
 ```
 
-## Authentication in Tests
+### Run specific browser
+```bash
+./e2e/run-tests.sh --project=chromium
+```
 
-For authenticated tests, use one of:
+### Manual test run
+```bash
+npm run dev &
+npx playwright test
+```
 
-1. **API Key Auth** - Set `SUPABASE_SERVICE_ROLE_KEY` and use service client
-2. **Cookie Auth** - Pre-authenticate and set cookies
-3. **Test Users** - Create test users in Supabase before running tests
+## Test Files
+
+| File | Description |
+|------|-------------|
+| `complete.spec.ts` | **Main test suite** - All major features |
+| `login.spec.ts` | Authentication tests |
+| `dashboard.spec.ts` | Dashboard navigation |
+| `customers.spec.ts` | Customer management |
+| `orders.spec.ts` | Order management |
+| `invoices.spec.ts` | Invoice management |
+| `planning.spec.ts` | Shift planning |
+| `employee-form.spec.ts` | Employee form |
+
+## Features Tested
+
+### ✅ Authentication
+- Login page displays correctly
+- Invalid credentials show error
+- Unauthenticated users redirect to login
+- Authenticated sessions persist
+
+### ✅ Dashboard
+- Page loads without errors
+- Sidebar navigation visible
+- All main sections accessible
+
+### ✅ Customers
+- Customer list displays
+- Search functionality works
+- New customer form opens
+- Customer details accessible
+
+### ✅ Employees
+- Employee list displays
+- Add employee button exists
+- Employee form has required fields
+- Form validation works
+
+### ✅ Orders
+- Order list displays with status
+- Filter by status works
+- Create new order form opens
+- Required field validation
+
+### ✅ Invoices
+- Invoice list displays
+- Search functionality works
+- Filter by status works
+- Invoice details accessible
+- New invoice form works
+
+### ✅ Planning
+- Calendar view displays
+- Week navigation works
+- Employee shifts visible
+
+### ✅ Objects
+- Objects list displays
+- Address information shown
+- Object details accessible
+
+### ✅ Time Tracking
+- Time tracking page loads
+- Time entries list displays
+- Create time entry option exists
+
+### ✅ Finances
+- Financial overview loads
+- Summary data displays
+
+### ✅ Performance
+- All pages load within 5 seconds
+- No console errors
+- Network errors handled gracefully
+
+### ✅ Mobile Responsive
+- Mobile viewport works
+- Navigation accessible on mobile
+
+## Test Data
+
+The seed script creates:
+- 1 Test Tenant (reinplaner)
+- 3 Test Users (admin, manager, employee)
+- 2 Test Customers
+- 3 Cleaning Objects
+- 2 Test Orders
+- 2 Test Invoices
+
+## Test Credentials
+
+```
+Admin: admin@reinplaner.de / TestPassword123!
+Manager: manager@reinplaner.de / TestPassword123!
+Employee: employee@reinplaner.de / TestPassword123!
+```
+
+## CI/CD
+
+In CI environments, tests run with:
+- 2 retries
+- Screenshots on failure
+- Trace on first retry
+
+```bash
+CI=true npx playwright test
+```
 
 ## Debugging
 
-```bash
-# Show trace viewer
-pnpm exec playwright show-trace trace.zip
+To debug failed tests:
 
-# Run with screenshot on failure
-pnpm exec playwright test --screenshots
+1. Run with headed mode:
+   ```bash
+   ./e2e/run-tests.sh --headed
+   ```
 
-# Update snapshots
-pnpm exec playwright test --update-snapshots
-```
+2. Open Playwright UI:
+   ```bash
+   ./e2e/run-tests.sh --ui
+   ```
+
+3. Check test traces:
+   ```bash
+   npx playwright show-trace test-results/
+   ```
+
+## Known Issues
+
+- Some tests may fail if Supabase is not accessible
+- Tests require seeded data to be meaningful
+- Mobile tests need proper viewport configuration

@@ -58,6 +58,9 @@ export const employeeSchema = z.object({
   has_professional_education: z.boolean().default(false),
   lohngruppen_eingruppung_datum: z.date().nullable().optional(),
   psa_type: z.string().nullable().optional(),
+  wage_surcharge_night_enabled: z.boolean().default(false),
+  wage_surcharge_weekend_enabled: z.boolean().default(false),
+  wage_surcharge_holiday_enabled: z.boolean().default(false),
 });
 
 export type EmployeeFormValues = z.infer<typeof employeeSchema>;

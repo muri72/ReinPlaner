@@ -40,7 +40,7 @@ test.describe('Invoice Dashboard - List View', () => {
     const heading = page.getByRole('heading', { name: /rechnungen|invoices|factures/i }).first();
     await expect(heading).toBeVisible({ timeout: 5000 }).catch(() => {
       // Fallback: check page title
-      await expect(page).toHaveTitle(/rechnungen|invoices/i).catch(() => {});
+      // await expect(page).toHaveTitle(/rechnungen|invoices/i).catch(() => {});
     });
   });
 
