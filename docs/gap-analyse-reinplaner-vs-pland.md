@@ -57,7 +57,7 @@
 | **Abwesenheitsmanagement** | ✅ Ja | ❌ Fehlt | 🔴 Fehlt |
 | **Lohnabrechnung mit Zuschlägen** | ✅ Ja | ⚠️ Invoice nur | 🟡 Aufbauen |
 | **DATEV-Export** | ✅ Ja | ❌ Fehlt | 🔴 Fehlt |
-| **Wiederkehrende Rechnungen** | ✅ Ja | ⚠️ Manual | 🟡 Aufbauen |
+| **Wiederkehrende Rechnungen** | ✅ Ja | ⚠️ Cron-basiert (auto. Rechnungen) | 🟢 DONE (PR#9) |
 | **Mahnwesen automatisch** | ✅ Ja | ✅ Cron-basiert (3-stufig) | 🟢 DONE (PR#6) |
 | **Zahlungserinnerungen** | ✅ Ja | ❌ Fehlt | 🔴 Fehlt |
 | **Leistungsnachweise (Fotos)** | ✅ Ja | ❌ Fehlt | 🔴 Fehlt |
