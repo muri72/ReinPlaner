@@ -154,6 +154,153 @@ export async function userBelongsToTenant(userId: string, tenantId: string): Pro
 }
 
 // ============================================
+// CURRENT USER HELPERS (were in services-rls.ts)
+// ============================================
+
+/**
+ * Get the current user's role from their profile (no userId argument)
+ */
+export async function getCurrentUserRole(): Promise<'admin' | 'manager' | 'employee' | 'customer' | 'unknown'> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    return 'unknown';
+  }
+
+  const { data: profile, error } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single();
+
+  if (error || !profile) {
+    return 'unknown';
+  }
+
+  return (profile.role as 'admin' | 'manager' | 'employee' | 'customer') || 'unknown';
+}
+
+/**
+ * Get the current user's employee record
+ */
+export async function getCurrentEmployee() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    return null;
+  }
+
+  const { data: employee } = await supabase
+    .from('employees')
+    .select('*')
+    .eq('user_id', user.id)
+    .single();
+
+  return employee;
+}
+
+/**
+ * Check if current user is assigned to a specific order
+ */
+export async function isAssignedToOrder(orderId: string): Promise<boolean> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    return false;
+  }
+
+  const { data: employee } = await supabase
+    .from('employees')
+    .select('id')
+    .eq('user_id', user.id)
+    .single();
+
+  if (!employee) {
+    return false;
+  }
+
+  const { data: shiftEmployee } = await supabase
+    .from('order_employee_assignments')
+    .select('id')
+    .eq('order_id', orderId)
+    .eq('employee_id', employee.id)
+    .maybeSingle();
+
+  return !!shiftEmployee;
+}
+
+/**
+ * Filter records based on user role (for client-side filtering)
+ */
+export async function getRoleBasedFilter(tableName: 'orders' | 'customers' | 'time_entries' | 'shifts') {
+  const role = await getCurrentUserRole();
+
+  if (role === 'admin' || role === 'manager') {
+    return {}; // Managers/admins see all tenant data
+  }
+
+  const employee = await getCurrentEmployee();
+  if (!employee) {
+    return { id: 'none' }; // No access
+  }
+
+  switch (tableName) {
+    case 'orders':
+      return { user_id: employee.user_id };
+    case 'customers':
+      return { user_id: employee.user_id };
+    case 'time_entries':
+      return { employee_id: employee.id };
+    case 'shifts':
+      return { employee_id: employee.id };
+    default:
+      return {};
+  }
+}
+
+/**
+ * Require role check - throws error if user doesn't have required role
+ */
+export async function requireRole(requiredRole: 'admin' | 'manager' | 'employee'): Promise<void> {
+  const role = await getCurrentUserRole();
+
+  if (requiredRole === 'admin' && role !== 'admin') {
+    throw new Error('Administrator-Berechtigung erforderlich');
+  }
+
+  if (requiredRole === 'manager' && role !== 'admin' && role !== 'manager') {
+    throw new Error('Manager-Berechtigung erforderlich');
+  }
+
+  if (requiredRole === 'employee' && role === 'unknown') {
+    throw new Error('Authentifizierung erforderlich');
+  }
+}
+
+/**
+ * Require admin role - throws error if user isn't admin
+ */
+export async function requireAdmin(): Promise<void> {
+  const role = await getCurrentUserRole();
+  if (role !== 'admin') {
+    throw new Error('Administrator-Berechtigung erforderlich');
+  }
+}
+
+/**
+ * Require manager role - throws error if user isn't admin or manager
+ */
+export async function requireManager(): Promise<void> {
+  const role = await getCurrentUserRole();
+  if (role !== 'admin' && role !== 'manager') {
+    throw new Error('Manager-Berechtigung erforderlich');
+  }
+}
+
+// ============================================
 // RLS POLICIES (SQL templates for Supabase)
 // ============================================
 
