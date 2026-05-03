@@ -2,12 +2,7 @@
   "buildCommand": "pnpm run build",
   "devCommand": "pnpm run dev",
   "installCommand": "pnpm install",
-  "crons": {
-    "period": "1 day",
-    "path": "/api/cron/dunning",
-    "method": "POST"
-  },
-  "cronJobs": [
+  "crons": [
     {
       "path": "/api/cron/dunning",
       "schedule": "0 8 * * *"
