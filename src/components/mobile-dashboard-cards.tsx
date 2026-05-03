@@ -100,7 +100,7 @@ const statusConfig = {
   },
   completed: {
     label: "Erledigt",
-    color: "bg-gray-100 text-gray-600 dark:bg-gray-900/30 dark:text-gray-400",
+    color: "bg-muted text-muted-foreground dark:bg-muted dark:text-muted-foreground",
     dot: "bg-gray-400",
   },
   pending: {

@@ -555,7 +555,7 @@ export function AdminEmployeeOverview({ onEmployeeSelect, selectedEmployeeId, on
                         </div>
 
                         {/* Genehmigte Abwesenheiten Total */}
-                        <div className="flex items-center gap-2.5 p-2.5 rounded-lg bg-slate-300 dark:bg-slate-800/60 border border-slate-500 dark:border-slate-600">
+                        <div className="flex items-center gap-2.5 p-2.5 rounded-lg bg-muted dark:bg-muted border border-border dark:border-muted-foreground/30">
                           <div className="p-1.5 rounded-md bg-slate-500 dark:bg-slate-700">
                             <Calendar className="h-3.5 w-3.5 text-white dark:text-slate-200" />
                           </div>

@@ -36,7 +36,7 @@ const typeConfig: Record<
   order: { icon: Package, color: "text-blue-600", bgColor: "bg-blue-100 dark:bg-blue-900/30" },
   shift: { icon: Clock, color: "text-emerald-600", bgColor: "bg-emerald-100 dark:bg-emerald-900/30" },
   ticket: { icon: Ticket, color: "text-violet-600", bgColor: "bg-violet-100 dark:bg-violet-900/30" },
-  system: { icon: Settings, color: "text-gray-600 dark:text-gray-400", bgColor: "bg-gray-100 dark:bg-gray-800/50" },
+  system: { icon: Settings, color: "text-muted-foreground", bgColor: "bg-muted" },
   absence: { icon: Umbrella, color: "text-amber-600", bgColor: "bg-amber-100 dark:bg-amber-900/30" },
   default: { icon: BellIcon, color: "text-primary", bgColor: "bg-primary/10" },
 };

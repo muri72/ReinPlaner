@@ -12,9 +12,9 @@ import { absenceTypeConfig, typeTranslations, statusConfig } from "@/lib/absence
 
 // Default fallback for unknown types
 const defaultTypeConfig = {
-  bg: "bg-gray-100 dark:bg-gray-800",
-  border: "border-gray-300 dark:border-gray-700",
-  text: "text-gray-800 dark:text-gray-200",
+  bg: "bg-muted dark:bg-muted",
+  border: "border-border dark:border-border",
+  text: "text-foreground dark:text-foreground",
 };
 
 interface Absence {
