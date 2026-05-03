@@ -58,7 +58,7 @@
 | **Lohnabrechnung mit Zuschlägen** | ✅ Ja | ⚠️ Invoice nur | 🟡 Aufbauen |
 | **DATEV-Export** | ✅ Ja | ❌ Fehlt | 🔴 Fehlt |
 | **Wiederkehrende Rechnungen** | ✅ Ja | ⚠️ Manual | 🟡 Aufbauen |
-| **Mahnwesen automatisch** | ✅ Ja | ❌ Fehlt | 🔴 Fehlt |
+| **Mahnwesen automatisch** | ✅ Ja | ✅ Cron-basiert (3-stufig) | 🟢 DONE (PR#6) |
 | **Zahlungserinnerungen** | ✅ Ja | ❌ Fehlt | 🔴 Fehlt |
 | **Leistungsnachweise (Fotos)** | ✅ Ja | ❌ Fehlt | 🔴 Fehlt |
 | **KI-Assistent/Telefon** | ✅ Paula | ❌ Fehlt | 🔴 Fehlt |
