@@ -509,7 +509,7 @@ export function WorkTimeReportForm() {
                     const hoursWithoutHolidays = regularHours + weekendHours;
 
                     return (
-                      <div className="text-[#1a365d] space-y-2">
+                      <div className="text-foreground space-y-2">
                         <div className="text-lg font-bold">Gesamtarbeitsstunden: {objectReportData.totalHours} Stunden</div>
 
                         {/* Conditional breakdown - only show if holidays or weekends exist */}
@@ -628,7 +628,7 @@ export function WorkTimeReportForm() {
                     const hoursWithoutHolidays = regularHours + weekendHours;
 
                     return (
-                      <div className="text-[#1a365d] space-y-2">
+                      <div className="text-foreground space-y-2">
                         <div className="text-lg font-bold">Gesamtarbeitsstunden: {employeeReportData.totalHours} Stunden</div>
 
                         {/* Conditional breakdown - only show if holidays or weekends exist */}
