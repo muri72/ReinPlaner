@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu, X, ChevronLeft } from "lucide-react";
@@ -92,11 +92,9 @@ function NavLinkItem({
 function SidebarNavContent({
   currentUserRole,
   isCollapsed,
-  onNavigate,
 }: {
   currentUserRole: UserRole;
   isCollapsed: boolean;
-  onNavigate?: () => void;
 }) {
   const pathname = usePathname();
   const flatLinks = getFlatNavForRole(currentUserRole);
@@ -110,7 +108,6 @@ function SidebarNavContent({
           item={item}
           isActive={pathname === item.href}
           isCollapsed={isCollapsed}
-          onClick={onNavigate}
         />
       ))}
 
@@ -135,7 +132,6 @@ function SidebarNavContent({
                   item={child}
                   isActive={pathname === child.href}
                   isCollapsed={isCollapsed}
-                  onClick={onNavigate}
                 />
               ))}
             </SidebarMenu>
@@ -351,55 +347,56 @@ export function DashboardClientLayout({
 }: DashboardClientLayoutProps) {
   const { currentUserRole, loading } = useUserProfile();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
   const isMobile = useIsMobile();
 
-  if (loading) {
+  // Wait for client mount to avoid SSR/hydration mismatch
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  // SSR + first hydration: show loading to avoid flash of wrong layout
+  if (!isMounted || loading) {
     return <LoadingScreen />;
   }
 
-  return (
-    <SidebarProvider defaultOpen={true}>
-      {/* Mobile: header + sheet */}
-      {isMobile && (
-        <>
-          <MobileHeader
-            currentUserRole={currentUserRole}
-            onMenuOpen={() => setIsMobileMenuOpen(true)}
-          />
-          <MobileNavSheet
-            currentUserRole={currentUserRole}
-            onSignOut={onSignOut}
-            open={isMobileMenuOpen}
-            onOpenChange={setIsMobileMenuOpen}
-          />
-        </>
-      )}
-
-      {/* Desktop: sidebar + main content */}
-      {!isMobile && (
-        <>
-          <DesktopSidebar
-            currentUserRole={currentUserRole}
-            onSignOut={onSignOut}
-          />
-          <main className="flex-1 min-h-screen md:ml-[--sidebar-width] data-[state=collapsed]:md:ml-[--sidebar-width-icon]">
-            <div className="p-4 md:pl-6 md:pr-6 md:pt-6 space-y-4">
-              <ImpersonationBanner />
-              {children}
-            </div>
-          </main>
-        </>
-      )}
-
-      {/* Mobile: full-width content, no sidebar offset */}
-      {isMobile && (
+  // Mobile: header + sheet + full-width content
+  if (isMobile) {
+    return (
+      <div className="min-h-screen bg-background">
+        <MobileHeader
+          currentUserRole={currentUserRole}
+          onMenuOpen={() => setIsMobileMenuOpen(true)}
+        />
+        <MobileNavSheet
+          currentUserRole={currentUserRole}
+          onSignOut={onSignOut}
+          open={isMobileMenuOpen}
+          onOpenChange={setIsMobileMenuOpen}
+        />
         <main className="flex-1 min-h-screen">
           <div className="p-4 space-y-4">
             <ImpersonationBanner />
             {children}
           </div>
         </main>
-      )}
+      </div>
+    );
+  }
+
+  // Desktop: sidebar + sidebar-aware content
+  return (
+    <SidebarProvider defaultOpen={true}>
+      <DesktopSidebar
+        currentUserRole={currentUserRole}
+        onSignOut={onSignOut}
+      />
+      <main className="flex-1 min-h-screen md:ml-[--sidebar-width] data-[state=collapsed]:md:ml-[--sidebar-width-icon]">
+        <div className="p-4 md:pl-6 md:pr-6 md:pt-6 space-y-4">
+          <ImpersonationBanner />
+          {children}
+        </div>
+      </main>
     </SidebarProvider>
   );
 }
