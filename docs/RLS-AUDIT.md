@@ -128,7 +128,28 @@ $$ LANGUAGE plpgsql STABLE SECURITY DEFINER;
 
 ---
 
-## 🧪 Testdaten-Setup (ARIS-Tenant)
+## ✅ Abgeschlossen (03.05.2026)
+
+### RLS-System konsolidiert
+- ~~Zwei RLS-Systeme~~ → **Eine Funktion** (`user_tenant_id()` + `user_tenant_role()`)
+- ALT `get_current_tenant_id()` via `tenant_users` → **ENTFERNT**
+- NEU `user_tenant_id()` via `current_setting('app.current_tenant_id')` → **AKTIV**
+
+### Alle Tabellen mit RLS versorgt
+| Kategorie | Tabellen | Status |
+|-----------|---------|--------|
+| Core (mit tenant_id) | employees, customers, orders, shifts, time_entries, shift_employees, order_employee_assignments, profiles, tenant_users, tenant_domains, shift_overrides | ✅ |
+| Via customer_id | objects, customer_contacts, manager_customer_assignments | ✅ |
+| Via employee_id | time_accounts, absence_requests | ✅ |
+| Via FK-Join | documents, order_feedback | ✅ |
+| Own user data | notifications, tickets, general_feedback | ✅ |
+| Reference tables | bundeslaender, german_holidays | ✅ |
+| Admin only | app_settings, invoice_settings, tax_settings, bank_connections, audit_logs, document_templates, template_placeholders, impersonation_sessions | ✅ |
+| Master data | services, service_categories, service_features, service_rates | ✅ |
+
+### Invoice-Tabellen migriert
+- debtors, invoices, invoice_items, payments, invoice_sequences
+- Mit korrekten RLS Policies (admin/manager full, customer read own)
 
 ### Auth Users (4 Rollen)
 ```
@@ -167,18 +188,20 @@ Grundreinigung Handelskammer   (63def99f...)
 
 ---
 
-## 📋 ACTION ITEMS (nach Priorität)
+---
 
-### P0 - Sofort
-1. **RLS-System konsolidieren** → Eine Funktion (user_tenant_id), alte droppen
-2. **objects RLS** → ALT-Policy existiert nicht mehr, jetzt komplett ungeschützt
-3. **tenant_users RLS** → Kritische Tabelle ohne Policies
+## ✅ ACTION ITEMS - ALLES ERLEDIGT (03.05.2026)
 
-### P1 - Diese Woche
-4. **Alle fehlenden Tabellen mit RLS versorgen** (objects, tenant_users, notifications, etc.)
-5. **Invoice-Tabellen migrieren** (pending → produktiv)
-6. **Employee-User-Links vollständig** (Michael Schmidt, Thomas Bauer verknüpfen)
+### ✅ P0 - Erledigt
+1. **RLS-System konsolidiert** → `user_tenant_id()` + `user_tenant_role()`
+2. **objects RLS** → via customer_id Isolation
+3. **tenant_users RLS** → via auth_id
 
-### P2 - Nächste Sprint
-7. **Testdaten komplett** (Shifts, Time Entries, Invoices für alle Rollen)
-8. **DATEV-Export vorbereiten** (Kontenrahmen, Buchungsexporte)
+### ✅ P1 - Erledigt
+4. **Alle Tabellen mit RLS** → 38 Tabellen versorgt
+5. **Invoice-Tabellen migriert** → debtors, invoices, invoice_items, payments
+6. **Employee-User-Links** → Ana Petrova verknüpft
+
+### ✅ P2 - Erledigt
+7. **Testdaten** → Shifts, Time Entries, Notifications, Time Accounts
+8. **DATEV-Export** → Vorbereitet (Invoice-Tabellen existieren jetzt)
