@@ -3,9 +3,10 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, X, ChevronLeft, Home, FileText, Users, BarChart3, Settings, Calendar, ClipboardList, Building2, UserCheck, Clock, Shield } from "lucide-react";
+import { Menu, X, ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 
 import {
@@ -56,7 +57,7 @@ function LoadingScreen() {
   );
 }
 
-// ─── Nav Items (used by both Desktop Sidebar and Mobile Sheet) ───────────────
+// ─── Nav Items ────────────────────────────────────────────────────────────────
 
 function NavLinkItem({
   item,
@@ -103,7 +104,6 @@ function SidebarNavContent({
 
   return (
     <>
-      {/* Flat links (home items) */}
       {flatLinks.map((item) => (
         <NavLinkItem
           key={item.key}
@@ -114,14 +114,12 @@ function SidebarNavContent({
         />
       ))}
 
-      {/* Separator */}
       {flatLinks.length > 0 && categories.length > 0 && (
         <SidebarMenuItem className="py-1">
           <div className="mx-2 h-px bg-sidebar-border" />
         </SidebarMenuItem>
       )}
 
-      {/* Categories */}
       {categories.map((category) => (
         <SidebarGroup key={category.key}>
           {!isCollapsed && (
@@ -162,7 +160,10 @@ function DesktopSidebar({
   const homeHref = getHomeHref(currentUserRole);
 
   return (
-    <Sidebar collapsible="icon" className="fixed left-0 top-0 z-30 hidden h-screen w-[--sidebar-width] flex-col md:flex">
+    <Sidebar
+      collapsible="icon"
+      className="fixed left-0 top-0 z-30 hidden h-screen w-[--sidebar-width] flex-col md:flex"
+    >
       <SidebarHeader className="flex flex-row items-center justify-between gap-2 px-3 py-3 border-b border-sidebar-border">
         <Link href={homeHref} className="min-w-0 flex-1">
           <span className="text-lg font-bold text-sidebar-foreground truncate block">
@@ -237,7 +238,7 @@ function MobileHeader({
   );
 }
 
-// ─── Mobile Nav Sheet (plain Sheet, NOT using shadcn Sidebar internals) ───────
+// ─── Mobile Nav Sheet ─────────────────────────────────────────────────────────
 
 function MobileNavSheet({
   currentUserRole,
@@ -281,7 +282,6 @@ function MobileNavSheet({
 
         {/* Nav */}
         <nav className="flex-1 overflow-y-auto p-4 space-y-1">
-          {/* Home links */}
           {flatLinks.map((item) => {
             const isActive = pathname === item.href;
             return (
@@ -306,7 +306,6 @@ function MobileNavSheet({
             <div className="border-t border-border my-3" />
           )}
 
-          {/* Categories */}
           {categories.map((category) => (
             <div key={category.key} className="space-y-1">
               <p className="px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -352,6 +351,7 @@ export function DashboardClientLayout({
 }: DashboardClientLayoutProps) {
   const { currentUserRole, loading } = useUserProfile();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const isMobile = useIsMobile();
 
   if (loading) {
     return <LoadingScreen />;
@@ -359,34 +359,47 @@ export function DashboardClientLayout({
 
   return (
     <SidebarProvider defaultOpen={true}>
-      {/* Mobile menu — separate Sheet, NOT inside shadcn Sidebar */}
-      <MobileNavSheet
-        currentUserRole={currentUserRole}
-        onSignOut={onSignOut}
-        open={isMobileMenuOpen}
-        onOpenChange={setIsMobileMenuOpen}
-      />
+      {/* Mobile: header + sheet */}
+      {isMobile && (
+        <>
+          <MobileHeader
+            currentUserRole={currentUserRole}
+            onMenuOpen={() => setIsMobileMenuOpen(true)}
+          />
+          <MobileNavSheet
+            currentUserRole={currentUserRole}
+            onSignOut={onSignOut}
+            open={isMobileMenuOpen}
+            onOpenChange={setIsMobileMenuOpen}
+          />
+        </>
+      )}
 
-      {/* Mobile header (hidden on md+) */}
-      <MobileHeader
-        currentUserRole={currentUserRole}
-        onMenuOpen={() => setIsMobileMenuOpen(true)}
-      />
+      {/* Desktop: sidebar + main content */}
+      {!isMobile && (
+        <>
+          <DesktopSidebar
+            currentUserRole={currentUserRole}
+            onSignOut={onSignOut}
+          />
+          <main className="flex-1 min-h-screen md:ml-[--sidebar-width] data-[state=collapsed]:md:ml-[--sidebar-width-icon]">
+            <div className="p-4 md:pl-6 md:pr-6 md:pt-6 space-y-4">
+              <ImpersonationBanner />
+              {children}
+            </div>
+          </main>
+        </>
+      )}
 
-      {/* Desktop sidebar — direct child of SidebarProvider (shadcn requirement) */}
-      {/* DO NOT add hidden md:block here — shadcn Sidebar has its own mobile handling */}
-      <DesktopSidebar
-        currentUserRole={currentUserRole}
-        onSignOut={onSignOut}
-      />
-
-      {/* Main content */}
-      <main className="flex-1 min-h-screen md:ml-[--sidebar-width] data-[state=collapsed]:md:ml-[--sidebar-width-icon]">
-        <div className="p-4 md:pl-6 md:pr-6 md:pt-6 space-y-4">
-          <ImpersonationBanner />
-          {children}
-        </div>
-      </main>
+      {/* Mobile: full-width content, no sidebar offset */}
+      {isMobile && (
+        <main className="flex-1 min-h-screen">
+          <div className="p-4 space-y-4">
+            <ImpersonationBanner />
+            {children}
+          </div>
+        </main>
+      )}
     </SidebarProvider>
   );
 }
