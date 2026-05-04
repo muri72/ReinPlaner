@@ -59,7 +59,7 @@ export function ObjectDetailTabs({ object }: ObjectDetailTabsProps) {
         <TabsTrigger value="dokumente">Dokumente</TabsTrigger>
       </TabsList>
       <TabsContent value="stammdaten">
-        <Card className="shadow-neumorphic glassmorphism-card">
+        <Card className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm dark:shadow-none">
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
               <CardTitle>Stammdaten</CardTitle>
@@ -101,7 +101,7 @@ export function ObjectDetailTabs({ object }: ObjectDetailTabsProps) {
         </Card>
       </TabsContent>
       <TabsContent value="auftraege">
-        <Card className="shadow-neumorphic glassmorphism-card">
+        <Card className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm dark:shadow-none">
           <CardHeader>
             <CardTitle>Zugehörige Aufträge</CardTitle>
             <CardDescription>Alle Aufträge, die diesem Objekt zugeordnet sind.</CardDescription>
@@ -112,7 +112,7 @@ export function ObjectDetailTabs({ object }: ObjectDetailTabsProps) {
         </Card>
       </TabsContent>
       <TabsContent value="wochenplan">
-        <Card className="shadow-neumorphic glassmorphism-card">
+        <Card className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm dark:shadow-none">
           <CardHeader>
             <CardTitle>Wochenplan</CardTitle>
             <CardDescription>Regelmäßige Arbeitszeiten für dieses Objekt.</CardDescription>
@@ -123,7 +123,7 @@ export function ObjectDetailTabs({ object }: ObjectDetailTabsProps) {
         </Card>
       </TabsContent>
       <TabsContent value="dokumente">
-        <Card className="shadow-neumorphic glassmorphism-card">
+        <Card className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm dark:shadow-none">
           <CardHeader>
             <CardTitle>Dokumente</CardTitle>
             <CardDescription>Verwalten Sie Dokumente, die mit diesem Objekt verknüpft sind.</CardDescription>

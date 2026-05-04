@@ -179,7 +179,7 @@ export default function LoginPage() {
             {/* Gradient accent line */}
             <div className="absolute -top-px left-8 right-8 h-px bg-gradient-to-r from-transparent via-blue-400 to-transparent" />
 
-            <div className="bg-card/90 dark:bg-slate-800/90 backdrop-blur-xl rounded-3xl shadow-2xl border border-border dark:border-slate-700 p-8 lg:p-10 page-enter stagger-4">
+            <div className="bg-slate-800/90 dark:bg-slate-800/90 rounded-3xl shadow-2xl border border-border dark:border-slate-700 p-8 lg:p-10 page-enter stagger-4">
               {/* Header */}
               <div className="text-center mb-8 page-enter stagger-4">
                 {isResetMode ? (

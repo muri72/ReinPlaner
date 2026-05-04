@@ -201,23 +201,17 @@ function RegisterForm() {
   };
 
   const inputClass = (fieldName: string) =>
-    `h-12 glass-input rounded-xl transition-all duration-300 placeholder:text-slate-400/60 ${
+    `h-12 bg-slate-800 border border-slate-700 rounded-xl transition-all duration-300 placeholder:text-slate-500 text-white ${
       focusedField === fieldName
         ? "border-blue-500 ring-4 ring-blue-500/20"
-        : "hover:border-white/12"
+        : "hover:border-slate-600"
     }`;
 
   return (
-    <div className="min-h-screen flex flex-col section-dark">
-      {/* Background Effects */}
-      <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-blue-600/10 rounded-full blur-[120px]" />
-        <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-violet-600/10 rounded-full blur-[100px]" />
-      </div>
-      
+    <div className="min-h-screen flex flex-col bg-slate-900">
       {/* Header */}
       <header className="relative p-4 sm:p-6">
-        <Link href="/" className="inline-flex items-center gap-2 text-slate-200 hover:text-white transition-colors">
+        <Link href="/" className="inline-flex items-center gap-2 text-slate-400 hover:text-white transition-colors dark:text-slate-400">
           <ArrowLeft className="w-5 h-5" />
           <span className="text-sm font-medium">Zurück zur Startseite</span>
         </Link>
@@ -238,20 +232,20 @@ function RegisterForm() {
           <div className="flex items-center justify-center gap-4 mb-8">
             <div className={`flex items-center gap-2 ${step === "plan" ? "text-blue-300" : "text-emerald-400"}`}>
               <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
-                step === "account" ? "bg-emerald-500 text-white" : "bg-blue-500 text-white"
+                step === "account" ? "bg-emerald-500 text-white" : "bg-blue-600 text-white"
               }`}>
                 {step === "account" ? <CheckCircle2 className="w-5 h-5" /> : "1"}
               </div>
-              <span className="text-sm font-medium">Plan wählen</span>
+              <span className="text-sm font-medium text-slate-200">Plan wählen</span>
             </div>
             <div className="w-16 h-px bg-slate-700" />
-            <div className={`flex items-center gap-2 ${step === "account" ? "text-blue-300" : "text-slate-200"}`}>
+            <div className={`flex items-center gap-2 ${step === "account" ? "text-blue-300" : "text-slate-400"}`}>
               <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
-                step === "account" ? "bg-blue-500 text-white" : "bg-slate-700 text-slate-200"
+                step === "account" ? "bg-blue-600 text-white" : "bg-slate-700 text-slate-200"
               }`}>
                 2
               </div>
-              <span className="text-sm font-medium">Konto erstellen</span>
+              <span className="text-sm font-medium text-slate-200">Konto erstellen</span>
             </div>
           </div>
 
@@ -269,43 +263,43 @@ function RegisterForm() {
                     key={plan.id}
                     type="button"
                     onClick={() => handlePlanSelect(plan.id)}
-                    className={`relative p-6 rounded-2xl text-left transition-all duration-300 ${
-                      plan.highlighted 
-                        ? "glass-card ring-2 ring-blue-500/50 glow-blue scale-105" 
-                        : "glass-card hover:border-white/12"
-                    } ${formData.plan === plan.id ? "ring-2 ring-blue-500" : ""}`}
+                  className={`relative p-6 rounded-2xl text-left transition-all duration-300 ${
+                    plan.highlighted
+                      ? "bg-slate-800 border-2 border-blue-500 ring-2 ring-blue-500/30 dark:bg-slate-800 dark:border-blue-500 dark:ring-2 dark:ring-blue-500/30 scale-105"
+                      : "bg-slate-800 border border-slate-700 dark:bg-slate-800 dark:border-slate-700 hover:border-slate-600"
+                  } ${formData.plan === plan.id ? "ring-2 ring-blue-500" : ""}`}
                   >
                     {plan.highlighted && (
-                      <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-blue-600 to-cyan-500 text-white text-xs font-semibold px-4 py-1.5 rounded-full shadow-lg">
+                      <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-blue-600 text-white text-xs font-semibold px-4 py-1.5 rounded-full shadow-lg">
                         Beliebt
                       </div>
                     )}
-                    
+
                     <div className="flex items-center gap-3 mb-4">
                       <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                        plan.highlighted 
-                          ? "bg-gradient-to-br from-blue-500 to-cyan-500 text-white" 
-                          : "bg-white/10 text-slate-200"
+                        plan.highlighted
+                          ? "bg-blue-600 text-white"
+                          : "bg-slate-700 text-slate-200"
                       }`}>
                         <Sparkles className="w-6 h-6" />
                       </div>
                       <div>
                         <h3 className="font-semibold text-white text-lg">{plan.name}</h3>
-                        <p className="text-2xl font-bold text-white">{plan.price}<span className="text-sm font-normal text-slate-200">/Monat</span></p>
+                        <p className="text-2xl font-bold text-white">{plan.price}<span className="text-sm font-normal text-slate-400">/Monat</span></p>
                       </div>
                     </div>
-                    
-                    <p className="text-sm text-slate-200 mb-4">{plan.description}</p>
-                    
+
+                    <p className="text-sm text-slate-300 mb-4">{plan.description}</p>
+
                     <ul className="space-y-2 mb-6">
                       {plan.features.map((feature) => (
-                        <li key={feature} className="flex items-center gap-2 text-sm text-slate-200">
+                        <li key={feature} className="flex items-center gap-2 text-sm text-slate-300">
                           <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
                           {feature}
                         </li>
                       ))}
                     </ul>
-                    
+
                     <div className="flex items-center text-sm font-medium text-blue-300">
                       Auswählen <Sparkles className="w-4 h-4 ml-1" />
                     </div>
@@ -317,30 +311,30 @@ function RegisterForm() {
 
           {/* Step 2: Account Details */}
           {step === "account" && (
-            <div className="glass-card p-8">
+            <div className="bg-slate-800 border border-slate-700 p-8 rounded-2xl">
               <div className="text-center mb-8">
                 <h1 className="text-h2 text-white mb-2">KONTO ERSTELLEN</h1>
-                <p className="text-slate-200">Geben Sie Ihre Firmen- und Kontodaten ein</p>
+                <p className="text-slate-300">Geben Sie Ihre Firmen- und Kontodaten ein</p>
               </div>
 
               {/* Why ReinPlaner Benefits */}
-              <div className="grid grid-cols-3 gap-4 mb-8 p-4 glass-card rounded-xl border border-white/5">
+              <div className="grid grid-cols-3 gap-4 mb-8 p-4 bg-slate-700/50 rounded-xl border border-slate-700">
                 <div className="text-center">
-                  <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center mx-auto mb-2">
+                  <div className="w-10 h-10 rounded-lg bg-blue-600/20 flex items-center justify-center mx-auto mb-2">
                     <Zap className="w-5 h-5 text-blue-400" />
                   </div>
                   <p className="text-xs font-medium text-white">5 Min. Setup</p>
                   <p className="text-xs text-slate-500 mt-0.5">Sofort einsatzbereit</p>
                 </div>
-                <div className="text-center border-x border-white/5">
-                  <div className="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center mx-auto mb-2">
+                <div className="text-center border-x border-slate-600">
+                  <div className="w-10 h-10 rounded-lg bg-emerald-600/20 flex items-center justify-center mx-auto mb-2">
                     <Shield className="w-5 h-5 text-emerald-400" />
                   </div>
                   <p className="text-xs font-medium text-white">DSGVO-konform</p>
                   <p className="text-xs text-slate-500 mt-0.5">Daten in Deutschland</p>
                 </div>
                 <div className="text-center">
-                  <div className="w-10 h-10 rounded-lg bg-violet-500/20 flex items-center justify-center mx-auto mb-2">
+                  <div className="w-10 h-10 rounded-lg bg-violet-600/20 flex items-center justify-center mx-auto mb-2">
                     <Headphones className="w-5 h-5 text-violet-400" />
                   </div>
                   <p className="text-xs font-medium text-white">Persönlicher Support</p>
@@ -350,8 +344,8 @@ function RegisterForm() {
 
               <form onSubmit={handleSubmit} className="space-y-6">
                 {/* Selected Plan Badge */}
-                <div className="flex items-center justify-center gap-4 p-4 glass-card rounded-xl border border-blue-500/20">
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 text-white flex items-center justify-center">
+                <div className="flex items-center justify-center gap-4 p-4 bg-slate-700/50 rounded-xl border border-blue-500/30">
+                  <div className="w-12 h-12 rounded-xl bg-blue-600 text-white flex items-center justify-center">
                     <Sparkles className="w-6 h-6" />
                   </div>
                   <div>

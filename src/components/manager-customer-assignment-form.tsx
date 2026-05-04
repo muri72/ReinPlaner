@@ -178,7 +178,7 @@ export function ManagerCustomerAssignmentForm({ managerId, onSuccess, isInDialog
 
   return (
     <UnsavedChangesProtection formId="manager-customer-assignment-form">
-      <Card className="shadow-neumorphic glassmorphism-card">
+      <Card className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm dark:shadow-none">
         <CardHeader>
           <CardTitle className="text-lg font-semibold flex items-center gap-2">
             <Building2 className="h-5 w-5 text-primary" />
