@@ -96,17 +96,14 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex">
       {/* Left Side - Hero with Logo */}
-      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 page-enter-left">
+      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 dark:bg-[#0D1117] page-enter-left">
         {/* Animated background */}
         <div className="absolute inset-0 overflow-hidden">
-          {/* Gradient orbs matching logo colors */}
-          <div className="absolute top-1/4 left-1/4 w-[600px] h-[600px] bg-blue-500/25 rounded-full blur-[120px] animate-pulse-slow" />
-          <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-cyan-400/20 rounded-full blur-[100px] animate-pulse-slow delay-700" />
-          <div className="absolute top-1/2 right-1/3 w-[400px] h-[400px] bg-violet-500/15 rounded-full blur-[80px] animate-pulse-slow delay-300" />
-          <div className="absolute top-2/3 left-1/3 w-[350px] h-[350px] bg-blue-600/15 rounded-full blur-[70px] animate-pulse-slow delay-500" />
+          {/* Subtle dark gradients instead of neon glows */}
+          <div className="absolute inset-0 bg-gradient-to-br from-slate-900/50 via-slate-800/30 to-slate-900/50" />
 
-          {/* Subtle grid */}
-          <div className="absolute inset-0 opacity-5"
+          {/* Subtle grid - more visible in dark mode */}
+          <div className="absolute inset-0 opacity-5 dark:opacity-10"
                style={{
                  backgroundImage: `linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px),
                                    linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)`,
@@ -120,18 +117,14 @@ export default function LoginPage() {
           {/* Large Logo Display */}
           <div className="mb-10">
             <div className="relative">
-              {/* Glow effect */}
-              <div className="absolute inset-0 bg-blue-500/30 blur-3xl rounded-full" />
-              <div className="relative">
-                <Image
-                  src="/tenant-logos/aris.png"
-                  alt="ARIS Logo"
-                  width={280}
-                  height={280}
-                  className="drop-shadow-2xl"
-                  priority
-                />
-              </div>
+              <Image
+                src="/tenant-logos/aris.png"
+                alt="ARIS Logo"
+                width={280}
+                height={280}
+                className="drop-shadow-2xl"
+                priority
+              />
             </div>
           </div>
 
@@ -167,20 +160,16 @@ export default function LoginPage() {
       </div>
 
       {/* Right Side - Login Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-8 lg:p-12 bg-gradient-to-br from-background via-background to-background page-enter-right">
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-8 lg:p-12 bg-background dark:bg-slate-900 page-enter-right">
         <div className="w-full max-w-md">
           {/* Mobile Logo Header */}
           <div className="lg:hidden text-center mb-8">
-            <div className="relative inline-block">
-              <div className="absolute inset-0 bg-blue-500/20 blur-xl rounded-full" />
-              <Image
-                src="/reinplaner-logo.svg"
-                alt="ReinPlaner Management Logo"
-                width={120}
-                height={120}
-                className="relative"
-              />
-            </div>
+            <Image
+              src="/reinplaner-logo.svg"
+              alt="ReinPlaner Management Logo"
+              width={120}
+              height={120}
+            />
             <h1 className="text-2xl font-bold mt-4 text-foreground">ReinPlaner</h1>
             <p className="text-primary text-sm">Software für Gebäudereinigung</p>
           </div>
@@ -190,7 +179,7 @@ export default function LoginPage() {
             {/* Gradient accent line */}
             <div className="absolute -top-px left-8 right-8 h-px bg-gradient-to-r from-transparent via-blue-400 to-transparent" />
 
-            <div className="bg-card/90 backdrop-blur-xl rounded-3xl shadow-2xl border border-border p-8 lg:p-10 page-enter stagger-4">
+            <div className="bg-card/90 dark:bg-slate-800/90 backdrop-blur-xl rounded-3xl shadow-2xl border border-border dark:border-slate-700 p-8 lg:p-10 page-enter stagger-4">
               {/* Header */}
               <div className="text-center mb-8 page-enter stagger-4">
                 {isResetMode ? (
@@ -394,10 +383,6 @@ export default function LoginPage() {
                 </form>
               )}
             </div>
-
-            {/* Decorative glow */}
-            <div className="absolute -bottom-6 -left-6 w-32 h-32 bg-blue-400/20 rounded-full blur-2xl" />
-            <div className="absolute -top-6 -right-6 w-24 h-24 bg-cyan-400/15 rounded-full blur-2xl" />
           </div>
 
           {/* Mobile footer */}
@@ -406,19 +391,6 @@ export default function LoginPage() {
           </div>
         </div>
       </div>
-
-      {/* Custom animations */}
-      <style jsx global>{`
-        @keyframes pulse-slow {
-          0%, 100% { opacity: 0.4; transform: scale(1); }
-          50% { opacity: 0.7; transform: scale(1.1); }
-        }
-        .animate-pulse-slow {
-          animation: pulse-slow 5s ease-in-out infinite;
-        }
-        .delay-300 { animation-delay: 0.3s; }
-        .delay-700 { animation-delay: 0.7s; }
-      `}</style>
     </div>
   );
 }

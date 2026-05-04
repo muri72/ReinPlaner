@@ -142,27 +142,27 @@ const trustBadges = [
 
 export default function PricingPage() {
   return (
-    <main className="min-h-screen bg-white">
+    <main className="min-h-screen bg-white dark:bg-slate-900">
       <MarketingHeader />
 
       {/* ============ HERO SECTION ============ */}
-      <section className="pt-24 pb-16 sm:pt-32 sm:pb-24 bg-white">
+      <section className="pt-24 pb-16 sm:pt-32 sm:pb-24 bg-white dark:bg-slate-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           {/* Trust Badges */}
           <div className="inline-flex flex-wrap items-center justify-center gap-4 mb-6">
             {trustBadges.map((badge) => (
-              <div key={badge.text} className="inline-flex items-center gap-1.5 text-sm text-slate-600">
-                <badge.icon className="w-4 h-4 text-blue-600" />
+              <div key={badge.text} className="inline-flex items-center gap-1.5 text-sm text-slate-600 dark:text-slate-300">
+                <badge.icon className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                 <span>{badge.text}</span>
               </div>
             ))}
           </div>
 
-          <h1 className="text-4xl md:text-5xl font-bold text-slate-900 mb-4 tracking-tight">
+          <h1 className="text-4xl md:text-5xl font-bold text-slate-900 dark:text-white mb-4 tracking-tight">
             Der passende Plan für{" "}
-            <span className="text-blue-600">Ihre Reinigungsfirma</span>
+            <span className="text-blue-600 dark:text-blue-400">Ihre Reinigungsfirma</span>
           </h1>
-          <p className="text-lg text-slate-600 max-w-2xl mx-auto">
+          <p className="text-lg text-slate-600 dark:text-slate-300 max-w-2xl mx-auto">
             Wählen Sie den Plan, der zu Ihrem Unternehmen passt. Alle Pläne
             include 14 Tage kostenlos testen — ohne Kreditkarte.
           </p>
@@ -170,16 +170,16 @@ export default function PricingPage() {
       </section>
 
       {/* ============ PRICING CARDS ============ */}
-      <section className="py-16 bg-slate-50">
+      <section className="py-16 bg-slate-50 dark:bg-slate-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
             {plans.map((plan) => (
               <div
                 key={plan.name}
-                className={`relative p-8 rounded-2xl bg-white border ${
+                className={`relative p-8 rounded-2xl bg-white dark:bg-slate-800 border ${
                   plan.highlighted
-                    ? "border-blue-500 border-2 shadow-xl"
-                    : "border-slate-200 shadow-sm"
+                    ? "border-blue-500 border-2 shadow-xl dark:shadow-none"
+                    : "border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none"
                 } transition-all duration-300`}
               >
                 {plan.highlighted && (
@@ -188,18 +188,18 @@ export default function PricingPage() {
                   </div>
                 )}
                 <div className={plan.highlighted ? "pt-2" : ""}>
-                  <h3 className="text-xl font-bold text-slate-900 mb-1">{plan.name}</h3>
-                  <p className="text-sm text-slate-600 mb-4">{plan.description}</p>
+                  <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-1">{plan.name}</h3>
+                  <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">{plan.description}</p>
                   <div className="mb-6">
-                    <span className="text-5xl font-bold text-slate-900">€{plan.price}</span>
-                    <span className="text-slate-500 ml-1">/ {plan.period}</span>
+                    <span className="text-5xl font-bold text-slate-900 dark:text-white">€{plan.price}</span>
+                    <span className="text-slate-500 dark:text-slate-400 ml-1">/ {plan.period}</span>
                   </div>
                   <Button
                     asChild
                     className={`w-full mb-8 h-12 font-semibold ${
                       plan.highlighted
                         ? "bg-blue-600 hover:bg-blue-700 text-white"
-                        : "bg-white border border-slate-300 text-slate-700 hover:bg-slate-50"
+                        : "bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-600"
                     }`}
                   >
                     <Link
@@ -222,13 +222,13 @@ export default function PricingPage() {
                         {feature.included ? (
                           <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
                         ) : (
-                          <XCircle className="w-5 h-5 text-slate-300 shrink-0" />
+                          <XCircle className="w-5 h-5 text-slate-300 dark:text-slate-600 shrink-0" />
                         )}
                         <span
                           className={
                             feature.included
-                              ? "text-slate-700"
-                              : "text-slate-400"
+                              ? "text-slate-700 dark:text-slate-300"
+                              : "text-slate-400 dark:text-slate-500"
                           }
                         >
                           {feature.name}
@@ -244,13 +244,13 @@ export default function PricingPage() {
       </section>
 
       {/* ============ ENTERPRISE CTA ============ */}
-      <section className="py-16 bg-white">
+      <section className="py-16 bg-white dark:bg-slate-900">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div className="p-8 md:p-12 bg-slate-50 border border-slate-200 rounded-2xl">
-            <h2 className="text-2xl md:text-3xl font-bold text-slate-900 mb-4">
+          <div className="p-8 md:p-12 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl">
+            <h2 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white mb-4">
               Brauchen Sie etwas Individuelles?
             </h2>
-            <p className="text-lg text-slate-600 max-w-2xl mx-auto mb-8">
+            <p className="text-lg text-slate-600 dark:text-slate-300 max-w-2xl mx-auto mb-8">
               Für große Organisationen mit speziellen Anforderungen bieten wir
               maßgeschneiderte Lösungen mit individueller Preisgestaltung.
             </p>
@@ -271,24 +271,24 @@ export default function PricingPage() {
       </section>
 
       {/* ============ FAQ SECTION ============ */}
-      <section className="py-20 bg-slate-50">
+      <section className="py-20 bg-slate-50 dark:bg-slate-800">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4 tracking-tight">
+            <h2 className="text-3xl md:text-4xl font-bold text-slate-900 dark:text-white mb-4 tracking-tight">
               Häufig gestellte Fragen
             </h2>
-            <p className="text-lg text-slate-600">
+            <p className="text-lg text-slate-600 dark:text-slate-300">
               Alles, was Sie über unsere Preise wissen müssen.
             </p>
           </div>
 
-          <Accordion type="single" collapsible className="bg-white border border-slate-200 rounded-xl p-6">
+          <Accordion type="single" collapsible className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-6">
             {faqs.map((faq, index) => (
-              <AccordionItem key={index} value={`item-${index}`} className="border-b border-slate-200 last:border-0">
-                <AccordionTrigger className="text-left font-semibold text-slate-900 hover:text-blue-600 py-5">
+              <AccordionItem key={index} value={`item-${index}`} className="border-b border-slate-200 dark:border-slate-700 last:border-0">
+                <AccordionTrigger className="text-left font-semibold text-slate-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 py-5">
                   {faq.question}
                 </AccordionTrigger>
-                <AccordionContent className="text-slate-600 leading-relaxed pb-5">
+                <AccordionContent className="text-slate-600 dark:text-slate-300 leading-relaxed pb-5">
                   {faq.answer}
                 </AccordionContent>
               </AccordionItem>
@@ -298,17 +298,17 @@ export default function PricingPage() {
       </section>
 
       {/* ============ FINAL CTA ============ */}
-      <section className="py-20 bg-white">
+      <section className="py-20 bg-white dark:bg-slate-900">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <div className="flex items-center justify-center gap-1 mb-4">
             {[...Array(5)].map((_, i) => (
               <span key={i} className="text-amber-400 text-2xl">★</span>
             ))}
           </div>
-          <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4 tracking-tight">
+          <h2 className="text-3xl md:text-4xl font-bold text-slate-900 dark:text-white mb-4 tracking-tight">
             Starten Sie noch heute — kostenlos
           </h2>
-          <p className="text-lg text-slate-600 mb-8">
+          <p className="text-lg text-slate-600 dark:text-slate-300 mb-8">
             Über 150 Reinigungsfirmen vertrauen bereits auf ReinPlaner.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -323,16 +323,16 @@ export default function PricingPage() {
               </Link>
             </Button>
           </div>
-          <p className="mt-4 text-sm text-slate-500">
+          <p className="mt-4 text-sm text-slate-500 dark:text-slate-400">
             Keine Kreditkarte erforderlich. Jederzeit kündbar.
           </p>
         </div>
       </section>
 
       {/* ============ FOOTER ============ */}
-      <footer className="py-12 bg-slate-50 border-t border-slate-200">
+      <footer className="py-12 bg-slate-50 dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <p className="text-sm text-slate-500">© 2024 ReinPlaner. Alle Rechte vorbehalten.</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">© 2024 ReinPlaner. Alle Rechte vorbehalten.</p>
         </div>
       </footer>
     </main>

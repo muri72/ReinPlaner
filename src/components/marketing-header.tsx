@@ -36,8 +36,8 @@ export function MarketingHeader() {
       <header
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-200 ${
           isScrolled
-            ? "bg-white border-b border-slate-200 shadow-sm"
-            : "bg-white border-b border-slate-200"
+            ? "bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none"
+            : "bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700"
         }`}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -64,8 +64,8 @@ export function MarketingHeader() {
                   href={link.href}
                   className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
                     pathname === link.href
-                      ? "text-blue-600 bg-blue-50"
-                      : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                      ? "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30"
+                      : "text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800"
                   }`}
                 >
                   {link.label}
@@ -75,7 +75,7 @@ export function MarketingHeader() {
 
             {/* Desktop CTA */}
             <div className="hidden md:flex items-center gap-3">
-              <Button asChild variant="ghost" size="sm" className="text-slate-600 hover:text-slate-900 hover:bg-slate-50">
+              <Button asChild variant="ghost" size="sm" className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800">
                 <Link href="/login">Anmelden</Link>
               </Button>
               <Button asChild size="sm" className="bg-blue-600 hover:bg-blue-700 text-white font-medium">
@@ -99,7 +99,7 @@ export function MarketingHeader() {
 
       {/* Mobile Menu */}
       <div
-        className={`fixed inset-0 z-40 bg-white md:hidden transition-all duration-300 ${
+        className={`fixed inset-0 z-40 bg-white dark:bg-slate-900 md:hidden transition-all duration-300 ${
           isMobileMenuOpen ? "opacity-100 visible" : "opacity-0 invisible pointer-events-none"
         }`}
       >
@@ -109,13 +109,13 @@ export function MarketingHeader() {
               key={link.href}
               href={link.href}
               onClick={() => setIsMobileMenuOpen(false)}
-              className="text-2xl font-semibold text-slate-900 hover:text-blue-600 transition-colors"
+              className="text-2xl font-semibold text-slate-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
             >
               {link.label}
             </Link>
           ))}
           <div className="flex flex-col gap-3 mt-8 w-64">
-            <Button asChild variant="outline" className="border-slate-300 text-slate-700 hover:bg-slate-50">
+            <Button asChild variant="outline" className="border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800">
               <Link href="/login">Anmelden</Link>
             </Button>
             <Button asChild className="bg-blue-600 hover:bg-blue-700 text-white">
