@@ -34,7 +34,7 @@ import {
   arrayMove,
   rectSortingStrategy,
 } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
+
 import {
   Sheet,
   SheetContent,
@@ -421,7 +421,7 @@ export function MobileNavigation({
                       } = useSortable({ id: item.id });
 
                       const style = {
-                        transform: CSS.Transform.toString(transform),
+                        transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
                         transition,
                       };
 
