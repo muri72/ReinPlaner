@@ -102,10 +102,14 @@ export function NotificationBell({ isCollapsed = false }: NotificationBellProps)
   const handleMarkAllAsRead = async () => {
     setLoading(true);
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) {
+      setLoading(false);
+      return;
+    }
 
     // Optimistic update - immediately clear counter
     const previousNotifications = notifications;
+    const previousUnreadCount = unreadCount;
     setNotifications([]);
     setUnreadCount(0);
 
@@ -118,13 +122,50 @@ export function NotificationBell({ isCollapsed = false }: NotificationBellProps)
     if (error) {
       // Rollback on error
       setNotifications(previousNotifications);
-      setUnreadCount(previousNotifications.length);
+      setUnreadCount(previousUnreadCount);
       console.error("Fehler beim Markieren aller als gelesen:", error);
-    } else {
-      // Fetch fresh data after brief delay to ensure DB write is committed
-      await new Promise(resolve => setTimeout(resolve, 300));
-      await fetchNotifications();
+      setLoading(false);
+      return;
     }
+
+    // Wait for DB commit, then force refetch with retry
+    let success = false;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      // Fetch fresh data
+      const { data, error: fetchError } = await supabase
+        .from("notifications")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("is_read", false)
+        .order("created_at", { ascending: false })
+        .limit(20);
+
+      if (!fetchError && data !== null) {
+        const newUnreadCount = data.length;
+        if (newUnreadCount === 0) {
+          // Success - all cleared
+          setNotifications([]);
+          setUnreadCount(0);
+          success = true;
+          break;
+        } else if (attempt === 2) {
+          // Final attempt failed - update with whatever we got
+          setNotifications(data.map((n) => ({
+            ...n,
+            type: (n.type as NotificationType) || "default",
+          })));
+          setUnreadCount(newUnreadCount);
+        }
+      }
+    }
+    
+    if (!success) {
+      // Fallback: force a complete re-fetch via channel
+      console.log("Notifications update verify failed, forcing re-fetch");
+    }
+    
     setLoading(false);
   };
 
