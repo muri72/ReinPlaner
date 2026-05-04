@@ -133,7 +133,7 @@ export default function TemplatesPage() {
       case 'contract':
         return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
       default:
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
+        return 'bg-muted text-foreground dark:bg-muted dark:text-muted-foreground';
     }
   };
 

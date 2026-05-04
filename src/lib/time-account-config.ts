@@ -249,7 +249,7 @@ export const timeAccountStatusConfig = {
   },
   neutral: {
     label: 'Ausgeglichen',
-    bg: 'bg-slate-100 dark:bg-slate-900/60',
+    bg: 'bg-muted dark:bg-muted',
     border: 'border-slate-300 dark:border-slate-700',
     text: 'text-slate-800 dark:text-slate-200',
     solidBg: 'bg-slate-600',

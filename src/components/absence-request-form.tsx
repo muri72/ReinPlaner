@@ -323,7 +323,7 @@ export function AbsenceRequestForm({ initialData, onSubmit, submitButtonText, on
 
             {/* Option to convert excess to unpaid leave */}
             {isExceedingBalance && !convertToUnpaid && (
-              <div className="mt-3 p-3 bg-slate-100 dark:bg-slate-800/60 rounded-lg border border-slate-300 dark:border-slate-700">
+              <div className="mt-3 p-3 bg-muted dark:bg-muted rounded-lg border border-border dark:border-muted-foreground/30">
                 <div className="flex items-start gap-3">
                   <Checkbox
                     id="convertToUnpaid"
@@ -355,7 +355,7 @@ export function AbsenceRequestForm({ initialData, onSubmit, submitButtonText, on
 
             {/* Show unpaid leave info when selected */}
             {form.watch("type") === "unpaid_leave" && (
-              <div className="mt-3 p-3 bg-slate-100 dark:bg-slate-800/60 rounded-lg border border-slate-300 dark:border-slate-700">
+              <div className="mt-3 p-3 bg-muted dark:bg-muted rounded-lg border border-border dark:border-muted-foreground/30">
                 <div className="flex items-center gap-2 text-sm">
                   <Info className="h-4 w-4 text-slate-600 dark:text-slate-400" />
                   <span className="font-medium text-slate-800 dark:text-slate-200">
@@ -520,7 +520,7 @@ export function AbsenceRequestForm({ initialData, onSubmit, submitButtonText, on
 
               {/* Option to convert excess to unpaid leave */}
               {isExceedingBalance && !convertToUnpaid && (
-                <div className="mt-3 p-3 bg-slate-100 dark:bg-slate-800/60 rounded-lg border border-slate-300 dark:border-slate-700">
+                <div className="mt-3 p-3 bg-muted dark:bg-muted rounded-lg border border-border dark:border-muted-foreground/30">
                   <div className="flex items-start gap-3">
                     <Checkbox
                       id="convertToUnpaid2"
@@ -552,7 +552,7 @@ export function AbsenceRequestForm({ initialData, onSubmit, submitButtonText, on
 
               {/* Show unpaid leave info when selected */}
               {form.watch("type") === "unpaid_leave" && (
-                <div className="mt-3 p-3 bg-slate-100 dark:bg-slate-800/60 rounded-lg border border-slate-300 dark:border-slate-700">
+                <div className="mt-3 p-3 bg-muted dark:bg-muted rounded-lg border border-border dark:border-muted-foreground/30">
                   <div className="flex items-center gap-2 text-sm">
                     <Info className="h-4 w-4 text-slate-600 dark:text-slate-400" />
                     <span className="font-medium text-slate-800 dark:text-slate-200">

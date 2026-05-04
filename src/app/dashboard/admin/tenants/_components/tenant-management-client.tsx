@@ -116,7 +116,7 @@ export function TenantManagementClient({
       case 'starter': return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300';
       case 'professional': return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300';
       case 'enterprise': return 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300';
-      default: return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
+      default: return 'bg-muted text-foreground dark:bg-muted dark:text-muted-foreground';
     }
   };
 

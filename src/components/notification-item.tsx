@@ -56,7 +56,7 @@ const typeConfig: Record<
   system: {
     icon: Settings,
     color: "text-gray-600",
-    bgColor: "bg-gray-100 dark:bg-gray-900/30",
+    bgColor: "bg-muted",
   },
   absence: {
     icon: Umbrella,

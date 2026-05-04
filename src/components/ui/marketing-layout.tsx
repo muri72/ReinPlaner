@@ -83,7 +83,7 @@ export function MarketingLayout({
           className={cn(
             "relative z-10 border-b",
             isDark
-              ? "border-white/10 bg-slate-900/50 backdrop-blur-md"
+              ? "border-border bg-background/50 backdrop-blur-md"
               : "border-slate-200 bg-white/80 backdrop-blur-xl sticky top-0"
           )}
         >

@@ -310,12 +310,13 @@ export function TodaysOrdersOverview() {
       }
 
       // Fallback to regular optimized query
+      // Note: orders table has object_id (FK to objects) and customer_id, but NOT
+      // foreign key relationships to objects/customers tables in PostgREST schema.
+      // So we use explicit JOINs via separate queries instead of embedded relationships.
       let query = supabase
         .from('orders')
         .select(`
-          id, title, status, end_date, customer_id, object_id, order_type, start_date,
-          objects ( name, recurrence_interval_weeks, start_week_offset, daily_schedules ),
-          customers ( name )
+          id, title, status, end_date, customer_id, object_id, order_type, start_date
         `)
         .eq('request_status', 'approved')
         .or(`end_date.eq.${todayStr},and(start_date.lte.${todayStr},or(end_date.gte.${todayStr},end_date.is.null))`)
@@ -336,6 +337,22 @@ export function TodaysOrdersOverview() {
         return;
       }
 
+      // Fetch object and customer data separately (no FK relationship in PostgREST schema)
+      const objectIds = [...new Set(ordersData.map(o => o.object_id).filter(Boolean))];
+      const customerIds = [...new Set(ordersData.map(o => o.customer_id).filter(Boolean))];
+
+      const [{ data: objectsData }, { data: customersData }] = await Promise.all([
+        objectIds.length > 0
+          ? supabase.from('objects').select('id, name, recurrence_interval_weeks, start_week_offset, daily_schedules').in('id', objectIds)
+          : { data: null },
+        customerIds.length > 0
+          ? supabase.from('customers').select('id, name').in('id', customerIds)
+          : { data: null }
+      ]);
+
+      const objectsMap = new Map((objectsData || []).map(o => [o.id, o]));
+      const customersMap = new Map((customersData || []).map(c => [c.id, c]));
+
       // Get employee assignments
       const orderIds = ordersData.map(o => o.id);
       const { data: assignmentsData } = await supabase
@@ -350,9 +367,11 @@ export function TodaysOrdersOverview() {
         `)
         .in('order_id', orderIds);
 
-      // Combine data with memoized filter
+      // Combine data with the looked-up object and customer info
       const data = ordersData.map(order => ({
         ...order,
+        _object: objectsMap.get(order.object_id) || null,
+        _customer: customersMap.get(order.customer_id) || null,
         order_employee_assignments: assignmentsData?.filter(a => a.order_id === order.id) || []
       }));
 
@@ -379,11 +398,11 @@ export function TodaysOrdersOverview() {
             assigned_start_week_offset: a.assigned_start_week_offset,
           };
         }) || [],
-        customer_name: order.customers?.[0]?.name || null,
-        object_name: order.objects?.[0]?.name || null,
+        customer_name: order._customer?.name || null,
+        object_name: order._object?.name || null,
         order_type: order.order_type,
         start_date: order.start_date,
-        object: order.objects?.[0] || null,
+        object: order._object || null,
       }));
 
       // Cache the results

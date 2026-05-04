@@ -24,6 +24,18 @@ import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
+  DndContext,
+  closestCenter,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  useSortable,
+  arrayMove,
+  rectSortingStrategy,
+} from "@dnd-kit/sortable";
+
+import {
   Sheet,
   SheetContent,
   SheetHeader,
@@ -262,21 +274,15 @@ export function MobileNavigation({
     [orderedItems, visibleItems],
   );
 
-  const moveItem = (id: string, direction: "up" | "down") => {
-    setOrder((prev) => {
-      const index = prev.indexOf(id);
-      if (index === -1) return prev;
-
-      const targetIndex = direction === "up" ? index - 1 : index + 1;
-      if (targetIndex < 0 || targetIndex >= prev.length) return prev;
-
-      const updated = [...prev];
-      [updated[index], updated[targetIndex]] = [
-        updated[targetIndex],
-        updated[index],
-      ];
-      return updated;
-    });
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      setOrder((prev) => {
+        const oldIndex = prev.indexOf(active.id as string);
+        const newIndex = prev.indexOf(over.id as string);
+        return arrayMove(prev, oldIndex, newIndex);
+      });
+    }
   };
 
   const toggleVisible = (id: string, checked: boolean) => {
@@ -395,70 +401,76 @@ export function MobileNavigation({
             </div>
 
             {isManaging ? (
-              <div className="space-y-3 px-4 pb-6">
-                {orderedItems.map((item) => {
-                  const index = order.indexOf(item.id);
-                  const canMoveUp = index > 0;
-                  const canMoveDown = index < order.length - 1;
-                  const isVisible = visible.includes(item.id);
+              <div className="space-y-3 px-4 pb-3">
+                <DndContext
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleDragEnd}
+                >
+                  <SortableContext items={order} strategy={rectSortingStrategy}>
+                    {order.map((itemId) => {
+                      const item = orderedItems.find((i) => i.id === itemId);
+                      if (!item) return null;
+                      const isVisible = visible.includes(item.id);
+                      const {
+                        attributes,
+                        listeners,
+                        setNodeRef,
+                        transform,
+                        transition,
+                        isDragging,
+                      } = useSortable({ id: item.id });
 
-                  return (
-                    <div
-                      key={item.id}
-                      className="flex items-center gap-3 rounded-xl border border-border/80 bg-card/80 p-3 shadow-sm"
-                    >
-                      <GripVertical className="h-4 w-4 text-muted-foreground" />
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-semibold">
-                          {item.label}
-                        </p>
-                        <p className="truncate text-xs text-muted-foreground">
-                          {item.href}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="flex flex-col gap-1">
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => moveItem(item.id, "up")}
-                            disabled={!canMoveUp}
-                            aria-label={`${item.label} nach oben verschieben`}
-                          >
-                            <ChevronUp className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => moveItem(item.id, "down")}
-                            disabled={!canMoveDown}
-                            aria-label={`${item.label} nach unten verschieben`}
-                          >
-                            <ChevronDown className="h-4 w-4" />
-                          </Button>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Switch
-                            id={`visible-${item.id}`}
-                            checked={isVisible}
-                            onCheckedChange={(checked) =>
-                              toggleVisible(item.id, checked)
-                            }
-                          />
-                          <label
-                            htmlFor={`visible-${item.id}`}
-                            className="text-xs text-muted-foreground"
-                          >
-                            Schnellzugriff
-                          </label>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
+                      const style = {
+                        transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
+                        transition,
+                      };
 
+                      return (
+                        <div
+                          key={item.id}
+                          ref={setNodeRef}
+                          style={style}
+                          className={cn(
+                            "flex items-center gap-3 rounded-xl border border-border/80 bg-card/80 p-3 shadow-sm touch-manipulation mb-3",
+                            isDragging && "opacity-50 shadow-lg z-50",
+                          )}
+                        >
+                          <button
+                            type="button"
+                            className="cursor-grab active:cursor-grabbing touch-manipulation"
+                            {...attributes}
+                            {...listeners}
+                          >
+                            <GripVertical className="h-4 w-4 text-muted-foreground" />
+                          </button>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-semibold">
+                              {item.label}
+                            </p>
+                            <p className="truncate text-xs text-muted-foreground">
+                              {item.href}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Switch
+                              id={`visible-${item.id}`}
+                              checked={isVisible}
+                              onCheckedChange={(checked) =>
+                                toggleVisible(item.id, checked)
+                              }
+                            />
+                            <label
+                              htmlFor={`visible-${item.id}`}
+                              className="text-xs text-muted-foreground"
+                            >
+                              Schnellzugriff
+                            </label>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </SortableContext>
+                </DndContext>
                 <Button
                   variant="outline"
                   className="w-full"

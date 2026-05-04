@@ -22,13 +22,15 @@ import { useIsMobile } from "@/hooks/use-mobile"; // Import useIsMobile
 import { ImpersonationDialog } from "@/components/impersonation-dialog";
 import { IMPERSONATION_STORAGE_KEY } from "../lib/impersonation/constants";
 import { useUserProfile } from "@/components/user-profile-provider";
+import { cn } from "@/lib/utils";
 
 interface UserMenuProps {
   currentUserRole: 'admin' | 'manager' | 'employee' | 'customer';
   onSignOut: () => Promise<void>;
+  isCollapsed?: boolean;
 }
 
-export function UserMenu({ currentUserRole, onSignOut }: UserMenuProps) {
+export function UserMenu({ currentUserRole, onSignOut, isCollapsed = false }: UserMenuProps) {
   const router = useRouter();
   const { theme, setTheme } = useTheme();
   const isMobile = useIsMobile(); // Use the hook
@@ -58,8 +60,8 @@ export function UserMenu({ currentUserRole, onSignOut }: UserMenuProps) {
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-            <Avatar className="h-8 w-8">
+          <Button variant="ghost" className={cn("relative rounded-full", isCollapsed ? "h-10 w-10 mx-auto" : "h-8 w-8")}>
+            <Avatar className={isCollapsed ? "h-10 w-10" : "h-8 w-8"}>
               <AvatarImage src={profile?.avatar_url || undefined} alt={displayName} />
               <AvatarFallback>{avatarFallback}</AvatarFallback>
             </Avatar>
