@@ -1,29 +1,13 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, X, ChevronLeft } from "lucide-react";
+import { ChevronLeft, Bell, User, Settings, LayoutDashboard, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
-
-import {
-  SidebarProvider,
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuItem,
-  SidebarMenuButton,
-  SidebarGroup,
-  SidebarGroupLabel,
-  SidebarGroupContent,
-  SidebarRail,
-  useSidebar,
-} from "@/components/ui/sidebar";
 
 import { NotificationBell } from "@/components/notification-bell";
 import { UserMenu } from "@/components/user-menu";
@@ -35,8 +19,6 @@ import {
   getFlatNavForRole,
   getHomeHref,
   getNavLabel,
-  type NavLink,
-  type NavCategory,
   type UserRole,
 } from "@/lib/nav-config";
 
@@ -46,6 +28,12 @@ interface DashboardClientLayoutProps {
   children: React.ReactNode;
   onSignOut: () => Promise<void>;
 }
+
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const SIDEBAR_EXPANDED_WIDTH = 256;
+const SIDEBAR_COLLAPSED_WIDTH = 64;
+const STORAGE_KEY = "reinplaner-sidebar-collapsed";
 
 // ─── Loading Screen ───────────────────────────────────────────────────────────
 
@@ -57,121 +45,93 @@ function LoadingScreen() {
   );
 }
 
-// ─── Nav Items ────────────────────────────────────────────────────────────────
+// ─── Sidebar Navigation Item ─────────────────────────────────────────────────
 
-function NavLinkItem({
-  item,
+function NavItem({
+  href,
+  icon: Icon,
+  label,
   isActive,
   isCollapsed,
   onClick,
 }: {
-  item: NavLink;
+  href: string;
+  icon: React.ElementType;
+  label: string;
   isActive: boolean;
   isCollapsed: boolean;
   onClick?: () => void;
 }) {
-  const label = getNavLabel(item.key);
-
   return (
-    <SidebarMenuItem>
-      <SidebarMenuButton
-        asChild
-        isActive={isActive}
-        tooltip={isCollapsed ? label : undefined}
-        onClick={onClick}
-      >
-        <Link href={item.href}>
-          <item.Icon className="size-5 shrink-0" />
-          {!isCollapsed && <span className="truncate">{label}</span>}
-        </Link>
-      </SidebarMenuButton>
-    </SidebarMenuItem>
+    <Link
+      href={href}
+      onClick={onClick}
+      className={cn(
+        "flex items-center gap-3 rounded-lg text-sm font-medium transition-colors relative group",
+        isActive
+          ? "bg-primary/10 text-primary"
+          : "text-muted-foreground hover:bg-muted hover:text-foreground",
+        isCollapsed ? "justify-center px-2 py-2.5" : "px-3 py-2.5"
+      )}
+      title={isCollapsed ? label : undefined}
+    >
+      <Icon className="h-5 w-5 shrink-0" />
+      {!isCollapsed && <span className="truncate">{label}</span>}
+      {isCollapsed && (
+        <div className="absolute left-full ml-2 px-2 py-1 bg-popover text-popover-foreground text-xs rounded-md shadow-md opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity whitespace-nowrap z-50 pointer-events-none">
+          {label}
+        </div>
+      )}
+    </Link>
   );
 }
 
-function SidebarNavContent({
+// ─── Custom Sidebar (plain, no shadcn dependency) ────────────────────────────
+
+function CustomSidebar({
   currentUserRole,
   isCollapsed,
+  onToggle,
+  onSignOut,
 }: {
   currentUserRole: UserRole;
   isCollapsed: boolean;
+  onToggle: () => void;
+  onSignOut: () => Promise<void>;
 }) {
   const pathname = usePathname();
   const flatLinks = getFlatNavForRole(currentUserRole);
   const categories = getCategoriesForRole(currentUserRole);
-
-  return (
-    <>
-      {flatLinks.map((item) => (
-        <NavLinkItem
-          key={item.key}
-          item={item}
-          isActive={pathname === item.href}
-          isCollapsed={isCollapsed}
-        />
-      ))}
-
-      {flatLinks.length > 0 && categories.length > 0 && (
-        <SidebarMenuItem className="py-1">
-          <div className="mx-2 h-px bg-sidebar-border" />
-        </SidebarMenuItem>
-      )}
-
-      {categories.map((category) => (
-        <SidebarGroup key={category.key}>
-          {!isCollapsed && (
-            <SidebarGroupLabel className="px-2 text-xs font-semibold uppercase tracking-wider text-sidebar-foreground/50">
-              {getNavLabel(category.key)}
-            </SidebarGroupLabel>
-          )}
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {category.children.map((child) => (
-                <NavLinkItem
-                  key={child.key}
-                  item={child}
-                  isActive={pathname === child.href}
-                  isCollapsed={isCollapsed}
-                />
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      ))}
-    </>
-  );
-}
-
-// ─── Desktop Sidebar ─────────────────────────────────────────────────────────
-
-function DesktopSidebar({
-  currentUserRole,
-  onSignOut,
-}: {
-  currentUserRole: UserRole;
-  onSignOut: () => Promise<void>;
-}) {
-  const { state, toggleSidebar } = useSidebar();
-  const isCollapsed = state === "collapsed";
   const homeHref = getHomeHref(currentUserRole);
 
   return (
-    <Sidebar
-      collapsible="icon"
-      className="fixed left-0 top-0 z-30 hidden h-screen w-[--sidebar-width] flex-col md:flex"
-      style={{ backgroundColor: "hsl(var(--sidebar-background))" }}
+    <aside
+      className="fixed left-0 top-0 z-40 h-screen flex flex-col transition-all duration-200 ease-in-out"
+      style={{
+        width: isCollapsed ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_EXPANDED_WIDTH,
+        backgroundColor: "hsl(var(--sidebar-background))",
+        borderRight: "1px solid hsl(var(--sidebar-border))",
+      }}
     >
-      <SidebarHeader className="flex flex-row items-center justify-between gap-2 px-3 py-3 border-b border-sidebar-border">
+      {/* Header */}
+      <div
+        className="flex items-center gap-2 px-3 py-3 border-b border-sidebar-border"
+        style={{ height: 57 }}
+      >
         <Link href={homeHref} className="min-w-0 flex-1">
-          <span className="text-lg font-bold text-sidebar-foreground truncate block">
+          <span
+            className="text-lg font-bold truncate block"
+            style={{ color: "hsl(var(--sidebar-foreground))" }}
+          >
             ReinPlaner
           </span>
         </Link>
         <Button
           variant="ghost"
           size="icon"
-          onClick={toggleSidebar}
+          onClick={onToggle}
           className="h-7 w-7 shrink-0"
+          style={{ color: "hsl(var(--sidebar-foreground))" }}
           aria-label={isCollapsed ? "Sidebar erweitern" : "Sidebar minimieren"}
         >
           <ChevronLeft
@@ -181,46 +141,60 @@ function DesktopSidebar({
             )}
           />
         </Button>
-      </SidebarHeader>
+      </div>
 
-      <SidebarContent className="overflow-y-auto flex-1">
-        <SidebarMenu>
-          <SidebarNavContent currentUserRole={currentUserRole} isCollapsed={isCollapsed} />
-        </SidebarMenu>
-      </SidebarContent>
+      {/* Nav */}
+      <nav className="flex-1 overflow-y-auto px-2 py-3 space-y-1">
+        {/* Flat links */}
+        {flatLinks.map((item) => (
+          <NavItem
+            key={item.key}
+            href={item.href}
+            icon={item.Icon}
+            label={getNavLabel(item.key)}
+            isActive={pathname === item.href}
+            isCollapsed={isCollapsed}
+          />
+        ))}
 
-      <SidebarFooter className="border-t border-sidebar-border px-2 py-3">
-        <div className="flex flex-col gap-2">
-          <NotificationBell />
+        {/* Divider */}
+        {flatLinks.length > 0 && categories.length > 0 && (
+          <div className="my-3 border-t border-sidebar-border" />
+        )}
+
+        {/* Category groups */}
+        {categories.map((category) => (
+          <div key={category.key} className="space-y-1">
+            {!isCollapsed && (
+              <p
+                className="px-3 py-1.5 text-xs font-semibold uppercase tracking-wider"
+                style={{ color: "hsl(var(--sidebar-foreground) / 0.5)" }}
+              >
+                {getNavLabel(category.key)}
+              </p>
+            )}
+            {category.children.map((child) => (
+              <NavItem
+                key={child.key}
+                href={child.href}
+                icon={child.Icon}
+                label={getNavLabel(child.key)}
+                isActive={pathname === child.href}
+                isCollapsed={isCollapsed}
+              />
+            ))}
+          </div>
+        ))}
+      </nav>
+
+      {/* Footer */}
+      <div className="border-t border-sidebar-border px-2 py-3">
+        <NotificationBell />
+        <div className="mt-2">
           <UserMenu currentUserRole={currentUserRole} onSignOut={onSignOut} />
         </div>
-      </SidebarFooter>
-
-      <SidebarRail />
-    </Sidebar>
-  );
-}
-
-// ─── Mobile Header ────────────────────────────────────────────────────────────
-
-function MobileHeader({
-  currentUserRole,
-}: {
-  currentUserRole: UserRole;
-}) {
-  return (
-    <header className="md:hidden sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border px-4 py-3">
-      <div className="flex items-center justify-between">
-        <Link href={getHomeHref(currentUserRole)}>
-          <span className="text-lg font-bold text-primary">ReinPlaner</span>
-        </Link>
-
-        <div className="flex items-center gap-2">
-          <NotificationBell />
-          <UserMenu currentUserRole={currentUserRole} onSignOut={async () => {}} />
-        </div>
       </div>
-    </header>
+    </aside>
   );
 }
 
@@ -329,34 +303,44 @@ function MobileNavSheet({
   );
 }
 
-// ─── Desktop Content (uses useSidebar hook — must be inside SidebarProvider) ───
+// ─── Mobile Header ────────────────────────────────────────────────────────────
 
-function DesktopContent({
+function MobileHeader({
   currentUserRole,
-  children,
+  onMenuOpen,
 }: {
   currentUserRole: UserRole;
-  children: React.ReactNode;
+  onMenuOpen: () => void;
 }) {
-  const { state } = useSidebar();
-  const isCollapsed = state === "collapsed";
-
   return (
-    <main
-      className={cn(
-        "flex-1 min-h-screen transition-[margin] duration-200 ease-linear",
-        isCollapsed ? "md:ml-[--sidebar-width-icon]" : "md:ml-[--sidebar-width]"
-      )}
-    >
-      <div className="p-4 md:pl-6 md:pr-6 md:pt-6 space-y-4">
-        <ImpersonationBanner />
-        {children}
+    <header className="md:hidden sticky top-0 z-30 bg-background/95 backdrop-blur-sm border-b border-border px-4 py-3">
+      <div className="flex items-center justify-between">
+        <Link href={getHomeHref(currentUserRole)}>
+          <span className="text-lg font-bold text-primary">ReinPlaner</span>
+        </Link>
+
+        <div className="flex items-center gap-2">
+          <NotificationBell />
+          <UserMenu currentUserRole={currentUserRole} onSignOut={async () => {}} />
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onMenuOpen}
+            aria-label="Menü öffnen"
+          >
+            <span className="grid grid-cols-3 gap-0.5 h-4 w-4">
+              {[...Array(9)].map((_, i) => (
+                <span key={i} className="bg-current rounded-sm" />
+              ))}
+            </span>
+          </Button>
+        </div>
       </div>
-    </main>
+    </header>
   );
 }
 
-// ─── Main Layout ──────────────────────────────────────────────────────────────
+// ─── Main Layout ─────────────────────────────────────────────────────────────
 
 export function DashboardClientLayout({
   children,
@@ -365,24 +349,39 @@ export function DashboardClientLayout({
   const { currentUserRole, loading } = useUserProfile();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
   const isMobile = useIsMobile();
 
-  // Wait for client mount to avoid SSR/hydration mismatch
+  // Restore sidebar state from localStorage
   useEffect(() => {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored !== null) {
+      setIsCollapsed(stored === "true");
+    }
     setIsMounted(true);
   }, []);
 
-  // SSR + first hydration: show loading to avoid flash of wrong layout
+  // Persist sidebar collapse state
+  const handleToggle = useCallback(() => {
+    setIsCollapsed((prev) => {
+      const next = !prev;
+      localStorage.setItem(STORAGE_KEY, String(next));
+      return next;
+    });
+  }, []);
+
+  // SSR + first hydration: show loading
   if (!isMounted || loading) {
     return <LoadingScreen />;
   }
 
-  // Mobile: header + sheet + full-width content
+  // Mobile layout
   if (isMobile) {
     return (
       <div className="min-h-screen bg-background">
         <MobileHeader
           currentUserRole={currentUserRole}
+          onMenuOpen={() => setIsMobileMenuOpen(true)}
         />
         <MobileNavSheet
           currentUserRole={currentUserRole}
@@ -400,16 +399,26 @@ export function DashboardClientLayout({
     );
   }
 
-  // Desktop: sidebar + sidebar-aware content
+  // Desktop layout: custom sidebar + content
+  const sidebarWidth = isCollapsed ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_EXPANDED_WIDTH;
+
   return (
-    <SidebarProvider defaultOpen={true}>
-      <DesktopSidebar
+    <div className="min-h-screen bg-background">
+      <CustomSidebar
         currentUserRole={currentUserRole}
+        isCollapsed={isCollapsed}
+        onToggle={handleToggle}
         onSignOut={onSignOut}
       />
-      <DesktopContent currentUserRole={currentUserRole}>
-        {children}
-      </DesktopContent>
-    </SidebarProvider>
+      <main
+        className="min-h-screen transition-all duration-200 ease-in-out"
+        style={{ marginLeft: sidebarWidth }}
+      >
+        <div className="p-6 space-y-4">
+          <ImpersonationBanner />
+          {children}
+        </div>
+      </main>
+    </div>
   );
 }
