@@ -160,7 +160,7 @@ export default function EmployeesPage() {
             searchQuery={query}
           />
           {totalCount !== null && !loading && (
-            <div className="text-sm text-slate-600 mt-2">
+            <div className="text-sm text-slate-600 dark:text-slate-400 mt-2">
               {totalCount} {totalCount === 1 ? 'Ergebnis' : 'Ergebnisse'} gefunden.
             </div>
           )}

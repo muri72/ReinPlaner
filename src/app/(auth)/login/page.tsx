@@ -240,7 +240,7 @@ export default function LoginPage() {
                     type="button"
                     variant="ghost"
                     onClick={() => setIsResetMode(false)}
-                    className="w-full h-12 font-medium text-foreground hover:text-foreground hover:bg-slate-100"
+                    className="w-full h-12 font-medium text-foreground hover:text-foreground hover:bg-slate-100 dark:hover:bg-slate-800"
                   >
                     <ArrowLeft className="w-5 h-5 mr-2" />
                     Zurück zur Anmeldung
