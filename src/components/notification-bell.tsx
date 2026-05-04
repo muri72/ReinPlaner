@@ -41,7 +41,11 @@ const typeConfig: Record<
   default: { icon: BellIcon, color: "text-primary", bgColor: "bg-primary/10" },
 };
 
-export function NotificationBell() {
+interface NotificationBellProps {
+  isCollapsed?: boolean;
+}
+
+export function NotificationBell({ isCollapsed = false }: NotificationBellProps) {
   const supabase = createClient();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -115,7 +119,15 @@ export function NotificationBell() {
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative h-9 w-9" aria-label="Benachrichtigungen">
+        <Button
+          variant="ghost"
+          size="icon"
+          className={cn(
+            "relative",
+            isCollapsed ? "h-10 w-10 mx-auto" : "h-9 w-9"
+          )}
+          aria-label="Benachrichtigungen"
+        >
           {unreadCount > 0 ? (
             <BellRing className="h-4 w-4 text-destructive" />
           ) : (

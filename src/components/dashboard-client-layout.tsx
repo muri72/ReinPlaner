@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronLeft, Bell, User, Settings, LayoutDashboard, X } from "lucide-react";
+import { ChevronLeft, X, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -53,36 +53,79 @@ function NavItem({
   label,
   isActive,
   isCollapsed,
-  onClick,
 }: {
   href: string;
   icon: React.ElementType;
   label: string;
   isActive: boolean;
   isCollapsed: boolean;
-  onClick?: () => void;
 }) {
   return (
     <Link
       href={href}
-      onClick={onClick}
       className={cn(
-        "flex items-center gap-3 rounded-lg text-sm font-medium transition-colors relative group",
+        "group flex items-center rounded-lg text-sm font-medium transition-colors",
         isActive
           ? "bg-primary/10 text-primary"
-          : "text-muted-foreground hover:bg-muted hover:text-foreground",
-        isCollapsed ? "justify-center px-2 py-2.5" : "px-3 py-2.5"
+          : "text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground",
+        isCollapsed
+          ? "justify-center w-10 h-10 mx-auto"
+          : "gap-3 px-3 py-2.5"
       )}
       title={isCollapsed ? label : undefined}
     >
       <Icon className="h-5 w-5 shrink-0" />
       {!isCollapsed && <span className="truncate">{label}</span>}
-      {isCollapsed && (
-        <div className="absolute left-full ml-2 px-2 py-1 bg-popover text-popover-foreground text-xs rounded-md shadow-md opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity whitespace-nowrap z-50 pointer-events-none">
-          {label}
-        </div>
-      )}
     </Link>
+  );
+}
+
+// ─── Sidebar Tooltip (for collapsed state) ───────────────────────────────────
+
+function SidebarTooltip({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="relative group/tooltip">
+      {children}
+      <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2 py-1.5 bg-popover text-popover-foreground text-xs rounded-md shadow-lg opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-opacity whitespace-nowrap z-[100] pointer-events-none">
+        {label}
+      </div>
+    </div>
+  );
+}
+
+// ─── Icon-Only Nav Item (collapsed sidebar) ───────────────────────────────────
+
+function CollapsedNavItem({
+  href,
+  icon: Icon,
+  label,
+  isActive,
+}: {
+  href: string;
+  icon: React.ElementType;
+  label: string;
+  isActive: boolean;
+}) {
+  return (
+    <SidebarTooltip label={label}>
+      <Link
+        href={href}
+        className={cn(
+          "flex items-center justify-center w-10 h-10 mx-auto rounded-lg text-sm font-medium transition-colors",
+          isActive
+            ? "bg-primary/10 text-primary"
+            : "text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground"
+        )}
+      >
+        <Icon className="h-5 w-5 shrink-0" />
+      </Link>
+    </SidebarTooltip>
   );
 }
 
@@ -104,6 +147,22 @@ function CustomSidebar({
   const categories = getCategoriesForRole(currentUserRole);
   const homeHref = getHomeHref(currentUserRole);
 
+  // Flatten all nav items for collapsed view
+  const allNavItems = [
+    ...flatLinks.map((item) => ({
+      href: item.href,
+      icon: item.Icon,
+      label: getNavLabel(item.key),
+    })),
+    ...categories.flatMap((cat) =>
+      cat.children.map((child) => ({
+        href: child.href,
+        icon: child.Icon,
+        label: getNavLabel(child.key),
+      }))
+    ),
+  ];
+
   return (
     <aside
       className="fixed left-0 top-0 z-40 h-screen flex flex-col transition-all duration-200 ease-in-out"
@@ -113,86 +172,112 @@ function CustomSidebar({
         borderRight: "1px solid hsl(var(--sidebar-border))",
       }}
     >
-      {/* Header */}
+      {/* ── Header ── */}
       <div
-        className="flex items-center gap-2 px-3 py-3 border-b border-sidebar-border"
-        style={{ height: 57 }}
+        className="flex items-center border-b border-sidebar-border shrink-0"
+        style={isCollapsed ? { height: 57, padding: "0 8px", justifyContent: "center" } : { height: 57, padding: "0 12px" }}
       >
-        <Link href={homeHref} className="min-w-0 flex-1">
-          <span
-            className="text-lg font-bold truncate block"
-            style={{ color: "hsl(var(--sidebar-foreground))" }}
+        {isCollapsed ? (
+          <Link
+            href={homeHref}
+            className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary text-primary-foreground font-bold text-sm"
           >
-            ReinPlaner
-          </span>
-        </Link>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onToggle}
-          className="h-7 w-7 shrink-0"
-          style={{ color: "hsl(var(--sidebar-foreground))" }}
-          aria-label={isCollapsed ? "Sidebar erweitern" : "Sidebar minimieren"}
-        >
-          <ChevronLeft
-            className={cn(
-              "h-4 w-4 transition-transform duration-200",
-              isCollapsed ? "rotate-180" : ""
-            )}
-          />
-        </Button>
+            R
+          </Link>
+        ) : (
+          <>
+            <Link href={homeHref} className="flex-1 min-w-0">
+              <span
+                className="text-lg font-bold truncate block"
+                style={{ color: "hsl(var(--sidebar-foreground))" }}
+              >
+                ReinPlaner
+              </span>
+            </Link>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onToggle}
+              className="h-7 w-7 shrink-0"
+              style={{ color: "hsl(var(--sidebar-foreground))" }}
+              aria-label="Sidebar minimieren"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+          </>
+        )}
       </div>
 
-      {/* Nav */}
-      <nav className="flex-1 overflow-y-auto px-2 py-3 space-y-1">
-        {/* Flat links */}
-        {flatLinks.map((item) => (
-          <NavItem
-            key={item.key}
-            href={item.href}
-            icon={item.Icon}
-            label={getNavLabel(item.key)}
-            isActive={pathname === item.href}
-            isCollapsed={isCollapsed}
-          />
-        ))}
-
-        {/* Divider */}
-        {flatLinks.length > 0 && categories.length > 0 && (
-          <div className="my-3 border-t border-sidebar-border" />
-        )}
-
-        {/* Category groups */}
-        {categories.map((category) => (
-          <div key={category.key} className="space-y-1">
-            {!isCollapsed && (
-              <p
-                className="px-3 py-1.5 text-xs font-semibold uppercase tracking-wider"
-                style={{ color: "hsl(var(--sidebar-foreground) / 0.5)" }}
-              >
-                {getNavLabel(category.key)}
-              </p>
-            )}
-            {category.children.map((child) => (
-              <NavItem
-                key={child.key}
-                href={child.href}
-                icon={child.Icon}
-                label={getNavLabel(child.key)}
-                isActive={pathname === child.href}
-                isCollapsed={isCollapsed}
+      {/* ── Nav ── */}
+      <nav className="flex-1 overflow-y-auto py-3">
+        {isCollapsed ? (
+          <div className="flex flex-col items-center gap-1 px-2">
+            {allNavItems.map(({ href, icon, label }) => (
+              <CollapsedNavItem
+                key={href}
+                href={href}
+                icon={icon}
+                label={label}
+                isActive={pathname === href}
               />
             ))}
           </div>
-        ))}
+        ) : (
+          <div className="space-y-1 px-2">
+            {flatLinks.map((item) => (
+              <NavItem
+                key={item.key}
+                href={item.href}
+                icon={item.Icon}
+                label={getNavLabel(item.key)}
+                isActive={pathname === item.href}
+                isCollapsed={false}
+              />
+            ))}
+
+            {flatLinks.length > 0 && categories.length > 0 && (
+              <div className="my-3 border-t border-sidebar-border" />
+            )}
+
+            {categories.map((category) => (
+              <div key={category.key} className="space-y-1">
+                <p
+                  className="px-3 py-1.5 text-xs font-semibold uppercase tracking-wider"
+                  style={{ color: "hsl(var(--sidebar-foreground) / 0.5)" }}
+                >
+                  {getNavLabel(category.key)}
+                </p>
+                {category.children.map((child) => (
+                  <NavItem
+                    key={child.key}
+                    href={child.href}
+                    icon={child.Icon}
+                    label={getNavLabel(child.key)}
+                    isActive={pathname === child.href}
+                    isCollapsed={false}
+                  />
+                ))}
+              </div>
+            ))}
+          </div>
+        )}
       </nav>
 
-      {/* Footer */}
-      <div className="border-t border-sidebar-border px-2 py-3">
-        <NotificationBell />
-        <div className="mt-2">
-          <UserMenu currentUserRole={currentUserRole} onSignOut={onSignOut} />
-        </div>
+      {/* ── Footer ── */}
+      <div className="shrink-0 border-t border-sidebar-border py-3">
+        {isCollapsed ? (
+          <div className="flex flex-col items-center gap-1 px-2">
+            <NotificationBell isCollapsed />
+            <UserMenu currentUserRole={currentUserRole} onSignOut={onSignOut} isCollapsed />
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 px-3">
+            <NotificationBell isCollapsed={false} />
+            <div className="flex-1 min-w-0">
+              <UserMenu currentUserRole={currentUserRole} onSignOut={onSignOut} isCollapsed={false} />
+            </div>
+          </div>
+        )}
       </div>
     </aside>
   );
@@ -296,7 +381,7 @@ function MobileNavSheet({
 
         {/* Footer */}
         <div className="border-t border-border p-4">
-          <UserMenu currentUserRole={currentUserRole} onSignOut={onSignOut} />
+          <UserMenu currentUserRole={currentUserRole} onSignOut={onSignOut} isCollapsed={false} />
         </div>
       </SheetContent>
     </Sheet>
@@ -319,20 +404,16 @@ function MobileHeader({
           <span className="text-lg font-bold text-primary">ReinPlaner</span>
         </Link>
 
-        <div className="flex items-center gap-2">
-          <NotificationBell />
-          <UserMenu currentUserRole={currentUserRole} onSignOut={async () => {}} />
+        <div className="flex items-center gap-1">
+          <NotificationBell isCollapsed />
+          <UserMenu currentUserRole={currentUserRole} onSignOut={async () => {}} isCollapsed />
           <Button
             variant="ghost"
             size="icon"
             onClick={onMenuOpen}
             aria-label="Menü öffnen"
           >
-            <span className="grid grid-cols-3 gap-0.5 h-4 w-4">
-              {[...Array(9)].map((_, i) => (
-                <span key={i} className="bg-current rounded-sm" />
-              ))}
-            </span>
+            <Menu className="h-5 w-5" />
           </Button>
         </div>
       </div>
@@ -399,7 +480,7 @@ export function DashboardClientLayout({
     );
   }
 
-  // Desktop layout: custom sidebar + content
+  // Desktop layout
   const sidebarWidth = isCollapsed ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_EXPANDED_WIDTH;
 
   return (
