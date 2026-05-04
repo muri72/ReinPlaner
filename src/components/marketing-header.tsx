@@ -1,10 +1,9 @@
 "use client";
 import Image from "next/image";
-
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
-import { Menu, X, Zap, CheckCircle2 } from "lucide-react";
+import { Menu, X, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const navLinks = [
@@ -21,31 +20,30 @@ export function MarketingHeader() {
 
   useEffect(() => {
     const handleScroll = () => {
-      setIsScrolled(window.scrollY > 20);
+      setIsScrolled(window.scrollY > 10);
     };
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Close mobile menu on route change
   useEffect(() => {
     setIsMobileMenuOpen(false);
   }, [pathname]);
 
   return (
     <>
-      {/* Glass Navbar */}
+      {/* Clean White Navbar */}
       <header
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-200 ${
           isScrolled
-            ? "bg-[#0A0E1A]/80 backdrop-blur-xl border-b border-white/5 shadow-lg"
-            : "bg-transparent"
+            ? "bg-white border-b border-slate-200 shadow-sm"
+            : "bg-white border-b border-slate-200"
         }`}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16 md:h-20">
+          <div className="flex items-center justify-between h-16 md:h-18">
             {/* Logo */}
-            <Link href="/" className="flex items-center gap-2 group">
+            <Link href="/" className="flex items-center gap-2.5 group">
               <Image
                 src="/reinplaner-logo.svg"
                 alt="ReinPlaner"
@@ -53,7 +51,7 @@ export function MarketingHeader() {
                 height={36}
                 className="rounded-lg"
               />
-              <span className="text-xl font-bold text-white tracking-tight">
+              <span className="text-xl font-bold text-slate-900 tracking-tight">
                 ReinPlaner
               </span>
             </Link>
@@ -66,8 +64,8 @@ export function MarketingHeader() {
                   href={link.href}
                   className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
                     pathname === link.href
-                      ? "text-blue-400 bg-blue-500/10"
-                      : "text-slate-300 hover:text-white hover:bg-white/5"
+                      ? "text-blue-600 bg-blue-50"
+                      : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
                   }`}
                 >
                   {link.label}
@@ -77,13 +75,13 @@ export function MarketingHeader() {
 
             {/* Desktop CTA */}
             <div className="hidden md:flex items-center gap-3">
-              <Button asChild variant="ghost" size="sm" className="text-slate-300 hover:text-white">
+              <Button asChild variant="ghost" size="sm" className="text-slate-600 hover:text-slate-900 hover:bg-slate-50">
                 <Link href="/login">Anmelden</Link>
               </Button>
-              <Button asChild size="sm" className="btn-primary">
+              <Button asChild size="sm" className="bg-blue-600 hover:bg-blue-700 text-white font-medium">
                 <Link href="/register">
                   Kostenlos testen
-                  <Zap className="w-4 h-4 ml-1" />
+                  <CheckCircle2 className="w-4 h-4 ml-1" />
                 </Link>
               </Button>
             </div>
@@ -91,7 +89,7 @@ export function MarketingHeader() {
             {/* Mobile Menu Button */}
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="md:hidden p-2 text-slate-300 hover:text-white"
+              className="md:hidden p-2 text-slate-600 hover:text-slate-900"
             >
               {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
@@ -101,26 +99,26 @@ export function MarketingHeader() {
 
       {/* Mobile Menu */}
       <div
-        className={`fixed inset-0 z-40 bg-[#05080F] md:hidden transition-all duration-300 ${
-          isMobileMenuOpen ? "opacity-100 visible" : "opacity-0 invisible"
+        className={`fixed inset-0 z-40 bg-white md:hidden transition-all duration-300 ${
+          isMobileMenuOpen ? "opacity-100 visible" : "opacity-0 invisible pointer-events-none"
         }`}
       >
-        <div className="flex flex-col items-center justify-center h-full space-y-8">
+        <div className="flex flex-col items-center justify-center h-full space-y-6 pt-16">
           {navLinks.map((link) => (
             <Link
               key={link.href}
               href={link.href}
               onClick={() => setIsMobileMenuOpen(false)}
-              className="text-2xl font-semibold text-white hover:text-blue-400 transition-colors"
+              className="text-2xl font-semibold text-slate-900 hover:text-blue-600 transition-colors"
             >
               {link.label}
             </Link>
           ))}
-          <div className="flex flex-col gap-4 mt-8">
-            <Button asChild variant="outline" className="glass-btn border-slate-700 text-white">
+          <div className="flex flex-col gap-3 mt-8 w-64">
+            <Button asChild variant="outline" className="border-slate-300 text-slate-700 hover:bg-slate-50">
               <Link href="/login">Anmelden</Link>
             </Button>
-            <Button asChild className="btn-primary">
+            <Button asChild className="bg-blue-600 hover:bg-blue-700 text-white">
               <Link href="/register">Kostenlos testen</Link>
             </Button>
           </div>

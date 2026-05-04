@@ -333,6 +333,120 @@
 }
 
 /* ==========================================
+   MARKETING DESIGN TOKENS - PERSONIO STYLE
+   Professional Light Theme for Marketing Pages
+   ========================================== */
+
+/* Marketing Backgrounds */
+.marketing-bg-white { background: #FFFFFF; }
+.marketing-bg-slate-50 { background: #F8FAFC; }
+.marketing-bg-slate-100 { background: #F1F5F9; }
+
+/* Marketing Text Colors */
+.marketing-text-primary { color: #0F172A; }
+.marketing-text-secondary { color: #475569; }
+.marketing-text-muted { color: #94A3B8; }
+
+/* Marketing Card - Solid White with Subtle Shadow */
+.marketing-card {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  transition: box-shadow 0.2s ease;
+}
+
+.marketing-card:hover {
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+}
+
+/* Marketing Navbar - Clean White */
+.marketing-nav {
+  background: #FFFFFF;
+  border-bottom: 1px solid #E2E8F0;
+}
+
+/* Marketing Section Backgrounds */
+.marketing-section-white {
+  background: #FFFFFF;
+}
+
+.marketing-section-slate {
+  background: #F8FAFC;
+}
+
+.marketing-section-blue {
+  background: #EFF6FF;
+}
+
+/* Marketing Button - Solid Professional */
+.marketing-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 1.5rem;
+  background: #2563EB;
+  color: white;
+  font-weight: 600;
+  font-size: 1rem;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.marketing-btn-primary:hover {
+  background: #1D4ED8;
+  transform: translateY(-1px);
+}
+
+.marketing-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 1.5rem;
+  background: white;
+  color: #0F172A;
+  font-weight: 600;
+  font-size: 1rem;
+  border-radius: 8px;
+  border: 1px solid #E2E8F0;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.marketing-btn-secondary:hover {
+  background: #F8FAFC;
+  border-color: #CBD5E1;
+}
+
+/* Feature Icon Container */
+.marketing-feature-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  background: #EFF6FF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #2563EB;
+}
+
+/* Pricing Card */
+.marketing-pricing-card {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 16px;
+  padding: 2rem;
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+}
+
+.marketing-pricing-card-highlighted {
+  border-color: #3B82F6;
+  box-shadow: 0 0 0 1px #3B82F6, 0 10px 15px -3px rgb(0 0 0 / 0.1);
+}
+
+/* ==========================================
    2026 GLASSMORPHISM UTILITIES
    ========================================== */
 
