@@ -204,23 +204,12 @@ function DesktopSidebar({
 
 function MobileHeader({
   currentUserRole,
-  onMenuOpen,
 }: {
   currentUserRole: UserRole;
-  onMenuOpen: () => void;
 }) {
   return (
     <header className="md:hidden sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border px-4 py-3">
       <div className="flex items-center justify-between">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onMenuOpen}
-          aria-label="Menü öffnen"
-        >
-          <Menu className="h-6 w-6" />
-        </Button>
-
         <Link href={getHomeHref(currentUserRole)}>
           <span className="text-lg font-bold text-primary">ReinPlaner</span>
         </Link>
@@ -339,6 +328,33 @@ function MobileNavSheet({
   );
 }
 
+// ─── Desktop Content (uses useSidebar hook — must be inside SidebarProvider) ───
+
+function DesktopContent({
+  currentUserRole,
+  children,
+}: {
+  currentUserRole: UserRole;
+  children: React.ReactNode;
+}) {
+  const { state } = useSidebar();
+  const isCollapsed = state === "collapsed";
+
+  return (
+    <main
+      className={cn(
+        "flex-1 min-h-screen transition-[margin] duration-200 ease-linear",
+        isCollapsed ? "md:ml-[--sidebar-width-icon]" : "md:ml-[--sidebar-width]"
+      )}
+    >
+      <div className="p-4 md:pl-6 md:pr-6 md:pt-6 space-y-4">
+        <ImpersonationBanner />
+        {children}
+      </div>
+    </main>
+  );
+}
+
 // ─── Main Layout ──────────────────────────────────────────────────────────────
 
 export function DashboardClientLayout({
@@ -366,7 +382,6 @@ export function DashboardClientLayout({
       <div className="min-h-screen bg-background">
         <MobileHeader
           currentUserRole={currentUserRole}
-          onMenuOpen={() => setIsMobileMenuOpen(true)}
         />
         <MobileNavSheet
           currentUserRole={currentUserRole}
@@ -391,12 +406,9 @@ export function DashboardClientLayout({
         currentUserRole={currentUserRole}
         onSignOut={onSignOut}
       />
-      <main className="flex-1 min-h-screen md:ml-[--sidebar-width] data-[state=collapsed]:md:ml-[--sidebar-width-icon]">
-        <div className="p-4 md:pl-6 md:pr-6 md:pt-6 space-y-4">
-          <ImpersonationBanner />
-          {children}
-        </div>
-      </main>
+      <DesktopContent currentUserRole={currentUserRole}>
+        {children}
+      </DesktopContent>
     </SidebarProvider>
   );
 }
