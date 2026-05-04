@@ -45,61 +45,36 @@ function LoadingScreen() {
   );
 }
 
-// ─── Sidebar Navigation Item ─────────────────────────────────────────────────
+// ─── Sidebar Navigation Item (expanded) ─────────────────────────────────────
 
 function NavItem({
   href,
   icon: Icon,
   label,
   isActive,
-  isCollapsed,
 }: {
   href: string;
   icon: React.ElementType;
   label: string;
   isActive: boolean;
-  isCollapsed: boolean;
 }) {
   return (
     <Link
       href={href}
       className={cn(
-        "group flex items-center rounded-lg text-sm font-medium transition-colors",
+        "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
         isActive
           ? "bg-primary/10 text-primary"
-          : "text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground",
-        isCollapsed
-          ? "justify-center w-10 h-10 mx-auto"
-          : "gap-3 px-3 py-2.5"
+          : "text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground"
       )}
-      title={isCollapsed ? label : undefined}
     >
       <Icon className="h-5 w-5 shrink-0" />
-      {!isCollapsed && <span className="truncate">{label}</span>}
+      <span className="truncate">{label}</span>
     </Link>
   );
 }
 
-// ─── Sidebar Tooltip (for collapsed state) ───────────────────────────────────
-
-function SidebarTooltip({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="relative group/tooltip">
-      {children}
-      <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2 py-1.5 bg-popover text-popover-foreground text-xs rounded-md shadow-lg opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-opacity whitespace-nowrap z-[100] pointer-events-none">
-        {label}
-      </div>
-    </div>
-  );
-}
-
-// ─── Icon-Only Nav Item (collapsed sidebar) ───────────────────────────────────
+// ─── Icon-Only Nav Item (collapsed sidebar with tooltip) ─────────────────────
 
 function CollapsedNavItem({
   href,
@@ -113,11 +88,11 @@ function CollapsedNavItem({
   isActive: boolean;
 }) {
   return (
-    <SidebarTooltip label={label}>
+    <div className="relative group">
       <Link
         href={href}
         className={cn(
-          "flex items-center justify-center w-10 h-10 mx-auto rounded-lg text-sm font-medium transition-colors",
+          "flex items-center justify-center w-10 h-10 rounded-lg text-sm font-medium transition-colors",
           isActive
             ? "bg-primary/10 text-primary"
             : "text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground"
@@ -125,7 +100,13 @@ function CollapsedNavItem({
       >
         <Icon className="h-5 w-5 shrink-0" />
       </Link>
-    </SidebarTooltip>
+      {/* Tooltip — rendered INSIDE the group div so group-hover works */}
+      <div
+        className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2 py-1.5 bg-popover text-popover-foreground text-xs rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity whitespace-nowrap z-[100] pointer-events-none"
+      >
+        {label}
+      </div>
+    </div>
   );
 }
 
@@ -208,8 +189,8 @@ function CustomSidebar({
         )}
       </div>
 
-      {/* ── Nav ── */}
-      <nav className="flex-1 overflow-y-auto py-3">
+      {/* ── Nav (hidden scrollbar) ── */}
+      <nav className="flex-1 overflow-y-auto scrollbar-none py-3">
         {isCollapsed ? (
           <div className="flex flex-col items-center gap-1 px-2">
             {allNavItems.map(({ href, icon, label }) => (
@@ -231,7 +212,6 @@ function CustomSidebar({
                 icon={item.Icon}
                 label={getNavLabel(item.key)}
                 isActive={pathname === item.href}
-                isCollapsed={false}
               />
             ))}
 
@@ -254,7 +234,6 @@ function CustomSidebar({
                     icon={child.Icon}
                     label={getNavLabel(child.key)}
                     isActive={pathname === child.href}
-                    isCollapsed={false}
                   />
                 ))}
               </div>
@@ -263,10 +242,25 @@ function CustomSidebar({
         )}
       </nav>
 
-      {/* ── Footer ── */}
-      <div className="shrink-0 border-t border-sidebar-border py-3">
+      {/* ── Footer (no scrollbar) ── */}
+      <div className="shrink-0 border-t border-sidebar-border py-3 overflow-hidden">
         {isCollapsed ? (
           <div className="flex flex-col items-center gap-1 px-2">
+            {/* Toggle to expand */}
+            <div className="relative group">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onToggle}
+                className="w-10 h-10 rounded-lg text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                aria-label="Sidebar erweitern"
+              >
+                <ChevronLeft className="h-4 w-4 rotate-180" />
+              </Button>
+              <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2 py-1.5 bg-popover text-popover-foreground text-xs rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity whitespace-nowrap z-[100] pointer-events-none">
+                Sidebar erweitern
+              </div>
+            </div>
             <NotificationBell isCollapsed />
             <UserMenu currentUserRole={currentUserRole} onSignOut={onSignOut} isCollapsed />
           </div>
