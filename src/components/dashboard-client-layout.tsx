@@ -159,6 +159,7 @@ function DesktopSidebar({
     <Sidebar
       collapsible="icon"
       className="fixed left-0 top-0 z-30 hidden h-screen w-[--sidebar-width] flex-col md:flex"
+      style={{ backgroundColor: "hsl(var(--sidebar-background))" }}
     >
       <SidebarHeader className="flex flex-row items-center justify-between gap-2 px-3 py-3 border-b border-sidebar-border">
         <Link href={homeHref} className="min-w-0 flex-1">
