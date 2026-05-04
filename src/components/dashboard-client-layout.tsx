@@ -45,7 +45,7 @@ function LoadingScreen() {
   );
 }
 
-// ─── Sidebar Navigation Item (expanded) ─────────────────────────────────────
+// ─── Expanded Nav Item ────────────────────────────────────────────────────────
 
 function NavItem({
   href,
@@ -74,7 +74,7 @@ function NavItem({
   );
 }
 
-// ─── Icon-Only Nav Item (collapsed sidebar with tooltip) ─────────────────────
+// ─── Collapsed Nav Item (icon + native title tooltip) ─────────────────────────
 
 function CollapsedNavItem({
   href,
@@ -88,7 +88,36 @@ function CollapsedNavItem({
   isActive: boolean;
 }) {
   return (
-    <div className="relative group">
+    <Link
+      href={href}
+      title={label}
+      className={cn(
+        "flex items-center justify-center w-10 h-10 rounded-lg text-sm font-medium transition-colors",
+        isActive
+          ? "bg-primary/10 text-primary"
+          : "text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground"
+      )}
+    >
+      <Icon className="h-5 w-5 shrink-0" />
+    </Link>
+  );
+}
+
+// ─── Collapsed Nav Item with Floating Tooltip ──────────────────────────────────
+
+function CollapsedNavItemTooltip({
+  href,
+  icon: Icon,
+  label,
+  isActive,
+}: {
+  href: string;
+  icon: React.ElementType;
+  label: string;
+  isActive: boolean;
+}) {
+  return (
+    <div className="relative w-full flex justify-center">
       <Link
         href={href}
         className={cn(
@@ -100,17 +129,22 @@ function CollapsedNavItem({
       >
         <Icon className="h-5 w-5 shrink-0" />
       </Link>
-      {/* Tooltip — rendered INSIDE the group div so group-hover works */}
+      {/* Floating tooltip — outside nav flow, not clipped by nav overflow */}
       <div
-        className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2 py-1.5 bg-popover text-popover-foreground text-xs rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity whitespace-nowrap z-[100] pointer-events-none"
+        className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2 py-1.5 bg-popover text-popover-foreground text-xs rounded-md shadow-lg whitespace-nowrap z-[200] pointer-events-none opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity"
+        style={{ minWidth: "max-content" }}
       >
         {label}
+        <div
+          className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-popover"
+          style={{ right: "-1px" }}
+        />
       </div>
     </div>
   );
 }
 
-// ─── Custom Sidebar (plain, no shadcn dependency) ────────────────────────────
+// ─── Custom Sidebar ────────────────────────────────────────────────────────────
 
 function CustomSidebar({
   currentUserRole,
@@ -128,7 +162,6 @@ function CustomSidebar({
   const categories = getCategoriesForRole(currentUserRole);
   const homeHref = getHomeHref(currentUserRole);
 
-  // Flatten all nav items for collapsed view
   const allNavItems = [
     ...flatLinks.map((item) => ({
       href: item.href,
@@ -151,56 +184,88 @@ function CustomSidebar({
         width: isCollapsed ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_EXPANDED_WIDTH,
         backgroundColor: "hsl(var(--sidebar-background))",
         borderRight: "1px solid hsl(var(--sidebar-border))",
+        overflow: "visible",
       }}
     >
       {/* ── Header ── */}
       <div
-        className="flex items-center border-b border-sidebar-border shrink-0"
-        style={isCollapsed ? { height: 57, padding: "0 8px", justifyContent: "center" } : { height: 57, padding: "0 12px" }}
+        className="relative flex items-center border-b border-sidebar-border shrink-0"
+        style={{ height: 57, overflow: "visible" }}
       >
-        {isCollapsed ? (
-          <Link
-            href={homeHref}
-            className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary text-primary-foreground font-bold text-sm"
-          >
-            R
-          </Link>
-        ) : (
-          <>
-            <Link href={homeHref} className="flex-1 min-w-0">
-              <span
-                className="text-lg font-bold truncate block"
-                style={{ color: "hsl(var(--sidebar-foreground))" }}
-              >
-                ReinPlaner
-              </span>
-            </Link>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onToggle}
-              className="h-7 w-7 shrink-0"
-              style={{ color: "hsl(var(--sidebar-foreground))" }}
-              aria-label="Sidebar minimieren"
+        {/* Logo — clickable to toggle, full click area */}
+        <button
+          onClick={onToggle}
+          className="flex items-center min-w-0 flex-1 h-full px-3 cursor-pointer bg-transparent border-none focus:outline-none"
+          aria-label={isCollapsed ? "Sidebar erweitern" : "Sidebar minimieren"}
+          style={{ overflow: "visible" }}
+        >
+          {isCollapsed ? (
+            <span
+              className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary text-primary-foreground font-bold text-sm shrink-0"
             >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-          </>
-        )}
+              R
+            </span>
+          ) : (
+            <span
+              className="text-lg font-bold truncate block"
+              style={{ color: "hsl(var(--sidebar-foreground))" }}
+            >
+              ReinPlaner
+            </span>
+          )}
+        </button>
+
+        {/* Toggle button — overlaps the logo/header area on right edge */}
+        <div
+          className="absolute flex items-center justify-center shrink-0"
+          style={{
+            right: isCollapsed ? -14 : 8,
+            top: "50%",
+            transform: "translateY(-50%)",
+            zIndex: 50,
+          }}
+        >
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onToggle}
+            className="h-7 w-7 rounded-full bg-background border border-border shadow-sm hover:bg-muted"
+            style={{ color: "hsl(var(--sidebar-foreground))" }}
+            aria-label={isCollapsed ? "Sidebar erweitern" : "Sidebar minimieren"}
+          >
+            <ChevronLeft
+              className="h-4 w-4 transition-transform duration-200"
+              style={{ transform: isCollapsed ? "rotate(180deg)" : "rotate(0deg)" }}
+            />
+          </Button>
+        </div>
       </div>
 
-      {/* ── Nav (hidden scrollbar) ── */}
-      <nav className="flex-1 overflow-y-auto scrollbar-none py-3">
+      {/* ── Nav (scrollable, no clipping for tooltips in collapsed mode) ── */}
+      <nav
+        className="flex-1 py-3"
+        style={{
+          overflowY: "auto",
+          overflowX: "visible",
+        }}
+      >
         {isCollapsed ? (
           <div className="flex flex-col items-center gap-1 px-2">
             {allNavItems.map(({ href, icon, label }) => (
-              <CollapsedNavItem
-                key={href}
-                href={href}
-                icon={icon}
-                label={label}
-                isActive={pathname === href}
-              />
+              <div key={href} className="group w-full flex justify-center">
+                <CollapsedNavItem
+                  href={href}
+                  icon={icon}
+                  label={label}
+                  isActive={pathname === href}
+                />
+                {/* Floating tooltip — rendered in document flow via group-hover on parent */}
+                <div
+                  className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2 py-1.5 bg-popover text-popover-foreground text-xs rounded-md shadow-lg whitespace-nowrap z-[200] pointer-events-none opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity"
+                >
+                  {label}
+                </div>
+              </div>
             ))}
           </div>
         ) : (
@@ -242,25 +307,13 @@ function CustomSidebar({
         )}
       </nav>
 
-      {/* ── Footer (no scrollbar) ── */}
-      <div className="shrink-0 border-t border-sidebar-border py-3 overflow-hidden">
+      {/* ── Footer ── */}
+      <div
+        className="shrink-0 border-t border-sidebar-border py-3"
+        style={{ overflow: "visible" }}
+      >
         {isCollapsed ? (
-          <div className="flex flex-col items-center gap-1 px-2">
-            {/* Toggle to expand */}
-            <div className="relative group">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={onToggle}
-                className="w-10 h-10 rounded-lg text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground"
-                aria-label="Sidebar erweitern"
-              >
-                <ChevronLeft className="h-4 w-4 rotate-180" />
-              </Button>
-              <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2 py-1.5 bg-popover text-popover-foreground text-xs rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity whitespace-nowrap z-[100] pointer-events-none">
-                Sidebar erweitern
-              </div>
-            </div>
+          <div className="flex flex-col items-center gap-2 px-2">
             <NotificationBell isCollapsed />
             <UserMenu currentUserRole={currentUserRole} onSignOut={onSignOut} isCollapsed />
           </div>
