@@ -137,7 +137,7 @@ export function AbsenceKpiCards() {
         </p>
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {Array.from({ length: 4 }).map((_, index) => (
-            <Card key={`kpi-skeleton-${index}`} className="bg-white border border-slate-200 shadow-sm">
+            <Card key={`kpi-skeleton-${index}`} className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none">
               <CardHeader className="pb-3">
                 <Skeleton className="h-4 w-32" />
               </CardHeader>
@@ -160,7 +160,7 @@ export function AbsenceKpiCards() {
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {/* Card 1: Today Absent */}
-        <Card className="bg-white border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+        <Card className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-semibold">Heute Abwesend</CardTitle>
             <div className="rounded-full bg-blue-50 p-1.5">
@@ -198,7 +198,7 @@ export function AbsenceKpiCards() {
         </Card>
 
         {/* Card 2: Pending Requests */}
-        <Card className="bg-white border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+        <Card className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-semibold">Offene Anträge</CardTitle>
             <div className="rounded-full bg-amber-50 p-1.5">
@@ -222,7 +222,7 @@ export function AbsenceKpiCards() {
         </Card>
 
         {/* Card 3: Approved This Month */}
-        <Card className="bg-white border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+        <Card className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-semibold">Genehmigt (Monat)</CardTitle>
             <div className="rounded-full bg-emerald-50 p-1.5">
@@ -238,7 +238,7 @@ export function AbsenceKpiCards() {
         </Card>
 
         {/* Card 4: Sick Days This Month */}
-        <Card className="bg-white border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+        <Card className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-semibold">Krankheitstage</CardTitle>
             <div className="rounded-full bg-rose-50 p-1.5">

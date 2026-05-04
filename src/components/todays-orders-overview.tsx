@@ -538,7 +538,7 @@ export function TodaysOrdersOverview() {
 
   if (loading) {
     return (
-      <Card className="bg-white border border-slate-200 shadow-sm">
+      <Card className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none">
         <CardHeader>
           <CardTitle className="text-lg font-semibold flex items-center">
             <Briefcase className="mr-2 h-5 w-5" /> Heutige Einsätze
@@ -556,7 +556,7 @@ export function TodaysOrdersOverview() {
   }
 
   return (
-    <Card className="bg-white border border-slate-200 shadow-sm">
+    <Card className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none">
       <CardHeader>
         <CardTitle className="text-xl md:text-2xl font-bold flex items-center">
           <Briefcase className="mr-2 h-5 w-5" /> Heutige Einsätze

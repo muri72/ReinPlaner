@@ -21,7 +21,7 @@ export interface ModernButtonProps extends Omit<ButtonProps, "size" | "variant" 
 const modernVariants: Record<ModernButtonVariant, string> = {
   primary: "btn-primary",
   secondary: "glass-btn",
-  ghost: "glass-btn hover:bg-white/10",
+  ghost: "glass-btn hover:bg-white/10 dark:hover:bg-slate-700/50",
   outline: "glass-btn border-white/20 hover:border-white/40",
   success: "bg-emerald-500 text-white hover:bg-emerald-600 shadow-[0_4px_15px_rgba(16,185,129,0.3)]",
   warning: "bg-amber-500 text-white hover:bg-amber-600 shadow-[0_4px_15px_rgba(245,158,11,0.3)]",
