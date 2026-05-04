@@ -104,13 +104,27 @@ export function NotificationBell({ isCollapsed = false }: NotificationBellProps)
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    await supabase
+    // Optimistic update - immediately clear counter
+    const previousNotifications = notifications;
+    setNotifications([]);
+    setUnreadCount(0);
+
+    const { error } = await supabase
       .from("notifications")
       .update({ is_read: true })
       .eq("user_id", user.id)
       .eq("is_read", false);
 
-    await fetchNotifications();
+    if (error) {
+      // Rollback on error
+      setNotifications(previousNotifications);
+      setUnreadCount(previousNotifications.length);
+      console.error("Fehler beim Markieren aller als gelesen:", error);
+    } else {
+      // Fetch fresh data after brief delay to ensure DB write is committed
+      await new Promise(resolve => setTimeout(resolve, 300));
+      await fetchNotifications();
+    }
     setLoading(false);
   };
 
