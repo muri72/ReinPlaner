@@ -333,6 +333,37 @@
 }
 
 /* ==========================================
+   DASHBOARD DESIGN TOKENS - PERSONIO CLEAN
+   Professional Light Theme for Dashboard Pages
+   ========================================== */
+
+.dashboard-bg { background-color: #FFFFFF; }
+.dashboard-bg-subtle { background-color: #F8FAFC; }
+.dashboard-border { border-color: #E2E8F0; }
+.dashboard-text-primary { color: #0F172A; }
+.dashboard-text-secondary { color: #64748B; }
+.dashboard-shadow-card { box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06); }
+.dashboard-shadow-card-hover { box-shadow: 0 4px 6px rgba(0,0,0,0.07), 0 2px 4px rgba(0,0,0,0.06); }
+
+/* Dashboard Card - Clean White with Subtle Shadow */
+.dashboard-card {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.08), 0 1px 2px -1px rgb(0 0 0 / 0.06);
+  transition: box-shadow 0.2s ease;
+}
+
+.dashboard-card:hover {
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.08), 0 2px 4px -2px rgb(0 0 0 / 0.06);
+}
+
+/* Dashboard Page Background */
+.dashboard-page-bg {
+  background-color: #F8FAFC;
+}
+
+/* ==========================================
    MARKETING DESIGN TOKENS - PERSONIO STYLE
    Professional Light Theme for Marketing Pages
    ========================================== */

@@ -103,7 +103,7 @@ export function EmployeesTableView({
   }
 
   return (
-    <div className="overflow-x-auto p-4 rounded-lg shadow-neumorphic glassmorphism-card">
+    <div className="overflow-x-auto p-4 rounded-lg bg-white border border-slate-200 shadow-sm">
       <Table>
         <TableHeader>
           <TableRow>

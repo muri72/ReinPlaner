@@ -137,7 +137,7 @@ export function AbsenceKpiCards() {
         </p>
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {Array.from({ length: 4 }).map((_, index) => (
-            <Card key={`kpi-skeleton-${index}`} className="glassmorphism-card">
+            <Card key={`kpi-skeleton-${index}`} className="bg-white border border-slate-200 shadow-sm">
               <CardHeader className="pb-3">
                 <Skeleton className="h-4 w-32" />
               </CardHeader>
@@ -160,11 +160,11 @@ export function AbsenceKpiCards() {
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {/* Card 1: Today Absent */}
-        <Card className="glassmorphism-card hover:shadow-md transition-shadow">
+        <Card className="bg-white border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-semibold">Heute Abwesend</CardTitle>
-            <div className="rounded-full bg-primary/10 p-1.5">
-              <Users className="h-4 w-4 text-primary" />
+            <div className="rounded-full bg-blue-50 p-1.5">
+              <Users className="h-4 w-4 text-blue-600" />
             </div>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -198,11 +198,11 @@ export function AbsenceKpiCards() {
         </Card>
 
         {/* Card 2: Pending Requests */}
-        <Card className="glassmorphism-card hover:shadow-md transition-shadow">
+        <Card className="bg-white border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-semibold">Offene Anträge</CardTitle>
-            <div className="rounded-full bg-amber-100 dark:bg-amber-900/50 p-1.5">
-              <Clock className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+            <div className="rounded-full bg-amber-50 p-1.5">
+              <Clock className="h-4 w-4 text-amber-600" />
             </div>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -213,12 +213,7 @@ export function AbsenceKpiCards() {
             {kpis.pendingRequests > 0 && (
               <Badge
                 variant="outline"
-                className={cn(
-                  "text-[10px] px-2 py-0 h-5",
-                  kpis.pendingRequests > 10
-                    ? "border-red-300 bg-red-50 text-red-700 dark:border-red-700 dark:bg-red-900/30 dark:text-red-300"
-                    : "border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-700 dark:bg-amber-900/30 dark:text-amber-300"
-                )}
+                className="text-[10px] px-2 py-0 h-5 border border-amber-200 bg-amber-50 text-amber-700"
               >
                 {kpis.pendingRequests > 10 ? "Dringend bearbeiten" : "Ausstehende Aktion"}
               </Badge>
@@ -227,11 +222,11 @@ export function AbsenceKpiCards() {
         </Card>
 
         {/* Card 3: Approved This Month */}
-        <Card className="glassmorphism-card hover:shadow-md transition-shadow">
+        <Card className="bg-white border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-semibold">Genehmigt (Monat)</CardTitle>
-            <div className="rounded-full bg-emerald-100 dark:bg-emerald-900/50 p-1.5">
-              <CheckCircle className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+            <div className="rounded-full bg-emerald-50 p-1.5">
+              <CheckCircle className="h-4 w-4 text-emerald-600" />
             </div>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -243,11 +238,11 @@ export function AbsenceKpiCards() {
         </Card>
 
         {/* Card 4: Sick Days This Month */}
-        <Card className="glassmorphism-card hover:shadow-md transition-shadow">
+        <Card className="bg-white border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-semibold">Krankheitstage</CardTitle>
-            <div className="rounded-full bg-rose-100 dark:bg-rose-900/50 p-1.5">
-              <Thermometer className="h-4 w-4 text-rose-600 dark:text-rose-400" />
+            <div className="rounded-full bg-rose-50 p-1.5">
+              <Thermometer className="h-4 w-4 text-rose-600" />
             </div>
           </CardHeader>
           <CardContent className="space-y-3">

@@ -112,7 +112,7 @@ export default function EmployeesPage() {
     return (
       <div className="p-4 md:p-8 space-y-8">
         <PageHeader title="Ihre Mitarbeiter" loading={true} />
-        <Card className="shadow-neumorphic glassmorphism-card">
+        <Card className="dashboard-card">
           <CardContent className="p-8">
             <GenericGridSkeleton count={6} showAvatar={true} showBadges={true} badgeCount={2} />
           </CardContent>
@@ -151,7 +151,7 @@ export default function EmployeesPage() {
         <EmployeeCreateDialog onEmployeeCreated={fetchData} />
       </PageHeader>
 
-      <Card className="shadow-neumorphic glassmorphism-card">
+      <Card className="dashboard-card">
         <CardHeader>
           <DataTableToolbar
             searchPlaceholder="Mitarbeiter suchen..."
@@ -160,7 +160,7 @@ export default function EmployeesPage() {
             searchQuery={query}
           />
           {totalCount !== null && !loading && (
-            <div className="text-sm text-muted-foreground mt-2">
+            <div className="text-sm text-slate-600 mt-2">
               {totalCount} {totalCount === 1 ? 'Ergebnis' : 'Ergebnisse'} gefunden.
             </div>
           )}

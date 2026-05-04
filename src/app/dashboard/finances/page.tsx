@@ -37,7 +37,7 @@ export default async function FinancesPage() {
     <div className="p-4 md:p-8 space-y-8">
       <h1 className="text-2xl md:text-3xl font-bold">Finanzübersicht</h1>
       
-      <Card className="shadow-neumorphic glassmorphism-card">
+      <Card className="dashboard-card">
         <CardHeader>
           <CardTitle className="text-lg font-semibold">Monatsübersicht</CardTitle>
           <CardDescription className="text-sm">
@@ -59,7 +59,7 @@ export default async function FinancesPage() {
         </CardContent>
       </Card>
 
-      <Card className="shadow-neumorphic glassmorphism-card">
+      <Card className="dashboard-card">
         <CardHeader>
           <CardTitle className="text-lg font-semibold">Rentabilitätsanalyse pro Auftrag</CardTitle>
           <CardDescription className="text-sm">
@@ -71,7 +71,7 @@ export default async function FinancesPage() {
         </CardContent>
       </Card>
 
-      <Card className="shadow-neumorphic glassmorphism-card">
+      <Card className="dashboard-card">
         <CardHeader>
           <CardTitle className="text-lg font-semibold">Personalkosten-Analyse</CardTitle>
           <CardDescription className="text-sm">
@@ -84,7 +84,7 @@ export default async function FinancesPage() {
       </Card>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
-        <Card className="shadow-neumorphic glassmorphism-card">
+        <Card className="dashboard-card">
           <CardHeader>
             <CardTitle className="text-lg font-semibold">Stundensätze verwalten</CardTitle>
             <CardDescription className="text-sm">
@@ -95,7 +95,7 @@ export default async function FinancesPage() {
             <ServiceRateManager />
           </CardContent>
         </Card>
-        <Card className="shadow-neumorphic glassmorphism-card">
+        <Card className="dashboard-card">
           <CardHeader>
             <CardTitle className="text-lg font-semibold">Standard-Mitarbeiterstundenlohn</CardTitle>
             <CardDescription className="text-sm">

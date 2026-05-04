@@ -135,7 +135,7 @@ export default function FeedbackPage() {
       <h1 className="text-2xl md:text-3xl font-bold">Feedback</h1>
       
       {currentUserRole !== 'admin' && currentUserRole !== 'manager' && (
-        <Card className="shadow-neumorphic glassmorphism-card">
+        <Card className="dashboard-card">
           <CardHeader>
             <CardTitle className="text-lg font-semibold">Neues Feedback einreichen</CardTitle>
           </CardHeader>
@@ -168,7 +168,7 @@ export default function FeedbackPage() {
           <TabsContent value="orders" className="mt-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
               {mappedOrderFeedback.length === 0 ? (
-                <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30 shadow-neumorphic glassmorphism-card">
+                <div className="col-span-full text-center text-slate-600 py-8 bg-slate-50 rounded-xl p-8 border border-dashed border-slate-300 dashboard-card">
                   <Star className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
                   <p className="text-base md:text-lg font-semibold">Bisher kein auftragsbezogenes Feedback</p>
                   <p className="text-sm">Wenn Sie Feedback zu einem Auftrag haben, können Sie es hier einreichen.</p>
@@ -195,7 +195,7 @@ export default function FeedbackPage() {
           <TabsContent value="general" className="mt-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
               {mappedGeneralFeedback.length === 0 ? (
-                <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30 shadow-neumorphic glassmorphism-card">
+                <div className="col-span-full text-center text-slate-600 py-8 bg-slate-50 rounded-xl p-8 border border-dashed border-slate-300 dashboard-card">
                   <MessageSquare className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
                   <p className="text-base md:text-lg font-semibold">Kein allgemeines Feedback vorhanden</p>
                   <p className="text-sm">Wenn Sie allgemeines Feedback haben, können Sie es hier einreichen.</p>

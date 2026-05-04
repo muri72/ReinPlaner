@@ -64,11 +64,11 @@ function NavItem({
       className={cn(
         "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
         isActive
-          ? "bg-primary/10 text-primary"
-          : "text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground"
+          ? "bg-blue-50 text-blue-700"
+          : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
       )}
     >
-      <Icon className="h-5 w-5 shrink-0" />
+      <Icon className={cn("h-5 w-5 shrink-0", isActive ? "text-blue-600" : "text-slate-500")} />
       <span className="truncate">{label}</span>
     </Link>
   );
@@ -96,11 +96,11 @@ function CollapsedNavItem({
         className={cn(
           "flex items-center justify-center w-10 h-10 rounded-lg text-sm font-medium transition-colors relative z-10",
           isActive
-            ? "bg-primary/10 text-primary"
-            : "text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground"
+            ? "bg-blue-50 text-blue-700"
+            : "text-slate-500 hover:bg-slate-100 hover:text-slate-900"
         )}
       >
-        <Icon className="h-5 w-5 shrink-0" />
+        <Icon className={cn("h-5 w-5 shrink-0", isActive ? "text-blue-600" : "text-slate-500")} />
       </Link>
       {/* Floating tooltip — positioned directly right of the 40px icon */}
       <div
@@ -137,11 +137,9 @@ function CustomSidebar({
 
   return (
     <aside
-      className="fixed left-0 top-0 z-40 h-screen flex flex-col transition-all duration-200 ease-in-out"
+      className="fixed left-0 top-0 z-40 h-screen flex flex-col transition-all duration-200 ease-in-out bg-white border-r border-slate-200"
       style={{
         width: isCollapsed ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_EXPANDED_WIDTH,
-        backgroundColor: "hsl(var(--sidebar-background))",
-        borderRight: "1px solid hsl(var(--sidebar-border))",
         overflow: "visible",
       }}
     >
@@ -252,8 +250,7 @@ function CustomSidebar({
             {categories.map((category) => (
               <div key={category.key} className="space-y-1">
                 <p
-                  className="px-3 py-1.5 text-xs font-semibold uppercase tracking-wider"
-                  style={{ color: "hsl(var(--sidebar-foreground) / 0.5)" }}
+                  className="px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-slate-500"
                 >
                   {getNavLabel(category.key)}
                 </p>

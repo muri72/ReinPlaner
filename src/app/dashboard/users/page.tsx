@@ -133,7 +133,7 @@ export default function UsersPage() {
         <UserCreateDialog onUserCreated={fetchData} />
       </PageHeader>
 
-      <Card className="shadow-neumorphic glassmorphism-card">
+      <Card className="dashboard-card">
         <CardHeader>
           <DataTableToolbar
             searchPlaceholder="Benutzer suchen..."

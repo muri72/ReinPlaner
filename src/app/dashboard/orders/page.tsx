@@ -351,7 +351,7 @@ export default function OrdersPage({
     return (
       <div className="p-4 md:p-8 space-y-8">
         <PageHeader title="Auftragsverwaltung" loading={true} />
-        <Card className="shadow-neumorphic glassmorphism-card">
+        <Card className="dashboard-card">
           <CardContent className="p-8">
             <OrdersGridSkeleton />
           </CardContent>
@@ -406,7 +406,7 @@ export default function OrdersPage({
         <OrderCreateDialog />
       </PageHeader>
 
-      <Card className="shadow-neumorphic glassmorphism-card">
+      <Card className="dashboard-card">
         <CardHeader>
           <DataTableToolbar
             searchPlaceholder="Aufträge suchen..."

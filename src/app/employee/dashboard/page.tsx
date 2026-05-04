@@ -351,7 +351,7 @@ export default function EmployeeDashboard() {
               ))}
             </div>
           ) : (
-            <Card className="glassmorphism-card bg-muted/30">
+            <Card className="bg-white border border-slate-200 shadow-sm">
               <CardContent className="p-6 text-center">
                 <ListTodo className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
                 <p className="text-sm text-muted-foreground">
@@ -433,14 +433,14 @@ function QuickLinkCard({
   return (
     <Card
       className={cn(
-        "glassmorphism-card cursor-pointer transition-all duration-200",
+        "bg-white border border-slate-200 shadow-sm cursor-pointer transition-all duration-200",
         "hover:shadow-md active:scale-[0.98]",
         "select-none touch-manipulation"
       )}
       onClick={onClick}
     >
       <CardContent className="p-4 flex items-center gap-3">
-        <div className="h-12 w-12 rounded-xl bg-primary/10 dark:bg-primary/20 flex items-center justify-center flex-shrink-0 text-primary">
+        <div className="h-12 w-12 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0 text-blue-600">
           {icon}
         </div>
         <div className="min-w-0 flex-1">

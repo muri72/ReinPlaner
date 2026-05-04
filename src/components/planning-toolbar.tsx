@@ -154,7 +154,7 @@ export function PlanningToolbar({
   ];
 
   return (
-    <div className="flex flex-col gap-3 p-4 border rounded-lg shadow-neumorphic glassmorphism-card">
+    <div className="flex flex-col gap-3 p-4 border rounded-lg bg-white border-slate-200 shadow-sm">
       {/* Prominent Date Display - Centered */}
       <div className="flex items-center justify-center gap-3 py-1 bg-gradient-to-r from-transparent via-primary/5 to-transparent rounded-lg">
         <Button variant="outline" size="icon" onClick={handlePrev} className="h-9 w-9">
