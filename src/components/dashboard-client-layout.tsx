@@ -74,7 +74,8 @@ function NavItem({
   );
 }
 
-// ─── Collapsed Nav Item (icon + native title tooltip) ─────────────────────────
+// ─── Collapsed Nav Item with Floating Tooltip ──────────────────────────────────
+// Tooltip appears DIRECTLY to the right of the icon (not sidebar center)
 
 function CollapsedNavItem({
   href,
@@ -88,40 +89,12 @@ function CollapsedNavItem({
   isActive: boolean;
 }) {
   return (
-    <Link
-      href={href}
-      title={label}
-      className={cn(
-        "flex items-center justify-center w-10 h-10 rounded-lg text-sm font-medium transition-colors",
-        isActive
-          ? "bg-primary/10 text-primary"
-          : "text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground"
-      )}
-    >
-      <Icon className="h-5 w-5 shrink-0" />
-    </Link>
-  );
-}
-
-// ─── Collapsed Nav Item with Floating Tooltip ──────────────────────────────────
-
-function CollapsedNavItemTooltip({
-  href,
-  icon: Icon,
-  label,
-  isActive,
-}: {
-  href: string;
-  icon: React.ElementType;
-  label: string;
-  isActive: boolean;
-}) {
-  return (
-    <div className="relative w-full flex justify-center">
+    <div className="relative group w-full">
       <Link
         href={href}
+        title={label}
         className={cn(
-          "flex items-center justify-center w-10 h-10 rounded-lg text-sm font-medium transition-colors",
+          "flex items-center justify-center w-10 h-10 rounded-lg text-sm font-medium transition-colors relative z-10",
           isActive
             ? "bg-primary/10 text-primary"
             : "text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground"
@@ -129,12 +102,13 @@ function CollapsedNavItemTooltip({
       >
         <Icon className="h-5 w-5 shrink-0" />
       </Link>
-      {/* Floating tooltip — outside nav flow, not clipped by nav overflow */}
+      {/* Floating tooltip — positioned directly right of the 40px icon */}
       <div
-        className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2 py-1.5 bg-popover text-popover-foreground text-xs rounded-md shadow-lg whitespace-nowrap z-[200] pointer-events-none opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity"
+        className="absolute left-full top-1/2 -translate-y-1/2 ml-1 px-2 py-1.5 bg-popover text-popover-foreground text-xs rounded-md shadow-lg whitespace-nowrap z-[200] pointer-events-none opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity"
         style={{ minWidth: "max-content" }}
       >
         {label}
+        {/* Arrow pointing left to icon */}
         <div
           className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-popover"
           style={{ right: "-1px" }}
@@ -160,22 +134,6 @@ function CustomSidebar({
   const pathname = usePathname();
   const flatLinks = getFlatNavForRole(currentUserRole);
   const categories = getCategoriesForRole(currentUserRole);
-  const homeHref = getHomeHref(currentUserRole);
-
-  const allNavItems = [
-    ...flatLinks.map((item) => ({
-      href: item.href,
-      icon: item.Icon,
-      label: getNavLabel(item.key),
-    })),
-    ...categories.flatMap((cat) =>
-      cat.children.map((child) => ({
-        href: child.href,
-        icon: child.Icon,
-        label: getNavLabel(child.key),
-      }))
-    ),
-  ];
 
   return (
     <aside
@@ -192,7 +150,7 @@ function CustomSidebar({
         className="relative flex items-center border-b border-sidebar-border shrink-0"
         style={{ height: 57, overflow: "visible" }}
       >
-        {/* Logo — clickable to toggle, full click area */}
+        {/* Logo — clickable to toggle */}
         <button
           onClick={onToggle}
           className="flex items-center min-w-0 flex-1 h-full px-3 cursor-pointer bg-transparent border-none focus:outline-none"
@@ -214,32 +172,30 @@ function CustomSidebar({
             </span>
           )}
         </button>
-
-        {/* Toggle button — overlaps the logo/header area on right edge */}
-        <div
-          className="absolute flex items-center justify-center shrink-0"
-          style={{
-            right: isCollapsed ? -14 : 8,
-            top: "50%",
-            transform: "translateY(-50%)",
-            zIndex: 50,
-          }}
-        >
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onToggle}
-            className="h-7 w-7 rounded-full bg-background border border-border shadow-sm hover:bg-muted"
-            style={{ color: "hsl(var(--sidebar-foreground))" }}
-            aria-label={isCollapsed ? "Sidebar erweitern" : "Sidebar minimieren"}
-          >
-            <ChevronLeft
-              className="h-4 w-4 transition-transform duration-200"
-              style={{ transform: isCollapsed ? "rotate(180deg)" : "rotate(0deg)" }}
-            />
-          </Button>
-        </div>
       </div>
+
+      {/* ── Toggle Button — OUTSIDE header, right side of sidebar, elegant + thin ── */}
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={onToggle}
+        className={cn(
+          "absolute top-[22px] flex items-center justify-center border border-sidebar-border shadow-sm transition-all duration-200",
+          isCollapsed
+            ? "left-[52px] h-6 w-6 rounded-md bg-background hover:bg-muted"
+            : "left-[236px] h-6 w-6 rounded-md bg-background hover:bg-muted"
+        )}
+        style={{
+          color: "hsl(var(--sidebar-foreground))",
+          zIndex: 50,
+        }}
+        aria-label={isCollapsed ? "Sidebar erweitern" : "Sidebar minimieren"}
+      >
+        <ChevronLeft
+          className="h-3.5 w-3.5 transition-transform duration-200"
+          style={{ transform: isCollapsed ? "rotate(180deg)" : "rotate(0deg)" }}
+        />
+      </Button>
 
       {/* ── Nav (scrollable, no clipping for tooltips in collapsed mode) ── */}
       <nav
@@ -251,22 +207,31 @@ function CustomSidebar({
       >
         {isCollapsed ? (
           <div className="flex flex-col items-center gap-1 px-2">
-            {allNavItems.map(({ href, icon, label }) => (
-              <div key={href} className="group w-full flex justify-center">
-                <CollapsedNavItem
-                  href={href}
-                  icon={icon}
-                  label={label}
-                  isActive={pathname === href}
-                />
-                {/* Floating tooltip — rendered in document flow via group-hover on parent */}
-                <div
-                  className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2 py-1.5 bg-popover text-popover-foreground text-xs rounded-md shadow-lg whitespace-nowrap z-[200] pointer-events-none opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity"
-                >
-                  {label}
-                </div>
-              </div>
+            {flatLinks.map((item) => (
+              <CollapsedNavItem
+                key={item.key}
+                href={item.href}
+                icon={item.Icon}
+                label={getNavLabel(item.key)}
+                isActive={pathname === item.href}
+              />
             ))}
+
+            {flatLinks.length > 0 && categories.length > 0 && (
+              <div className="w-8 border-t border-sidebar-border my-2" />
+            )}
+
+            {categories.map((category) =>
+              category.children.map((child) => (
+                <CollapsedNavItem
+                  key={child.key}
+                  href={child.href}
+                  icon={child.Icon}
+                  label={getNavLabel(child.key)}
+                  isActive={pathname === child.href}
+                />
+              ))
+            )}
           </div>
         ) : (
           <div className="space-y-1 px-2">
