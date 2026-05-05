@@ -114,12 +114,13 @@ export function NotificationBell({ isCollapsed = false }: NotificationBellProps)
     setNotifications([]);
     setUnreadCount(0);
 
-    const { error } = await supabase
+    const { error, count } = await supabase
       .from("notifications")
       .update({ is_read: true })
       .eq("user_id", userId)
       .eq("is_read", false);
 
+    console.log("[NotificationBell] markAllAsRead:", { error, count, userId });
     if (error) {
       // Rollback on error
       setNotifications(previousNotifications);
