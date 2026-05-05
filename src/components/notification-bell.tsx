@@ -101,11 +101,12 @@ export function NotificationBell({ isCollapsed = false }: NotificationBellProps)
 
   const handleMarkAllAsRead = async () => {
     setLoading(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) {
       setLoading(false);
       return;
     }
+    const userId = session.user.id;
 
     // Optimistic update - immediately clear counter
     const previousNotifications = notifications;
@@ -116,7 +117,7 @@ export function NotificationBell({ isCollapsed = false }: NotificationBellProps)
     const { error } = await supabase
       .from("notifications")
       .update({ is_read: true })
-      .eq("user_id", user.id)
+      .eq("user_id", userId)
       .eq("is_read", false);
 
     if (error) {
@@ -132,12 +133,12 @@ export function NotificationBell({ isCollapsed = false }: NotificationBellProps)
     let success = false;
     for (let attempt = 0; attempt < 3; attempt++) {
       await new Promise(resolve => setTimeout(resolve, 300));
-      
+
       // Fetch fresh data
       const { data, error: fetchError } = await supabase
         .from("notifications")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("user_id", userId)
         .eq("is_read", false)
         .order("created_at", { ascending: false })
         .limit(20);
@@ -160,12 +161,12 @@ export function NotificationBell({ isCollapsed = false }: NotificationBellProps)
         }
       }
     }
-    
+
     if (!success) {
       // Fallback: force a complete re-fetch via channel
       console.log("Notifications update verify failed, forcing re-fetch");
     }
-    
+
     setLoading(false);
   };
 
