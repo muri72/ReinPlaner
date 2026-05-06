@@ -88,13 +88,16 @@ export function MarketingHeader() {
               </Button>
             </div>
 
-            {/* Mobile Menu Button */}
-            <button
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="md:hidden p-2 text-slate-600 hover:text-slate-900"
-            >
-              {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-            </button>
+            {/* Mobile Header: Logo + ThemeSwitcher + X */}
+            <div className="flex items-center gap-2 md:hidden">
+              <ThemeSwitcher />
+              <button
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                className="p-2 text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
+              >
+                {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+              </button>
+            </div>
           </div>
         </div>
       </header>
@@ -117,7 +120,6 @@ export function MarketingHeader() {
             </Link>
           ))}
           <div className="flex flex-col gap-3 mt-8 w-64">
-            <ThemeSwitcher />
             <Button asChild variant="outline" className="border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800">
               <Link href="/login">Anmelden</Link>
             </Button>
