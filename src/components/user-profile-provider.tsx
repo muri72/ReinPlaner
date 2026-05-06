@@ -13,7 +13,7 @@ interface UserProfile {
 
 interface UserProfileContextType {
   userProfile: UserProfile | null;
-  currentUserRole: 'admin' | 'manager' | 'employee' | 'customer';
+  currentUserRole: 'admin' | 'manager' | 'employee' | 'customer' | 'platform_admin';
   displayName: string;
   loading: boolean;
   authenticated: boolean;
@@ -122,7 +122,7 @@ export function UserProfileProvider({ children }: { children: React.ReactNode })
 
   const currentUserRole = useMemo(() => {
     if (isImpersonating && meta?.impersonatedRole) {
-      return meta.impersonatedRole as 'admin' | 'manager' | 'employee' | 'customer';
+      return meta.impersonatedRole as 'admin' | 'manager' | 'employee' | 'customer' | 'platform_admin';
     }
 
     return (userProfile?.role as any) || 'employee';

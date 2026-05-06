@@ -31,7 +31,7 @@ interface DisplayAbsenceRequest {
 interface AbsenceRequestsGridViewProps {
   requests: DisplayAbsenceRequest[];
   query: string;
-  currentUserRole: 'admin' | 'manager' | 'employee';
+  currentUserRole: 'admin' | 'manager' | 'employee' | 'customer' | 'platform_admin';
   currentUserId: string;
   onActionSuccess: () => void;
 }
@@ -89,7 +89,7 @@ function RequestCard({
           <div className="flex items-center gap-1">
             <AbsenceRequestEditDialog
               request={request}
-              currentUserRole={currentUserRole as 'admin' | 'manager' | 'employee'}
+              currentUserRole={currentUserRole as 'admin' | 'manager' | 'employee' | 'customer' | 'platform_admin'}
               currentUserId={currentUserId}
               onRequestUpdated={onActionSuccess}
             />

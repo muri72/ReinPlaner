@@ -65,7 +65,7 @@ interface AbsenceRequestFormProps {
   onSubmit: (data: AbsenceRequestFormValues) => Promise<{ success: boolean; message: string }>;
   submitButtonText: string;
   onSuccess?: () => void;
-  currentUserRole: 'admin' | 'manager' | 'employee';
+  currentUserRole: 'admin' | 'manager' | 'employee' | 'customer' | 'platform_admin';
   currentUserId: string;
   isInDialog?: boolean;
 }

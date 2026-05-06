@@ -49,7 +49,7 @@ export default function AbsenceRequestsPage() {
   const currentSearchParams = useSearchParams();
 
   const [currentUser, setCurrentUser] = useState<any>(null);
-  const [currentUserRole, setCurrentUserRole] = useState<'admin' | 'manager' | 'employee' | 'customer'>('employee');
+  const [currentUserRole, setCurrentUserRole] = useState<'admin' | 'manager' | 'employee' | 'customer' | 'platform_admin'>('employee');
   const [currentUserEmployeeId, setCurrentUserEmployeeId] = useState<string | null>(null);
   const [allRequests, setAllRequests] = useState<DisplayAbsenceRequest[]>([]);
   const [employees, setEmployees] = useState<{ id: string; first_name: string; last_name: string }[]>([]);
@@ -83,7 +83,7 @@ export default function AbsenceRequestsPage() {
       .single();
 
     if (profileError) console.error("Fehler beim Laden des Benutzerprofils:", profileError?.message || profileError);
-    const role = profile?.role as 'admin' | 'manager' | 'employee' | 'customer' || 'employee';
+    const role = profile?.role as 'admin' | 'manager' | 'employee' | 'customer' | 'platform_admin' || 'employee';
     setCurrentUserRole(role);
 
     // Get current user's employee ID

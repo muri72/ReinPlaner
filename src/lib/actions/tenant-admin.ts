@@ -3,12 +3,14 @@
  * 
  * Server-side actions for managing tenants in the platform admin.
  * These functions bypass RLS using SERVICE ROLE key.
+ * Requires platform_admin role - accessible only via reinplaner.vercel.app
  */
 
 'use server';
 
 import { createClient } from '@supabase/supabase-js';
 import { revalidatePath } from 'next/cache';
+import { requirePlatformAdmin } from '@/lib/services-rbac';
 
 // Service role client for admin operations
 function getAdminClient() {
@@ -22,6 +24,11 @@ function getAdminClient() {
   return createClient(supabaseUrl, serviceRoleKey, {
     auth: { persistSession: false }
   });
+}
+
+// Verify caller is platform_admin (throws if not)
+async function verifyPlatformAdmin(): Promise<void> {
+  await requirePlatformAdmin();
 }
 
 // =============================================================================
@@ -75,6 +82,7 @@ export async function getAllTenants(): Promise<{
   data: TenantListItem[];
   error: string | null;
 }> {
+  await verifyPlatformAdmin();
   try {
     const supabase = getAdminClient();
     
@@ -101,6 +109,7 @@ export async function getTenantById(id: string): Promise<{
   data: TenantListItem | null;
   error: string | null;
 }> {
+  await verifyPlatformAdmin();
   try {
     const supabase = getAdminClient();
     
@@ -134,6 +143,7 @@ export async function getTenantDomains(tenantId: string): Promise<{
   }>;
   error: string | null;
 }> {
+  await verifyPlatformAdmin();
   try {
     const supabase = getAdminClient();
     
@@ -170,6 +180,7 @@ export async function createTenant(input: {
   data: TenantListItem | null;
   error: string | null;
 }> {
+  await verifyPlatformAdmin();
   try {
     const supabase = getAdminClient();
     
@@ -229,6 +240,7 @@ export async function updateTenant(
   data: TenantListItem | null;
   error: string | null;
 }> {
+  await verifyPlatformAdmin();
   try {
     const supabase = getAdminClient();
     
@@ -258,6 +270,7 @@ export async function deleteTenant(id: string): Promise<{
   success: boolean;
   error: string | null;
 }> {
+  await verifyPlatformAdmin();
   try {
     const supabase = getAdminClient();
     
@@ -288,6 +301,7 @@ export async function suspendTenant(id: string, reason?: string): Promise<{
   success: boolean;
   error: string | null;
 }> {
+  await verifyPlatformAdmin();
   try {
     const supabase = getAdminClient();
     
@@ -320,6 +334,7 @@ export async function activateTenant(id: string): Promise<{
   success: boolean;
   error: string | null;
 }> {
+  await verifyPlatformAdmin();
   try {
     const supabase = getAdminClient();
     
@@ -357,6 +372,7 @@ export async function addTenantDomain(
   data: { verification_token: string; verification_method: string } | null;
   error: string | null;
 }> {
+  await verifyPlatformAdmin();
   try {
     const supabase = getAdminClient();
     const verificationToken = generateVerificationToken();
@@ -397,6 +413,7 @@ export async function getDomainVerificationInstructions(
   } | null;
   error: string | null;
 }> {
+  await verifyPlatformAdmin();
   try {
     const supabase = getAdminClient();
     
@@ -440,6 +457,7 @@ export async function verifyDomainOwnership(
   success: boolean;
   error: string | null;
 }> {
+  await verifyPlatformAdmin();
   try {
     const supabase = getAdminClient();
     
@@ -514,6 +532,7 @@ export async function getPlatformStats(): Promise<{
   } | null;
   error: string | null;
 }> {
+  await verifyPlatformAdmin();
   try {
     const supabase = getAdminClient();
     

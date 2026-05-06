@@ -12,7 +12,7 @@ import {
 import { cn } from "@/lib/utils";
 
 // Definieren der Rollen-Typen
-type UserRole = 'admin' | 'manager' | 'employee' | 'customer';
+type UserRole = 'admin' | 'manager' | 'employee' | 'customer' | 'platform_admin';
 
 // Basis-Interface für Navigationspunkte
 interface NavItemBase {

@@ -31,7 +31,7 @@ interface AbsenceRequestsTableViewProps {
   totalPages: number;
   currentPage: number;
   query: string;
-  currentUserRole: 'admin' | 'manager' | 'employee';
+  currentUserRole: 'admin' | 'manager' | 'employee' | 'customer' | 'platform_admin';
   onActionSuccess?: () => void;
 }
 

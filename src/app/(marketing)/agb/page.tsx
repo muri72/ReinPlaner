@@ -9,22 +9,22 @@ export const metadata: Metadata = {
 export default function AgbPage() {
   return (
     <MarketingPage maxWidth="lg">
-      <h1 className="text-3xl font-bold text-white mb-8">Allgemeine Geschäftsbedingungen (AGB)</h1>
+      <h1 className="text-3xl font-bold dark:text-white mb-8">Allgemeine Geschäftsbedingungen (AGB)</h1>
 
       <div className="glass-card p-8 space-y-8">
         <p className="text-sm text-slate-400">
-          <strong className="text-white">Stand:</strong> 13. April 2026
+          <strong className="dark:text-white">Stand:</strong> 13. April 2026
         </p>
 
         <section>
-          <h2 className="text-xl font-semibold text-white mt-6 mb-4">1. Geltungsbereich</h2>
+          <h2 className="text-xl font-semibold dark:text-white mt-6 mb-4">1. Geltungsbereich</h2>
           <p className="text-slate-400 mb-4">
             Diese Allgemeinen Geschäftsbedingungen (AGB) gelten für die Nutzung der Software-as-a-Service-Plattform „ReinPlaner" der ReinPlaner GmbH (nachfolgend „Anbieter"). Mit der Registrierung und Nutzung der Plattform erklärt sich der Nutzer mit diesen AGB einverstanden.
           </p>
         </section>
 
         <section>
-          <h2 className="text-xl font-semibold text-white mt-6 mb-4">2. Gegenstand der Leistung</h2>
+          <h2 className="text-xl font-semibold dark:text-white mt-6 mb-4">2. Gegenstand der Leistung</h2>
           <p className="text-slate-400 mb-4">
             Der Anbieter stellt dem Nutzer eine cloudbasierte Software für die Gebäudereinigung zur Verfügung. Dies umfasst insbesondere:
           </p>
@@ -38,7 +38,7 @@ export default function AgbPage() {
         </section>
 
         <section>
-          <h2 className="text-xl font-semibold text-white mt-6 mb-4">3. Registrierung und Vertragsschluss</h2>
+          <h2 className="text-xl font-semibold dark:text-white mt-6 mb-4">3. Registrierung und Vertragsschluss</h2>
           <p className="text-slate-400 mb-4">
             Die Registrierung erfolgt über die Webseite des Anbieters. Der Vertrag kommt mit der Bestätigung der Registrierung durch den Anbieter und Annahme dieser AGB zustande.
           </p>
@@ -48,14 +48,14 @@ export default function AgbPage() {
         </section>
 
         <section>
-          <h2 className="text-xl font-semibold text-white mt-6 mb-4">4. Testphase</h2>
+          <h2 className="text-xl font-semibold dark:text-white mt-6 mb-4">4. Testphase</h2>
           <p className="text-slate-400 mb-4">
             Der Anbieter gewährt eine 14-tägige kostenlose Testphase. Während dieser Zeit kann der Nutzer die Software mit allen Funktionen des gewählten Tarifs testen. Eine Zahlungsverpflichtung entsteht während der Testphase nicht.
           </p>
         </section>
 
         <section>
-          <h2 className="text-xl font-semibold text-white mt-6 mb-4">5. Preise und Zahlungsbedingungen</h2>
+          <h2 className="text-xl font-semibold dark:text-white mt-6 mb-4">5. Preise und Zahlungsbedingungen</h2>
           <p className="text-slate-400 mb-4">
             Es gelten die zum Zeitpunkt der Buchung auf der Website angegebenen Preise. Alle Preise verstehen sich in Euro zzgl. der gesetzlichen MwSt.
           </p>
@@ -65,7 +65,7 @@ export default function AgbPage() {
         </section>
 
         <section>
-          <h2 className="text-xl font-semibold text-white mt-6 mb-4">6. Laufzeit und Kündigung</h2>
+          <h2 className="text-xl font-semibold dark:text-white mt-6 mb-4">6. Laufzeit und Kündigung</h2>
           <p className="text-slate-400 mb-4">
             Der Vertrag wird auf unbestimmte Zeit geschlossen und kann jederzeit zum Monatsende gekündigt werden. Die Kündigung erfolgt über die Account-Einstellungen oder per E-Mail an support@reinplaner.de.
           </p>
@@ -75,14 +75,14 @@ export default function AgbPage() {
         </section>
 
         <section>
-          <h2 className="text-xl font-semibold text-white mt-6 mb-4">7. Verfügbarkeit</h2>
+          <h2 className="text-xl font-semibold dark:text-white mt-6 mb-4">7. Verfügbarkeit</h2>
           <p className="text-slate-400 mb-4">
             Der Anbieter strebt eine Verfügbarkeit von 99% im Jahresmittel an. Geplante Wartungsarbeiten werden nach Möglichkeit außerhalb der Geschäftszeiten durchgeführt.
           </p>
         </section>
 
         <section>
-          <h2 className="text-xl font-semibold text-white mt-6 mb-4">8. Datenschutz und Datensicherheit</h2>
+          <h2 className="text-xl font-semibold dark:text-white mt-6 mb-4">8. Datenschutz und Datensicherheit</h2>
           <p className="text-slate-400 mb-4">
             Der Anbieter verarbeitet personenbezogene Daten des Nutzers nach den Bestimmungen der DSGVO. Details ergeben sich aus der Datenschutzerklärung.
           </p>
@@ -92,21 +92,21 @@ export default function AgbPage() {
         </section>
 
         <section>
-          <h2 className="text-xl font-semibold text-white mt-6 mb-4">9. Haftung</h2>
+          <h2 className="text-xl font-semibold dark:text-white mt-6 mb-4">9. Haftung</h2>
           <p className="text-slate-400 mb-4">
             Die Haftung des Anbieters richtet sich nach den gesetzlichen Bestimmungen. Für Schäden, die nicht die Verletzung von Leben, Körper oder Gesundheit betreffen, haftet der Anbieter nur bei Vorsatz oder grober Fahrlässigkeit.
           </p>
         </section>
 
         <section>
-          <h2 className="text-xl font-semibold text-white mt-6 mb-4">10. Urheberrecht</h2>
+          <h2 className="text-xl font-semibold dark:text-white mt-6 mb-4">10. Urheberrecht</h2>
           <p className="text-slate-400 mb-4">
             Die Software und alle zugehörigen Inhalte sind urheberrechtlich geschützt. Der Nutzer erhält ein nicht ausschließliches, nicht übertragbares Recht zur Nutzung der Software während der Vertragslaufzeit.
           </p>
         </section>
 
         <section>
-          <h2 className="text-xl font-semibold text-white mt-6 mb-4">11. Schlussbestimmungen</h2>
+          <h2 className="text-xl font-semibold dark:text-white mt-6 mb-4">11. Schlussbestimmungen</h2>
           <p className="text-slate-400 mb-4">
             Es gilt das Recht der Bundesrepublik Deutschland. Gerichtsstand ist Musterstadt.
           </p>
@@ -116,7 +116,7 @@ export default function AgbPage() {
         </section>
 
         <section>
-          <h2 className="text-xl font-semibold text-white mt-6 mb-4">Kontakt</h2>
+          <h2 className="text-xl font-semibold dark:text-white mt-6 mb-4">Kontakt</h2>
           <p className="text-slate-400 mb-4">
             ReinPlaner GmbH<br />
             Musterstraße 123<br />

@@ -29,7 +29,7 @@ export default async function EmployeeLayout({
   // Ensure only employees can access this layout
   // Note: The actual role check will happen in the client component
   // For now, we'll redirect on the server side if not an employee
-  const serverSideRole = userProfile?.role as 'admin' | 'manager' | 'employee' | 'customer' || 'employee';
+  const serverSideRole = userProfile?.role as 'admin' | 'manager' | 'employee' | 'customer' | 'platform_admin' || 'employee';
   if (serverSideRole !== 'employee') {
     redirect("/dashboard"); // Redirect to main dashboard if not an employee
   }

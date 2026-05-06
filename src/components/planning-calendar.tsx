@@ -133,7 +133,7 @@ interface PlanningCalendarProps {
   onActionSuccess: () => void;
   weekNumber: number;
   holidaysMap: { [key: string]: { name: string } | null };
-  currentUserRole?: 'admin' | 'manager' | 'employee' | 'customer';
+  currentUserRole?: 'admin' | 'manager' | 'employee' | 'customer' | 'platform_admin';
   services: Service[];
   onEditShift?: (shiftId: string, shift: any, date: string) => void;
   onCreateShift?: (employeeId: string, date: string) => void;
