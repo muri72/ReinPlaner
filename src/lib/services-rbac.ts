@@ -169,7 +169,7 @@ export async function userBelongsToTenant(userId: string, tenantId: string): Pro
 /**
  * Get the current user's role from their profile (no userId argument)
  */
-export async function getCurrentUserRole(): Promise<'admin' | 'manager' | 'employee' | 'customer' | 'platform_admin' | 'unknown'> {
+export async function getCurrentUserRole(): Promise<'admin' | 'manager' | 'employee' | 'customer' | 'platform_admin' | 'support' | 'unknown'> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -187,7 +187,7 @@ export async function getCurrentUserRole(): Promise<'admin' | 'manager' | 'emplo
     return 'unknown';
   }
 
-  return (profile.role as 'admin' | 'manager' | 'employee' | 'customer' | 'platform_admin') || 'unknown';
+  return (profile.role as 'admin' | 'manager' | 'employee' | 'customer' | 'platform_admin' | 'support') || 'unknown';
 }
 
 /**

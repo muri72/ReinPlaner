@@ -20,26 +20,24 @@ import {
   Activity,
   FileEdit,
   Building2,
+  BarChart3,
+  Eye,
   type LucideIcon,
 } from "lucide-react";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-export type UserRole = "admin" | "manager" | "employee" | "customer" | "platform_admin";
+export type UserRole = "admin" | "manager" | "employee" | "customer" | "platform_admin" | "support";
 
 export interface NavLink {
-  /** Unique key — also used as translation key / label */
   key: string;
-  /** Full path (used for href + active detection) */
   href: string;
   Icon: LucideIcon;
-  /** Roles that can see this item */
   roles: UserRole[];
 }
 
 export interface NavCategory {
   key: string;
-  /** Roles that can see this category (empty = always visible) */
   roles: UserRole[];
   children: NavLink[];
 }
@@ -51,7 +49,10 @@ const homeLinks: Record<UserRole, NavLink> = {
   manager: { key: "planning", href: "/dashboard/planning", Icon: Home, roles: ["manager"] },
   employee: { key: "employee-dashboard", href: "/employee/dashboard", Icon: Home, roles: ["employee"] },
   customer: { key: "portal-dashboard", href: "/portal/dashboard", Icon: Home, roles: ["customer"] },
-  platform_admin: { key: "platform-admin", href: "/dashboard/admin/tenants", Icon: Home, roles: ["platform_admin"] },
+  // platform_admin home → overview page
+  platform_admin: { key: "platform-overview", href: "/dashboard/admin", Icon: Home, roles: ["platform_admin"] },
+  // support home → tenants list
+  support: { key: "support-overview", href: "/dashboard/admin/tenants", Icon: Home, roles: ["support"] },
 };
 
 // ─── Category Definitions ─────────────────────────────────────────────────────
@@ -81,14 +82,30 @@ const PORTAL_LINKS: NavLink[] = [
   { key: "my-bookings", href: "/portal/dashboard/bookings", Icon: Briefcase, roles: ["customer"] },
 ];
 
-const ADMIN_LINKS: NavLink[] = [
+// ─── Platform Admin Categories ────────────────────────────────────────────────
+
+const PLATFORM_ADMIN_TENANTS_LINKS: NavLink[] = [
+  { key: "platform-tenants", href: "/dashboard/admin/tenants", Icon: Building2, roles: ["platform_admin"] },
+];
+
+const PLATFORM_ADMIN_REVENUE_LINKS: NavLink[] = [
+  { key: "platform-revenue", href: "/dashboard/admin/revenue", Icon: BarChart3, roles: ["platform_admin"] },
+  { key: "platform-forecast", href: "/dashboard/admin/forecast", Icon: TrendingUp, roles: ["platform_admin"] },
+];
+
+const PLATFORM_ADMIN_SYSTEM_LINKS: NavLink[] = [
   { key: "platform-health", href: "/dashboard/platform-health", Icon: Activity, roles: ["platform_admin"] },
-  { key: "services", href: "/dashboard/services", Icon: Wrench, roles: ["platform_admin"] },
-  { key: "settings", href: "/dashboard/settings", Icon: Settings, roles: ["platform_admin"] },
-  { key: "templates", href: "/dashboard/templates", Icon: FileEdit, roles: ["platform_admin"] },
-  { key: "audit-logs", href: "/dashboard/audit-logs", Icon: Shield, roles: ["platform_admin"] },
-  { key: "users", href: "/dashboard/users", Icon: Users, roles: ["platform_admin"] },
-  { key: "tenants", href: "/dashboard/admin/tenants", Icon: Building2, roles: ["platform_admin"] },
+  { key: "platform-services", href: "/dashboard/services", Icon: Wrench, roles: ["platform_admin"] },
+  { key: "platform-settings", href: "/dashboard/settings", Icon: Settings, roles: ["platform_admin"] },
+  { key: "platform-templates", href: "/dashboard/templates", Icon: FileEdit, roles: ["platform_admin"] },
+  { key: "platform-audit", href: "/dashboard/audit-logs", Icon: Shield, roles: ["platform_admin"] },
+  { key: "platform-users", href: "/dashboard/users", Icon: Users, roles: ["platform_admin"] },
+];
+
+// ─── Support Role Categories ─────────────────────────────────────────────────
+
+const SUPPORT_TENANTS_LINKS: NavLink[] = [
+  { key: "support-tenants", href: "/dashboard/admin/tenants", Icon: Building2, roles: ["support"] },
 ];
 
 // ─── Full Navigation Tree ─────────────────────────────────────────────────────
@@ -99,6 +116,7 @@ export const NAV_CONFIG: (NavLink | NavCategory)[] = [
   homeLinks.employee,
   homeLinks.customer,
   homeLinks.platform_admin,
+  homeLinks.support,
   {
     key: "management",
     roles: ["admin", "manager", "employee"],
@@ -114,17 +132,36 @@ export const NAV_CONFIG: (NavLink | NavCategory)[] = [
     roles: ["admin", "manager", "employee"],
     children: STAFF_LINKS,
   },
-  ...ADMIN_LINKS,
+  // ── Platform Admin Navigation ──
+  {
+    key: "platform-plattform",
+    roles: ["platform_admin"],
+    children: PLATFORM_ADMIN_TENANTS_LINKS,
+  },
+  {
+    key: "platform-finanzen",
+    roles: ["platform_admin"],
+    children: PLATFORM_ADMIN_REVENUE_LINKS,
+  },
+  {
+    key: "platform-system",
+    roles: ["platform_admin"],
+    children: PLATFORM_ADMIN_SYSTEM_LINKS,
+  },
+  // ── Support Navigation ──
+  {
+    key: "support-mandanten",
+    roles: ["support"],
+    children: SUPPORT_TENANTS_LINKS,
+  },
 ];
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-/** Returns a flat list of all NavLinks visible for a given role */
 export function getFlatNavForRole(role: UserRole): NavLink[] {
   return NAV_CONFIG.filter((item): item is NavLink => !("children" in item) && item.roles.includes(role));
 }
 
-/** Returns only categories (with filtered children) visible for a given role */
 export function getCategoriesForRole(role: UserRole): NavCategory[] {
   return NAV_CONFIG
     .filter((item): item is NavCategory => "children" in item && item.children.some((c) => c.roles.includes(role)))
@@ -134,25 +171,25 @@ export function getCategoriesForRole(role: UserRole): NavCategory[] {
     }));
 }
 
-/** Returns ALL visible items (links + categories with children) for a role, flattened */
 export function getAllNavItemsForRole(role: UserRole): NavLink[] {
   const links = getFlatNavForRole(role);
   const categories = getCategoriesForRole(role);
   return [...links, ...categories.flatMap((c) => c.children)];
 }
 
-/** Returns the home link href for a role */
 export function getHomeHref(role: UserRole): string {
-  const homeLink = homeLinks[role];
-  return homeLink.href;
+  return homeLinks[role].href;
 }
 
-/** i18n labels (German) — extend as needed */
+// ─── Labels ─────────────────────────────────────────────────────────────────
+
 export const NAV_LABELS: Record<string, string> = {
   "dashboard": "Dashboard",
   "planning": "Planung",
   "employee-dashboard": "Dashboard",
   "portal-dashboard": "Dashboard",
+  "platform-overview": "Übersicht",
+  "support-overview": "Übersicht",
   "orders": "Aufträge",
   "objects": "Objekte",
   "reports": "Berichte",
@@ -168,12 +205,22 @@ export const NAV_LABELS: Record<string, string> = {
   "absence-requests": "Abwesenheiten",
   "time-tracking": "Zeiterfassung",
   "my-bookings": "Meine Buchungen",
+  // Platform Admin
+  "platform-plattform": "Plattform",
+  "platform-finanzen": "Finanzen",
+  "platform-system": "System",
+  "platform-tenants": "Mandanten",
+  "platform-revenue": "Umsatz",
+  "platform-forecast": "Prognose",
   "platform-health": "Platform Health",
-  "services": "Services",
-  "settings": "Einstellungen",
-  "templates": "Vorlagen",
-  "audit-logs": "Audit-Logs",
-  "users": "Benutzer",
+  "platform-services": "Services",
+  "platform-settings": "Einstellungen",
+  "platform-templates": "Vorlagen",
+  "platform-audit": "Audit-Logs",
+  "platform-users": "Benutzer",
+  // Support
+  "support-mandanten": "Mandanten",
+  "support-tenants": "Mandanten",
   "tenants": "Mandanten",
 };
 

@@ -25,7 +25,7 @@ import { useUserProfile } from "@/components/user-profile-provider";
 import { cn } from "@/lib/utils";
 
 interface UserMenuProps {
-  currentUserRole: 'admin' | 'manager' | 'employee' | 'customer' | 'platform_admin';
+  currentUserRole: 'admin' | 'manager' | 'employee' | 'customer' | 'platform_admin' | 'support';
   onSignOut: () => Promise<void>;
   isCollapsed?: boolean;
 }
