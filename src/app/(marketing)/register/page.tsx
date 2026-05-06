@@ -202,17 +202,17 @@ function RegisterForm() {
   };
 
   const inputClass = (fieldName: string) =>
-    `h-12 bg-slate-800 border border-slate-700 rounded-xl transition-all duration-300 placeholder:text-slate-500 text-white ${
+    `h-12 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl transition-all duration-300 placeholder:text-slate-400 dark:placeholder:text-slate-500 text-slate-900 dark:text-white ${
       focusedField === fieldName
-        ? "border-blue-500 ring-4 ring-blue-500/20"
-        : "hover:border-slate-600"
+        ? "border-blue-500 ring-4 ring-blue-500/20 dark:border-blue-400 dark:ring-blue-400/20"
+        : "hover:border-slate-400 dark:hover:border-slate-600"
     }`;
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-900">
+    <div className="min-h-screen flex flex-col bg-white dark:bg-slate-900">
       {/* Header */}
       <header className="relative p-4 sm:p-6">
-        <Link href="/" className="inline-flex items-center gap-2 text-slate-400 hover:text-white transition-colors dark:text-slate-400">
+        <Link href="/" className="inline-flex items-center gap-2 text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors">
           <ArrowLeft className="w-5 h-5" />
           <span className="text-sm font-medium">Zurück zur Startseite</span>
         </Link>
@@ -225,28 +225,28 @@ function RegisterForm() {
           <div className="text-center mb-8">
             <Link href="/" className="inline-flex items-center gap-3">
               <Image src="/logo.png" alt="ReinPlaner" width={48} height={48} className="rounded-xl" />
-              <span className="text-2xl font-bold text-white">ReinPlaner</span>
+              <span className="text-2xl font-bold text-slate-900 dark:text-white">ReinPlaner</span>
             </Link>
           </div>
 
           {/* Progress Indicator */}
           <div className="flex items-center justify-center gap-4 mb-8">
-            <div className={`flex items-center gap-2 ${step === "plan" ? "text-blue-300" : "text-emerald-400"}`}>
+            <div className={`flex items-center gap-2 ${step === "plan" ? "text-blue-600 dark:text-blue-300" : "text-emerald-600 dark:text-emerald-400"}`}>
               <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
                 step === "account" ? "bg-emerald-500 text-white" : "bg-blue-600 text-white"
               }`}>
                 {step === "account" ? <CheckCircle2 className="w-5 h-5" /> : "1"}
               </div>
-              <span className="text-sm font-medium text-slate-200">Plan wählen</span>
+              <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Plan wählen</span>
             </div>
-            <div className="w-16 h-px bg-slate-700" />
-            <div className={`flex items-center gap-2 ${step === "account" ? "text-blue-300" : "text-slate-400"}`}>
+            <div className="w-16 h-px bg-slate-300 dark:bg-slate-700" />
+            <div className={`flex items-center gap-2 ${step === "account" ? "text-blue-600 dark:text-blue-300" : "text-slate-400"}`}>
               <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
-                step === "account" ? "bg-blue-600 text-white" : "bg-slate-700 text-slate-200"
+                step === "account" ? "bg-blue-600 text-white" : "bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200"
               }`}>
                 2
               </div>
-              <span className="text-sm font-medium text-slate-200">Konto erstellen</span>
+              <span className="text-sm font-medium text-slate-700 dark:text-slate-200">Konto erstellen</span>
             </div>
           </div>
 
@@ -254,8 +254,8 @@ function RegisterForm() {
           {step === "plan" && (
             <div className="space-y-6">
               <div className="text-center">
-                <h1 className="text-h1 text-white mb-2">WÄHLEN SIE IHREEN PLAN</h1>
-                <p className="text-slate-200">Alle Pläne mit 14 Tage kostenlos testen</p>
+                <h1 className="text-h1 text-slate-900 dark:text-white mb-2">WÄHLEN SIE IHREEN PLAN</h1>
+                <p className="text-slate-600 dark:text-slate-200">Alle Pläne mit 14 Tage kostenlos testen</p>
               </div>
               
               <div className="grid md:grid-cols-3 gap-6">
@@ -266,8 +266,8 @@ function RegisterForm() {
                     onClick={() => handlePlanSelect(plan.id)}
                   className={`relative p-6 rounded-2xl text-left transition-all duration-300 ${
                     plan.highlighted
-                      ? "bg-slate-800 border-2 border-blue-500 ring-2 ring-blue-500/30 dark:bg-slate-800 dark:border-blue-500 dark:ring-2 dark:ring-blue-500/30 scale-105"
-                      : "bg-slate-800 border border-slate-700 dark:bg-slate-800 dark:border-slate-700 hover:border-slate-600"
+                      ? "bg-white dark:bg-slate-800 border-2 border-blue-500 dark:border-blue-500 ring-2 ring-blue-500/30 dark:ring-2 dark:ring-blue-500/30 scale-105"
+                      : "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600"
                   } ${formData.plan === plan.id ? "ring-2 ring-blue-500" : ""}`}
                   >
                     {plan.highlighted && (
@@ -280,28 +280,28 @@ function RegisterForm() {
                       <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
                         plan.highlighted
                           ? "bg-blue-600 text-white"
-                          : "bg-slate-700 text-slate-200"
-                      }`}>
+                          : "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-200"
+                      }` }>
                         <Sparkles className="w-6 h-6" />
                       </div>
                       <div>
-                        <h3 className="font-semibold text-white text-lg">{plan.name}</h3>
-                        <p className="text-2xl font-bold text-white">{plan.price}<span className="text-sm font-normal text-slate-400">/Monat</span></p>
+                        <h3 className="font-semibold text-slate-900 dark:text-white text-lg">{plan.name}</h3>
+                        <p className="text-2xl font-bold text-slate-900 dark:text-white">{plan.price}<span className="text-sm font-normal text-slate-500 dark:text-slate-400">/Monat</span></p>
                       </div>
                     </div>
 
-                    <p className="text-sm text-slate-300 mb-4">{plan.description}</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-300 mb-4">{plan.description}</p>
 
                     <ul className="space-y-2 mb-6">
                       {plan.features.map((feature) => (
-                        <li key={feature} className="flex items-center gap-2 text-sm text-slate-300">
-                          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                        <li key={feature} className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-500 dark:text-emerald-400 shrink-0" />
                           {feature}
                         </li>
                       ))}
                     </ul>
 
-                    <div className="flex items-center text-sm font-medium text-blue-300">
+                    <div className="flex items-center text-sm font-medium text-blue-600 dark:text-blue-300">
                       Auswählen <Sparkles className="w-4 h-4 ml-1" />
                     </div>
                   </button>
@@ -312,55 +312,55 @@ function RegisterForm() {
 
           {/* Step 2: Account Details */}
           {step === "account" && (
-            <div className="bg-slate-800 border border-slate-700 p-8 rounded-2xl">
+            <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-8 rounded-2xl">
               <div className="text-center mb-8">
-                <h1 className="text-h2 text-white mb-2">KONTO ERSTELLEN</h1>
-                <p className="text-slate-300">Geben Sie Ihre Firmen- und Kontodaten ein</p>
+                <h1 className="text-h2 text-slate-900 dark:text-white mb-2">KONTO ERSTELLEN</h1>
+                <p className="text-slate-600 dark:text-slate-300">Geben Sie Ihre Firmen- und Kontodaten ein</p>
               </div>
 
               {/* Why ReinPlaner Benefits */}
-              <div className="grid grid-cols-3 gap-4 mb-8 p-4 bg-slate-700/50 rounded-xl border border-slate-700">
+              <div className="grid grid-cols-3 gap-4 mb-8 p-4 bg-slate-50 dark:bg-slate-700/50 rounded-xl border border-slate-200 dark:border-slate-700">
                 <div className="text-center">
-                  <div className="w-10 h-10 rounded-lg bg-blue-600/20 flex items-center justify-center mx-auto mb-2">
-                    <Zap className="w-5 h-5 text-blue-400" />
+                  <div className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900/20 flex items-center justify-center mx-auto mb-2">
+                    <Zap className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                   </div>
-                  <p className="text-xs font-medium text-white">5 Min. Setup</p>
-                  <p className="text-xs text-slate-500 mt-0.5">Sofort einsatzbereit</p>
+                  <p className="text-xs font-medium text-slate-900 dark:text-white">5 Min. Setup</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Sofort einsatzbereit</p>
                 </div>
-                <div className="text-center border-x border-slate-600">
-                  <div className="w-10 h-10 rounded-lg bg-emerald-600/20 flex items-center justify-center mx-auto mb-2">
-                    <Shield className="w-5 h-5 text-emerald-400" />
+                <div className="text-center border-x border-slate-200 dark:border-slate-600">
+                  <div className="w-10 h-10 rounded-lg bg-emerald-100 dark:bg-emerald-900/20 flex items-center justify-center mx-auto mb-2">
+                    <Shield className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                   </div>
-                  <p className="text-xs font-medium text-white">DSGVO-konform</p>
-                  <p className="text-xs text-slate-500 mt-0.5">Daten in Deutschland</p>
+                  <p className="text-xs font-medium text-slate-900 dark:text-white">DSGVO-konform</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Daten in Deutschland</p>
                 </div>
                 <div className="text-center">
-                  <div className="w-10 h-10 rounded-lg bg-violet-600/20 flex items-center justify-center mx-auto mb-2">
-                    <Headphones className="w-5 h-5 text-violet-400" />
+                  <div className="w-10 h-10 rounded-lg bg-violet-100 dark:bg-violet-900/20 flex items-center justify-center mx-auto mb-2">
+                    <Headphones className="w-5 h-5 text-violet-600 dark:text-violet-400" />
                   </div>
-                  <p className="text-xs font-medium text-white">Persönlicher Support</p>
-                  <p className="text-xs text-slate-500 mt-0.5">Antwort in &lt;4 Std.</p>
+                  <p className="text-xs font-medium text-slate-900 dark:text-white">Persönlicher Support</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Antwort in &lt;4 Std.</p>
                 </div>
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-6">
                 {/* Selected Plan Badge */}
-                <div className="flex items-center justify-center gap-4 p-4 bg-slate-700/50 rounded-xl border border-blue-500/30">
-                  <div className="w-12 h-12 rounded-xl bg-blue-600 text-white flex items-center justify-center">
+                <div className="flex items-center justify-center gap-4 p-4 bg-slate-50 dark:bg-slate-700/50 rounded-xl border border-slate-200 dark:border-blue-500/30">
+                  <div className="w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-600 text-blue-600 dark:text-white flex items-center justify-center">
                     <Sparkles className="w-6 h-6" />
                   </div>
                   <div>
-                    <p className="font-semibold text-white">
+                    <p className="font-semibold text-slate-900 dark:text-white">
                       {plans.find((p) => p.id === formData.plan)?.name} Plan
                     </p>
-                    <p className="text-sm text-slate-200">
+                    <p className="text-sm text-slate-600 dark:text-slate-200">
                       {plans.find((p) => p.id === formData.plan)?.price}/Monat
                     </p>
                   </div>
                   <button
                     type="button"
                     onClick={() => setStep("plan")}
-                    className="ml-auto text-sm text-blue-300 hover:text-blue-300 font-medium transition-colors"
+                    className="ml-auto text-sm text-blue-600 dark:text-blue-300 hover:text-blue-700 dark:hover:text-blue-300 font-medium transition-colors"
                   >
                     Ändern
                   </button>
@@ -368,12 +368,12 @@ function RegisterForm() {
 
                 {/* Company Name */}
                 <div className="space-y-2">
-                  <Label htmlFor="companyName" className="text-sm font-semibold text-white ml-1">
+                  <Label htmlFor="companyName" className="text-sm font-semibold text-slate-700 dark:text-slate-200 ml-1">
                     Firmenname
                   </Label>
                   <div className="relative">
                     <Building2 className={`absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 transition-colors ${
-                      focusedField === "companyName" ? "text-blue-300" : "text-slate-200"
+                      focusedField === "companyName" ? "text-blue-500 dark:text-blue-300" : "text-slate-400 dark:text-slate-500"
                     }`} />
                     <Input
                       id="companyName"
@@ -392,12 +392,12 @@ function RegisterForm() {
                 {/* Name Fields */}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="firstName" className="text-sm font-semibold text-white ml-1">
+                    <Label htmlFor="firstName" className="text-sm font-semibold text-slate-700 dark:text-slate-200 ml-1">
                       Vorname
                     </Label>
                     <div className="relative">
                       <User className={`absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 transition-colors ${
-                        focusedField === "firstName" ? "text-blue-300" : "text-slate-200"
+                        focusedField === "firstName" ? "text-blue-500 dark:text-blue-300" : "text-slate-400 dark:text-slate-500"
                       }`} />
                       <Input
                         id="firstName"
@@ -413,12 +413,12 @@ function RegisterForm() {
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="lastName" className="text-sm font-semibold text-white ml-1">
+                    <Label htmlFor="lastName" className="text-sm font-semibold text-slate-700 dark:text-slate-200 ml-1">
                       Nachname
                     </Label>
                     <div className="relative">
                       <User className={`absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 transition-colors ${
-                        focusedField === "lastName" ? "text-blue-300" : "text-slate-200"
+                        focusedField === "lastName" ? "text-blue-500 dark:text-blue-300" : "text-slate-400 dark:text-slate-500"
                       }`} />
                       <Input
                         id="lastName"
@@ -437,12 +437,12 @@ function RegisterForm() {
 
                 {/* Email */}
                 <div className="space-y-2">
-                  <Label htmlFor="email" className="text-sm font-semibold text-white ml-1">
+                  <Label htmlFor="email" className="text-sm font-semibold text-slate-700 dark:text-slate-200 ml-1">
                     E-Mail-Adresse
                   </Label>
                   <div className="relative">
                     <Mail className={`absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 transition-colors ${
-                      focusedField === "email" ? "text-blue-300" : "text-slate-200"
+                      focusedField === "email" ? "text-blue-500 dark:text-blue-300" : "text-slate-400 dark:text-slate-500"
                     }`} />
                     <Input
                       id="email"
@@ -461,12 +461,12 @@ function RegisterForm() {
                 {/* Password */}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="password" className="text-sm font-semibold text-white ml-1">
+                    <Label htmlFor="password" className="text-sm font-semibold text-slate-700 dark:text-slate-200 ml-1">
                       Passwort
                     </Label>
                     <div className="relative">
                       <Lock className={`absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 transition-colors ${
-                        focusedField === "password" ? "text-blue-300" : "text-slate-200"
+                        focusedField === "password" ? "text-blue-500 dark:text-blue-300" : "text-slate-400 dark:text-slate-500"
                       }`} />
                       <Input
                         id="password"
@@ -484,7 +484,7 @@ function RegisterForm() {
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
                         className={`absolute right-4 top-1/2 -translate-y-1/2 transition-colors ${
-                          focusedField === "password" ? "text-blue-300" : "text-slate-200 hover:text-slate-200"
+                          focusedField === "password" ? "text-blue-500 dark:text-blue-300" : "text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-400"
                         }`}
                       >
                         {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
@@ -492,12 +492,12 @@ function RegisterForm() {
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="confirmPassword" className="text-sm font-semibold text-white ml-1">
+                    <Label htmlFor="confirmPassword" className="text-sm font-semibold text-slate-700 dark:text-slate-200 ml-1">
                       Passwort bestätigen
                     </Label>
                     <div className="relative">
                       <Lock className={`absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 transition-colors ${
-                        focusedField === "confirmPassword" ? "text-blue-300" : "text-slate-200"
+                        focusedField === "confirmPassword" ? "text-blue-500 dark:text-blue-300" : "text-slate-400 dark:text-slate-500"
                       }`} />
                       <Input
                         id="confirmPassword"
@@ -515,7 +515,7 @@ function RegisterForm() {
                         type="button"
                         onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                         className={`absolute right-4 top-1/2 -translate-y-1/2 transition-colors ${
-                          focusedField === "confirmPassword" ? "text-blue-300" : "text-slate-200 hover:text-slate-200"
+                          focusedField === "confirmPassword" ? "text-blue-500 dark:text-blue-300" : "text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-400"
                         }`}
                       >
                         {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
@@ -525,18 +525,18 @@ function RegisterForm() {
                 </div>
 
                 {/* AGB Checkbox */}
-                <div className="flex items-start gap-3 p-4 glass-card rounded-xl border border-white/5">
+                <div className="flex items-start gap-3 p-4 bg-slate-50 dark:bg-slate-700/50 rounded-xl border border-slate-200 dark:border-slate-700">
                   <Checkbox
                     id="agb"
                     checked={formData.agbAccepted}
                     onCheckedChange={(checked) => updateField("agbAccepted", checked as boolean)}
                     className="mt-0.5 data-[state=checked]:bg-blue-500 data-[state=checked]:border-blue-500"
                   />
-                  <Label htmlFor="agb" className="text-sm text-slate-200 leading-relaxed cursor-pointer">
+                  <Label htmlFor="agb" className="text-sm text-slate-700 dark:text-slate-200 leading-relaxed cursor-pointer">
                     Ich akzeptiere die{" "}
-                    <Link href="/agb" className="text-blue-300 hover:underline">AGB</Link>{" "}
+                    <Link href="/agb" className="text-blue-600 dark:text-blue-300 hover:underline">AGB</Link>{" "}
                     und die{" "}
-                    <Link href="/datenschutz" className="text-blue-300 hover:underline">Datenschutzerklärung</Link>.
+                    <Link href="/datenschutz" className="text-blue-600 dark:text-blue-300 hover:underline">Datenschutzerklärung</Link>.
                   </Label>
                 </div>
 
@@ -560,9 +560,9 @@ function RegisterForm() {
                 </Button>
 
                 {/* Login Link */}
-                <p className="text-center text-sm text-slate-200">
+                <p className="text-center text-sm text-slate-600 dark:text-slate-200">
                   Bereits ein Konto?{" "}
-                  <Link href="/login" className="text-blue-300 hover:underline font-medium">Jetzt anmelden</Link>
+                  <Link href="/login" className="text-blue-600 dark:text-blue-300 hover:underline font-medium">Jetzt anmelden</Link>
                 </p>
               </form>
             </div>
@@ -570,16 +570,16 @@ function RegisterForm() {
 
           {/* Trust Badges */}
           <div className="mt-8 flex flex-wrap items-center justify-center gap-6 text-sm">
-            <div className="flex items-center gap-2 text-slate-200">
-              <Shield className="w-4 h-4 text-emerald-400" />
+            <div className="flex items-center gap-2 text-slate-600 dark:text-slate-200">
+              <Shield className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
               <span>DSGVO-konform</span>
             </div>
-            <div className="flex items-center gap-2 text-slate-200">
-              <Globe className="w-4 h-4 text-blue-300" />
+            <div className="flex items-center gap-2 text-slate-600 dark:text-slate-200">
+              <Globe className="w-4 h-4 text-blue-500 dark:text-blue-300" />
               <span>Made in Germany</span>
             </div>
-            <div className="flex items-center gap-2 text-slate-200">
-              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+            <div className="flex items-center gap-2 text-slate-600 dark:text-slate-200">
+              <CheckCircle2 className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
               <span>Keine Kreditkarte nötig</span>
             </div>
           </div>
@@ -592,9 +592,9 @@ function RegisterForm() {
 
 function RegisterLoading() {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center section-dark">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-white dark:bg-slate-900">
       <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
-      <p className="mt-4 text-slate-200">Laden...</p>
+      <p className="mt-4 text-slate-600 dark:text-slate-200">Laden...</p>
     </div>
   );
 }
