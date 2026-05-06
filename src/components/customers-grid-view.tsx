@@ -28,7 +28,7 @@ interface CustomersGridViewProps {
 export function CustomersGridView({ customers, query, customerTypeFilter, onActionSuccess }: CustomersGridViewProps) {
   if (customers.length === 0 && !query && !customerTypeFilter) {
     return (
-      <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30 shadow-neumorphic glassmorphism-card">
+      <div className="col-span-full text-center text-muted-foreground py-8 bg-white dark:bg-slate-800 rounded-xl p-8 border border-dashed border-slate-300 dark:border-slate-700 shadow-sm dark:shadow-none">
         <Users className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
         <p className="text-base md:text-lg font-semibold">Noch keine Kunden vorhanden</p>
         <p className="text-sm">Fügen Sie Ihren ersten Kunden hinzu, um loszulegen.</p>
@@ -41,7 +41,7 @@ export function CustomersGridView({ customers, query, customerTypeFilter, onActi
 
   if (customers.length === 0 && (query || customerTypeFilter)) {
     return (
-      <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30 shadow-neumorphic glassmorphism-card">
+      <div className="col-span-full text-center text-muted-foreground py-8 bg-white dark:bg-slate-800 rounded-xl p-8 border border-dashed border-slate-300 dark:border-slate-700 shadow-sm dark:shadow-none">
         <Users className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
         <p className="text-base md:text-lg font-semibold">Keine Kunden gefunden</p>
         <p className="text-sm">Ihre Suche oder Filter ergaben keine Treffer.</p>
@@ -53,7 +53,7 @@ export function CustomersGridView({ customers, query, customerTypeFilter, onActi
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
       {customers.map((customer) => (
         <Link key={customer.id} href={`/dashboard/customers/${customer.id}`} className="block hover:scale-[1.02] transition-transform duration-200 ease-in-out">
-          <Card className="shadow-neumorphic glassmorphism-card h-full">
+          <Card className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none h-full">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-base md:text-lg font-semibold line-clamp-2">{customer.name}</CardTitle>
             </CardHeader>

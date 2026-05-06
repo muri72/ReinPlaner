@@ -352,7 +352,7 @@ export function PlanningCalendar({
   }, [planningData, weekDays]);
 
   return (
-    <div className="flex flex-col h-full overflow-hidden border rounded-lg shadow-neumorphic glassmorphism-card">
+    <div className="flex flex-col h-full overflow-hidden border rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none">
       <TooltipProvider delayDuration={200}>
         <div className="overflow-auto custom-scrollbar flex-1">
           <Table className="min-w-full border-collapse table-fixed">

@@ -48,7 +48,7 @@ function KPICard({
   badge?: React.ReactNode;
 }) {
   return (
-    <Card className="glassmorphism-card">
+    <Card className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none">
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-semibold flex items-center justify-between">
           <span className="flex items-center gap-2">
@@ -161,7 +161,7 @@ export function EmployeeAbsenceKPIs({ employeeId, employeeName, year }: Employee
         <h3 className="text-lg font-semibold">Abwesenheitsübersicht {year || new Date().getFullYear()}</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {[1, 2, 3, 4].map((i) => (
-            <Card key={i} className="glassmorphism-card">
+            <Card key={i} className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none">
               <CardHeader className="pb-2">
                 <Skeleton className="h-4 w-24" />
               </CardHeader>
@@ -219,7 +219,7 @@ export function EmployeeAbsenceKPIs({ employeeId, employeeName, year }: Employee
           color={absenceTypeConfig.sick_leave.text}
           badge={
             kpis.sick_leave.occurrences > 3 ? (
-              <Badge variant="outline" className="bg-orange-500/10 text-orange-600 border-orange-200">
+              <Badge variant="outline" className="bg-orange-50 text-orange-600 border-orange-200">
                 <TrendingUp className="h-3 w-3 mr-1" />
                 Häufig
               </Badge>

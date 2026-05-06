@@ -491,7 +491,7 @@ export function DocumentGeneratorFromTemplates() {
                   </Button>
                 </div>
 
-                <div className="border rounded-lg p-6 bg-white min-h-[400px]">
+                <div className="border rounded-lg p-6 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 min-h-[400px]">
                   {previewHtml ? (
                     <pre className="whitespace-pre-wrap text-sm font-serif">
                       {previewHtml}

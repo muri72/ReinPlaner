@@ -50,35 +50,35 @@
        2026 DESIGN SYSTEM TOKENS - DARK MODE
        ========================================== */
     
-    /* Background Layers - Dark Mode */
-    --bg-deep: #05080F;
-    --bg-dark: #0A0E1A;
-    --bg-elevated: #0F1524;
-    --bg-surface: #141B2D;
-    --bg-card: #1A2235;
-    --bg-glass: rgba(26, 34, 53, 0.6);
+    /* Background Layers - Dark Mode (Professional GitHub/Linear style) */
+    --bg-deep: #0D1117;
+    --bg-dark: #0F172A;
+    --bg-elevated: #161B22;
+    --bg-surface: #1C2128;
+    --bg-card: #161B22;
+    --bg-glass: rgba(22, 27, 34, 0.8);
     
     /* Text Colors - Dark Mode */
-    --text-primary: #F1F5F9;
-    --text-secondary: #94A3B8;
-    --text-muted: #475569;
+    --text-primary: #E6EDF3;
+    --text-secondary: #8B949E;
+    --text-muted: #6E7681;
     --text-inverse: #F8FAFC;
     
-    /* Shadows - Dark Mode */
-    --shadow-glass: 0 4px 24px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.05);
-    --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.04);
-    --shadow-card-hover: 0 8px 40px rgba(0, 0, 0, 0.5), 0 0 60px rgba(37, 99, 235, 0.1);
-    --shadow-glow-blue: 0 0 40px rgba(37, 99, 235, 0.3);
-    --shadow-glow-cyan: 0 0 40px rgba(6, 182, 212, 0.3);
+    /* Shadows - Dark Mode (Professional, no neon glows) */
+    --shadow-glass: 0 1px 3px rgba(0, 0, 0, 0.3);
+    --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.4);
+    --shadow-card-hover: 0 4px 12px rgba(0, 0, 0, 0.5);
+    --shadow-glow-blue: 0 0 0 transparent;
+    --shadow-glow-cyan: 0 0 0 transparent;
     
-    /* Glass effects - Dark Mode */
-    --glass-border: rgba(255, 255, 255, 0.08);
-    --glass-border-hover: rgba(255, 255, 255, 0.12);
-    --glass-bg: rgba(26, 34, 53, 0.55);
-    --glass-bg-hover: rgba(26, 34, 53, 0.8);
-    --glass-nav-bg: rgba(5, 8, 15, 0.8);
-    --glass-input-bg: rgba(26, 34, 53, 0.4);
-    --glass-input-bg-focus: rgba(26, 34, 53, 0.7);
+    /* Glass effects - Dark Mode (Professional slate-based) */
+    --glass-border: rgba(48, 54, 61, 0.8);
+    --glass-border-hover: rgba(48, 54, 61, 0.9);
+    --glass-bg: rgba(22, 27, 34, 0.8);
+    --glass-bg-hover: rgba(48, 54, 61, 0.9);
+    --glass-nav-bg: rgba(13, 17, 23, 0.85);
+    --glass-input-bg: rgba(22, 27, 34, 0.6);
+    --glass-input-bg-focus: rgba(22, 27, 34, 0.85);
     
     /* Accent Colors */
     --accent-blue: #2563EB;
@@ -88,8 +88,8 @@
     --accent-amber: #F59E0B;
     --accent-rose: #F43F5E;
     
-    /* Gradients */
-    --gradient-hero: linear-gradient(135deg, #05080F 0%, #0F1524 50%, #0A1628 100%);
+    /* Gradients - Professional dark */
+    --gradient-hero: linear-gradient(135deg, #0D1117 0%, #0F172A 50%, #161B22 100%);
     --gradient-blue: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
     --gradient-glow-bl: linear-gradient(135deg, rgba(37,99,235,0.15) 0%, rgba(6,182,212,0.08) 100%);
     --gradient-glow-pr: linear-gradient(135deg, rgba(124,58,237,0.15) 0%, rgba(37,99,235,0.08) 100%);
@@ -117,15 +117,15 @@
     /* Radius */
     --radius: 16px;
     
-    /* Base Colors - Dark Mode */
-    --background: 220 30% 5%;
-    --foreground: 220 10% 95%;
+    /* Base Colors - Dark Mode (Professional slate-based) */
+    --background: 220 40% 4%;
+    --foreground: 220 15% 95%;
     
-    --card: 220 25% 10%;
-    --card-foreground: 220 10% 95%;
+    --card: 220 33% 9%;
+    --card-foreground: 220 15% 95%;
     
-    --popover: 220 25% 10%;
-    --popover-foreground: 220 10% 95%;
+    --popover: 220 33% 9%;
+    --popover-foreground: 220 15% 95%;
     
     --primary: 217 90% 60%;
     --primary-foreground: 0 0% 100%;
@@ -133,8 +133,8 @@
     --secondary: 220 20% 15%;
     --secondary-foreground: 220 10% 90%;
     
-    --muted: 220 15% 20%;
-    --muted-foreground: 220 10% 60%;
+    --muted: 220 15% 12%;
+    --muted-foreground: 220 10% 55%;
     
     --accent: 217 70% 60%;
     --accent-foreground: 0 0% 100%;
@@ -148,17 +148,17 @@
     --warning: 45 90% 50%;
     --warning-foreground: 0 0% 100%;
     
-    --border: 220 15% 20%;
+    --border: 220 15% 15%;
     --input: 220 15% 15%;
     --ring: 217 90% 60%;
     
-    --sidebar-background: 220 25% 8%;
-    --sidebar-foreground: 220 10% 85%;
+    --sidebar-background: 220 40% 4%;
+    --sidebar-foreground: 220 15% 95%;
     --sidebar-primary: 217 90% 55%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 20% 18%;
-    --sidebar-accent-foreground: 220 10% 90%;
-    --sidebar-border: 220 15% 18%;
+    --sidebar-accent: 220 20% 12%;
+    --sidebar-accent-foreground: 220 15% 95%;
+    --sidebar-border: 220 15% 15%;
     --sidebar-ring: 217 90% 55%;
   }
 
@@ -270,11 +270,9 @@
     font-size: 1rem;
     line-height: 1.5;
     
-    /* Grain texture overlay - uses CSS variables for theme awareness */
-    background-image: 
-      radial-gradient(circle at center, rgba(0,0,0,0.01) 1px, transparent 1px),
-      var(--gradient-hero);
-    background-size: 2px 2px, 100% 100%;
+    /* Subtle grain texture overlay - much reduced for dark mode */
+    background-image: var(--gradient-hero);
+    background-size: 100% 100%;
     background-attachment: fixed;
     
     /* Touch optimizations */
@@ -333,6 +331,165 @@
 }
 
 /* ==========================================
+   DASHBOARD DESIGN TOKENS - PERSONIO CLEAN
+   Professional Light Theme for Dashboard Pages
+   ========================================== */
+
+.dashboard-bg { background-color: #FFFFFF; }
+.dashboard-bg-subtle { background-color: #F8FAFC; }
+.dashboard-border { border-color: #E2E8F0; }
+.dashboard-text-primary { color: #0F172A; }
+.dashboard-text-secondary { color: #64748B; }
+.dashboard-shadow-card { box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06); }
+.dashboard-shadow-card-hover { box-shadow: 0 4px 6px rgba(0,0,0,0.07), 0 2px 4px rgba(0,0,0,0.06); }
+
+/* Dashboard Card - Clean White with Subtle Shadow */
+.dashboard-card {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.08), 0 1px 2px -1px rgb(0 0 0 / 0.06);
+  transition: box-shadow 0.2s ease;
+}
+
+.dashboard-card:hover {
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.08), 0 2px 4px -2px rgb(0 0 0 / 0.06);
+}
+
+.dark .dashboard-card {
+  background: #1E293B;
+  border: 1px solid #334155;
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.3), 0 1px 2px -1px rgb(0 0 0 / 0.2);
+}
+
+.dark .dashboard-card:hover {
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.3), 0 2px 4px -2px rgb(0 0 0 / 0.2);
+}
+
+/* Dashboard Page Background */
+.dashboard-page-bg {
+  background-color: #F8FAFC;
+}
+
+.dark .dashboard-page-bg {
+  background-color: #0F172A;
+}
+
+/* ==========================================
+   MARKETING DESIGN TOKENS - PERSONIO STYLE
+   Professional Light Theme for Marketing Pages
+   ========================================== */
+
+/* Marketing Backgrounds */
+.marketing-bg-white { background: #FFFFFF; }
+.marketing-bg-slate-50 { background: #F8FAFC; }
+.marketing-bg-slate-100 { background: #F1F5F9; }
+
+/* Marketing Text Colors */
+.marketing-text-primary { color: #0F172A; }
+.marketing-text-secondary { color: #475569; }
+.marketing-text-muted { color: #94A3B8; }
+
+/* Marketing Card - Solid White with Subtle Shadow */
+.marketing-card {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  transition: box-shadow 0.2s ease;
+}
+
+.marketing-card:hover {
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+}
+
+/* Marketing Navbar - Clean White */
+.marketing-nav {
+  background: #FFFFFF;
+  border-bottom: 1px solid #E2E8F0;
+}
+
+/* Marketing Section Backgrounds */
+.marketing-section-white {
+  background: #FFFFFF;
+}
+
+.marketing-section-slate {
+  background: #F8FAFC;
+}
+
+.marketing-section-blue {
+  background: #EFF6FF;
+}
+
+/* Marketing Button - Solid Professional */
+.marketing-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 1.5rem;
+  background: #2563EB;
+  color: white;
+  font-weight: 600;
+  font-size: 1rem;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.marketing-btn-primary:hover {
+  background: #1D4ED8;
+  transform: translateY(-1px);
+}
+
+.marketing-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 1.5rem;
+  background: white;
+  color: #0F172A;
+  font-weight: 600;
+  font-size: 1rem;
+  border-radius: 8px;
+  border: 1px solid #E2E8F0;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.marketing-btn-secondary:hover {
+  background: #F8FAFC;
+  border-color: #CBD5E1;
+}
+
+/* Feature Icon Container */
+.marketing-feature-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  background: #EFF6FF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #2563EB;
+}
+
+/* Pricing Card */
+.marketing-pricing-card {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 16px;
+  padding: 2rem;
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+}
+
+.marketing-pricing-card-highlighted {
+  border-color: #3B82F6;
+  box-shadow: 0 0 0 1px #3B82F6, 0 10px 15px -3px rgb(0 0 0 / 0.1);
+}
+
+/* ==========================================
    2026 GLASSMORPHISM UTILITIES
    ========================================== */
 
@@ -365,8 +522,10 @@
   }
   
   .dark .glass-card {
-    background: var(--glass-bg);
+    background: var(--bg-card);
     border-color: var(--glass-border);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
   }
   
   .glass-card::before {
@@ -381,7 +540,7 @@
   }
   
   .dark .glass-card::before {
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.25) 30%, rgba(255,255,255,0.25) 70%, transparent);
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.06) 30%, rgba(255,255,255,0.06) 70%, transparent);
   }
   
   :root:not(.dark) .glass-card::before {
@@ -462,7 +621,7 @@
     box-shadow: 0 4px 20px rgba(37, 99, 235, 0.15);
   }
   
-  /* Primary Button */
+  /* Primary Button - Subtle shadow in dark mode */
   .btn-primary {
     background: var(--gradient-blue);
     border: none;
@@ -470,12 +629,12 @@
     color: white;
     font-weight: 600;
     transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-    box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
   }
   
   .btn-primary:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 25px rgba(37, 99, 235, 0.4);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
   }
   
   /* Glow Effects */

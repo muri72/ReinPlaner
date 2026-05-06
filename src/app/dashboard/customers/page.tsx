@@ -105,7 +105,7 @@ export default function CustomersPage() {
     return (
       <div className="p-4 md:p-8 space-y-8">
         <PageHeader title="Ihre Kunden" loading={true} />
-        <Card className="shadow-neumorphic glassmorphism-card">
+        <Card className="dashboard-card">
           <CardContent className="p-8">
             <GenericGridSkeleton count={6} showBadges={false} />
           </CardContent>
@@ -146,7 +146,7 @@ export default function CustomersPage() {
         <CustomerCreateDialog onCustomerCreated={fetchData} />
       </PageHeader>
 
-      <Card className="shadow-neumorphic glassmorphism-card">
+      <Card className="dashboard-card">
         <CardHeader>
           <DataTableToolbar
             searchPlaceholder="Kunden suchen..."
@@ -154,7 +154,7 @@ export default function CustomersPage() {
             sortOptions={sortOptions}
           />
           {totalCount !== null && !loading && (
-            <div className="text-sm text-muted-foreground mt-2">
+            <div className="text-sm text-slate-600 dark:text-slate-400 mt-2">
               {totalCount} {totalCount === 1 ? 'Ergebnis' : 'Ergebnisse'} gefunden.
             </div>
           )}

@@ -144,7 +144,7 @@ export default function ObjectsPage() {
     return (
       <div className="p-4 md:p-8 space-y-8">
         <PageHeader title="Ihre Objekte" loading={true} />
-        <Card className="shadow-neumorphic glassmorphism-card">
+        <Card className="dashboard-card">
           <CardContent className="p-8">
             <ObjectsGridSkeleton />
           </CardContent>
@@ -186,7 +186,7 @@ export default function ObjectsPage() {
         <ObjectCreateDialog onObjectCreated={fetchData} />
       </PageHeader>
 
-      <Card className="shadow-neumorphic glassmorphism-card">
+      <Card className="dashboard-card">
         <CardHeader>
           <DataTableToolbar
             searchPlaceholder="Objekte suchen..."

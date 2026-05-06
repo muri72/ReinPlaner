@@ -186,7 +186,7 @@ export function LandingPage() {
             {/* Left: Text */}
             <div className="text-center lg:text-left">
               {/* Badge */}
-              <div className="inline-flex items-center gap-2 glass-card px-4 py-2 mb-8 animate-fade-up stagger-1 border border-blue-500/20">
+              <div className="inline-flex items-center gap-2 bg-slate-800 border border-blue-500/30 dark:bg-slate-800 dark:border-blue-500/30 px-4 py-2 mb-8 animate-fade-up stagger-1">
                 <Zap className="w-4 h-4 text-blue-400" />
                 <span className="text-sm font-medium text-slate-200">14 Tage kostenlos · Keine Kreditkarte</span>
               </div>
@@ -233,7 +233,7 @@ export function LandingPage() {
             <div className="relative animate-fade-up stagger-3">
               {/* Glow behind the card */}
               <div className="absolute -inset-4 bg-gradient-to-r from-blue-600/20 via-violet-600/10 to-cyan-500/20 rounded-3xl blur-xl" />
-              <div className="relative glass-card p-1 overflow-hidden shadow-[0_8px_60px_rgba(0,0,0,0.5)] animate-float">
+              <div className="relative bg-slate-800 dark:bg-slate-800 border border-slate-700 dark:border-slate-700 rounded-xl shadow-sm dark:shadow-none p-1 overflow-hidden shadow-[0_8px_60px_rgba(0,0,0,0.5)] animate-float">
                 {/* Browser chrome */}
                 <div className="flex items-center gap-2 px-4 py-3 bg-[#0A0E1A] border-b border-white/5">
                   <div className="flex gap-1.5">
@@ -242,7 +242,7 @@ export function LandingPage() {
                     <div className="w-3 h-3 rounded-full bg-green-500/80" />
                   </div>
                   <div className="flex-1 text-center">
-                    <div className="inline-flex items-center glass-card rounded-md px-3 py-1 text-xs text-slate-300">
+                    <div className="inline-flex items-center bg-slate-800 dark:bg-slate-800 border border-slate-700 dark:border-slate-700 rounded-xl shadow-sm dark:shadow-none rounded-md px-3 py-1 text-xs text-slate-300">
                       app.reinplaner.de
                     </div>
                   </div>
@@ -258,7 +258,7 @@ export function LandingPage() {
                         </p>
                       </div>
                       <div className="flex gap-2">
-                        <div className="h-8 w-20 rounded-lg glass-card" />
+                        <div className="h-8 w-20 rounded-lg bg-slate-800 dark:bg-slate-800 border border-slate-700 dark:border-slate-700 rounded-xl shadow-sm dark:shadow-none" />
                         <div className="h-8 w-20 rounded-lg bg-blue-600" />
                       </div>
                     </div>
@@ -269,7 +269,7 @@ export function LandingPage() {
                         { label: "Mitarbeiter", value: "12", color: "bg-emerald-500" },
                         { label: "Kunden", value: "23", color: "bg-violet-500" },
                       ].map((kpi) => (
-                        <div key={kpi.label} className="glass-card p-3">
+                        <div key={kpi.label} className="bg-slate-800 dark:bg-slate-800 border border-slate-700 dark:border-slate-700 rounded-xl shadow-sm dark:shadow-none p-3">
                           <p className="text-xs text-slate-500">{kpi.label}</p>
                           <p className="text-xl font-bold text-white mt-1">{kpi.value}</p>
                           <div className={`mt-2 h-1 rounded-full ${kpi.color}`} />
@@ -277,7 +277,7 @@ export function LandingPage() {
                       ))}
                     </div>
                     {/* Calendar placeholder */}
-                    <div className="glass-card p-4">
+                    <div className="bg-slate-800 dark:bg-slate-800 border border-slate-700 dark:border-slate-700 rounded-xl shadow-sm dark:shadow-none p-4">
                       <div className="flex items-center gap-2 mb-3">
                         <Calendar className="w-4 h-4 text-blue-400" />
                         <span className="text-sm font-medium text-white">Einsatzplanung</span>
@@ -291,7 +291,7 @@ export function LandingPage() {
                                 ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
                                 : i % 3 === 1
                                 ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
-                                : "glass-card text-slate-500"
+                                : "bg-slate-800 dark:bg-slate-800 border border-slate-700 dark:border-slate-700 rounded-xl shadow-sm dark:shadow-none text-slate-500"
                             }`}
                           >
                             {`${8 + i}:00`}
@@ -313,7 +313,7 @@ export function LandingPage() {
       {/* ============ STATS BAR ============ */}
       <section className="py-12 border-y border-white/5">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="glass-card p-8">
+          <div className="bg-slate-800 dark:bg-slate-800 border border-slate-700 dark:border-slate-700 rounded-xl shadow-sm dark:shadow-none p-8">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
               {stats.map((stat, index) => (
                 <div key={index} className={index !== 0 ? "hidden md:block" : ""}>
@@ -348,7 +348,7 @@ export function LandingPage() {
             {features.map((feature, index) => (
               <div
                 key={feature.title}
-                className={`glass-card glass-card-hover p-6 animate-fade-up stagger-${index + 1}`}
+                className={`bg-slate-800 dark:bg-slate-800 border border-slate-700 dark:border-slate-700 rounded-xl shadow-sm dark:shadow-none bg-slate-800 dark:bg-slate-800 border border-slate-700 dark:border-slate-700 rounded-xl shadow-sm dark:shadow-none-hover p-6 animate-fade-up stagger-${index + 1}`}
               >
                 <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${feature.color} flex items-center justify-center mb-4 shadow-lg`}>
                   <feature.icon className="w-7 h-7 text-white" />
@@ -379,7 +379,7 @@ export function LandingPage() {
               { step: "02", title: "Einrichten", desc: "Fügen Sie Ihre Mitarbeiter, Kunden und Objekte hinzu." },
               { step: "03", title: "Durchstarten", desc: "Starten Sie Ihre erste Planung und erleben Sie den Unterschied." },
             ].map((item, index) => (
-              <div key={index} className="glass-card p-8 text-center relative">
+              <div key={index} className="bg-slate-800 dark:bg-slate-800 border border-slate-700 dark:border-slate-700 rounded-xl shadow-sm dark:shadow-none p-8 text-center relative">
                 <div className="absolute -top-4 left-1/2 -translate-x-1/2 w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-2xl font-bold text-white shadow-lg">
                   {item.step}
                 </div>
@@ -409,7 +409,7 @@ export function LandingPage() {
 
           <div className="grid md:grid-cols-3 gap-6">
             {testimonials.map((testimonial, index) => (
-              <div key={index} className="glass-card p-8">
+              <div key={index} className="bg-slate-800 dark:bg-slate-800 border border-slate-700 dark:border-slate-700 rounded-xl shadow-sm dark:shadow-none p-8">
                 <div className="flex gap-1 mb-4">
                   {[...Array(testimonial.stars)].map((_, i) => (
                     <Star key={i} className="w-5 h-5 fill-amber-400 text-amber-400" />
@@ -444,7 +444,7 @@ export function LandingPage() {
             {pricingPlans.map((plan) => (
               <div
                 key={plan.name}
-                className={`glass-card relative p-8 ${
+                className={`bg-slate-800 dark:bg-slate-800 border border-slate-700 dark:border-slate-700 rounded-xl shadow-sm dark:shadow-none relative p-8 ${
                   plan.highlighted 
                     ? "ring-2 ring-blue-500/50 scale-105 glow-blue" 
                     : "hover:border-white/12"
@@ -507,7 +507,7 @@ export function LandingPage() {
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {benefits.map((benefit, index) => (
-              <div key={index} className="glass-card p-6 flex items-start gap-4">
+              <div key={index} className="bg-slate-800 dark:bg-slate-800 border border-slate-700 dark:border-slate-700 rounded-xl shadow-sm dark:shadow-none p-6 flex items-start gap-4">
                 <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500/20 to-cyan-500/20 flex items-center justify-center shrink-0 border border-blue-500/20">
                   <benefit.icon className="w-6 h-6 text-blue-400" />
                 </div>
@@ -548,7 +548,7 @@ export function LandingPage() {
       {/* ============ FOOTER ============ */}
       <footer className="py-16 border-t border-white/5">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="glass-card p-8">
+          <div className="bg-slate-800 dark:bg-slate-800 border border-slate-700 dark:border-slate-700 rounded-xl shadow-sm dark:shadow-none p-8">
             <div className="flex flex-col md:flex-row items-center justify-between gap-8">
               {/* Logo */}
               <Link href="/" className="flex items-center gap-3">

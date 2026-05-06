@@ -84,7 +84,7 @@ export function MarketingLayout({
             "relative z-10 border-b",
             isDark
               ? "border-border bg-background/50 backdrop-blur-md"
-              : "border-slate-200 bg-white/80 backdrop-blur-xl sticky top-0"
+              : "border-slate-200 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl sticky top-0"
           )}
         >
           <div className={cn("mx-auto", maxWidthMap[maxWidth])}>

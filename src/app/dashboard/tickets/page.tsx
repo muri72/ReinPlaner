@@ -123,7 +123,7 @@ export default function TicketsPage() {
     return (
       <div className="p-4 md:p-8 space-y-8">
         <PageHeader title="Ticket-Verwaltung" loading={true} />
-        <Card className="shadow-neumorphic glassmorphism-card">
+        <Card className="dashboard-card">
           <CardContent className="p-8">
             <GenericGridSkeleton count={6} showBadges={true} badgeCount={2} />
           </CardContent>
@@ -164,7 +164,7 @@ export default function TicketsPage() {
         <TicketCreateDialog onTicketCreated={fetchData} />
       </PageHeader>
 
-      <Card className="shadow-neumorphic glassmorphism-card">
+      <Card className="dashboard-card">
         <CardHeader>
           <DataTableToolbar
             searchPlaceholder="Tickets suchen..."

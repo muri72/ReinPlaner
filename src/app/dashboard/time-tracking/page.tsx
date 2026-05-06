@@ -197,7 +197,7 @@ export default function TimeTrackingPage() {
 
       {isAdmin ? (
         <>
-          <Card className="shadow-neumorphic glassmorphism-card">
+          <Card className="dashboard-card">
             <CardHeader>
               <CardTitle className="text-lg font-semibold">Zeiteinträge verwalten</CardTitle>
               <DataTableToolbar

@@ -28,7 +28,7 @@ export function OpenInvoicesWidget() {
 
   if (loading) {
     return (
-      <Card>
+      <Card className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none">
         <CardHeader className="pb-2">
           <CardTitle className="text-base font-medium">Offene Rechnungen</CardTitle>
         </CardHeader>
@@ -45,7 +45,7 @@ export function OpenInvoicesWidget() {
   const overdueAmount = (stats.total_overdue || 0);
 
   return (
-    <Card>
+    <Card className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none">
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <CardTitle className="text-base font-medium flex items-center gap-2">
@@ -64,7 +64,7 @@ export function OpenInvoicesWidget() {
         <div className="space-y-2">
           <div className="flex justify-between items-baseline">
             <span className="text-sm text-muted-foreground">Überfällig</span>
-            <span className="text-xl font-bold text-red-600">
+            <span className="text-xl font-bold text-red-600 dark:text-red-400">
               {stats.total_overdue || 0}
             </span>
           </div>
@@ -78,20 +78,20 @@ export function OpenInvoicesWidget() {
         <div className="space-y-2">
           <div className="flex justify-between items-baseline">
             <span className="text-sm text-muted-foreground">Ausstehend</span>
-            <span className="text-xl font-bold">
+            <span className="text-xl font-bold text-slate-900 dark:text-white">
               {stats.total_open || 0}
             </span>
           </div>
         </div>
 
         {stats.total_paid_this_month > 0 && (
-          <div className="pt-2 border-t">
+          <div className="pt-2 border-t border-slate-200 dark:border-slate-700">
             <div className="flex justify-between items-baseline">
-              <span className="text-sm text-green-600 flex items-center gap-1">
+              <span className="text-sm text-green-600 dark:text-green-400 flex items-center gap-1">
                 <TrendingUp className="h-3 w-3" />
                 In diesem Monat
               </span>
-              <span className="text-sm font-medium text-green-600">
+              <span className="text-sm font-medium text-green-600 dark:text-green-400">
                 {formatCurrency(stats.total_paid_this_month)}
               </span>
             </div>

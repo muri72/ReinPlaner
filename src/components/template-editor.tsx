@@ -608,7 +608,7 @@ export function TemplateEditor({ templateId, onSave, onCancel }: TemplateEditorP
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="border rounded-lg p-6 bg-white">
+                <div className="border rounded-lg p-6 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700">
                   <pre className="whitespace-pre-wrap text-sm font-serif">
                     {generatePreview()}
                   </pre>

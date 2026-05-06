@@ -187,7 +187,7 @@ export default function ServicesPage() {
   if (!currentUser || currentUserRole !== 'admin') {
     return (
       <div className="p-4 md:p-8 space-y-8">
-        <Card className="glassmorphism-card">
+        <Card className="dashboard-card">
           <CardContent className="p-8 text-center">
             <p className="text-lg font-semibold">Zugriff verweigert</p>
             <p className="text-sm text-muted-foreground mt-2">
@@ -208,7 +208,7 @@ export default function ServicesPage() {
         </Button>
       </PageHeader>
 
-      <Card className="shadow-neumorphic glassmorphism-card">
+      <Card className="dashboard-card">
         <CardHeader>
           <CardTitle>Services verwalten</CardTitle>
           <CardDescription>
