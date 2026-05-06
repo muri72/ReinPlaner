@@ -46,7 +46,7 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { useUserProfile } from "@/components/user-profile-provider";
 
-type UserRole = "admin" | "manager" | "employee" | "customer";
+type UserRole = "admin" | "manager" | "employee" | "customer" | "platform_admin";
 
 interface MobileNavigationProps {
   currentUserRole: UserRole;

@@ -29,7 +29,7 @@ export default async function PortalLayout({
   // Ensure only customers can access this layout
   // Note: The actual role check will happen in the client component
   // For now, we'll redirect on the server side if not a customer
-  const serverSideRole = userProfile?.role as 'admin' | 'manager' | 'employee' | 'customer' || 'customer';
+  const serverSideRole = userProfile?.role as 'admin' | 'manager' | 'employee' | 'customer' | 'platform_admin' || 'customer';
   if (serverSideRole !== 'customer') {
     redirect("/dashboard"); // Redirect to main dashboard if not a customer
   }

@@ -99,7 +99,7 @@ export default function OrdersPage({
   const isMobile = useIsMobile();
 
   const [currentUser, setCurrentUser] = useState<any>(null);
-  const [currentUserRole, setCurrentUserRole] = useState<'admin' | 'manager' | 'employee' | 'customer'>('employee');
+  const [currentUserRole, setCurrentUserRole] = useState<'admin' | 'manager' | 'employee' | 'customer' | 'platform_admin'>('employee');
   const [allOrders, setAllOrders] = useState<DisplayOrder[]>([]);
   const [customers, setCustomers] = useState<{ id: string; name: string }[]>([]);
   const [employees, setEmployees] = useState<{ id: string; first_name: string | null; last_name: string | null }[]>([]);
@@ -137,7 +137,7 @@ export default function OrdersPage({
     if (profileError) {
       console.error("Fehler beim Laden des Benutzerprofils:", profileError?.message || profileError);
     }
-    const role = profile?.role as 'admin' | 'manager' | 'employee' | 'customer' || 'employee';
+    const role = profile?.role as 'admin' | 'manager' | 'employee' | 'customer' | 'platform_admin' || 'employee';
     setCurrentUserRole(role);
 
     const from = (currentPage - 1) * pageSize;

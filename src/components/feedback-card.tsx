@@ -50,7 +50,7 @@ interface FeedbackCardProps {
   feedback: Feedback;
   feedbackType: "order" | "general";
   currentUserId: string;
-  currentUserRole: 'admin' | 'manager' | 'employee' | 'customer';
+  currentUserRole: 'admin' | 'manager' | 'employee' | 'customer' | 'platform_admin';
   onDeleteSuccess?: () => void;
 }
 

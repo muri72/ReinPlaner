@@ -25,7 +25,7 @@ import {
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-export type UserRole = "admin" | "manager" | "employee" | "customer";
+export type UserRole = "admin" | "manager" | "employee" | "customer" | "platform_admin";
 
 export interface NavLink {
   /** Unique key — also used as translation key / label */
@@ -51,6 +51,7 @@ const homeLinks: Record<UserRole, NavLink> = {
   manager: { key: "planning", href: "/dashboard/planning", Icon: Home, roles: ["manager"] },
   employee: { key: "employee-dashboard", href: "/employee/dashboard", Icon: Home, roles: ["employee"] },
   customer: { key: "portal-dashboard", href: "/portal/dashboard", Icon: Home, roles: ["customer"] },
+  platform_admin: { key: "platform-admin", href: "/dashboard/admin/tenants", Icon: Home, roles: ["platform_admin"] },
 };
 
 // ─── Category Definitions ─────────────────────────────────────────────────────
@@ -81,13 +82,13 @@ const PORTAL_LINKS: NavLink[] = [
 ];
 
 const ADMIN_LINKS: NavLink[] = [
-  { key: "platform-health", href: "/dashboard/platform-health", Icon: Activity, roles: ["admin"] },
-  { key: "services", href: "/dashboard/services", Icon: Wrench, roles: ["admin"] },
-  { key: "settings", href: "/dashboard/settings", Icon: Settings, roles: ["admin"] },
-  { key: "templates", href: "/dashboard/templates", Icon: FileEdit, roles: ["admin"] },
-  { key: "audit-logs", href: "/dashboard/audit-logs", Icon: Shield, roles: ["admin"] },
-  { key: "users", href: "/dashboard/users", Icon: Users, roles: ["admin"] },
-  { key: "tenants", href: "/dashboard/admin/tenants", Icon: Building2, roles: ["admin"] },
+  { key: "platform-health", href: "/dashboard/platform-health", Icon: Activity, roles: ["platform_admin"] },
+  { key: "services", href: "/dashboard/services", Icon: Wrench, roles: ["platform_admin"] },
+  { key: "settings", href: "/dashboard/settings", Icon: Settings, roles: ["platform_admin"] },
+  { key: "templates", href: "/dashboard/templates", Icon: FileEdit, roles: ["platform_admin"] },
+  { key: "audit-logs", href: "/dashboard/audit-logs", Icon: Shield, roles: ["platform_admin"] },
+  { key: "users", href: "/dashboard/users", Icon: Users, roles: ["platform_admin"] },
+  { key: "tenants", href: "/dashboard/admin/tenants", Icon: Building2, roles: ["platform_admin"] },
 ];
 
 // ─── Full Navigation Tree ─────────────────────────────────────────────────────
@@ -97,6 +98,7 @@ export const NAV_CONFIG: (NavLink | NavCategory)[] = [
   homeLinks.manager,
   homeLinks.employee,
   homeLinks.customer,
+  homeLinks.platform_admin,
   {
     key: "management",
     roles: ["admin", "manager", "employee"],
@@ -112,7 +114,7 @@ export const NAV_CONFIG: (NavLink | NavCategory)[] = [
     roles: ["admin", "manager", "employee"],
     children: STAFF_LINKS,
   },
-  ...(ADMIN_LINKS.map((l) => ({ ...l, roles: ["admin"] })) as NavLink[]),
+  ...ADMIN_LINKS,
 ];
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────

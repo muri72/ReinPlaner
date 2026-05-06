@@ -72,7 +72,7 @@ export default function PlanningPage() {
   const [isRefreshing, setIsRefreshing] = React.useState(false); // Background refresh for navigation
   const [activeDragId, setActiveDragId] = React.useState<string | null>(null);
   const [currentUser, setCurrentUser] = React.useState<any>(null);
-  const [currentUserRole, setCurrentUserRole] = React.useState<'admin' | 'manager' | 'employee' | 'customer'>('employee');
+  const [currentUserRole, setCurrentUserRole] = React.useState<'admin' | 'manager' | 'employee' | 'customer' | 'platform_admin'>('employee');
   const [isAdmin, setIsAdmin] = React.useState(false);
   const [mobileSelectedDate, setMobileSelectedDate] = React.useState(() => startOfDay(new Date()));
   const [bundeslandCode, setBundeslandCode] = React.useState<string>('HH'); // Default to Hamburg
@@ -235,7 +235,7 @@ export default function PlanningPage() {
     // Load profile role and bundesland only once (static data)
     if (user && !staticDataLoadedRef.current.profile) {
       const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
-      const role = profile?.role as 'admin' | 'manager' | 'employee' | 'customer' || 'employee';
+      const role = profile?.role as 'admin' | 'manager' | 'employee' | 'customer' | 'platform_admin' || 'employee';
       setCurrentUserRole(role);
       setIsAdmin(role === "admin");
       staticDataLoadedRef.current.profile = true;

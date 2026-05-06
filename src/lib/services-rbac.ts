@@ -9,6 +9,7 @@
  * - manager: Can manage employees, orders, and view reports
  * - employee: Can access time-tracking and planning, view assigned orders
  * - customer: Read-only access to their own data
+ * - platform_admin: Cross-tenant admin for reinplaner.vercel.app only (Murat only)
  */
 
 import { createClient } from '@/lib/supabase/server';
@@ -66,6 +67,14 @@ export async function isEmployee(userId: string): Promise<boolean> {
 export async function isCustomer(userId: string): Promise<boolean> {
   const role = await getUserRole(userId);
   return role === 'customer';
+}
+
+/**
+ * Check if user is platform_admin (cross-tenant admin - Murat only)
+ */
+export async function isPlatformAdmin(userId: string): Promise<boolean> {
+  const role = await getUserRole(userId);
+  return role === 'platform_admin';
 }
 
 // ============================================
@@ -160,7 +169,7 @@ export async function userBelongsToTenant(userId: string, tenantId: string): Pro
 /**
  * Get the current user's role from their profile (no userId argument)
  */
-export async function getCurrentUserRole(): Promise<'admin' | 'manager' | 'employee' | 'customer' | 'unknown'> {
+export async function getCurrentUserRole(): Promise<'admin' | 'manager' | 'employee' | 'customer' | 'platform_admin' | 'unknown'> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -178,7 +187,7 @@ export async function getCurrentUserRole(): Promise<'admin' | 'manager' | 'emplo
     return 'unknown';
   }
 
-  return (profile.role as 'admin' | 'manager' | 'employee' | 'customer') || 'unknown';
+  return (profile.role as 'admin' | 'manager' | 'employee' | 'customer' | 'platform_admin') || 'unknown';
 }
 
 /**
@@ -291,12 +300,23 @@ export async function requireAdmin(): Promise<void> {
 }
 
 /**
- * Require manager role - throws error if user isn't admin or manager
+ * Require manager role - throws error if user isn't admin, manager, or platform_admin
  */
 export async function requireManager(): Promise<void> {
   const role = await getCurrentUserRole();
-  if (role !== 'admin' && role !== 'manager') {
+  if (role !== 'admin' && role !== 'manager' && role !== 'platform_admin') {
     throw new Error('Manager-Berechtigung erforderlich');
+  }
+}
+
+/**
+ * Require platform_admin role - throws error if user isn't platform_admin
+ * Used for /dashboard/admin/* routes (cross-tenant access)
+ */
+export async function requirePlatformAdmin(): Promise<void> {
+  const role = await getCurrentUserRole();
+  if (role !== 'platform_admin') {
+    throw new Error('Platform-Admin-Berechtigung erforderlich');
   }
 }
 

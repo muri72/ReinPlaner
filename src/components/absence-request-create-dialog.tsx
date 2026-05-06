@@ -10,7 +10,7 @@ import { RecordDialog } from "@/components/ui/record-dialog";
 
 interface AbsenceRequestCreateDialogProps {
   onAbsenceRequestCreated?: () => void;
-  currentUserRole: 'admin' | 'manager' | 'employee';
+  currentUserRole: 'admin' | 'manager' | 'employee' | 'customer' | 'platform_admin';
   currentUserId: string;
 }
 

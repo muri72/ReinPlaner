@@ -46,7 +46,7 @@ interface ServiceCategory {
 export default function ServicesPage() {
   const supabase = createClient();
   const [currentUser, setCurrentUser] = useState<any>(null);
-  const [currentUserRole, setCurrentUserRole] = useState<'admin' | 'manager' | 'employee' | 'customer'>('employee');
+  const [currentUserRole, setCurrentUserRole] = useState<'admin' | 'manager' | 'employee' | 'customer' | 'platform_admin'>('employee');
   const [services, setServices] = useState<Service[]>([]);
   const [categories, setCategories] = useState<ServiceCategory[]>([]);
   const [loading, setLoading] = useState(true);
@@ -75,7 +75,7 @@ export default function ServicesPage() {
       console.error("Fehler beim Laden des Benutzerprofils:", profileError?.message || profileError);
     }
 
-    const role = profile?.role as 'admin' | 'manager' | 'employee' | 'customer' || 'employee';
+    const role = profile?.role as 'admin' | 'manager' | 'employee' | 'customer' | 'platform_admin' || 'employee';
     setCurrentUserRole(role);
 
     // Only admins can access this page

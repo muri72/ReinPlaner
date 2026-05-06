@@ -49,7 +49,7 @@ type Feedback = OrderFeedback | GeneralFeedback;
 export default function FeedbackPage() {
   const supabase = createClient();
   const [currentUser, setCurrentUser] = useState<any>(null);
-  const [currentUserRole, setCurrentUserRole] = useState<'admin' | 'manager' | 'employee' | 'customer'>('employee');
+  const [currentUserRole, setCurrentUserRole] = useState<'admin' | 'manager' | 'employee' | 'customer' | 'platform_admin'>('employee');
   const [mappedOrderFeedback, setMappedOrderFeedback] = useState<OrderFeedback[]>([]);
   const [mappedGeneralFeedback, setMappedGeneralFeedback] = useState<GeneralFeedback[]>([]);
   const [loading, setLoading] = useState(true);
@@ -67,7 +67,7 @@ export default function FeedbackPage() {
     if (profileError) {
       console.error("Fehler beim Abrufen des Benutzerprofils:", profileError?.message || profileError);
     }
-    setCurrentUserRole(profile?.role as 'admin' | 'manager' | 'employee' | 'customer' || 'employee');
+    setCurrentUserRole(profile?.role as 'admin' | 'manager' | 'employee' | 'customer' | 'platform_admin' || 'employee');
 
     // Fetch order-specific feedback
     const { data: orderFeedbackData, error: orderFeedbackError } = await supabase

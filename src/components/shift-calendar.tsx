@@ -61,7 +61,7 @@ interface ShiftCalendarProps {
   onActionSuccess: () => void;
   weekNumber: number;
   holidaysMap: { [key: string]: { name: string } | null };
-  currentUserRole?: 'admin' | 'manager' | 'employee' | 'customer';
+  currentUserRole?: 'admin' | 'manager' | 'employee' | 'customer' | 'platform_admin';
   services: Service[];
 }
 
