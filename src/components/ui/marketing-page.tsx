@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
 import { Menu, X, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ThemeSwitcher } from "@/components/theme-switcher";
 
 const navLinks = [
   { href: "/", label: "Startseite" },
@@ -28,8 +29,8 @@ const maxWidthMap = {
   full: "max-w-7xl",
 };
 
-export function MarketingPage({ 
-  children, 
+export function MarketingPage({
+  children,
   showNav = true,
   maxWidth = "lg",
 }: MarketingPageProps) {
@@ -50,14 +51,14 @@ export function MarketingPage({
   }, [pathname]);
 
   return (
-    <main className="min-h-screen bg-white dark:bg-slate-900">
+    <main className="min-h-screen bg-background dark:bg-slate-900">
       {/* Clean White Navbar */}
       {showNav && (
         <header
           className={`fixed top-0 left-0 right-0 z-50 transition-all duration-200 ${
             isScrolled
-              ? "bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none"
-              : "bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700"
+              ? "bg-background dark:bg-slate-900 border-b border-border dark:border-slate-700 shadow-sm dark:shadow-none"
+              : "bg-background dark:bg-slate-900 border-b border-border dark:border-slate-700"
           }`}
         >
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -67,7 +68,7 @@ export function MarketingPage({
                 <div className="w-9 h-9 rounded-lg bg-blue-600 flex items-center justify-center">
                   <span className="text-white font-bold text-sm">RP</span>
                 </div>
-                <span className="text-xl font-bold text-slate-900 tracking-tight">
+                <span className="text-xl font-bold text-foreground dark:text-white tracking-tight">
                   ReinPlaner
                 </span>
               </Link>
@@ -81,7 +82,7 @@ export function MarketingPage({
                     className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
                       pathname === link.href
                         ? "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30"
-                        : "text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800"
+                        : "text-muted-foreground dark:text-slate-300 hover:text-foreground dark:hover:text-white hover:bg-muted dark:hover:bg-slate-800"
                     }`}
                   >
                     {link.label}
@@ -91,7 +92,8 @@ export function MarketingPage({
 
               {/* Desktop CTA */}
               <div className="hidden md:flex items-center gap-3">
-                <Button asChild variant="ghost" size="sm" className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800">
+                <ThemeSwitcher />
+                <Button asChild variant="ghost" size="sm" className="text-muted-foreground dark:text-slate-300 hover:text-foreground dark:hover:text-white hover:bg-muted dark:hover:bg-slate-800">
                   <Link href="/login">Anmelden</Link>
                 </Button>
                 <Button asChild size="sm" className="bg-blue-600 hover:bg-blue-700 text-white font-medium">
@@ -105,7 +107,7 @@ export function MarketingPage({
               {/* Mobile Menu Button */}
               <button
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                className="md:hidden p-2 text-slate-600 hover:text-slate-900"
+                className="md:hidden p-2 text-muted-foreground dark:text-slate-300 hover:text-foreground dark:hover:text-white"
               >
                 {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
               </button>
@@ -117,7 +119,7 @@ export function MarketingPage({
       {/* Mobile Menu */}
       {showNav && (
         <div
-          className={`fixed inset-0 z-40 bg-white dark:bg-slate-900 md:hidden transition-all duration-300 ${
+          className={`fixed inset-0 z-40 bg-background dark:bg-slate-900 md:hidden transition-all duration-300 ${
             isMobileMenuOpen ? "opacity-100 visible" : "opacity-0 invisible pointer-events-none"
           }`}
         >
@@ -127,13 +129,14 @@ export function MarketingPage({
                 key={link.href}
                 href={link.href}
                 onClick={() => setIsMobileMenuOpen(false)}
-                className="text-2xl font-semibold text-slate-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                className="text-2xl font-semibold text-foreground dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
               >
                 {link.label}
               </Link>
             ))}
             <div className="flex flex-col gap-3 mt-8 w-64">
-              <Button asChild variant="outline" className="border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800">
+              <ThemeSwitcher />
+              <Button asChild variant="outline" className="border-border dark:border-slate-600 text-foreground dark:text-slate-200 hover:bg-muted dark:hover:bg-slate-800">
                 <Link href="/login">Anmelden</Link>
               </Button>
               <Button asChild className="bg-blue-600 hover:bg-blue-700 text-white">
@@ -152,14 +155,16 @@ export function MarketingPage({
       </div>
 
       {/* Minimal Footer */}
-      <footer className="py-8 bg-slate-50 dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700">
+      <footer className="py-8 bg-muted dark:bg-slate-800 border-t border-border dark:border-slate-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-sm">
-            <p className="text-slate-500 dark:text-slate-400">© 2024 ReinPlaner. Alle Rechte vorbehalten.</p>
+            <p className="text-muted-foreground dark:text-slate-400">
+              &copy; {new Date().getFullYear()} ReinPlaner. Alle Rechte vorbehalten.
+            </p>
             <nav className="flex items-center gap-6">
-              <Link href="/impressum" className="text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors">Impressum</Link>
-              <Link href="/datenschutz" className="text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors">Datenschutz</Link>
-              <Link href="/agb" className="text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors">AGB</Link>
+              <Link href="/impressum" className="text-muted-foreground dark:text-slate-500 hover:text-foreground dark:hover:text-white transition-colors">Impressum</Link>
+              <Link href="/datenschutz" className="text-muted-foreground dark:text-slate-500 hover:text-foreground dark:hover:text-white transition-colors">Datenschutz</Link>
+              <Link href="/agb" className="text-muted-foreground dark:text-slate-500 hover:text-foreground dark:hover:text-white transition-colors">AGB</Link>
             </nav>
           </div>
         </div>

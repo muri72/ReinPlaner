@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
 import { Menu, X, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ThemeSwitcher } from "@/components/theme-switcher";
 
 const navLinks = [
   { href: "/", label: "Startseite" },
@@ -75,6 +76,7 @@ export function MarketingHeader() {
 
             {/* Desktop CTA */}
             <div className="hidden md:flex items-center gap-3">
+              <ThemeSwitcher />
               <Button asChild variant="ghost" size="sm" className="text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800">
                 <Link href="/login">Anmelden</Link>
               </Button>
@@ -115,6 +117,7 @@ export function MarketingHeader() {
             </Link>
           ))}
           <div className="flex flex-col gap-3 mt-8 w-64">
+            <ThemeSwitcher />
             <Button asChild variant="outline" className="border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800">
               <Link href="/login">Anmelden</Link>
             </Button>

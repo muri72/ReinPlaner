@@ -16,6 +16,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { MarketingHeader } from "@/components/marketing-header";
+import { MarketingFooter } from "@/components/marketing-footer";
 
 export const metadata: Metadata = {
   title: "Preise – ReinPlaner",
@@ -329,12 +330,7 @@ export default function PricingPage() {
         </div>
       </section>
 
-      {/* ============ FOOTER ============ */}
-      <footer className="py-12 bg-slate-50 dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <p className="text-sm text-slate-500 dark:text-slate-400">© 2024 ReinPlaner. Alle Rechte vorbehalten.</p>
-        </div>
-      </footer>
+      <MarketingFooter />
     </main>
   );
 }
