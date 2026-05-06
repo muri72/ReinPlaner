@@ -35,7 +35,7 @@ export default async function ConfirmationPage({
             height={48}
             className="rounded-xl"
           />
-          <span className="text-2xl font-bold text-white">
+          <span className="text-2xl font-bold dark:text-white">
             ReinPlaner
           </span>
         </Link>
@@ -48,7 +48,7 @@ export default async function ConfirmationPage({
         </div>
 
         {/* Title */}
-        <h1 className="text-2xl font-bold text-white mb-3">
+        <h1 className="text-2xl font-bold dark:text-white mb-3">
           Registrierung erfolgreich!
         </h1>
 
@@ -56,7 +56,7 @@ export default async function ConfirmationPage({
         <div className="space-y-4 text-slate-400 mb-8">
           <p>
             Wir haben eine Bestätigungs-E-Mail an{" "}
-            <span className="font-semibold text-white">
+            <span className="font-semibold dark:text-white">
               {email || "Ihre E-Mail-Adresse"}
             </span>{" "}
             gesendet.
