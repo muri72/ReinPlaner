@@ -123,7 +123,25 @@ export function MarketingPage({
             isMobileMenuOpen ? "opacity-100 visible" : "opacity-0 invisible pointer-events-none"
           }`}
         >
-          <div className="flex flex-col items-center justify-center h-full space-y-6 pt-16">
+          <div className="flex flex-col justify-center h-full space-y-6 pt-16">
+            <div className="flex items-center justify-between px-8 pb-4 border-b border-border dark:border-slate-700">
+              <Link href="/" className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-lg bg-blue-600 flex items-center justify-center">
+                  <span className="text-white font-bold text-sm">RP</span>
+                </div>
+                <span className="text-xl font-bold text-foreground dark:text-white tracking-tight">ReinPlaner</span>
+              </Link>
+              <div className="flex items-center gap-2">
+                <ThemeSwitcher />
+                <button
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="p-2 text-muted-foreground dark:text-slate-300 hover:text-foreground dark:hover:text-white"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+            </div>
+            <div className="flex flex-col items-center space-y-6">
             {navLinks.map((link) => (
               <Link
                 key={link.href}
@@ -134,8 +152,8 @@ export function MarketingPage({
                 {link.label}
               </Link>
             ))}
-            <div className="flex flex-col gap-3 mt-8 w-64">
-              <ThemeSwitcher />
+            </div>
+            <div className="flex flex-col gap-3 w-64 mx-auto">
               <Button asChild variant="outline" className="border-border dark:border-slate-600 text-foreground dark:text-slate-200 hover:bg-muted dark:hover:bg-slate-800">
                 <Link href="/login">Anmelden</Link>
               </Button>
