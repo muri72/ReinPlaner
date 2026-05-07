@@ -64,7 +64,7 @@ export function TicketsGridView({
 
   if (tickets.length === 0 && !query) {
     return (
-      <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30 shadow-neumorphic glassmorphism-card">
+      <div className="col-span-full text-center text-muted-foreground py-8 bg-slate-50 dark:bg-slate-800/50 rounded-xl p-8 border border-dashed border-slate-300 dark:border-slate-700">
         <MessageSquare className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
         <p className="text-base md:text-lg font-semibold">Noch keine Tickets vorhanden</p>
         <p className="text-sm">Erstellen Sie ein neues Ticket, um Kundenanliegen zu verwalten.</p>
@@ -77,7 +77,7 @@ export function TicketsGridView({
 
   if (tickets.length === 0 && query) {
     return (
-      <div className="col-span-full text-center text-muted-foreground py-8 bg-gradient-to-br from-muted/20 to-background/50 rounded-xl p-8 border border-dashed border-muted-foreground/30 shadow-neumorphic glassmorphism-card">
+      <div className="col-span-full text-center text-muted-foreground py-8 bg-slate-50 dark:bg-slate-800/50 rounded-xl p-8 border border-dashed border-slate-300 dark:border-slate-700">
         <MessageSquare className="mx-auto h-10 w-10 md:h-12 md:w-12 text-muted-foreground mb-4" />
         <p className="text-base md:text-lg font-semibold">Keine Tickets gefunden</p>
         <p className="text-sm">Ihre Suche ergab keine Treffer.</p>
@@ -89,7 +89,7 @@ export function TicketsGridView({
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
       {tickets.map((ticket) => (
         <Link key={ticket.id} href={`/dashboard/tickets/${ticket.id}`} className="block hover:scale-[1.02] transition-transform duration-200 ease-in-out">
-          <Card className="shadow-neumorphic glassmorphism-card h-full">
+          <Card className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none h-full">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-base md:text-lg font-semibold">{ticket.title}</CardTitle>
             </CardHeader>

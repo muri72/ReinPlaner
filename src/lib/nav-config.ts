@@ -108,6 +108,14 @@ const SUPPORT_TENANTS_LINKS: NavLink[] = [
   { key: "support-tenants", href: "/dashboard/admin/tenants", Icon: Building2, roles: ["support"] },
 ];
 
+const SUPPORT_TICKETS_LINKS: NavLink[] = [
+  { key: "support-tickets", href: "/dashboard/tickets", Icon: MessageSquare, roles: ["support"] },
+];
+
+const SUPPORT_FEEDBACK_LINKS: NavLink[] = [
+  { key: "support-feedback", href: "/dashboard/feedback", Icon: Star, roles: ["support"] },
+];
+
 // ─── Full Navigation Tree ─────────────────────────────────────────────────────
 
 export const NAV_CONFIG: (NavLink | NavCategory)[] = [
@@ -153,6 +161,11 @@ export const NAV_CONFIG: (NavLink | NavCategory)[] = [
     key: "support-mandanten",
     roles: ["support"],
     children: SUPPORT_TENANTS_LINKS,
+  },
+  {
+    key: "support-ticketfeedback",
+    roles: ["support"],
+    children: [...SUPPORT_TICKETS_LINKS, ...SUPPORT_FEEDBACK_LINKS],
   },
 ];
 
@@ -222,6 +235,8 @@ export const NAV_LABELS: Record<string, string> = {
   "support-mandanten": "Mandanten",
   "support-tenants": "Mandanten",
   "tenants": "Mandanten",
+  "support-tickets": "Tickets",
+  "support-feedback": "Feedback",
 };
 
 export function getNavLabel(key: string): string {

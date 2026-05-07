@@ -10,6 +10,8 @@ import { PaginationControls } from "@/components/pagination-controls";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
 import { RecordDetailsDialog } from "@/components/record-details-dialog";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { Card, CardContent } from "@/components/ui/card";
 
 interface DisplayTicket {
   id: string;
@@ -48,6 +50,7 @@ export function TicketsTableView({
   query,
   onTicketUpdated,
 }: TicketsTableViewProps) {
+  const isMobile = useIsMobile();
 
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
@@ -99,8 +102,61 @@ export function TicketsTableView({
     );
   }
 
+  // Mobile Card View
+  if (isMobile) {
+    return (
+      <div className="space-y-3">
+        {tickets.map((ticket) => (
+          <Card key={ticket.id} className="p-4">
+            <CardContent className="p-0 space-y-2">
+              <div className="flex justify-between items-start">
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-sm truncate">{ticket.title}</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Badge variant={getStatusBadgeVariant(ticket.status)} className="flex items-center w-fit text-xs">
+                      {getStatusIcon(ticket.status)} {ticket.status}
+                    </Badge>
+                    <Badge variant={getPriorityBadgeVariant(ticket.priority)} className="text-xs">
+                      {ticket.priority}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                {ticket.customer_name && (
+                  <div className="col-span-2">
+                    <span className="font-medium text-foreground">Kunde: </span>
+                    <span className="truncate">{ticket.customer_name}</span>
+                  </div>
+                )}
+                <div className="col-span-2">
+                  <span className="font-medium text-foreground">Erstellt: </span>
+                  <span>{format(new Date(ticket.created_at), 'dd.MM.yyyy', { locale: de })}</span>
+                </div>
+                {(ticket.assigned_to_first_name || ticket.assigned_to_last_name) && (
+                  <div className="col-span-2">
+                    <span className="font-medium text-foreground">Zugewiesen: </span>
+                    <span>{`${ticket.assigned_to_first_name || ''} ${ticket.assigned_to_last_name || ''}`.trim()}</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-end space-x-1 pt-2">
+                <RecordDetailsDialog record={ticket} title={`Details zu Ticket: ${ticket.title}`} />
+                <TicketEditDialog ticket={ticket} onTicketUpdated={onTicketUpdated} />
+                <DeleteTicketButton ticketId={ticket.id} onDeleteSuccess={onTicketUpdated} />
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  }
+
+  // Desktop Table View
   return (
-    <div className="overflow-x-auto p-4 rounded-lg shadow-neumorphic glassmorphism-card">
+    <div className="rounded-md border">
       <Table>
         <TableHeader>
           <TableRow>
