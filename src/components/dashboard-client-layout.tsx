@@ -483,7 +483,7 @@ export function DashboardClientLayout({
           onOpenChange={setIsMobileMenuOpen}
         />
         <main className="flex-1 min-h-screen">
-          <div className="p-4 space-y-4">
+          <div className="p-4 pb-20 md:pb-4 space-y-4">
             <ImpersonationBanner />
             {children}
           </div>

@@ -62,13 +62,13 @@ export function CustomersTableView({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="min-w-[150px]">Name</TableHead>
-            <TableHead className="min-w-[100px]">Typ</TableHead>
-            <TableHead className="min-w-[200px]">Adresse</TableHead>
-            <TableHead className="min-w-[150px]">E-Mail</TableHead>
-            <TableHead className="min-w-[120px]">Telefon</TableHead>
-            <TableHead className="min-w-[200px]">Vertragsdaten</TableHead> {/* New column */}
-            <TableHead className="text-right min-w-[120px]">Aktionen</TableHead>
+            <TableHead className="min-w-[100px] text-xs md:text-sm">Name</TableHead>
+            <TableHead className="min-w-[80px] text-xs md:text-sm">Typ</TableHead>
+            <TableHead className="min-w-[120px] text-xs md:text-sm">Adresse</TableHead>
+            <TableHead className="min-w-[100px] text-xs md:text-sm">E-Mail</TableHead>
+            <TableHead className="min-w-[100px] text-xs md:text-sm">Telefon</TableHead>
+            <TableHead className="min-w-[150px] text-xs md:text-sm hidden lg:table-cell">Vertragsdaten</TableHead>
+            <TableHead className="text-right min-w-[80px] text-xs md:text-sm">Aktionen</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
