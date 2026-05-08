@@ -1,9 +1,17 @@
 "use client";
 
 import React, { useState, ReactNode } from "react";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { UnsavedChangesAlert } from "@/components/ui/unsaved-changes-alert";
 import { useDialogUnsavedChanges } from "@/components/ui/unsaved-changes-context";
+import { cn } from "@/lib/utils";
 
 interface RecordDialogProps {
   open: boolean;
@@ -13,7 +21,7 @@ interface RecordDialogProps {
   icon?: ReactNode;
   children: ReactNode;
   className?: string;
-  size?: "sm" | "md" | "lg" | "xl" | "5xl";
+  size?: "sm" | "md" | "lg" | "xl";
 }
 
 export function RecordDialog({
@@ -30,7 +38,6 @@ export function RecordDialog({
   const { isDirty } = useDialogUnsavedChanges();
 
   const handleOpenChange = (nextOpen: boolean) => {
-    // If closing and form has unsaved changes, show confirmation
     if (!nextOpen && open && isDirty) {
       setShowConfirmClose(true);
     } else {
@@ -41,59 +48,22 @@ export function RecordDialog({
   const sizeClasses = {
     sm: "sm:max-w-md",
     md: "sm:max-w-2xl",
-    lg: "sm:max-w-3xl",
-    xl: "sm:max-w-4xl",
-    "5xl": "sm:max-w-5xl",
+    lg: "sm:max-w-4xl",
+    xl: "sm:max-w-6xl",
   };
-
-  // Recursive function to check if a component has DialogTrigger anywhere in its tree
-  const hasDialogTriggerInTree = (element: any): boolean => {
-    if (!React.isValidElement(element)) return false;
-
-    // Check if this element itself is a DialogTrigger
-    if (element.type === DialogTrigger) {
-      return true;
-    }
-
-    // Check all children recursively
-    const elementChildren = (element.props as any)?.children;
-    if (elementChildren) {
-      return React.Children.toArray(elementChildren).some((child: any) =>
-        hasDialogTriggerInTree(child)
-      );
-    }
-
-    return false;
-  };
-
-  // Separate children into trigger and content
-  const triggerChildren: ReactNode[] = [];
-  const contentChildren: ReactNode[] = [];
-
-  React.Children.toArray(children).forEach((child) => {
-    if (React.isValidElement(child)) {
-      const hasDialogTrigger = hasDialogTriggerInTree(child);
-
-      if (hasDialogTrigger) {
-        triggerChildren.push(child);
-      } else {
-        contentChildren.push(child);
-      }
-    } else {
-      contentChildren.push(child);
-    }
-  });
 
   return (
     <>
       <Dialog open={open} onOpenChange={handleOpenChange}>
-        {/* Render trigger if provided - must be inside Dialog but outside DialogContent */}
-        {triggerChildren.length > 0 && triggerChildren}
-
         <DialogContent
-          className={`${sizeClasses[size]} max-h-[95vh] overflow-hidden flex flex-col glassmorphism-card p-0 ${className || ""}`}
+          className={cn(
+            "max-h-[90vh] overflow-hidden flex flex-col p-0",
+            sizeClasses[size],
+            className
+          )}
+          hideCloseButton
         >
-          {/* Dialog Header */}
+          {/* Dialog Header — fixed, doesn't scroll */}
           <DialogHeader className="px-6 py-4 border-b flex-shrink-0">
             <DialogTitle className="text-xl font-semibold flex items-center gap-2">
               {icon}
@@ -107,9 +77,7 @@ export function RecordDialog({
           </DialogHeader>
 
           {/* Scrollable Content */}
-          <div className="flex-1 overflow-y-auto px-6 py-4">
-            {contentChildren}
-          </div>
+          <div className="flex-1 overflow-y-auto px-6 py-4">{children}</div>
         </DialogContent>
       </Dialog>
 
