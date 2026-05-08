@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, ReactNode } from "react";
+import React, { useState, ReactNode, isValidElement } from "react";
 import {
   Dialog,
   DialogContent,
@@ -22,6 +22,7 @@ interface RecordDialogProps {
   children: ReactNode;
   className?: string;
   size?: "sm" | "md" | "lg" | "xl";
+  hideCloseButton?: boolean;
 }
 
 export function RecordDialog({
@@ -33,6 +34,7 @@ export function RecordDialog({
   children,
   className,
   size = "md",
+  hideCloseButton = false,
 }: RecordDialogProps) {
   const [showConfirmClose, setShowConfirmClose] = useState(false);
   const { isDirty } = useDialogUnsavedChanges();
@@ -52,16 +54,42 @@ export function RecordDialog({
     xl: "sm:max-w-6xl",
   };
 
+  // Recursively check if an element or its children contain a DialogTrigger
+  const hasDialogTrigger = (element: ReactNode): boolean => {
+    if (!isValidElement(element)) return false;
+    if (element.type === DialogTrigger) return true;
+    const elementChildren = (element.props as any)?.children;
+    if (elementChildren) {
+      return React.Children.toArray(elementChildren).some(hasDialogTrigger);
+    }
+    return false;
+  };
+
+  // Split children into trigger elements and content
+  const triggerChildren: ReactNode[] = [];
+  const contentChildren: ReactNode[] = [];
+
+  React.Children.toArray(children).forEach((child) => {
+    if (isValidElement(child) && hasDialogTrigger(child)) {
+      triggerChildren.push(child);
+    } else {
+      contentChildren.push(child);
+    }
+  });
+
   return (
     <>
       <Dialog open={open} onOpenChange={handleOpenChange}>
+        {/* Render DialogTrigger as sibling to DialogContent (required by Radix) */}
+        {triggerChildren.length > 0 && triggerChildren}
+
         <DialogContent
           className={cn(
             "max-h-[90vh] overflow-hidden flex flex-col p-0",
             sizeClasses[size],
             className
           )}
-          hideCloseButton
+          hideCloseButton={hideCloseButton}
         >
           {/* Dialog Header — fixed, doesn't scroll */}
           <DialogHeader className="px-6 py-4 border-b flex-shrink-0">
@@ -77,7 +105,9 @@ export function RecordDialog({
           </DialogHeader>
 
           {/* Scrollable Content */}
-          <div className="flex-1 overflow-y-auto px-6 py-4">{children}</div>
+          <div className="flex-1 overflow-y-auto px-6 py-4">
+            {contentChildren}
+          </div>
         </DialogContent>
       </Dialog>
 
