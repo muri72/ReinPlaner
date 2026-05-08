@@ -130,7 +130,6 @@ export function InvoicesClientPage() {
           <InvoiceCreateDialog
             debtors={debtors}
             orders={orders}
-            hideTrigger
             open={createDialogOpen}
             onOpenChange={setCreateDialogOpen}
             trigger={
