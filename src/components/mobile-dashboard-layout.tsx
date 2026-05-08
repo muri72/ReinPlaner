@@ -19,7 +19,8 @@ export function MobileDashboardLayout({
   onSignOut,
   notificationCount = 0
 }: MobileDashboardLayoutProps) {
-  const { currentUserRole, userProfile, loading } = useUserProfile();
+  const { currentUserRole: rawUserRole, userProfile, loading } = useUserProfile();
+  const currentUserRole = rawUserRole === 'unknown' ? 'employee' : rawUserRole;
 
   if (loading) {
     return (

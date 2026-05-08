@@ -29,7 +29,7 @@ export const GlassCard = React.forwardRef<HTMLDivElement, GlassCardProps>(
     const baseClass = variant === "interactive" ? "glass-card-hover" : "glass-card";
     
     const outlinedClass = variant === "outlined"
-      ? "bg-white/80 dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700/60 shadow-sm dark:shadow-none"
+      ? "bg-[var(--glass-bg)] border border-[var(--glass-border)] shadow-[var(--shadow-card)]"
       : "";
 
     return (

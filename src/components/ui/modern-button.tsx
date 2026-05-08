@@ -23,9 +23,9 @@ const modernVariants: Record<ModernButtonVariant, string> = {
   secondary: "glass-btn",
   ghost: "glass-btn hover:bg-white/10 dark:hover:bg-slate-700/50",
   outline: "glass-btn border-white/20 hover:border-white/40",
-  success: "bg-emerald-500 text-white hover:bg-emerald-600 shadow-[0_4px_15px_rgba(16,185,129,0.3)]",
-  warning: "bg-amber-500 text-white hover:bg-amber-600 shadow-[0_4px_15px_rgba(245,158,11,0.3)]",
-  danger: "bg-rose-500 text-white hover:bg-rose-600 shadow-[0_4px_15px_rgba(244,63,94,0.3)]",
+  success: "bg-[var(--accent-emerald)] text-white hover:opacity-90 shadow-[0_4px_15px_rgba(var(--accent-emerald),0.3)]",
+  warning: "bg-[var(--accent-amber)] text-white hover:opacity-90 shadow-[0_4px_15px_rgba(var(--accent-amber),0.3)]",
+  danger: "bg-[var(--destructive)] text-white hover:opacity-90 shadow-[0_4px_15px_rgba(var(--destructive),0.3)]",
 };
 
 const sizeClasses = {
