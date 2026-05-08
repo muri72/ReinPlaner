@@ -98,7 +98,7 @@ export function OrderDetailTabs({ order }: OrderDetailTabsProps) {
         <TabsTrigger value="zeitplanung">Zeitplanung</TabsTrigger>
       </TabsList>
       <TabsContent value="stammdaten">
-        <Card className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm dark:shadow-none">
+        <Card className="dashboard-card">
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
               <CardTitle>Stammdaten</CardTitle>
@@ -245,7 +245,7 @@ export function OrderDetailTabs({ order }: OrderDetailTabsProps) {
         </Card>
       </TabsContent>
       <TabsContent value="dokumente">
-        <Card className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm dark:shadow-none">
+        <Card className="dashboard-card">
           <CardHeader>
             <CardTitle>Dokumente</CardTitle>
             <CardDescription>Verwalten Sie Dokumente, die mit diesem Auftrag verknüpft sind.</CardDescription>
@@ -269,7 +269,7 @@ export function OrderDetailTabs({ order }: OrderDetailTabsProps) {
           {order.assignedEmployees.length > 0 ? (
             <div className="space-y-4">
               {order.assignedEmployees.map((assignment, index) => (
-              <Card key={index} className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm dark:shadow-none border-l-4 border-l-primary/50">
+              <Card key={index} className="dashboard-card border-l-4 border-l-primary/50">
                 <CardHeader className="bg-gradient-to-r from-primary/5 to-primary/10">
                   <div className="flex items-center gap-3">
                     <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
@@ -402,7 +402,7 @@ export function OrderDetailTabs({ order }: OrderDetailTabsProps) {
               ))}
             </div>
           ) : (
-            <Card className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm dark:shadow-none">
+            <Card className="dashboard-card">
               <CardContent className="py-12 text-center">
                 <User className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
                 <p className="text-muted-foreground">Keine Mitarbeiter für diesen Auftrag zugewiesen.</p>

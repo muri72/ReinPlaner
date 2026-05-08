@@ -271,13 +271,13 @@ export default function ServicesPage() {
                       </div>
                     ) : (
                       filteredServices.map(service => (
-                        <Card key={service.id} className="p-4">
+                        <Card key={service.id} className="p-4 dashboard-card">
                           <div className="flex items-start justify-between gap-4">
                             <div className="flex-1">
                               <div className="flex items-center gap-2">
                                 {service.color && (
                                   <div
-                                    className="h-4 w-4 rounded-full border border-border"
+                                    className="h-4 w-4 rounded-full border border-border/50"
                                     style={{ backgroundColor: service.color }}
                                   />
                                 )}

@@ -117,7 +117,7 @@ export function ImpersonationDialog({ open, onOpenChange }: ImpersonationDialogP
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg glassmorphism-card">
         <DialogHeader>
           <DialogTitle>Als anderer Benutzer anmelden</DialogTitle>
           <DialogDescription>

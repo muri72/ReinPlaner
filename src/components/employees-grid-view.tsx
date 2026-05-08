@@ -115,7 +115,7 @@ export function EmployeesGridView({
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
       {filteredEmployees.map((employee) => (
         <Link key={employee.id} href={`/dashboard/employees/${employee.id}`} className="block hover:scale-[1.02] transition-transform duration-200 ease-in-out">
-          <Card className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none h-full">
+          <Card className="dashboard-card h-full">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-base md:text-lg font-semibold line-clamp-2">{employee.first_name} {employee.last_name}</CardTitle>
             </CardHeader>

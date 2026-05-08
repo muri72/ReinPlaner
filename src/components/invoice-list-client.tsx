@@ -259,7 +259,7 @@ export function InvoiceListClient({ invoices }: InvoiceListClientProps) {
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
+                      <DropdownMenuContent align="end" glass>
                         <DropdownMenuItem asChild>
                           <Link href={`/dashboard/invoices/${invoice.id}`}>
                             <Eye className="mr-2 h-4 w-4" />

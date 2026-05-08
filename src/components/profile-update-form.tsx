@@ -218,7 +218,7 @@ export function ProfileUpdateForm({ initialData, isInDialog = false }: ProfileUp
 
   return (
     <UnsavedChangesProtection formId="profile-update-form">
-      <Card className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm dark:shadow-none">
+      <Card className="dashboard-card">
         <CardHeader>
           <CardTitle className="text-lg font-semibold flex items-center gap-2">
             <UserCheck className="h-5 w-5 text-primary" />

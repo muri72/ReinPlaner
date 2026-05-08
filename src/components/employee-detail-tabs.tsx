@@ -101,7 +101,7 @@ export function EmployeeDetailTabs({ employee }: EmployeeDetailTabsProps) {
         <TabsTrigger value="abwesenheiten" className="flex-1 lg:flex-none">Abwesenheiten</TabsTrigger>
       </TabsList>
       <TabsContent value="stammdaten">
-        <Card className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm dark:shadow-none">
+        <Card className="dashboard-card">
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
               <CardTitle>Stammdaten</CardTitle>
@@ -157,7 +157,7 @@ export function EmployeeDetailTabs({ employee }: EmployeeDetailTabsProps) {
         </Card>
       </TabsContent>
       <TabsContent value="auftraege">
-        <Card className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm dark:shadow-none">
+        <Card className="dashboard-card">
           <CardHeader>
             <CardTitle>Zugewiesene Aufträge</CardTitle>
             <CardDescription>Alle Aufträge, denen dieser Mitarbeiter zugewiesen ist.</CardDescription>
@@ -168,7 +168,7 @@ export function EmployeeDetailTabs({ employee }: EmployeeDetailTabsProps) {
         </Card>
       </TabsContent>
       <TabsContent value="arbeitszeiten">
-        <Card className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm dark:shadow-none">
+        <Card className="dashboard-card">
           <CardHeader>
             <CardTitle>Arbeitszeiten</CardTitle>
             <CardDescription>Eine Liste der letzten Zeiteinträge für diesen Mitarbeiter.</CardDescription>
@@ -196,7 +196,7 @@ export function EmployeeDetailTabs({ employee }: EmployeeDetailTabsProps) {
         </div>
       </TabsContent>
       <TabsContent value="dokumente">
-        <Card className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm dark:shadow-none">
+        <Card className="dashboard-card">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
@@ -230,7 +230,7 @@ export function EmployeeDetailTabs({ employee }: EmployeeDetailTabsProps) {
           />
 
           {/* Absences List */}
-          <Card className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm dark:shadow-none">
+          <Card className="dashboard-card">
             <CardHeader>
               <CardTitle>Abwesenheitsanträge</CardTitle>
               <CardDescription>Eine Liste aller Abwesenheitsanträge für diesen Mitarbeiter.</CardDescription>

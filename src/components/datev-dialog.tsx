@@ -72,7 +72,7 @@ export function DATEVDialog({ children }: DATEVDialogProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md glassmorphism-card">
         <DialogHeader>
           <DialogTitle>CSV Export</DialogTitle>
           <DialogDescription>
