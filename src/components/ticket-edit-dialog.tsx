@@ -159,7 +159,7 @@ export function TicketEditDialog({ ticket, onTicketUpdated }: TicketEditDialogPr
           </svg>
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm dark:shadow-none">
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto glassmorphism-card">
         <DialogHeader>
           <DialogTitle>Ticket bearbeiten</DialogTitle>
           <DialogDescription>

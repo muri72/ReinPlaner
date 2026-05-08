@@ -218,7 +218,7 @@ export function DataTableToolbar({
               Sortieren
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="start">
+          <DropdownMenuContent align="start" glass>
             <DropdownMenuLabel>Sortieren nach</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuRadioGroup

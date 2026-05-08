@@ -178,7 +178,7 @@ export function PlanningFilterDialog({
           )}
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[500px] glassmorphism-card">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Filter className="h-4 w-4" />

@@ -28,7 +28,7 @@ export function OpenInvoicesWidget() {
 
   if (loading) {
     return (
-      <Card className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none">
+      <Card className="dashboard-card">
         <CardHeader className="pb-2">
           <CardTitle className="text-base font-medium">Offene Rechnungen</CardTitle>
         </CardHeader>
@@ -45,7 +45,7 @@ export function OpenInvoicesWidget() {
   const overdueAmount = (stats.total_overdue || 0);
 
   return (
-    <Card className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none">
+    <Card className="dashboard-card">
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <CardTitle className="text-base font-medium flex items-center gap-2">

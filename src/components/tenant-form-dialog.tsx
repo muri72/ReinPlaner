@@ -125,7 +125,7 @@ export function TenantFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[500px] glassmorphism-card">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>

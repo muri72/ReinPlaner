@@ -35,9 +35,9 @@ export function CustomerOrderRequestDialog({ customerId, onOrderRequested }: Cus
           <PlusCircle className="mr-2 h-4 w-4" /> Neue Buchung anfragen
         </Button>
       </DialogTrigger>
-      <DialogContent 
-        key={open ? "customer-order-request-open" : "customer-order-request-closed"} 
-        className="sm:max-w-3xl max-h-[90vh] overflow-y-auto bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm dark:shadow-none"
+      <DialogContent
+        key={open ? "customer-order-request-open" : "customer-order-request-closed"}
+        className="sm:max-w-3xl max-h-[90vh] overflow-y-auto glassmorphism-card"
       >
         <DialogHeader>
           <DialogTitle>Neue Buchung anfragen</DialogTitle>

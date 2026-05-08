@@ -159,7 +159,7 @@ export function InvoiceActionsClient({
               <MoreHorizontal className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
+          <DropdownMenuContent align="end" glass>
             <DropdownMenuItem onClick={handleDownloadPDF} disabled={isDownloading}>
               <FileText className="mr-2 h-4 w-4" />
               PDF herunterladen

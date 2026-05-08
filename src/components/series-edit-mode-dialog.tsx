@@ -45,7 +45,7 @@ export function SeriesEditModeDialog({
 
   return (
     <AlertDialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
-      <AlertDialogContent className="sm:max-w-md">
+      <AlertDialogContent className="sm:max-w-md glassmorphism-card">
         <AlertDialogHeader>
           <AlertDialogTitle className="flex items-center gap-2">
             <Repeat className="h-5 w-5 text-blue-500" />

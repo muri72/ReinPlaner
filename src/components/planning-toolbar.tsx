@@ -154,7 +154,7 @@ export function PlanningToolbar({
   ];
 
   return (
-    <div className="flex flex-col gap-3 p-4 border rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none">
+    <div className="flex flex-col gap-3 p-4 border rounded-lg dashboard-card">
       {/* Prominent Date Display - Centered */}
       <div className="flex items-center justify-center gap-3 py-1 bg-gradient-to-r from-transparent via-primary/5 to-transparent rounded-lg">
         <Button variant="outline" size="icon" onClick={handlePrev} className="h-9 w-9">
@@ -231,7 +231,7 @@ export function PlanningToolbar({
             <DropdownMenuTrigger asChild>
               <Button variant="outline">{viewModeTranslations[viewMode]}</Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent>
+            <DropdownMenuContent glass>
               <DropdownMenuRadioGroup value={viewMode} onValueChange={(value) => onViewModeChange(value as 'day' | 'week' | 'month')}>
                 <DropdownMenuRadioItem value="day">Heute</DropdownMenuRadioItem>
                 <DropdownMenuRadioItem value="week">Woche</DropdownMenuRadioItem>
