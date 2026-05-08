@@ -24,7 +24,6 @@ interface InvoiceCreateDialogProps {
   onOpenChange?: (open: boolean) => void;
   hideTrigger?: boolean;
   onInvoiceCreated?: (invoiceId: string) => void;
-  children?: ReactNode;
 }
 
 export function InvoiceCreateDialog({
@@ -35,7 +34,6 @@ export function InvoiceCreateDialog({
   onOpenChange,
   hideTrigger = false,
   onInvoiceCreated,
-  children,
 }: InvoiceCreateDialogProps) {
   const [internalOpen, setInternalOpen] = useState(false);
   const isControlled = controlledOpen !== undefined;
@@ -47,10 +45,6 @@ export function InvoiceCreateDialog({
     }
     onOpenChange?.(next);
   };
-
-  // When hideTrigger=true and children provided, use children as content
-  const showCustomContent = hideTrigger && children;
-  const dialogContent = showCustomContent ? children : <NewInvoiceForm debtors={debtors} orders={orders} />;
 
   return (
     <RecordDialog
@@ -72,7 +66,7 @@ export function InvoiceCreateDialog({
         </DialogTrigger>
       )}
 
-      {dialogContent}
+      <NewInvoiceForm debtors={debtors} orders={orders} />
     </RecordDialog>
   );
 }
