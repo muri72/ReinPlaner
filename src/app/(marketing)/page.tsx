@@ -188,9 +188,9 @@ export default function MarketingLandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
             {/* Left: Text */}
-            <div className="text-center lg:text-left">
+            <div className="text-center lg:text-left animate-fade-up">
               {/* Trust Badge Bar */}
-              <div className="inline-flex flex-wrap items-center justify-center lg:justify-start gap-3 mb-8">
+              <div className="inline-flex flex-wrap items-center justify-center lg:justify-start gap-3 mb-8 animate-fade-up stagger-1">
                 <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/30 border border-blue-100 dark:border-blue-800 rounded-full">
                   <span className="text-[var(--accent-blue)] font-semibold text-sm">4.9</span>
                   <span className="text-amber-500">★★★★★</span>
@@ -203,13 +203,13 @@ export default function MarketingLandingPage() {
               </div>
 
               {/* Headline */}
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-[var(--text-primary)] mb-6 leading-[1.1] tracking-tight">
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-[var(--text-primary)] mb-6 leading-[1.1] tracking-tight animate-fade-up stagger-2">
                 Die All-in-one Software für{" "}
-                <span className="text-[var(--accent-blue)]">Reinigungsfirmen</span>
+                <span className="text-[var(--accent-blue)] animate-gradient-shift">Reinigungsfirmen</span>
               </h1>
 
               {/* Subline */}
-              <p className="text-lg md:text-xl text-[var(--text-secondary)] leading-relaxed max-w-xl mx-auto lg:mx-0 mb-8">
+              <p className="text-lg md:text-xl text-[var(--text-secondary)] leading-relaxed max-w-xl mx-auto lg:mx-0 mb-8 animate-fade-up stagger-3">
                 Planen Sie Einsätze, erfassen Sie Arbeitszeiten und erstellen Sie Rechnungen — ohne Excel, ohne Papierkram. 60% weniger Zeit für Verwaltung.
               </p>
 
@@ -327,7 +327,7 @@ export default function MarketingLandingPage() {
       {/* ====== FEATURES SECTION ====== */}
       <section id="features" className="py-20 md:py-28 bg-[var(--bg-elevated)]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-3xl mx-auto mb-16">
+          <div className="text-center max-w-3xl mx-auto mb-16 animate-fade-up">
             <h2 className="text-3xl md:text-4xl font-bold text-[var(--text-primary)] mb-4 tracking-tight">
               ALLES, WAS SIE BRAUCHEN
             </h2>
@@ -337,8 +337,8 @@ export default function MarketingLandingPage() {
           </div>
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {features.map((feature) => (
-              <div key={feature.title} className="p-6 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl hover:shadow-md dark:hover:shadow-none transition-shadow">
+            {features.map((feature, index) => (
+              <div key={feature.title} className="p-6 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl hover:shadow-md dark:hover:shadow-none transition-shadow animate-fade-up" style={{ animationDelay: `${index * 100}ms` }}>
                 <div className="w-12 h-12 rounded-xl bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center mb-4">
                   <feature.icon className="w-6 h-6 text-[var(--accent-blue)]" />
                 </div>

@@ -172,16 +172,16 @@ function CustomSidebar({
         </button>
       </div>
 
-      {/* ── Toggle Button — OUTSIDE header, right side of sidebar, elegant + thin ── */}
+      {/* ── Toggle Button — positioned at the RIGHT outer edge of sidebar ── */}
       <Button
         variant="ghost"
         size="icon"
         onClick={onToggle}
         className={cn(
-          "absolute top-[22px] flex items-center justify-center border border-sidebar-border shadow-sm transition-all duration-200",
+          "absolute top-[22px] flex items-center justify-center border border-sidebar-border shadow-sm transition-all duration-200 z-[60]",
           isCollapsed
-            ? "left-[52px] h-6 w-6 rounded-md bg-background hover:bg-muted"
-            : "left-[236px] h-6 w-6 rounded-md bg-background hover:bg-muted"
+            ? "left-[58px] h-8 w-8 rounded-md bg-background hover:bg-muted"
+            : "left-[248px] h-8 w-8 rounded-md bg-background hover:bg-muted"
         )}
         style={{
           color: "hsl(var(--sidebar-foreground))",
@@ -190,12 +190,10 @@ function CustomSidebar({
         aria-label={isCollapsed ? "Sidebar erweitern" : "Sidebar minimieren"}
       >
         <ChevronLeft
-          className="h-3.5 w-3.5 transition-transform duration-200"
+          className="h-4 w-4 transition-transform duration-200"
           style={{ transform: isCollapsed ? "rotate(180deg)" : "rotate(0deg)" }}
         />
       </Button>
-
-      {/* ── Nav (scrollable, no clipping for tooltips in collapsed mode) ── */}
       <nav
         className="flex-1 py-3"
         style={{
