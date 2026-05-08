@@ -31,17 +31,25 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const hostname = request.headers.get('host') || '';
   const tenantSlug = extractTenantSlug(hostname);
-  
+
   const response = NextResponse.next();
-  
+
   if (tenantSlug) {
     response.headers.set('x-tenant-slug', tenantSlug);
   }
-  
+
   const requestId = request.headers.get('x-request-id') || crypto.randomUUID();
   response.headers.set('x-request-id', requestId);
   response.headers.set('x-timestamp', new Date().toISOString());
-  
+
+  // Edge caching for API and dashboard routes
+  if (pathname.startsWith('/api/') || pathname.startsWith('/dashboard/')) {
+    response.headers.set(
+      'Cache-Control',
+      'public, s-maxage=30, stale-while-revalidate=60'
+    );
+  }
+
   return response;
 }
 

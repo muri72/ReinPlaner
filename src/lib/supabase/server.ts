@@ -28,6 +28,7 @@ export async function createClient() {
     supabaseUrl,
     supabaseAnonKey,
     {
+      global: { headers: { prefer: 'prepared-statements' } },
       cookies: {
         get(name: string) {
           return cookieStore.get(name)?.value
