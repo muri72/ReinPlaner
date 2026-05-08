@@ -42,7 +42,7 @@ export async function getUserRole(userId: string): Promise<string | null> {
  */
 export async function isAdmin(userId: string): Promise<boolean> {
   const role = await getUserRole(userId);
-  return role === 'admin';
+  return role === 'admin' || role === 'platform_admin';
 }
 
 /**
@@ -91,23 +91,23 @@ export async function canAccess(
   const role = await getUserRole(userId);
   
   if (!role) return false;
-  
-  // Admin can access everything
-  if (role === 'admin') return true;
-  
+
+  // Admin and platform_admin can access everything
+  if (role === 'admin' || role === 'platform_admin') return true;
+
   switch (resource) {
     case 'orders':
-      return ['admin', 'manager', 'employee'].includes(role);
+      return ['manager', 'employee'].includes(role);
     case 'employees':
-      return ['admin', 'manager'].includes(role);
+      return ['manager'].includes(role);
     case 'customers':
-      return ['admin', 'manager', 'customer'].includes(role);
+      return ['manager', 'customer'].includes(role);
     case 'time-tracking':
-      return ['admin', 'manager', 'employee'].includes(role);
+      return ['manager', 'employee'].includes(role);
     case 'reports':
-      return ['admin', 'manager'].includes(role);
+      return ['manager'].includes(role);
     case 'admin':
-      return role === 'admin';
+      return false;
     default:
       return false;
   }
@@ -119,13 +119,16 @@ export async function canAccess(
 export function getRoleDefaultRedirect(role: string | null): string {
   switch (role) {
     case 'admin':
+    case 'platform_admin':
       return '/dashboard';
     case 'manager':
       return '/dashboard/planning';
     case 'employee':
-      return '/dashboard/time-tracking';
+      return '/employee/dashboard';
     case 'customer':
-      return '/dashboard';
+      return '/portal/dashboard';
+    case 'unknown':
+      return '/role-pending';
     default:
       return '/login';
   }
@@ -242,12 +245,21 @@ export async function isAssignedToOrder(orderId: string): Promise<boolean> {
 }
 
 /**
- * Filter records based on user role (for client-side filtering)
+ * Filter records based on user role (for client-side filtering).
+ *
+ * For employees, orders/customers are scoped via the
+ * `order_employee_assignments` join table — NOT `orders.user_id`
+ * (which is the creator/admin). Returning a `user_id` filter on
+ * orders/customers would yield zero rows for non-admin employees.
+ *
+ * This helper now returns either a simple equality filter (object)
+ * or `{ orderIds: string[] }` for tables where pre-resolved IDs are
+ * required. Callers should branch accordingly.
  */
 export async function getRoleBasedFilter(tableName: 'orders' | 'customers' | 'time_entries' | 'shifts') {
   const role = await getCurrentUserRole();
 
-  if (role === 'admin' || role === 'manager') {
+  if (role === 'admin' || role === 'manager' || role === 'platform_admin') {
     return {}; // Managers/admins see all tenant data
   }
 
@@ -258,9 +270,39 @@ export async function getRoleBasedFilter(tableName: 'orders' | 'customers' | 'ti
 
   switch (tableName) {
     case 'orders':
-      return { user_id: employee.user_id };
-    case 'customers':
-      return { user_id: employee.user_id };
+    case 'customers': {
+      // Resolve assigned order IDs via join table
+      const supabase = await createClient();
+      const { data: assignments } = await supabase
+        .from('order_employee_assignments')
+        .select('order_id')
+        .eq('employee_id', employee.id);
+
+      const orderIds = (assignments || [])
+        .map((a) => a.order_id as string)
+        .filter(Boolean);
+
+      if (orderIds.length === 0) {
+        return { id: 'none' };
+      }
+
+      if (tableName === 'orders') {
+        return { id: { in: orderIds } };
+      }
+
+      // customers: resolve customer_ids via the assigned orders
+      const { data: orderRows } = await supabase
+        .from('orders')
+        .select('customer_id')
+        .in('id', orderIds);
+
+      const customerIds = Array.from(
+        new Set((orderRows || []).map((o) => o.customer_id as string).filter(Boolean))
+      );
+      return customerIds.length > 0
+        ? { id: { in: customerIds } }
+        : { id: 'none' };
+    }
     case 'time_entries':
       return { employee_id: employee.id };
     case 'shifts':
@@ -276,11 +318,16 @@ export async function getRoleBasedFilter(tableName: 'orders' | 'customers' | 'ti
 export async function requireRole(requiredRole: 'admin' | 'manager' | 'employee'): Promise<void> {
   const role = await getCurrentUserRole();
 
-  if (requiredRole === 'admin' && role !== 'admin') {
+  if (requiredRole === 'admin' && role !== 'admin' && role !== 'platform_admin') {
     throw new Error('Administrator-Berechtigung erforderlich');
   }
 
-  if (requiredRole === 'manager' && role !== 'admin' && role !== 'manager') {
+  if (
+    requiredRole === 'manager' &&
+    role !== 'admin' &&
+    role !== 'manager' &&
+    role !== 'platform_admin'
+  ) {
     throw new Error('Manager-Berechtigung erforderlich');
   }
 
@@ -290,11 +337,11 @@ export async function requireRole(requiredRole: 'admin' | 'manager' | 'employee'
 }
 
 /**
- * Require admin role - throws error if user isn't admin
+ * Require admin role - throws error if user isn't admin or platform_admin
  */
 export async function requireAdmin(): Promise<void> {
   const role = await getCurrentUserRole();
-  if (role !== 'admin') {
+  if (role !== 'admin' && role !== 'platform_admin') {
     throw new Error('Administrator-Berechtigung erforderlich');
   }
 }

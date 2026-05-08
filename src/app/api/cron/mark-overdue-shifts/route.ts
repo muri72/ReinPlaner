@@ -2,21 +2,13 @@
 
 import { createAdminClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
-
-// API Key for cron job authentication (set this in .env.local as CRON_API_KEY)
-const CRON_API_KEY = process.env.CRON_API_KEY;
+import { verifyCronRequest } from "@/lib/cron/auth";
 
 export async function POST(request: Request) {
   try {
-    // Verify API key
-    const authHeader = request.headers.get("authorization");
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return Response.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const token = authHeader.replace("Bearer ", "");
-    if (token !== CRON_API_KEY) {
-      return Response.json({ error: "Invalid API key" }, { status: 403 });
+    const auth = verifyCronRequest(request);
+    if (!auth.ok) {
+      return Response.json({ error: auth.error }, { status: auth.status });
     }
 
     const supabaseAdmin = createAdminClient();

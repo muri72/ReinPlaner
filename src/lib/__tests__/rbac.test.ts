@@ -1,34 +1,42 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { getRoleDefaultRedirect } from '../services-rbac'
 
 describe('RBAC Service', () => {
   describe('getRoleDefaultRedirect', () => {
-    it('should return /dashboard for admin role', () => {
+    it('returns /dashboard for admin', () => {
       expect(getRoleDefaultRedirect('admin')).toBe('/dashboard')
     })
 
-    it('should return /dashboard/planning for manager role', () => {
+    it('returns /dashboard for platform_admin', () => {
+      expect(getRoleDefaultRedirect('platform_admin')).toBe('/dashboard')
+    })
+
+    it('returns /dashboard/planning for manager', () => {
       expect(getRoleDefaultRedirect('manager')).toBe('/dashboard/planning')
     })
 
-    it('should return /dashboard/time-tracking for employee role', () => {
-      expect(getRoleDefaultRedirect('employee')).toBe('/dashboard/time-tracking')
+    it('returns /employee/dashboard for employee', () => {
+      expect(getRoleDefaultRedirect('employee')).toBe('/employee/dashboard')
     })
 
-    it('should return /dashboard for customer role', () => {
-      expect(getRoleDefaultRedirect('customer')).toBe('/dashboard')
+    it('returns /portal/dashboard for customer', () => {
+      expect(getRoleDefaultRedirect('customer')).toBe('/portal/dashboard')
     })
 
-    it('should return /login for unknown role', () => {
-      expect(getRoleDefaultRedirect('unknown')).toBe('/login')
+    it('returns /role-pending for unknown role', () => {
+      expect(getRoleDefaultRedirect('unknown')).toBe('/role-pending')
     })
 
-    it('should return /login for null role', () => {
+    it('returns /login for unrecognized strings', () => {
+      expect(getRoleDefaultRedirect('something-else')).toBe('/login')
+    })
+
+    it('returns /login for null role', () => {
       expect(getRoleDefaultRedirect(null)).toBe('/login')
     })
 
-    it('should return /login for undefined role', () => {
-      expect(getRoleDefaultRedirect(undefined)).toBe('/login')
+    it('returns /login for undefined role', () => {
+      expect(getRoleDefaultRedirect(undefined as unknown as string)).toBe('/login')
     })
   })
 })

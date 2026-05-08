@@ -436,7 +436,10 @@ export function DashboardClientLayout({
   children,
   onSignOut,
 }: DashboardClientLayoutProps) {
-  const { currentUserRole, loading } = useUserProfile();
+  const { currentUserRole: rawUserRole, loading } = useUserProfile();
+  // Middleware redirects 'unknown' to /role-pending; narrow type for nav helpers
+  const currentUserRole: UserRole =
+    rawUserRole === 'unknown' ? 'employee' : rawUserRole;
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);

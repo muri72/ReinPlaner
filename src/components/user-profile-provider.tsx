@@ -13,7 +13,7 @@ interface UserProfile {
 
 interface UserProfileContextType {
   userProfile: UserProfile | null;
-  currentUserRole: 'admin' | 'manager' | 'employee' | 'customer' | 'platform_admin';
+  currentUserRole: 'admin' | 'manager' | 'employee' | 'customer' | 'platform_admin' | 'unknown';
   displayName: string;
   loading: boolean;
   authenticated: boolean;
@@ -67,24 +67,25 @@ export function UserProfileProvider({ children }: { children: React.ReactNode })
         .single();
 
       if (profileError) {
-        // Create default profile on error — default to admin to prevent redirect loops
-        // If the user is truly not an admin, RLS will prevent access to admin routes anyway
+        // SECURITY: do NOT default to a privileged role. Use 'unknown' so the
+        // middleware redirects the user to /role-pending instead of accidentally
+        // exposing admin views.
         setUserProfile({
           first_name: user.email?.split('@')[0] || 'User',
           last_name: '',
           avatar_url: null,
-          role: 'admin',
+          role: 'unknown',
         });
       } else {
         setUserProfile(profile);
       }
-    } catch (error) {
-      // Set default profile to prevent infinite loading — default to admin
+    } catch {
+      // Set unknown profile to prevent infinite loading without granting access
       setUserProfile({
         first_name: 'User',
         last_name: '',
         avatar_url: null,
-        role: 'admin',
+        role: 'unknown',
       });
       setAuthenticated(true);
     } finally {
@@ -125,7 +126,7 @@ export function UserProfileProvider({ children }: { children: React.ReactNode })
       return meta.impersonatedRole as 'admin' | 'manager' | 'employee' | 'customer' | 'platform_admin';
     }
 
-    return (userProfile?.role as any) || 'employee';
+    return (userProfile?.role as 'admin' | 'manager' | 'employee' | 'customer' | 'platform_admin' | 'unknown') || 'unknown';
   }, [userProfile?.role, isImpersonating, meta]);
 
   const displayName = useMemo(() => {

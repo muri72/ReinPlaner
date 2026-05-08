@@ -1,90 +1,130 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/middleware'
+import { extractTenantFromSubdomain } from '@/lib/tenant/types'
+import { getTenantBySlug } from '@/lib/tenant/registry'
 
 export const runtime = 'edge'
+
+const PUBLIC_PATHS = new Set([
+  '/', '/pricing', '/register', '/impressum', '/datenschutz', '/agb',
+])
+
+const AUTH_PATHS = new Set(['/login', '/role-pending'])
+
+const PLATFORM_HOSTS = new Set([
+  'localhost',
+  'reinplaner.de',
+  'www.reinplaner.de',
+  'reinplaner.vercel.app',
+])
+
+function isPlatformHost(host: string): boolean {
+  const h = host.split(':')[0].toLowerCase()
+  if (PLATFORM_HOSTS.has(h)) return true
+  if (h.endsWith('.vercel.app')) return true
+  return false
+}
 
 export async function proxy(request: NextRequest) {
   const { supabase, response } = createClient(request)
   const { data: { user } } = await supabase.auth.getUser()
-  const { pathname } = request.nextUrl;
+  const { pathname } = request.nextUrl
+  const hostname = request.headers.get('host') || ''
 
-  // --- Öffentliche Pfade (Marketing Seiten) ---
-  const publicPaths = ['/', '/pricing', '/register', '/impressum', '/datenschutz', '/agb'];
-  const isPublicPath = publicPaths.includes(pathname);
+  // --- Public paths ---
+  const isPublicPath = PUBLIC_PATHS.has(pathname)
+    || pathname.startsWith('/auth/callback')
+    || AUTH_PATHS.has(pathname)
 
-  // --- 1. Behandlung von nicht authentifizierten Benutzern ---
+  // --- 1. Unauthenticated users ---
   if (!user) {
-    // Erlaube Zugriff auf öffentliche Pfade und Auth-Routen
-    if (isPublicPath || pathname === '/login' || pathname.startsWith('/auth/callback')) {
-      return response;
-    }
-    // Leite alle anderen Pfade zum Login um
-    return NextResponse.redirect(new URL('/login', request.url));
+    if (isPublicPath) return response
+    return NextResponse.redirect(new URL('/login', request.url))
   }
 
-  // --- 2. Behandlung von authentifizierten Benutzern ---
-  // Benutzerrolle abrufen
+  // --- 2. Authenticated users: fetch role + tenant_id ---
   const { data: profileData, error: profileError } = await supabase
     .from('profiles')
-    .select('role')
+    .select('role, tenant_id')
     .eq('id', user.id)
-    .single();
+    .single()
 
   if (profileError) {
-    console.error("Fehler beim Abrufen des Benutzerprofils:", profileError?.message || JSON.stringify(profileError));
+    console.error(
+      'Fehler beim Abrufen des Benutzerprofils:',
+      profileError?.message || JSON.stringify(profileError),
+    )
   }
 
-  const userRole = profileData?.role || 'employee'; // Standard auf 'employee', falls Rolle nicht gefunden
+  // SECURITY: do NOT default to a privileged role. If profile is missing,
+  // route the user to /role-pending so admin can assign a role.
+  const userRole = (profileData?.role as string | undefined) || 'unknown'
+  const userTenantId = (profileData?.tenant_id as string | null | undefined) || null
 
-  // Den korrekten Basis-Dashboard-Pfad für die Benutzerrolle bestimmen
-  let baseDashboardPath: string;
+  if (userRole === 'unknown') {
+    if (pathname === '/role-pending' || pathname.startsWith('/auth/')) {
+      return response
+    }
+    return NextResponse.redirect(new URL('/role-pending', request.url))
+  }
+
+  // --- 3. Subdomain ↔ tenant_id validation (defense in depth) ---
+  // Skip for platform hosts (Vercel preview, localhost, root domain).
+  if (!isPlatformHost(hostname) && userRole !== 'platform_admin') {
+    const slug = extractTenantFromSubdomain(hostname)
+    if (slug && slug !== 'reinplaner') {
+      try {
+        const tenant = await getTenantBySlug(slug)
+        if (!tenant || (userTenantId && tenant.id !== userTenantId)) {
+          // Wrong subdomain for this user — sign-out + redirect to login
+          await supabase.auth.signOut()
+          return NextResponse.redirect(new URL('/login?error=wrong_tenant', request.url))
+        }
+      } catch (err) {
+        console.error('Subdomain validation failed:', err)
+      }
+    }
+  }
+
+  // --- 4. Determine base dashboard for role ---
+  let baseDashboardPath: string
   if (userRole === 'customer') {
-    baseDashboardPath = '/portal/dashboard';
+    baseDashboardPath = '/portal/dashboard'
   } else if (userRole === 'employee') {
-    baseDashboardPath = '/employee/dashboard';
-  } else { // admin oder manager
-    baseDashboardPath = '/dashboard';
+    baseDashboardPath = '/employee/dashboard'
+  } else {
+    // admin, manager, platform_admin
+    baseDashboardPath = '/dashboard'
   }
 
-  // --- 3. Rollenbasierte Routen-Erzwingung ---
-
-  // Wenn der Benutzer auf '/login' ist, leite ihn zu seinem korrekten Basis-Dashboard um
-  // WICHTIG: '/' NICHT hier redirecten, da '/' die öffentliche Landing Page ist!
+  // --- 5. Route enforcement ---
   if (pathname === '/login') {
-    return NextResponse.redirect(new URL(baseDashboardPath, request.url));
+    return NextResponse.redirect(new URL(baseDashboardPath, request.url))
   }
 
-  // Spezifische Regeln für jede Rolle, um sicherzustellen, dass sie in ihren erlaubten Bereichen bleiben
   if (userRole === 'customer') {
-    // Kunden MÜSSEN sich in /portal/* befinden
     if (!pathname.startsWith('/portal')) {
-      return NextResponse.redirect(new URL('/portal/dashboard', request.url));
+      return NextResponse.redirect(new URL('/portal/dashboard', request.url))
     }
   } else if (userRole === 'employee') {
-    // Mitarbeiter MÜSSEN sich in /employee/* befinden
     if (!pathname.startsWith('/employee')) {
-      return NextResponse.redirect(new URL('/employee/dashboard', request.url));
+      return NextResponse.redirect(new URL('/employee/dashboard', request.url))
     }
-  } else if (userRole === 'admin' || userRole === 'manager') {
-    // Admins/Manager DÜRFEN NICHT in /portal/* oder /employee/* sein
+  } else if (
+    userRole === 'admin'
+    || userRole === 'manager'
+    || userRole === 'platform_admin'
+  ) {
     if (pathname.startsWith('/portal') || pathname.startsWith('/employee')) {
-      return NextResponse.redirect(new URL('/dashboard', request.url));
+      return NextResponse.redirect(new URL('/dashboard', request.url))
     }
   }
 
-  // Wenn keine der oben genannten Umleitungsregeln zutrifft, erlaube die Anfrage.
-  return response;
+  return response
 }
 
 export const config = {
   matcher: [
-    /*
-     * Alle Anfragewege abgleichen, außer denen, die beginnen mit:
-     * - _next/static (statische Dateien)
-     * - _next/image (Bildoptimierungsdateien)
-     * - favicon.ico (Favicon-Datei)
-     * - beliebige Dateien im öffentlichen Ordner (z.B. /vercel.svg)
-     */
     '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }
