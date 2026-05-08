@@ -216,7 +216,7 @@ export default function TemplatesPage() {
                       Kategorie
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent>
+                  <DropdownMenuContent glass>
                     <DropdownMenuItem onClick={() => setFilterCategory("all")}>
                       Alle Kategorien
                     </DropdownMenuItem>
@@ -307,7 +307,7 @@ export default function TemplatesPage() {
                                 <MoreHorizontal className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
+                            <DropdownMenuContent align="end" glass>
                               <DropdownMenuItem onClick={() => handleEdit(template)}>
                                 <Edit3 className="h-4 w-4 mr-2" />
                                 Bearbeiten

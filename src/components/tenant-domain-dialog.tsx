@@ -112,7 +112,7 @@ export function TenantDomainDialog({
       if (!newOpen) resetForm();
       onOpenChange(newOpen);
     }}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="sm:max-w-[600px] glassmorphism-card">
         <DialogHeader>
           <DialogTitle>
             {step === 'add' && `Custom Domain für ${tenantName}`}

@@ -396,7 +396,7 @@ export function CreateShiftDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={handleOpenChange}>
-        <DialogContent className="sm:max-w-5xl max-h-[90vh] flex flex-col p-0 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm dark:shadow-none">
+        <DialogContent className="sm:max-w-5xl max-h-[90vh] flex flex-col p-0 glassmorphism-card">
           <DialogHeader className="px-4 pt-4 pb-2">
             <DialogTitle className="text-lg font-medium flex items-center gap-2">
               <Plus className="h-5 w-5" />

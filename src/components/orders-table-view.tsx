@@ -86,7 +86,7 @@ export function OrdersTableView({
   }
 
   return (
-    <div className="overflow-x-auto p-4 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none">
+    <div className="overflow-x-auto p-4 rounded-lg dashboard-card">
       <Table>
         <TableHeader>
           <TableRow>

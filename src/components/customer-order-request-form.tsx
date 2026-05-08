@@ -292,7 +292,7 @@ export function CustomerOrderRequestForm({ customerId, onSuccess, isInDialog = f
 
   return (
     <UnsavedChangesProtection formId="customer-order-request-form">
-      <Card className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm dark:shadow-none">
+      <Card className="dashboard-card">
         <CardHeader>
           <CardTitle className="text-lg font-semibold flex items-center gap-2">
             <ShoppingCart className="h-5 w-5 text-primary" />
