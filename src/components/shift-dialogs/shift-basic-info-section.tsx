@@ -82,13 +82,13 @@ export function ShiftBasicInfoSection({ form }: ShiftBasicInfoSectionProps) {
       {/* Date Selection - full width for single, 2-col for recurring */}
       <div className={shiftType === "recurring" ? "grid grid-cols-2 gap-4" : "w-full"}>
         <div className={shiftType === "recurring" ? "" : "w-full"}>
-          <Label className="text-sm text-muted-foreground mb-1.5 block">
+          <Label className="text-xs uppercase tracking-wider text-muted-foreground mb-1.5 block">
             {shiftType === "recurring" ? "Startdatum" : "Datum"}
           </Label>
           <Controller
             name="shiftDate"
             control={form.control}
-            render={({ field }) => <Input type="date" {...field} className="w-full" />}
+            render={({ field }) => <Input type="date" {...field} className="w-full bg-transparent border-b border-input py-1 focus:border-primary focus:outline-none rounded-none px-0" />}
           />
         </div>
         {shiftType === "recurring" && (
@@ -98,7 +98,7 @@ export function ShiftBasicInfoSection({ form }: ShiftBasicInfoSectionProps) {
               name="endDate"
               control={form.control}
               render={({ field }) => (
-                <Input type="date" {...field} min={form.getValues("shiftDate")} className="w-full" />
+                <Input type="date" {...field} min={form.getValues("shiftDate")} className="w-full bg-transparent border-b border-input py-1 focus:border-primary focus:outline-none rounded-none px-0" />
               )}
             />
           </div>
@@ -109,9 +109,9 @@ export function ShiftBasicInfoSection({ form }: ShiftBasicInfoSectionProps) {
       {shiftType === "single" && (
         <>
           {/* Start and End Time */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="startTime" className="text-sm text-muted-foreground mb-1.5 block">
+          <div className="grid grid-cols-2 gap-4 items-stretch">
+            <div className="flex flex-col">
+              <Label htmlFor="startTime" className="text-xs uppercase tracking-wider text-muted-foreground mb-1.5 block">
                 Von
               </Label>
               <Controller
@@ -122,7 +122,7 @@ export function ShiftBasicInfoSection({ form }: ShiftBasicInfoSectionProps) {
                     id="startTime"
                     type="time"
                     value={field.value ?? ""}
-                    className="w-full"
+                    className="w-full bg-transparent border-b border-input py-1 focus:border-primary focus:outline-none rounded-none px-0"
                     onChange={(e) => {
                       field.onChange(e);
                       form.trigger(["startTime", "endTime", "travelTimeMinutes", "breakTimeMinutes"]);
@@ -131,8 +131,8 @@ export function ShiftBasicInfoSection({ form }: ShiftBasicInfoSectionProps) {
                 )}
               />
             </div>
-            <div>
-              <Label htmlFor="endTime" className="text-sm text-muted-foreground mb-1.5 block">
+            <div className="flex flex-col">
+              <Label htmlFor="endTime" className="text-xs uppercase tracking-wider text-muted-foreground mb-1.5 block">
                 Bis
               </Label>
               <Controller
@@ -143,7 +143,7 @@ export function ShiftBasicInfoSection({ form }: ShiftBasicInfoSectionProps) {
                     id="endTime"
                     type="time"
                     value={field.value ?? ""}
-                    className="w-full"
+                    className="w-full bg-transparent border-b border-input py-1 focus:border-primary focus:outline-none rounded-none px-0"
                     onChange={(e) => {
                       field.onChange(e);
                       form.trigger(["startTime", "endTime", "travelTimeMinutes", "breakTimeMinutes"]);
