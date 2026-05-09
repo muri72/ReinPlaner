@@ -125,9 +125,9 @@ export function ObjectCreateDialog({
       )}
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="details">Details</TabsTrigger>
-          <TabsTrigger value="documents">
+        <TabsList className="w-full mb-4">
+          <TabsTrigger value="details" className="flex-1">Details</TabsTrigger>
+          <TabsTrigger value="documents" className="flex-1">
             <FileStack className="mr-2 h-4 w-4" />
             Dokumente
           </TabsTrigger>
