@@ -25,6 +25,7 @@ interface RecordDialogProps {
   size?: "sm" | "md" | "lg" | "xl";
   hideCloseButton?: boolean;
   onOpenAutoFocus?: (e: Event) => void;
+  footer?: ReactNode;
 }
 
 export function RecordDialog({
@@ -38,6 +39,7 @@ export function RecordDialog({
   size = "md",
   hideCloseButton = false,
   onOpenAutoFocus,
+  footer,
 }: RecordDialogProps) {
   const [showConfirmClose, setShowConfirmClose] = useState(false);
   const { isDirty } = useDialogUnsavedChanges();
@@ -114,13 +116,19 @@ export function RecordDialog({
           </div>
 
           {/* Sticky Footer with Action Buttons */}
-          <div className="flex-shrink-0 border-t px-6 py-4 bg-background/80 backdrop-blur-sm">
-            <div className="flex justify-end gap-3">
-              <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-                Abbrechen
-              </Button>
+          {footer ? (
+            <div className="flex-shrink-0 border-t px-6 py-4 bg-background/80 backdrop-blur-sm">
+              {footer}
             </div>
-          </div>
+          ) : (
+            <div className="flex-shrink-0 border-t px-6 py-4 bg-background/80 backdrop-blur-sm">
+              <div className="flex justify-end gap-3">
+                <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+                  Abbrechen
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 

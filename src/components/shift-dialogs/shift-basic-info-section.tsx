@@ -88,7 +88,7 @@ export function ShiftBasicInfoSection({ form }: ShiftBasicInfoSectionProps) {
           <Controller
             name="shiftDate"
             control={form.control}
-            render={({ field }) => <Input type="date" {...field} />}
+            render={({ field }) => <Input type="date" {...field} className="h-10" />}
           />
         </div>
         {shiftType === "recurring" && (
@@ -98,7 +98,7 @@ export function ShiftBasicInfoSection({ form }: ShiftBasicInfoSectionProps) {
               name="endDate"
               control={form.control}
               render={({ field }) => (
-                <Input type="date" {...field} min={form.getValues("shiftDate")} />
+                <Input type="date" {...field} min={form.getValues("shiftDate")} className="h-10" />
               )}
             />
           </div>
@@ -122,6 +122,7 @@ export function ShiftBasicInfoSection({ form }: ShiftBasicInfoSectionProps) {
                     id="startTime"
                     type="time"
                     value={field.value ?? ""}
+                    className="h-10"
                     onChange={(e) => {
                       field.onChange(e);
                       form.trigger(["startTime", "endTime", "travelTimeMinutes", "breakTimeMinutes"]);
@@ -142,6 +143,7 @@ export function ShiftBasicInfoSection({ form }: ShiftBasicInfoSectionProps) {
                     id="endTime"
                     type="time"
                     value={field.value ?? ""}
+                    className="h-10"
                     onChange={(e) => {
                       field.onChange(e);
                       form.trigger(["startTime", "endTime", "travelTimeMinutes", "breakTimeMinutes"]);
