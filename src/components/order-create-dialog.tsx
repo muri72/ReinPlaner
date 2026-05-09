@@ -75,6 +75,7 @@ export function OrderCreateDialog({
       description="Erstellen Sie einen neuen Auftrag für einen Kunden."
       icon={<ShoppingCart className="h-5 w-5 text-primary" />}
       size="lg"
+      onOpenAutoFocus={(e) => e.preventDefault()}
     >
       {!hideTrigger && (
         <DialogTrigger asChild>
@@ -88,9 +89,9 @@ export function OrderCreateDialog({
       )}
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="details">Details</TabsTrigger>
-          <TabsTrigger value="documents">
+        <TabsList className="w-full mb-4">
+          <TabsTrigger value="details" className="flex-1">Details</TabsTrigger>
+          <TabsTrigger value="documents" className="flex-1">
             <FileStack className="mr-2 h-4 w-4" />
             Dokumente
           </TabsTrigger>
