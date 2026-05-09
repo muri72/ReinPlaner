@@ -42,6 +42,7 @@ export function TicketCreateDialog({
       description="Erstellen Sie ein neues Support-Ticket für Ihr Anliegen."
       icon={<MessageSquare className="h-5 w-5 text-primary" />}
       size="lg"
+      onOpenAutoFocus={(e) => e.preventDefault()}
     >
       <DialogTrigger asChild>
         <Button variant={triggerButtonVariant} className={triggerButtonClassName}>

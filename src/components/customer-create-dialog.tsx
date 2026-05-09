@@ -42,6 +42,7 @@ export function CustomerCreateDialog({ onCustomerCreated, trigger }: CustomerCre
       description="Erfassen Sie die Stammdaten für einen neuen Kunden oder Partner."
       icon={<Building2 className="h-5 w-5 text-primary" />}
       size="lg"
+      onOpenAutoFocus={(e) => e.preventDefault()}
     >
       <DialogTrigger asChild>
         {trigger ?? (

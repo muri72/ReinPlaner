@@ -32,6 +32,7 @@ export function UserCreateDialog({ onUserCreated }: UserCreateDialogProps) {
       description="Erstellen Sie einen neuen Benutzer mit entsprechenden Rollen und Zuweisungen."
       icon={<UserCheck className="h-5 w-5 text-primary" />}
       size="lg"
+      onOpenAutoFocus={(e) => e.preventDefault()}
     >
       <DialogTrigger asChild>
         <Button>
