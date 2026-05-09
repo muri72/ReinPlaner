@@ -65,25 +65,21 @@ export function ObjectCreateDialog({
     }
   }, [open]);
 
-  // Ensure dialog content scrolls to top when opening
+  // Scroll content to top when dialog opens
   useEffect(() => {
     if (open) {
-      // Scroll the dialog content to top using multiple strategies
+      // Use multiple frames to ensure DOM is fully ready after animation
+      let frameCount = 0;
       const scrollToTop = () => {
-        // Try data attribute first
+        frameCount++;
         const content = document.querySelector("[data-dialog-content]");
         if (content) {
           content.scrollTop = 0;
         }
-        // Also scroll the form wrapper to top
-        const form = document.querySelector("[data-dialog-content] form");
-        if (form) {
-          form.scrollTop = 0;
+        if (frameCount < 3) {
+          requestAnimationFrame(scrollToTop);
         }
-        // Fallback: scroll window to top if dialog is full-page
-        window.scrollTo({ top: 0, behavior: "instant" });
       };
-      // Use requestAnimationFrame to ensure DOM is ready
       requestAnimationFrame(scrollToTop);
     }
   }, [open]);

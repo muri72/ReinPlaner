@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, UserCog, FileStack } from "lucide-react";
 import { EmployeeForm, EmployeeFormValues } from "@/components/employee-form";
@@ -31,6 +31,24 @@ export function EmployeeCreateDialog({ onEmployeeCreated, trigger }: EmployeeCre
     }
     setInternalOpen(next);
   };
+
+  // Scroll content to top when dialog opens
+  useEffect(() => {
+    if (internalOpen) {
+      let frameCount = 0;
+      const scrollToTop = () => {
+        frameCount++;
+        const content = document.querySelector("[data-dialog-content]");
+        if (content) {
+          content.scrollTop = 0;
+        }
+        if (frameCount < 3) {
+          requestAnimationFrame(scrollToTop);
+        }
+      };
+      requestAnimationFrame(scrollToTop);
+    }
+  }, [internalOpen]);
 
   const handleCreate = async (data: EmployeeFormValues) => {
     const result = await createEmployee(data);

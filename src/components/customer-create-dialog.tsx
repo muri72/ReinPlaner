@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, Building2, FileStack } from "lucide-react";
 import { CustomerForm, CustomerFormValues } from "@/components/customer-form";
@@ -24,6 +24,24 @@ export function CustomerCreateDialog({ onCustomerCreated, trigger }: CustomerCre
   const setOpenState = (next: boolean) => {
     setInternalOpen(next);
   };
+
+  // Scroll content to top when dialog opens
+  useEffect(() => {
+    if (internalOpen) {
+      let frameCount = 0;
+      const scrollToTop = () => {
+        frameCount++;
+        const content = document.querySelector("[data-dialog-content]");
+        if (content) {
+          content.scrollTop = 0;
+        }
+        if (frameCount < 3) {
+          requestAnimationFrame(scrollToTop);
+        }
+      };
+      requestAnimationFrame(scrollToTop);
+    }
+  }, [internalOpen]);
 
   const handleCreate = async (data: CustomerFormValues) => {
     const result = await createCustomer(data);
