@@ -87,7 +87,7 @@ export function RecordDialog({
 
         <DialogContent
           className={cn(
-            "max-h-[90vh] md:max-h-[85vh] overflow-hidden flex flex-col p-0",
+            "max-h-[90vh] md:max-h-[85vh] overflow-hidden flex flex-col",
             sizeClasses[size],
             className
           )}
@@ -108,7 +108,7 @@ export function RecordDialog({
           </DialogHeader>
 
           {/* Scrollable Content */}
-          <div data-dialog-content className="flex-1 overflow-y-auto px-6 py-4">
+          <div data-dialog-content className="flex-1 overflow-y-auto px-6 py-4 min-h-0">
             {contentChildren}
           </div>
         </DialogContent>
