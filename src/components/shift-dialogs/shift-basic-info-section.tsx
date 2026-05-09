@@ -111,7 +111,7 @@ export function ShiftBasicInfoSection({ form }: ShiftBasicInfoSectionProps) {
           {/* Start and End Time */}
           <div className="grid grid-cols-2 gap-4 items-stretch">
             <div className="flex flex-col">
-              <Label htmlFor="startTime" className="text-xs uppercase tracking-wider text-muted-foreground mb-1.5 block">
+              <Label htmlFor="startTime" className="text-sm text-muted-foreground mb-1.5 block">
                 Von
               </Label>
               <Controller
@@ -132,7 +132,7 @@ export function ShiftBasicInfoSection({ form }: ShiftBasicInfoSectionProps) {
               />
             </div>
             <div className="flex flex-col">
-              <Label htmlFor="endTime" className="text-xs uppercase tracking-wider text-muted-foreground mb-1.5 block">
+              <Label htmlFor="endTime" className="text-sm text-muted-foreground mb-1.5 block">
                 Bis
               </Label>
               <Controller
