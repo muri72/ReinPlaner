@@ -88,7 +88,7 @@ export function ShiftBasicInfoSection({ form }: ShiftBasicInfoSectionProps) {
           <Controller
             name="shiftDate"
             control={form.control}
-            render={({ field }) => <Input type="date" {...field} className="w-full bg-transparent border-b border-input py-1 focus:border-primary focus:outline-none rounded-none px-0" />}
+            render={({ field }) => <Input type="date" {...field} className="w-full border border-input rounded-md px-3 py-2 text-sm bg-background focus:border-primary focus:outline-none focus:ring-1 focus:ring-ring" />}
           />
         </div>
         {shiftType === "recurring" && (
@@ -98,7 +98,7 @@ export function ShiftBasicInfoSection({ form }: ShiftBasicInfoSectionProps) {
               name="endDate"
               control={form.control}
               render={({ field }) => (
-                <Input type="date" {...field} min={form.getValues("shiftDate")} className="w-full bg-transparent border-b border-input py-1 focus:border-primary focus:outline-none rounded-none px-0" />
+                <Input type="date" {...field} min={form.getValues("shiftDate")} className="w-full border border-input rounded-md px-3 py-2 text-sm bg-background focus:border-primary focus:outline-none focus:ring-1 focus:ring-ring" />
               )}
             />
           </div>
@@ -122,7 +122,7 @@ export function ShiftBasicInfoSection({ form }: ShiftBasicInfoSectionProps) {
                     id="startTime"
                     type="time"
                     value={field.value ?? ""}
-                    className="w-full bg-transparent border-b border-input py-1 focus:border-primary focus:outline-none rounded-none px-0"
+                    className="w-full border border-input rounded-md px-3 py-2 text-sm bg-background focus:border-primary focus:outline-none focus:ring-1 focus:ring-ring"
                     onChange={(e) => {
                       field.onChange(e);
                       form.trigger(["startTime", "endTime", "travelTimeMinutes", "breakTimeMinutes"]);
@@ -143,7 +143,7 @@ export function ShiftBasicInfoSection({ form }: ShiftBasicInfoSectionProps) {
                     id="endTime"
                     type="time"
                     value={field.value ?? ""}
-                    className="w-full bg-transparent border-b border-input py-1 focus:border-primary focus:outline-none rounded-none px-0"
+                    className="w-full border border-input rounded-md px-3 py-2 text-sm bg-background focus:border-primary focus:outline-none focus:ring-1 focus:ring-ring"
                     onChange={(e) => {
                       field.onChange(e);
                       form.trigger(["startTime", "endTime", "travelTimeMinutes", "breakTimeMinutes"]);
