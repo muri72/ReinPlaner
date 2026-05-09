@@ -88,7 +88,7 @@ export function ShiftBasicInfoSection({ form }: ShiftBasicInfoSectionProps) {
           <Controller
             name="shiftDate"
             control={form.control}
-            render={({ field }) => <Input type="date" {...field} className="w-full border border-input rounded-md px-3 py-2 text-sm bg-background focus:border-primary focus:outline-none focus:ring-1 focus:ring-ring" />}
+            render={({ field }) => <Input type="date" {...field} className="w-full rounded-md" />}
           />
         </div>
         {shiftType === "recurring" && (
@@ -98,7 +98,7 @@ export function ShiftBasicInfoSection({ form }: ShiftBasicInfoSectionProps) {
               name="endDate"
               control={form.control}
               render={({ field }) => (
-                <Input type="date" {...field} min={form.getValues("shiftDate")} className="w-full border border-input rounded-md px-3 py-2 text-sm bg-background focus:border-primary focus:outline-none focus:ring-1 focus:ring-ring" />
+                <Input type="date" {...field} min={form.getValues("shiftDate")} className="w-full rounded-md" />
               )}
             />
           </div>
@@ -122,7 +122,7 @@ export function ShiftBasicInfoSection({ form }: ShiftBasicInfoSectionProps) {
                     id="startTime"
                     type="time"
                     value={field.value ?? ""}
-                    className="w-full border border-input rounded-md px-3 py-2 text-sm bg-background focus:border-primary focus:outline-none focus:ring-1 focus:ring-ring"
+                    className="w-full rounded-md"
                     onChange={(e) => {
                       field.onChange(e);
                       form.trigger(["startTime", "endTime", "travelTimeMinutes", "breakTimeMinutes"]);
@@ -143,7 +143,7 @@ export function ShiftBasicInfoSection({ form }: ShiftBasicInfoSectionProps) {
                     id="endTime"
                     type="time"
                     value={field.value ?? ""}
-                    className="w-full border border-input rounded-md px-3 py-2 text-sm bg-background focus:border-primary focus:outline-none focus:ring-1 focus:ring-ring"
+                    className="w-full rounded-md"
                     onChange={(e) => {
                       field.onChange(e);
                       form.trigger(["startTime", "endTime", "travelTimeMinutes", "breakTimeMinutes"]);
