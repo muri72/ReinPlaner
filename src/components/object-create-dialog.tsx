@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, Building, FileStack } from "lucide-react";
 import { ObjectForm, ObjectFormValues } from "@/components/object-form";
@@ -34,6 +34,7 @@ export function ObjectCreateDialog({
   const [formKey, setFormKey] = useState(0);
   const isControlled = controlledOpen !== undefined;
   const open = isControlled ? controlledOpen : internalOpen;
+  const justOpenedRef = useRef(false);
 
   const setOpenState = (next: boolean) => {
     if (next && !open) {
@@ -41,12 +42,28 @@ export function ObjectCreateDialog({
       setFormKey(prev => prev + 1);
       setCreatedObjectId(null);
       setActiveTab("details");
+      justOpenedRef.current = true;
     }
     if (!isControlled) {
       setInternalOpen(next);
     }
     onOpenChange?.(next);
   };
+
+  // Prevent autofocus on first field when dialog opens
+  useEffect(() => {
+    if (open && justOpenedRef.current) {
+      // Blur any focused element inside the dialog after a short delay
+      const timer = setTimeout(() => {
+        const focused = document.activeElement as HTMLElement | null;
+        if (focused && document.contains(focused)) {
+          focused.blur();
+        }
+        justOpenedRef.current = false;
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [open]);
 
   const handleCreate = async (data: ObjectFormValues) => {
     const result = await createObject(data);
