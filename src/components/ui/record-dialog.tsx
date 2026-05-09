@@ -9,6 +9,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { UnsavedChangesAlert } from "@/components/ui/unsaved-changes-alert";
 import { useDialogUnsavedChanges } from "@/components/ui/unsaved-changes-context";
 import { cn } from "@/lib/utils";
@@ -107,9 +108,18 @@ export function RecordDialog({
             )}
           </DialogHeader>
 
-          {/* Scrollable Content */}
+{/* Scrollable Content */}
           <div data-dialog-content className="flex-1 overflow-y-auto px-6 py-4 min-h-0">
             {contentChildren}
+          </div>
+
+          {/* Sticky Footer with Action Buttons */}
+          <div className="flex-shrink-0 border-t px-6 py-4 bg-background/80 backdrop-blur-sm">
+            <div className="flex justify-end gap-3">
+              <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+                Abbrechen
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
