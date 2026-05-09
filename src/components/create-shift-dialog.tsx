@@ -409,7 +409,7 @@ export function CreateShiftDialog({
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={form.handleSubmit(onSubmit)} className="flex-grow overflow-y-auto px-4 space-y-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="flex-grow overflow-y-auto overflow-x-hidden px-4 space-y-4">
             {/* Object & Order Selection */}
             <ShiftObjectSelector
               form={form}
