@@ -65,6 +65,16 @@ export function ObjectCreateDialog({
     }
   }, [open]);
 
+  // Ensure dialog content scrolls to top when opening
+  useEffect(() => {
+    if (open) {
+      const content = document.querySelector("[data-dialog-content]");
+      if (content) {
+        content.scrollTop = 0;
+      }
+    }
+  }, [open]);
+
   const handleCreate = async (data: ObjectFormValues) => {
     const result = await createObject(data);
     if (result.success) {

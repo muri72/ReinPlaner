@@ -108,7 +108,7 @@ export function RecordDialog({
           </DialogHeader>
 
           {/* Scrollable Content */}
-          <div className="flex-1 overflow-y-auto px-6 py-4">
+          <div data-dialog-content className="flex-1 overflow-y-auto px-6 py-4">
             {contentChildren}
           </div>
         </DialogContent>
