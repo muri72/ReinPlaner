@@ -23,6 +23,7 @@ interface RecordDialogProps {
   className?: string;
   size?: "sm" | "md" | "lg" | "xl";
   hideCloseButton?: boolean;
+  onOpenAutoFocus?: (e: Event) => void;
 }
 
 export function RecordDialog({
@@ -35,6 +36,7 @@ export function RecordDialog({
   className,
   size = "md",
   hideCloseButton = false,
+  onOpenAutoFocus,
 }: RecordDialogProps) {
   const [showConfirmClose, setShowConfirmClose] = useState(false);
   const { isDirty } = useDialogUnsavedChanges();
@@ -90,6 +92,7 @@ export function RecordDialog({
             className
           )}
           hideCloseButton={hideCloseButton}
+          onOpenAutoFocus={onOpenAutoFocus}
         >
           {/* Dialog Header — fixed, doesn't scroll */}
           <DialogHeader className="px-6 py-4 border-b flex-shrink-0">

@@ -60,7 +60,7 @@ DialogDescription.displayName = DialogPrimitive.Overlay.displayName
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & { hideCloseButton?: boolean }
->(({ className, children, hideCloseButton, ...props }, ref) => (
+>(({ className, children, hideCloseButton, onOpenAutoFocus, ...props }, ref) => (
   <DialogPortal>
     <DialogOverlay />
     <DialogPrimitive.Content
@@ -70,6 +70,7 @@ const DialogContent = React.forwardRef<
         className
       )}
       style={{ zIndex: 110 }}
+      onOpenAutoFocus={onOpenAutoFocus}
       {...props}
     >
       {children}

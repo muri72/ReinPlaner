@@ -64,14 +64,15 @@ export function ObjectCreateDialog({
   };
 
   return (
-    <RecordDialog
-      open={open}
-      onOpenChange={setOpenState}
-      title="Neues Objekt erstellen"
-      description="Erstellen Sie ein neues Objekt für einen Kunden."
-      icon={<Building className="h-5 w-5 text-primary" />}
-      size="lg"
-    >
+<RecordDialog
+        open={open}
+        onOpenChange={setOpenState}
+        title="Neues Objekt erstellen"
+        description="Erstellen Sie ein neues Objekt für einen Kunden."
+        icon={<Building className="h-5 w-5 text-primary" />}
+        size="lg"
+        onOpenAutoFocus={(e) => e.preventDefault()}
+      >
       {!hideTrigger && (
         <DialogTrigger asChild>
           {trigger ?? (
