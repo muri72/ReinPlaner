@@ -87,7 +87,7 @@ export function RecordDialog({
 
         <DialogContent
           className={cn(
-            "max-h-[90vh] overflow-hidden flex flex-col p-0",
+            "max-h-[90vh] md:max-h-[85vh] overflow-hidden flex flex-col p-0",
             sizeClasses[size],
             className
           )}
