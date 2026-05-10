@@ -262,7 +262,7 @@ export function UserForm({
 
       <UserFormHeader isEditMode={isEditMode} isInDialog={isInDialog} />
 
-      <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-6 w-full">
+      <form id="user-form" onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-6 w-full">
         {/* Assignment Section - only in create mode */}
         {!isEditMode && (
           <AssignmentSection
@@ -315,13 +315,15 @@ export function UserForm({
           />
         )}
 
-        {/* Form Actions */}
-        <FormActions
-          onCancel={handleCancel}
-          onSubmit={handleSubmitClick}
-          isSubmitting={form.formState.isSubmitting}
-          submitLabel={submitButtonText}
-        />
+        {/* Form Actions - hidden in dialog mode since dialog provides its own buttons */}
+        {!isInDialog && (
+          <FormActions
+            onCancel={handleCancel}
+            onSubmit={handleSubmitClick}
+            isSubmitting={form.formState.isSubmitting}
+            submitLabel={submitButtonText}
+          />
+        )}
       </form>
     </>
   );

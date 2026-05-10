@@ -355,7 +355,7 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess,
   };
 
   return (
-    <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 w-full">
+    <form onSubmit={form.handleSubmit(handleFormSubmit)} id="object-form" className="space-y-4 w-full">
       <div>
         <LabelWithRequired htmlFor="name" required>Objektname</LabelWithRequired>
         <Input
@@ -716,16 +716,18 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess,
           Geschätzte Wochenstunden (Netto, über alle Wochen): {totalWeeklyHours.toFixed(2)}
         </div>
       </div>
-      <FormActions
-        isSubmitting={form.formState.isSubmitting}
-        onCancel={handleCancel}
-        onSubmit={handleSubmitClick}
-        submitLabel={submitButtonText}
-        cancelLabel="Abbrechen"
-        showCancel={!isInDialog}
-        submitVariant="default"
-        loadingText={`${submitButtonText}...`}
-      />
+      {!isInDialog && (
+        <FormActions
+          isSubmitting={form.formState.isSubmitting}
+          onCancel={handleCancel}
+          onSubmit={handleSubmitClick}
+          submitLabel={submitButtonText}
+          cancelLabel="Abbrechen"
+          showCancel={!isInDialog}
+          submitVariant="default"
+          loadingText={`${submitButtonText}...`}
+        />
+      )}
     </form>
   );
 }

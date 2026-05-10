@@ -1,43 +1,49 @@
 "use client";
 
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, MessageSquare } from "lucide-react";
+import { MessageSquare } from "lucide-react";
 import { GeneralDashboardFeedbackForm } from "@/components/general-dashboard-feedback-form";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+import { RecordDialog } from "@/components/ui/record-dialog";
+import { DialogTrigger } from "@/components/ui/dialog";
 
 interface GiveGeneralFeedbackDialogProps {
   onFeedbackSubmitted?: () => void;
-  onSuccess?: () => void; // Hinzugefügt
+  onSuccess?: () => void;
 }
 
 export function GiveGeneralFeedbackDialog({ onFeedbackSubmitted, onSuccess }: GiveGeneralFeedbackDialogProps) {
   const [open, setOpen] = useState(false);
-  // Removed titleId and descriptionId as they are no longer needed for aria attributes
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <RecordDialog
+      open={open}
+      onOpenChange={setOpen}
+      title="Allgemeines Feedback einreichen"
+      description="Formular zum Einreichen von allgemeinem Feedback."
+      icon={<MessageSquare className="h-5 w-5 text-primary" />}
+      size="lg"
+      footer={
+        <div className="flex justify-end gap-3">
+          <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
+            Abbrechen
+          </Button>
+        </div>
+      }
+    >
       <DialogTrigger asChild>
         <Button variant="outline" className="w-full">
           <MessageSquare className="mr-2 h-4 w-4" /> Allgemeines Feedback geben
         </Button>
       </DialogTrigger>
-      <DialogContent 
-        key={open ? "give-general-feedback-open" : "give-general-feedback-closed"} 
-        className="sm:max-w-3xl max-h-[90vh] overflow-y-auto glassmorphism-card"
-      >
-        <DialogHeader>
-          <DialogTitle>Allgemeines Feedback einreichen</DialogTitle>
-          <DialogDescription>
-            Formular zum Einreichen von allgemeinem Feedback.
-          </DialogDescription>
-        </DialogHeader>
-        <GeneralDashboardFeedbackForm onSuccess={() => {
+
+      <GeneralDashboardFeedbackForm
+        key={open ? "give-general-feedback-open" : "give-general-feedback-closed"}
+        onSuccess={() => {
           setOpen(false);
-          onSuccess?.(); // Ruft die onSuccess-Prop des Dialogs auf
-        }} />
-      </DialogContent>
-    </Dialog>
+          onSuccess?.();
+        }}
+      />
+    </RecordDialog>
   );
 }

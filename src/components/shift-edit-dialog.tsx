@@ -3,7 +3,7 @@
 import * as React from "react";
 import { Calendar, Clock, Users, Repeat, Trash2, Copy, Edit3, Check, Save, X, ChevronsUpDown, Layers, MapPin, User, Coffee, Car } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { RecordDialog } from "@/components/ui/record-dialog";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { format, parseISO } from "date-fns";
@@ -279,118 +279,157 @@ export function ShiftEditDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        className="sm:max-w-md max-h-[90vh] overflow-y-auto p-0 glassmorphism-card"
-        aria-labelledby="shift-dialog-title"
-      >
-        {/* Header */}
-        <DialogHeader className="px-4 pt-4 pb-2">
-          <DialogTitle className="text-base font-medium flex items-start justify-between gap-2" id="shift-dialog-title">
-            <div className="flex-1 min-w-0">
-              <div className="truncate">{shift.job_title}</div>
-              <div className="flex items-center gap-1.5 mt-1 text-sm text-muted-foreground">
-                <Calendar className="h-3.5 w-3.5 shrink-0" />
-                <span>{formattedDate}</span>
-              </div>
-              <div className="flex items-center gap-1.5 mt-0.5 text-sm text-muted-foreground">
-                <Clock className="h-3.5 w-3.5 shrink-0" />
-                <span>{startTime} - {endTime} ({hours.toFixed(2)} Std.)</span>
-                {(shift.travel_time_minutes || shift.break_time_minutes) && (
-                  <span className="text-xs">
-                    {(shift.travel_time_minutes || 0) > 0 && (
-                      <span className="inline-flex items-center gap-0.5">
-                        <Car className="h-3 w-3" />
-                        {shift.travel_time_minutes}m
-                      </span>
-                    )}
-                    {(shift.break_time_minutes || 0) > 0 && (
-                      <span className="inline-flex items-center gap-0.5 ml-2">
-                        <Coffee className="h-3 w-3" />
-                        {shift.break_time_minutes}m
-                      </span>
-                    )}
-                  </span>
-                )}
-              </div>
-              {/* Address */}
-              {(shift.object_address || shift.object_name) && (
-                <div className="flex items-center gap-1.5 mt-1.5 text-sm text-muted-foreground">
-                  <MapPin className="h-3.5 w-3.5 shrink-0" />
-                  {shift.object_address ? (
-                    <a
-                      href={`https://maps.google.com/maps?q=${encodeURIComponent(shift.object_address)}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="hover:text-primary hover:underline transition-colors"
-                      onClick={(e) => {
-                        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-                        if (isMobile && shift.object_address) {
-                          window.location.href = `maps:0,0?q=${encodeURIComponent(shift.object_address)}`;
-                          e.preventDefault();
-                        }
-                      }}
-                    >
-                      {shift.object_address}
-                    </a>
-                  ) : (
-                    <span>{shift.object_name}</span>
-                  )}
-                </div>
-              )}
-              {/* Team Members */}
-              {shift.is_team && shift.employees.length > 1 && !shift.is_multi_shift && (
-                <div className="flex items-center gap-1.5 mt-1.5 text-sm text-muted-foreground">
-                  <Users className="h-3.5 w-3.5 shrink-0" />
-                  <span>{shift.employees.map(e => e.employee_name).join(", ")}</span>
-                </div>
-              )}
-              {/* Multi-Shift */}
-              {shift.is_multi_shift && shift.employees.length > 1 && (
-                <div className="flex items-center gap-1.5 mt-1.5 text-sm text-muted-foreground">
-                  <Layers className="h-3.5 w-3.5 shrink-0" />
-                  <span>{shift.employees.map(e => e.employee_name).join(", ")}</span>
-                </div>
-              )}
-              {/* Single Employee */}
-              {!shift.is_team && !shift.is_multi_shift && shift.employees[0] && (
-                <div className="flex items-center gap-1.5 mt-1.5 text-sm text-muted-foreground">
-                  <User className="h-3.5 w-3.5 shrink-0" />
-                  <span>{shift.employees[0].employee_name}</span>
-                </div>
-              )}
-            </div>
-          </DialogTitle>
-        </DialogHeader>
-
-        {/* Badges */}
-        <div className="px-4 pb-2 flex flex-wrap gap-1.5">
-          {shift.is_recurring && (
-            <Badge variant="secondary" className="text-xs gap-1">
-              <Repeat className="h-3 w-3" />
-              Serie
-            </Badge>
+    <RecordDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={shift.job_title}
+      description={`${formattedDate} | ${startTime} - ${endTime} (${hours.toFixed(2)} Std.)`}
+      icon={<Calendar className="h-5 w-5" />}
+      className="sm:max-w-md max-h-[90vh] overflow-y-auto p-0 glassmorphism-card"
+      footer={
+        <div className="flex justify-end gap-3">
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => onOpenChange(false)}
+            disabled={saving || deleting || copying}
+          >
+            Abbrechen
+          </Button>
+          {action === "edit" && (
+            <Button
+              type="button"
+              onClick={handleSave}
+              disabled={saving || deleting || copying}
+            >
+              <Save className="h-4 w-4 mr-2" />
+              {saving ? "Speichern..." : "Speichern"}
+            </Button>
           )}
-          {shift.service_title && (
-            <Badge className="text-xs" style={{ backgroundColor: shift.service_color || "#3b82f6", color: "#ffffff" }}>
-              {shift.service_title}
-            </Badge>
+          {action === "copy" && (
+            <Button
+              type="button"
+              onClick={handleCopy}
+              disabled={saving || deleting || copying}
+            >
+              <Copy className="h-4 w-4 mr-2" />
+              {copying ? "Kopieren..." : "Kopieren"}
+            </Button>
           )}
-          {(shift.is_multi_shift || (shift.employees.length > 1 && !shift.is_team)) && (
-            <Badge variant="outline" className="text-xs gap-1 border-indigo-300 text-indigo-700 bg-indigo-50">
-              <Layers className="h-3 w-3" />
-              Mehrschicht ({shift.employees.length})
-            </Badge>
-          )}
-          {shift.is_team && shift.employees.length > 1 && !shift.is_multi_shift && (
-            <Badge variant="secondary" className="text-xs gap-1">
-              <Users className="h-3 w-3" />
-              Team ({shift.employees.length})
-            </Badge>
+          {action === "delete" && (
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={saving || deleting || copying}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              {deleting ? "Löschen..." : "Löschen"}
+            </Button>
           )}
         </div>
+      }
+    >
+      {/* Header Info - moved into content area */}
+      <div className="space-y-3">
+        {/* Time & Hours Info */}
+        <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+          <Clock className="h-3.5 w-3.5 shrink-0" />
+          <span>{startTime} - {endTime} ({hours.toFixed(2)} Std.)</span>
+          {(shift.travel_time_minutes || shift.break_time_minutes) && (
+            <span className="text-xs">
+              {(shift.travel_time_minutes || 0) > 0 && (
+                <span className="inline-flex items-center gap-0.5">
+                  <Car className="h-3 w-3" />
+                  {shift.travel_time_minutes}m
+                </span>
+              )}
+              {(shift.break_time_minutes || 0) > 0 && (
+                <span className="inline-flex items-center gap-0.5 ml-2">
+                  <Coffee className="h-3 w-3" />
+                  {shift.break_time_minutes}m
+                </span>
+              )}
+            </span>
+          )}
+        </div>
+        {/* Address */}
+        {(shift.object_address || shift.object_name) && (
+          <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+            <MapPin className="h-3.5 w-3.5 shrink-0" />
+            {shift.object_address ? (
+              <a
+                href={`https://maps.google.com/maps?q=${encodeURIComponent(shift.object_address)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-primary hover:underline transition-colors"
+                onClick={(e) => {
+                  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+                  if (isMobile && shift.object_address) {
+                    window.location.href = `maps:0,0?q=${encodeURIComponent(shift.object_address)}`;
+                    e.preventDefault();
+                  }
+                }}
+              >
+                {shift.object_address}
+              </a>
+            ) : (
+              <span>{shift.object_name}</span>
+            )}
+          </div>
+        )}
+        {/* Team Members */}
+        {shift.is_team && shift.employees.length > 1 && !shift.is_multi_shift && (
+          <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+            <Users className="h-3.5 w-3.5 shrink-0" />
+            <span>{shift.employees.map(e => e.employee_name).join(", ")}</span>
+          </div>
+        )}
+        {/* Multi-Shift */}
+        {shift.is_multi_shift && shift.employees.length > 1 && (
+          <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+            <Layers className="h-3.5 w-3.5 shrink-0" />
+            <span>{shift.employees.map(e => e.employee_name).join(", ")}</span>
+          </div>
+        )}
+        {/* Single Employee */}
+        {!shift.is_team && !shift.is_multi_shift && shift.employees[0] && (
+          <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+            <User className="h-3.5 w-3.5 shrink-0" />
+            <span>{shift.employees[0].employee_name}</span>
+          </div>
+        )}
+      </div>
 
-        {/* Shift Actions (Edit/Copy/Delete) */}
+      {/* Badges */}
+      <div className="flex flex-wrap gap-1.5 mt-4">
+        {shift.is_recurring && (
+          <Badge variant="secondary" className="text-xs gap-1">
+            <Repeat className="h-3 w-3" />
+            Serie
+          </Badge>
+        )}
+        {shift.service_title && (
+          <Badge className="text-xs" style={{ backgroundColor: shift.service_color || "#3b82f6", color: "#ffffff" }}>
+            {shift.service_title}
+          </Badge>
+        )}
+        {(shift.is_multi_shift || (shift.employees.length > 1 && !shift.is_team)) && (
+          <Badge variant="outline" className="text-xs gap-1 border-indigo-300 text-indigo-700 bg-indigo-50">
+            <Layers className="h-3 w-3" />
+            Mehrschicht ({shift.employees.length})
+          </Badge>
+        )}
+        {shift.is_team && shift.employees.length > 1 && !shift.is_multi_shift && (
+          <Badge variant="secondary" className="text-xs gap-1">
+            <Users className="h-3 w-3" />
+            Team ({shift.employees.length})
+          </Badge>
+        )}
+      </div>
+
+      {/* Shift Actions (Edit/Copy/Delete) */}
+      <div className="mt-4">
         <ShiftActions
           action={action}
           setAction={setAction}
@@ -438,7 +477,7 @@ export function ShiftEditDialog({
           getEmployeeName={getEmployeeName}
           handleEmployeeSelect={handleEmployeeSelect}
         />
-      </DialogContent>
-    </Dialog>
+      </div>
+    </RecordDialog>
   );
 }

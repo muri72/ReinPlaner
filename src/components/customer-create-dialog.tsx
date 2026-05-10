@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, Building2, FileStack } from "lucide-react";
 import { CustomerForm, CustomerFormValues } from "@/components/customer-form";
@@ -25,6 +25,24 @@ export function CustomerCreateDialog({ onCustomerCreated, trigger }: CustomerCre
     setInternalOpen(next);
   };
 
+  // Scroll content to top when dialog opens
+  useEffect(() => {
+    if (internalOpen) {
+      let frameCount = 0;
+      const scrollToTop = () => {
+        frameCount++;
+        const content = document.querySelector("[data-dialog-content]");
+        if (content) {
+          content.scrollTop = 0;
+        }
+        if (frameCount < 3) {
+          requestAnimationFrame(scrollToTop);
+        }
+      };
+      requestAnimationFrame(scrollToTop);
+    }
+  }, [internalOpen]);
+
   const handleCreate = async (data: CustomerFormValues) => {
     const result = await createCustomer(data);
     if (result.success) {
@@ -42,6 +60,17 @@ export function CustomerCreateDialog({ onCustomerCreated, trigger }: CustomerCre
       description="Erfassen Sie die Stammdaten für einen neuen Kunden oder Partner."
       icon={<Building2 className="h-5 w-5 text-primary" />}
       size="lg"
+      onOpenAutoFocus={(e) => e.preventDefault()}
+      footer={
+        <div className="flex justify-end gap-3">
+          <Button type="button" variant="ghost" onClick={() => setOpenState(false)}>
+            Abbrechen
+          </Button>
+          <Button type="submit" form="customer-form">
+            Kunden erstellen
+          </Button>
+        </div>
+      }
     >
       <DialogTrigger asChild>
         {trigger ?? (
@@ -53,9 +82,9 @@ export function CustomerCreateDialog({ onCustomerCreated, trigger }: CustomerCre
       </DialogTrigger>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="details">Details</TabsTrigger>
-          <TabsTrigger value="documents">
+        <TabsList className="w-full mb-4">
+          <TabsTrigger value="details" className="flex-1">Details</TabsTrigger>
+          <TabsTrigger value="documents" className="flex-1">
             <FileStack className="mr-2 h-4 w-4" />
             Dokumente
           </TabsTrigger>

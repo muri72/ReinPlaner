@@ -841,7 +841,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess, 
         </div>
       )}
       <UnsavedChangesProtection formId="order-form">
-        <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 w-full">
+        <form id="order-form" onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 w-full">
           <OrderBasicInfoSection
             form={form}
             customers={customers}
@@ -883,16 +883,18 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess, 
             totalHoursLabel={totalHoursLabel}
           />
 
-          <FormActions
-            isSubmitting={form.formState.isSubmitting}
-            onCancel={handleCancel}
-            onSubmit={handleSubmitClick}
-            submitLabel={submitButtonText}
-            cancelLabel="Abbrechen"
-            showCancel={!isInDialog}
-            submitVariant="default"
-            loadingText={`${submitButtonText}...`}
-          />
+          {!isInDialog && (
+            <FormActions
+              isSubmitting={form.formState.isSubmitting}
+              onCancel={handleCancel}
+              onSubmit={handleSubmitClick}
+              submitLabel={submitButtonText}
+              cancelLabel="Abbrechen"
+              showCancel={!isInDialog}
+              submitVariant="default"
+              loadingText={`${submitButtonText}...`}
+            />
+          )}
         </form>
 
         <UnsavedChangesAlert

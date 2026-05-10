@@ -222,7 +222,7 @@ export function TicketForm({ initialData, onSubmit, submitButtonText, onSuccess,
   if (isInDialog) {
     return (
       <>
-        <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-6">
+        <form id="ticket-form" onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-6">
           <FormSection
             title="Zuordnung"
             description="Kunde und Objekt zuordnen (optional)"
@@ -421,7 +421,7 @@ export function TicketForm({ initialData, onSubmit, submitButtonText, onSuccess,
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-6">
+          <form id="ticket-form" onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-6">
             <FormSection
               title="Zuordnung"
               description="Kunde und Objekt zuordnen (optional)"

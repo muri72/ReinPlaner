@@ -177,7 +177,7 @@ export function TimeEntryForm({ initialData, onSubmit, submitButtonText, onSucce
   if (isInDialog) {
     return (
       <>
-        <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-6">
+        <form id="time-entry-form" onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-6">
           <FormSection
             title="Eintragstyp"
             description="Wählen Sie den Typ des Zeiteintrags"
@@ -387,17 +387,6 @@ export function TimeEntryForm({ initialData, onSubmit, submitButtonText, onSucce
             </div>
           </FormSection>
 
-          <FormActions
-            isSubmitting={form.formState.isSubmitting}
-            onCancel={handleCancel}
-            onSubmit={handleSubmitClick}
-            submitLabel={submitButtonText}
-            cancelLabel="Abbrechen"
-            showCancel={true}
-            submitVariant="default"
-            loadingText={`${submitButtonText}...`}
-            align="right"
-          />
         </form>
 
         <UnsavedChangesAlert
@@ -424,7 +413,7 @@ export function TimeEntryForm({ initialData, onSubmit, submitButtonText, onSucce
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-6">
+          <form id="time-entry-form" onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-6">
             <FormSection
               title="Eintragstyp"
               description="Wählen Sie den Typ des Zeiteintrags"

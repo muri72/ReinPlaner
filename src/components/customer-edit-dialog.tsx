@@ -52,6 +52,17 @@ export function CustomerEditDialog({ customer, trigger, onSuccess }: CustomerEdi
       description={`Aktualisieren Sie die Stammdaten für ${customer.name}.`}
       icon={<Building2 className="h-5 w-5 text-primary" />}
       size="lg"
+      onOpenAutoFocus={(e) => e.preventDefault()}
+      footer={
+        <div className="flex justify-end gap-3">
+          <Button type="button" variant="ghost" onClick={() => setInternalOpen(false)}>
+            Abbrechen
+          </Button>
+          <Button type="submit" form="customer-form">
+            Änderungen speichern
+          </Button>
+        </div>
+      }
     >
       <DialogTrigger asChild>
         {trigger ?? (
@@ -62,9 +73,9 @@ export function CustomerEditDialog({ customer, trigger, onSuccess }: CustomerEdi
       </DialogTrigger>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="details">Details</TabsTrigger>
-          <TabsTrigger value="documents">
+        <TabsList className="w-full mb-4">
+          <TabsTrigger value="details" className="flex-1">Details</TabsTrigger>
+          <TabsTrigger value="documents" className="flex-1">
             <FileStack className="mr-2 h-4 w-4" />
             Dokumente
           </TabsTrigger>

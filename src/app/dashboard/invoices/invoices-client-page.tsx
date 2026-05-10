@@ -130,15 +130,15 @@ export function InvoicesClientPage() {
           <InvoiceCreateDialog
             debtors={debtors}
             orders={orders}
-            hideTrigger
             open={createDialogOpen}
             onOpenChange={setCreateDialogOpen}
-          >
-            <Button onClick={() => setCreateDialogOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              Neue Rechnung
-            </Button>
-          </InvoiceCreateDialog>
+            trigger={
+              <Button onClick={() => setCreateDialogOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Neue Rechnung
+              </Button>
+            }
+          />
         </div>
       </div>
 

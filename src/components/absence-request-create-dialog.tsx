@@ -34,6 +34,16 @@ export function AbsenceRequestCreateDialog({ onAbsenceRequestCreated, currentUse
       description="Reichen Sie einen neuen Abwesenheitsantrag ein."
       icon={<Calendar className="h-5 w-5 text-primary" />}
       size="lg"
+      footer={
+        <div className="flex justify-end gap-3">
+          <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
+            Abbrechen
+          </Button>
+          <Button type="submit" form="absence-request-form">
+            Antrag einreichen
+          </Button>
+        </div>
+      }
     >
       <DialogTrigger asChild>
         <Button>

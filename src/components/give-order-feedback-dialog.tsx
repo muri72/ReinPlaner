@@ -1,43 +1,44 @@
 "use client";
 
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
+import { RecordDialog } from "@/components/ui/record-dialog";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Star } from "lucide-react";
+import { Star } from "lucide-react";
 import { GiveFeedbackForm } from "@/components/give-feedback-form";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+import { DialogTrigger } from "@/components/ui/dialog";
 
 interface GiveOrderFeedbackDialogProps {
   onFeedbackSubmitted?: () => void;
-  onSuccess?: () => void; // Hinzugefügt
+  onSuccess?: () => void;
 }
 
 export function GiveOrderFeedbackDialog({ onFeedbackSubmitted, onSuccess }: GiveOrderFeedbackDialogProps) {
   const [open, setOpen] = useState(false);
-  // Removed titleId and descriptionId as they are no longer needed for aria attributes
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <RecordDialog
+      open={open}
+      onOpenChange={setOpen}
+      title="Auftragsbezogenes Feedback einreichen"
+      description="Formular zum Einreichen von Feedback zu einem bestimmten Auftrag."
+      icon={<Star className="h-5 w-5" />}
+      footer={
+        <div className="flex justify-end gap-3">
+          <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
+            Abbrechen
+          </Button>
+        </div>
+      }
+    >
       <DialogTrigger asChild>
         <Button className="w-full">
           <Star className="mr-2 h-4 w-4" /> Auftrags-Feedback geben
         </Button>
       </DialogTrigger>
-      <DialogContent 
-        key={open ? "give-order-feedback-open" : "give-order-feedback-closed"} 
-        className="sm:max-w-3xl max-h-[90vh] overflow-y-auto glassmorphism-card"
-      >
-        <DialogHeader>
-          <DialogTitle>Auftragsbezogenes Feedback einreichen</DialogTitle>
-          <DialogDescription>
-            Formular zum Einreichen von Feedback zu einem bestimmten Auftrag.
-          </DialogDescription>
-        </DialogHeader>
-        <GiveFeedbackForm onSuccess={() => {
-          setOpen(false);
-          onSuccess?.(); // Ruft die onSuccess-Prop des Dialogs auf
-        }} />
-      </DialogContent>
-    </Dialog>
+      <GiveFeedbackForm isInDialog={true} onSuccess={() => {
+        setOpen(false);
+        onSuccess?.();
+      }} />
+    </RecordDialog>
   );
 }

@@ -104,7 +104,7 @@ export function CustomerContactForm({ initialData, onSubmit, submitButtonText, o
           )}
         </div>
       )}
-      <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-6 w-full">
+      <form id="customer-contact-form" onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-6 w-full">
         {/* Basic Information Section */}
         <FormSection
           title="Grundinformationen"
@@ -212,16 +212,18 @@ export function CustomerContactForm({ initialData, onSubmit, submitButtonText, o
             )}
           </div>
         </FormSection>
-        <FormActions
-          isSubmitting={form.formState.isSubmitting}
-          onCancel={handleCancel}
-          onSubmit={handleSubmitClick}
-          submitLabel={submitButtonText}
-          cancelLabel="Abbrechen"
-          showCancel={!isInDialog}
-          submitVariant="default"
-          loadingText={`${submitButtonText}...`}
-        />
+        {!isInDialog && (
+          <FormActions
+            isSubmitting={form.formState.isSubmitting}
+            onCancel={handleCancel}
+            onSubmit={handleSubmitClick}
+            submitLabel={submitButtonText}
+            cancelLabel="Abbrechen"
+            showCancel={true}
+            submitVariant="default"
+            loadingText={`${submitButtonText}...`}
+          />
+        )}
       </form>
     </>
   );

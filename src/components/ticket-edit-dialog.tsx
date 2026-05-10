@@ -4,7 +4,8 @@ import * as React from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
+import { RecordDialog } from "@/components/ui/record-dialog";
+import { DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -15,8 +16,7 @@ import { handleActionResponse } from "@/lib/toast-utils";
 import { Skeleton } from "./ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useDialogUnsavedChanges } from "@/components/ui/unsaved-changes-context";
-import { UnsavedChangesAlert } from "@/components/ui/unsaved-changes-alert";
+
 
 const ticketEditSchema = z.object({
   title: z.string().min(1, "Titel ist erforderlich").max(255, "Titel ist zu lang"),
@@ -57,18 +57,8 @@ interface TicketEditDialogProps {
 
 export function TicketEditDialog({ ticket, onTicketUpdated }: TicketEditDialogProps) {
   const [open, setOpen] = React.useState(false);
-  const [showConfirmClose, setShowConfirmClose] = React.useState(false);
   const [loading, setLoading] = React.useState(true);
   const [allEmployees, setAllEmployees] = React.useState<{ id: string; first_name: string; last_name: string }[]>([]);
-  const { isDirty } = useDialogUnsavedChanges();
-
-  const handleOpenChange = (nextOpen: boolean) => {
-    if (!nextOpen && open && isDirty) {
-      setShowConfirmClose(true);
-    } else {
-      setOpen(nextOpen);
-    }
-  };
 
   const form = useForm<TicketEditFormInput>({
     resolver: zodResolver(ticketEditSchema),
@@ -139,33 +129,43 @@ export function TicketEditDialog({ ticket, onTicketUpdated }: TicketEditDialogPr
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>
-        <Button variant="ghost" size="icon">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="h-4 w-4"
-          >
-            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4Z" />
-          </svg>
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto glassmorphism-card">
-        <DialogHeader>
-          <DialogTitle>Ticket bearbeiten</DialogTitle>
-          <DialogDescription>
-            Bearbeiten Sie die Details dieses Tickets. Klicken Sie auf "Speichern", um Ihre Änderungen zu übernehmen.
-          </DialogDescription>
-        </DialogHeader>
+    <>
+      <RecordDialog
+        open={open}
+        onOpenChange={setOpen}
+        title="Ticket bearbeiten"
+        description="Bearbeiten Sie die Details dieses Tickets. Klicken Sie auf Speichern, um Ihre Änderungen zu übernehmen."
+        size="md"
+        footer={
+          <div className="flex justify-end gap-3">
+            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+              Abbrechen
+            </Button>
+            <Button type="submit" disabled={form.formState.isSubmitting}>
+              {form.formState.isSubmitting ? "Speichern..." : "Speichern"}
+            </Button>
+          </div>
+        }
+      >
+        <DialogTrigger asChild>
+          <Button variant="ghost" size="icon">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="h-4 w-4"
+            >
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4Z" />
+            </svg>
+          </Button>
+        </DialogTrigger>
         {loading ? (
           <div className="space-y-4 py-4">
             <Skeleton className="h-10 w-full" />
@@ -275,29 +275,9 @@ export function TicketEditDialog({ ticket, onTicketUpdated }: TicketEditDialogPr
                 <p className="text-sm text-red-500">{form.formState.errors.assigned_to_user_id.message}</p>
               )}
             </div>
-
-            <div className="flex justify-end space-x-2 pt-4">
-              <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-                Abbrechen
-              </Button>
-              <Button type="submit" disabled={form.formState.isSubmitting}>
-                {form.formState.isSubmitting ? "Speichern..." : "Speichern"}
-              </Button>
-            </div>
           </form>
         )}
-      </DialogContent>
-
-      <UnsavedChangesAlert
-        open={showConfirmClose}
-        onConfirm={() => {
-          setShowConfirmClose(false);
-          setOpen(false);
-        }}
-        onCancel={() => setShowConfirmClose(false)}
-        title="Ungespeicherte Änderungen verwerfen?"
-        description="Wenn Sie das Dialog jetzt schließen, gehen Ihre Eingaben verloren."
-      />
-    </Dialog>
+      </RecordDialog>
+    </>
   );
 }

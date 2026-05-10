@@ -5,13 +5,8 @@ import { useForm, Controller, useFieldArray, SubmitHandler } from "react-hook-fo
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+  RecordDialog,
+} from "@/components/ui/record-dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -42,9 +37,8 @@ import {
   PlusCircle,
   Loader2,
 } from "lucide-react";
+import { Label } from "@/components/ui/label";
 import { useFormUnsavedChangesForCreate } from "@/components/ui/unsaved-changes-context";
-import { useUnsavedChanges } from "@/components/ui/unsaved-changes-dialog";
-import { UnsavedChangesAlert } from "@/components/ui/unsaved-changes-alert";
 import {
   preprocessNumber,
   dayNames,
@@ -379,179 +373,155 @@ export function CreateShiftDialog({
     }
   };
 
-  // Unsaved changes protection
-  const { handleClose, confirmClose, cancelClose, showDialog } = useUnsavedChanges(
-    form.formState.isDirty,
-    form.formState.isSubmitting
-  );
-
-  const handleOpenChange = (newOpen: boolean) => {
-    if (!newOpen) {
-      handleClose(() => onOpenChange(false));
-    }
-  };
-
+  // Unsaved changes protection - use RecordDialog's built-in
   const shiftType = form.getValues("shiftType");
+
+  const footer = (
+    <div className="flex justify-end gap-3">
+      <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+        Abbrechen
+      </Button>
+      <Button type="submit" disabled={loading || form.formState.isSubmitting} form="create-shift-form">
+        {loading || form.formState.isSubmitting ? (
+          <>
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            Wird erstellt...
+          </>
+        ) : (
+          <>
+            <Plus className="mr-2 h-4 w-4" />
+            Einsatz erstellen
+          </>
+        )}
+      </Button>
+    </div>
+  );
 
   return (
     <>
-      <Dialog open={open} onOpenChange={handleOpenChange}>
-        <DialogContent className="sm:max-w-5xl max-h-[90vh] flex flex-col p-0 glassmorphism-card">
-          <DialogHeader className="px-4 pt-4 pb-2">
-            <DialogTitle className="text-lg font-medium flex items-center gap-2">
-              <Plus className="h-5 w-5" />
-              Neuen Einsatz erstellen
-            </DialogTitle>
-            <DialogDescription className="text-sm">
-              Erstellen Sie einen neuen Einsatz mit Zeitplan und Mitarbeiterzuweisung.
-            </DialogDescription>
-          </DialogHeader>
+      <RecordDialog
+        open={open}
+        onOpenChange={onOpenChange}
+        title="Neuen Einsatz erstellen"
+        description="Erstellen Sie einen neuen Einsatz mit Zeitplan und Mitarbeiterzuweisung."
+        icon={<Plus className="h-5 w-5" />}
+        size="xl"
+        onOpenAutoFocus={(e) => e.preventDefault()}
+        footer={footer}
+      >
+        <form id="create-shift-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          {/* Object & Order Selection */}
+          <ShiftObjectSelector
+            form={form}
+            availableObjects={availableObjects}
+            availableOrders={availableOrders}
+            objectSearch={objectSearch}
+            setObjectSearch={setObjectSearch}
+            orderSearch={orderSearch}
+            setOrderSearch={setOrderSearch}
+            objectSelectOpen={objectSelectOpen}
+            setObjectSelectOpen={setObjectSelectOpen}
+            orderSelectOpen={orderSelectOpen}
+            setOrderSelectOpen={setOrderSelectOpen}
+            createObjectDialogOpen={createObjectDialogOpen}
+            setCreateObjectDialogOpen={setCreateObjectDialogOpen}
+            createOrderDialogOpen={createOrderDialogOpen}
+            setCreateOrderDialogOpen={setCreateOrderDialogOpen}
+          />
 
-          <form onSubmit={form.handleSubmit(onSubmit)} className="flex-grow overflow-y-auto pr-4 px-4 space-y-4">
-            {/* Object & Order Selection */}
-            <ShiftObjectSelector
+          {/* Basic Info: Shift Type, Date, Time */}
+          <ShiftBasicInfoSection form={form} />
+
+          {/* Schedule Editor for Recurring Shifts */}
+          {shiftType === 'recurring' && (
+            <ShiftScheduleEditor
               form={form}
-              availableObjects={availableObjects}
-              availableOrders={availableOrders}
-              objectSearch={objectSearch}
-              setObjectSearch={setObjectSearch}
-              orderSearch={orderSearch}
-              setOrderSearch={setOrderSearch}
-              objectSelectOpen={objectSelectOpen}
-              setObjectSelectOpen={setObjectSelectOpen}
-              orderSelectOpen={orderSelectOpen}
-              setOrderSelectOpen={setOrderSelectOpen}
-              createObjectDialogOpen={createObjectDialogOpen}
-              setCreateObjectDialogOpen={setCreateObjectDialogOpen}
-              createOrderDialogOpen={createOrderDialogOpen}
-              setCreateOrderDialogOpen={setCreateOrderDialogOpen}
+              selectedObject={selectedObject}
+              recurrenceInterval={recurrenceInterval}
+              startWeekOffset={startWeekOffset}
+              importSchedules={importSchedules}
             />
+          )}
 
-            {/* Basic Info: Shift Type, Date, Time */}
-            <ShiftBasicInfoSection form={form} />
-
-            {/* Schedule Editor for Recurring Shifts */}
-            {shiftType === 'recurring' && (
-              <ShiftScheduleEditor
-                form={form}
-                selectedObject={selectedObject}
-                recurrenceInterval={recurrenceInterval}
-                startWeekOffset={startWeekOffset}
-                importSchedules={importSchedules}
-              />
-            )}
-
-            {/* Employee Selection */}
-            <div>
-              <Label className="text-sm text-muted-foreground mb-1.5 block">
-                Mitarbeiter * ({form.getValues("employeeIds")?.length || 0} ausgewählt)
-              </Label>
-              <Popover open={employeeSelectOpen} onOpenChange={setEmployeeSelectOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    role="combobox"
-                    aria-expanded={employeeSelectOpen}
-                    className="w-full justify-between h-auto min-h-[38px] flex-wrap"
-                  >
-                    {form.getValues("employeeIds")?.length > 0 ? (
-                      <div className="flex flex-wrap gap-1">
-                        {form.getValues("employeeIds").map((id: string) => (
-                          <Badge key={id} variant="secondary" className="flex items-center gap-1">
-                            {getEmployeeName(id)}
-                            <X
-                              className="h-3 w-3 cursor-pointer"
-                              onClick={(e: React.MouseEvent) => {
-                                e.stopPropagation();
-                                handleEmployeeSelect(id);
-                              }}
-                            />
-                          </Badge>
-                        ))}
-                      </div>
-                    ) : (
-                      <span className="text-muted-foreground">Mitarbeiter auswählen...</span>
-                    )}
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[--radix-popover-trigger-width] p-0 max-h-[300px]" align="start">
-                  <Command>
-                    <CommandInput placeholder="Mitarbeiter suchen..." />
-                    <CommandList className="max-h-[250px] overflow-y-auto">
-                      <CommandEmpty>Keine Mitarbeiter gefunden.</CommandEmpty>
-                      <CommandGroup heading="Mitarbeiter">
-                        {availableEmployees.map((emp) => (
-                          <CommandItem
-                            key={emp.id}
-                            value={emp.name}
-                            onSelect={() => handleEmployeeSelect(emp.id)}
+          {/* Employee Selection */}
+          <div>
+            <Label className="text-sm text-muted-foreground mb-1.5 block">
+              Mitarbeiter * ({form.getValues("employeeIds")?.length || 0} ausgewählt)
+            </Label>
+            <Popover open={employeeSelectOpen} onOpenChange={setEmployeeSelectOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={employeeSelectOpen}
+                  className="w-full justify-between h-auto min-h-[38px] flex-wrap"
+                >
+                  {form.getValues("employeeIds")?.length > 0 ? (
+                    <div className="flex flex-wrap gap-1">
+                      {form.getValues("employeeIds").map((id: string) => (
+                        <Badge key={id} variant="secondary" className="flex items-center gap-1">
+                          {getEmployeeName(id)}
+                          <X
+                            className="h-3 w-3 cursor-pointer"
+                            onClick={(e: React.MouseEvent) => {
+                              e.stopPropagation();
+                              handleEmployeeSelect(id);
+                            }}
+                          />
+                        </Badge>
+                      ))}
+                    </div>
+                  ) : (
+                    <span className="text-muted-foreground">Mitarbeiter auswählen...</span>
+                  )}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[--radix-popover-trigger-width] p-0 max-h-[300px]" align="start">
+                <Command>
+                  <CommandInput placeholder="Mitarbeiter suchen..." />
+                  <CommandList className="max-h-[250px] overflow-y-auto">
+                    <CommandEmpty>Keine Mitarbeiter gefunden.</CommandEmpty>
+                    <CommandGroup heading="Mitarbeiter">
+                      {availableEmployees.map((emp) => (
+                        <CommandItem
+                          key={emp.id}
+                          value={emp.name}
+                          onSelect={() => handleEmployeeSelect(emp.id)}
+                        >
+                          <div
+                            className={cn(
+                              "mr-2 h-4 w-4 rounded border",
+                              form.getValues("employeeIds")?.includes(emp.id)
+                                ? "bg-primary border-primary"
+                                : "border-muted-foreground"
+                            )}
                           >
-                            <div
-                              className={cn(
-                                "mr-2 h-4 w-4 rounded border",
-                                form.getValues("employeeIds")?.includes(emp.id)
-                                  ? "bg-primary border-primary"
-                                  : "border-muted-foreground"
-                              )}
-                            >
-                              {form.getValues("employeeIds")?.includes(emp.id) && (
-                                <Plus className="h-3 w-3 text-primary-foreground mx-auto" />
-                              )}
-                            </div>
-                            {emp.name}
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
-              {form.formState.errors.employeeIds && (
-                <p className="text-red-500 text-sm mt-1">{form.formState.errors.employeeIds.message}</p>
-              )}
-            </div>
-
-            {/* Form Errors */}
-            {form.formState.errors.root && (
-              <div className="p-3 rounded-md bg-red-50 border border-red-200">
-                <p className="text-red-600 text-sm">{form.formState.errors.root.message}</p>
-              </div>
+                            {form.getValues("employeeIds")?.includes(emp.id) && (
+                              <Plus className="h-3 w-3 text-primary-foreground mx-auto" />
+                            )}
+                          </div>
+                          {emp.name}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+            {form.formState.errors.employeeIds && (
+              <p className="text-red-500 text-sm mt-1">{form.formState.errors.employeeIds.message}</p>
             )}
+          </div>
 
-            <DialogFooter className="sticky bottom-0 bg-background/80 backdrop-blur-sm py-4 px-4 -mx-4">
-              <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-                Abbrechen
-              </Button>
-              <Button type="submit" disabled={loading || form.formState.isSubmitting}>
-                {loading || form.formState.isSubmitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Wird erstellt...
-                  </>
-                ) : (
-                  <>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Einsatz erstellen
-                  </>
-                )}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Unsaved Changes Alert */}
-      <UnsavedChangesAlert
-        open={showDialog}
-        onConfirm={confirmClose}
-        onCancel={cancelClose}
-        title="Ungespeicherte Änderungen"
-        description="Sie haben ungespeicherte Änderungen. Möchten Sie den Dialog wirklich schließen?"
-      />
+          {/* Form Errors */}
+          {form.formState.errors.root && (
+            <div className="p-3 rounded-md bg-red-50 border border-red-200">
+              <p className="text-red-600 text-sm">{form.formState.errors.root.message}</p>
+            </div>
+          )}
+        </form>
+      </RecordDialog>
     </>
   );
 }
-
-// Need Label and X/Plus from lucide-react
-import { Label } from "@/components/ui/label";

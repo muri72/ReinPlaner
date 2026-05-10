@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, Building, FileStack } from "lucide-react";
 import { ObjectForm, ObjectFormValues } from "@/components/object-form";
@@ -34,6 +34,7 @@ export function ObjectCreateDialog({
   const [formKey, setFormKey] = useState(0);
   const isControlled = controlledOpen !== undefined;
   const open = isControlled ? controlledOpen : internalOpen;
+  const justOpenedRef = useRef(false);
 
   const setOpenState = (next: boolean) => {
     if (next && !open) {
@@ -41,12 +42,47 @@ export function ObjectCreateDialog({
       setFormKey(prev => prev + 1);
       setCreatedObjectId(null);
       setActiveTab("details");
+      justOpenedRef.current = true;
     }
     if (!isControlled) {
       setInternalOpen(next);
     }
     onOpenChange?.(next);
   };
+
+  // Prevent autofocus on first field when dialog opens
+  useEffect(() => {
+    if (open && justOpenedRef.current) {
+      // Blur any focused element inside the dialog after a short delay
+      const timer = setTimeout(() => {
+        const focused = document.activeElement as HTMLElement | null;
+        if (focused && document.contains(focused)) {
+          focused.blur();
+        }
+        justOpenedRef.current = false;
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [open]);
+
+  // Scroll content to top when dialog opens
+  useEffect(() => {
+    if (open) {
+      // Use multiple frames to ensure DOM is fully ready after animation
+      let frameCount = 0;
+      const scrollToTop = () => {
+        frameCount++;
+        const content = document.querySelector("[data-dialog-content]");
+        if (content) {
+          content.scrollTop = 0;
+        }
+        if (frameCount < 3) {
+          requestAnimationFrame(scrollToTop);
+        }
+      };
+      requestAnimationFrame(scrollToTop);
+    }
+  }, [open]);
 
   const handleCreate = async (data: ObjectFormValues) => {
     const result = await createObject(data);
@@ -64,14 +100,34 @@ export function ObjectCreateDialog({
   };
 
   return (
-    <RecordDialog
-      open={open}
-      onOpenChange={setOpenState}
-      title="Neues Objekt erstellen"
-      description="Erstellen Sie ein neues Objekt für einen Kunden."
-      icon={<Building className="h-5 w-5 text-primary" />}
-      size="lg"
-    >
+<RecordDialog
+        open={open}
+        onOpenChange={setOpenState}
+        title="Neues Objekt erstellen"
+        description="Erstellen Sie ein neues Objekt für einen Kunden."
+        icon={<Building className="h-5 w-5 text-primary" />}
+        size="lg"
+        onOpenAutoFocus={(e) => e.preventDefault()}
+        footer={
+          <div className="flex justify-end gap-3">
+            <Button type="button" variant="ghost" onClick={() => setOpenState(false)}>
+              Abbrechen
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {
+                const formElement = document.querySelector("[data-dialog-content] form");
+                if (formElement) {
+                  const submitEvent = new Event("submit", { bubbles: true, cancelable: true });
+                  formElement.dispatchEvent(submitEvent);
+                }
+              }}
+            >
+              Objekt erstellen
+            </Button>
+          </div>
+        }
+      >
       {!hideTrigger && (
         <DialogTrigger asChild>
           {trigger ?? (
@@ -84,9 +140,9 @@ export function ObjectCreateDialog({
       )}
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="details">Details</TabsTrigger>
-          <TabsTrigger value="documents">
+        <TabsList className="w-full mb-4">
+          <TabsTrigger value="details" className="flex-1">Details</TabsTrigger>
+          <TabsTrigger value="documents" className="flex-1">
             <FileStack className="mr-2 h-4 w-4" />
             Dokumente
           </TabsTrigger>

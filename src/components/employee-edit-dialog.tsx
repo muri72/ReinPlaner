@@ -102,6 +102,26 @@ export function EmployeeEditDialog({ employee, trigger, onActionSuccess }: Emplo
       description={`Bearbeiten Sie die Details für ${currentEmployee.first_name} ${currentEmployee.last_name}.`}
       icon={<UserCog className="h-5 w-5 text-primary" />}
       size="lg"
+      onOpenAutoFocus={(e) => e.preventDefault()}
+      footer={
+        <div className="flex justify-end gap-3">
+          <Button type="button" variant="ghost" onClick={() => setInternalOpen(false)}>
+            Abbrechen
+          </Button>
+          <Button
+            type="button"
+            onClick={() => {
+              const form = document.querySelector("[data-dialog-content] form");
+              if (form) {
+                const submitBtn = form.querySelector('button[type="submit"]') as HTMLButtonElement;
+                if (submitBtn) submitBtn.click();
+              }
+            }}
+          >
+            Änderungen speichern
+          </Button>
+        </div>
+      }
     >
       <DialogTrigger asChild>
         {trigger ?? (
@@ -112,9 +132,9 @@ export function EmployeeEditDialog({ employee, trigger, onActionSuccess }: Emplo
       </DialogTrigger>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="details">Details</TabsTrigger>
-          <TabsTrigger value="documents">
+        <TabsList className="w-full mb-4">
+          <TabsTrigger value="details" className="flex-1">Details</TabsTrigger>
+          <TabsTrigger value="documents" className="flex-1">
             <FileStack className="mr-2 h-4 w-4" />
             Dokumente
           </TabsTrigger>

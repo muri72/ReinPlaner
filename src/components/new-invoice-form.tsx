@@ -196,7 +196,7 @@ export function NewInvoiceForm({ debtors, orders }: NewInvoiceFormProps) {
               <CardTitle className="text-lg">Rechnungsdetails</CardTitle>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleManualSubmit} className="space-y-6">
+              <form id="new-invoice-form-manual" onSubmit={handleManualSubmit} className="space-y-6">
                 {/* Debtor Selection */}
                 <div className="space-y-2">
                   <Label htmlFor="debtor">Debitor *</Label>
@@ -360,15 +360,6 @@ export function NewInvoiceForm({ debtors, orders }: NewInvoiceFormProps) {
                     rows={3}
                   />
                 </div>
-
-                <div className="flex justify-end gap-2">
-                  <Button type="button" variant="outline" onClick={() => router.back()}>
-                    Abbrechen
-                  </Button>
-                  <Button type="submit" disabled={isSubmitting}>
-                    {isSubmitting ? 'Wird erstellt...' : 'Rechnung erstellen'}
-                  </Button>
-                </div>
               </form>
             </CardContent>
           </Card>
@@ -381,7 +372,7 @@ export function NewInvoiceForm({ debtors, orders }: NewInvoiceFormProps) {
               <CardTitle className="text-lg">Rechnung aus Auftrag erstellen</CardTitle>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleOrderSubmit} className="space-y-6">
+              <form id="new-invoice-form-order" onSubmit={handleOrderSubmit} className="space-y-6">
                 <div className="space-y-2">
                   <Label>Auftrag auswählen</Label>
                   <Select value={selectedOrder} onValueChange={setSelectedOrder} required>
@@ -440,15 +431,7 @@ export function NewInvoiceForm({ debtors, orders }: NewInvoiceFormProps) {
                   </ul>
                 </div>
 
-                <div className="flex justify-end gap-2">
-                  <Button type="button" variant="outline" onClick={() => router.back()}>
-                    Abbrechen
-                  </Button>
-                  <Button type="submit" disabled={isSubmitting || !selectedOrder}>
-                    {isSubmitting ? 'Wird erstellt...' : 'Rechnung erstellen'}
-                  </Button>
-                </div>
-              </form>
+                </form>
             </CardContent>
           </Card>
         </TabsContent>

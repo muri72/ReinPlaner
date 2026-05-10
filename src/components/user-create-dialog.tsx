@@ -32,6 +32,20 @@ export function UserCreateDialog({ onUserCreated }: UserCreateDialogProps) {
       description="Erstellen Sie einen neuen Benutzer mit entsprechenden Rollen und Zuweisungen."
       icon={<UserCheck className="h-5 w-5 text-primary" />}
       size="lg"
+      onOpenAutoFocus={(e) => e.preventDefault()}
+      footer={
+        <div className="flex justify-end gap-3">
+          <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
+            Abbrechen
+          </Button>
+          <Button
+            type="submit"
+            form="user-form"
+          >
+            Benutzer erstellen
+          </Button>
+        </div>
+      }
     >
       <DialogTrigger asChild>
         <Button>

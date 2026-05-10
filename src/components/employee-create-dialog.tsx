@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, UserCog, FileStack } from "lucide-react";
 import { EmployeeForm, EmployeeFormValues } from "@/components/employee-form";
@@ -32,6 +32,24 @@ export function EmployeeCreateDialog({ onEmployeeCreated, trigger }: EmployeeCre
     setInternalOpen(next);
   };
 
+  // Scroll content to top when dialog opens
+  useEffect(() => {
+    if (internalOpen) {
+      let frameCount = 0;
+      const scrollToTop = () => {
+        frameCount++;
+        const content = document.querySelector("[data-dialog-content]");
+        if (content) {
+          content.scrollTop = 0;
+        }
+        if (frameCount < 3) {
+          requestAnimationFrame(scrollToTop);
+        }
+      };
+      requestAnimationFrame(scrollToTop);
+    }
+  }, [internalOpen]);
+
   const handleCreate = async (data: EmployeeFormValues) => {
     const result = await createEmployee(data);
     if (result.success) {
@@ -49,6 +67,20 @@ export function EmployeeCreateDialog({ onEmployeeCreated, trigger }: EmployeeCre
       description="Erfassen Sie die Stammdaten für einen neuen Mitarbeiter."
       icon={<UserCog className="h-5 w-5 text-primary" />}
       size="lg"
+      onOpenAutoFocus={(e) => e.preventDefault()}
+      footer={
+        <div className="flex justify-end gap-3">
+          <Button type="button" variant="ghost" onClick={() => setOpenState(false)}>
+            Abbrechen
+          </Button>
+          <Button
+            type="submit"
+            form="employee-create-form"
+          >
+            Mitarbeiter erstellen
+          </Button>
+        </div>
+      }
     >
       <DialogTrigger asChild>
         {trigger ?? (
@@ -60,9 +92,9 @@ export function EmployeeCreateDialog({ onEmployeeCreated, trigger }: EmployeeCre
       </DialogTrigger>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="details">Details</TabsTrigger>
-          <TabsTrigger value="documents">
+        <TabsList className="w-full mb-4">
+          <TabsTrigger value="details" className="flex-1">Details</TabsTrigger>
+          <TabsTrigger value="documents" className="flex-1">
             <FileStack className="mr-2 h-4 w-4" />
             Dokumente
           </TabsTrigger>
