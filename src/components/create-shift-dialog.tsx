@@ -398,7 +398,7 @@ export function CreateShiftDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={handleOpenChange}>
-        <DialogContent className="sm:max-w-5xl max-w-[calc(100vw-2rem)] max-h-[90vh] flex flex-col p-0 border bg-background shadow-xl">
+        <DialogContent className="sm:max-w-5xl max-w-[calc(100vw-2rem)] max-h-[90vh] flex flex-col p-0 border bg-background shadow-xl" onOpenAutoFocus={(e) => e.preventDefault()}>
           <DialogHeader className="px-4 pt-4 pb-2">
             <DialogTitle className="text-lg font-medium flex items-center gap-2">
               <Plus className="h-5 w-5" />
