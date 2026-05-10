@@ -33,6 +33,25 @@ export function UserCreateDialog({ onUserCreated }: UserCreateDialogProps) {
       icon={<UserCheck className="h-5 w-5 text-primary" />}
       size="lg"
       onOpenAutoFocus={(e) => e.preventDefault()}
+      footer={
+        <div className="flex justify-end gap-3">
+          <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
+            Abbrechen
+          </Button>
+          <Button
+            type="button"
+            onClick={() => {
+              const form = document.querySelector("[data-dialog-content] form");
+              if (form) {
+                const submitBtn = form.querySelector('button[type="submit"]') as HTMLButtonElement;
+                if (submitBtn) submitBtn.click();
+              }
+            }}
+          >
+            Benutzer erstellen
+          </Button>
+        </div>
+      }
     >
       <DialogTrigger asChild>
         <Button>

@@ -55,6 +55,16 @@ export function AbsenceRequestEditDialog({ request, trigger, onRequestUpdated, c
       description="Bearbeiten Sie den Abwesenheitsantrag."
       icon={<Calendar className="h-5 w-5 text-primary" />}
       size="lg"
+      footer={
+        <div className="flex justify-end gap-3">
+          <Button type="button" variant="ghost" onClick={() => setInternalOpen(false)}>
+            Abbrechen
+          </Button>
+          <Button type="submit" form="absence-request-form">
+            Änderungen speichern
+          </Button>
+        </div>
+      }
     >
       <DialogTrigger asChild>
         {trigger ?? defaultTrigger}

@@ -3,14 +3,6 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -20,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { RecordDialog } from '@/components/ui/record-dialog';
 import { createTenant, updateTenant } from '@/lib/actions/tenant-admin';
 import { toast } from 'sonner';
 
@@ -124,123 +117,119 @@ export function TenantFormDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px] glassmorphism-card">
-        <form onSubmit={handleSubmit}>
-          <DialogHeader>
-            <DialogTitle>
-              {mode === 'create' ? 'Neuen Tenant erstellen' : `Tenant bearbeiten: ${tenant?.name}`}
-            </DialogTitle>
-            <DialogDescription>
-              {mode === 'create'
-                ? 'Fülle das Formular aus, um einen neuen Tenant anzulegen.'
-                : 'Aktualisiere die Tenant-Informationen.'}
-            </DialogDescription>
-          </DialogHeader>
+    <RecordDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={mode === 'create' ? 'Neuen Tenant erstellen' : `Tenant bearbeiten: ${tenant?.name}`}
+      description={
+        mode === 'create'
+          ? 'Fülle das Formular aus, um einen neuen Tenant anzulegen.'
+          : 'Aktualisiere die Tenant-Informationen.'
+      }
+      size="sm"
+      footer={
+        <div className="flex justify-end gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={loading}
+          >
+            Abbrechen
+          </Button>
+          <Button type="submit" disabled={loading}>
+            {loading ? 'Wird gespeichert...' : mode === 'create' ? 'Erstellen' : 'Speichern'}
+          </Button>
+        </div>
+      }
+    >
+      <form onSubmit={handleSubmit} className="grid gap-4">
+        {/* Name */}
+        <div className="grid gap-2">
+          <Label htmlFor="name">Firmenname *</Label>
+          <Input
+            id="name"
+            value={formData.name}
+            onChange={(e) => {
+              setFormData({ ...formData, name: e.target.value });
+              if (mode === 'create') {
+                handleSlugChange(e.target.value);
+              }
+            }}
+            placeholder="z.B. Muster Gebäudereinigung GmbH"
+            required
+          />
+        </div>
 
-          <div className="grid gap-4 py-4">
-            {/* Name */}
-            <div className="grid gap-2">
-              <Label htmlFor="name">Firmenname *</Label>
-              <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) => {
-                  setFormData({ ...formData, name: e.target.value });
-                  if (mode === 'create') {
-                    handleSlugChange(e.target.value);
-                  }
-                }}
-                placeholder="z.B. Muster Gebäudereinigung GmbH"
-                required
-              />
-            </div>
-
-            {/* Slug */}
-            <div className="grid gap-2">
-              <Label htmlFor="slug">Subdomain/Slug *</Label>
-              <div className="flex items-center gap-1">
-                <Input
-                  id="slug"
-                  value={formData.slug}
-                  onChange={(e) => setFormData({ ...formData, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-') })}
-                  placeholder="z.B. muster-cleaning"
-                  required
-                  pattern="[a-z0-9-]+"
-                />
-                <span className="text-muted-foreground text-sm">.reinplaner.de</span>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Nur Kleinbuchstaben, Zahlen und Bindestriche erlaubt.
-              </p>
-            </div>
-
-            {/* Custom Domain */}
-            <div className="grid gap-2">
-              <Label htmlFor="domain">Custom Domain (optional)</Label>
-              <Input
-                id="domain"
-                value={formData.domain}
-                onChange={(e) => setFormData({ ...formData, domain: e.target.value })}
-                placeholder="z.B. www.musterfirma.de"
-                type="text"
-              />
-              <p className="text-xs text-muted-foreground">
-                Optional: Eigene Domain für diesen Tenant.
-              </p>
-            </div>
-
-            {/* Plan */}
-            <div className="grid gap-2">
-              <Label htmlFor="plan">Plan *</Label>
-              <Select
-                value={formData.plan}
-                onValueChange={(value) =>
-                  setFormData({ ...formData, plan: value as 'starter' | 'professional' | 'enterprise' })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Plan auswählen" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="starter">
-                    <div className="flex flex-col items-start">
-                      <span>Starter</span>
-                      <span className="text-xs text-muted-foreground">Bis 5 Benutzer, €29/Monat</span>
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="professional">
-                    <div className="flex flex-col items-start">
-                      <span>Professional</span>
-                      <span className="text-xs text-muted-foreground">Bis 25 Benutzer, €79/Monat</span>
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="enterprise">
-                    <div className="flex flex-col items-start">
-                      <span>Enterprise</span>
-                      <span className="text-xs text-muted-foreground">Unbegrenzt, €199/Monat</span>
-                    </div>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+        {/* Slug */}
+        <div className="grid gap-2">
+          <Label htmlFor="slug">Subdomain/Slug *</Label>
+          <div className="flex items-center gap-1">
+            <Input
+              id="slug"
+              value={formData.slug}
+              onChange={(e) => setFormData({ ...formData, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-') })}
+              placeholder="z.B. muster-cleaning"
+              required
+              pattern="[a-z0-9-]+"
+            />
+            <span className="text-muted-foreground text-sm">.reinplaner.de</span>
           </div>
+          <p className="text-xs text-muted-foreground">
+            Nur Kleinbuchstaben, Zahlen und Bindestriche erlaubt.
+          </p>
+        </div>
 
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={loading}
-            >
-              Abbrechen
-            </Button>
-            <Button type="submit" disabled={loading}>
-              {loading ? 'Wird gespeichert...' : mode === 'create' ? 'Erstellen' : 'Speichern'}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+        {/* Custom Domain */}
+        <div className="grid gap-2">
+          <Label htmlFor="domain">Custom Domain (optional)</Label>
+          <Input
+            id="domain"
+            value={formData.domain}
+            onChange={(e) => setFormData({ ...formData, domain: e.target.value })}
+            placeholder="z.B. www.musterfirma.de"
+            type="text"
+          />
+          <p className="text-xs text-muted-foreground">
+            Optional: Eigene Domain für diesen Tenant.
+          </p>
+        </div>
+
+        {/* Plan */}
+        <div className="grid gap-2">
+          <Label htmlFor="plan">Plan *</Label>
+          <Select
+            value={formData.plan}
+            onValueChange={(value) =>
+              setFormData({ ...formData, plan: value as 'starter' | 'professional' | 'enterprise' })
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Plan auswählen" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="starter">
+                <div className="flex flex-col items-start">
+                  <span>Starter</span>
+                  <span className="text-xs text-muted-foreground">Bis 5 Benutzer, €29/Monat</span>
+                </div>
+              </SelectItem>
+              <SelectItem value="professional">
+                <div className="flex flex-col items-start">
+                  <span>Professional</span>
+                  <span className="text-xs text-muted-foreground">Bis 25 Benutzer, €79/Monat</span>
+                </div>
+              </SelectItem>
+              <SelectItem value="enterprise">
+                <div className="flex flex-col items-start">
+                  <span>Enterprise</span>
+                  <span className="text-xs text-muted-foreground">Unbegrenzt, €199/Monat</span>
+                </div>
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </form>
+    </RecordDialog>
   );
 }

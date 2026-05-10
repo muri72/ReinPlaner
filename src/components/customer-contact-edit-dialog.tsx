@@ -42,6 +42,16 @@ export function CustomerContactEditDialog({ contact, onSuccess }: CustomerContac
       description={`Bearbeiten Sie die Daten für ${contact.first_name} ${contact.last_name}.`}
       icon={<Users className="h-5 w-5 text-primary" />}
       size="lg"
+      footer={
+        <div className="flex justify-end gap-3">
+          <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
+            Abbrechen
+          </Button>
+          <Button type="submit" form="customer-contact-form" disabled={false}>
+            Änderungen speichern
+          </Button>
+        </div>
+      }
     >
       <TooltipProvider delayDuration={300}>
         <Tooltip>

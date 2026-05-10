@@ -104,7 +104,7 @@ export function CustomerContactForm({ initialData, onSubmit, submitButtonText, o
           )}
         </div>
       )}
-      <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-6 w-full">
+      <form id="customer-contact-form" onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-6 w-full">
         {/* Basic Information Section */}
         <FormSection
           title="Grundinformationen"

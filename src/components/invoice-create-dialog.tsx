@@ -54,6 +54,23 @@ export function InvoiceCreateDialog({
       description="Erstellen Sie eine neue Rechnung für einen Debitor."
       icon={<FileText className="h-5 w-5 text-primary" />}
       size="lg"
+      footer={
+        <div className="flex justify-end gap-3">
+          <Button type="button" variant="ghost" onClick={() => setOpenState(false)}>
+            Abbrechen
+          </Button>
+          <Button
+            type="submit"
+            form="new-invoice-form-submit"
+            onClick={() => {
+              const form = document.getElementById('new-invoice-form-submit');
+              if (form) form.click();
+            }}
+          >
+            Rechnung erstellen
+          </Button>
+        </div>
+      }
     >
       {!hideTrigger && (
         <DialogTrigger asChild>

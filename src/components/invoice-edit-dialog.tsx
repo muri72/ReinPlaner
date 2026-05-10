@@ -62,6 +62,16 @@ export function InvoiceEditDialog({ invoice, trigger }: InvoiceEditDialogProps) 
       description="Bearbeiten Sie die Rechnungsdetails."
       icon={<FileText className="h-5 w-5 text-primary" />}
       size="lg"
+      footer={
+        <div className="flex justify-end gap-3">
+          <Button type="button" variant="outline" onClick={() => setOpenState(false)}>
+            Abbrechen
+          </Button>
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? "Wird gespeichert..." : "Änderungen speichern"}
+          </Button>
+        </div>
+      }
     >
       <DialogTrigger asChild>
         {trigger ?? (
@@ -153,15 +163,7 @@ export function InvoiceEditDialog({ invoice, trigger }: InvoiceEditDialogProps) 
           </CardContent>
         </Card>
 
-        <div className="flex justify-end gap-2">
-          <Button type="button" variant="outline" onClick={() => setOpenState(false)}>
-            Abbrechen
-          </Button>
-          <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? "Wird gespeichert..." : "Änderungen speichern"}
-          </Button>
-        </div>
-      </form>
+        </form>
     </RecordDialog>
   );
 }

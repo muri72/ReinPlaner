@@ -56,6 +56,16 @@ export function ObjectEditDialog({ object, trigger }: ObjectEditDialogProps) {
       icon={<Building className="h-5 w-5 text-primary" />}
       size="lg"
       onOpenAutoFocus={(e) => e.preventDefault()}
+    footer={
+        <div className="flex justify-end gap-3">
+          <Button type="button" variant="ghost" onClick={() => setInternalOpen(false)}>
+            Abbrechen
+          </Button>
+          <Button type="submit" form="object-form">
+            Änderungen speichern
+          </Button>
+        </div>
+      }
     >
       <DialogTrigger asChild>
         {trigger ?? (

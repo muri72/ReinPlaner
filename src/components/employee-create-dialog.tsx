@@ -68,6 +68,19 @@ export function EmployeeCreateDialog({ onEmployeeCreated, trigger }: EmployeeCre
       icon={<UserCog className="h-5 w-5 text-primary" />}
       size="lg"
       onOpenAutoFocus={(e) => e.preventDefault()}
+      footer={
+        <div className="flex justify-end gap-3">
+          <Button type="button" variant="ghost" onClick={() => setOpenState(false)}>
+            Abbrechen
+          </Button>
+          <Button
+            type="submit"
+            form="employee-create-form"
+          >
+            Mitarbeiter erstellen
+          </Button>
+        </div>
+      }
     >
       <DialogTrigger asChild>
         {trigger ?? (

@@ -102,7 +102,7 @@ export function CustomerForm({ initialData, onSubmit, submitButtonText, onSucces
         </div>
       )}
       <UnsavedChangesProtection formId="customer-form">
-        <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-6 w-full">
+        <form id="customer-form" onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-6 w-full">
           {/* Basic Information Section */}
           <FormSection
             title="Grundinformationen"

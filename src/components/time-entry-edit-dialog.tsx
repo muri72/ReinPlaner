@@ -39,13 +39,27 @@ export function TimeEntryEditDialog({ timeEntry, currentUserId, isAdmin }: TimeE
   };
 
   return (
-    <RecordDialog
+<RecordDialog
       open={open}
       onOpenChange={setOpen}
       title="Zeiteintrag bearbeiten"
       description="Bearbeiten Sie die Details des Zeiteintrags."
       icon={<Clock className="h-5 w-5 text-primary" />}
       size="lg"
+      footer={
+        <div className="flex justify-end gap-3">
+          <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
+            Abbrechen
+          </Button>
+          <Button
+            type="submit"
+            form="time-entry-form"
+            className="bg-primary text-primary-foreground hover:bg-primary/90"
+          >
+            Änderungen speichern
+          </Button>
+        </div>
+      }
     >
       <TooltipProvider delayDuration={300}>
         <Tooltip>

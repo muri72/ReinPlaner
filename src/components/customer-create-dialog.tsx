@@ -61,6 +61,16 @@ export function CustomerCreateDialog({ onCustomerCreated, trigger }: CustomerCre
       icon={<Building2 className="h-5 w-5 text-primary" />}
       size="lg"
       onOpenAutoFocus={(e) => e.preventDefault()}
+      footer={
+        <div className="flex justify-end gap-3">
+          <Button type="button" variant="ghost" onClick={() => setOpenState(false)}>
+            Abbrechen
+          </Button>
+          <Button type="submit" form="customer-form">
+            Kunden erstellen
+          </Button>
+        </div>
+      }
     >
       <DialogTrigger asChild>
         {trigger ?? (

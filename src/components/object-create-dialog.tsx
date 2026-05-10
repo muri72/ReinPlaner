@@ -108,6 +108,25 @@ export function ObjectCreateDialog({
         icon={<Building className="h-5 w-5 text-primary" />}
         size="lg"
         onOpenAutoFocus={(e) => e.preventDefault()}
+        footer={
+          <div className="flex justify-end gap-3">
+            <Button type="button" variant="ghost" onClick={() => setOpenState(false)}>
+              Abbrechen
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {
+                const formElement = document.querySelector("[data-dialog-content] form");
+                if (formElement) {
+                  const submitEvent = new Event("submit", { bubbles: true, cancelable: true });
+                  formElement.dispatchEvent(submitEvent);
+                }
+              }}
+            >
+              Objekt erstellen
+            </Button>
+          </div>
+        }
       >
       {!hideTrigger && (
         <DialogTrigger asChild>

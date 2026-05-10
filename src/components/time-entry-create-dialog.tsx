@@ -49,6 +49,16 @@ export function TimeEntryCreateDialog({
       title={dialogTitle}
       icon={<Clock className="h-5 w-5 text-primary" />}
       size="lg"
+      footer={
+        <>
+          <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
+            Abbrechen
+          </Button>
+          <Button type="submit" form="time-entry-form">
+            Zeiteintrag erstellen
+          </Button>
+        </>
+      }
     >
       <DialogTrigger asChild>
         <Button variant={triggerButtonVariant} className={triggerButtonClassName}>

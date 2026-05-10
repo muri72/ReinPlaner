@@ -94,6 +94,25 @@ export function UserEditDialog({ user, trigger, onActionSuccess }: UserEditDialo
       description="Formular zum Bearbeiten der Benutzerdaten."
       icon={<UserCheck className="h-5 w-5 text-primary" />}
       size="lg"
+      footer={
+        <div className="flex justify-end gap-3">
+          <Button type="button" variant="ghost" onClick={() => setInternalOpen(false)}>
+            Abbrechen
+          </Button>
+          <Button
+            type="button"
+            onClick={() => {
+              const form = document.querySelector("[data-dialog-content] form");
+              if (form) {
+                const submitBtn = form.querySelector('button[type="submit"]') as HTMLButtonElement;
+                if (submitBtn) submitBtn.click();
+              }
+            }}
+          >
+            Änderungen speichern
+          </Button>
+        </div>
+      }
     >
       <DialogTrigger asChild>
         {trigger ?? defaultTrigger}

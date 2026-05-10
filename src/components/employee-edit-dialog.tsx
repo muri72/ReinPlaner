@@ -103,6 +103,25 @@ export function EmployeeEditDialog({ employee, trigger, onActionSuccess }: Emplo
       icon={<UserCog className="h-5 w-5 text-primary" />}
       size="lg"
       onOpenAutoFocus={(e) => e.preventDefault()}
+      footer={
+        <div className="flex justify-end gap-3">
+          <Button type="button" variant="ghost" onClick={() => setInternalOpen(false)}>
+            Abbrechen
+          </Button>
+          <Button
+            type="button"
+            onClick={() => {
+              const form = document.querySelector("[data-dialog-content] form");
+              if (form) {
+                const submitBtn = form.querySelector('button[type="submit"]') as HTMLButtonElement;
+                if (submitBtn) submitBtn.click();
+              }
+            }}
+          >
+            Änderungen speichern
+          </Button>
+        </div>
+      }
     >
       <DialogTrigger asChild>
         {trigger ?? (
