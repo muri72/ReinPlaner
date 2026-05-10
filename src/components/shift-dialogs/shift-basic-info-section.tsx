@@ -82,7 +82,7 @@ export function ShiftBasicInfoSection({ form }: ShiftBasicInfoSectionProps) {
       {/* Date Selection - full width for single, 2-col for recurring */}
       <div className={shiftType === "recurring" ? "grid grid-cols-2 gap-4" : "w-full"}>
         <div className={shiftType === "recurring" ? "" : "w-full"}>
-          <Label className="text-xs uppercase tracking-wider text-muted-foreground mb-1.5 block">
+          <Label className="text-sm text-muted-foreground mb-1.5 block">
             {shiftType === "recurring" ? "Startdatum" : "Datum"}
           </Label>
           <Controller
