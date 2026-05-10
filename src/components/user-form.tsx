@@ -262,7 +262,7 @@ export function UserForm({
 
       <UserFormHeader isEditMode={isEditMode} isInDialog={isInDialog} />
 
-      <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-6 w-full">
+      <form id="user-form" onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-6 w-full">
         {/* Assignment Section - only in create mode */}
         {!isEditMode && (
           <AssignmentSection

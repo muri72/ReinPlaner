@@ -39,14 +39,8 @@ export function UserCreateDialog({ onUserCreated }: UserCreateDialogProps) {
             Abbrechen
           </Button>
           <Button
-            type="button"
-            onClick={() => {
-              const form = document.querySelector("[data-dialog-content] form");
-              if (form) {
-                const submitBtn = form.querySelector('button[type="submit"]') as HTMLButtonElement;
-                if (submitBtn) submitBtn.click();
-              }
-            }}
+            type="submit"
+            form="user-form"
           >
             Benutzer erstellen
           </Button>

@@ -61,11 +61,7 @@ export function InvoiceCreateDialog({
           </Button>
           <Button
             type="submit"
-            form="new-invoice-form-submit"
-            onClick={() => {
-              const form = document.getElementById('new-invoice-form-submit');
-              if (form) form.click();
-            }}
+            form="new-invoice-form-manual"
           >
             Rechnung erstellen
           </Button>

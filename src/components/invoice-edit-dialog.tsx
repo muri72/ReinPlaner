@@ -67,7 +67,7 @@ export function InvoiceEditDialog({ invoice, trigger }: InvoiceEditDialogProps) 
           <Button type="button" variant="outline" onClick={() => setOpenState(false)}>
             Abbrechen
           </Button>
-          <Button type="submit" disabled={isSubmitting}>
+          <Button type="submit" form="invoice-edit-form" disabled={isSubmitting}>
             {isSubmitting ? "Wird gespeichert..." : "Änderungen speichern"}
           </Button>
         </div>
@@ -81,7 +81,7 @@ export function InvoiceEditDialog({ invoice, trigger }: InvoiceEditDialogProps) 
         )}
       </DialogTrigger>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form id="invoice-edit-form" onSubmit={handleSubmit} className="space-y-6">
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">Rechnungsdaten</CardTitle>

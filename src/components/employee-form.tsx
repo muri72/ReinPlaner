@@ -373,7 +373,7 @@ export function EmployeeForm({ initialData, onSubmit, submitButtonText, onSucces
 
   return (
     <>
-      <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-6">
+      <form id={isInDialog ? "employee-create-form" : undefined} onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-6">
         <EmployeeBasicInfoSection form={form} />
         <EmployeeDatesSection form={form} />
         <EmployeeEmploymentSection form={form} />

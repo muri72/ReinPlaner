@@ -355,7 +355,7 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess,
   };
 
   return (
-    <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 w-full">
+    <form onSubmit={form.handleSubmit(handleFormSubmit)} id="object-form" className="space-y-4 w-full">
       <div>
         <LabelWithRequired htmlFor="name" required>Objektname</LabelWithRequired>
         <Input

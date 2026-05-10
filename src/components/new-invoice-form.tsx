@@ -196,7 +196,7 @@ export function NewInvoiceForm({ debtors, orders }: NewInvoiceFormProps) {
               <CardTitle className="text-lg">Rechnungsdetails</CardTitle>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleManualSubmit} className="space-y-6">
+              <form id="new-invoice-form-manual" onSubmit={handleManualSubmit} className="space-y-6">
                 {/* Debtor Selection */}
                 <div className="space-y-2">
                   <Label htmlFor="debtor">Debitor *</Label>
@@ -372,7 +372,7 @@ export function NewInvoiceForm({ debtors, orders }: NewInvoiceFormProps) {
               <CardTitle className="text-lg">Rechnung aus Auftrag erstellen</CardTitle>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleOrderSubmit} className="space-y-6">
+              <form id="new-invoice-form-order" onSubmit={handleOrderSubmit} className="space-y-6">
                 <div className="space-y-2">
                   <Label>Auftrag auswählen</Label>
                   <Select value={selectedOrder} onValueChange={setSelectedOrder} required>

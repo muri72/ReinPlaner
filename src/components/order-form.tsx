@@ -841,7 +841,7 @@ export function OrderForm({ initialData, onSubmit, submitButtonText, onSuccess, 
         </div>
       )}
       <UnsavedChangesProtection formId="order-form">
-        <form id="order-create-form" onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 w-full">
+        <form id="order-form" onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4 w-full">
           <OrderBasicInfoSection
             form={form}
             customers={customers}
