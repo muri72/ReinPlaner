@@ -43,6 +43,16 @@ export function TicketCreateDialog({
       icon={<MessageSquare className="h-5 w-5 text-primary" />}
       size="lg"
       onOpenAutoFocus={(e) => e.preventDefault()}
+      footer={
+        <div className="flex justify-end gap-3">
+          <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
+            Abbrechen
+          </Button>
+          <Button type="submit" form="ticket-form">
+            Ticket erstellen
+          </Button>
+        </div>
+      }
     >
       <DialogTrigger asChild>
         <Button variant={triggerButtonVariant} className={triggerButtonClassName}>

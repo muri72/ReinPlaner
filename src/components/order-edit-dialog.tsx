@@ -98,6 +98,16 @@ export function OrderEditDialog({ order, trigger }: OrderEditDialogProps) {
       icon={<ShoppingCart className="h-5 w-5 text-primary" />}
       size="lg"
       onOpenAutoFocus={(e) => e.preventDefault()}
+      footer={
+        <div className="flex justify-end gap-3">
+          <Button type="button" variant="ghost" onClick={() => setInternalOpen(false)}>
+            Abbrechen
+          </Button>
+          <Button type="submit" form="order-form">
+            Änderungen speichern
+          </Button>
+        </div>
+      }
     >
       <DialogTrigger asChild>
         {trigger ?? (
