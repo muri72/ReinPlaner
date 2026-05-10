@@ -197,16 +197,18 @@ export function CustomerForm({ initialData, onSubmit, submitButtonText, onSucces
             />
           </FormSection>
 
-          <FormActions
-            isSubmitting={form.formState.isSubmitting}
-            onCancel={handleCancel}
-            onSubmit={handleSubmitClick}
-            submitLabel={submitButtonText}
-            cancelLabel="Abbrechen"
-            showCancel={!isInDialog}
-            submitVariant="default"
-            loadingText={`${submitButtonText}...`}
-          />
+          {!isInDialog && (
+            <FormActions
+              isSubmitting={form.formState.isSubmitting}
+              onCancel={handleCancel}
+              onSubmit={handleSubmitClick}
+              submitLabel={submitButtonText}
+              cancelLabel="Abbrechen"
+              showCancel={!isInDialog}
+              submitVariant="default"
+              loadingText={`${submitButtonText}...`}
+            />
+          )}
         </form>
       </UnsavedChangesProtection>
 

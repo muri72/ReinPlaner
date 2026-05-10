@@ -360,15 +360,6 @@ export function NewInvoiceForm({ debtors, orders }: NewInvoiceFormProps) {
                     rows={3}
                   />
                 </div>
-
-                <div className="flex justify-end gap-2">
-                  <Button type="button" variant="outline" onClick={() => router.back()}>
-                    Abbrechen
-                  </Button>
-                  <Button type="submit" disabled={isSubmitting}>
-                    {isSubmitting ? 'Wird erstellt...' : 'Rechnung erstellen'}
-                  </Button>
-                </div>
               </form>
             </CardContent>
           </Card>
@@ -440,15 +431,7 @@ export function NewInvoiceForm({ debtors, orders }: NewInvoiceFormProps) {
                   </ul>
                 </div>
 
-                <div className="flex justify-end gap-2">
-                  <Button type="button" variant="outline" onClick={() => router.back()}>
-                    Abbrechen
-                  </Button>
-                  <Button type="submit" disabled={isSubmitting || !selectedOrder}>
-                    {isSubmitting ? 'Wird erstellt...' : 'Rechnung erstellen'}
-                  </Button>
-                </div>
-              </form>
+                </form>
             </CardContent>
           </Card>
         </TabsContent>

@@ -716,16 +716,18 @@ export function ObjectForm({ initialData, onSubmit, submitButtonText, onSuccess,
           Geschätzte Wochenstunden (Netto, über alle Wochen): {totalWeeklyHours.toFixed(2)}
         </div>
       </div>
-      <FormActions
-        isSubmitting={form.formState.isSubmitting}
-        onCancel={handleCancel}
-        onSubmit={handleSubmitClick}
-        submitLabel={submitButtonText}
-        cancelLabel="Abbrechen"
-        showCancel={!isInDialog}
-        submitVariant="default"
-        loadingText={`${submitButtonText}...`}
-      />
+      {!isInDialog && (
+        <FormActions
+          isSubmitting={form.formState.isSubmitting}
+          onCancel={handleCancel}
+          onSubmit={handleSubmitClick}
+          submitLabel={submitButtonText}
+          cancelLabel="Abbrechen"
+          showCancel={!isInDialog}
+          submitVariant="default"
+          loadingText={`${submitButtonText}...`}
+        />
+      )}
     </form>
   );
 }

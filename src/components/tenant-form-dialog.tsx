@@ -137,13 +137,17 @@ export function TenantFormDialog({
           >
             Abbrechen
           </Button>
-          <Button type="submit" disabled={loading}>
+          <Button
+            type="submit"
+            form="tenant-form"
+            disabled={loading}
+          >
             {loading ? 'Wird gespeichert...' : mode === 'create' ? 'Erstellen' : 'Speichern'}
           </Button>
         </div>
       }
     >
-      <form onSubmit={handleSubmit} className="grid gap-4">
+      <form id="tenant-form" onSubmit={handleSubmit} className="grid gap-4">
         {/* Name */}
         <div className="grid gap-2">
           <Label htmlFor="name">Firmenname *</Label>

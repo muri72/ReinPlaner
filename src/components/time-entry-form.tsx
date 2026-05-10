@@ -387,17 +387,6 @@ export function TimeEntryForm({ initialData, onSubmit, submitButtonText, onSucce
             </div>
           </FormSection>
 
-          <FormActions
-            isSubmitting={form.formState.isSubmitting}
-            onCancel={handleCancel}
-            onSubmit={handleSubmitClick}
-            submitLabel={submitButtonText}
-            cancelLabel="Abbrechen"
-            showCancel={true}
-            submitVariant="default"
-            loadingText={`${submitButtonText}...`}
-            align="right"
-          />
         </form>
 
         <UnsavedChangesAlert

@@ -315,13 +315,15 @@ export function UserForm({
           />
         )}
 
-        {/* Form Actions */}
-        <FormActions
-          onCancel={handleCancel}
-          onSubmit={handleSubmitClick}
-          isSubmitting={form.formState.isSubmitting}
-          submitLabel={submitButtonText}
-        />
+        {/* Form Actions - hidden in dialog mode since dialog provides its own buttons */}
+        {!isInDialog && (
+          <FormActions
+            onCancel={handleCancel}
+            onSubmit={handleSubmitClick}
+            isSubmitting={form.formState.isSubmitting}
+            submitLabel={submitButtonText}
+          />
+        )}
       </form>
     </>
   );

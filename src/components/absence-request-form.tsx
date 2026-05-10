@@ -399,17 +399,19 @@ export function AbsenceRequestForm({ initialData, onSubmit, submitButtonText, on
             </FormSection>
           )}
 
-          <FormActions
-            isSubmitting={form.formState.isSubmitting}
-            onCancel={handleCancel}
-            onSubmit={handleSubmitClick}
-            submitLabel={submitButtonText}
-            cancelLabel="Abbrechen"
-            showCancel={true}
-            submitVariant="default"
-            loadingText="Wird verarbeitet..."
-            align="right"
-          />
+          {!isInDialog && (
+            <FormActions
+              isSubmitting={form.formState.isSubmitting}
+              onCancel={handleCancel}
+              onSubmit={handleSubmitClick}
+              submitLabel={submitButtonText}
+              cancelLabel="Abbrechen"
+              showCancel={true}
+              submitVariant="default"
+              loadingText="Wird verarbeitet..."
+              align="right"
+            />
+          )}
         </form>
 
         <UnsavedChangesAlert

@@ -396,16 +396,18 @@ export function ServiceCreateEditDialog({
         </div>
 
         <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <Label>Features</Label>
-            <Button type="button" variant="outline" size="sm" onClick={handleAddFeature}>
-              <Plus className="mr-2 h-4 w-4" />
-              Feature hinzufügen
-            </Button>
-          </div>
-
           <div className="space-y-2">
-            {features.map((feature, index) => (
+            <div className="flex items-center justify-between">
+              <Label>Features</Label>
+              <Button type="button" variant="outline" size="sm" onClick={handleAddFeature}>
+                <Plus className="mr-2 h-4 w-4" />
+                Feature hinzufügen
+              </Button>
+            </div>
+            {features.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-2">Noch keine Features vorhanden.</p>
+            ) : (
+              features.map((feature, index) => (
               <div key={feature.id} className="flex items-start gap-2 p-2 border rounded">
                 <GripVertical className="h-5 w-5 text-muted-foreground mt-1" />
                 <div className="flex-1 grid grid-cols-2 gap-2">
@@ -430,7 +432,8 @@ export function ServiceCreateEditDialog({
                   <X className="h-4 w-4" />
                 </Button>
               </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
       </form>

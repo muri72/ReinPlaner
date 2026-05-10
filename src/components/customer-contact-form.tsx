@@ -212,16 +212,18 @@ export function CustomerContactForm({ initialData, onSubmit, submitButtonText, o
             )}
           </div>
         </FormSection>
-        <FormActions
-          isSubmitting={form.formState.isSubmitting}
-          onCancel={handleCancel}
-          onSubmit={handleSubmitClick}
-          submitLabel={submitButtonText}
-          cancelLabel="Abbrechen"
-          showCancel={!isInDialog}
-          submitVariant="default"
-          loadingText={`${submitButtonText}...`}
-        />
+        {!isInDialog && (
+          <FormActions
+            isSubmitting={form.formState.isSubmitting}
+            onCancel={handleCancel}
+            onSubmit={handleSubmitClick}
+            submitLabel={submitButtonText}
+            cancelLabel="Abbrechen"
+            showCancel={true}
+            submitVariant="default"
+            loadingText={`${submitButtonText}...`}
+          />
+        )}
       </form>
     </>
   );
