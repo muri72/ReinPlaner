@@ -88,7 +88,7 @@ export function ShiftBasicInfoSection({ form }: ShiftBasicInfoSectionProps) {
           <Controller
             name="shiftDate"
             control={form.control}
-            render={({ field }) => <Input type="date" {...field} />}
+            render={({ field }) => <Input type="date" {...field} className="w-full" />}
           />
         </div>
         {shiftType === "recurring" && (
@@ -98,7 +98,7 @@ export function ShiftBasicInfoSection({ form }: ShiftBasicInfoSectionProps) {
               name="endDate"
               control={form.control}
               render={({ field }) => (
-                <Input type="date" {...field} min={form.getValues("shiftDate")} />
+                <Input type="date" {...field} min={form.getValues("shiftDate")} className="w-full" />
               )}
             />
           </div>
@@ -109,7 +109,7 @@ export function ShiftBasicInfoSection({ form }: ShiftBasicInfoSectionProps) {
       {shiftType === "single" && (
         <>
           {/* Start and End Time */}
-          <div className="grid grid-cols-2 gap-4 items-stretch">
+          <div className="grid grid-cols-2 gap-4 items-stretch min-w-0">
             <div className="flex flex-col">
               <Label htmlFor="startTime" className="text-sm text-muted-foreground mb-1.5 block">
                 Von
@@ -122,6 +122,7 @@ export function ShiftBasicInfoSection({ form }: ShiftBasicInfoSectionProps) {
                     id="startTime"
                     type="time"
                     value={field.value ?? ""}
+                    className="w-full"
                     onChange={(e) => {
                       field.onChange(e);
                       form.trigger(["startTime", "endTime", "travelTimeMinutes", "breakTimeMinutes"]);
@@ -142,6 +143,7 @@ export function ShiftBasicInfoSection({ form }: ShiftBasicInfoSectionProps) {
                     id="endTime"
                     type="time"
                     value={field.value ?? ""}
+                    className="w-full"
                     onChange={(e) => {
                       field.onChange(e);
                       form.trigger(["startTime", "endTime", "travelTimeMinutes", "breakTimeMinutes"]);
@@ -161,7 +163,7 @@ export function ShiftBasicInfoSection({ form }: ShiftBasicInfoSectionProps) {
           </div>
 
           {/* Travel Time and Break Time */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-4 min-w-0">
             <div>
               <Label htmlFor="travelTimeMinutes" className="text-sm text-muted-foreground mb-1.5 block">
                 Fahrtzeit (Min.)
