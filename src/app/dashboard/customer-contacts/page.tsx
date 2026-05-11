@@ -153,7 +153,7 @@ export default function CustomerContactsPage() {
     // Build query
     let contactsQuery = supabase
       .from('customer_contacts')
-      .select(`*, customers(name)`, { count: 'exact' })
+      .select('*', { count: 'exact' })
       .order(sortColumn, { ascending: sortDirection === 'asc' })
       .range(from, to);
 
@@ -170,7 +170,7 @@ export default function CustomerContactsPage() {
         .from('customers')
         .select('id')
         .eq('user_id', user.id);
-      
+
       if (userCustomers && userCustomers.length > 0) {
         const customerIds = userCustomers.map(c => c.id);
         contactsQuery = contactsQuery.in('customer_id', customerIds);
@@ -184,6 +184,18 @@ export default function CustomerContactsPage() {
     }
 
     const { data, error, count } = await contactsQuery;
+
+    // Fetch customer names separately (embedded join requires FK that doesn't exist)
+    const customerIds = [...new Set((data || []).map(c => c.customer_id).filter(Boolean))];
+    const { data: customerRows } = customerIds.length > 0
+      ? await supabase.from('customers').select('id, name').in('id', customerIds)
+      : { data: [] };
+    const customerMap = Object.fromEntries((customerRows || []).map(c => [c.id, c]));
+
+    setAllContacts(data?.map(contact => ({
+      ...contact,
+      customers: customerMap[contact.customer_id] ? { name: customerMap[contact.customer_id].name } : null,
+    })) || []);
 
     if (error) {
       console.error("Fehler beim Laden der Kundenkontakte:", error?.message || error);

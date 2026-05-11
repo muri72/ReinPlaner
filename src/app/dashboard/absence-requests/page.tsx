@@ -109,11 +109,11 @@ export default function AbsenceRequestsPage() {
 
     let selectQuery = supabase
       .from('absence_requests')
-      .select(`*, employees ( first_name, last_name )`, { count: 'exact' })
+      .select('*', { count: 'exact' })
       .order(sortColumn, { ascending: sortDirection === 'asc' });
 
     if (role === 'employee') selectQuery = selectQuery.eq('user_id', user.id);
-    if (query) selectQuery = selectQuery.or(`notes.ilike.%${query}%,admin_notes.ilike.%${query}%,employees.first_name.ilike.%${query}%,employees.last_name.ilike.%${query}%`);
+    if (query) selectQuery = selectQuery.or(`notes.ilike.%${query}%,admin_notes.ilike.%${query}%`);
     if (employeeIdFilter) selectQuery = selectQuery.eq('employee_id', employeeIdFilter);
     if (typeFilter) selectQuery = selectQuery.eq('type', typeFilter);
     if (statusFilter) selectQuery = selectQuery.eq('status', statusFilter);
@@ -121,9 +121,17 @@ export default function AbsenceRequestsPage() {
     const { data, error, count } = await selectQuery.range(from, to);
 
     if (error) console.error("Fehler beim Laden der Abwesenheitsanträge:", error?.message || error);
+
+    // Fetch employee names separately (embedded join requires FK that doesn't exist)
+    const employeeIds = [...new Set((data || []).map(r => r.employee_id).filter(Boolean))];
+    const { data: employeeRows } = employeeIds.length > 0
+      ? await supabase.from('employees').select('id, first_name, last_name').in('id', employeeIds)
+      : { data: [] };
+    const employeeMap = Object.fromEntries((employeeRows || []).map(e => [e.id, e]));
+
     setAllRequests(data?.map(request => ({
       ...request,
-      employees: Array.isArray(request.employees) ? request.employees[0] : request.employees,
+      employees: employeeMap[request.employee_id] || null,
     })) || []);
     setTotalCount(count);
     setLoading(false);
