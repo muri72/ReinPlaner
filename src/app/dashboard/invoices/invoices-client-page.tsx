@@ -49,9 +49,23 @@ export function InvoicesClientPage() {
           // Fetch invoices
           const { data: invoicesData } = await supabase
             .from("invoices")
-            .select("*, debtor:debtors(*), items:invoice_items(*)")
+            .select("*")
             .eq("tenant_id", profile.tenant_id)
             .order("created_at", { ascending: false });
+
+          // Fetch debtors and invoice items separately (embedded joins require FK constraints that don't exist)
+          const { data: allDebtors } = await supabase
+            .from("debtors")
+            .select("*")
+            .eq("tenant_id", profile.tenant_id)
+            .order("billing_name");
+          const { data: allItems } = await supabase
+            .from("invoice_items")
+            .select("*")
+            .eq("tenant_id", profile.tenant_id);
+
+          const debtorMap = Object.fromEntries((allDebtors || []).map(d => [d.id, d]));
+          const itemsByInvoice = Object.groupBy((allItems || []), i => i.invoice_id);
 
           const today = new Date().toISOString().split("T")[0];
           const processedInvoices = (invoicesData || []).map((inv: any) => ({
@@ -60,6 +74,8 @@ export function InvoicesClientPage() {
               inv.status === "sent" && inv.due_date < today && inv.paid_amount_cents < inv.total_amount_cents
                 ? "overdue"
                 : inv.status,
+            debtor: inv.debtor_id ? debtorMap[inv.debtor_id] || null : null,
+            items: itemsByInvoice[inv.id] || [],
           }));
           setInvoices(processedInvoices);
 
@@ -74,15 +90,22 @@ export function InvoicesClientPage() {
           // Fetch active orders
           const { data: ordersData } = await supabase
             .from("orders")
-            .select("id, title, customer_id, order_type, fixed_monthly_price, objects:objects(customer_id, customers:name)")
+            .select("id, title, customer_id, order_type, fixed_monthly_price")
             .eq("tenant_id", profile.tenant_id)
             .eq("status", "active")
             .order("created_at", { ascending: false });
 
+          // Fetch customer names for orders separately (embedded join has no FK)
+          const orderCustomerIds = [...new Set((ordersData || []).map(o => o.customer_id).filter(Boolean))];
+          const { data: customerRows } = orderCustomerIds.length > 0
+            ? await supabase.from("customers").select("id, name").in("id", orderCustomerIds)
+            : { data: [] };
+          const orderCustomerMap = Object.fromEntries((customerRows || []).map(c => [c.id, c]));
+
           const processedOrders = (ordersData || []).map((o: any) => ({
             id: o.id,
             title: o.title,
-            customer_name: o.objects?.customers?.name || "Unbekannt",
+            customer_name: orderCustomerMap[o.customer_id]?.name || "Unbekannt",
             order_type: o.order_type,
             fixed_monthly_price: o.fixed_monthly_price,
           }));

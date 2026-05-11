@@ -94,7 +94,6 @@ export default function CustomersPage() {
     customerTypeFilter,
     sortColumn,
     sortDirection,
-    currentSearchParams
   ]);
 
   useEffect(() => {

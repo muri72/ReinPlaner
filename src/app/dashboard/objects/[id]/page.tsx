@@ -18,13 +18,7 @@ export default async function ObjectDetailPage({ params }: { params: Promise<{ i
 
   const { data: object, error } = await supabase
     .from('objects')
-    .select(`
-      *,
-      customers!objects_customer_id_fkey ( name ),
-      customer_contacts!objects_customer_contact_id_fkey ( first_name, last_name ),
-      orders ( * ),
-      documents ( * )
-    `)
+    .select("*")
     .eq('id', id)
     .single();
 
@@ -33,12 +27,22 @@ export default async function ObjectDetailPage({ params }: { params: Promise<{ i
     redirect("/dashboard/objects");
   }
 
+  // Fetch related data separately (embedded joins require FK constraints that don't fully exist)
+  const [{ data: customerRows }, { data: contactRows }, { data: orderRows }, { data: documentRows }] = await Promise.all([
+    object.customer_id ? supabase.from("customers").select("name").eq("id", object.customer_id).limit(1) : Promise.resolve({ data: null }),
+    object.customer_contact_id ? supabase.from("customer_contacts").select("first_name, last_name").eq("id", object.customer_contact_id).limit(1) : Promise.resolve({ data: null }),
+    supabase.from("orders").select("id, key, title, status").eq("object_id", id),
+    supabase.from("documents").select("id, name, file_url, created_at").eq("object_id", id),
+  ]);
+
   // Flatten nested data for easier prop passing
   const flattenedObject = {
     ...object,
-    customer_name: Array.isArray(object.customers) ? object.customers[0]?.name : object.customers?.name,
-    object_leader_first_name: Array.isArray(object.customer_contacts) ? object.customer_contacts[0]?.first_name : object.customer_contacts?.first_name,
-    object_leader_last_name: Array.isArray(object.customer_contacts) ? object.customer_contacts[0]?.last_name : object.customer_contacts?.last_name,
+    customer_name: customerRows?.[0]?.name || null,
+    object_leader_first_name: contactRows?.[0]?.first_name || null,
+    object_leader_last_name: contactRows?.[0]?.last_name || null,
+    orders: orderRows || [],
+    documents: documentRows || [],
   };
 
   return (
