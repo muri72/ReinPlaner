@@ -14,24 +14,11 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
     redirect("/login");
   }
 
-  // Await the params
   const { id } = await params;
 
   const { data: order, error } = await supabase
     .from('orders')
-    .select(`
-      *,
-      customers ( name ),
-      objects ( name, address, recurrence_interval_weeks ),
-      customer_contacts ( first_name, last_name ),
-      order_employee_assignments (
-        employee_id,
-        assigned_daily_schedules,
-        assigned_recurrence_interval_weeks,
-        assigned_start_week_offset,
-        employees ( first_name, last_name )
-      )
-    `)
+    .select("*")
     .eq('id', id)
     .single();
 
@@ -39,6 +26,21 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
     console.error("Fehler beim Laden des Auftrags:", error?.message || "Auftrag nicht gefunden");
     redirect("/dashboard/orders");
   }
+
+  // Fetch related data separately (embedded joins require FK constraints that don't exist)
+  const [{ data: customerRows }, { data: objectRows }, { data: contactRows }, { data: assignmentRows }] = await Promise.all([
+    order.customer_id ? supabase.from("customers").select("name").eq("id", order.customer_id).limit(1) : Promise.resolve({ data: null }),
+    order.object_id ? supabase.from("objects").select("name, address, recurrence_interval_weeks").eq("id", order.object_id).limit(1) : Promise.resolve({ data: null }),
+    order.customer_contact_id ? supabase.from("customer_contacts").select("first_name, last_name").eq("id", order.customer_contact_id).limit(1) : Promise.resolve({ data: null }),
+    supabase.from("order_employee_assignments").select("employee_id, assigned_daily_schedules, assigned_recurrence_interval_weeks, assigned_start_week_offset").eq("order_id", id),
+  ]);
+
+  // Fetch employee names for assignments
+  const employeeIds = [...new Set((assignmentRows || []).map(a => a.employee_id).filter(Boolean))];
+  const { data: employeeRows } = employeeIds.length > 0
+    ? await supabase.from("employees").select("id, first_name, last_name").in("id", employeeIds)
+    : { data: [] };
+  const employeeMap = Object.fromEntries((employeeRows || []).map(e => [e.id, e]));
 
   // Fetch services for hourly rate calculation
   const { data: servicesData, error: servicesError } = await supabase
@@ -56,40 +58,28 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
     markup_percentage: order.markup_percentage,
     custom_hourly_rate: order.custom_hourly_rate,
   };
-  const finalHourlyRate = calculateFinalHourlyRate(
-    serviceConfig,
-    servicesData || []
-  );
+  const finalHourlyRate = calculateFinalHourlyRate(serviceConfig, servicesData || []);
 
   // Calculate total cost
-  const totalCost = calculateTotalCost(
-    order.total_estimated_hours,
-    finalHourlyRate
-  );
+  const totalCost = calculateTotalCost(order.total_estimated_hours, finalHourlyRate);
 
   // Flatten nested data for easier prop passing
   const flattenedOrder = {
     ...order,
-    customer_name: Array.isArray(order.customers) ? order.customers[0]?.name : order.customers?.name,
-    object_name: Array.isArray(order.objects) ? order.objects[0]?.name : order.objects?.name,
-    object_address: Array.isArray(order.objects) ? order.objects[0]?.address : order.objects?.address,
-    customer_contact_first_name: Array.isArray(order.customer_contacts) ? order.customer_contacts[0]?.first_name : order.customer_contacts?.first_name,
-    customer_contact_last_name: Array.isArray(order.customer_contacts) ? order.customer_contacts[0]?.last_name : order.customer_contacts?.last_name,
-    employee_first_names: order.order_employee_assignments?.map((a: any) => {
-      const employee = Array.isArray(a.employees) ? a.employees[0] : a.employees;
-      return employee?.first_name || '';
-    }) || null,
-    employee_last_names: order.order_employee_assignments?.map((a: any) => {
-      const employee = Array.isArray(a.employees) ? a.employees[0] : a.employees;
-      return employee?.last_name || '';
-    }) || null,
-    assignedEmployees: order.order_employee_assignments?.map((a: any) => ({
+    customer_name: customerRows?.[0]?.name || null,
+    object_name: objectRows?.[0]?.name || null,
+    object_address: objectRows?.[0]?.address || null,
+    customer_contact_first_name: contactRows?.[0]?.first_name || null,
+    customer_contact_last_name: contactRows?.[0]?.last_name || null,
+    employee_first_names: assignmentRows?.map(a => employeeMap[a.employee_id]?.first_name || '').filter(Boolean) || null,
+    employee_last_names: assignmentRows?.map(a => employeeMap[a.employee_id]?.last_name || '').filter(Boolean) || null,
+    assignedEmployees: assignmentRows?.map(a => ({
       employeeId: a.employee_id,
       assigned_daily_schedules: a.assigned_daily_schedules || [],
       assigned_recurrence_interval_weeks: a.assigned_recurrence_interval_weeks || 1,
       assigned_start_week_offset: a.assigned_start_week_offset || 0,
     })) || [],
-    object: Array.isArray(order.objects) ? order.objects[0] : order.objects,
+    object: objectRows?.[0] || null,
     hourly_rate: finalHourlyRate,
     total_cost: totalCost,
   };

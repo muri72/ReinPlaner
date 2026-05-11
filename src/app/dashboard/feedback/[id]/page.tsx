@@ -36,54 +36,80 @@ export default async function FeedbackDetailPage({
   // Try order_feedback
   const { data: orderFeedback, error: orderError } = await supabase
     .from("order_feedback")
-    .select(`
-      *,
-      orders (
-        id,
-        title,
-        customers ( name ),
-        order_employee_assignments ( employees ( first_name, last_name ) )
-      ),
-      profiles ( first_name, last_name )
-    `)
+    .select("*")
     .eq("id", id)
     .single();
 
   if (!orderError && orderFeedback) {
-    const employeeAssignment = orderFeedback.orders?.order_employee_assignments?.[0];
-    const employee = employeeAssignment?.employees;
-    const employeeName = [employee?.first_name, employee?.last_name].filter(Boolean).join(" ") || "N/A";
+    // Fetch related data separately
+    const [{ data: orderRows }, { data: profileRows }] = await Promise.all([
+      orderFeedback.order_id ? supabase.from("orders").select("id, title").eq("id", orderFeedback.order_id).limit(1) : Promise.resolve({ data: null }),
+      orderFeedback.reply_by ? supabase.from("profiles").select("first_name, last_name").eq("id", orderFeedback.reply_by).limit(1) : Promise.resolve({ data: null }),
+    ]);
+
+    let employeeName = "N/A";
+    if (orderRows?.[0]) {
+      const { data: assignmentRows } = await supabase
+        .from("order_employee_assignments")
+        .select("employee_id")
+        .eq("order_id", orderFeedback.order_id)
+        .limit(1);
+      if (assignmentRows?.[0]?.employee_id) {
+        const { data: empRows } = await supabase
+          .from("employees")
+          .select("first_name, last_name")
+          .eq("id", assignmentRows[0].employee_id)
+          .limit(1);
+        const emp = empRows?.[0];
+        if (emp) employeeName = [emp.first_name, emp.last_name].filter(Boolean).join(" ") || "N/A";
+      }
+    }
+
+    let customerName = "N/A";
+    if (orderRows?.[0]) {
+      const { data: customerRows } = await supabase
+        .from("orders")
+        .select("customer_id")
+        .eq("id", orderFeedback.order_id)
+        .limit(1);
+      if (customerRows?.[0]?.customer_id) {
+        const { data: cust } = await supabase.from("customers").select("name").eq("id", customerRows[0].customer_id).limit(1);
+        customerName = cust?.[0]?.name || "N/A";
+      }
+    }
 
     feedback = {
       ...orderFeedback,
       order: {
-        id: orderFeedback.orders?.id,
-        title: orderFeedback.orders?.title || "Unbekannter Auftrag",
-        customer_name: orderFeedback.orders?.customers?.[0]?.name || "N/A",
+        id: orderRows?.[0]?.id,
+        title: orderRows?.[0]?.title || "Unbekannter Auftrag",
+        customer_name: customerName,
         employee_name: employeeName,
       },
-      replied_by_name: [orderFeedback.profiles?.first_name, orderFeedback.profiles?.last_name]
-        .filter(Boolean)
-        .join(" ") || "Admin",
+      replied_by_name: profileRows?.[0]
+        ? [profileRows[0].first_name, profileRows[0].last_name].filter(Boolean).join(" ")
+        : "Admin",
     };
     feedbackType = "order";
   } else {
     // Try general_feedback
     const { data: generalFeedback, error: generalError } = await supabase
       .from("general_feedback")
-      .select(`
-        *,
-        profiles ( first_name, last_name )
-      `)
+      .select("*")
       .eq("id", id)
       .single();
 
     if (!generalError && generalFeedback) {
+      // Fetch replier profile separately
+      const { data: profileRows } = generalFeedback.reply_by
+        ? await supabase.from("profiles").select("first_name, last_name").eq("id", generalFeedback.reply_by).limit(1)
+        : { data: null };
+
       feedback = {
         ...generalFeedback,
-        replied_by_name: [generalFeedback.profiles?.first_name, generalFeedback.profiles?.last_name]
-          .filter(Boolean)
-          .join(" ") || "Admin",
+        replied_by_name: profileRows?.[0]
+          ? [profileRows[0].first_name, profileRows[0].last_name].filter(Boolean).join(" ")
+          : "Admin",
       };
       feedbackType = "general";
     }

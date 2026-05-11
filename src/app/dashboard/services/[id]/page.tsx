@@ -33,23 +33,10 @@ export default async function ServiceDetailPage({
     redirect("/dashboard/services");
   }
 
-  // Fetch service with category and features
+  // Fetch service
   const { data: service, error } = await supabase
     .from("services")
-    .select(`
-      *,
-      service_categories (
-        id,
-        key,
-        title
-      ),
-      service_features (
-        id,
-        title,
-        description,
-        price_modifier
-      )
-    `)
+    .select("*")
     .eq("id", id)
     .single();
 
@@ -61,11 +48,23 @@ export default async function ServiceDetailPage({
     redirect("/dashboard/services");
   }
 
+  // Fetch category and features separately (embedded joins require FK constraints that don't exist)
+  const { data: categoryRows } = await supabase
+    .from("service_categories")
+    .select("id, key, title")
+    .eq("id", service.category_id)
+    .limit(1);
+
+  const { data: featureRows } = await supabase
+    .from("service_features")
+    .select("id, title, description, price_modifier")
+    .eq("service_id", id);
+
   // Transform the data to match the expected format
   const transformedService = {
     ...service,
-    category: service.service_categories,
-    features: service.service_features,
+    category: categoryRows?.[0] || null,
+    features: featureRows || [],
   };
 
   return (

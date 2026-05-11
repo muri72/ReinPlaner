@@ -28,23 +28,10 @@ export default async function TicketDetailPage({
 
   const currentUserRole = profile?.role || "employee";
 
-  // Fetch ticket with related data
+  // Fetch ticket
   const { data: ticket, error } = await supabase
     .from("tickets")
-    .select(`
-      *,
-      customers ( name ),
-      objects ( name ),
-      profiles!tickets_user_id_fkey ( first_name, last_name ),
-      assigned_to_profile:profiles!tickets_assigned_to_user_id_fkey ( first_name, last_name ),
-      ticket_comments (
-        id,
-        created_at,
-        user_id,
-        content,
-        profiles ( first_name, last_name )
-      )
-    `)
+    .select("*")
     .eq("id", id)
     .single();
 
@@ -53,36 +40,46 @@ export default async function TicketDetailPage({
     redirect("/dashboard/tickets");
   }
 
+  // Fetch related data separately (embedded joins require FK constraints that don't exist)
+  const [{ data: customerRows }, { data: objectRows }, { data: creatorRows }, { data: assigneeRows }] = await Promise.all([
+    ticket.customer_id ? supabase.from("customers").select("name").eq("id", ticket.customer_id).limit(1) : Promise.resolve({ data: null }),
+    ticket.object_id ? supabase.from("objects").select("name").eq("id", ticket.object_id).limit(1) : Promise.resolve({ data: null }),
+    supabase.from("profiles").select("first_name, last_name").eq("id", ticket.user_id).limit(1),
+    ticket.assigned_to_user_id ? supabase.from("profiles").select("first_name, last_name").eq("id", ticket.assigned_to_user_id).limit(1) : Promise.resolve({ data: null }),
+  ]);
+
+  // Fetch comments separately
+  const { data: commentRows } = await supabase
+    .from("ticket_comments")
+    .select("id, created_at, user_id, content")
+    .eq("ticket_id", id)
+    .order("created_at", { ascending: true });
+
+  // Fetch comment creators
+  const commentUserIds = [...new Set((commentRows || []).map(c => c.user_id).filter(Boolean))];
+  const { data: commentProfiles } = commentUserIds.length > 0
+    ? await supabase.from("profiles").select("id, first_name, last_name").in("id", commentUserIds)
+    : { data: [] };
+
+  const profileMap = Object.fromEntries((commentProfiles || []).map(p => [p.id, p]));
+
   // Flatten the data
   const flattenedTicket = {
     ...ticket,
-    customer_name: Array.isArray(ticket.customers)
-      ? ticket.customers[0]?.name
-      : ticket.customers?.name,
-    object_name: Array.isArray(ticket.objects)
-      ? ticket.objects[0]?.name
-      : ticket.objects?.name,
-    creator_first_name: Array.isArray(ticket.profiles)
-      ? ticket.profiles[0]?.first_name
-      : ticket.profiles?.first_name,
-    creator_last_name: Array.isArray(ticket.profiles)
-      ? ticket.profiles[0]?.last_name
-      : ticket.profiles?.last_name,
-    assigned_to_first_name: Array.isArray(ticket.assigned_to_profile)
-      ? ticket.assigned_to_profile[0]?.first_name
-      : ticket.assigned_to_profile?.first_name,
-    assigned_to_last_name: Array.isArray(ticket.assigned_to_profile)
-      ? ticket.assigned_to_profile[0]?.last_name
-      : ticket.assigned_to_profile?.last_name,
-    comments: (ticket.ticket_comments || []).map((c: any) => ({
-      ...c,
-      creator_first_name: Array.isArray(c.profiles)
-        ? c.profiles[0]?.first_name
-        : c.profiles?.first_name,
-      creator_last_name: Array.isArray(c.profiles)
-        ? c.profiles[0]?.last_name
-        : c.profiles?.last_name,
-    })),
+    customer_name: customerRows?.[0]?.name || null,
+    object_name: objectRows?.[0]?.name || null,
+    creator_first_name: creatorRows?.[0]?.first_name || null,
+    creator_last_name: creatorRows?.[0]?.last_name || null,
+    assigned_to_first_name: assigneeRows?.[0]?.first_name || null,
+    assigned_to_last_name: assigneeRows?.[0]?.last_name || null,
+    comments: (commentRows || []).map(c => {
+      const profile = profileMap[c.user_id];
+      return {
+        ...c,
+        creator_first_name: profile?.first_name || null,
+        creator_last_name: profile?.last_name || null,
+      };
+    }),
   };
 
   const getStatusBadge = (status: string) => {

@@ -30,17 +30,10 @@ export default async function AbsenceRequestDetailPage({
 
   const currentUserRole = profile?.role || "employee";
 
-  // Fetch absence request with employee data
+  // Fetch absence request
   const { data: absenceRequest, error } = await supabase
     .from("absence_requests")
-    .select(`
-      *,
-      employees (
-        first_name,
-        last_name,
-        user_id
-      )
-    `)
+    .select("*")
     .eq("id", id)
     .single();
 
@@ -51,6 +44,15 @@ export default async function AbsenceRequestDetailPage({
     );
     redirect("/dashboard/absence-requests");
   }
+
+  // Fetch employee separately (no FK constraint exists for embedded join)
+  const { data: employeeRows } = await supabase
+    .from("employees")
+    .select("first_name, last_name, user_id")
+    .eq("id", absenceRequest.employee_id)
+    .limit(1);
+
+  const employee = employeeRows?.[0] || null;
 
   const getStatusBadge = (status: string) => {
     const variants: Record<string, string> = {
@@ -103,8 +105,8 @@ export default async function AbsenceRequestDetailPage({
               </div>
               <div className="text-sm">
                 <span className="text-muted-foreground">Mitarbeiter:</span>{" "}
-                {absenceRequest.employees
-                  ? [absenceRequest.employees.first_name, absenceRequest.employees.last_name]
+                {employee
+                  ? [employee.first_name, employee.last_name]
                       .filter(Boolean)
                       .join(" ")
                   : "Unbekannt"}
