@@ -4,16 +4,8 @@
   "installCommand": "pnpm install",
   "crons": [
     {
-      "path": "/api/cron/dunning",
-      "schedule": "0 8 * * *"
-    },
-    {
-      "path": "/api/cron/mark-overdue-shifts",
+      "path": "/api/cron/daily-tasks",
       "schedule": "0 9 * * *"
-    },
-    {
-      "path": "/api/cron/recurring-invoices",
-      "schedule": "0 7 1 * *"
     }
   ]
 }

@@ -1,0 +1,14 @@
+name: Keep Supabase Alive
+
+on:
+  schedule:
+    # Run every 5 days to prevent Supabase Free 7-day inactivity pause
+    - cron: '0 9 */5 * *'
+  workflow_dispatch:  # Manual trigger
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send keep-alive ping
+        run: curl -s -o /dev/null -w "%{http_code}" ${{ vars.REINPLANER_APP_URL }}/api/health || true
