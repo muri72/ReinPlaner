@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { CustomerFormValues } from "@/components/customer-form"; // Importiere den Typ
 import { logDataChange } from "@/lib/audit-log";
+import { requireManager } from "@/lib/services-rbac";
 
 export async function createCustomer(data: CustomerFormValues) {
   const supabase = await createClient();
@@ -12,6 +13,9 @@ export async function createCustomer(data: CustomerFormValues) {
   if (!user) {
     return { success: false, message: "Benutzer nicht authentifiziert." };
   }
+
+  // RBAC: Only admin and manager can create customers
+  await requireManager();
 
   const { name, address, contactEmail, contactPhone, customerType, contractualServices } = data;
 
@@ -55,6 +59,9 @@ export async function updateCustomer(customerId: string, data: CustomerFormValue
   if (!user) {
     return { success: false, message: "Benutzer nicht authentifiziert." };
   }
+
+  // RBAC: Only admin and manager can update customers
+  await requireManager();
 
   // Überprüfen, ob der aktuelle Benutzer ein Admin ist
   const { data: profile, error: profileError } = await supabase
@@ -125,6 +132,9 @@ export async function deleteCustomer(formData: FormData): Promise<{ success: boo
   if (!user) {
     return { success: false, message: "Benutzer nicht authentifiziert." };
   }
+
+  // RBAC: Only admin and manager can delete customers
+  await requireManager();
 
   // Überprüfen, ob der aktuelle Benutzer ein Admin ist
   const { data: profile, error: profileError } = await supabase

@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { ObjectFormValues } from "@/components/object-form";
 import { logDataChange } from "@/lib/audit-log";
+import { requireManager } from "@/lib/services-rbac";
 
 export async function createObject(data: ObjectFormValues) {
   const supabase = await createClient();
@@ -12,6 +13,9 @@ export async function createObject(data: ObjectFormValues) {
   if (!user) {
     return { success: false, message: "Benutzer nicht authentifiziert." };
   }
+
+  // RBAC: Only admin and manager can create objects
+  await requireManager();
 
   const {
     name,
@@ -85,6 +89,9 @@ export async function updateObject(objectId: string, data: ObjectFormValues) {
   if (!user) {
     return { success: false, message: "Benutzer nicht authentifiziert." };
   }
+
+  // RBAC: Only admin and manager can update objects
+  await requireManager();
 
   // Überprüfen, ob der aktuelle Benutzer ein Admin ist
   const { data: profile, error: profileError } = await supabase
@@ -185,6 +192,9 @@ export async function deleteObject(formData: FormData): Promise<{ success: boole
   if (!user) {
     return { success: false, message: "Benutzer nicht authentifiziert." };
   }
+
+  // RBAC: Only admin and manager can delete objects
+  await requireManager();
 
   // Überprüfen, ob der aktuelle Benutzer ein Admin ist
   const { data: profile, error: profileError } = await supabase
