@@ -52,9 +52,18 @@ export function NotificationBell({ isCollapsed = false }: NotificationBellProps)
   const [loading, setLoading] = useState(false);
 
   const fetchNotifications = useCallback(async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) {
+      setNotifications([]);
+      setUnreadCount(0);
+      return;
+    }
+    const userId = session.user.id;
+
     const { data, error } = await supabase
       .from("notifications")
       .select("*")
+      .eq("user_id", userId)
       .eq("is_read", false)
       .order("created_at", { ascending: false })
       .limit(20);
@@ -74,22 +83,29 @@ export function NotificationBell({ isCollapsed = false }: NotificationBellProps)
   }, [supabase]);
 
   useEffect(() => {
-    fetchNotifications();
+    const setupRealtime = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) return;
 
-    const channel = supabase
-      .channel("realtime-notifications")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "notifications" },
-        () => {
-          fetchNotifications();
-        }
-      )
-      .subscribe();
+      fetchNotifications();
 
-    return () => {
-      supabase.removeChannel(channel);
+      const channel = supabase
+        .channel("realtime-notifications")
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "notifications", filter: `user_id=eq.${session.user.id}` },
+          () => {
+            fetchNotifications();
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
     };
+
+    setupRealtime();
   }, [supabase, fetchNotifications]);
 
   const handleMarkAsRead = async (id: string) => {
