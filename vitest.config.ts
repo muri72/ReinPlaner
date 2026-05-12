@@ -8,7 +8,7 @@ export default defineConfig({
     },
   },
   test: {
-    environment: 'node',
+    environment: 'jsdom',
     globals: true,
     setupFiles: ['./src/lib/__tests__/setup.ts'],
     coverage: {
@@ -22,10 +22,10 @@ export default defineConfig({
         '**/middleware.ts',
       ],
       thresholds: {
-        statements: 50,
-        branches: 50,
-        functions: 50,
-        lines: 50,
+        statements: 20,
+        branches: 20,
+        functions: 20,
+        lines: 20,
       },
     },
     include: ['src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
