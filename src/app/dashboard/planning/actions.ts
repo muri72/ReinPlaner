@@ -7,6 +7,7 @@ import { sendNotification } from "@/lib/actions/notifications";
 import { generateShiftsFromAssignments, ensureShiftTimeEntriesSync } from "@/lib/actions/shift-planning";
 import { startOfWeek, endOfWeek, eachDayOfInterval, formatISO, parseISO, getDay, differenceInDays, format, addMinutes, getWeek, subDays, addDays } from 'date-fns';
 import { de } from 'date-fns/locale';
+import { requireManager } from "@/lib/services-rbac";
 
 // ============================================================================
 // AUTO-COMPLETE OVERDUE SHIFTS ON PAGE VISIT
@@ -371,6 +372,9 @@ export async function assignOrderToEmployee(
     return { success: false, message: "Benutzer nicht authentifiziert." };
   }
 
+  // RBAC: Only admin and manager can assign orders
+  await requireManager();
+
   try {
     // 1. Get order details
     const { data: order, error: orderError } = await supabaseAdmin
@@ -469,6 +473,9 @@ export async function reassignSingleOrder(
   if (!user) {
     return { success: false, message: "Benutzer nicht authentifiziert." };
   }
+
+  // RBAC: Only admin and manager can reassign orders
+  await requireManager();
 
   try {
     // 1. Get the original assignment to find the order ID
@@ -680,6 +687,9 @@ export async function reassignSeriesAssignment(
   if (!user) {
     return { success: false, message: "Benutzer nicht authentifiziert." };
   }
+
+  // RBAC: Only admin and manager can reassign series
+  await requireManager();
 
   try {
     // 1. Get the original assignment with order details

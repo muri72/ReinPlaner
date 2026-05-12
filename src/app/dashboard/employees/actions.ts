@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { EmployeeFormValues } from "@/components/employee-form";
 import { logDataChange } from "@/lib/audit-log";
 import { trackSupabaseError, addBreadcrumb } from "@/lib/sentry";
+import { requireManager } from "@/lib/services-rbac";
 
 // Helper function to format date for database
 const formatDateForDB = (date: Date | null | undefined): string | null => {
@@ -47,6 +48,9 @@ export async function createEmployee(data: EmployeeFormValues) {
   if (!user) {
     return { success: false, message: "Benutzer nicht authentifiziert." };
   }
+
+  // RBAC: Only admin and manager can create employees
+  await requireManager();
 
   // Build insert data
   const insertData = {
@@ -126,6 +130,9 @@ export async function updateEmployee(employeeId: string, data: EmployeeFormValue
   if (!user) {
     return { success: false, message: "Benutzer nicht authentifiziert." };
   }
+
+  // RBAC: Only admin and manager can update employees
+  await requireManager();
 
   if (!data.first_name || !data.last_name) {
     return { success: false, message: "Vorname und Nachname sind erforderlich." };
@@ -220,6 +227,9 @@ export async function deleteEmployee(formData: FormData): Promise<{ success: boo
   if (!user) {
     return { success: false, message: "Benutzer nicht authentifiziert." };
   }
+
+  // RBAC: Only admin and manager can delete employees
+  await requireManager();
 
   const employeeId = formData.get('employeeId') as string;
 

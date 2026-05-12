@@ -7,6 +7,7 @@ import { sendNotification } from "@/lib/actions/notifications";
 import { logDataChange } from "@/lib/audit-log";
 import { formatDateToYMD } from "@/lib/utils";
 import { generateShiftsFromAssignments, ensureShiftTimeEntriesSync } from "@/lib/actions/shift-planning";
+import { requireManager } from "@/lib/services-rbac";
 
 /**
  * Sanitize assigned_daily_schedules to prevent PostgreSQL errors.
@@ -45,6 +46,9 @@ export async function createOrder(data: OrderFormValues) {
   if (!user) {
     return { success: false, message: "Benutzer nicht authentifiziert." };
   }
+
+  // RBAC: Only admin and manager can create orders
+  await requireManager();
 
   const {
     title,
@@ -183,6 +187,9 @@ export async function updateOrder(orderId: string, data: OrderFormValues) {
     return { success: false, message: "Benutzer nicht authentifiziert." };
   }
 
+  // RBAC: Only admin and manager can update orders
+  await requireManager();
+
   const {
     title,
     description,
@@ -316,6 +323,9 @@ export async function deleteOrder(formData: FormData): Promise<{ success: boolea
   if (!user) {
     return { success: false, message: "Benutzer nicht authentifiziert." };
   }
+
+  // RBAC: Only admin and manager can delete orders
+  await requireManager();
 
   const orderId = formData.get('orderId') as string;
 
