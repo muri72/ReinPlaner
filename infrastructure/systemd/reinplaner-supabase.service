@@ -1,0 +1,16 @@
+[Unit]
+Description=ReinPlaner Supabase Stack
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/home/ubuntu/ReinPlaner
+ExecStartPre=/usr/bin/docker compose -f /home/ubuntu/ReinPlaner/infrastructure/docker-compose.prod.yml rm -f supabase_prod_postgres supabase_prod_kong supabase_prod_studio supabase_prod_functions supabase_prod_analytics 2>/dev/null || true
+ExecStart=/usr/bin/docker compose -f /home/ubuntu/ReinPlaner/infrastructure/docker-compose.prod.yml up -d
+ExecStop=/usr/bin/docker compose -f /home/ubuntu/ReinPlaner/infrastructure/docker-compose.prod.yml down
+TimeoutStartSec=300
+
+[Install]
+WantedBy=multi-user.target
