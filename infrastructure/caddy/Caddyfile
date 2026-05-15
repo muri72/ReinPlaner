@@ -1,0 +1,83 @@
+# ============================================================
+# ReinPlaner — Caddy Reverse Proxy Configuration
+# ============================================================
+# Automatic HTTPS with Let's Encrypt
+# Run: caddy run --config Caddyfile
+# ============================================================
+
+# Global config
+{
+    admin off
+    log {
+        format json
+    }
+}
+
+# ============================================================
+# dev.reinplaner.de — Next.js Application
+# ============================================================
+dev.reinplaner.de {
+    reverse_proxy localhost:3000
+    encode gzip
+
+    log {
+        output file /var/log/caddy/dev.reinplaner.de.log
+    }
+}
+
+# ============================================================
+# supabase.dev.reinplaner.de — Supabase API Gateway
+# ============================================================
+supabase.dev.reinplaner.de {
+    reverse_proxy localhost:8000
+
+    # CORS headers for Supabase
+    @_OPTIONS {
+        method OPTIONS
+    }
+    respond @OPTIONS "204" {
+        header Access-Control-Allow-Origin "*"
+        header Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+        header Access-Control-Allow-Headers "Authorization, Content-Type, X-Client-Info, apikey"
+        header Access-Control-Max-Age "3600"
+    }
+
+    encode gzip
+
+    log {
+        output file /var/log/caddy/supabase.dev.reinplaner.de.log
+    }
+}
+
+# ============================================================
+# studio.supabase.dev.reinplaner.de — Supabase Studio UI
+# ============================================================
+studio.supabase.dev.reinplaner.de {
+    reverse_proxy localhost:3001
+    encode gzip
+
+    log {
+        output file /var/log/caddy/studio.supabase.dev.reinplaner.de.log
+    }
+}
+
+# ============================================================
+# reinplaner.de — Coming Soon (Production)
+# ============================================================
+reinplaner.de, www.reinplaner.de {
+    root * /var/www/coming-soon
+    file_server
+    encode gzip
+
+    log {
+        output file /var/log/caddy/reinplaner.de.log
+    }
+}
+
+# ============================================================
+# Local development (HTTP only)
+# ============================================================
+localhost {
+    reverse_proxy localhost:3000
+    encode gzip
+}

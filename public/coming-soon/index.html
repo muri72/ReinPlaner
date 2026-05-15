@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ReinPlaner – Coming Soon</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --border: #2a2d3a;
+      --text: #e8e9ed;
+      --text-muted: #8b8fa3;
+      --accent: #6c63ff;
+      --accent-hover: #7d75ff;
+    }
+
+    html, body {
+      height: 100%;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 1.5rem;
+      gap: 2rem;
+    }
+
+    /* Language toggle */
+    .lang-toggle {
+      position: absolute;
+      top: 1.25rem;
+      right: 1.5rem;
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .lang-toggle button {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      padding: 0.3rem 0.75rem;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .lang-toggle button:hover,
+    .lang-toggle button.active {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    /* Card */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 3rem 2.5rem;
+      width: 100%;
+      max-width: 520px;
+      text-align: center;
+    }
+
+    /* Logo */
+    .logo {
+      font-size: 1.6rem;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      margin-bottom: 0.25rem;
+    }
+
+    .logo span {
+      color: var(--accent);
+    }
+
+    .tagline {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      margin-bottom: 2.5rem;
+    }
+
+    /* Headline */
+    h1 {
+      font-size: 2.2rem;
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      margin-bottom: 0.75rem;
+    }
+
+    .subtitle {
+      color: var(--text-muted);
+      font-size: 1rem;
+      line-height: 1.6;
+      margin-bottom: 2.25rem;
+    }
+
+    /* Form */
+    .signup-form {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .input-row {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    input[type="email"] {
+      flex: 1;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.7rem 1rem;
+      color: var(--text);
+      font-size: 0.95rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    input[type="email"]:focus {
+      border-color: var(--accent);
+    }
+
+    input[type="email"]::placeholder {
+      color: var(--text-muted);
+    }
+
+    button.submit {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 0.7rem 1.4rem;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+      white-space: nowrap;
+    }
+
+    button.submit:hover {
+      background: var(--accent-hover);
+    }
+
+    button.submit:active {
+      transform: scale(0.97);
+    }
+
+    .form-note {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    /* Social links */
+    .social {
+      margin-top: 2rem;
+      display: flex;
+      justify-content: center;
+      gap: 1.25rem;
+    }
+
+    .social a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.85rem;
+      transition: color 0.2s;
+    }
+
+    .social a:hover {
+      color: var(--accent);
+    }
+
+    /* Hidden sections */
+    [lang="de"] { display: none; }
+    html:lang(de) [lang="en"] { display: none; }
+    html:lang(de) [lang="de"] { display: block; }
+    html:lang(de) .input-row { display: flex; }
+
+    /* Responsive */
+    @media (max-width: 480px) {
+      .card { padding: 2rem 1.25rem; }
+      h1 { font-size: 1.75rem; }
+      .input-row { flex-direction: column; }
+      button.submit { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="lang-toggle">
+    <button class="active" onclick="document.documentElement.lang='en'">EN</button>
+    <button onclick="document.documentElement.lang='de'">DE</button>
+  </div>
+
+  <div class="card">
+    <div class="logo">Rein<span>Planer</span></div>
+    <div class="tagline">Project &amp; Resource Intelligence</div>
+
+    <h1 lang="en">Coming Soon</h1>
+    <h1 lang="de">Bald Verfügbar</h1>
+
+    <p class="subtitle" lang="en">
+      We're building something powerful for project planning and resource management.<br>
+      Leave your email and we'll notify you the moment we launch.
+    </p>
+    <p class="subtitle" lang="de">
+      Wir entwickeln ein leistungsstarkes Tool für Projektplanung und Ressourcenmanagement.<br>
+      Hinterlassen Sie Ihre E-Mail – wir benachrichtigen Sie bei unserem Start.
+    </p>
+
+    <form class="signup-form" action="#" method="post" onsubmit="return false;">
+      <div class="input-row">
+        <input type="email" placeholder="you@example.com" required>
+        <button type="submit" class="submit" lang="en">Notify Me</button>
+        <button type="submit" class="submit" lang="de">Benachrichtigen</button>
+      </div>
+      <p class="form-note" lang="en">No spam. Unsubscribe anytime.</p>
+      <p class="form-note" lang="de">Kein Spam. Jederzeit abmelden.</p>
+    </form>
+
+    <div class="social">
+      <a href="#" lang="en">GitHub</a>
+      <a href="#" lang="de">GitHub</a>
+    </div>
+  </div>
+
+</body>
+</html>

@@ -1,0 +1,182 @@
+# ============================================================
+# Kong Declarative Configuration — Production
+# ============================================================
+# Auto-generated, do not edit manually
+# ============================================================
+
+_format_version: "3.0"
+_transform: true
+
+# ============================================================
+# Services
+# ============================================================
+
+services:
+  # PostgREST — REST API
+  - name: postgrest
+    url: http://postgrest:3000/
+    routes:
+      - name: rest-api
+        paths:
+          - /rest/v1/
+        strip_path: true
+        plugins:
+          - name: cors
+          - name: rate-limiting
+            config:
+              minute: 1000
+              policy: local
+
+  # Auth — Gotrue
+  - name: auth
+    url: http://auth:9999/
+    routes:
+      - name: auth-api
+        paths:
+          - /auth/v1/
+        strip_path: true
+        plugins:
+          - name: cors
+
+  # Storage
+  - name: storage
+    url: http://storage:5000/
+    routes:
+      - name: storage-api
+        paths:
+          - /storage/v1/
+        strip_path: true
+        plugins:
+          - name: cors
+
+  # Edge Functions
+  - name: functions
+    url: http://functions:9000/
+    routes:
+      - name: functions-api
+        paths:
+          - /functions/v1/
+        strip_path: true
+        plugins:
+          - name: cors
+          - name: request-transformer
+            config:
+              add:
+                headers:
+                  - "X-Client-Name: ReinPlaner"
+                  - "X-Client-Version: 1.0"
+
+  # Realtime
+  - name: realtime
+    url: http://realtime:4000/
+    routes:
+      - name: realtime-api
+        paths:
+          - /realtime/v1/
+        strip_path: true
+        plugins:
+          - name: cors
+
+  # Meta — Postgres Meta
+  - name: meta
+    url: http://meta:54381/
+    routes:
+      - name: meta-api
+        paths:
+          - /meta/v1/
+        strip_path: true
+
+# ============================================================
+# Plugins
+# ============================================================
+
+plugins:
+  - name: cors
+    config:
+      origins:
+        - "*"
+      methods:
+        - GET
+        - POST
+        - PUT
+        - DELETE
+        - OPTIONS
+      headers:
+        - Authorization
+        - Content-Type
+        - X-Client-Info
+        - apikey
+        - X-Client-Version
+      exposed_headers:
+        - X-Total-Count
+        - X-Page-Number
+      credentials: true
+      max_age: 3600
+
+  - name: rate-limiting
+    config:
+      minute: 1000
+      hour: 10000
+      policy: local
+      fault_tolerant: true
+
+  - name: request-transformer
+    config:
+      add:
+        headers:
+          - "X-Forwarded-Proto: https"
+
+# ============================================================
+# Consumers & Key Auth (for Supabase API Keys)
+# ============================================================
+
+consumers:
+  - username: anon
+    keyauth_credentials:
+      - key: ANON_KEY_PLACEHOLDER
+  - username: service_role
+    keyauth_credentials:
+      - key: SERVICE_ROLE_KEY_PLACEHOLDER
+
+# ============================================================
+# JWT for Supabase Auth
+# ============================================================
+
+jwt_secrets:
+  - key: supabase-jwt-secret
+    algorithm: HS256
+    rsa_public_key: |
+      -----BEGIN PUBLIC KEY-----
+      MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA3bq0cP9x3i1J+Z3pOqLV
+      (placeholder - replace with real key from .env)
+      -----END PUBLIC KEY-----
+
+# ============================================================
+# Upstream targets (for health checking)
+# ============================================================
+
+upstreams:
+  - name: postgrest
+    targets:
+      - target: postgrest:3000
+        weight: 100
+  - name: auth
+    targets:
+      - target: auth:9999
+        weight: 100
+  - name: storage
+    targets:
+      - target: storage:5000
+        weight: 100
+  - name: functions
+    targets:
+      - target: functions:9000
+        weight: 100
+  - name: realtime
+    targets:
+      - target: realtime:4000
+        weight: 100
+  - name: meta
+    targets:
+      - target: meta:54381
+        weight: 100
