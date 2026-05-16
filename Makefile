@@ -6,6 +6,8 @@
 
 .PHONY: help start stop restart logs ps logs-postgres logs-kong logs-studio
 .PHONY: status health backup clean init-auth restart-studio restart-kong
+.PHONY: coolify-install coolify-deploy coolify-status coolify-supabase coolify-app
+.PHONY: dev-start dev-stop dev-logs
 
 # ============================================================
 # Variables
@@ -156,3 +158,31 @@ dev-stop: ## Stop local dev stack
 
 dev-logs: ## Show local dev logs
 	docker compose logs --tail=50 -f
+
+# ============================================================
+# Coolify Deployment (Self-Hosting)
+# ============================================================
+
+coolify-install: ## Install Docker + Coolify on a fresh server
+	@echo "🔄 Installing Docker + Coolify..."
+	@bash infrastructure/scripts/setup-coolify.sh install
+
+coolify-deploy: ## Deploy full ReinPlaner stack via Coolify
+	@echo "🔄 Deploying ReinPlaner stack via Coolify..."
+	@bash infrastructure/scripts/setup-coolify.sh deploy
+
+coolify-status: ## Show Coolify deployment status
+	@bash infrastructure/scripts/setup-coolify.sh status
+
+coolify-supabase: ## Deploy Supabase self-hosted via Coolify
+	@echo "🔄 Deploying Supabase via Coolify..."
+	@coolify service create supabase \
+		--project-uuid oshxs172porzibyzgv1e27sg \
+		--environment-uuid g13qtkjbntq8hvo18445lrk5 \
+		--name "reinplaner-supabase" \
+		--instant-deploy 2>&1 || echo "Use Coolify UI to deploy Supabase"
+
+coolify-app: ## Deploy ReinPlaner Next.js app via Coolify
+	@echo "🔄 Deploying ReinPlaner app via Coolify..."
+	@echo "Open https://coolify.reinplaner.de → Project → ReinPlaner → Add New Resource → Application"
+	@coolify app list 2>&1 | grep -i reinplaner || echo "No ReinPlaner app found"
