@@ -1,6 +1,0 @@
-# Force Node.js build for Next.js
-[node]
-include = ["package.json"]
-
-[ phases.build ]
-cmds = ["pnpm install --frozen-lockfile", "pnpm build"]
