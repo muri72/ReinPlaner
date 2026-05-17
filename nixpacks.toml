@@ -1,0 +1,14 @@
+# Configure nixpacks for ReinPlaner Next.js app
+# Use node with pnpm via corepack
+
+[phases.setup]
+nixPkgs = ['nodejs-22']
+
+[phases.install]
+cmds = ["corepack enable && corepack prepare pnpm@latest --activate && pnpm install --frozen-lockfile || pnpm install"]
+
+[phases.build]
+cmds = ["pnpm build"]
+
+[start]
+cmd = "node .next/standalone/server.js"
