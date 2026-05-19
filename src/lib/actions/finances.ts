@@ -29,9 +29,9 @@ export async function getMultiMonthFinancialData(numberOfMonths: number = 6) {
     }
 
     // Get all service rates (service_type -> hourly_rate mapping)
-    const allServiceRates = await db.query.serviceRates.findMany({
+    const allServiceRates = (await db.query.serviceRates.findMany({
       with: { service: true }
-    });
+    })) as any[];
     const serviceRatesMap = new Map<string, number>();
     allServiceRates.forEach(sr => {
       if (sr.service?.serviceType) {
@@ -46,7 +46,7 @@ export async function getMultiMonthFinancialData(numberOfMonths: number = 6) {
       const endDate = endOfMonth(monthDate);
 
       // Calculate total costs for the month (based on net hours)
-      const costTimeEntries = await db.query.timeEntries.findMany({
+      const costTimeEntries = (await db.query.timeEntries.findMany({
         where: and(
           isNull(timeEntries.employeeId),
           gte(timeEntries.date, startDate),
@@ -55,7 +55,7 @@ export async function getMultiMonthFinancialData(numberOfMonths: number = 6) {
         with: {
           employee: true
         }
-      });
+      })) as any[];
 
       const totalCosts = costTimeEntries.reduce((acc, entry) => {
         const hourlyRate = entry.employee?.hourlyRate ? Number(entry.employee.hourlyRate) / 100 : defaultEmployeeRate;
@@ -68,7 +68,7 @@ export async function getMultiMonthFinancialData(numberOfMonths: number = 6) {
       let totalRevenue = 0;
 
       // Fixed monthly prices from permanent orders (only count if the month is within their recurring period)
-      const permanentOrders = await db.query.orders.findMany({
+      const permanentOrders = (await db.query.orders.findMany({
         where: and(
           eq(orders.orderType, 'permanent'),
           isNull(orders.fixedMonthlyPrice),
@@ -78,12 +78,12 @@ export async function getMultiMonthFinancialData(numberOfMonths: number = 6) {
         with: {
           assignments: true
         }
-      });
+      })) as any[];
 
       totalRevenue += permanentOrders.reduce((acc, order) => acc + (Number(order.fixedMonthlyPrice) || 0), 0);
 
       // Revenue from hourly-based orders (time entries)
-      const hourlyTimeEntries = await db.query.timeEntries.findMany({
+      const hourlyTimeEntries = (await db.query.timeEntries.findMany({
         where: and(
           gte(timeEntries.date, startDate),
           lte(timeEntries.date, endDate)
@@ -95,7 +95,7 @@ export async function getMultiMonthFinancialData(numberOfMonths: number = 6) {
             }
           }
         }
-      });
+      })) as any[];
 
       for (const entry of hourlyTimeEntries) {
         const order = entry.shift?.order;
@@ -142,7 +142,7 @@ export async function getMultiMonthEmployeeWorkload(numberOfMonths: number = 6) 
       const startDate = startOfMonth(monthDate);
       const endDate = endOfMonth(monthDate);
 
-      const monthlyTimeEntries = await db.query.timeEntries.findMany({
+      const monthlyTimeEntries = (await db.query.timeEntries.findMany({
         where: and(
           gte(timeEntries.date, startDate),
           lte(timeEntries.date, endDate)
@@ -154,7 +154,7 @@ export async function getMultiMonthEmployeeWorkload(numberOfMonths: number = 6) 
             }
           }
         }
-      });
+      })) as any[];
 
       const employeeHours: { [key: string]: { name: string; hours: number } } = {};
 
@@ -194,9 +194,9 @@ export async function getRevenueLast7Days() {
 
   try {
     // Get all service rates
-    const allServiceRates = await db.query.serviceRates.findMany({
+    const allServiceRates = (await db.query.serviceRates.findMany({
       with: { service: true }
-    });
+    })) as any[];
     const serviceRatesMap = new Map<string, number>();
     allServiceRates.forEach(sr => {
       if (sr.service?.serviceType) {
@@ -207,7 +207,7 @@ export async function getRevenueLast7Days() {
     let totalRevenue = 0;
 
     // Fixed monthly prices from permanent orders (prorated for the last 7 days)
-    const fixedPriceOrders = await db.query.orders.findMany({
+    const fixedPriceOrders = (await db.query.orders.findMany({
       where: and(
         eq(orders.orderType, 'permanent'),
         isNull(orders.fixedMonthlyPrice),
@@ -217,12 +217,12 @@ export async function getRevenueLast7Days() {
       with: {
         assignments: true
       }
-    });
+    })) as any[];
 
     totalRevenue += fixedPriceOrders.reduce((acc, order) => acc + Number(order.fixedMonthlyPrice || 0), 0);
 
     // Revenue from hourly-based orders (time entries) within the last 7 days
-    const hourlyTimeEntries = await db.query.timeEntries.findMany({
+    const hourlyTimeEntries = (await db.query.timeEntries.findMany({
       where: and(
         gte(timeEntries.date, sevenDaysAgo),
         lte(timeEntries.date, today)
@@ -234,7 +234,7 @@ export async function getRevenueLast7Days() {
           }
         }
       }
-    });
+    })) as any[];
 
     for (const entry of hourlyTimeEntries) {
       const order = entry.shift?.order;
@@ -254,12 +254,12 @@ export async function getRevenueLast7Days() {
 
 export async function getMostBookedServices(limit: number = 5) {
   try {
-    const allOrders = await db.query.orders.findMany({
+    const allOrders = (await db.query.orders.findMany({
       where: ne(orders.serviceType, null),
       with: {
         assignments: true
       }
-    });
+    })) as any[];
 
     const serviceCounts: { [key: string]: number } = {};
     allOrders.forEach(order => {
