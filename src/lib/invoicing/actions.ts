@@ -1,10 +1,12 @@
 // ============================================
 // Invoice Server Actions
+// Migrated from Supabase to Drizzle+NextAuth
 // ============================================
 
 "use server";
 
-import { createClient, createAdminClient } from '@/lib/supabase/server';
+import { auth } from '@/lib/auth/session';
+import { db } from '@/lib/db';
 import { revalidatePath } from 'next/cache';
 import { Invoice, InvoiceItem, InvoiceFilters, CreateInvoiceData, UpdateInvoiceData, InvoiceStatus } from './types';
 import { logDataChange } from '@/lib/audit-log';
@@ -15,81 +17,111 @@ import { exportZUGFeRD } from './zugferd-export';
 import { exportXRechnung } from './xrechnung-export';
 import { sendInvoiceEmail, sendReminderEmail } from './email-service';
 import { validateAmountCents, validateQuantity, validateTaxRate, MAX_AMOUNT_CENTS } from '@/lib/security';
+import { eq, and, desc, gte, lte, like, or, inArray } from 'drizzle-orm';
+import { 
+  invoices, 
+  invoiceItems, 
+  debtors, 
+  payments, 
+  profiles, 
+  tenants,
+  orders,
+  customers,
+  objects,
+  timeEntries,
+  serviceRates,
+  employees
+} from '@/lib/db/schema';
+
+// ============================================
+// Helper: Get current user session with tenant
+// ============================================
+
+async function getSessionWithTenant() {
+  const session = await auth();
+  
+  if (!session?.user?.id) {
+    return { success: false, message: 'Nicht authentifiziert.', user: null, tenantId: null };
+  }
+
+  const userId = session.user.id;
+  const tenantId = (session.user as any).tenantId as string | null;
+
+  return { success: true, user: session.user, tenantId };
+}
 
 // ============================================
 // Invoice CRUD
 // ============================================
 
 export async function getInvoicesAction(filters: InvoiceFilters = {}) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
-    return { success: false, message: 'Nicht authentifiziert.' };
+  const { success, message, user, tenantId } = await getSessionWithTenant();
+  
+  if (!success || !user) {
+    return { success: false, message };
   }
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('tenant_id')
-    .eq('id', user.id)
-    .single();
-
-  const tenantId = profile?.tenant_id;
 
   if (!tenantId) {
     return { success: true, data: [] };
   }
 
-  const supabaseAdmin = createAdminClient();
-
   try {
-    let query = supabaseAdmin
-      .from('invoices')
-      .select(`
-        *,
-        debtor:debtors(*),
-        order:orders(id, title, customer_id),
-        items:invoice_items(*)
-      `)
-      .eq('tenant_id', tenantId)
-      .order('created_at', { ascending: false });
+    // Build query conditions
+    const conditions = [eq(invoices.tenantId, tenantId)];
 
     if (filters.status) {
       if (Array.isArray(filters.status)) {
-        query = query.in('status', filters.status);
+        conditions.push(inArray(invoices.status, filters.status));
       } else {
-        query = query.eq('status', filters.status);
+        conditions.push(eq(invoices.status, filters.status));
       }
     }
 
     if (filters.debtor_id) {
-      query = query.eq('debtor_id', filters.debtor_id);
+      conditions.push(eq(invoices.debtorId, filters.debtor_id));
     }
 
     if (filters.order_id) {
-      query = query.eq('order_id', filters.order_id);
+      conditions.push(eq(invoices.orderId, filters.order_id));
     }
 
     if (filters.date_from) {
-      query = query.gte('issue_date', filters.date_from);
+      conditions.push(gte(invoices.issueDate, new Date(filters.date_from)));
     }
 
     if (filters.date_to) {
-      query = query.lte('issue_date', filters.date_to);
+      conditions.push(lte(invoices.issueDate, new Date(filters.date_to)));
     }
 
     if (filters.search) {
-      query = query.or(`invoice_number.ilike.%${filters.search}%,reference_text.ilike.%${filters.search}%`);
+      conditions.push(
+        or(
+          like(invoices.invoiceNumber, `%${filters.search}%`),
+          like(invoices.referenceText, `%${filters.search}%`)
+        )!
+      );
     }
 
-    const { data, error } = await query;
-
-    if (error) throw error;
+    const result = await db.query.invoices.findMany({
+      where: and(...conditions),
+      with: {
+        debtor: true,
+        items: true,
+        order: {
+          columns: {
+            id: true,
+            title: true,
+            customerId: true,
+          }
+        }
+      },
+      orderBy: [desc(invoices.createdAt)],
+    });
 
     const today = new Date().toISOString().split('T')[0];
-    const processedData = (data || []).map(inv => ({
+    const processedData = result.map(inv => ({
       ...inv,
-      status: inv.status === 'sent' && inv.due_date < today && inv.paid_amount_cents < inv.total_amount_cents
+      status: inv.status === 'sent' && inv.dueDate && inv.dueDate < new Date(today) && (inv.paidAmount || 0) < (inv.totalAmount || 0)
         ? 'overdue' as const
         : inv.status,
     }));
@@ -102,48 +134,43 @@ export async function getInvoicesAction(filters: InvoiceFilters = {}) {
 }
 
 export async function getInvoiceByIdAction(id: string) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
-    return { success: false, message: 'Nicht authentifiziert.' };
+  const { success, message, user, tenantId } = await getSessionWithTenant();
+  
+  if (!success || !user) {
+    return { success: false, message };
   }
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('tenant_id')
-    .eq('id', user.id)
-    .single();
-
-  const tenantId = profile?.tenant_id;
 
   if (!tenantId) {
     return { success: false, message: 'Tenant nicht gefunden.' };
   }
 
-  const supabaseAdmin = createAdminClient();
-
   try {
-    const { data, error } = await supabaseAdmin
-      .from('invoices')
-      .select(`
-        *,
-        debtor:debtors(*),
-        order:orders(id, title, customer_id, objects(*, customers(*))),
-        items:invoice_items(*)
-      `)
-      .eq('id', id)
-      .eq('tenant_id', tenantId)
-      .single();
+    const invoice = await db.query.invoices.findFirst({
+      where: and(eq(invoices.id, id), eq(invoices.tenantId, tenantId)),
+      with: {
+        items: true,
+        order: {
+          with: {
+            objects: {
+              with: {
+                customers: true
+              }
+            }
+          }
+        }
+      },
+    });
 
-    if (error) throw error;
+    if (!invoice) {
+      return { success: false, message: 'Rechnung nicht gefunden.' };
+    }
 
     const today = new Date().toISOString().split('T')[0];
     const processedData = {
-      ...data,
-      status: data.status === 'sent' && data.due_date < today && data.paid_amount_cents < data.total_amount_cents
+      ...invoice,
+      status: invoice.status === 'sent' && invoice.dueDate && invoice.dueDate < new Date(today) && (invoice.paidAmount || 0) < (invoice.totalAmount || 0)
         ? 'overdue' as const
-        : data.status,
+        : invoice.status,
     };
 
     return { success: true, data: processedData };
@@ -154,21 +181,11 @@ export async function getInvoiceByIdAction(id: string) {
 }
 
 export async function createInvoiceAction(data: CreateInvoiceData) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
-    return { success: false, message: 'Nicht authentifiziert.' };
+  const { success, message, user, tenantId } = await getSessionWithTenant();
+  
+  if (!success || !user) {
+    return { success: false, message };
   }
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('tenant_id')
-    .eq('id', user.id)
-    .single();
-
-  const supabaseAdmin = createAdminClient();
-  const tenantId = profile?.tenant_id || null;
 
   // Validate financial field bounds
   const taxRateValidation = validateTaxRate(data.tax_rate ?? 19.0);
@@ -198,30 +215,46 @@ export async function createInvoiceAction(data: CreateInvoiceData) {
 
   // Validate debtor ownership (debtor must belong to same tenant)
   if (data.debtor_id && tenantId) {
-    const { data: debtor } = await supabaseAdmin
-      .from('debtors')
-      .select('tenant_id')
-      .eq('id', data.debtor_id)
-      .single();
+    const debtor = await db.query.debtors.findFirst({
+      where: and(eq(debtors.id, data.debtor_id), eq(debtors.tenantId, tenantId)),
+    });
 
     if (!debtor) {
       return { success: false, message: 'Debitor nicht gefunden.' };
-    }
-
-    if (debtor.tenant_id !== tenantId) {
-      return { success: false, message: 'Keine Berechtigung für diesen Debitor.' };
     }
   }
 
   try {
     // Generate invoice number
     let invoiceNumber = 'R/00001';
+    
     if (tenantId) {
-      const { data: seqData } = await supabaseAdmin.rpc('generate_invoice_number', { p_tenant_id: tenantId });
-      if (seqData) invoiceNumber = seqData;
+      // Get or create invoice sequence
+      const sequence = await db.query.invoiceSequences.findFirst({
+        where: and(eq(invoiceSequences.tenantId, tenantId), eq(invoiceSequences.year, new Date().getFullYear())),
+      });
+
+      if (sequence) {
+        const nextNumber = sequence.lastNumber + 1;
+        invoiceNumber = `${sequence.prefix || 'RE'}/${new Date().getFullYear()}/${String(nextNumber).padStart(5, '0')}`;
+        
+        await db.update(invoiceSequences)
+          .set({ lastNumber: nextNumber, updatedAt: new Date() })
+          .where(eq(invoiceSequences.id, sequence.id));
+      } else {
+        // Create new sequence for this year
+        invoiceNumber = `RE/${new Date().getFullYear()}/00001`;
+        
+        await db.insert(invoiceSequences).values({
+          tenantId,
+          lastNumber: 1,
+          year: new Date().getFullYear(),
+          prefix: 'RE',
+        });
+      }
     } else {
-      const { count } = await supabaseAdmin.from('invoices').select('*', { count: 'exact', head: true });
-      invoiceNumber = `R/${new Date().getFullYear()}/${String((count || 0) + 1).padStart(5, '0')}`;
+      const countResult = await db.select().from(invoices);
+      invoiceNumber = `R/${new Date().getFullYear()}/${String((countResult.length || 0) + 1).padStart(5, '0')}`;
     }
 
     const taxRate = data.tax_rate ?? 19.0;
@@ -239,65 +272,80 @@ export async function createInvoiceAction(data: CreateInvoiceData) {
       return {
         ...item,
         quantity: qty,
-        unit_price_cents: unitPrice,
-        net_amount_cents: netAmount,
-        tax_amount_cents: taxAmount,
-        sort_order: index,
-        service_date: item.service_date || null,
+        unitPrice: unitPrice,
+        netAmount: netAmount,
+        taxAmount: taxAmount,
+        sortOrder: index,
+        serviceDate: item.service_date || null,
       };
     });
 
-    const { data: invoice, error: invoiceError } = await supabaseAdmin
-      .from('invoices')
-      .insert({
-        tenant_id: tenantId,
-        invoice_number: invoiceNumber,
-        debtor_id: data.debtor_id || null,
-        order_id: data.order_id || null,
-        issue_date: data.issue_date || new Date().toISOString().split('T')[0],
-        due_date: data.due_date,
-        delivery_date_start: data.delivery_date_start || null,
-        delivery_date_end: data.delivery_date_end || null,
-        net_amount_cents: netAmountCents,
-        tax_amount_cents: taxAmountCents,
-        total_amount_cents: netAmountCents + taxAmountCents,
-        tax_rate: taxRate,
-        status: 'draft',
-        notes: data.notes || null,
-        internal_notes: data.internal_notes || null,
-        reference_text: data.reference_text || null,
-        order_reference: data.order_reference || null,
-        created_by: user.id,
-      })
-      .select()
-      .single();
+    // Get customer_id from debtor or order
+    let customerId = '';
+    if (data.debtor_id) {
+      const debtor = await db.query.debtors.findFirst({
+        where: eq(debtors.id, data.debtor_id),
+      });
+      customerId = debtor?.customerId || '';
+    } else if (data.order_id) {
+      const order = await db.query.orders.findFirst({
+        where: eq(orders.id, data.order_id),
+      });
+      customerId = order?.customerId || '';
+    }
 
-    if (invoiceError) throw invoiceError;
+    const [invoice] = await db.insert(invoices).values({
+      tenantId,
+      customerId,
+      invoiceNumber,
+      debtorId: data.debtor_id || null,
+      orderId: data.order_id || null,
+      issueDate: data.issue_date ? new Date(data.issue_date) : new Date(),
+      dueDate: data.due_date ? new Date(data.due_date) : null,
+      deliveryDateStart: data.delivery_date_start ? new Date(data.delivery_date_start) : null,
+      deliveryDateEnd: data.delivery_date_end ? new Date(data.delivery_date_end) : null,
+      netAmount: netAmountCents,
+      taxAmount: taxAmountCents,
+      totalAmount: netAmountCents + taxAmountCents,
+      taxRate,
+      status: 'draft',
+      notes: data.notes || null,
+      referenceText: data.reference_text || null,
+      orderReference: data.order_reference || null,
+      createdBy: user.id,
+    }).returning();
 
     if (processedItems.length > 0) {
       const itemsWithInvoiceId = processedItems.map((item, idx) => ({
-        ...item,
-        invoice_id: invoice.id,
-        line_number: idx + 1,
+        invoiceId: invoice.id,
+        lineNumber: idx + 1,
+        serviceDate: item.service_date || null,
+        serviceDescription: item.service_description,
+        quantity: item.quantity,
+        unit: item.unit || 'h',
+        unitPrice: item.unitPrice,
+        netAmount: item.netAmount,
+        taxRate: item.tax_rate || taxRate,
+        taxAmount: item.taxAmount,
+        sortOrder: item.sortOrder,
       }));
 
-      const { error: itemsError } = await supabaseAdmin
-        .from('invoice_items')
-        .insert(itemsWithInvoiceId);
-
-      if (itemsError) throw itemsError;
+      await db.insert(invoiceItems).values(itemsWithInvoiceId);
     }
 
-    const { data: completeInvoice } = await supabaseAdmin
-      .from('invoices')
-      .select('*, debtor:debtors(*), items:invoice_items(*)')
-      .eq('id', invoice.id)
-      .single();
+    // Fetch complete invoice with relations
+    const completeInvoice = await db.query.invoices.findFirst({
+      where: eq(invoices.id, invoice.id),
+      with: {
+        debtor: true,
+        items: true,
+      },
+    });
 
     if (completeInvoice) {
       await logDataChange(user.id, 'INSERT', 'invoices', invoice.id, null, {
-        invoice_number: invoice.invoice_number,
-        total: invoice.total_amount_cents,
+        invoice_number: completeInvoice.invoiceNumber,
+        total: completeInvoice.totalAmount,
       });
     }
 
@@ -320,59 +368,51 @@ export async function createInvoiceFromOrderAction(
     notes?: string;
   } = {}
 ) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
-    return { success: false, message: 'Nicht authentifiziert.' };
+  const { success, message, user, tenantId } = await getSessionWithTenant();
+  
+  if (!success || !user) {
+    return { success: false, message };
   }
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('tenant_id')
-    .eq('id', user.id)
-    .single();
-
-  const supabaseAdmin = createAdminClient();
-  const tenantId = profile?.tenant_id || null;
-
   try {
-    const { data: order, error: orderError } = await supabaseAdmin
-      .from('orders')
-      .select('*, objects(*, customers(*)), customer_contacts(*)')
-      .eq('id', orderId)
-      .single();
+    const order = await db.query.orders.findFirst({
+      where: eq(orders.id, orderId),
+      with: {
+        objects: {
+          with: {
+            customers: true
+          }
+        },
+        customerContacts: true,
+      },
+    });
 
-    if (orderError) throw orderError;
+    if (!order) {
+      return { success: false, message: 'Auftrag nicht gefunden.' };
+    }
 
     let debtorId: string | null = null;
 
-    if (order.customer_id) {
-      const { data: existingDebtor } = await supabaseAdmin
-        .from('debtors')
-        .select('id')
-        .eq('customer_id', order.customer_id)
-        .maybeSingle();
+    if (order.customerId) {
+      const existingDebtor = await db.query.debtors.findFirst({
+        where: eq(debtors.customerId, order.customerId),
+      });
 
       if (existingDebtor) {
         debtorId = existingDebtor.id;
       } else {
-        const customer = (order as any).objects?.customers;
+        const customer = order.objects?.customers;
         if (customer) {
-          const { data: newDebtor } = await supabaseAdmin
-            .from('debtors')
-            .insert({
-              tenant_id: tenantId,
-              customer_id: order.customer_id,
-              billing_name: customer.name || null,
-              billing_street: customer.address || null,
-              billing_postal_code: customer.postal_code || null,
-              billing_city: customer.city || null,
-              billing_country: 'DE',
-              invoice_email: customer.email || null,
-            })
-            .select('id')
-            .single();
+          const [newDebtor] = await db.insert(debtors).values({
+            tenantId,
+            customerId: order.customerId,
+            billingName: customer.name || null,
+            billingStreet: customer.address || null,
+            billingPostalCode: customer.postalCode || null,
+            billingCity: customer.city || null,
+            billingCountry: 'DE',
+            invoiceEmail: customer.email || null,
+          }).returning();
 
           debtorId = newDebtor?.id || null;
         }
@@ -386,8 +426,9 @@ export async function createInvoiceFromOrderAction(
 
     const items: CreateInvoiceData['items'] = [];
 
-    if (order.order_type === 'permanent' && order.fixed_monthly_price) {
-      const netAmount = Math.round(Number(order.fixed_monthly_price) * 100);
+    // Check for permanent orders with fixed monthly price
+    if ((order as any).order_type === 'permanent' && (order as any).fixed_monthly_price) {
+      const netAmount = Math.round(Number((order as any).fixed_monthly_price) * 100);
       items.push({
         service_description: `Monatliche Pauschale für: ${order.title}`,
         quantity: 1,
@@ -401,19 +442,19 @@ export async function createInvoiceFromOrderAction(
       const startOfMonth = new Date();
       startOfMonth.setDate(1);
 
-      const { data: timeEntries } = await supabaseAdmin
-        .from('time_entries')
-        .select('duration_minutes, break_minutes, employees(hourly_rate)')
-        .eq('order_id', orderId)
-        .gte('start_time', startOfMonth.toISOString());
+      // Get time entries for this order
+      const timeEntriesData = await db.query.timeEntries.findMany({
+        where: eq(timeEntries.shiftId, orderId as any), // Using order_id reference
+      });
 
-      const { data: serviceRates } = await supabaseAdmin.from('service_rates').select('*');
-      const rateMap = new Map((serviceRates || []).map((r: any) => [r.service_type, Number(r.hourly_rate)]));
-      const rate = rateMap.get(order.service_type || '') || rateMap.get('standard') || 2400;
+      // Get service rates
+      const serviceRatesData = await db.select().from(serviceRates);
+      const rateMap = new Map(serviceRatesData.map((r: any) => [r.serviceType, Number(r.hourlyRate)]));
+      const rate = rateMap.get((order as any).service_type || '') || rateMap.get('standard') || 2400;
 
       let totalMinutes = 0;
-      (timeEntries || []).forEach((entry: any) => {
-        totalMinutes += entry.duration_minutes || 0;
+      (timeEntriesData || []).forEach((entry: any) => {
+        totalMinutes += entry.hoursWorked || 0;
       });
 
       if (totalMinutes > 0) {
@@ -431,10 +472,31 @@ export async function createInvoiceFromOrderAction(
       }
     }
 
+    // Generate invoice number
     let invoiceNumber = 'R/00001';
+    
     if (tenantId) {
-      const { data: seqData } = await supabaseAdmin.rpc('generate_invoice_number', { p_tenant_id: tenantId });
-      if (seqData) invoiceNumber = seqData;
+      const sequence = await db.query.invoiceSequences.findFirst({
+        where: and(eq(invoiceSequences.tenantId, tenantId), eq(invoiceSequences.year, new Date().getFullYear())),
+      });
+
+      if (sequence) {
+        const nextNumber = sequence.lastNumber + 1;
+        invoiceNumber = `${sequence.prefix || 'RE'}/${new Date().getFullYear()}/${String(nextNumber).padStart(5, '0')}`;
+        
+        await db.update(invoiceSequences)
+          .set({ lastNumber: nextNumber, updatedAt: new Date() })
+          .where(eq(invoiceSequences.id, sequence.id));
+      } else {
+        invoiceNumber = `RE/${new Date().getFullYear()}/00001`;
+        
+        await db.insert(invoiceSequences).values({
+          tenantId,
+          lastNumber: 1,
+          year: new Date().getFullYear(),
+          prefix: 'RE',
+        });
+      }
     }
 
     let netAmountCents = 0;
@@ -446,52 +508,54 @@ export async function createInvoiceFromOrderAction(
       taxAmountCents += Math.round(netAmount * (taxRate / 100));
     });
 
-    const { data: invoice, error: invoiceError } = await supabaseAdmin
-      .from('invoices')
-      .insert({
-        tenant_id: tenantId,
-        invoice_number: invoiceNumber,
-        debtor_id: debtorId,
-        order_id: orderId,
-        issue_date: issueDate,
-        due_date: dueDate,
-        net_amount_cents: netAmountCents,
-        tax_amount_cents: taxAmountCents,
-        total_amount_cents: netAmountCents + taxAmountCents,
-        tax_rate: taxRate,
-        status: 'draft',
-        notes: options.notes || `Rechnung für Auftrag: ${order.title}`,
-        order_reference: order.title,
-        created_by: user.id,
-      })
-      .select()
-      .single();
-
-    if (invoiceError) throw invoiceError;
+    const [invoice] = await db.insert(invoices).values({
+      tenantId,
+      invoiceNumber,
+      debtorId,
+      orderId,
+      issueDate: new Date(issueDate),
+      dueDate: new Date(dueDate),
+      netAmount: netAmountCents,
+      taxAmount: taxAmountCents,
+      totalAmount: netAmountCents + taxAmountCents,
+      taxRate,
+      status: 'draft',
+      notes: options.notes || `Rechnung für Auftrag: ${order.title}`,
+      orderReference: order.title,
+      createdBy: user.id,
+    }).returning();
 
     if (items.length > 0) {
       const itemsWithLineNumbers = items.map((item, idx) => ({
-        ...item,
-        invoice_id: invoice.id,
-        line_number: idx + 1,
-        net_amount_cents: Math.round(item.quantity * item.unit_price_cents),
-        tax_amount_cents: Math.round(item.quantity * item.unit_price_cents * (taxRate / 100)),
+        invoiceId: invoice.id,
+        lineNumber: idx + 1,
+        serviceDate: item.service_date || null,
+        serviceDescription: item.service_description,
+        quantity: item.quantity,
+        unit: item.unit || 'h',
+        unitPrice: item.unit_price_cents,
+        netAmount: Math.round(item.quantity * item.unit_price_cents),
+        taxRate: item.tax_rate || taxRate,
+        taxAmount: Math.round(item.quantity * item.unit_price_cents * (taxRate / 100)),
+        sortOrder: item.sort_order || idx,
       }));
 
-      await supabaseAdmin.from('invoice_items').insert(itemsWithLineNumbers);
+      await db.insert(invoiceItems).values(itemsWithLineNumbers);
     }
 
-    const { data: completeInvoice } = await supabaseAdmin
-      .from('invoices')
-      .select('*, debtor:debtors(*), items:invoice_items(*)')
-      .eq('id', invoice.id)
-      .single();
+    const completeInvoice = await db.query.invoices.findFirst({
+      where: eq(invoices.id, invoice.id),
+      with: {
+        debtor: true,
+        items: true,
+      },
+    });
 
     if (completeInvoice) {
       await logDataChange(user.id, 'INSERT', 'invoices', invoice.id, null, {
-        invoice_number: invoice.invoice_number,
+        invoice_number: invoice.invoiceNumber,
         order_id: orderId,
-        total: invoice.total_amount_cents,
+        total: invoice.totalAmount,
       });
     }
 
@@ -506,54 +570,53 @@ export async function createInvoiceFromOrderAction(
 }
 
 export async function updateInvoiceAction(invoiceId: string, data: UpdateInvoiceData) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
-    return { success: false, message: 'Nicht authentifiziert.' };
+  const { success, message, user, tenantId } = await getSessionWithTenant();
+  
+  if (!success || !user) {
+    return { success: false, message };
   }
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('tenant_id')
-    .eq('id', user.id)
-    .single();
-  const tenantId = profile?.tenant_id;
   if (!tenantId) {
     return { success: false, message: 'Tenant nicht gefunden.' };
   }
 
-  const supabaseAdmin = createAdminClient();
-
   try {
     // First verify this invoice belongs to the tenant
-    const { data: invoice } = await supabaseAdmin
-      .from('invoices')
-      .select('id')
-      .eq('id', invoiceId)
-      .eq('tenant_id', tenantId)
-      .single();
+    const invoice = await db.query.invoices.findFirst({
+      where: and(eq(invoices.id, invoiceId), eq(invoices.tenantId, tenantId)),
+    });
 
     if (!invoice) {
       throw new Error('Invoice nicht gefunden oder keine Berechtigung.');
     }
 
-    const { data: updatedInvoice, error } = await supabaseAdmin
-      .from('invoices')
-      .update({
-        ...data,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', invoiceId)
-      .select('*, debtor:debtors(*), items:invoice_items(*)')
-      .single();
+    const updateData: any = {
+      ...data,
+      updatedAt: new Date(),
+    };
 
-    if (error) throw error;
+    if (data.issue_date) updateData.issueDate = new Date(data.issue_date);
+    if (data.due_date) updateData.dueDate = new Date(data.due_date);
+    if (data.delivery_date_start) updateData.deliveryDateStart = new Date(data.delivery_date_start);
+    if (data.delivery_date_end) updateData.deliveryDateEnd = new Date(data.delivery_date_end);
+
+    const [updatedInvoice] = await db.update(invoices)
+      .set(updateData)
+      .where(eq(invoices.id, invoiceId))
+      .returning();
+
+    const completeInvoice = await db.query.invoices.findFirst({
+      where: eq(invoices.id, invoiceId),
+      with: {
+        debtor: true,
+        items: true,
+      },
+    });
 
     revalidatePath('/dashboard/invoices');
     revalidatePath(`/dashboard/invoices/${invoiceId}`);
 
-    return { success: true, data: updatedInvoice };
+    return { success: true, data: completeInvoice };
   } catch (error: any) {
     console.error('Error updating invoice:', error);
     return { success: false, message: error.message };
@@ -561,35 +624,21 @@ export async function updateInvoiceAction(invoiceId: string, data: UpdateInvoice
 }
 
 export async function updateInvoiceStatusAction(invoiceId: string, status: InvoiceStatus) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
-    return { success: false, message: 'Nicht authentifiziert.' };
+  const { success, message, user, tenantId } = await getSessionWithTenant();
+  
+  if (!success || !user) {
+    return { success: false, message };
   }
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('tenant_id')
-    .eq('id', user.id)
-    .single();
-
-  const tenantId = profile?.tenant_id;
 
   if (!tenantId) {
     return { success: false, message: 'Tenant nicht gefunden.' };
   }
 
-  const supabaseAdmin = createAdminClient();
-
   try {
     // First verify this invoice belongs to the tenant
-    const { data: invoice } = await supabaseAdmin
-      .from('invoices')
-      .select('tenant_id, total_amount_cents')
-      .eq('id', invoiceId)
-      .eq('tenant_id', tenantId)
-      .single();
+    const invoice = await db.query.invoices.findFirst({
+      where: and(eq(invoices.id, invoiceId), eq(invoices.tenantId, tenantId)),
+    });
 
     if (!invoice) {
       throw new Error('Invoice nicht gefunden oder keine Berechtigung.');
@@ -597,25 +646,21 @@ export async function updateInvoiceStatusAction(invoiceId: string, status: Invoi
 
     const updateData: any = {
       status,
-      updated_at: new Date().toISOString(),
+      updatedAt: new Date(),
     };
 
     if (status === 'sent') {
-      updateData.sent_at = new Date().toISOString();
+      updateData.sentAt = new Date();
     }
 
     if (status === 'paid') {
-      updateData.paid_at = new Date().toISOString();
-      updateData.paid_amount_cents = invoice.total_amount_cents;
+      updateData.paidAt = new Date();
+      updateData.paidAmount = invoice.totalAmount;
     }
 
-    const { error } = await supabaseAdmin
-      .from('invoices')
-      .update(updateData)
-      .eq('id', invoiceId)
-      .eq('tenant_id', tenantId);
-
-    if (error) throw error;
+    await db.update(invoices)
+      .set(updateData)
+      .where(and(eq(invoices.id, invoiceId), eq(invoices.tenantId, tenantId)));
 
     revalidatePath('/dashboard/invoices');
     revalidatePath(`/dashboard/invoices/${invoiceId}`);
@@ -628,47 +673,28 @@ export async function updateInvoiceStatusAction(invoiceId: string, status: Invoi
 }
 
 export async function deleteInvoiceAction(invoiceId: string) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
-    return { success: false, message: 'Nicht authentifiziert.' };
+  const { success, message, user, tenantId } = await getSessionWithTenant();
+  
+  if (!success || !user) {
+    return { success: false, message };
   }
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('tenant_id')
-    .eq('id', user.id)
-    .single();
-
-  const tenantId = profile?.tenant_id;
 
   if (!tenantId) {
     return { success: false, message: 'Tenant nicht gefunden.' };
   }
 
-  const supabaseAdmin = createAdminClient();
-
   try {
     // First verify this invoice belongs to the tenant
-    const { data: invoice } = await supabaseAdmin
-      .from('invoices')
-      .select('id')
-      .eq('id', invoiceId)
-      .eq('tenant_id', tenantId)
-      .single();
+    const invoice = await db.query.invoices.findFirst({
+      where: and(eq(invoices.id, invoiceId), eq(invoices.tenantId, tenantId)),
+    });
 
     if (!invoice) {
       throw new Error('Invoice nicht gefunden oder keine Berechtigung.');
     }
 
-    const { error } = await supabaseAdmin
-      .from('invoices')
-      .delete()
-      .eq('id', invoiceId)
-      .eq('tenant_id', tenantId);
-
-    if (error) throw error;
+    await db.delete(invoices)
+      .where(and(eq(invoices.id, invoiceId), eq(invoices.tenantId, tenantId)));
 
     revalidatePath('/dashboard/invoices');
 
@@ -687,50 +713,39 @@ export async function addInvoiceItemAction(
   invoiceId: string,
   item: Omit<InvoiceItem, 'id' | 'invoice_id' | 'created_at' | 'line_number' | 'net_amount_cents' | 'tax_amount_cents'>
 ) {
-  const supabaseAdmin = createAdminClient();
-
   try {
-    const { data: lastItem } = await supabaseAdmin
-      .from('invoice_items')
-      .select('line_number')
-      .eq('invoice_id', invoiceId)
-      .order('line_number', { ascending: false })
-      .limit(1)
-      .single();
+    // Get last line number for this invoice
+    const lastItem = await db.query.invoiceItems.findFirst({
+      where: eq(invoiceItems.invoiceId, invoiceId),
+      orderBy: [desc(invoiceItems.lineNumber)],
+    });
 
-    const lineNumber = (lastItem?.line_number || 0) + 1;
+    const lineNumber = (lastItem?.lineNumber || 0) + 1;
 
-    const { data: invoice } = await supabaseAdmin
-      .from('invoices')
-      .select('tax_rate')
-      .eq('id', invoiceId)
-      .single();
+    // Get invoice tax rate
+    const invoice = await db.query.invoices.findFirst({
+      where: eq(invoices.id, invoiceId),
+    });
 
-    const taxRate = item.tax_rate || invoice?.tax_rate || 19.0;
+    const taxRate = item.tax_rate || invoice?.taxRate || 19.0;
     const qty = Number(item.quantity) || 1;
     const unitPrice = Number(item.unit_price_cents) || 0;
     const netAmount = Math.round(qty * unitPrice);
     const taxAmount = Math.round(netAmount * (taxRate / 100));
 
-    const { data: newItem, error } = await supabaseAdmin
-      .from('invoice_items')
-      .insert({
-        invoice_id: invoiceId,
-        line_number: lineNumber,
-        service_date: item.service_date || null,
-        service_description: item.service_description,
-        quantity: qty,
-        unit: item.unit || 'h',
-        unit_price_cents: unitPrice,
-        net_amount_cents: netAmount,
-        tax_rate: taxRate,
-        tax_amount_cents: taxAmount,
-        sort_order: item.sort_order || lineNumber,
-      })
-      .select()
-      .single();
-
-    if (error) throw error;
+    const [newItem] = await db.insert(invoiceItems).values({
+      invoiceId,
+      lineNumber,
+      serviceDate: item.service_date || null,
+      serviceDescription: item.service_description,
+      quantity: qty,
+      unit: item.unit || 'h',
+      unitPrice: unitPrice,
+      netAmount,
+      taxRate,
+      taxAmount,
+      sortOrder: item.sort_order || lineNumber,
+    }).returning();
 
     revalidatePath(`/dashboard/invoices/${invoiceId}`);
 
@@ -742,51 +757,46 @@ export async function addInvoiceItemAction(
 }
 
 export async function updateInvoiceItemAction(itemId: string, updates: Partial<InvoiceItem>) {
-  const supabaseAdmin = createAdminClient();
-
   try {
-    const { data: existingItem } = await supabaseAdmin
-      .from('invoice_items')
-      .select('*, invoices(tax_rate)')
-      .eq('id', itemId)
-      .single();
+    const existingItem = await db.query.invoiceItems.findFirst({
+      where: eq(invoiceItems.id, itemId),
+      with: {
+        invoices: {
+          with: {}
+        }
+      },
+    });
 
     if (!existingItem) throw new Error('Item not found');
 
-    const taxRate = updates.tax_rate || (existingItem as any).invoices?.tax_rate || 19.0;
+    const taxRate = updates.tax_rate || (existingItem as any).invoices?.taxRate || 19.0;
     const qty = updates.quantity !== undefined ? Number(updates.quantity) : existingItem.quantity;
-    const unitPrice = updates.unit_price_cents !== undefined ? Number(updates.unit_price_cents) : existingItem.unit_price_cents;
+    const unitPrice = updates.unit_price_cents !== undefined ? Number(updates.unit_price_cents) : existingItem.unitPrice;
     const netAmount = Math.round(qty * unitPrice);
     const taxAmount = Math.round(netAmount * (taxRate / 100));
 
-    const { data: updatedItem, error } = await supabaseAdmin
-      .from('invoice_items')
-      .update({
-        service_date: updates.service_date ?? existingItem.service_date,
-        service_description: updates.service_description ?? existingItem.service_description,
+    const [updatedItem] = await db.update(invoiceItems)
+      .set({
+        serviceDate: updates.service_date ?? existingItem.serviceDate,
+        serviceDescription: updates.service_description ?? existingItem.serviceDescription,
         quantity: qty,
         unit: updates.unit ?? existingItem.unit,
-        unit_price_cents: unitPrice,
-        net_amount_cents: netAmount,
-        tax_rate: taxRate,
-        tax_amount_cents: taxAmount,
-        sort_order: updates.sort_order ?? existingItem.sort_order,
+        unitPrice: unitPrice,
+        netAmount: netAmount,
+        taxRate: taxRate,
+        taxAmount: taxAmount,
+        sortOrder: updates.sort_order ?? existingItem.sortOrder,
       })
-      .eq('id', itemId)
-      .select()
-      .single();
-
-    if (error) throw error;
+      .where(eq(invoiceItems.id, itemId))
+      .returning();
 
     // Find invoice_id to revalidate
-    const { data: item } = await supabaseAdmin
-      .from('invoice_items')
-      .select('invoice_id')
-      .eq('id', itemId)
-      .single();
+    const item = await db.query.invoiceItems.findFirst({
+      where: eq(invoiceItems.id, itemId),
+    });
 
     if (item) {
-      revalidatePath(`/dashboard/invoices/${item.invoice_id}`);
+      revalidatePath(`/dashboard/invoices/${item.invoiceId}`);
     }
 
     return { success: true, data: updatedItem };
@@ -797,24 +807,15 @@ export async function updateInvoiceItemAction(itemId: string, updates: Partial<I
 }
 
 export async function deleteInvoiceItemAction(itemId: string) {
-  const supabaseAdmin = createAdminClient();
-
   try {
-    const { data: item } = await supabaseAdmin
-      .from('invoice_items')
-      .select('invoice_id')
-      .eq('id', itemId)
-      .single();
+    const item = await db.query.invoiceItems.findFirst({
+      where: eq(invoiceItems.id, itemId),
+    });
 
-    const { error } = await supabaseAdmin
-      .from('invoice_items')
-      .delete()
-      .eq('id', itemId);
-
-    if (error) throw error;
+    await db.delete(invoiceItems).where(eq(invoiceItems.id, itemId));
 
     if (item) {
-      revalidatePath(`/dashboard/invoices/${item.invoice_id}`);
+      revalidatePath(`/dashboard/invoices/${item.invoiceId}`);
     }
 
     return { success: true, message: 'Position erfolgreich gelöscht.' };
@@ -838,56 +839,43 @@ export async function recordPaymentAction(
     bank_reference?: string;
   }
 ) {
-  const supabaseAdmin = createAdminClient();
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
-    return { success: false, message: 'Nicht authentifiziert.' };
+  const { success, message, user, tenantId } = await getSessionWithTenant();
+  
+  if (!success || !user) {
+    return { success: false, message };
   }
 
   try {
-    const { data: invoice } = await supabaseAdmin
-      .from('invoices')
-      .select('tenant_id, paid_amount_cents, total_amount_cents')
-      .eq('id', invoiceId)
-      .single();
+    const invoice = await db.query.invoices.findFirst({
+      where: eq(invoices.id, invoiceId),
+    });
 
     if (!invoice) throw new Error('Invoice not found');
 
-    const { error: paymentError } = await supabaseAdmin
-      .from('payments')
-      .insert({
-        tenant_id: invoice.tenant_id,
-        invoice_id: invoiceId,
-        payment_date: payment.payment_date || new Date().toISOString().split('T')[0],
-        amount_cents: payment.amount_cents,
-        payment_method: payment.payment_method || 'bank_transfer',
-        reference: payment.reference || null,
-        bank_reference: payment.bank_reference || null,
-        created_by: user.id,
-      });
+    await db.insert(payments).values({
+      invoiceId,
+      debtorId: invoice.debtorId || null,
+      amount: payment.amount_cents,
+      paymentDate: payment.payment_date ? new Date(payment.payment_date) : new Date(),
+      paymentMethod: payment.payment_method || 'bank_transfer',
+      reference: payment.reference || null,
+    });
 
-    if (paymentError) throw paymentError;
-
-    const newPaidAmount = invoice.paid_amount_cents + payment.amount_cents;
+    const newPaidAmount = (invoice.paidAmount || 0) + payment.amount_cents;
     let newStatus: Invoice['status'] = 'partial';
 
-    if (newPaidAmount >= invoice.total_amount_cents) {
+    if (newPaidAmount >= (invoice.totalAmount || 0)) {
       newStatus = 'paid';
     }
 
-    const { error: updateError } = await supabaseAdmin
-      .from('invoices')
-      .update({
-        paid_amount_cents: newPaidAmount,
+    await db.update(invoices)
+      .set({
+        paidAmount: newPaidAmount,
         status: newStatus,
-        paid_at: newStatus === 'paid' ? new Date().toISOString() : null,
-        updated_at: new Date().toISOString(),
+        paidAt: newStatus === 'paid' ? new Date() : null,
+        updatedAt: new Date(),
       })
-      .eq('id', invoiceId);
-
-    if (updateError) throw updateError;
+      .where(eq(invoices.id, invoiceId));
 
     revalidatePath('/dashboard/invoices');
     revalidatePath(`/dashboard/invoices/${invoiceId}`);
@@ -900,38 +888,23 @@ export async function recordPaymentAction(
 }
 
 export async function getPaymentsForInvoiceAction(invoiceId: string) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
-    return { success: false, message: 'Nicht authentifiziert.' };
+  const { success, message, user, tenantId } = await getSessionWithTenant();
+  
+  if (!success || !user) {
+    return { success: false, message };
   }
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('tenant_id')
-    .eq('id', user.id)
-    .single();
-
-  const tenantId = profile?.tenant_id;
 
   if (!tenantId) {
     return { success: false, message: 'Tenant nicht gefunden.' };
   }
 
-  const supabaseAdmin = createAdminClient();
-
   try {
-    const { data, error } = await supabaseAdmin
-      .from('payments')
-      .select('*')
-      .eq('tenant_id', tenantId)
-      .eq('invoice_id', invoiceId)
-      .order('payment_date', { ascending: false });
+    const result = await db.query.payments.findMany({
+      where: eq(payments.invoiceId, invoiceId),
+      orderBy: [desc(payments.paymentDate)],
+    });
 
-    if (error) throw error;
-
-    return { success: true, data };
+    return { success: true, data: result };
   } catch (error: any) {
     console.error('Error fetching payments:', error);
     return { success: false, message: error.message };
@@ -943,37 +916,23 @@ export async function getPaymentsForInvoiceAction(invoiceId: string) {
 // ============================================
 
 export async function getDebtorsAction() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
-    return { success: false, message: 'Nicht authentifiziert.' };
+  const { success, message, user, tenantId } = await getSessionWithTenant();
+  
+  if (!success || !user) {
+    return { success: false, message };
   }
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('tenant_id')
-    .eq('id', user.id)
-    .single();
-
-  const tenantId = profile?.tenant_id;
 
   if (!tenantId) {
     return { success: true, data: [] };
   }
 
-  const supabaseAdmin = createAdminClient();
-
   try {
-    const { data, error } = await supabaseAdmin
-      .from('debtors')
-      .select('*')
-      .eq('tenant_id', tenantId)
-      .order('billing_name');
+    const result = await db.query.debtors.findMany({
+      where: eq(debtors.tenantId, tenantId),
+      orderBy: [debtors.billingName],
+    });
 
-    if (error) throw error;
-
-    return { success: true, data };
+    return { success: true, data: result };
   } catch (error: any) {
     console.error('Error fetching debtors:', error);
     return { success: false, message: error.message };
@@ -981,38 +940,26 @@ export async function getDebtorsAction() {
 }
 
 export async function getDebtorByIdAction(id: string) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
-    return { success: false, message: 'Nicht authentifiziert.' };
+  const { success, message, user, tenantId } = await getSessionWithTenant();
+  
+  if (!success || !user) {
+    return { success: false, message };
   }
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('tenant_id')
-    .eq('id', user.id)
-    .single();
-
-  const tenantId = profile?.tenant_id;
 
   if (!tenantId) {
     return { success: false, message: 'Tenant nicht gefunden.' };
   }
 
-  const supabaseAdmin = createAdminClient();
-
   try {
-    const { data, error } = await supabaseAdmin
-      .from('debtors')
-      .select('*')
-      .eq('id', id)
-      .eq('tenant_id', tenantId)
-      .single();
+    const debtor = await db.query.debtors.findFirst({
+      where: and(eq(debtors.id, id), eq(debtors.tenantId, tenantId)),
+    });
 
-    if (error) throw error;
+    if (!debtor) {
+      return { success: false, message: 'Debitor nicht gefunden.' };
+    }
 
-    return { success: true, data };
+    return { success: true, data: debtor };
   } catch (error: any) {
     console.error('Error fetching debtor:', error);
     return { success: false, message: error.message };
@@ -1024,66 +971,63 @@ export async function getDebtorByIdAction(id: string) {
 // ============================================
 
 export async function getInvoiceStatsAction() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
-    return { success: false, message: 'Nicht authentifiziert.' };
+  const { success, message, user, tenantId } = await getSessionWithTenant();
+  
+  if (!success || !user) {
+    return { success: false, message };
   }
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('tenant_id')
-    .eq('id', user.id)
-    .single();
-
-  const tenantId = profile?.tenant_id;
 
   if (!tenantId) {
     return { success: true, data: { total_open: 0, total_overdue: 0, total_paid_this_month: 0, total_draft: 0, currency: 'EUR' } };
   }
 
-  const supabaseAdmin = createAdminClient();
-
   try {
-    const today = new Date().toISOString().split('T')[0];
+    const today = new Date();
     const startOfMonth = new Date();
     startOfMonth.setDate(1);
 
-    const { count: openCount } = await supabaseAdmin
-      .from('invoices')
-      .select('*', { count: 'exact', head: true })
-      .eq('tenant_id', tenantId)
-      .in('status', ['sent', 'partial', 'overdue']);
+    // Count open invoices
+    const openInvoices = await db.query.invoices.findMany({
+      where: and(
+        eq(invoices.tenantId, tenantId),
+        inArray(invoices.status, ['sent', 'partial', 'overdue'])
+      ),
+    });
 
-    const { count: overdueCount } = await supabaseAdmin
-      .from('invoices')
-      .select('*', { count: 'exact', head: true })
-      .eq('tenant_id', tenantId)
-      .eq('status', 'overdue');
+    // Count overdue invoices
+    const overdueInvoices = await db.query.invoices.findMany({
+      where: and(
+        eq(invoices.tenantId, tenantId),
+        eq(invoices.status, 'overdue')
+      ),
+    });
 
-    const { data: paidData } = await supabaseAdmin
-      .from('invoices')
-      .select('paid_amount_cents')
-      .eq('tenant_id', tenantId)
-      .eq('status', 'paid')
-      .gte('paid_at', startOfMonth.toISOString());
+    // Get paid this month
+    const paidInvoices = await db.query.invoices.findMany({
+      where: and(
+        eq(invoices.tenantId, tenantId),
+        eq(invoices.status, 'paid'),
+        gte(invoices.paidAt, startOfMonth)
+      ),
+    });
 
-    const paidThisMonth = (paidData || []).reduce((sum: number, inv: any) => sum + inv.paid_amount_cents, 0);
+    const paidThisMonth = paidInvoices.reduce((sum: number, inv: any) => sum + (inv.paidAmount || 0), 0);
 
-    const { count: draftCount } = await supabaseAdmin
-      .from('invoices')
-      .select('*', { count: 'exact', head: true })
-      .eq('tenant_id', tenantId)
-      .eq('status', 'draft');
+    // Count draft invoices
+    const draftInvoices = await db.query.invoices.findMany({
+      where: and(
+        eq(invoices.tenantId, tenantId),
+        eq(invoices.status, 'draft')
+      ),
+    });
 
     return {
       success: true,
       data: {
-        total_open: openCount || 0,
-        total_overdue: overdueCount || 0,
+        total_open: openInvoices.length,
+        total_overdue: overdueInvoices.length,
         total_paid_this_month: paidThisMonth,
-        total_draft: draftCount || 0,
+        total_draft: draftInvoices.length,
         currency: 'EUR',
       },
     };
@@ -1098,20 +1042,12 @@ export async function getInvoiceStatsAction() {
 // ============================================
 
 export async function exportDATEVAction(dateFrom: string, dateTo: string) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
-    return { success: false, message: 'Nicht authentifiziert.' };
+  const { success, message, user, tenantId } = await getSessionWithTenant();
+  
+  if (!success || !user) {
+    return { success: false, message };
   }
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('tenant_id')
-    .eq('id', user.id)
-    .single();
-
-  const tenantId = profile?.tenant_id;
   if (!tenantId) {
     return { success: false, message: 'Tenant nicht gefunden.' };
   }
@@ -1120,22 +1056,20 @@ export async function exportDATEVAction(dateFrom: string, dateTo: string) {
 }
 
 export async function exportZUGFeRDAction(invoiceId: string) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
-    return { success: false, message: 'Nicht authentifiziert.' };
+  const { success, message, user } = await getSessionWithTenant();
+  
+  if (!success || !user) {
+    return { success: false, message };
   }
 
   return exportZUGFeRD(invoiceId);
 }
 
 export async function exportXRechnungAction(invoiceId: string) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
-    return { success: false, message: 'Nicht authentifiziert.' };
+  const { success, message, user } = await getSessionWithTenant();
+  
+  if (!success || !user) {
+    return { success: false, message };
   }
 
   return exportXRechnung(invoiceId);
@@ -1146,11 +1080,10 @@ export async function exportXRechnungAction(invoiceId: string) {
 // ============================================
 
 export async function sendInvoiceEmailAction(invoiceId: string, recipientEmail?: string) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
-    return { success: false, message: 'Nicht authentifiziert.' };
+  const { success, message, user } = await getSessionWithTenant();
+  
+  if (!success || !user) {
+    return { success: false, message };
   }
 
   const invoiceResult = await getInvoiceByIdAction(invoiceId);
@@ -1159,7 +1092,7 @@ export async function sendInvoiceEmailAction(invoiceId: string, recipientEmail?:
   }
 
   const invoice = invoiceResult.data;
-  const email = recipientEmail || invoice.debtor?.invoice_email;
+  const email = recipientEmail || (invoice.debtor as any)?.invoice_email;
 
   if (!email) {
     return { success: false, message: 'Keine Empfänger-E-Mail gefunden.' };
@@ -1190,11 +1123,10 @@ export async function sendInvoiceEmailAction(invoiceId: string, recipientEmail?:
 // ============================================
 
 export async function sendInvoiceReminderAction(invoiceId: string) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
-    return { success: false, message: 'Nicht authentifiziert.' };
+  const { success, message, user } = await getSessionWithTenant();
+  
+  if (!success || !user) {
+    return { success: false, message };
   }
 
   const invoiceResult = await getInvoiceByIdAction(invoiceId);
@@ -1203,7 +1135,7 @@ export async function sendInvoiceReminderAction(invoiceId: string) {
   }
 
   const invoice = invoiceResult.data;
-  const email = invoice.debtor?.invoice_email;
+  const email = (invoice.debtor as any)?.invoice_email;
 
   if (!email) {
     return { success: false, message: 'Keine Empfänger-E-Mail gefunden.' };
@@ -1213,14 +1145,12 @@ export async function sendInvoiceReminderAction(invoiceId: string) {
 
   if (result.success) {
     // Increment reminder count
-    const supabaseAdmin = createAdminClient();
-    await supabaseAdmin
-      .from('invoices')
-      .update({
-        reminder_count: (invoice.reminder_count || 0) + 1,
-        last_reminder_at: new Date().toISOString(),
+    await db.update(invoices)
+      .set({
+        reminderCount: (invoice.reminderCount || 0) + 1,
+        lastReminderAt: new Date(),
       })
-      .eq('id', invoiceId);
+      .where(eq(invoices.id, invoiceId));
 
     revalidatePath('/dashboard/invoices');
     revalidatePath(`/dashboard/invoices/${invoiceId}`);
@@ -1234,39 +1164,26 @@ export async function sendInvoiceReminderAction(invoiceId: string) {
 // ============================================
 
 export async function downloadInvoicePDFAction(invoiceId: string) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
-    return { success: false, message: 'Nicht authentifiziert.' };
+  const { success, message, user, tenantId } = await getSessionWithTenant();
+  
+  if (!success || !user) {
+    return { success: false, message };
   }
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('tenant_id')
-    .eq('id', user.id)
-    .single();
-
-  const tenantId = profile?.tenant_id;
 
   if (!tenantId) {
     return { success: false, message: 'Tenant nicht gefunden.' };
   }
 
   // Get invoice with tenant verification
-  const supabaseAdmin = createAdminClient();
-  const { data: invoice, error } = await supabaseAdmin
-    .from('invoices')
-    .select(`
-      *,
-      debtor:debtors(*),
-      items:invoice_items(*)
-    `)
-    .eq('id', invoiceId)
-    .eq('tenant_id', tenantId)
-    .single();
+  const invoice = await db.query.invoices.findFirst({
+    where: and(eq(invoices.id, invoiceId), eq(invoices.tenantId, tenantId)),
+    with: {
+      debtor: true,
+      items: true,
+    },
+  });
 
-  if (error || !invoice) {
+  if (!invoice) {
     return { success: false, message: 'Rechnung nicht gefunden oder keine Berechtigung.' };
   }
 

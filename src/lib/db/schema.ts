@@ -6,6 +6,7 @@ export const userRoleEnum = pgEnum('user_role', ['platform_admin', 'admin', 'man
 export const tenantPlanEnum = pgEnum('tenant_plan', ['starter', 'professional', 'enterprise']);
 export const tenantStatusEnum = pgEnum('tenant_status', ['active', 'suspended', 'pending', 'cancelled']);
 export const orderStatusEnum = pgEnum('order_status', ['scheduled', 'in_progress', 'completed', 'cancelled', 'pending']);
+export const orderTypeEnum = pgEnum('order_type', ['one_time', 'recurring', 'substitution', 'permanent']);
 export const shiftStatusEnum = pgEnum('shift_status', ['scheduled', 'in_progress', 'completed', 'cancelled']);
 export const absenceTypeEnum = pgEnum('absence_type', ['vacation', 'sick', 'personal', 'other']);
 export const absenceStatusEnum = pgEnum('absence_status', ['pending', 'approved', 'rejected']);
@@ -97,6 +98,11 @@ export const orders = pgTable('orders', {
   objectId: uuid('object_id').references(() => objects.id),
   serviceId: uuid('service_id').references(() => services.id),
   status: orderStatusEnum('status').default('scheduled'),
+  orderType: orderTypeEnum('order_type').default('one_time'),
+  serviceType: text('service_type'),
+  fixedMonthlyPrice: integer('fixed_monthly_price'),
+  startDate: timestamp('start_date'),
+  recurringEndDate: timestamp('recurring_end_date'),
   scheduledDate: timestamp('scheduled_date'),
   scheduledEndDate: timestamp('scheduled_end_date'),
   actualStartDate: timestamp('actual_start_date'),
@@ -132,6 +138,16 @@ export const shifts = pgTable('shifts', {
   updatedAt: timestamp('updated_at').defaultNow(),
 });
 
+// Shift Employees (many-to-many junction)
+export const shiftEmployees = pgTable('shift_employees', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  shiftId: uuid('shift_id').notNull().references(() => shifts.id),
+  employeeId: uuid('employee_id').notNull().references(() => employees.id),
+  role: text('role').default('worker'), // 'worker', 'team_lead', 'substitute'
+  isConfirmed: boolean('is_confirmed').default(false),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
 // Shift Overrides
 export const shiftOverrides = pgTable('shift_overrides', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -142,6 +158,23 @@ export const shiftOverrides = pgTable('shift_overrides', {
   reason: text('reason'),
   createdBy: uuid('created_by').references(() => profiles.id),
   createdAt: timestamp('created_at').defaultNow(),
+});
+
+// Extended Shifts table with additional fields needed for shift planning
+export const shiftsExtended = pgTable('shifts_extended', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  shiftId: uuid('shift_id').notNull().references(() => shifts.id),
+  shiftDate: text('shift_date'), // ISO date string 'YYYY-MM-DD'
+  startTime: text('start_time'), // HH:mm format
+  endTime: text('end_time'), // HH:mm format
+  estimatedHours: integer('estimated_hours'),
+  travelTimeMinutes: integer('travel_time_minutes'),
+  breakTimeMinutes: integer('break_time_minutes'),
+  isDetachedFromSeries: boolean('is_detached_from_series').default(false),
+  seriesId: uuid('series_id'),
+  assignmentId: uuid('assignment_id').references(() => orderEmployeeAssignments.id),
+  orderId: uuid('order_id').references(() => orders.id),
+  isManual: boolean('is_manual').default(false),
 });
 
 // Service Rates (for employee-service experience)
@@ -379,6 +412,28 @@ export const generatedDocuments = pgTable('generated_documents', {
   createdAt: timestamp('created_at').defaultNow(),
 });
 
+// Tenant Domains
+export const tenantDomains = pgTable('tenant_domains', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tenantId: uuid('tenant_id').notNull().references(() => tenants.id),
+  domain: text('domain').notNull(),
+  isPrimary: boolean('is_primary').default(false),
+  verificationToken: text('verification_token'),
+  verificationMethod: text('verification_method').default('dns_txt'),
+  verifiedAt: timestamp('verified_at'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+export const generatedDocumentsRelations = relations(generatedDocuments, ({ one }) => ({
+  tenant: one(tenants, { fields: [generatedDocuments.tenantId], references: [tenants.id] }),
+  template: one(documentTemplates, { fields: [generatedDocuments.templateId], references: [documentTemplates.id] }),
+}));
+
+export const tenantDomainsRelations = relations(tenantDomains, ({ one }) => ({
+  tenant: one(tenants, { fields: [tenantDomains.tenantId], references: [tenants.id] }),
+}));
+
 // Company Branding
 export const companyBranding = pgTable('company_branding', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -424,6 +479,38 @@ export const invoiceSequences = pgTable('invoice_sequences', {
   updatedAt: timestamp('updated_at').defaultNow(),
 });
 
+// Notifications
+export const notifications = pgTable('notifications', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  profileId: uuid('profile_id').notNull().references(() => profiles.id),
+  title: text('title').notNull(),
+  message: text('message').notNull(),
+  link: text('link'),
+  type: text('type').default('default'), // 'order', 'shift', 'ticket', 'system', 'absence', 'default'
+  isRead: boolean('is_read').default(false),
+  readAt: timestamp('read_at'),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+// Impersonation Sessions
+export const impersonationSessions = pgTable('impersonation_sessions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  adminUserId: uuid('admin_user_id').notNull().references(() => profiles.id),
+  impersonatedUserId: uuid('impersonated_user_id').notNull().references(() => profiles.id),
+  impersonatedRole: text('impersonated_role').notNull().default('employee'),
+  sessionMetadata: jsonb('session_metadata'),
+  ipAddress: text('ip_address'),
+  userAgent: text('user_agent'),
+  isActive: boolean('is_active').default(true),
+  startedAt: timestamp('started_at').defaultNow(),
+  endedAt: timestamp('ended_at'),
+});
+
+export const impersonationSessionsRelations = relations(impersonationSessions, ({ one }) => ({
+  admin: one(profiles, { fields: [impersonationSessions.adminUserId], references: [profiles.id], relationName: 'adminUser' }),
+  impersonated: one(profiles, { fields: [impersonationSessions.impersonatedUserId], references: [profiles.id], relationName: 'impersonatedUser' }),
+}));
+
 // Helper for date-only columns (stored as timestamp at midnight)
 function date(name: string) {
   return timestamp(name, { withTimezone: false });
@@ -440,6 +527,7 @@ export const tenantsRelations = relations(tenants, ({ many }) => ({
   invoices: many(invoices),
   products: many(products),
   auditLogs: many(auditLogs),
+  domains: many(tenantDomains),
 }));
 
 export const profilesRelations = relations(profiles, ({ one, many }) => ({
@@ -478,12 +566,23 @@ export const orderEmployeeAssignmentsRelations = relations(orderEmployeeAssignme
   employee: one(employees, { fields: [orderEmployeeAssignments.employeeId], references: [employees.id] }),
 }));
 
+export const shiftEmployeesRelations = relations(shiftEmployees, ({ one }) => ({
+  shift: one(shifts, { fields: [shiftEmployees.shiftId], references: [shifts.id] }),
+  employee: one(employees, { fields: [shiftEmployees.employeeId], references: [employees.id] }),
+}));
+
 export const shiftsRelations = relations(shifts, ({ one, many }) => ({
   tenant: one(tenants, { fields: [shifts.tenantId], references: [tenants.id] }),
   order: one(orders, { fields: [shifts.orderId], references: [orders.id] }),
   employee: one(employees, { fields: [shifts.employeeId], references: [employees.id] }),
   overrides: many(shiftOverrides),
   timeEntries: many(timeEntries),
+  shiftEmployees: many(shiftEmployees),
+}));
+
+export const shiftOverridesRelations = relations(shiftOverrides, ({ one }) => ({
+  shift: one(shifts, { fields: [shiftOverrides.shiftId], references: [shifts.id] }),
+  creator: one(profiles, { fields: [shiftOverrides.createdBy], references: [profiles.id] }),
 }));
 
 export const servicesRelations = relations(services, ({ one, many }) => ({

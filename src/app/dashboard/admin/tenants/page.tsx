@@ -1,5 +1,14 @@
 import { getAllTenants, getPlatformStats, activateTenant, suspendTenant, deleteTenant } from '@/lib/actions/tenant-admin';
 import { TenantManagementClient } from './_components/tenant-management-client';
+import type { TenantListItem } from '@/lib/actions/tenant-admin';
+type PlatformStats = {
+  totalTenants: number;
+  activeTenants: number;
+  pendingTenants: number;
+  suspendedTenants: number;
+  totalUsers: number;
+  monthlyRevenue: number;
+};
 
 // Server Component - fetches initial data
 export default async function AdminTenantsPage() {
@@ -10,8 +19,8 @@ export default async function AdminTenantsPage() {
 
   return (
     <TenantManagementClient
-      initialTenants={tenantsResult.data}
-      initialStats={statsResult.data}
+      initialTenants={tenantsResult.data as TenantListItem[]}
+      initialStats={statsResult.data as PlatformStats | null}
       error={tenantsResult.error || statsResult.error}
     />
   );

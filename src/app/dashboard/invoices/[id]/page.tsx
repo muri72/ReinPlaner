@@ -42,8 +42,8 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
     notFound();
   }
 
-  const debtor = invoice.debtor;
-  const items = invoice.items || [];
+  const debtorId = invoice.debtorId;
+  const items = invoice.invoiceItems || [];
 
   return (
     <div className="p-4 md:p-8 space-y-6">

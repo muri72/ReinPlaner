@@ -24,8 +24,8 @@ interface Tenant {
   plan: 'starter' | 'professional' | 'enterprise';
   status: 'active' | 'suspended' | 'pending' | 'cancelled';
   settings: Record<string, unknown>;
-  created_at: string;
-  updated_at: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 interface TenantFormDialogProps {

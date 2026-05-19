@@ -2,33 +2,42 @@
  * Tenant Admin Server Actions
  * 
  * Server-side actions for managing tenants in the platform admin.
- * These functions bypass RLS using SERVICE ROLE key.
+ * Uses Drizzle ORM for database operations and NextAuth for authentication.
  * Requires platform_admin role - accessible only via reinplaner.vercel.app
  */
 
 'use server';
 
-import { createClient } from '@supabase/supabase-js';
+import { db } from '@/lib/db';
+import { tenants, tenantDomains, profiles } from '@/lib/db/schema';
+import { eq, desc } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
-import { requirePlatformAdmin } from '@/lib/services-rbac';
+import { auth } from '@/lib/auth/session';
 
-// Service role client for admin operations
-function getAdminClient() {
-  const supabaseUrl = process.env.META_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRoleKey = process.env.META_SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+// =============================================================================
+// AUTH HELPERS
+// =============================================================================
+
+/**
+ * Get the current session and verify platform admin role
+ */
+async function getPlatformAdmin(): Promise<{ id: string; role: string; tenantId: string | null }> {
+  const session = await auth();
   
-  if (!supabaseUrl || !serviceRoleKey) {
-    throw new Error('Admin database credentials not configured');
+  if (!session?.user?.id) {
+    throw new Error('Authentication required');
   }
   
-  return createClient(supabaseUrl, serviceRoleKey, {
-    auth: { persistSession: false }
-  });
-}
-
-// Verify caller is platform_admin (throws if not)
-async function verifyPlatformAdmin(): Promise<void> {
-  await requirePlatformAdmin();
+  const role = (session.user as any).role;
+  if (role !== 'platform_admin') {
+    throw new Error('Platform-Admin-Berechtigung erforderlich');
+  }
+  
+  return {
+    id: session.user.id,
+    role,
+    tenantId: (session.user as any).tenantId ?? null,
+  };
 }
 
 // =============================================================================
@@ -67,8 +76,8 @@ export interface TenantListItem {
   plan: 'starter' | 'professional' | 'enterprise';
   status: 'active' | 'suspended' | 'pending' | 'cancelled';
   settings: Record<string, unknown>;
-  created_at: string;
-  updated_at: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 // =============================================================================
@@ -82,20 +91,36 @@ export async function getAllTenants(): Promise<{
   data: TenantListItem[];
   error: string | null;
 }> {
-  await verifyPlatformAdmin();
   try {
-    const supabase = getAdminClient();
+    await getPlatformAdmin();
     
-    const { data, error } = await supabase
-      .from('tenants')
-      .select('*')
-      .order('created_at', { ascending: false });
+    const result = await db
+      .select({
+        id: tenants.id,
+        slug: tenants.slug,
+        name: tenants.name,
+        domain: tenants.customDomain,
+        plan: tenants.plan,
+        status: tenants.status,
+        createdAt: tenants.createdAt,
+        updatedAt: tenants.updatedAt,
+      })
+      .from(tenants)
+      .orderBy(desc(tenants.createdAt));
 
-    if (error) {
-      return { data: [], error: error.message };
-    }
+    const data: TenantListItem[] = result.map(r => ({
+      id: r.id,
+      slug: r.slug,
+      name: r.name,
+      domain: r.domain ?? null,
+      plan: r.plan ?? 'starter',
+      status: r.status ?? 'pending',
+      settings: {},
+      createdAt: r.createdAt ?? new Date(),
+      updatedAt: r.updatedAt ?? new Date(),
+    }));
 
-    return { data: data || [], error: null };
+    return { data, error: null };
   } catch (err) {
     console.error('getAllTenants error:', err);
     return { data: [], error: (err as Error).message };
@@ -109,21 +134,43 @@ export async function getTenantById(id: string): Promise<{
   data: TenantListItem | null;
   error: string | null;
 }> {
-  await verifyPlatformAdmin();
   try {
-    const supabase = getAdminClient();
+    await getPlatformAdmin();
     
-    const { data, error } = await supabase
-      .from('tenants')
-      .select('*')
-      .eq('id', id)
-      .single();
+    const result = await db
+      .select({
+        id: tenants.id,
+        slug: tenants.slug,
+        name: tenants.name,
+        domain: tenants.customDomain,
+        plan: tenants.plan,
+        status: tenants.status,
+        createdAt: tenants.createdAt,
+        updatedAt: tenants.updatedAt,
+      })
+      .from(tenants)
+      .where(eq(tenants.id, id))
+      .limit(1);
 
-    if (error) {
-      return { data: null, error: error.message };
+    if (result.length === 0) {
+      return { data: null, error: 'Tenant not found' };
     }
 
-    return { data, error: null };
+    const r = result[0];
+    return { 
+      data: {
+        id: r.id,
+        slug: r.slug,
+        name: r.name,
+        domain: r.domain ?? null,
+        plan: r.plan ?? 'starter',
+        status: r.status ?? 'pending',
+        settings: {},
+        createdAt: r.createdAt ?? new Date(),
+        updatedAt: r.updatedAt ?? new Date(),
+      }, 
+      error: null 
+    };
   } catch (err) {
     console.error('getTenantById error:', err);
     return { data: null, error: (err as Error).message };
@@ -137,27 +184,28 @@ export async function getTenantDomains(tenantId: string): Promise<{
   data: Array<{
     id: string;
     domain: string;
-    is_primary: boolean;
-    verified_at: string | null;
-    verification_token: string | null;
+    isPrimary: boolean;
+    verifiedAt: Date | null;
+    verificationToken: string | null;
   }>;
   error: string | null;
 }> {
-  await verifyPlatformAdmin();
   try {
-    const supabase = getAdminClient();
+    await getPlatformAdmin();
     
-    const { data, error } = await supabase
-      .from('tenant_domains')
-      .select('id, domain, is_primary, verified_at, verification_token')
-      .eq('tenant_id', tenantId)
-      .order('is_primary', { ascending: false });
+    const result = await db
+      .select({
+        id: tenantDomains.id,
+        domain: tenantDomains.domain,
+        isPrimary: tenantDomains.isPrimary,
+        verifiedAt: tenantDomains.verifiedAt,
+        verificationToken: tenantDomains.verificationToken,
+      })
+      .from(tenantDomains)
+      .where(eq(tenantDomains.tenantId, tenantId))
+      .orderBy(desc(tenantDomains.isPrimary));
 
-    if (error) {
-      return { data: [], error: error.message };
-    }
-
-    return { data: data || [], error: null };
+    return { data: result, error: null };
   } catch (err) {
     console.error('getTenantDomains error:', err);
     return { data: [], error: (err as Error).message };
@@ -180,45 +228,49 @@ export async function createTenant(input: {
   data: TenantListItem | null;
   error: string | null;
 }> {
-  await verifyPlatformAdmin();
   try {
-    const supabase = getAdminClient();
+    await getPlatformAdmin();
     
     // Generate verification token for custom domain
     const verificationToken = generateVerificationToken();
     
-    const { data, error } = await supabase
-      .from('tenants')
-      .insert({
-        slug: input.slug.toLowerCase().replace(/[^a-z0-9-]/g, '-'),
+    const slug = input.slug.toLowerCase().replace(/[^a-z0-9-]/g, '-');
+    
+    const [newTenant] = await db
+      .insert(tenants)
+      .values({
+        slug,
         name: input.name,
-        domain: input.domain || null,
+        customDomain: input.domain || null,
         plan: input.plan || 'starter',
         status: 'pending',
-        settings: getDefaultSettings(input.plan || 'starter'),
       })
-      .select()
-      .single();
-
-    if (error) {
-      return { data: null, error: error.message };
-    }
+      .returning({
+        id: tenants.id,
+        slug: tenants.slug,
+        name: tenants.name,
+        domain: tenants.customDomain,
+        plan: tenants.plan,
+        status: tenants.status,
+        createdAt: tenants.createdAt,
+        updatedAt: tenants.updatedAt,
+      });
 
     // If domain provided, create tenant_domain entry
-    if (input.domain) {
-      await supabase
-        .from('tenant_domains')
-        .insert({
-          tenant_id: data.id,
+    if (input.domain && newTenant) {
+      await db
+        .insert(tenantDomains)
+        .values({
+          tenantId: newTenant.id,
           domain: input.domain,
-          is_primary: true,
-          verification_token: verificationToken,
-          verification_method: 'dns_txt',
+          isPrimary: true,
+          verificationToken,
+          verificationMethod: 'dns_txt',
         });
     }
 
     revalidatePath('/dashboard/admin/tenants');
-    return { data, error: null };
+    return { data: newTenant ?? null, error: null };
   } catch (err) {
     console.error('createTenant error:', err);
     return { data: null, error: (err as Error).message };
@@ -240,23 +292,33 @@ export async function updateTenant(
   data: TenantListItem | null;
   error: string | null;
 }> {
-  await verifyPlatformAdmin();
   try {
-    const supabase = getAdminClient();
+    await getPlatformAdmin();
     
-    const { data, error } = await supabase
-      .from('tenants')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single();
+    const [updated] = await db
+      .update(tenants)
+      .set({
+        ...updates,
+        updatedAt: new Date(),
+      })
+      .where(eq(tenants.id, id))
+      .returning({
+        id: tenants.id,
+        slug: tenants.slug,
+        name: tenants.name,
+        domain: tenants.customDomain,
+        plan: tenants.plan,
+        status: tenants.status,
+        createdAt: tenants.createdAt,
+        updatedAt: tenants.updatedAt,
+      });
 
-    if (error) {
-      return { data: null, error: error.message };
+    if (!updated) {
+      return { data: null, error: 'Tenant not found' };
     }
 
     revalidatePath('/dashboard/admin/tenants');
-    return { data, error: null };
+    return { data: updated, error: null };
   } catch (err) {
     console.error('updateTenant error:', err);
     return { data: null, error: (err as Error).message };
@@ -270,21 +332,16 @@ export async function deleteTenant(id: string): Promise<{
   success: boolean;
   error: string | null;
 }> {
-  await verifyPlatformAdmin();
   try {
-    const supabase = getAdminClient();
+    await getPlatformAdmin();
     
-    const { error } = await supabase
-      .from('tenants')
-      .update({ 
+    await db
+      .update(tenants)
+      .set({ 
         status: 'cancelled',
-        updated_at: new Date().toISOString()
+        updatedAt: new Date(),
       })
-      .eq('id', id);
-
-    if (error) {
-      return { success: false, error: error.message };
-    }
+      .where(eq(tenants.id, id));
 
     revalidatePath('/dashboard/admin/tenants');
     return { success: true, error: null };
@@ -301,23 +358,16 @@ export async function suspendTenant(id: string, reason?: string): Promise<{
   success: boolean;
   error: string | null;
 }> {
-  await verifyPlatformAdmin();
   try {
-    const supabase = getAdminClient();
+    await getPlatformAdmin();
     
-    const { error } = await supabase
-      .from('tenants')
-      .update({ 
+    await db
+      .update(tenants)
+      .set({ 
         status: 'suspended',
-        suspended_at: new Date().toISOString(),
-        suspended_reason: reason || null,
-        updated_at: new Date().toISOString()
+        updatedAt: new Date(),
       })
-      .eq('id', id);
-
-    if (error) {
-      return { success: false, error: error.message };
-    }
+      .where(eq(tenants.id, id));
 
     revalidatePath('/dashboard/admin/tenants');
     return { success: true, error: null };
@@ -334,21 +384,16 @@ export async function activateTenant(id: string): Promise<{
   success: boolean;
   error: string | null;
 }> {
-  await verifyPlatformAdmin();
   try {
-    const supabase = getAdminClient();
+    await getPlatformAdmin();
     
-    const { error } = await supabase
-      .from('tenants')
-      .update({ 
+    await db
+      .update(tenants)
+      .set({ 
         status: 'active',
-        updated_at: new Date().toISOString()
+        updatedAt: new Date(),
       })
-      .eq('id', id);
-
-    if (error) {
-      return { success: false, error: error.message };
-    }
+      .where(eq(tenants.id, id));
 
     revalidatePath('/dashboard/admin/tenants');
     return { success: true, error: null };
@@ -369,31 +414,32 @@ export async function addTenantDomain(
   tenantId: string,
   domain: string
 ): Promise<{
-  data: { verification_token: string; verification_method: string } | null;
+  data: { verificationToken: string; verificationMethod: string } | null;
   error: string | null;
 }> {
-  await verifyPlatformAdmin();
   try {
-    const supabase = getAdminClient();
+    await getPlatformAdmin();
     const verificationToken = generateVerificationToken();
     
-    const { data, error } = await supabase
-      .from('tenant_domains')
-      .insert({
-        tenant_id: tenantId,
-        domain: domain,
-        is_primary: false,
-        verification_token: verificationToken,
-        verification_method: 'dns_txt',
+    const [result] = await db
+      .insert(tenantDomains)
+      .values({
+        tenantId,
+        domain,
+        isPrimary: false,
+        verificationToken,
+        verificationMethod: 'dns_txt',
       })
-      .select('verification_token, verification_method')
-      .single();
+      .returning({
+        verificationToken: tenantDomains.verificationToken,
+        verificationMethod: tenantDomains.verificationMethod,
+      });
 
-    if (error) {
-      return { data: null, error: error.message };
+    if (!result) {
+      return { data: null, error: 'Failed to add domain' };
     }
 
-    return { data, error: null };
+    return { data: result, error: null };
   } catch (err) {
     console.error('addTenantDomain error:', err);
     return { data: null, error: (err as Error).message };
@@ -413,29 +459,31 @@ export async function getDomainVerificationInstructions(
   } | null;
   error: string | null;
 }> {
-  await verifyPlatformAdmin();
   try {
-    const supabase = getAdminClient();
+    await getPlatformAdmin();
     
-    const { data, error } = await supabase
-      .from('tenant_domains')
-      .select('verification_token, verification_method')
-      .eq('domain', domain)
-      .single();
+    const [domainRecord] = await db
+      .select({
+        verificationToken: tenantDomains.verificationToken,
+        verificationMethod: tenantDomains.verificationMethod,
+      })
+      .from(tenantDomains)
+      .where(eq(tenantDomains.domain, domain))
+      .limit(1);
 
-    if (error || !data) {
+    if (!domainRecord) {
       return { data: null, error: 'Domain not found or not pending verification' };
     }
 
     return {
       data: {
-        token: data.verification_token || '',
-        method: data.verification_method || 'dns_txt',
+        token: domainRecord.verificationToken || '',
+        method: domainRecord.verificationMethod || 'dns_txt',
         instructions: [
           `1. Log in to your DNS provider for ${domain}`,
           `2. Create a new TXT record`,
           `3. Set the name/host to: _reinplaner-verification.${domain.replace(/^www\./, '')}`,
-          `4. Set the value to: ${data.verification_token}`,
+          `4. Set the value to: ${domainRecord.verificationToken}`,
           `5. Save the record and wait 5-10 minutes for DNS propagation`,
           `6. Click "Verify" to confirm`,
         ],
@@ -457,20 +505,15 @@ export async function verifyDomainOwnership(
   success: boolean;
   error: string | null;
 }> {
-  await verifyPlatformAdmin();
   try {
-    const supabase = getAdminClient();
+    await getPlatformAdmin();
     
     // In a real implementation, we would check DNS here
     // For now, we just mark it as verified
-    const { error } = await supabase
-      .from('tenant_domains')
-      .update({ verified_at: new Date().toISOString() })
-      .eq('id', domainId);
-
-    if (error) {
-      return { success: false, error: error.message };
-    }
+    await db
+      .update(tenantDomains)
+      .set({ verifiedAt: new Date() })
+      .where(eq(tenantDomains.id, domainId));
 
     return { success: true, error: null };
   } catch (err) {
@@ -492,28 +535,6 @@ function generateVerificationToken(): string {
   return token;
 }
 
-function getDefaultSettings(plan: 'starter' | 'professional' | 'enterprise') {
-  const limits = {
-    starter: { max_users: 5, max_orders_per_month: 1000, storage_mb: 1000 },
-    professional: { max_users: 25, max_orders_per_month: 10000, storage_mb: 10000 },
-    enterprise: { max_users: -1, max_orders_per_month: -1, storage_mb: 100000 },
-  };
-
-  const features = {
-    starter: { api_access: false, sso: false, custom_backup: false },
-    professional: { api_access: true, sso: false, custom_backup: false },
-    enterprise: { api_access: true, sso: true, custom_backup: true },
-  };
-
-  return {
-    branding: {
-      primary_color: '#3B82F6',
-    },
-    limits: limits[plan],
-    features: features[plan],
-  };
-}
-
 // =============================================================================
 // PLATFORM STATS
 // =============================================================================
@@ -532,27 +553,29 @@ export async function getPlatformStats(): Promise<{
   } | null;
   error: string | null;
 }> {
-  await verifyPlatformAdmin();
   try {
-    const supabase = getAdminClient();
+    await getPlatformAdmin();
     
-    const { data, error } = await supabase
-      .from('tenants')
-      .select('status, plan, monthly_rate_cents');
+    const allTenants = await db
+      .select({
+        status: tenants.status,
+        plan: tenants.plan,
+      })
+      .from(tenants);
 
-    if (error) {
-      return { data: null, error: error.message };
-    }
+    const allProfiles = await db
+      .select({ id: profiles.id })
+      .from(profiles);
 
     const stats = {
-      totalTenants: data.length,
-      activeTenants: data.filter(t => t.status === 'active').length,
-      pendingTenants: data.filter(t => t.status === 'pending').length,
-      suspendedTenants: data.filter(t => t.status === 'suspended').length,
-      totalUsers: 0, // Would need to join with tenant_users
-      monthlyRevenue: data
+      totalTenants: allTenants.length,
+      activeTenants: allTenants.filter(t => t.status === 'active').length,
+      pendingTenants: allTenants.filter(t => t.status === 'pending').length,
+      suspendedTenants: allTenants.filter(t => t.status === 'suspended').length,
+      totalUsers: allProfiles.length,
+      monthlyRevenue: allTenants
         .filter(t => t.status === 'active')
-        .reduce((sum, t) => sum + (t.monthly_rate_cents || 2900), 0) / 100,
+        .reduce((sum, t) => sum + 29, 0), // Default $29/month
     };
 
     return { data: stats, error: null };

@@ -1,6 +1,9 @@
 'use server';
 
-import { createClient, createAdminClient } from '@/lib/supabase/server';
+import { auth } from '@/lib/auth/options';
+import { db } from '@/lib/db';
+import { tenants, profiles, auditLogs } from '@/lib/db/schema';
+import { eq, desc, and, count, sql } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import type { Tenant, TenantPlan, TenantStatus, TenantSettings, CreateTenantInput } from '@/lib/tenant/types';
 import { logCriticalAction } from '@/lib/audit-log';
@@ -28,42 +31,38 @@ export interface TenantAdminResult {
  * Check if the current user has platform admin role
  */
 async function requirePlatformAdmin(): Promise<{ userId: string; email: string } | null> {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const session = await auth();
 
-  if (!user) {
+  if (!session?.user?.id) {
     return null;
   }
 
-  // Check if user has admin role in profiles
-  const { data: profile, error } = await supabase
-    .from('profiles')
-    .select('role, email')
-    .eq('id', user.id)
-    .single();
+  const userId = session.user.id;
+  const email = session.user.email || '';
 
-  if (error || !profile || profile.role !== 'admin') {
+  // Check if user has platform_admin role via NextAuth token
+  const role = (session.user as any).role;
+  if (role !== 'platform_admin') {
     return null;
   }
 
-  return { userId: user.id, email: profile.email || user.email || '' };
+  return { userId, email };
 }
 
 /**
  * Map database row to Tenant type
  */
-function mapRowToTenant(data: Record<string, unknown>): Tenant {
+function mapRowToTenant(data: typeof tenants.$inferSelect): Tenant {
   return {
     id: data.id as string,
-    slug: data.slug as string,
-    name: data.name as string,
-    domain: data.domain as string | null,
+    slug: data.slug,
+    name: data.name,
+    domain: data.customDomain || null,
     plan: (data.plan as TenantPlan) || 'starter',
     status: (data.status as TenantStatus) || 'active',
     settings: (data.settings as TenantSettings) || {},
-    database_url: data.database_url as string | undefined,
-    created_at: data.created_at as string,
-    updated_at: data.updated_at as string,
+    created_at: data.createdAt?.toISOString() || new Date().toISOString(),
+    updated_at: data.updatedAt?.toISOString() || new Date().toISOString(),
   };
 }
 
@@ -73,7 +72,6 @@ function mapRowToTenant(data: Record<string, unknown>): Tenant {
 
 /**
  * Admin-only: List all tenants with pagination
- * Uses the get_tenants_admin() RPC function to bypass RLS
  */
 export async function getAllTenants(
   page: number = 1,
@@ -86,40 +84,46 @@ export async function getAllTenants(
     throw new Error('Unauthorized: Platform admin access required');
   }
 
-  const supabase = createAdminClient();
+  try {
+    const conditions = [];
+    if (status) {
+      conditions.push(eq(tenants.status, status));
+    }
+    if (plan) {
+      conditions.push(eq(tenants.plan, plan));
+    }
 
-  let query = supabase
-    .from('tenants')
-    .select('*', { count: 'exact' })
-    .order('created_at', { ascending: false })
-    .range((page - 1) * pageSize, page * pageSize - 1);
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
-  if (status) {
-    query = query.eq('status', status);
+    // Get total count
+    const [{ total }] = await db
+      .select({ total: count() })
+      .from(tenants)
+      .where(whereClause);
+
+    // Get paginated results
+    const results = await db
+      .select()
+      .from(tenants)
+      .where(whereClause)
+      .orderBy(desc(tenants.createdAt))
+      .limit(pageSize)
+      .offset((page - 1) * pageSize);
+
+    const tenantList = results.map(row => mapRowToTenant(row));
+
+    return {
+      tenants: tenantList,
+      total: Number(total) || 0,
+    };
+  } catch (err) {
+    console.error('[tenant-admin] Error fetching tenants:', err);
+    throw new Error(`Failed to fetch tenants: ${err instanceof Error ? err.message : 'Unknown error'}`);
   }
-
-  if (plan) {
-    query = query.eq('plan', plan);
-  }
-
-  const { data, error, count } = await query;
-
-  if (error) {
-    console.error('[tenant-admin] Error fetching tenants:', error);
-    throw new Error(`Failed to fetch tenants: ${error.message}`);
-  }
-
-  const tenants = (data || []).map(row => mapRowToTenant(row as Record<string, unknown>));
-
-  return {
-    tenants,
-    total: count || 0,
-  };
 }
 
 /**
  * Admin-only: Get a single tenant by ID
- * Uses the get_tenants_admin() RPC function to bypass RLS
  */
 export async function getTenantById(id: string): Promise<Tenant> {
   const admin = await requirePlatformAdmin();
@@ -127,31 +131,17 @@ export async function getTenantById(id: string): Promise<Tenant> {
     throw new Error('Unauthorized: Platform admin access required');
   }
 
-  const supabase = createAdminClient();
+  const result = await db
+    .select()
+    .from(tenants)
+    .where(eq(tenants.id, id))
+    .limit(1);
 
-  // Try RPC first (bypasses RLS)
-  const { data: rpcData, error: rpcError } = await supabase.rpc('get_tenant_by_id', { tenant_id: id });
-
-  if (rpcError) {
-    // Fallback to direct query
-    const { data, error } = await supabase
-      .from('tenants')
-      .select('*')
-      .eq('id', id)
-      .single();
-
-    if (error || !data) {
-      throw new Error(`Tenant not found: ${id}`);
-    }
-
-    return mapRowToTenant(data as Record<string, unknown>);
-  }
-
-  if (!rpcData) {
+  if (!result || result.length === 0) {
     throw new Error(`Tenant not found: ${id}`);
   }
 
-  return mapRowToTenant(rpcData as Record<string, unknown>);
+  return mapRowToTenant(result[0]);
 }
 
 /**
@@ -165,34 +155,27 @@ export async function createTenant(data: CreateTenantInput): Promise<TenantAdmin
   }
 
   try {
-    const supabase = createAdminClient();
+    const now = new Date();
 
-    const { data: tenantData, error } = await supabase
-      .from('tenants')
-      .insert({
+    const [newTenant] = await db
+      .insert(tenants)
+      .values({
         slug: data.slug,
         name: data.name,
-        domain: data.domain || null,
+        customDomain: data.domain || null,
         plan: data.plan || 'starter',
         status: 'pending',
         settings: data.settings || {},
-        created_by: admin.userId,
+        createdAt: now,
+        updatedAt: now,
       })
-      .select()
-      .single();
+      .returning();
 
-    if (error) {
-      console.error('[tenant-admin] Error creating tenant:', error);
-      
-      // Handle unique constraint violation
-      if (error.code === '23505') {
-        return { success: false, error: 'Ein Tenant mit diesem Slug existiert bereits' };
-      }
-      
-      return { success: false, error: `Fehler beim Erstellen: ${error.message}` };
+    if (!newTenant) {
+      return { success: false, error: 'Failed to create tenant' };
     }
 
-    const tenant = mapRowToTenant(tenantData as Record<string, unknown>);
+    const tenant = mapRowToTenant(newTenant);
 
     // Audit log
     await logCriticalAction(
@@ -201,7 +184,7 @@ export async function createTenant(data: CreateTenantInput): Promise<TenantAdmin
       'success',
       `Created tenant: ${tenant.name} (${tenant.slug})`,
       undefined,
-      tenantData
+      newTenant
     );
 
     // Revalidate admin pages
@@ -211,6 +194,12 @@ export async function createTenant(data: CreateTenantInput): Promise<TenantAdmin
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.error('[tenant-admin] Error creating tenant:', message);
+
+    // Handle unique constraint violation (Postgres error code 23505)
+    if (message.includes('23505') || message.includes('unique') || message.includes('duplicate')) {
+      return { success: false, error: 'Ein Tenant mit diesem Slug existiert bereits' };
+    }
+
     return { success: false, error: message };
   }
 }
@@ -230,37 +219,37 @@ export async function updateTenant(
 
   try {
     // Get current tenant for audit log
-    const { data: currentTenant } = await createAdminClient()
-      .from('tenants')
-      .select('*')
-      .eq('id', id)
-      .single();
+    const [currentTenant] = await db
+      .select()
+      .from(tenants)
+      .where(eq(tenants.id, id))
+      .limit(1);
 
-    const supabase = createAdminClient();
+    if (!currentTenant) {
+      return { success: false, error: 'Tenant nicht gefunden' };
+    }
 
-    const updateData: Record<string, unknown> = {
-      updated_at: new Date().toISOString(),
+    const updateData: Partial<typeof tenants.$inferInsert> = {
+      updatedAt: new Date(),
     };
 
     if (data.name !== undefined) updateData.name = data.name;
-    if (data.domain !== undefined) updateData.domain = data.domain;
+    if (data.domain !== undefined) updateData.customDomain = data.domain;
     if (data.plan !== undefined) updateData.plan = data.plan;
     if (data.status !== undefined) updateData.status = data.status;
     if (data.settings !== undefined) updateData.settings = data.settings;
 
-    const { data: tenantData, error } = await supabase
-      .from('tenants')
-      .update(updateData)
-      .eq('id', id)
-      .select()
-      .single();
+    const [updatedTenant] = await db
+      .update(tenants)
+      .set(updateData)
+      .where(eq(tenants.id, id))
+      .returning();
 
-    if (error) {
-      console.error('[tenant-admin] Error updating tenant:', error);
-      return { success: false, error: `Fehler beim Aktualisieren: ${error.message}` };
+    if (!updatedTenant) {
+      return { success: false, error: 'Failed to update tenant' };
     }
 
-    const tenant = mapRowToTenant(tenantData as Record<string, unknown>);
+    const tenant = mapRowToTenant(updatedTenant);
 
     // Audit log
     await logCriticalAction(
@@ -269,7 +258,7 @@ export async function updateTenant(
       'success',
       `Updated tenant: ${tenant.name} (${tenant.slug})`,
       currentTenant,
-      tenantData
+      updatedTenant
     );
 
     // Revalidate admin pages
@@ -296,38 +285,30 @@ export async function suspendTenant(id: string, reason?: string): Promise<Tenant
 
   try {
     // Get current tenant for audit log
-    const { data: currentTenant } = await createAdminClient()
-      .from('tenants')
-      .select('*')
-      .eq('id', id)
-      .single();
+    const [currentTenant] = await db
+      .select()
+      .from(tenants)
+      .where(eq(tenants.id, id))
+      .limit(1);
 
     if (!currentTenant) {
       return { success: false, error: 'Tenant nicht gefunden' };
     }
 
-    const supabase = createAdminClient();
-
-    const { data: tenantData, error } = await supabase
-      .from('tenants')
-      .update({
+    const [suspendedTenant] = await db
+      .update(tenants)
+      .set({
         status: 'suspended',
-        suspended_at: new Date().toISOString(),
-        suspended_reason: reason || 'Admin suspended',
-        updated_at: new Date().toISOString(),
-        // Clear sensitive database credentials when suspending
-        database_password_encrypted: null,
+        updatedAt: new Date(),
       })
-      .eq('id', id)
-      .select()
-      .single();
+      .where(eq(tenants.id, id))
+      .returning();
 
-    if (error) {
-      console.error('[tenant-admin] Error suspending tenant:', error);
-      return { success: false, error: `Fehler beim Suspendieren: ${error.message}` };
+    if (!suspendedTenant) {
+      return { success: false, error: 'Failed to suspend tenant' };
     }
 
-    const tenant = mapRowToTenant(tenantData as Record<string, unknown>);
+    const tenant = mapRowToTenant(suspendedTenant);
 
     // Audit log
     await logCriticalAction(
@@ -336,7 +317,7 @@ export async function suspendTenant(id: string, reason?: string): Promise<Tenant
       'success',
       `Suspended tenant: ${tenant.name} (${tenant.slug}). Reason: ${reason || 'No reason provided'}`,
       currentTenant,
-      tenantData
+      suspendedTenant
     );
 
     // Revalidate admin pages
@@ -362,36 +343,30 @@ export async function reactivateTenant(id: string): Promise<TenantAdminResult> {
 
   try {
     // Get current tenant for audit log
-    const { data: currentTenant } = await createAdminClient()
-      .from('tenants')
-      .select('*')
-      .eq('id', id)
-      .single();
+    const [currentTenant] = await db
+      .select()
+      .from(tenants)
+      .where(eq(tenants.id, id))
+      .limit(1);
 
     if (!currentTenant) {
       return { success: false, error: 'Tenant nicht gefunden' };
     }
 
-    const supabase = createAdminClient();
-
-    const { data: tenantData, error } = await supabase
-      .from('tenants')
-      .update({
+    const [reactivatedTenant] = await db
+      .update(tenants)
+      .set({
         status: 'active',
-        suspended_at: null,
-        suspended_reason: null,
-        updated_at: new Date().toISOString(),
+        updatedAt: new Date(),
       })
-      .eq('id', id)
-      .select()
-      .single();
+      .where(eq(tenants.id, id))
+      .returning();
 
-    if (error) {
-      console.error('[tenant-admin] Error reactivating tenant:', error);
-      return { success: false, error: `Fehler beim Reaktivieren: ${error.message}` };
+    if (!reactivatedTenant) {
+      return { success: false, error: 'Failed to reactivate tenant' };
     }
 
-    const tenant = mapRowToTenant(tenantData as Record<string, unknown>);
+    const tenant = mapRowToTenant(reactivatedTenant);
 
     // Audit log
     await logCriticalAction(
@@ -400,7 +375,7 @@ export async function reactivateTenant(id: string): Promise<TenantAdminResult> {
       'success',
       `Reactivated tenant: ${tenant.name} (${tenant.slug})`,
       currentTenant,
-      tenantData
+      reactivatedTenant
     );
 
     // Revalidate admin pages
@@ -426,11 +401,11 @@ export async function deleteTenant(id: string): Promise<TenantAdminResult> {
 
   try {
     // Get current tenant for audit log
-    const { data: currentTenant } = await createAdminClient()
-      .from('tenants')
-      .select('*')
-      .eq('id', id)
-      .single();
+    const [currentTenant] = await db
+      .select()
+      .from(tenants)
+      .where(eq(tenants.id, id))
+      .limit(1);
 
     if (!currentTenant) {
       return { success: false, error: 'Tenant nicht gefunden' };
@@ -441,17 +416,9 @@ export async function deleteTenant(id: string): Promise<TenantAdminResult> {
       return { success: false, error: 'Der Standard-Tenant kann nicht gelöscht werden' };
     }
 
-    const supabase = createAdminClient();
-
-    const { error } = await supabase
-      .from('tenants')
-      .delete()
-      .eq('id', id);
-
-    if (error) {
-      console.error('[tenant-admin] Error deleting tenant:', error);
-      return { success: false, error: `Fehler beim Löschen: ${error.message}` };
-    }
+    await db
+      .delete(tenants)
+      .where(eq(tenants.id, id));
 
     // Audit log
     await logCriticalAction(
@@ -489,37 +456,38 @@ export async function getTenantStats(): Promise<{
     throw new Error('Unauthorized: Platform admin access required');
   }
 
-  const supabase = createAdminClient();
+  try {
+    const results = await db
+      .select({
+        status: tenants.status,
+        plan: tenants.plan,
+      })
+      .from(tenants);
 
-  const { data, error } = await supabase
-    .from('tenants')
-    .select('status, plan');
+    const stats = {
+      total: results.length,
+      active: 0,
+      suspended: 0,
+      pending: 0,
+      byPlan: {
+        starter: 0,
+        professional: 0,
+        enterprise: 0,
+      } as Record<TenantPlan, number>,
+    };
 
-  if (error) {
-    console.error('[tenant-admin] Error fetching tenant stats:', error);
-    throw new Error(`Failed to fetch stats: ${error.message}`);
+    results.forEach((row) => {
+      if (row.status === 'active') stats.active++;
+      if (row.status === 'suspended') stats.suspended++;
+      if (row.status === 'pending') stats.pending++;
+      if (row.plan && row.plan in stats.byPlan) {
+        stats.byPlan[row.plan as TenantPlan]++;
+      }
+    });
+
+    return stats;
+  } catch (err) {
+    console.error('[tenant-admin] Error fetching tenant stats:', err);
+    throw new Error(`Failed to fetch stats: ${err instanceof Error ? err.message : 'Unknown error'}`);
   }
-
-  const stats = {
-    total: data?.length || 0,
-    active: 0,
-    suspended: 0,
-    pending: 0,
-    byPlan: {
-      starter: 0,
-      professional: 0,
-      enterprise: 0,
-    } as Record<TenantPlan, number>,
-  };
-
-  (data || []).forEach((row: { status: string; plan: string }) => {
-    if (row.status === 'active') stats.active++;
-    if (row.status === 'suspended') stats.suspended++;
-    if (row.status === 'pending') stats.pending++;
-    if (row.plan in stats.byPlan) {
-      stats.byPlan[row.plan as TenantPlan]++;
-    }
-  });
-
-  return stats;
 }
