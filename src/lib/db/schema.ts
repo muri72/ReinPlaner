@@ -44,7 +44,7 @@ export const employees = pgTable('employees', {
   profileId: uuid('profile_id').references(() => profiles.id),
   hourlyRate: integer('hourly_rate').default(0),
   contractHoursPerWeek: integer('contract_hours_per_week'),
-  hireDate: date('hire_date'),
+  hireDate: timestamp('hire_date'),
   isActive: boolean('is_active').default(true),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow(),

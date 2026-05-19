@@ -1,2 +1,2 @@
-import { auth } from './options';
-export { auth };
+import { auth, signIn, signOut } from './options';
+export { auth, signIn, signOut };
