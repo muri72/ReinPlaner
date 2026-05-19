@@ -11,7 +11,7 @@ import {
   serviceRates,
   appSettings
 } from "@/lib/db/schema";
-import { eq, and, gte, lte, isNull, or, ne } from "drizzle-orm";
+import { eq, and, gte, lte, isNull, or, ne, sql } from "drizzle-orm";
 
 export async function getMultiMonthFinancialData(numberOfMonths: number = 6) {
   const financialData = [];
@@ -255,7 +255,7 @@ export async function getRevenueLast7Days() {
 export async function getMostBookedServices(limit: number = 5) {
   try {
     const allOrders = (await db.query.orders.findMany({
-      where: ne(orders.serviceType, null),
+      where: sql`${orders.serviceType} IS NOT NULL`,
       with: {
         assignments: true
       }

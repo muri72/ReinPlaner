@@ -11,7 +11,7 @@ import { auth } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { desc, eq, and, gte, lte, inArray } from "drizzle-orm";
-import { shifts, shiftsExtended, shiftEmployees, employees, orders, orderEmployeeAssignments, timeEntries } from "@/lib/db/schema";
+import { shifts, shiftsExtended, shiftEmployees, employees, profiles, orders, orderEmployeeAssignments, timeEntries } from "@/lib/db/schema";
 
 // ============================================================================
 // CACHE UTILITIES (Stale-While-Revalidate Pattern)
@@ -128,11 +128,12 @@ async function refreshShiftsCache(startDate: string, endDate: string) {
           employeeId: shiftEmployees.employeeId,
           role: shiftEmployees.role,
           isConfirmed: shiftEmployees.isConfirmed,
-          employeeFirstName: employees.firstName,
-          employeeLastName: employees.lastName,
+          employeeFirstName: profiles.fullName,
+          employeeLastName: profiles.fullName, // Will be split in grouping
         })
         .from(shiftEmployees)
         .leftJoin(employees, eq(shiftEmployees.employeeId, employees.id))
+        .leftJoin(profiles, eq(employees.profileId, profiles.id))
         .where(inArray(shiftEmployees.shiftId, shiftIds));
     }
 
@@ -210,8 +211,8 @@ async function refreshOrdersCache(filters: { status?: string; customerId?: strin
         title: orders.serviceType,
         status: orders.status,
         startDate: orders.startDate,
-        endDate: orders.scheduledEnd,
-        priority: orders.actualEnd,
+        endDate: orders.scheduledEndDate,
+        priority: orders.actualEndDate,
         customerId: orders.customerId,
         objectId: orders.objectId,
         orderType: orders.orderType,
