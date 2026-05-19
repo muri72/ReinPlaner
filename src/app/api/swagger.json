@@ -1,0 +1,55 @@
+{
+	"openapi": "3.0.0",
+	"components": {
+		"examples": {},
+		"headers": {},
+		"parameters": {},
+		"requestBodies": {},
+		"responses": {},
+		"schemas": {},
+		"securitySchemes": {}
+	},
+	"info": {
+		"title": "ReinPlaner",
+		"version": "0.1.0",
+		"contact": {}
+	},
+	"paths": {
+		"/health": {
+			"get": {
+				"operationId": "GetHealth",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"timestamp": {
+											"type": "string"
+										},
+										"status": {
+											"type": "string"
+										}
+									},
+									"required": [
+										"timestamp",
+										"status"
+									],
+									"type": "object"
+								}
+							}
+						}
+					}
+				},
+				"security": [],
+				"parameters": []
+			}
+		}
+	},
+	"servers": [
+		{
+			"url": "/"
+		}
+	]
+}

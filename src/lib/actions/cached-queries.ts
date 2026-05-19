@@ -1,17 +1,19 @@
 "use server";
 
 import { unstable_cache, revalidatePath, revalidateTag } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
+import { db } from '@/lib/db';
+import { customers, employees, shifts, orders, objects } from '@/lib/db/schema';
+import { eq, desc } from 'drizzle-orm';
 
 // ============================================================================
 // Cached Query Builder - Uses Next.js unstable_cache for server-side caching
 // ============================================================================
 
 /**
- * Creates a cached version of a Supabase query.
+ * Creates a cached version of a Drizzle query.
  * The cache is stored at the edge and reused across serverless instances.
  *
- * @param queryFn - The async function that fetches data from Supabase
+ * @param queryFn - The async function that fetches data from Drizzle
  * @param cacheKey - Array of cache key parts (will be joined)
  * @param options - Cache options: revalidate (seconds), tags (for invalidation)
  */
@@ -49,15 +51,12 @@ export function createTenantCachedQuery<T>(
  */
 export const getCachedCustomers = createTenantCachedQuery(
   async (tenantId: string) => {
-    "use server";
-    const supabase = await createClient();
-    const { data, error } = await supabase
-      .from("customers")
-      .select("*")
-      .eq("tenant_id", tenantId)
-      .order("name", { ascending: true });
-    if (error) throw error;
-    return data;
+    const result = await db
+      .select()
+      .from(customers)
+      .where(eq(customers.tenantId, tenantId))
+      .orderBy(customers.name);
+    return result;
   },
   "customers",
   { revalidate: 30, tags: ["customers"] }
@@ -68,15 +67,12 @@ export const getCachedCustomers = createTenantCachedQuery(
  */
 export const getCachedEmployees = createTenantCachedQuery(
   async (tenantId: string) => {
-    "use server";
-    const supabase = await createClient();
-    const { data, error } = await supabase
-      .from("employees")
-      .select("*")
-      .eq("tenant_id", tenantId)
-      .order("last_name", { ascending: true });
-    if (error) throw error;
-    return data;
+    const result = await db
+      .select()
+      .from(employees)
+      .where(eq(employees.tenantId, tenantId))
+      .orderBy(employees.createdAt);
+    return result;
   },
   "employees",
   { revalidate: 30, tags: ["employees"] }
@@ -87,19 +83,12 @@ export const getCachedEmployees = createTenantCachedQuery(
  */
 export const getCachedShifts = createTenantCachedQuery(
   async (tenantId: string) => {
-    "use server";
-    const supabase = await createClient();
-    const { data, error } = await supabase
-      .from("shifts")
-      .select(`
-        *,
-        employee:employees(id, first_name, last_name),
-        object:objects(id, name, address)
-      `)
-      .eq("tenant_id", tenantId)
-      .order("shift_date", { ascending: true });
-    if (error) throw error;
-    return data;
+    const result = await db
+      .select()
+      .from(shifts)
+      .where(eq(shifts.tenantId, tenantId))
+      .orderBy(shifts.scheduledStart);
+    return result;
   },
   "shifts",
   { revalidate: 30, tags: ["shifts"] }
@@ -111,23 +100,13 @@ export const getCachedShifts = createTenantCachedQuery(
  */
 export const getCachedOrders = createTenantCachedQuery(
   async (tenantId: string) => {
-    "use server";
-    const supabase = await createClient();
-    const { data, error } = await supabase
-      .from("orders")
-      .select(`
-        *,
-        customer:customers(id, name, contact_email),
-        object:objects(id, name, address),
-        order_employee_assignments(
-          employee:employees(id, first_name, last_name)
-        )
-      `)
-      .eq("tenant_id", tenantId)
+    const result = await db
+      .select()
+      .from(orders)
+      .where(eq(orders.tenantId, tenantId))
       .limit(100)
-      .order("created_at", { ascending: false });
-    if (error) throw error;
-    return data;
+      .orderBy(desc(orders.createdAt));
+    return result;
   },
   "orders",
   { revalidate: 30, tags: ["orders"] }
@@ -138,15 +117,12 @@ export const getCachedOrders = createTenantCachedQuery(
  */
 export const getCachedObjects = createTenantCachedQuery(
   async (tenantId: string) => {
-    "use server";
-    const supabase = await createClient();
-    const { data, error } = await supabase
-      .from("objects")
-      .select("*")
-      .eq("tenant_id", tenantId)
-      .order("name", { ascending: true });
-    if (error) throw error;
-    return data;
+    const result = await db
+      .select()
+      .from(objects)
+      .where(eq(objects.tenantId, tenantId))
+      .orderBy(objects.name);
+    return result;
   },
   "objects",
   { revalidate: 30, tags: ["objects"] }
