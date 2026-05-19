@@ -65,7 +65,7 @@ export default async function NewInvoicePage() {
       </div>
 
       <NewInvoiceForm
-        debtors={debtorsResult.data || []}
+        debtors={(debtorsResult.data || []) as any}
         orders={processedOrders}
       />
     </div>

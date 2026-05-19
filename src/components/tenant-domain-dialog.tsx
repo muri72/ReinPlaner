@@ -55,12 +55,12 @@ export function TenantDomainDialog({
           });
         } else {
           setVerificationData({
-            token: result.data.verification_token,
+            token: result.data.verificationToken,
             instructions: [
               `1. Log in to your DNS provider for ${domain}`,
               `2. Create a new TXT record`,
               `3. Set the name/host to: _reinplaner-verification.${domain.replace(/^www\./, '')}`,
-              `4. Set the value to: ${result.data.verification_token}`,
+              `4. Set the value to: ${result.data.verificationToken}`,
               `5. Save the record and wait 5-10 minutes for DNS propagation`,
               `6. Click "Verify" to confirm`,
             ],

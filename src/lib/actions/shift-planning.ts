@@ -1661,6 +1661,8 @@ export interface CreateShiftParams {
   notes?: string;
 }
 
+export type CreateShiftWithScheduleParams = CreateShiftParams;
+
 export async function createShift(
   params: CreateShiftParams
 ): Promise<{ success: boolean; message: string; shift_id?: string }> {
