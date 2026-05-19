@@ -283,6 +283,7 @@ export async function getShiftPlanningData(
         })
       : [];
     const profilesMap = new Map(profilesResult.map((p) => [p.id, p.avatarUrl]));
+    const profilesFullNameMap = new Map<string, string>(profilesResult.map((p) => [p.id, p.fullName as string]));
 
     // 3. Fetch services for colors
     const servicesResult = await db.query.services.findMany({});
@@ -315,14 +316,14 @@ export async function getShiftPlanningData(
 
     // 6. Fetch assignments for approved orders that are not completed/cancelled
     const assignmentsResult = await db.query.orderEmployeeAssignments.findMany({
-      where: eq(orderEmployeeAssignments.id, "placeholder"), // No direct filter, join with orders
+      where: eq(orderEmployeeAssignments.id, "placeholder"), // No direct filter, join with order
       with: {
-        orders: {
+        order: {
           with: {
-            objects: true,
+            object: true,
           },
         },
-        employees: true,
+        employee: true,
       },
     });
 
@@ -330,21 +331,21 @@ export async function getShiftPlanningData(
     // fetch assignments and filter in JS
     const allAssignmentsResult = await db.query.orderEmployeeAssignments.findMany({
       with: {
-        orders: {
+        order: {
           with: {
-            objects: true,
+            object: true,
+            customer: true,
           },
         },
-        employees: true,
+        employee: true,
       },
     });
 
     // Filter assignments: approved orders, not completed/cancelled
     const assignmentsData = allAssignmentsResult.filter((a) => {
-      const order = a.orders;
+      const order = a.order;
       return (
         order &&
-        order.requestStatus !== "approved" &&
         order.status !== "completed" &&
         order.status !== "cancelled"
       );
@@ -357,22 +358,22 @@ export async function getShiftPlanningData(
     const unassignedAssignmentsResult = await db.query.orderEmployeeAssignments.findMany({
       where: isNull(orderEmployeeAssignments.employeeId),
       with: {
-        orders: {
+        order: {
           with: {
-            objects: true,
+            object: true,
           },
         },
       },
     });
 
-    const unassignedShifts: UnassignedShift[] = unassignedAssignmentsResult.map((ua) => ({
+    const unassignedShifts: UnassignedShift[] = (unassignedAssignmentsResult as any[]).map((ua: any) => ({
       id: ua.id,
       shift_date: startDateIso,
       start_time: null,
       end_time: null,
-      job_title: ua.orders?.title || "Unbekannt",
-      object_name: ua.orders?.objects?.name || null,
-      service_title: ua.orders?.serviceType || null,
+      job_title: ua.order?.service?.name || ua.order?.notes || "Unbekannt",
+      object_name: ua.order?.object?.name || null,
+      service_title: ua.order?.serviceType || null,
       service_color: null,
       estimated_hours: null,
       assignment_id: ua.id,
@@ -414,7 +415,7 @@ export async function getShiftPlanningData(
         if (empData) {
           teamMembersByOrderDate[orderId][shiftDateStr].push({
             employeeId: se.employeeId,
-            employeeName: empData.firstName + " " + empData.lastName,
+            employeeName: empData.profileId ? profilesFullNameMap.get(empData.profileId) || "Mitarbeiter" : "Mitarbeiter",
           });
         }
       }
@@ -721,7 +722,7 @@ export async function getShiftPlanningData(
               : [
                   {
                     employee_id: employee.id,
-                    employee_name: employee.firstName + " " + employee.lastName,
+                    employee_name: employee.profileId ? String(profilesFullNameMap.get(employee.profileId) || "Mitarbeiter") : "Mitarbeiter",
                     role: "worker" as const,
                     is_confirmed: false,
                   },
@@ -735,7 +736,7 @@ export async function getShiftPlanningData(
       }
 
       planningData[employee.id] = {
-        name: employee.firstName + " " + employee.lastName,
+        name: profilesFullNameMap.get(employee.profileId) || "Mitarbeiter",
         avatar_url: employee.profileId ? profilesMap.get(employee.profileId) || null : null,
         job_title: null,
         totalHoursAvailable,
@@ -1170,7 +1171,7 @@ export async function copyAssignment(
     const assignment = await db.query.orderEmployeeAssignments.findFirst({
       where: eq(orderEmployeeAssignments.id, assignmentId),
       with: {
-        orders: true,
+        order: true,
       },
     });
 
@@ -1200,6 +1201,9 @@ export async function copyAssignment(
     // Get employee for notification
     const employeeData = await db.query.employees.findFirst({
       where: eq(employees.id, newEmployeeId),
+      with: {
+        profile: true,
+      },
     });
 
     if (employeeData?.profileId) {
@@ -1215,7 +1219,7 @@ export async function copyAssignment(
 
     return {
       success: true,
-      message: `Auftrag wurde erfolgreich für ${employeeData?.firstName || "Mitarbeiter"} kopiert.`,
+      message: `Auftrag wurde erfolgreich für ${employeeData?.profile?.fullName || "Mitarbeiter"} kopiert.`,
     };
   } catch (error: any) {
     console.error("Fehler beim Kopieren des Assignments:", error.message);
