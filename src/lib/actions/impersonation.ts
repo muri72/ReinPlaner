@@ -49,8 +49,10 @@ export async function listImpersonationTargets(): Promise<
     return { success: false, message: "Nicht authentifiziert." };
   }
 
+  const userId = session.user.id;
+
   const adminProfile = await db.query.profiles.findFirst({
-    where: (profiles, { eq }) => eq(profiles.id, session.user.id),
+    where: (profiles, { eq }) => eq(profiles.id, userId),
   });
 
   if (!adminProfile || adminProfile.role !== "admin") {
@@ -61,7 +63,7 @@ export async function listImpersonationTargets(): Promise<
 
   // Get all profiles except the current admin
   const allProfiles = await db.query.profiles.findMany({
-    where: (profiles, { eq, ne }) => ne(profiles.id, session.user.id),
+    where: (profiles, { eq, ne }) => ne(profiles.id, userId),
   });
 
   const targets: ImpersonationTarget[] = allProfiles
@@ -94,8 +96,10 @@ export async function startImpersonation(targetUserId: string): Promise<ActionRe
     return { success: false, message: "Nicht authentifiziert." };
   }
 
+  const userId = session.user.id;
+
   const adminProfile = await db.query.profiles.findFirst({
-    where: (profiles, { eq }) => eq(profiles.id, session.user.id),
+    where: (profiles, { eq }) => eq(profiles.id, userId),
   });
 
   if (!adminProfile || adminProfile.role !== "admin") {
