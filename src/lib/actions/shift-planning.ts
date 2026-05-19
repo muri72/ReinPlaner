@@ -10,11 +10,20 @@ import { revalidatePath } from "next/cache";
 // ============================================================================
 
 export interface CreateShiftParams {
-  tenantId: string;
-  orderId: string;
-  employeeId: string;
-  scheduledStart: Date;
-  scheduledEnd: Date;
+  order_id: string;
+  employee_id: string;
+  shift_date: string;
+  start_time: string;
+  end_time: string;
+  estimated_hours?: number;
+  travel_time_minutes?: number;
+  break_time_minutes?: number;
+  notes?: string;
+  tenant_id?: string;
+}
+
+export interface CreateShiftWithScheduleParams {
+  [key: string]: any;
 }
 
 export interface UpdateShiftParams {
@@ -59,7 +68,7 @@ export async function getShiftPlanningData(
 // CREATE SHIFTS
 // ============================================================================
 
-export async function createShiftWithSchedule(params: CreateShiftParams): Promise<{
+export async function createShiftWithSchedule(params: any): Promise<{
   success: boolean;
   message: string;
   shiftIds?: string[];
@@ -92,19 +101,19 @@ export async function reassignShift(shiftId: string, newEmployeeId: string): Pro
   return updateShift(shiftId, { employeeId: newEmployeeId });
 }
 
-export async function simpleReassignShift(shiftId: string, newEmployeeId: string): Promise<{ success: boolean; message: string }> {
-  return updateShift(shiftId, { employeeId: newEmployeeId });
+export async function simpleReassignShift(params: { shiftId: string; newEmployeeId?: string; newDate?: string; newStartTime?: string; newEndTime?: string }): Promise<{ success: boolean; message: string }> {
+  return updateShift(params.shiftId, { employeeId: params.newEmployeeId });
 }
 
 // ============================================================================
 // DELETE SHIFTS
 // ============================================================================
 
-export async function deleteShift(shiftId: string): Promise<{ success: boolean; message: string }> {
+export async function deleteShift(shiftId: string, shiftDate?: any, message?: any): Promise<{ success: boolean; message: string }> {
   return { success: false, message: "Not implemented" };
 }
 
-export async function deleteSeries(shiftId: string, mode: SeriesDeleteMode): Promise<{ success: boolean; message: string }> {
+export async function deleteSeries(shiftId: string, mode?: any, targetDate?: any): Promise<{ success: boolean; message: string }> {
   return { success: false, message: "Not implemented" };
 }
 
@@ -144,7 +153,13 @@ export async function removeEmployeeFromShift(shiftId: string, employeeId: strin
   return { success: false, message: "Not implemented" };
 }
 
-export async function reassignAssignment(assignmentId: string, newEmployeeId: string): Promise<{ success: boolean; message: string }> {
+export async function reassignAssignment(
+  assignmentId: string,
+  newEmployeeId: string,
+  mode: AssignmentEditMode = "single",
+  shiftDate?: string,
+  shiftTimes?: { start: string; end: string; hours: number },
+): Promise<{ success: boolean; message: string }> {
   return { success: false, message: "Not implemented" };
 }
 
@@ -182,7 +197,7 @@ export async function ensureShiftTimeEntriesSync(): Promise<{
   return { success: true, message: "Not implemented", updated_count: 0, shifts_completed: 0, time_entries_created: 0 };
 }
 
-export async function copyShift(shiftId: string): Promise<{ success: boolean; message: string; newShiftId?: string }> {
+export async function copyShift(params: { sourceShiftId: string; newEmployeeId?: string; newDate?: string; newStartTime?: string; newEndTime?: string }): Promise<{ success: boolean; message: string; newShiftId?: string }> {
   return { success: false, message: "Not implemented" };
 }
 
