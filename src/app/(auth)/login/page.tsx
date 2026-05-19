@@ -1,6 +1,6 @@
 "use client";
 
-import { signIn } from "@/lib/auth/session";
+import { signIn } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -42,7 +42,7 @@ export default function LoginPage() {
       });
 
       if (result?.error) {
-        toast.error('Anmeldung fehlgeschlagen: ' + (result.error.message || 'Unbekannter Fehler'));
+        toast.error('Anmeldung fehlgeschlagen: ' + result.error);
       } else {
         toast.success('Erfolgreich angemeldet!');
         router.push('/dashboard');

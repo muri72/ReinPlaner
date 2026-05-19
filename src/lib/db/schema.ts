@@ -27,6 +27,7 @@ export const tenants = pgTable('tenants', {
 export const profiles = pgTable('profiles', {
   id: uuid('id').primaryKey().defaultRandom(),
   email: text('email').notNull().unique(),
+  passwordHash: text('password_hash'),
   fullName: text('full_name'),
   avatarUrl: text('avatar_url'),
   role: userRoleEnum('role').default('employee'),
