@@ -434,7 +434,7 @@ export async function assignOrderToEmployee(
     if (assignmentError) throw assignmentError;
 
     // Generate shifts from the new assignment
-    await generateShiftsFromAssignments();
+    await generateShiftsFromAssignments(orderId);
     // Sync time entries for all completed shifts (including past ones)
     await ensureShiftTimeEntriesSync();
 
@@ -643,14 +643,14 @@ export async function updateOrderAssignments(
         const syncResult = await syncAssignmentToShifts(assignment.id, assignment.employee_id, "future");
         if (!syncResult.success) {
           console.warn(`[UPDATE-ASSIGNMENTS] Sync fehlgeschlagen für Assignment ${assignment.id}:`, syncResult.message);
-        } else if (syncResult.updated_count > 0) {
+        } else if ((syncResult.updated_count ?? 0) > 0) {
           console.log(`[UPDATE-ASSIGNMENTS] ${syncResult.updated_count} Shifts synchronisiert für Assignment ${assignment.id}`);
         }
       }
     }
 
     // 5. Generate shifts for current and next month based on the updated assignments
-    await generateShiftsFromAssignments();
+    await generateShiftsFromAssignments(orderId);
     // Sync time entries for all completed shifts (including past ones)
     await ensureShiftTimeEntriesSync();
 
@@ -793,7 +793,7 @@ export async function reassignSeriesAssignment(
       revalidatePath("/dashboard/orders");
       return {
         success: true,
-        message: syncResult.updated_count > 0
+        message: (syncResult.updated_count ?? 0) > 0
           ? `Alle zukünftigen Termine wurden aktualisiert (${syncResult.updated_count} Shifts synchronisiert).`
           : "Alle zukünftigen Termine wurden aktualisiert."
       };
@@ -824,7 +824,7 @@ export async function reassignSeriesAssignment(
       revalidatePath("/dashboard/orders");
       return {
         success: true,
-        message: syncResult.updated_count > 0
+        message: (syncResult.updated_count ?? 0) > 0
           ? `Gesamte Serie wurde aktualisiert (${syncResult.updated_count} Shifts synchronisiert).`
           : "Gesamte Serie wurde aktualisiert."
       };

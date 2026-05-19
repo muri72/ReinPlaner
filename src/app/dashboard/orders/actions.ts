@@ -129,7 +129,7 @@ export async function createOrder(data: OrderFormValues) {
       try {
         const supabaseAdmin = createAdminClient();
         // Generate shifts for the new order
-        await generateShiftsFromAssignments();
+        await generateShiftsFromAssignments(newOrder.id);
         // Sync time entries for all completed shifts (including past ones)
         await ensureShiftTimeEntriesSync();
       } catch (e) {
@@ -292,7 +292,7 @@ export async function updateOrder(orderId: string, data: OrderFormValues) {
   try {
     const supabaseAdmin = await createAdminClient();
     // Generate shifts for the updated order
-    await generateShiftsFromAssignments();
+    await generateShiftsFromAssignments(orderId);
     // Sync time entries for all completed shifts (including past ones)
     await ensureShiftTimeEntriesSync();
   } catch (e) {
@@ -446,7 +446,7 @@ export async function processOrderRequest(formData: FormData): Promise<{ success
     }
 
     // Generate shifts from the new assignment
-    await generateShiftsFromAssignments();
+    await generateShiftsFromAssignments(orderId);
     // Sync time entries for all completed shifts (including past ones)
     await ensureShiftTimeEntriesSync();
 

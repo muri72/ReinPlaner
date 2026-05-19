@@ -416,8 +416,8 @@ export default function PlanningPage() {
 
       // Check if we have any shifts for this month
       const hasShifts = planningDataFromQuery?.planningData &&
-        Object.values(planningDataFromQuery.planningData).some(
-          employee => Object.values(employee.schedule).some(
+        (Object.values(planningDataFromQuery.planningData) as EmployeeShiftData[]).some(
+          employee => (Object.values(employee.schedule) as { shifts: ShiftAssignment[] }[]).some(
             day => day.shifts.length > 0
           )
         );
