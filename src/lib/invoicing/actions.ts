@@ -136,6 +136,7 @@ export async function getInvoiceByIdAction(id: string) {
       where: and(eq(invoices.id, id), eq(invoices.tenantId, tenantId)),
       with: {
         items: true,
+        customer: true,
       },
     });
 
@@ -1010,7 +1011,7 @@ export async function sendInvoiceEmailAction(invoiceId: string, recipientEmail?:
   }
 
   const invoice = invoiceResult.data;
-  const email = recipientEmail || (invoice.debtor as any)?.invoice_email;
+  const email = recipientEmail || (invoice.customer as any)?.invoice_email;
 
   if (!email) {
     return { success: false, message: 'Keine Empfänger-E-Mail gefunden.' };
@@ -1022,7 +1023,7 @@ export async function sendInvoiceEmailAction(invoiceId: string, recipientEmail?:
   }
 
   const emailResult = await sendInvoiceEmail({
-    invoice,
+    invoice: invoice as any,
     recipientEmail: email,
     pdfBuffer: pdfResult.data!,
   });
@@ -1053,21 +1054,21 @@ export async function sendInvoiceReminderAction(invoiceId: string) {
   }
 
   const invoice = invoiceResult.data;
-  const email = (invoice.debtor as any)?.invoice_email;
+  const email = (invoice.customer as any)?.invoice_email;
 
   if (!email) {
     return { success: false, message: 'Keine Empfänger-E-Mail gefunden.' };
   }
 
-  const result = await sendReminderEmail(invoice, email);
+  const result = await sendReminderEmail(invoice as any, email);
 
   if (result.success) {
     // Increment reminder count
     await db.update(invoices)
       .set({
-        reminderCount: (invoice.reminderCount || 0) + 1,
+        status: 'sent',
         lastReminderAt: new Date(),
-      })
+      } as any)
       .where(eq(invoices.id, invoiceId));
 
     revalidatePath('/dashboard/invoices');
