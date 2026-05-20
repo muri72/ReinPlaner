@@ -60,7 +60,6 @@ function mapRowToTenant(data: typeof tenants.$inferSelect): Tenant {
     domain: data.customDomain || null,
     plan: (data.plan as TenantPlan) || 'starter',
     status: (data.status as TenantStatus) || 'active',
-    settings: (data.settings as TenantSettings) || {},
     created_at: data.createdAt?.toISOString() || new Date().toISOString(),
     updated_at: data.updatedAt?.toISOString() || new Date().toISOString(),
   };
@@ -165,7 +164,6 @@ export async function createTenant(data: CreateTenantInput): Promise<TenantAdmin
         customDomain: data.domain || null,
         plan: data.plan || 'starter',
         status: 'pending',
-        settings: data.settings || {},
         createdAt: now,
         updatedAt: now,
       })
@@ -237,7 +235,6 @@ export async function updateTenant(
     if (data.domain !== undefined) updateData.customDomain = data.domain;
     if (data.plan !== undefined) updateData.plan = data.plan;
     if (data.status !== undefined) updateData.status = data.status;
-    if (data.settings !== undefined) updateData.settings = data.settings;
 
     const [updatedTenant] = await db
       .update(tenants)

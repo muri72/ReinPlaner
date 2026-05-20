@@ -182,9 +182,9 @@ export function PlanningToolbar({
               toast.info("Generiere Shifts...");
               try {
                 const { generateShiftsFromAssignments } = await import('@/lib/actions/shift-planning');
-                const result = await generateShiftsFromAssignments();
+                const result = await generateShiftsFromAssignments(undefined as any);
                 if (result.success) {
-                  toast.success(`${result.created_count || 0} Shifts generiert`);
+                  toast.success(`${result.count || 0} Shifts generiert`);
                   onActionSuccess?.();
                 } else {
                   toast.error(result.message);

@@ -31,6 +31,13 @@ export interface UpdateShiftParams {
   status?: string;
   scheduledStart?: Date;
   scheduledEnd?: Date;
+  start_time?: string;
+  end_time?: string;
+  estimated_hours?: number;
+  travel_time_minutes?: number;
+  break_time_minutes?: number;
+  notes?: string;
+  update_mode?: "single" | "series" | "future";
 }
 
 export interface ShiftPlanningData {
@@ -45,6 +52,8 @@ export interface UnassignedShift {
   job_title: string;
   object_name: string;
   address: string;
+  service_title?: string;
+  estimated_hours?: number;
 }
 
 export type ShiftAssignment = any;

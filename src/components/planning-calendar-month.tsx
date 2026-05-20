@@ -214,7 +214,7 @@ export function PlanningCalendarMonth({
 
       // Check if employee has any shifts OR absences in the month
       let hasVisibleContent = false;
-      for (const [dateKey, dayData] of Object.entries(employee.schedule)) {
+      for (const [dateKey, dayData] of Object.entries(employee.schedule) as [string, any][]) {
         if ((dayData.shifts && dayData.shifts.length > 0) || dayData.isAbsence) {
           hasVisibleContent = true;
           break;
@@ -245,7 +245,7 @@ export function PlanningCalendarMonth({
       if (!employee) continue;
       let planned = 0;
       // Sum up planned hours from all shifts in the schedule
-      for (const [dateKey, dayData] of Object.entries(employee.schedule)) {
+      for (const [dateKey, dayData] of Object.entries(employee.schedule) as [string, any][]) {
         if (dayData.shifts && dayData.shifts.length > 0) {
           planned += dayData.shifts.reduce((sum: number, shift: any) => sum + (shift.estimated_hours || 0), 0);
         }
@@ -389,7 +389,7 @@ export function PlanningCalendarMonth({
                     <Avatar className="h-6 w-6">
                       <AvatarImage src={employee.raw.avatar_url} alt={employee.name} />
                       <AvatarFallback className="text-xs">
-                        {employee.name.split(' ').map(n => n[0]).join('')}
+                        {employee.name.split(' ').map((n: string) => n[0]).join('')}
                       </AvatarFallback>
                     </Avatar>
                     <div className="cursor-pointer hover:text-primary">

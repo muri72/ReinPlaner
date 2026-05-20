@@ -81,8 +81,8 @@ export function ShiftCalendar({
   const allShifts: { shift: ShiftAssignment; date: string }[] = [];
 
   Object.values(planningData).forEach((employee) => {
-    Object.entries(employee.schedule).forEach(([date, dayData]) => {
-      dayData.shifts.forEach((shift) => {
+    Object.entries(employee.schedule).forEach(([date, dayData]: [string, any]) => {
+      dayData.shifts.forEach((shift: any) => {
         allShifts.push({ shift, date });
       });
     });

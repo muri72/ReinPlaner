@@ -78,11 +78,7 @@ export async function getInvoicesAction(filters: InvoiceFilters = {}) {
     }
 
     if (filters.debtor_id) {
-      conditions.push(eq(invoices.debtorId, filters.debtor_id));
-    }
-
-    if (filters.order_id) {
-      conditions.push(eq(invoices.orderId, filters.order_id));
+      conditions.push(eq(invoices.customerId, filters.debtor_id));
     }
 
     if (filters.date_from) {
@@ -95,25 +91,15 @@ export async function getInvoicesAction(filters: InvoiceFilters = {}) {
 
     if (filters.search) {
       conditions.push(
-        or(
-          like(invoices.invoiceNumber, `%${filters.search}%`),
-          like(invoices.referenceText, `%${filters.search}%`)
-        )!
+        like(invoices.invoiceNumber, `%${filters.search}%`)
       );
     }
 
     const result = await db.query.invoices.findMany({
       where: and(...conditions),
       with: {
-        debtor: true,
+        customer: true,
         items: true,
-        order: {
-          columns: {
-            id: true,
-            title: true,
-            customerId: true,
-          }
-        }
       },
       orderBy: [desc(invoices.createdAt)],
     });
@@ -149,15 +135,6 @@ export async function getInvoiceByIdAction(id: string) {
       where: and(eq(invoices.id, id), eq(invoices.tenantId, tenantId)),
       with: {
         items: true,
-        order: {
-          with: {
-            objects: {
-              with: {
-                customers: true
-              }
-            }
-          }
-        }
       },
     });
 

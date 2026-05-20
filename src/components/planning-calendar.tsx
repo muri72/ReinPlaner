@@ -173,7 +173,7 @@ export function PlanningCalendar({
 
       // Check if employee has any shifts OR absences in the week
       let hasVisibleContent = false;
-      for (const dayData of Object.values(employee.schedule)) {
+      for (const dayData of Object.values(employee.schedule) as any[]) {
         if ((dayData.shifts && dayData.shifts.length > 0) || dayData.isAbsence) {
           hasVisibleContent = true;
           break;
@@ -204,7 +204,7 @@ export function PlanningCalendar({
       if (!employee) continue;
       let planned = 0;
       // Sum up planned hours from all shifts in the schedule
-      for (const [dateKey, dayData] of Object.entries(employee.schedule)) {
+      for (const [dateKey, dayData] of Object.entries(employee.schedule) as [string, any][]) {
         if (dayData.shifts && dayData.shifts.length > 0) {
           planned += dayData.shifts.reduce((sum: number, shift: any) => sum + (shift.estimated_hours || 0), 0);
         }
@@ -222,7 +222,7 @@ export function PlanningCalendar({
     const map: Record<string, Array<{ employee_id: string; employee_name: string; avatar_url?: string }>> = {};
 
     for (const employee of Object.values(planningData)) {
-      for (const dayData of Object.values(employee.schedule)) {
+      for (const dayData of Object.values(employee.schedule) as any[]) {
         if (!dayData.shifts?.length) continue;
 
         for (const shift of dayData.shifts) {
@@ -259,7 +259,7 @@ export function PlanningCalendar({
     // Group shifts by order_id + shift_date
     const orderDateData: Record<string, { shifts: ShiftAssignment[]; employees: Set<string> }> = {};
     for (const employee of Object.values(planningData)) {
-      for (const dayData of Object.values(employee.schedule)) {
+      for (const dayData of Object.values(employee.schedule) as any[]) {
         if (!dayData.shifts?.length) continue;
         for (const shift of dayData.shifts) {
           if (!shift.order_id) continue;
@@ -514,7 +514,7 @@ export function PlanningCalendar({
                     <div className="flex items-start gap-2">
                       <Avatar>
                         <AvatarImage src={employee.raw.avatar_url} alt={employee.name} />
-                        <AvatarFallback>{employee.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                        <AvatarFallback>{employee.name.split(' ').map((n: string) => n[0]).join('')}</AvatarFallback>
                       </Avatar>
                       <div className="flex-1 space-y-2 min-w-0">
                         <div className="flex items-center gap-2">
@@ -622,7 +622,7 @@ export function PlanningCalendar({
                       const absenceType = dayData.absenceType || 'other';
                       let absenceDays = 0;
                       if (employee.schedule) {
-                        for (const [, schedData] of Object.entries(employee.schedule)) {
+                        for (const [, schedData] of Object.entries(employee.schedule) as [string, any][]) {
                           if (schedData.isAbsence && (schedData.absenceType || 'other') === absenceType) {
                             absenceDays++;
                           }
@@ -736,13 +736,13 @@ export function PlanningCalendar({
                         <div className="space-y-1 pt-5">
                           {dayData.shifts
                             .slice()
-                            .sort((a, b) => {
+                            .sort((a: any, b: any) => {
                               if (!a.start_time && !b.start_time) return 0;
                               if (!a.start_time) return 1;
                               if (!b.start_time) return -1;
                               return a.start_time.localeCompare(b.start_time);
                             })
-                            .map((shift) => (
+                            .map((shift: any) => (
                             <ShiftCard
                               key={shift.id}
                               shift={shift}

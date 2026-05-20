@@ -78,7 +78,7 @@ export function ShiftEditDialog({
       setBreakTime(shift.break_time_minutes || "");
       setStatus((shift.status as ShiftStatus) || "scheduled");
       setIsTeamMode(shift.is_team || false);
-      setAssignedEmployeeIds(shift.employees.map(e => e.employee_id));
+      setAssignedEmployeeIds(shift.employees.map((e: any) => e.employee_id));
       setEditEmployeeId(shift.employees[0]?.employee_id || null);
     }
   }, [open, shift?.id]);
@@ -152,7 +152,7 @@ export function ShiftEditDialog({
           return;
         }
         const seriesStartDate = copySeriesStartDate || shift.shift_date;
-        result = await copyAssignment(shift.assignment_id, selectedEmployee, seriesStartDate, true);
+        result = await copyShift({ sourceShiftId: shift.assignment_id, newEmployeeId: selectedEmployee, newDate: seriesStartDate });
       }
 
       if (result.success) {
@@ -173,13 +173,13 @@ export function ShiftEditDialog({
     setSaving(true);
 
     try {
-      const currentEmployeeIds = shift.employees.map(e => e.employee_id);
-      const employeesToAdd = assignedEmployeeIds.filter(id => !currentEmployeeIds.includes(id));
-      const employeesToRemove = currentEmployeeIds.filter(id => !assignedEmployeeIds.includes(id));
+      const currentEmployeeIds = shift.employees.map((e: any) => e.employee_id);
+      const employeesToAdd = assignedEmployeeIds.filter((id: string) => !currentEmployeeIds.includes(id));
+      const employeesToRemove = currentEmployeeIds.filter((id: string) => !assignedEmployeeIds.includes(id));
 
       if (isTeamMode && employeesToAdd.length > 0) {
         for (const empId of employeesToAdd) {
-          const addResult = await addEmployeeToShift({ shiftId: shift.id, employeeId: empId });
+          const addResult = await addEmployeeToShift(shift.id, empId);
           if (!addResult.success) {
             toast.warning(`Mitarbeiter konnte nicht hinzugefügt werden: ${addResult.message}`);
           }
@@ -188,14 +188,14 @@ export function ShiftEditDialog({
 
       if (isTeamMode && employeesToRemove.length > 0) {
         for (const empId of employeesToRemove) {
-          const removeResult = await removeEmployeeFromShift({ shiftId: shift.id, employeeId: empId });
+          const removeResult = await removeEmployeeFromShift(shift.id, empId);
           if (!removeResult.success) {
             toast.warning(`Mitarbeiter konnte nicht entfernt werden: ${removeResult.message}`);
           }
         }
       }
 
-      const currentWorker = shift.employees.find(e => e.role === "worker");
+      const currentWorker = shift.employees.find((e: any) => e.role === "worker");
       const currentEmployeeId = currentWorker?.employee_id;
 
       let employeeChanged = false;
@@ -203,7 +203,7 @@ export function ShiftEditDialog({
       if (!isTeamMode && editEmployeeId && editEmployeeId !== currentEmployeeId) {
         employeeChanged = true;
         const reassignMode = editMode === "series" ? "future" : "single";
-        const reassignResult = await reassignShift(shift.id, editEmployeeId, reassignMode);
+        const reassignResult = await reassignShift(shift.id, editEmployeeId);
 
         if (!reassignResult.success) {
           toast.error(reassignResult.message || "Fehler beim Ändern des Mitarbeiters");
@@ -226,7 +226,7 @@ export function ShiftEditDialog({
 
       let result;
       if (isTrulyRecurring && editMode === "series") {
-        result = await updateShift(shift.assignment_id!, shift.shift_date, {
+        result = await updateShift(shift.id, {
           start_time: startTime,
           end_time: endTime,
           estimated_hours: hours,
@@ -236,7 +236,7 @@ export function ShiftEditDialog({
           update_mode: "series",
         });
       } else {
-        result = await updateShift(shift.assignment_id!, shift.shift_date, {
+        result = await updateShift(shift.id, {
           start_time: startTime,
           end_time: endTime,
           estimated_hours: hours,
@@ -272,7 +272,7 @@ export function ShiftEditDialog({
 
   const handleEmployeeSelect = (employeeId: string) => {
     if (assignedEmployeeIds.includes(employeeId)) {
-      setAssignedEmployeeIds(prev => prev.filter(id => id !== employeeId));
+      setAssignedEmployeeIds(prev => prev.filter((id: string) => id !== employeeId));
     } else {
       setAssignedEmployeeIds(prev => [...prev, employeeId]);
     }
@@ -382,14 +382,14 @@ export function ShiftEditDialog({
         {shift.is_team && shift.employees.length > 1 && !shift.is_multi_shift && (
           <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
             <Users className="h-3.5 w-3.5 shrink-0" />
-            <span>{shift.employees.map(e => e.employee_name).join(", ")}</span>
+            <span>{shift.employees.map((e: any) => e.employee_name).join(", ")}</span>
           </div>
         )}
         {/* Multi-Shift */}
         {shift.is_multi_shift && shift.employees.length > 1 && (
           <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
             <Layers className="h-3.5 w-3.5 shrink-0" />
-            <span>{shift.employees.map(e => e.employee_name).join(", ")}</span>
+            <span>{shift.employees.map((e: any) => e.employee_name).join(", ")}</span>
           </div>
         )}
         {/* Single Employee */}

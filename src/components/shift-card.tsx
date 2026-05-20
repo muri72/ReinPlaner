@@ -150,7 +150,7 @@ function ShiftCardComponent({ shift, onSuccess, onEdit, teamMembers, isMultiShif
   };
 
   const badgeTextColorClass = isLightColor(serviceColor) ? "text-gray-800" : "text-white";
-  const isSubstitute = shift.employees.some((e) => e.role === "substitute");
+  const isSubstitute = shift.employees.some((e: any) => e.role === "substitute");
   const allTeamMembers = teamMembers || shift.employees;
 
   const handleClick = (e: React.MouseEvent) => {

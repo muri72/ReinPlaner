@@ -75,7 +75,6 @@ export interface TenantListItem {
   domain: string | null;
   plan: 'starter' | 'professional' | 'enterprise';
   status: 'active' | 'suspended' | 'pending' | 'cancelled';
-  settings: Record<string, unknown>;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -100,8 +99,8 @@ export async function getAllTenants(): Promise<{
         slug: tenants.slug,
         name: tenants.name,
         domain: tenants.customDomain,
-        plan: tenants.plan,
-        status: tenants.status,
+        plan: tenants.plan ?? 'starter',
+        status: tenants.status ?? 'pending',
         createdAt: tenants.createdAt,
         updatedAt: tenants.updatedAt,
       })
@@ -115,7 +114,6 @@ export async function getAllTenants(): Promise<{
       domain: r.domain ?? null,
       plan: r.plan ?? 'starter',
       status: r.status ?? 'pending',
-      settings: {},
       createdAt: r.createdAt ?? new Date(),
       updatedAt: r.updatedAt ?? new Date(),
     }));
@@ -143,8 +141,8 @@ export async function getTenantById(id: string): Promise<{
         slug: tenants.slug,
         name: tenants.name,
         domain: tenants.customDomain,
-        plan: tenants.plan,
-        status: tenants.status,
+        plan: tenants.plan ?? 'starter',
+        status: tenants.status ?? 'pending',
         createdAt: tenants.createdAt,
         updatedAt: tenants.updatedAt,
       })
@@ -165,13 +163,12 @@ export async function getTenantById(id: string): Promise<{
         domain: r.domain ?? null,
         plan: r.plan ?? 'starter',
         status: r.status ?? 'pending',
-        settings: {},
-        createdAt: r.createdAt ?? new Date(),
-        updatedAt: r.updatedAt ?? new Date(),
-      }, 
-      error: null 
-    };
-  } catch (err) {
+      createdAt: r.createdAt ?? new Date(),
+      updatedAt: r.updatedAt ?? new Date(),
+    }, 
+    error: null
+  };
+} catch (err) {
     console.error('getTenantById error:', err);
     return { data: null, error: (err as Error).message };
   }
@@ -193,7 +190,7 @@ export async function getTenantDomains(tenantId: string): Promise<{
   try {
     await getPlatformAdmin();
     
-    const result = await db
+    const result = (await db
       .select({
         id: tenantDomains.id,
         domain: tenantDomains.domain,
@@ -203,7 +200,7 @@ export async function getTenantDomains(tenantId: string): Promise<{
       })
       .from(tenantDomains)
       .where(eq(tenantDomains.tenantId, tenantId))
-      .orderBy(desc(tenantDomains.isPrimary));
+      .orderBy(desc(tenantDomains.isPrimary))) as Array<{ id: string; domain: string; isPrimary: boolean; verifiedAt: Date | null; verificationToken: string | null }>;
 
     return { data: result, error: null };
   } catch (err) {
@@ -250,13 +247,13 @@ export async function createTenant(input: {
         slug: tenants.slug,
         name: tenants.name,
         domain: tenants.customDomain,
-        plan: tenants.plan,
-        status: tenants.status,
+        plan: tenants.plan!,
+        status: tenants.status!,
         createdAt: tenants.createdAt,
         updatedAt: tenants.updatedAt,
       });
 
-    // If domain provided, create tenant_domain entry
+// If domain provided, create tenant_domain entry
     if (input.domain && newTenant) {
       await db
         .insert(tenantDomains)
@@ -270,7 +267,17 @@ export async function createTenant(input: {
     }
 
     revalidatePath('/dashboard/admin/tenants');
-    return { data: newTenant ?? null, error: null };
+    const result: TenantListItem | null = newTenant ? {
+      id: newTenant.id,
+      slug: newTenant.slug,
+      name: newTenant.name,
+      domain: newTenant.domain ?? null,
+      plan: newTenant.plan ?? 'starter',
+      status: newTenant.status ?? 'pending',
+      createdAt: newTenant.createdAt ?? new Date(),
+      updatedAt: newTenant.updatedAt ?? new Date(),
+    } : null;
+    return { data: result, error: null };
   } catch (err) {
     console.error('createTenant error:', err);
     return { data: null, error: (err as Error).message };
@@ -307,8 +314,8 @@ export async function updateTenant(
         slug: tenants.slug,
         name: tenants.name,
         domain: tenants.customDomain,
-        plan: tenants.plan,
-        status: tenants.status,
+        plan: tenants.plan!,
+        status: tenants.status!,
         createdAt: tenants.createdAt,
         updatedAt: tenants.updatedAt,
       });
@@ -318,7 +325,17 @@ export async function updateTenant(
     }
 
     revalidatePath('/dashboard/admin/tenants');
-    return { data: updated, error: null };
+    const result: TenantListItem = {
+      id: updated.id,
+      slug: updated.slug,
+      name: updated.name,
+      domain: updated.domain ?? null,
+      plan: updated.plan ?? 'starter',
+      status: updated.status ?? 'pending',
+      createdAt: updated.createdAt ?? new Date(),
+      updatedAt: updated.updatedAt ?? new Date(),
+    };
+    return { data: result, error: null };
   } catch (err) {
     console.error('updateTenant error:', err);
     return { data: null, error: (err as Error).message };
@@ -439,7 +456,11 @@ export async function addTenantDomain(
       return { data: null, error: 'Failed to add domain' };
     }
 
-    return { data: result, error: null };
+    const data = {
+      verificationToken: result.verificationToken!,
+      verificationMethod: result.verificationMethod!,
+    };
+    return { data, error: null };
   } catch (err) {
     console.error('addTenantDomain error:', err);
     return { data: null, error: (err as Error).message };

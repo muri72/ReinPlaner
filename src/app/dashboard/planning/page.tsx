@@ -715,7 +715,7 @@ export default function PlanningPage() {
     for (const emp of emps) {
       const schedule: any = emp.schedule;
       const days: any[] = Object.values(schedule);
-      for (const dayData of days) {
+      for (const dayData of days as any[]) {
         const found = dayData.shifts.find((s: any) => s.assignment_id === assignmentId && s.shift_date === date);
         if (found) return found;
       }
