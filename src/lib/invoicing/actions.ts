@@ -21,6 +21,7 @@ import { eq, and, desc, gte, lte, like, or, inArray } from 'drizzle-orm';
 import { 
   invoices, 
   invoiceItems, 
+  invoiceSequences,
   debtors, 
   payments, 
   profiles, 
@@ -212,7 +213,7 @@ export async function createInvoiceAction(data: CreateInvoiceData) {
       });
 
       if (sequence) {
-        const nextNumber = sequence.lastNumber + 1;
+        const nextNumber = (sequence.lastNumber ?? 0) + 1;
         invoiceNumber = `${sequence.prefix || 'RE'}/${new Date().getFullYear()}/${String(nextNumber).padStart(5, '0')}`;
         
         await db.update(invoiceSequences)
@@ -263,48 +264,32 @@ export async function createInvoiceAction(data: CreateInvoiceData) {
       const debtor = await db.query.debtors.findFirst({
         where: eq(debtors.id, data.debtor_id),
       });
-      customerId = debtor?.customerId || '';
+      customerId = debtor?.customerId ?? '';
     } else if (data.order_id) {
       const order = await db.query.orders.findFirst({
         where: eq(orders.id, data.order_id),
       });
-      customerId = order?.customerId || '';
+      customerId = order?.customerId ?? '';
     }
 
     const [invoice] = await db.insert(invoices).values({
-      tenantId,
+      tenantId: tenantId!,
       customerId,
       invoiceNumber,
-      debtorId: data.debtor_id || null,
-      orderId: data.order_id || null,
+      status: 'draft',
       issueDate: data.issue_date ? new Date(data.issue_date) : new Date(),
       dueDate: data.due_date ? new Date(data.due_date) : null,
-      deliveryDateStart: data.delivery_date_start ? new Date(data.delivery_date_start) : null,
-      deliveryDateEnd: data.delivery_date_end ? new Date(data.delivery_date_end) : null,
-      netAmount: netAmountCents,
-      taxAmount: taxAmountCents,
       totalAmount: netAmountCents + taxAmountCents,
-      taxRate,
-      status: 'draft',
       notes: data.notes || null,
-      referenceText: data.reference_text || null,
-      orderReference: data.order_reference || null,
-      createdBy: user.id,
     }).returning();
 
     if (processedItems.length > 0) {
       const itemsWithInvoiceId = processedItems.map((item, idx) => ({
         invoiceId: invoice.id,
-        lineNumber: idx + 1,
-        serviceDate: item.service_date || null,
-        serviceDescription: item.service_description,
+        description: item.service_description,
         quantity: item.quantity,
-        unit: item.unit || 'h',
-        unitPrice: item.unitPrice,
-        netAmount: item.netAmount,
-        taxRate: item.tax_rate || taxRate,
-        taxAmount: item.taxAmount,
-        sortOrder: item.sortOrder,
+        unitPrice: Math.round(item.unitPrice ?? 0),
+        totalPrice: Math.round(item.netAmount ?? 0),
       }));
 
       await db.insert(invoiceItems).values(itemsWithInvoiceId);
@@ -314,7 +299,6 @@ export async function createInvoiceAction(data: CreateInvoiceData) {
     const completeInvoice = await db.query.invoices.findFirst({
       where: eq(invoices.id, invoice.id),
       with: {
-        debtor: true,
         items: true,
       },
     });
@@ -431,7 +415,7 @@ export async function createInvoiceFromOrderAction(
 
       let totalMinutes = 0;
       (timeEntriesData || []).forEach((entry: any) => {
-        totalMinutes += entry.hoursWorked || 0;
+        totalMinutes += Number(entry.hoursWorked || 0);
       });
 
       if (totalMinutes > 0) {
