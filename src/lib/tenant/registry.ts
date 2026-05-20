@@ -5,17 +5,18 @@ export async function getTenantRegistry() {
 
 export async function getTenantBySlug(_slug: string) {
   console.warn('Tenant registry not available in Drizzle mode');
-  return { success: false, message: 'Tenant registry not implemented' };
+  // Return null to allow access (no tenant enforcement in dev)
+  return null as unknown as { id: string; slug: string; name: string } | null;
 }
 
 export async function getTenantByDomain(_domain: string) {
   console.warn('Tenant registry not available in Drizzle mode');
-  return { success: false, message: 'Tenant registry not implemented' };
+  return null as unknown as { id: string; slug: string; name: string } | null;
 }
 
 export async function getTenantById(_id: string) {
   console.warn('Tenant registry not available in Drizzle mode');
-  return { success: false, message: 'Tenant registry not implemented' };
+  return null as unknown as { id: string; slug: string; name: string } | null;
 }
 
 export async function createTenant(_data: any) {
