@@ -9,7 +9,17 @@ export async function sendInvoiceEmail(_invoiceId: string) {
   return { success: false, message: 'Invoice service not implemented' };
 }
 
-export async function createInvoiceFromOrder(_orderId: string) {
+export async function createInvoiceFromOrder(
+  _orderId: string,
+  _userId: string,
+  _tenantId: string,
+  _options: {
+    issue_date?: string;
+    due_days?: number;
+    tax_rate?: number;
+    notes?: string;
+  } = {}
+) {
   console.warn('Invoice service not available in Drizzle mode');
   return { success: false, message: 'Invoice service not implemented' };
 }
