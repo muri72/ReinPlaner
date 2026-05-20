@@ -461,21 +461,15 @@ export async function createInvoiceFromOrderAction(
     }).returning();
 
     if (items.length > 0) {
-      const itemsWithLineNumbers = items.map((item, idx) => ({
+      const itemsForInsert = items.map((item) => ({
         invoiceId: invoice.id,
-        lineNumber: idx + 1,
-        serviceDate: item.service_date || null,
-        serviceDescription: item.service_description,
+        description: item.service_description,
         quantity: item.quantity,
-        unit: item.unit || 'h',
         unitPrice: item.unit_price_cents,
-        netAmount: Math.round(item.quantity * item.unit_price_cents),
-        taxRate: item.tax_rate || taxRate,
-        taxAmount: Math.round(item.quantity * item.unit_price_cents * (taxRate / 100)),
-        sortOrder: item.sort_order || idx,
+        totalPrice: Math.round(item.quantity * item.unit_price_cents),
       }));
 
-      await db.insert(invoiceItems).values(itemsWithLineNumbers);
+      await db.insert(invoiceItems).values(itemsForInsert);
     }
 
     const completeInvoice = await db.query.invoices.findFirst({
