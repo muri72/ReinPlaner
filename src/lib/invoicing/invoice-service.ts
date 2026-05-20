@@ -1,10 +1,12 @@
+import { Invoice } from './types';
+
 // Shim — real implementation uses Supabase which is not available
-export async function getInvoicePdfUrl(_invoiceId: string) {
+export async function getInvoicePdfUrl(_invoiceId: string): Promise<{ success: true; data: { url: string } } | { success: false; message: string }> {
   console.warn('Invoice service not available in Drizzle mode');
   return { success: false, message: 'Invoice service not implemented' };
 }
 
-export async function sendInvoiceEmail(_invoiceId: string) {
+export async function sendInvoiceEmail(_invoiceId: string): Promise<{ success: true; data: { sent: boolean } } | { success: false; message: string }> {
   console.warn('Invoice service not available in Drizzle mode');
   return { success: false, message: 'Invoice service not implemented' };
 }
@@ -19,9 +21,9 @@ export async function createInvoiceFromOrder(
     tax_rate?: number;
     notes?: string;
   } = {}
-) {
+): Promise<{ success: true; data: Invoice } | { success: false; message: string; data: null }> {
   console.warn('Invoice service not available in Drizzle mode');
-  return { success: false, message: 'Invoice service not implemented' };
+  return { success: false, message: 'Invoice service not implemented', data: null };
 }
 
 export function formatCurrency(_amount: number, _currency?: string): string {

@@ -390,7 +390,7 @@ async function runRecurringInvoices(supabaseAdmin: any, today: Date, todayStr: s
           );
         } else {
           results.errors++;
-          results.details.push(`ERROR: ${order.title} - ${invoiceResult.message}`);
+          results.details.push(`ERROR: ${order.title} - ${(invoiceResult as { success: false; message: string }).message}`);
         }
 
         results.processed++;

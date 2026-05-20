@@ -123,7 +123,7 @@ export async function POST(request: Request) {
           );
         } else {
           results.errors++;
-          results.details.push(`ERROR: ${order.title} - ${invoiceResult.message}`);
+          results.details.push(`ERROR: ${order.title} - ${(invoiceResult as { success: false; message: string }).message}`);
         }
 
         results.processed++;

@@ -974,11 +974,11 @@ export async function exportDATEVAction(dateFrom: string, dateTo: string) {
   const { success, message, user, tenantId } = await getSessionWithTenant();
   
   if (!success || !user) {
-    return { success: false, message };
+    return { success: false, message, data: null, filename: null };
   }
 
   if (!tenantId) {
-    return { success: false, message: 'Tenant nicht gefunden.' };
+    return { success: false, message: 'Tenant nicht gefunden.', data: null, filename: null };
   }
 
   return exportDATEV(dateFrom, dateTo, tenantId);
@@ -988,7 +988,7 @@ export async function exportZUGFeRDAction(invoiceId: string) {
   const { success, message, user } = await getSessionWithTenant();
   
   if (!success || !user) {
-    return { success: false, message };
+    return { success: false, message, data: null };
   }
 
   return exportZUGFeRD(invoiceId);
@@ -998,7 +998,7 @@ export async function exportXRechnungAction(invoiceId: string) {
   const { success, message, user } = await getSessionWithTenant();
   
   if (!success || !user) {
-    return { success: false, message };
+    return { success: false, message, data: null };
   }
 
   return exportXRechnung(invoiceId);
