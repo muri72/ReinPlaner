@@ -432,7 +432,7 @@ export async function createInvoiceFromOrderAction(
         invoiceNumber = `RE/${new Date().getFullYear()}/00001`;
         
         await db.insert(invoiceSequences).values({
-          tenantId,
+          tenantId: tenantId!,
           lastNumber: 1,
           year: new Date().getFullYear(),
           prefix: 'RE',
@@ -450,7 +450,7 @@ export async function createInvoiceFromOrderAction(
     });
 
     const [invoice] = await db.insert(invoices).values({
-      tenantId,
+      tenantId: tenantId!,
       customerId,
       invoiceNumber,
       issueDate: new Date(issueDate),
@@ -475,12 +475,12 @@ export async function createInvoiceFromOrderAction(
     const completeInvoice = await db.query.invoices.findFirst({
       where: eq(invoices.id, invoice.id),
       with: {
-        debtor: true,
+        customer: true,
         items: true,
       },
     });
 
-    if (completeInvoice) {
+    if (completeInvoice && user.id) {
       await logDataChange(user.id, 'INSERT', 'invoices', invoice.id, null, {
         invoice_number: invoice.invoiceNumber,
         order_id: orderId,
@@ -537,7 +537,7 @@ export async function updateInvoiceAction(invoiceId: string, data: UpdateInvoice
     const completeInvoice = await db.query.invoices.findFirst({
       where: eq(invoices.id, invoiceId),
       with: {
-        debtor: true,
+        customer: true,
         items: true,
       },
     });
@@ -646,10 +646,10 @@ export async function addInvoiceItemAction(
     // Get last line number for this invoice
     const lastItem = await db.query.invoiceItems.findFirst({
       where: eq(invoiceItems.invoiceId, invoiceId),
-      orderBy: [desc(invoiceItems.lineNumber)],
+      orderBy: [desc(invoiceItems.createdAt)],
     });
 
-    const lineNumber = (lastItem?.lineNumber || 0) + 1;
+    const lineNumber = 1; // schema doesn't have lineNumber
 
     // Get invoice tax rate
     const invoice = await db.query.invoices.findFirst({
@@ -988,7 +988,7 @@ export async function exportZUGFeRDAction(invoiceId: string) {
   const { success, message, user } = await getSessionWithTenant();
   
   if (!success || !user) {
-    return { success: false, message, data: null };
+    return { success: false, message, data: null, filename: null };
   }
 
   return exportZUGFeRD(invoiceId);
@@ -998,7 +998,7 @@ export async function exportXRechnungAction(invoiceId: string) {
   const { success, message, user } = await getSessionWithTenant();
   
   if (!success || !user) {
-    return { success: false, message, data: null };
+    return { success: false, message, data: null, filename: null };
   }
 
   return exportXRechnung(invoiceId);
@@ -1096,18 +1096,18 @@ export async function downloadInvoicePDFAction(invoiceId: string) {
   const { success, message, user, tenantId } = await getSessionWithTenant();
   
   if (!success || !user) {
-    return { success: false, message };
+    return { success: false, message, data: null, filename: null };
   }
 
   if (!tenantId) {
-    return { success: false, message: 'Tenant nicht gefunden.' };
+    return { success: false, message: 'Tenant nicht gefunden.', data: null, filename: null };
   }
 
   // Get invoice with tenant verification
   const invoice = await db.query.invoices.findFirst({
     where: and(eq(invoices.id, invoiceId), eq(invoices.tenantId, tenantId)),
     with: {
-      debtor: true,
+      customer: true,
       items: true,
     },
   });
