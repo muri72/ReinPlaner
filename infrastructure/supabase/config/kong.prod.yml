@@ -22,10 +22,6 @@ services:
         strip_path: true
         plugins:
           - name: cors
-          - name: rate-limiting
-            config:
-              minute: 1000
-              policy: local
 
   # Auth — Gotrue
   - name: auth
@@ -113,43 +109,11 @@ plugins:
       credentials: true
       max_age: 3600
 
-  - name: rate-limiting
-    config:
-      minute: 1000
-      hour: 10000
-      policy: local
-      fault_tolerant: true
-
   - name: request-transformer
     config:
       add:
         headers:
           - "X-Forwarded-Proto: https"
-
-# ============================================================
-# Consumers & Key Auth (for Supabase API Keys)
-# ============================================================
-
-consumers:
-  - username: anon
-    keyauth_credentials:
-      - key: ANON_KEY_PLACEHOLDER
-  - username: service_role
-    keyauth_credentials:
-      - key: SERVICE_ROLE_KEY_PLACEHOLDER
-
-# ============================================================
-# JWT for Supabase Auth
-# ============================================================
-
-jwt_secrets:
-  - key: supabase-jwt-secret
-    algorithm: HS256
-    rsa_public_key: |
-      -----BEGIN PUBLIC KEY-----
-      MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA3bq0cP9x3i1J+Z3pOqLV
-      (placeholder - replace with real key from .env)
-      -----END PUBLIC KEY-----
 
 # ============================================================
 # Upstream targets (for health checking)

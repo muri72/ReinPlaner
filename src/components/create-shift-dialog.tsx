@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { de } from "date-fns/locale";
-import { createShift, createShiftWithSchedule, CreateShiftWithScheduleParams } from "@/lib/actions/shift-planning";
+import { createShift, createShiftWithSchedule, type CreateShiftParams, type CreateShiftWithScheduleParams } from "@/lib/actions/shift-planning";
 import { toast } from "sonner";
 import { handleActionResponse } from "@/lib/toast-utils";
 import {
@@ -345,7 +345,7 @@ export function CreateShiftDialog({
           return;
         }
 
-        const params: CreateShiftWithScheduleParams = {
+        const params = {
           order_id: data.orderId,
           employee_ids: data.employeeIds,
           object_id: data.objectId,

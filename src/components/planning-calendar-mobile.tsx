@@ -68,18 +68,18 @@ export function MobilePlanningCalendar({
   // Build a map of all team members per order for team display in ShiftCard
   const orderTeamMembersMap = React.useMemo(() => {
     const map: { [orderId: string]: { employee_id: string; employee_name: string; avatar_url?: string }[] } = {};
-    Object.values(planningData ?? {}).forEach((employee) => {
-      Object.values(employee.schedule ?? {}).forEach((dayData) => {
+    Object.values(planningData ?? {}).forEach((employee: any) => {
+      Object.values(employee.schedule ?? {}).forEach((dayData: any) => {
         if (dayData.shifts) {
-          dayData.shifts.forEach((shift) => {
+          dayData.shifts.forEach((shift: any) => {
             const orderId = shift.order_id;
             if (orderId && shift.employees) {
               if (!map[orderId]) {
                 map[orderId] = [];
               }
               // Add all team members from this shift
-              shift.employees.forEach((emp) => {
-                if (!map[orderId].find(m => m.employee_id === emp.employee_id)) {
+              shift.employees.forEach((emp: any) => {
+                if (!map[orderId].find((m: any) => m.employee_id === emp.employee_id)) {
                   map[orderId].push({
                     employee_id: emp.employee_id,
                     employee_name: emp.employee_name,
@@ -102,17 +102,17 @@ export function MobilePlanningCalendar({
     const result = new Set<string>();
     const orderData: Record<string, { shifts: import("@/lib/actions/shift-planning").ShiftAssignment[]; employees: Set<string> }> = {};
 
-    Object.values(planningData ?? {}).forEach((employee) => {
-      Object.values(employee.schedule ?? {}).forEach((dayData) => {
+    Object.values(planningData ?? {}).forEach((employee: any) => {
+      Object.values(employee.schedule ?? {}).forEach((dayData: any) => {
         if (dayData.shifts) {
-          dayData.shifts.forEach((shift) => {
+          dayData.shifts.forEach((shift: any) => {
             if (!shift.order_id) return;
             if (!orderData[shift.order_id]) {
               orderData[shift.order_id] = { shifts: [], employees: new Set() };
             }
             orderData[shift.order_id].shifts.push(shift);
             // Add unique employee IDs
-            shift.employees.forEach((emp) => {
+            shift.employees.forEach((emp: any) => {
               if (emp.employee_id) {
                 orderData[shift.order_id!].employees.add(emp.employee_id);
               }
@@ -199,8 +199,8 @@ export function MobilePlanningCalendar({
 
   const assignmentCountByDate = React.useMemo(() => {
     const map = new Map<string, number>();
-    Object.values(planningData ?? {}).forEach((employee) => {
-      Object.entries(employee.schedule ?? {}).forEach(([dateKey, dayData]) => {
+    Object.values(planningData ?? {}).forEach((employee: any) => {
+      Object.entries(employee.schedule ?? {}).forEach(([dateKey, dayData]: [string, any]) => {
         const count = dayData?.shifts?.length ?? 0;
         if (count > 0) {
           map.set(dateKey, (map.get(dateKey) ?? 0) + count);
@@ -623,7 +623,7 @@ export function MobilePlanningCalendar({
                           );
                         })()
                       ) : assignmentCount > 0 ? (
-                        shifts.map((shift) => (
+                        shifts.map((shift: any) => (
                           <ShiftCard
                             key={shift.id}
                             shift={shift}

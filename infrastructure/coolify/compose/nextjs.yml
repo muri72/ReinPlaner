@@ -1,0 +1,50 @@
+# ============================================================
+# ReinPlaner — Next.js Application (Coolify Ready)
+# ============================================================
+# Deploy via Coolify: Add Resource → Application
+# Or locally: pnpm build && pnpm start
+# ============================================================
+
+services:
+  app:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    container_name: reinplaner_app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      NEXT_TELEMETRY_DISABLED: "1"
+      # Supabase
+      NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+      # URLs
+      NEXT_PUBLIC_BASE_URL: ${NEXT_PUBLIC_BASE_URL}
+      # SMTP (Resend)
+      SMTP_ADMIN_EMAIL: ${SMTP_ADMIN_EMAIL}
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASS: ${SMTP_PASS}
+      # Sentry
+      SENTRY_AUTH_TOKEN: ${SENTRY_AUTH_TOKEN}
+      SENTRY_DSN: ${SENTRY_DSN}
+      SENTRY_ORG: ${SENTRY_ORG}
+      SENTRY_PROJECT: ReinPlaner
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    mem_limit: 2g
+    cpus: 2
+    networks:
+      - reinplaner_internal
+
+networks:
+  reinplaner_internal:
+    external: true

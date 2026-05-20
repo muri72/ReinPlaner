@@ -2,12 +2,16 @@
  * Optimized Server Actions with Caching
  * Uses stale-while-revalidate pattern for better performance
  * Supports batch operations for multiple employees
+ * Migrated from Supabase to Drizzle+NextAuth
  */
 
 "use server";
 
-import { createClient, createAdminClient } from "@/lib/supabase/server";
+import { auth } from "@/lib/auth/session";
+import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
+import { desc, eq, and, gte, lte, inArray } from "drizzle-orm";
+import { shifts, shiftsExtended, shiftEmployees, employees, profiles, orders, orderEmployeeAssignments, timeEntries } from "@/lib/db/schema";
 
 // ============================================================================
 // CACHE UTILITIES (Stale-While-Revalidate Pattern)
@@ -80,41 +84,96 @@ export async function getShiftsWithCache(
 }
 
 async function refreshShiftsCache(startDate: string, endDate: string) {
-  const supabase = createAdminClient();
   const cacheKey = createActionCacheKey('shifts', { startDate, endDate });
 
-  const { data, error } = await supabase
-    .from('shifts')
-    .select(`
-      id,
-      shift_date,
-      start_time,
-      end_time,
-      estimated_hours,
-      status,
-      assignment_id,
-      order_id,
-      shift_employees (
-        employee_id,
-        role,
-        is_confirmed,
-        employees (
-          first_name,
-          last_name
+  try {
+    // Get shiftsExtended entries for the date range
+    const shiftsData = await db
+      .select({
+        id: shiftsExtended.id,
+        shiftDate: shiftsExtended.shiftDate,
+        startTime: shiftsExtended.startTime,
+        endTime: shiftsExtended.endTime,
+        estimatedHours: shiftsExtended.estimatedHours,
+        shiftId: shiftsExtended.shiftId,
+        assignmentId: shiftsExtended.assignmentId,
+        orderId: shiftsExtended.orderId,
+        isManual: shiftsExtended.isManual,
+        // Shift data
+        shiftStatus: shifts.status,
+        shiftScheduledStart: shifts.scheduledStart,
+        shiftScheduledEnd: shifts.scheduledEnd,
+        shiftActualStart: shifts.actualStart,
+        shiftActualEnd: shifts.actualEnd,
+        shiftTenantId: shifts.tenantId,
+      })
+      .from(shiftsExtended)
+      .leftJoin(shifts, eq(shiftsExtended.shiftId, shifts.id))
+      .where(
+        and(
+          gte(shiftsExtended.shiftDate, startDate),
+          lte(shiftsExtended.shiftDate, endDate)
         )
       )
-    `)
-    .gte('shift_date', startDate)
-    .lte('shift_date', endDate);
+      .orderBy(shiftsExtended.shiftDate);
 
-  if (error) {
+    // Get shift employees with employee data
+    const shiftIds = shiftsData.map(s => s.shiftId).filter(Boolean);
+    let shiftEmployeesData: any[] = [];
+
+    if (shiftIds.length > 0) {
+      shiftEmployeesData = await db
+        .select({
+          shiftId: shiftEmployees.shiftId,
+          employeeId: shiftEmployees.employeeId,
+          role: shiftEmployees.role,
+          isConfirmed: shiftEmployees.isConfirmed,
+          employeeFirstName: profiles.fullName,
+          employeeLastName: profiles.fullName, // Will be split in grouping
+        })
+        .from(shiftEmployees)
+        .leftJoin(employees, eq(shiftEmployees.employeeId, employees.id))
+        .leftJoin(profiles, eq(employees.profileId, profiles.id))
+        .where(inArray(shiftEmployees.shiftId, shiftIds));
+    }
+
+    // Group shift employees by shiftId
+    const employeesByShift = new Map<string, any[]>();
+    for (const se of shiftEmployeesData) {
+      if (!employeesByShift.has(se.shiftId)) {
+        employeesByShift.set(se.shiftId, []);
+      }
+      employeesByShift.get(se.shiftId)!.push({
+        employee_id: se.employeeId,
+        role: se.role,
+        is_confirmed: se.isConfirmed,
+        employees: {
+          first_name: se.employeeFirstName,
+          last_name: se.employeeLastName,
+        },
+      });
+    }
+
+    // Combine data with same structure as original Supabase query
+    const data = shiftsData.map(shift => ({
+      id: shift.id,
+      shift_date: shift.shiftDate,
+      start_time: shift.startTime,
+      end_time: shift.endTime,
+      estimated_hours: shift.estimatedHours,
+      status: shift.shiftStatus,
+      assignment_id: shift.assignmentId,
+      order_id: shift.orderId,
+      shift_employees: employeesByShift.get(shift.shiftId) || [],
+    }));
+
+    const result = { success: true, data, message: 'ok' };
+    setCached(cacheKey, result);
+    return result;
+  } catch (error: any) {
     console.error('Error fetching shifts:', error);
     return { success: false, data: null, message: error.message };
   }
-
-  const result = { success: true, data, message: 'ok' };
-  setCached(cacheKey, result);
-  return result;
 }
 
 /**
@@ -134,41 +193,41 @@ export async function getOrdersWithCache(
 }
 
 async function refreshOrdersCache(filters: { status?: string; customerId?: string }) {
-  const supabase = createAdminClient();
   const cacheKey = createActionCacheKey('orders', filters);
 
-  let query = supabase
-    .from('orders')
-    .select(`
-      id,
-      title,
-      status,
-      request_status,
-      start_date,
-      end_date,
-      priority,
-      customer_id,
-      object_id,
-      order_type
-    `)
-    .eq('request_status', 'approved');
+  try {
+    const conditions = [];
 
-  if (filters.status) {
-    query = query.eq('status', filters.status);
-  }
-  if (filters.customerId) {
-    query = query.eq('customer_id', filters.customerId);
-  }
+    if (filters.status) {
+      conditions.push(eq(orders.status, filters.status as any));
+    }
+    if (filters.customerId) {
+      conditions.push(eq(orders.customerId, filters.customerId));
+    }
 
-  const { data, error } = await query.limit(200);
+    const ordersData = await db
+      .select({
+        id: orders.id,
+        title: orders.serviceType,
+        status: orders.status,
+        startDate: orders.startDate,
+        endDate: orders.scheduledEndDate,
+        priority: orders.actualEndDate,
+        customerId: orders.customerId,
+        objectId: orders.objectId,
+        orderType: orders.orderType,
+        tenantId: orders.tenantId,
+      })
+      .from(orders)
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .limit(200);
 
-  if (error) {
+    const result = { success: true, data: ordersData, message: 'ok' };
+    setCached(cacheKey, result);
+    return result;
+  } catch (error: any) {
     return { success: false, data: null, message: error.message };
   }
-
-  const result = { success: true, data, message: 'ok' };
-  setCached(cacheKey, result);
-  return result;
 }
 
 // ============================================================================
@@ -188,45 +247,52 @@ export async function getBatchEmployeeAssignments(
     return { success: true, data: [], message: 'No employee IDs provided' };
   }
 
-  const supabase = createAdminClient();
+  try {
+    const assignmentsData = await db
+      .select({
+        id: orderEmployeeAssignments.id,
+        orderId: orderEmployeeAssignments.orderId,
+        employeeId: orderEmployeeAssignments.employeeId,
+        orderStatus: orders.status,
+        orderTitle: orders.serviceType,
+        customerId: orders.customerId,
+        objectId: orders.objectId,
+        tenantId: orders.tenantId,
+      })
+      .from(orderEmployeeAssignments)
+      .leftJoin(orders, eq(orderEmployeeAssignments.orderId, orders.id))
+      .where(
+        and(
+          inArray(orderEmployeeAssignments.employeeId, employeeIds),
+          eq(orders.status, 'scheduled' as any)
+        )
+      );
 
-  const { data, error } = await supabase
-    .from('order_employee_assignments')
-    .select(`
-      id,
-      order_id,
-      employee_id,
-      assigned_daily_schedules,
-      assigned_recurrence_interval_weeks,
-      assigned_start_week_offset,
-      orders!inner (
-        id,
-        title,
-        status,
-        request_status,
-        customer_id,
-        object_id
-      )
-    `)
-    .in('employee_id', employeeIds)
-    .eq('orders.request_status', 'approved')
-    .eq('status', 'active');
+    // Group by employee
+    const byEmployee = new Map<string, any[]>();
+    for (const assignment of assignmentsData) {
+      const empId = assignment.employeeId;
+      if (!byEmployee.has(empId)) {
+        byEmployee.set(empId, []);
+      }
+      byEmployee.get(empId)!.push({
+        id: assignment.id,
+        order_id: assignment.orderId,
+        employee_id: assignment.employeeId,
+        orders: {
+          id: assignment.orderId,
+          title: assignment.orderTitle,
+          status: assignment.orderStatus,
+          customer_id: assignment.customerId,
+          object_id: assignment.objectId,
+        },
+      });
+    }
 
-  if (error) {
+    return { success: true, data: byEmployee, message: 'ok' };
+  } catch (error: any) {
     return { success: false, data: null, message: error.message };
   }
-
-  // Group by employee
-  const byEmployee = new Map<string, any[]>();
-  for (const assignment of data || []) {
-    const empId = assignment.employee_id;
-    if (!byEmployee.has(empId)) {
-      byEmployee.set(empId, []);
-    }
-    byEmployee.get(empId)!.push(assignment);
-  }
-
-  return { success: true, data: byEmployee, message: 'ok' };
 }
 
 /**
@@ -241,41 +307,50 @@ export async function getBatchTimeEntries(
     return { success: true, data: [], message: 'No employee IDs provided' };
   }
 
-  const supabase = createAdminClient();
+  try {
+    const entriesData = await db
+      .select({
+        id: timeEntries.id,
+        employeeId: timeEntries.employeeId,
+        shiftId: timeEntries.shiftId,
+        date: timeEntries.date,
+        hoursWorked: timeEntries.hoursWorked,
+        breakMinutes: timeEntries.breakMinutes,
+      })
+      .from(timeEntries)
+      .where(
+        and(
+          inArray(timeEntries.employeeId, employeeIds),
+          gte(timeEntries.date, new Date(startDate)),
+          lte(timeEntries.date, new Date(endDate))
+        )
+      )
+      .orderBy(timeEntries.date);
 
-  const { data, error } = await supabase
-    .from('time_entries')
-    .select(`
-      id,
-      employee_id,
-      order_id,
-      shift_id,
-      start_time,
-      end_time,
-      duration_minutes,
-      break_minutes,
-      type
-    `)
-    .in('employee_id', employeeIds)
-    .gte('start_time', startDate)
-    .lte('start_time', endDate)
-    .order('start_time', { ascending: true });
+    // Group by employee
+    const byEmployee = new Map<string, any[]>();
+    for (const entry of entriesData) {
+      const empId = entry.employeeId;
+      if (!byEmployee.has(empId)) {
+        byEmployee.set(empId, []);
+      }
+      byEmployee.get(empId)!.push({
+        id: entry.id,
+        employee_id: entry.employeeId,
+        order_id: null,
+        shift_id: entry.shiftId,
+        start_time: entry.date,
+        end_time: null,
+        duration_minutes: entry.hoursWorked,
+        break_minutes: entry.breakMinutes,
+        type: 'standard',
+      });
+    }
 
-  if (error) {
+    return { success: true, data: byEmployee, message: 'ok' };
+  } catch (error: any) {
     return { success: false, data: null, message: error.message };
   }
-
-  // Group by employee
-  const byEmployee = new Map<string, any[]>();
-  for (const entry of data || []) {
-    const empId = entry.employee_id;
-    if (!byEmployee.has(empId)) {
-      byEmployee.set(empId, []);
-    }
-    byEmployee.get(empId)!.push(entry);
-  }
-
-  return { success: true, data: byEmployee, message: 'ok' };
 }
 
 /**
@@ -290,67 +365,95 @@ export async function getBatchShifts(
     return { success: true, data: [], message: 'No employee IDs provided' };
   }
 
-  const supabase = createAdminClient();
+  try {
+    // Get shiftsExtended entries for date range
+    const shiftsData = await db
+      .select({
+        id: shiftsExtended.id,
+        shiftDate: shiftsExtended.shiftDate,
+        startTime: shiftsExtended.startTime,
+        endTime: shiftsExtended.endTime,
+        estimatedHours: shiftsExtended.estimatedHours,
+        status: shifts.status,
+        assignmentId: shiftsExtended.assignmentId,
+        orderId: shiftsExtended.orderId,
+        shiftId: shiftsExtended.shiftId,
+      })
+      .from(shiftsExtended)
+      .leftJoin(shifts, eq(shiftsExtended.shiftId, shifts.id))
+      .where(
+        and(
+          gte(shiftsExtended.shiftDate, startDate),
+          lte(shiftsExtended.shiftDate, endDate)
+        )
+      );
 
-  // First get shifts in date range, then filter by employees
-  const { data: shifts, error: shiftsError } = await supabase
-    .from('shifts')
-    .select(`
-      id,
-      shift_date,
-      start_time,
-      end_time,
-      estimated_hours,
-      status,
-      assignment_id,
-      order_id,
-      shift_employees!inner (
-        employee_id
-      )
-    `)
-    .gte('shift_date', startDate)
-    .lte('shift_date', endDate);
+    // Get shift employees for these shifts
+    const shiftIds = shiftsData.map(s => s.shiftId).filter(Boolean);
+    let shiftEmployeesData: any[] = [];
 
-  if (shiftsError) {
-    return { success: false, data: null, message: shiftsError.message };
-  }
-
-  // Filter by employee IDs
-  const empSet = new Set(employeeIds);
-  const filteredShifts = (shifts || []).filter(shift => 
-    shift.shift_employees?.some((se: any) => empSet.has(se.employee_id))
-  );
-
-  // Group by employee
-  const byEmployee = new Map<string, any[]>();
-  for (const shift of filteredShifts) {
-    for (const se of shift.shift_employees || []) {
-      const empId = se.employee_id;
-      if (!byEmployee.has(empId)) {
-        byEmployee.set(empId, []);
-      }
-      byEmployee.get(empId)!.push(shift);
+    if (shiftIds.length > 0) {
+      shiftEmployeesData = await db
+        .select({
+          shiftId: shiftEmployees.shiftId,
+          employeeId: shiftEmployees.employeeId,
+        })
+        .from(shiftEmployees)
+        .where(inArray(shiftEmployees.shiftId, shiftIds));
     }
-  }
 
-  return { success: true, data: byEmployee, message: 'ok' };
+    // Filter by employee IDs and group
+    const empSet = new Set(employeeIds);
+    const filteredShifts = shiftsData.filter(shift =>
+      shiftEmployeesData.some(se => se.shiftId === shift.shiftId && empSet.has(se.employeeId))
+    );
+
+    // Group by employee
+    const byEmployee = new Map<string, any[]>();
+    for (const shift of filteredShifts) {
+      const relevantEmployees = shiftEmployeesData.filter(
+        se => se.shiftId === shift.shiftId && empSet.has(se.employeeId)
+      );
+      for (const se of relevantEmployees) {
+        const empId = se.employeeId;
+        if (!byEmployee.has(empId)) {
+          byEmployee.set(empId, []);
+        }
+        byEmployee.get(empId)!.push({
+          id: shift.id,
+          shift_date: shift.shiftDate,
+          start_time: shift.startTime,
+          end_time: shift.endTime,
+          estimated_hours: shift.estimatedHours,
+          status: shift.status,
+          assignment_id: shift.assignmentId,
+          order_id: shift.orderId,
+          shift_employees: [{ employee_id: empId }],
+        });
+      }
+    }
+
+    return { success: true, data: byEmployee, message: 'ok' };
+  } catch (error: any) {
+    return { success: false, data: null, message: error.message };
+  }
 }
 
 // ============================================================================
 // INVALIDATE CACHE (for revalidation after mutations)
 // ============================================================================
 
-export function invalidatePlanningCache(): void {
+export async function invalidatePlanningCache(): Promise<void> {
   invalidateCache('shifts');
   invalidateCache('orders');
   revalidatePath('/dashboard/planning');
 }
 
-export function invalidateOrdersCache(): void {
+export async function invalidateOrdersCache(): Promise<void> {
   invalidateCache('orders');
   revalidatePath('/dashboard/orders');
 }
 
-export function invalidateTimeEntriesCache(): void {
+export async function invalidateTimeEntriesCache(): Promise<void> {
   revalidatePath('/dashboard/time-tracking');
 }

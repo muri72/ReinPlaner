@@ -36,14 +36,15 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
     redirect('/dashboard');
   }
 
-  const { success, data: invoice } = await getInvoiceByIdAction(id);
+  const { success, data: invoiceRaw } = await getInvoiceByIdAction(id);
 
-  if (!success || !invoice) {
+  if (!success || !invoiceRaw) {
     notFound();
   }
 
+  const invoice = invoiceRaw as any;
+  const items = invoice.items || invoice.invoiceItems || [];
   const debtor = invoice.debtor;
-  const items = invoice.items || [];
 
   return (
     <div className="p-4 md:p-8 space-y-6">
@@ -57,8 +58,8 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
           </Button>
           <div>
             <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold">Rechnung {invoice.invoice_number}</h1>
-              <InvoiceStatusBadge status={invoice.status} />
+              <h1 className="text-2xl font-bold">Rechnung {invoice.invoice_number || invoice.invoiceNumber}</h1>
+              <InvoiceStatusBadge status={(invoice.status as any) || 'draft'} />
             </div>
             <p className="text-sm text-muted-foreground mt-1">
               Erstellt am {invoice.issue_date ? format(parseISO(invoice.issue_date), 'dd. MMMM yyyy', { locale: require('date-fns/locale/de') }) : '—'}
@@ -69,7 +70,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
       </div>
 
       {/* Interactive Invoice Card with Actions */}
-      <InvoiceDetailClient invoice={invoice as Invoice} items={items as InvoiceItem[]} />
+      <InvoiceDetailClient invoice={invoice as unknown as Invoice} items={items as InvoiceItem[]} />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Content */}

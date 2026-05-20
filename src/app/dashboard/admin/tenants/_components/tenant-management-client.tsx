@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { TenantFormDialog } from '@/components/tenant-form-dialog';
 import { TenantDomainDialog } from '@/components/tenant-domain-dialog';
-import { activateTenant, suspendTenant, deleteTenant } from '@/lib/actions/tenant-admin';
+import { activateTenant, suspendTenant, deleteTenant, type TenantListItem } from '@/lib/actions/tenant-admin';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
 import { de } from 'date-fns/locale';
@@ -20,8 +20,8 @@ interface Tenant {
   plan: 'starter' | 'professional' | 'enterprise';
   status: 'active' | 'suspended' | 'pending' | 'cancelled';
   settings: Record<string, unknown>;
-  created_at: string;
-  updated_at: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 interface PlatformStats {
@@ -34,7 +34,7 @@ interface PlatformStats {
 }
 
 interface TenantManagementClientProps {
-  initialTenants: Tenant[];
+  initialTenants: TenantListItem[];
   initialStats: PlatformStats | null;
   error: string | null;
 }
@@ -45,12 +45,12 @@ export function TenantManagementClient({
   error,
 }: TenantManagementClientProps) {
   const router = useRouter();
-  const [tenants, setTenants] = useState<Tenant[]>(initialTenants);
+  const [tenants, setTenants] = useState<TenantListItem[]>(initialTenants);
   const [stats, setStats] = useState<PlatformStats | null>(initialStats);
   const [editTenant, setEditTenant] = useState<Tenant | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
-  const [domainTenant, setDomainTenant] = useState<Tenant | null>(null);
+  const [domainTenant, setDomainTenant] = useState<TenantListItem | null>(null);
   const [domainOpen, setDomainOpen] = useState(false);
 
   const handleStatusChange = async (
@@ -256,7 +256,7 @@ export function TenantManagementClient({
                         </Badge>
                       </td>
                       <td className="py-3 px-4 text-sm text-muted-foreground">
-                        {formatDate(tenant.created_at)}
+                        {formatDate(tenant.createdAt.toISOString())}
                       </td>
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-1">
@@ -264,7 +264,7 @@ export function TenantManagementClient({
                             variant="ghost"
                             size="sm"
                             onClick={() => {
-                              setEditTenant(tenant);
+                              setEditTenant(tenant as unknown as Tenant);
                               setEditOpen(true);
                             }}
                           >

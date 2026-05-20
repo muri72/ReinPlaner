@@ -1,0 +1,15 @@
+{
+  "entryFile": "./src/app/api/swagger.ts",
+  "spec": {
+    "specVersion": 3,
+    "swagger": true,
+    "outputDirectory": "./src/app/api",
+    "outputPath": "./src/app/api/openapi.json",
+    "noImplicitAdditionalProperties": "throw-on-extras"
+  },
+  "routes": {
+    "basePath": "/api",
+    "entryFile": "./src/app/api/swagger.ts",
+    "routesDir": "./src/app/api"
+  }
+}

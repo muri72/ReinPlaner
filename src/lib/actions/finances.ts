@@ -1,87 +1,111 @@
 "use server";
 
 import { format, startOfMonth, endOfMonth, addMonths, subDays } from 'date-fns';
-import { de } from 'date-fns/locale'; // Import German locale
-import { createAdminClient } from "@/lib/supabase/server";
+import { de } from 'date-fns/locale';
+import { db } from "@/lib/db";
+import { 
+  timeEntries, 
+  employees, 
+  orders, 
+  orderEmployeeAssignments,
+  serviceRates,
+  appSettings
+} from "@/lib/db/schema";
+import { eq, and, gte, lte, isNull, or, ne, sql } from "drizzle-orm";
 
 export async function getMultiMonthFinancialData(numberOfMonths: number = 6) {
-  const supabase = createAdminClient();
   const financialData = [];
   const now = new Date();
 
   try {
-    // Get default hourly rate for employees
-    const { data: defaultRateData, error: defaultRateError } = await supabase
-      .from('app_settings')
-      .select('value')
-      .eq('key', 'default_employee_hourly_rate')
-      .single();
-    if (defaultRateError) throw defaultRateError;
-    const defaultEmployeeRate = Number(defaultRateData?.value) || 14.25; // Fallback
+    // Get default hourly rate from app_settings JSON
+    const settingsRecord = await db.query.appSettings.findFirst();
+    let defaultEmployeeRate = 14.25; // Fallback
+    if (settingsRecord?.settings && typeof settingsRecord.settings === 'object') {
+      const settings = settingsRecord.settings as Record<string, any>;
+      if (settings.default_employee_hourly_rate) {
+        defaultEmployeeRate = Number(settings.default_employee_hourly_rate);
+      }
+    }
 
-    // Get all service rates
-    const { data: serviceRatesData, error: ratesError } = await supabase.from('service_rates').select('*');
-    if (ratesError) throw ratesError;
-    const serviceRates = new Map(serviceRatesData.map(r => [r.service_type, Number(r.hourly_rate)]));
+    // Get all service rates (service_type -> hourly_rate mapping)
+    const allServiceRates = (await db.query.serviceRates.findMany({
+      with: { service: true }
+    })) as any[];
+    const serviceRatesMap = new Map<string, number>();
+    allServiceRates.forEach(sr => {
+      if (sr.service?.serviceType) {
+        // hourlyRate is stored in cents, convert to euros
+        serviceRatesMap.set(sr.service.serviceType, Number(sr.hourlyRate) / 100);
+      }
+    });
 
     for (let i = 0; i < numberOfMonths; i++) {
       const monthDate = addMonths(now, -i);
       const startDate = startOfMonth(monthDate);
       const endDate = endOfMonth(monthDate);
 
-      // Calculate total costs for the month (basierend auf Netto-Stunden)
-      const { data: costTimeEntries, error: timeEntriesError } = await supabase
-        .from('time_entries')
-        .select('duration_minutes, break_minutes, employees(hourly_rate)')
-        .not('employee_id', 'is', null)
-        .gte('start_time', startDate.toISOString())
-        .lte('start_time', endDate.toISOString()); // Use lte for end of month
-
-      if (timeEntriesError) throw timeEntriesError;
+      // Calculate total costs for the month (based on net hours)
+      const costTimeEntries = (await db.query.timeEntries.findMany({
+        where: and(
+          isNull(timeEntries.employeeId),
+          gte(timeEntries.date, startDate),
+          lte(timeEntries.date, endDate)
+        ),
+        with: {
+          employee: true
+        }
+      })) as any[];
 
       const totalCosts = costTimeEntries.reduce((acc, entry) => {
-        const employee = Array.isArray(entry.employees) ? entry.employees[0] : entry.employees;
-        const hourlyRate = employee?.hourly_rate || defaultEmployeeRate;
-        const netMinutes = (entry.duration_minutes || 0) - (entry.break_minutes || 0);
+        const hourlyRate = entry.employee?.hourlyRate ? Number(entry.employee.hourlyRate) / 100 : defaultEmployeeRate;
+        const netMinutes = (entry.hoursWorked || 0) - (entry.breakMinutes || 0);
         const hoursWorked = netMinutes / 60;
-        return acc + (hoursWorked * Number(hourlyRate));
+        return acc + (hoursWorked * hourlyRate);
       }, 0);
 
       // Calculate total revenue for the month
       let totalRevenue = 0;
 
       // Fixed monthly prices from permanent orders (only count if the month is within their recurring period)
-      const { data: fixedPriceOrders, error: fixedPriceError } = await supabase
-        .from('orders')
-        .select('fixed_monthly_price, start_date, recurring_end_date, order_employee_assignments ( employee_id )') // Include assignments to filter
-        .eq('order_type', 'permanent')
-        .not('fixed_monthly_price', 'is', null)
-        .lte('start_date', endDate.toISOString().split('T')[0]) // Order started before or in this month
-        .or(`recurring_end_date.gte.${startDate.toISOString().split('T')[0]},recurring_end_date.is.null`); // Order ends after or in this month, or never ends
+      const permanentOrders = (await db.query.orders.findMany({
+        where: and(
+          eq(orders.orderType, 'permanent'),
+          isNull(orders.fixedMonthlyPrice),
+          lte(orders.startDate, endDate),
+          or(gte(orders.recurringEndDate, startDate), isNull(orders.recurringEndDate))
+        ),
+        with: {
+          assignments: true
+        }
+      })) as any[];
 
-      if (fixedPriceError) throw fixedPriceError;
-      // For simplicity, if a permanent order was active at any point in the last 7 days,
-      // we'll include its full monthly price. A more accurate calculation would prorate.
-      totalRevenue += fixedPriceOrders.reduce((acc, order) => acc + Number(order.fixed_monthly_price || 0), 0);
+      totalRevenue += permanentOrders.reduce((acc, order) => acc + (Number(order.fixedMonthlyPrice) || 0), 0);
 
       // Revenue from hourly-based orders (time entries)
-      const { data: hourlyTimeEntries, error: hourlyEntriesError } = await supabase
-        .from('time_entries')
-        .select('duration_minutes, orders(service_type, order_type, fixed_monthly_price, order_employee_assignments ( employee_id ))') // Include assignments
-        .gte('start_time', startDate.toISOString())
-        .lte('start_time', endDate.toISOString()); // Use lte for end of month
+      const hourlyTimeEntries = (await db.query.timeEntries.findMany({
+        where: and(
+          gte(timeEntries.date, startDate),
+          lte(timeEntries.date, endDate)
+        ),
+        with: {
+          shift: {
+            with: {
+              order: true
+            }
+          }
+        }
+      })) as any[];
 
-      if (hourlyEntriesError) throw hourlyEntriesError;
-
-      hourlyTimeEntries.forEach(entry => {
-        const order = Array.isArray(entry.orders) ? entry.orders[0] : entry.orders;
+      for (const entry of hourlyTimeEntries) {
+        const order = entry.shift?.order;
         // Only add revenue if it's not a fixed-price permanent order already counted
-        if (order && (order.order_type !== 'permanent' || !order.fixed_monthly_price)) {
-          const rate = serviceRates.get(order.service_type || '') || 24.00; // Fallback
-          const hoursWorked = (entry.duration_minutes || 0) / 60; // Revenue is based on gross hours
+        if (order && (order.orderType !== 'permanent' || !order.fixedMonthlyPrice)) {
+          const rate = serviceRatesMap.get(order.serviceType || '') || 24.00;
+          const hoursWorked = (entry.hoursWorked || 0) / 60; // Revenue is based on gross hours
           totalRevenue += hoursWorked * rate;
         }
-      });
+      }
 
       financialData.push({
         month: format(monthDate, 'MMM yy', { locale: de }),
@@ -91,7 +115,7 @@ export async function getMultiMonthFinancialData(numberOfMonths: number = 6) {
       });
     }
 
-    return { success: true, data: financialData.reverse(), message: "Finanzdaten erfolgreich geladen." }; // Reverse to show oldest first
+    return { success: true, data: financialData.reverse(), message: "Finanzdaten erfolgreich geladen." };
   } catch (error: any) {
     console.error("Fehler beim Laden der Finanzdaten für Charts:", error?.message || error);
     return { success: false, data: null, message: error.message };
@@ -99,44 +123,51 @@ export async function getMultiMonthFinancialData(numberOfMonths: number = 6) {
 }
 
 export async function getMultiMonthEmployeeWorkload(numberOfMonths: number = 6) {
-  const supabase = createAdminClient();
   const workloadData = [];
   const now = new Date();
 
   try {
-    // Get default hourly rate for employees
-    const { data: defaultRateData, error: defaultRateError } = await supabase
-      .from('app_settings')
-      .select('value')
-      .eq('key', 'default_employee_hourly_rate')
-      .single();
-    if (defaultRateError) throw defaultRateError;
-    const defaultEmployeeRate = Number(defaultRateData?.value) || 14.25; // Fallback
+    // Get default hourly rate from app_settings JSON
+    const settingsRecord = await db.query.appSettings.findFirst();
+    let defaultEmployeeRate = 14.25; // Fallback
+    if (settingsRecord?.settings && typeof settingsRecord.settings === 'object') {
+      const settings = settingsRecord.settings as Record<string, any>;
+      if (settings.default_employee_hourly_rate) {
+        defaultEmployeeRate = Number(settings.default_employee_hourly_rate);
+      }
+    }
 
     for (let i = 0; i < numberOfMonths; i++) {
       const monthDate = addMonths(now, -i);
       const startDate = startOfMonth(monthDate);
       const endDate = endOfMonth(monthDate);
 
-      const { data: timeEntries, error: timeEntriesError } = await supabase
-        .from('time_entries')
-        .select('employee_id, duration_minutes, break_minutes, employees(first_name, last_name)')
-        .gte('start_time', startDate.toISOString())
-        .lte('start_time', endDate.toISOString());
-
-      if (timeEntriesError) throw timeEntriesError;
+      const monthlyTimeEntries = (await db.query.timeEntries.findMany({
+        where: and(
+          gte(timeEntries.date, startDate),
+          lte(timeEntries.date, endDate)
+        ),
+        with: {
+          employee: {
+            with: {
+              profile: true
+            }
+          }
+        }
+      })) as any[];
 
       const employeeHours: { [key: string]: { name: string; hours: number } } = {};
 
-      timeEntries.forEach(entry => {
-        const employee = Array.isArray(entry.employees) ? entry.employees[0] : entry.employees;
-        if (employee && entry.employee_id) {
-          const netMinutes = (entry.duration_minutes || 0) - (entry.break_minutes || 0);
+      monthlyTimeEntries.forEach(entry => {
+        if (entry.employee && entry.id) {
+          const netMinutes = (entry.hoursWorked || 0) - (entry.breakMinutes || 0);
           const hoursWorked = netMinutes / 60;
-          if (!employeeHours[entry.employee_id]) {
-            employeeHours[entry.employee_id] = { name: `${employee.first_name} ${employee.last_name}`, hours: 0 };
+          const emp = entry.employee;
+          const fullName = emp.profile ? `${emp.profile.fullName || ''}` : '';
+          if (!employeeHours[entry.id]) {
+            employeeHours[entry.id] = { name: fullName.trim() || 'Unknown', hours: 0 };
           }
-          employeeHours[entry.employee_id].hours += hoursWorked;
+          employeeHours[entry.id].hours += hoursWorked;
         }
       });
 
@@ -157,53 +188,62 @@ export async function getMultiMonthEmployeeWorkload(numberOfMonths: number = 6) 
 }
 
 export async function getRevenueLast7Days() {
-  const supabase = createAdminClient();
   const today = new Date();
   const sevenDaysAgo = subDays(today, 7);
-  sevenDaysAgo.setHours(0, 0, 0, 0); // Start of the day 7 days ago
+  sevenDaysAgo.setHours(0, 0, 0, 0);
 
   try {
     // Get all service rates
-    const { data: serviceRatesData, error: ratesError } = await supabase.from('service_rates').select('*');
-    if (ratesError) throw ratesError;
-    const serviceRates = new Map(serviceRatesData.map(r => [r.service_type, Number(r.hourly_rate)]));
+    const allServiceRates = (await db.query.serviceRates.findMany({
+      with: { service: true }
+    })) as any[];
+    const serviceRatesMap = new Map<string, number>();
+    allServiceRates.forEach(sr => {
+      if (sr.service?.serviceType) {
+        serviceRatesMap.set(sr.service.serviceType, Number(sr.hourlyRate) / 100);
+      }
+    });
 
     let totalRevenue = 0;
 
     // Fixed monthly prices from permanent orders (prorated for the last 7 days)
-    // This is a simplification. For true prorated revenue, you'd need more complex logic
-    // or a dedicated invoicing system. For now, we'll just sum up fixed prices if the order was active.
-    const { data: fixedPriceOrders, error: fixedPriceError } = await supabase
-      .from('orders')
-      .select('fixed_monthly_price, start_date, recurring_end_date, order_employee_assignments ( employee_id )') // Include assignments
-      .eq('order_type', 'permanent')
-      .not('fixed_monthly_price', 'is', null)
-      .lte('start_date', today.toISOString().split('T')[0])
-      .or(`recurring_end_date.gte.${sevenDaysAgo.toISOString().split('T')[0]},recurring_end_date.is.null`);
+    const fixedPriceOrders = (await db.query.orders.findMany({
+      where: and(
+        eq(orders.orderType, 'permanent'),
+        isNull(orders.fixedMonthlyPrice),
+        lte(orders.startDate, today),
+        or(gte(orders.recurringEndDate, sevenDaysAgo), isNull(orders.recurringEndDate))
+      ),
+      with: {
+        assignments: true
+      }
+    })) as any[];
 
-    if (fixedPriceError) throw fixedPriceError;
-    // For simplicity, if a permanent order was active at any point in the last 7 days,
-    // we'll include its full monthly price. A more accurate calculation would prorate.
-    totalRevenue += fixedPriceOrders.reduce((acc, order) => acc + Number(order.fixed_monthly_price || 0), 0);
-
+    totalRevenue += fixedPriceOrders.reduce((acc, order) => acc + Number(order.fixedMonthlyPrice || 0), 0);
 
     // Revenue from hourly-based orders (time entries) within the last 7 days
-    const { data: hourlyTimeEntries, error: hourlyEntriesError } = await supabase
-      .from('time_entries')
-      .select('duration_minutes, orders(service_type, order_type, fixed_monthly_price, order_employee_assignments ( employee_id ))') // Include assignments
-      .gte('start_time', sevenDaysAgo.toISOString())
-      .lte('start_time', today.toISOString());
+    const hourlyTimeEntries = (await db.query.timeEntries.findMany({
+      where: and(
+        gte(timeEntries.date, sevenDaysAgo),
+        lte(timeEntries.date, today)
+      ),
+      with: {
+        shift: {
+          with: {
+            order: true
+          }
+        }
+      }
+    })) as any[];
 
-    if (hourlyEntriesError) throw hourlyEntriesError;
-
-    hourlyTimeEntries.forEach(entry => {
-      const order = Array.isArray(entry.orders) ? entry.orders[0] : entry.orders;
-      if (order && (order.order_type !== 'permanent' || !order.fixed_monthly_price)) {
-        const rate = serviceRates.get(order.service_type || '') || 24.00; // Fallback
-        const hoursWorked = (entry.duration_minutes || 0) / 60; // Revenue is based on gross hours
+    for (const entry of hourlyTimeEntries) {
+      const order = entry.shift?.order;
+      if (order && (order.orderType !== 'permanent' || !order.fixedMonthlyPrice)) {
+        const rate = serviceRatesMap.get(order.serviceType || '') || 24.00;
+        const hoursWorked = (entry.hoursWorked || 0) / 60;
         totalRevenue += hoursWorked * rate;
       }
-    });
+    }
 
     return { success: true, data: parseFloat(totalRevenue.toFixed(2)), message: "Umsatz der letzten 7 Tage erfolgreich geladen." };
   } catch (error: any) {
@@ -213,20 +253,18 @@ export async function getRevenueLast7Days() {
 }
 
 export async function getMostBookedServices(limit: number = 5) {
-  const supabase = createAdminClient();
-
   try {
-    const { data, error } = await supabase
-      .from('orders')
-      .select('service_type, order_employee_assignments ( employee_id )') // Include assignments
-      .not('service_type', 'is', null);
-
-    if (error) throw error;
+    const allOrders = (await db.query.orders.findMany({
+      where: sql`${orders.serviceType} IS NOT NULL`,
+      with: {
+        assignments: true
+      }
+    })) as any[];
 
     const serviceCounts: { [key: string]: number } = {};
-    data.forEach(order => {
-      if (order.service_type) {
-        serviceCounts[order.service_type] = (serviceCounts[order.service_type] || 0) + 1;
+    allOrders.forEach(order => {
+      if (order.serviceType) {
+        serviceCounts[order.serviceType] = (serviceCounts[order.serviceType] || 0) + 1;
       }
     });
 

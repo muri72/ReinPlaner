@@ -416,9 +416,9 @@ export default function PlanningPage() {
 
       // Check if we have any shifts for this month
       const hasShifts = planningDataFromQuery?.planningData &&
-        Object.values(planningDataFromQuery.planningData).some(
-          employee => Object.values(employee.schedule).some(
-            day => day.shifts.length > 0
+        (Object.values(planningDataFromQuery.planningData) as any[]).some(
+          (employee: any) => (Object.values(employee.schedule || {}) as any[]).some(
+            (day: any) => (day.shifts || []).length > 0
           )
         );
 
@@ -427,11 +427,11 @@ export default function PlanningPage() {
         console.log('[AUTO-GENERATE] No shifts found for', format(debouncedStartDate, 'MMMM yyyy'), '- generating...');
         try {
           const { generateShiftsFromAssignments } = await import('@/lib/actions/shift-planning');
-          const result = await generateShiftsFromAssignments();
+          const result = await generateShiftsFromAssignments(undefined as any);
 
           if (result.success) {
-            console.log('[AUTO-GENERATE] Generated', result.created_count, 'shifts');
-            toast.success(`${result.created_count || 0} Shifts automatisch generiert`);
+            console.log('[AUTO-GENERATE] Generated', result.count, 'shifts');
+            toast.success(`${result.count || 0} Shifts automatisch generiert`);
             // Refresh data to show newly generated shifts
             refreshData();
           } else {
@@ -523,7 +523,7 @@ export default function PlanningPage() {
       return 0;
     }
     const selectedKey = format(mobileSelectedDate, "yyyy-MM-dd");
-    return unassignedShifts.filter((shift) => {
+    return unassignedShifts.filter((shift: any) => {
       if (!shift.shift_date) {
         return false;
       }
@@ -710,9 +710,13 @@ export default function PlanningPage() {
 
   // Helper to find shift by assignmentId and date
   const findShiftByAssignment = (assignmentId: string, date: string): ShiftAssignment | undefined => {
-    for (const employee of Object.values(planningData)) {
-      for (const dayData of Object.values(employee.schedule)) {
-        const found = dayData.shifts.find(s => s.assignment_id === assignmentId && s.shift_date === date);
+    const empMap: any = planningData;
+    const emps: any[] = Object.values(empMap);
+    for (const emp of emps) {
+      const schedule: any = emp.schedule;
+      const days: any[] = Object.values(schedule);
+      for (const dayData of days as any[]) {
+        const found = dayData.shifts.find((s: any) => s.assignment_id === assignmentId && s.shift_date === date);
         if (found) return found;
       }
     }
@@ -878,7 +882,7 @@ export default function PlanningPage() {
         onOpenChange={setEditDialogOpen}
         shift={editingShift}
         onSuccess={refreshData}
-        availableEmployees={Object.entries(planningData).map(([id, emp]) => ({
+        availableEmployees={Object.entries(planningData as any).map(([id, emp]: [string, any]) => ({
           id,
           name: emp.name,
         }))}

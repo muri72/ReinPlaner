@@ -32,14 +32,15 @@ supabase.dev.reinplaner.de {
     reverse_proxy localhost:8000
 
     # CORS headers for Supabase
-    @_OPTIONS {
+    @OPTIONS {
         method OPTIONS
     }
-    respond @OPTIONS "204" {
+    handle @OPTIONS {
         header Access-Control-Allow-Origin "*"
         header Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
         header Access-Control-Allow-Headers "Authorization, Content-Type, X-Client-Info, apikey"
         header Access-Control-Max-Age "3600"
+        respond "" 204
     }
 
     encode gzip
@@ -58,6 +59,18 @@ studio.supabase.dev.reinplaner.de {
 
     log {
         output file /var/log/caddy/studio.supabase.dev.reinplaner.de.log
+    }
+}
+
+# ============================================================
+# coolify.reinplaner.de — Coolify Admin Interface
+# ============================================================
+coolify.reinplaner.de {
+    reverse_proxy localhost:8000
+    encode gzip
+
+    log {
+        output file /var/log/caddy/coolify.reinplaner.de.log
     }
 }
 

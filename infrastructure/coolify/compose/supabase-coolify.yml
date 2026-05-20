@@ -1,0 +1,324 @@
+# ============================================================
+# Supabase Self-Hosted — Coolify Application (Docker Compose)
+# ============================================================
+# Coolify Application: Add Resource → Docker Compose
+# Traefik labels für automatisches Routing
+# ============================================================
+
+services:
+  postgres:
+    image: supabase/postgres:15.6.1.147
+    container_name: reinplaner_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: postgres
+      POSTGRES_USER: supabase_admin
+      POSTGRES_HOST: localhost
+    volumes:
+      - supabase_postgres_data:/var/lib/postgresql/data
+      - ./supabase/migrations:/docker-entrypoint-initdb.d:ro
+      - ./supabase/seed:/docker-entrypoint-initdb.d/seed.sql:ro
+    shm_size: 256m
+    mem_limit: 2g
+    cpus: 1
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U supabase_admin -d postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - reinplaner_internal
+    labels:
+      - "coolify.managed=true"
+
+  kong:
+    image: supabase/kong:2.8.1
+    container_name: reinplaner_kong
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+      - "8443:8443"
+    environment:
+      KONG_DATABASE: postgres
+      KONG_PG_HOST: postgres
+      KONG_PG_PORT: 5432
+      KONG_PG_USER: supabase_admin
+      KONG_PG_PASSWORD: ${POSTGRES_PASSWORD}
+      KONG_PG_DB: kong
+      KONG_ADMIN_LISTEN: 0.0.0.0:8001
+      KONG_DECLARATIVE_CONFIG: /var/lib/kong/kong.yml
+      KONG_PLUGINS: request-transformer,cors,key-auth,acl,basic-auth,jwt,hmac-auth,rate-limiting
+      KONG_LOG_LEVEL: notice
+    volumes:
+      - ./supabase/config/kong.prod.yml:/var/lib/kong/kong.yml:ro
+      - kong_data:/var/lib/kong
+    mem_limit: 512m
+    cpus: 1
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "kong health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    networks:
+      - reinplaner_internal
+    labels:
+      - "coolify.managed=true"
+      - "traefik.enable=true"
+      - "traefik.http.routers.supabase-kong.rule=Host(`supabase.reinplaner.de`)"
+      - "traefik.http.routers.supabase-kong.entryPoints=http,https"
+      - "traefik.http.routers.supabase-kong.service=supabase-kong-svc"
+      - "traefik.http.services.supabase-kong-svc.loadbalancer.server.port=8000"
+
+  postgrest:
+    image: supabase/postgrest:20241028-91ff1ce
+    container_name: reinplaner_postgrest
+    restart: unless-stopped
+    environment:
+      PGRST_DB_URI: postgres://supabase_admin:${POSTGRES_PASSWORD}@postgres:5432/postgres
+      PGRST_DB_SCHEMA: public,graphql_public
+      PGRST_DB_ANON_ROLE: anon
+      PGRST_DB_USE_LEGACY_GUCS: "false"
+      PGRST_APP_SETTINGS_JWT_SECRET: ${JWT_SECRET}
+      PGRST_APP_SETTINGS_DB_EXTRA_SEARCH_PATH: public,extensions
+      PGRST_APP_SETTINGS_MULTI_SCHEMA: "true"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    mem_limit: 1g
+    cpus: 1
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/ || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - reinplaner_internal
+    labels:
+      - "coolify.managed=true"
+
+  studio:
+    image: supabase/studio:20241028-91ff1ce
+    container_name: reinplaner_studio
+    restart: unless-stopped
+    ports:
+      - "3001:3000"
+    environment:
+      STUDIO_PG_META_URL: http://meta:54381
+      POSTGRES_USER: supabase_admin
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DATABASE: postgres
+      SUPABASE_URL: http://kong:8000
+      SUPABASE_ANON_KEY: ${ANON_KEY}
+      SUPABASE_SERVICE_ROLE_KEY: ${SERVICE_ROLE_KEY}
+      SUPABASE_STUDIO_PORT: 3000
+    depends_on:
+      kong:
+        condition: service_healthy
+      meta:
+        condition: service_healthy
+    mem_limit: 1g
+    cpus: 0.5
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/api/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - reinplaner_internal
+    labels:
+      - "coolify.managed=true"
+      - "traefik.enable=true"
+      - "traefik.http.routers.supabase-studio.rule=Host(`studio.supabase.reinplaner.de`)"
+      - "traefik.http.routers.supabase-studio.entryPoints=http,https"
+      - "traefik.http.routers.supabase-studio.service=supabase-studio-svc"
+      - "traefik.http.services.supabase-studio-svc.loadbalancer.server.port=3000"
+
+  meta:
+    image: supabase/postgres-meta:20241028-91ff1ce
+    container_name: reinplaner_meta
+    restart: unless-stopped
+    environment:
+      PG_META_PORT: 54381
+      PG_META_DB_HOST: postgres
+      PG_META_DB_PORT: 5432
+      PG_META_DB_NAME: postgres
+      PG_META_DB_USER: supabase_admin
+      PG_META_DB_PASSWORD: ${POSTGRES_PASSWORD}
+      PG_META_DB_SSL_MODE: disable
+      PG_META_DB_AUTH_METHOD: password
+      PG_META_JWT_SECRET: ${JWT_SECRET}
+      PG_META_ADMIN_TOKEN: ${META_ADMIN_TOKEN}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    mem_limit: 512m
+    cpus: 0.5
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:54381/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - reinplaner_internal
+    labels:
+      - "coolify.managed=true"
+
+  realtime:
+    image: supabase/realtime:20241028-91ff1ce
+    container_name: reinplaner_realtime
+    restart: unless-stopped
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: postgres
+      DB_USER: supabase_admin
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      DB_SSL: "false"
+      PORT: 4000
+      JWT_SECRET: ${JWT_SECRET}
+      DB_AFTER_CONNECT_QUERY: "LISTEN pg_notify"
+      SLOT_NAME: supabase_realtime_rls
+      TEMPORARY_SLOT: "true"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    mem_limit: 1g
+    cpus: 1
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:4000/api/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - reinplaner_internal
+    labels:
+      - "coolify.managed=true"
+
+  storage:
+    image: supabase/storage:20241028-91ff1ce
+    container_name: reinplaner_storage
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      ANON_KEY: ${ANON_KEY}
+      SERVICE_KEY: ${SERVICE_ROLE_KEY}
+      POSTGREST_URL: http://postgrest:3000
+      PGRST_JWT_SECRET: ${JWT_SECRET}
+      DATABASE_URL: postgres://supabase_admin:${POSTGRES_PASSWORD}@postgres:5432/postgres
+      FILE_SIZE_LIMIT: 52428800
+      STORAGE_BACKEND: file
+      FILE_STORAGE_BACKEND_PATH: /var/lib/storage
+      TENANT_ID: reinplaner
+    volumes:
+      - supabase_storage_data:/var/lib/storage
+    depends_on:
+      postgres:
+        condition: service_healthy
+      postgrest:
+        condition: service_healthy
+    mem_limit: 1g
+    cpus: 1
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:5000/status || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    networks:
+      - reinplaner_internal
+    labels:
+      - "coolify.managed=true"
+
+  functions:
+    image: supabase/edge-runtime:20241028-91ff1ce
+    container_name: reinplaner_functions
+    restart: unless-stopped
+    ports:
+      - "9000:9000"
+    environment:
+      JWT_SECRET: ${JWT_SECRET}
+      SUPABASE_URL: http://kong:8000
+      SUPABASE_ANON_KEY: ${ANON_KEY}
+      SUPABASE_SERVICE_ROLE_KEY: ${SERVICE_ROLE_KEY}
+      SUPABASE_DB_URL: postgres://supabase_admin:${POSTGRES_PASSWORD}@postgres:5432/postgres
+      VERIFY_JWT: "true"
+    volumes:
+      - ./supabase/functions:/home/deno/functions:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    mem_limit: 1g
+    cpus: 2
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:9000/status || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    networks:
+      - reinplaner_internal
+    labels:
+      - "coolify.managed=true"
+
+  analytics:
+    image: supabase/postgres-analytics:20241028-91ff1ce
+    container_name: reinplaner_analytics
+    restart: unless-stopped
+    ports:
+      - "54327:54327"
+    environment:
+      ANALYTICS_DATABASE_URL: postgres://supabase_admin:${POSTGRES_PASSWORD}@postgres:5432/postgres
+      PG_META_PORT: 54381
+      FLUSH_INTERVAL: 5000
+    depends_on:
+      postgres:
+        condition: service_healthy
+    mem_limit: 1g
+    cpus: 1
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:54327/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - reinplaner_internal
+    labels:
+      - "coolify.managed=true"
+
+  inbucket:
+    image: inbucket/inbucket:20241028-91ff1ce
+    container_name: reinplaner_inbucket
+    restart: unless-stopped
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    networks:
+      - reinplaner_internal
+    labels:
+      - "coolify.managed=true"
+
+volumes:
+  supabase_postgres_data:
+    driver: local
+  supabase_storage_data:
+    driver: local
+  kong_data:
+    driver: local
+
+networks:
+  reinplaner_internal:
+    driver: bridge

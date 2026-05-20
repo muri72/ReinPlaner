@@ -48,7 +48,7 @@ export interface Tenant {
   domain?: string | null;
   plan: TenantPlan;
   status: TenantStatus;
-  settings: TenantSettings;
+  settings?: TenantSettings;
   database_url?: string; // Only available for enterprise/privileged tenants
   created_at: string;
   updated_at: string;

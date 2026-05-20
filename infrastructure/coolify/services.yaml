@@ -1,0 +1,69 @@
+# ============================================================
+# ReinPlaner — Coolify One-Click Service Templates
+# ============================================================
+# These templates define the one-click services available in Coolify UI.
+# Place in: ~/.coolify/services/ or configure via Coolify API.
+# ============================================================
+
+# Supabase (recommended for production)
+supabase:
+  name: Supabase
+  icon: supabase
+  tagline: Open source Firebase alternative
+  description: |
+    Complete Supabase stack including PostgreSQL, Kong, PostgREST,
+    Studio, Meta, Realtime, Storage, Edge Functions, and Analytics.
+  html_url: https://supabase.com
+  documentation_url: https://supabase.com/docs
+  instructions: |
+    1. Fill in the required environment variables
+    2. Click Deploy
+    3. Wait for all services to be healthy (~2-3 minutes)
+    4. Access Studio at the configured domain
+
+  # Services managed by this template
+  compose:
+    # See compose/supabase.yml for full configuration
+
+  # Required environment variables
+  env:
+    required:
+      - POSTGRES_PASSWORD
+      - JWT_SECRET
+      - ANON_KEY
+      - SERVICE_ROLE_KEY
+      - META_ADMIN_TOKEN
+    optional:
+      - SMTP_HOST
+      - SMTP_PORT
+      - SMTP_USER
+      - SMTP_PASS
+
+# PostgreSQL (standalone)
+reinplaner-postgres:
+  name: PostgreSQL
+  icon: postgresql
+  tagline: ReinPlaner Database
+  description: |
+    PostgreSQL 15 with recommended settings for ReinPlaner.
+  html_url: https://postgresql.org
+  documentation_url: https://postgresql.org/docs/
+
+  env:
+    required:
+      - POSTGRES_PASSWORD
+    optional:
+      - POSTGRES_DB
+      - POSTGRES_USER
+
+# Redis (for caching)
+reinplaner-redis:
+  name: Redis
+  icon: redis
+  tagline: ReinPlaner Cache
+  description: Redis for session storage and caching.
+
+  env:
+    required: []
+    optional:
+      - REDIS_PASSWORD

@@ -1,6 +1,6 @@
 "use client";
 
-import { createClient } from "@/lib/supabase/client";
+import { signIn } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -11,7 +11,6 @@ import { Eye, EyeOff, Mail, Lock, ArrowRight, Sparkles, Building2, Zap, ArrowLef
 import { useTheme } from "next-themes";
 
 export default function LoginPage() {
-  const supabase = createClient();
   const router = useRouter();
   const { resolvedTheme } = useTheme();
   // next-themes: resolvedTheme is "system" until mounted, defaultTheme is "dark"
@@ -28,50 +27,29 @@ export default function LoginPage() {
   const [resetSent, setResetSent] = useState(false);
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (event === "SIGNED_IN" && session?.user) {
-          try {
-            await fetch('/api/log-login', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-            });
-          } catch (error) {
-            console.error('Failed to log login:', error);
-          }
-
-          try {
-            const res = await fetch('/api/auth/redirect')
-            const data = await res.json()
-            router.push(data.redirectUrl || '/dashboard')
-          } catch {
-            router.push('/dashboard')
-          }
-          router.refresh();
-        } else if (event === "SIGNED_OUT") {
-          toast.info("Sie wurden abgemeldet.");
-        }
-      }
-    );
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, [router, supabase.auth]);
+    // NextAuth handles session automatically
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    try {
+      const result = await signIn('credentials', {
+        email,
+        password,
+        redirect: false,
+      });
 
-    if (error) {
-      toast.error(`Anmeldung fehlgeschlagen: ${error.message}`);
-    } else {
-      toast.success("Erfolgreich angemeldet!");
+      if (result?.error) {
+        toast.error('Anmeldung fehlgeschlagen: ' + result.error);
+      } else {
+        toast.success('Erfolgreich angemeldet!');
+        router.push('/dashboard');
+        router.refresh();
+      }
+    } catch (error) {
+      toast.error('Anmeldung fehlgeschlagen');
     }
     setLoading(false);
   };
@@ -85,16 +63,10 @@ export default function LoginPage() {
 
     setResetLoading(true);
 
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth/callback?type=recovery`,
-    });
-
-    if (error) {
-      toast.error(`Fehler: ${error.message}`);
-    } else {
-      toast.success("E-Mail zum Zurücksetzen des Passworts wurde gesendet!");
-      setResetSent(true);
-    }
+    // Password reset via NextAuth - for now show info
+    // TODO: Implement NextAuth email provider with Resend
+    toast.info("Passwort-Zurücksetzen kommt bald. Bitte kontaktieren Sie Ihren Administrator.");
+    setResetSent(true);
     setResetLoading(false);
   };
 

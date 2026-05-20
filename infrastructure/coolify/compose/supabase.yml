@@ -1,0 +1,345 @@
+# ============================================================
+# ReinPlaner — Supabase Self-Hosted (Coolify Ready)
+# ============================================================
+# Deploy via Coolify: Add Resource → Docker Compose
+# Or locally: docker-compose -f supabase.yml up -d
+# ============================================================
+
+services:
+  # ============================================================
+  # PostgreSQL 15.6
+  # ============================================================
+  postgres:
+    image: supabase/postgres:15.6.1.147
+    container_name: reinplaner_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: postgres
+      POSTGRES_USER: supabase_admin
+      POSTGRES_HOST: localhost
+      POSTGRES_SHARED_BUFFERS: 2GB
+      POSTGRES_MAX_CONNECTIONS: 200
+      POSTGRES_WORK_MEM: 16MB
+      POSTGRES_MAINTENANCE_WORK_MEM: 1GB
+      POSTGRES_EFFECTIVE_CACHE_SIZE: 4GB
+    volumes:
+      - reinplaner_postgres_data:/var/lib/postgresql/data
+      - ./supabase/migrations:/docker-entrypoint-initdb.d:ro
+      - ./supabase/seed:/docker-entrypoint-initdb.d/seed.sql:ro
+      - /etc/localtime:/etc/localtime:ro
+    shm_size: 512m
+    mem_limit: 4g
+    cpus: 2
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U supabase_admin -d postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - reinplaner_internal
+
+  # ============================================================
+  # Kong — API Gateway
+  # ============================================================
+  kong:
+    image: supabase/kong:2.8.1
+    container_name: reinplaner_kong
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8000:8000"
+      - "127.0.0.1:8443:8443"
+      - "127.0.0.1:8001:8001"
+    environment:
+      KONG_DATABASE: postgres
+      KONG_PG_HOST: postgres
+      KONG_PG_PORT: 5432
+      KONG_PG_USER: supabase_admin
+      KONG_PG_PASSWORD: ${POSTGRES_PASSWORD}
+      KONG_PG_DB: kong
+      KONG_ADMIN_LISTEN: 0.0.0.0:8001
+      KONG_DECLARATIVE_CONFIG: /var/lib/kong/kong.yml
+      KONG_PLUGINS: request-transformer,cors,key-auth,acl,basic-auth,jwt,hmac-auth,rate-limiting
+      KONG_LOG_LEVEL: notice
+      KONG_ADMIN_GUI_AUTHORITATIVE_URI: ${SUPABASE_STUDIO_URL}
+      KONG_JWT_SECRET_NAME: ${JWT_SECRET}
+    volumes:
+      - ./supabase/config/kong.prod.yml:/var/lib/kong/kong.yml:ro
+    mem_limit: 512m
+    cpus: 1
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "kong health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    networks:
+      - reinplaner_internal
+
+  # ============================================================
+  # PostgREST — REST API
+  # ============================================================
+  postgrest:
+    image: supabase/postgrest:20241028-91ff1ce
+    container_name: reinplaner_postgrest
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      PGRST_DB_URI: postgres://supabase_admin:${POSTGRES_PASSWORD}@postgres:5432/postgres
+      PGRST_DB_SCHEMA: public,graphql_public
+      PGRST_DB_ANON_ROLE: anon
+      PGRST_DB_USE_LEGACY_GUCS: "false"
+      PGRST_APP_SETTINGS_JWT_SECRET: ${JWT_SECRET}
+      PGRST_APP_SETTINGS_DB_EXTRA_SEARCH_PATH: public,extensions
+      PGRST_APP_SETTINGS_MULTI_SCHEMA: "true"
+      QUERY_LOG: "false"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    mem_limit: 1g
+    cpus: 1
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - reinplaner_internal
+
+  # ============================================================
+  # Supabase Studio — Web UI Dashboard
+  # ============================================================
+  studio:
+    image: supabase/studio:20241028-91ff1ce
+    container_name: reinplaner_studio
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3001:3000"
+    environment:
+      STUDIO_PG_META_URL: http://meta:54381
+      POSTGRES_USER: supabase_admin
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DATABASE: postgres
+      SUPABASE_URL: http://kong:8000
+      SUPABASE_ANON_KEY: ${ANON_KEY}
+      SUPABASE_SERVICE_ROLE_KEY: ${SERVICE_ROLE_KEY}
+      SUPABASE_STUDIO_PORT: 3000
+    depends_on:
+      kong:
+        condition: service_healthy
+      meta:
+        condition: service_healthy
+    mem_limit: 1g
+    cpus: 0.5
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/api/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - reinplaner_internal
+
+  # ============================================================
+  # Postgres Meta — Database Metadata API
+  # ============================================================
+  meta:
+    image: supabase/postgres-meta:20241028-91ff1ce
+    container_name: reinplaner_meta
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:54381:54381"
+    environment:
+      PG_META_PORT: 54381
+      PG_META_DB_HOST: postgres
+      PG_META_DB_PORT: 5432
+      PG_META_DB_NAME: postgres
+      PG_META_DB_USER: supabase_admin
+      PG_META_DB_PASSWORD: ${POSTGRES_PASSWORD}
+      PG_META_DB_SSL_MODE: disable
+      PG_META_DB_AUTH_METHOD: password
+      PG_META_JWT_SECRET: ${JWT_SECRET}
+      PG_META_ADMIN_TOKEN: ${META_ADMIN_TOKEN}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    mem_limit: 512m
+    cpus: 0.5
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:54381/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - reinplaner_internal
+
+  # ============================================================
+  # Realtime — WebSocket Server
+  # ============================================================
+  realtime:
+    image: supabase/realtime:20241028-91ff1ce
+    container_name: reinplaner_realtime
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:4000:4000"
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: postgres
+      DB_USER: supabase_admin
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      DB_SSL: "false"
+      PORT: 4000
+      JWT_SECRET: ${JWT_SECRET}
+      DB_AFTER_CONNECT_QUERY: "LISTEN pg_notify"
+      SLOT_NAME: supabase_realtime_rls
+      TEMPORARY_SLOT: "true"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    mem_limit: 1g
+    cpus: 1
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:4000/api/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - reinplaner_internal
+
+  # ============================================================
+  # Storage — S3-kompatibler Object Storage
+  # ============================================================
+  storage:
+    image: supabase/storage:20241028-91ff1ce
+    container_name: reinplaner_storage
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5000:5000"
+    environment:
+      ANON_KEY: ${ANON_KEY}
+      SERVICE_KEY: ${SERVICE_ROLE_KEY}
+      POSTGREST_URL: http://postgrest:3000
+      PGRST_JWT_SECRET: ${JWT_SECRET}
+      DATABASE_URL: postgres://supabase_admin:${POSTGRES_PASSWORD}@postgres:5432/postgres
+      FILE_SIZE_LIMIT: 52428800
+      STORAGE_BACKEND: file
+      FILE_STORAGE_BACKEND_PATH: /var/lib/storage
+      TENANT_ID: reinplaner
+    volumes:
+      - reinplaner_storage_data:/var/lib/storage
+    depends_on:
+      postgres:
+        condition: service_healthy
+      postgrest:
+        condition: service_healthy
+    mem_limit: 1g
+    cpus: 1
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:5000/status || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    networks:
+      - reinplaner_internal
+
+  # ============================================================
+  # Edge Functions — Deno Runtime
+  # ============================================================
+  functions:
+    image: supabase/edge-runtime:20241028-91ff1ce
+    container_name: reinplaner_functions
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:9000:9000"
+    environment:
+      JWT_SECRET: ${JWT_SECRET}
+      SUPABASE_URL: http://kong:8000
+      SUPABASE_ANON_KEY: ${ANON_KEY}
+      SUPABASE_SERVICE_ROLE_KEY: ${SERVICE_ROLE_KEY}
+      SUPABASE_DB_URL: postgres://supabase_admin:${POSTGRES_PASSWORD}@postgres:5432/postgres
+      VERIFY_JWT: "true"
+    volumes:
+      - ./supabase/functions:/home/deno/functions:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    mem_limit: 1g
+    cpus: 2
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:9000/status || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    networks:
+      - reinplaner_internal
+
+  # ============================================================
+  # Analytics — PostgreSQL Analytics
+  # ============================================================
+  analytics:
+    image: supabase/postgres-analytics:20241028-91ff1ce
+    container_name: reinplaner_analytics
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:54327:54327"
+    environment:
+      ANALYTICS_DATABASE_URL: postgres://supabase_admin:${POSTGRES_PASSWORD}@postgres:5432/postgres
+      PG_META_PORT: 54381
+      FLUSH_INTERVAL: 5000
+    depends_on:
+      postgres:
+        condition: service_healthy
+    mem_limit: 1g
+    cpus: 1
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:54327/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - reinplaner_internal
+
+  # ============================================================
+  # Inbucket — Test SMTP Server
+  # ============================================================
+  inbucket:
+    image: inbucket/inbucket:20241028-91ff1ce
+    container_name: reinplaner_inbucket
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:1025:1025"
+      - "127.0.0.1:8025:8025"
+      - "127.0.0.1:54324:1100"
+    networks:
+      - reinplaner_internal
+
+# ============================================================
+# Volumes
+# ============================================================
+volumes:
+  reinplaner_postgres_data:
+    driver: local
+  reinplaner_storage_data:
+    driver: local
+
+# ============================================================
+# Network
+# ============================================================
+networks:
+  reinplaner_internal:
+    driver: bridge
+    name: reinplaner_internal
