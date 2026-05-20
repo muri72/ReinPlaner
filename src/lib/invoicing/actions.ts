@@ -340,7 +340,6 @@ export async function createInvoiceFromOrderAction(
       where: eq(orders.id, orderId),
       with: {
         object: true,
-        customerContacts: true,
       },
     });
 
@@ -400,10 +399,10 @@ export async function createInvoiceFromOrderAction(
 
       if (totalMinutes > 0) {
         const hours = totalMinutes / 60;
-        const netAmount = Math.round(hours * rate);
+        const netAmount = Math.round(Number(hours) * Number(rate));
         items.push({
           service_description: `Dienstleistung: ${(order as any).title || 'Auftrag'}`,
-          quantity: Math.round(hours * 100) / 100,
+          quantity: Math.round(Number(hours) * 100) / 100,
           unit: 'h',
           unit_price_cents: Number(rate),
           tax_rate: taxRate,
@@ -415,14 +414,15 @@ export async function createInvoiceFromOrderAction(
 
     // Generate invoice number
     let invoiceNumber = 'R/00001';
-    
+    const customerId = order.customerId;
+
     if (tenantId) {
       const sequence = await db.query.invoiceSequences.findFirst({
         where: and(eq(invoiceSequences.tenantId, tenantId), eq(invoiceSequences.year, new Date().getFullYear())),
       });
 
       if (sequence) {
-        const nextNumber = sequence.lastNumber + 1;
+        const nextNumber = (sequence.lastNumber ?? 0) + 1;
         invoiceNumber = `${sequence.prefix || 'RE'}/${new Date().getFullYear()}/${String(nextNumber).padStart(5, '0')}`;
         
         await db.update(invoiceSequences)
@@ -451,19 +451,13 @@ export async function createInvoiceFromOrderAction(
 
     const [invoice] = await db.insert(invoices).values({
       tenantId,
+      customerId,
       invoiceNumber,
-      debtorId,
-      orderId,
       issueDate: new Date(issueDate),
       dueDate: new Date(dueDate),
-      netAmount: netAmountCents,
-      taxAmount: taxAmountCents,
       totalAmount: netAmountCents + taxAmountCents,
-      taxRate,
       status: 'draft',
-      notes: options.notes || `Rechnung für Auftrag: ${order.title}`,
-      orderReference: order.title,
-      createdBy: user.id,
+      notes: options.notes || `Rechnung für Auftrag: ${(order as any).title || 'Auftrag'}`,
     }).returning();
 
     if (items.length > 0) {
