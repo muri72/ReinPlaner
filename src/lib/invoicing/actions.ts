@@ -303,7 +303,7 @@ export async function createInvoiceAction(data: CreateInvoiceData) {
       },
     });
 
-    if (completeInvoice) {
+    if (completeInvoice && user.id) {
       await logDataChange(user.id, 'INSERT', 'invoices', invoice.id, null, {
         invoice_number: completeInvoice.invoiceNumber,
         total: completeInvoice.totalAmount,
@@ -339,11 +339,7 @@ export async function createInvoiceFromOrderAction(
     const order = await db.query.orders.findFirst({
       where: eq(orders.id, orderId),
       with: {
-        objects: {
-          with: {
-            customers: true
-          }
-        },
+        object: true,
         customerContacts: true,
       },
     });
@@ -361,22 +357,6 @@ export async function createInvoiceFromOrderAction(
 
       if (existingDebtor) {
         debtorId = existingDebtor.id;
-      } else {
-        const customer = order.objects?.customers;
-        if (customer) {
-          const [newDebtor] = await db.insert(debtors).values({
-            tenantId,
-            customerId: order.customerId,
-            billingName: customer.name || null,
-            billingStreet: customer.address || null,
-            billingPostalCode: customer.postalCode || null,
-            billingCity: customer.city || null,
-            billingCountry: 'DE',
-            invoiceEmail: customer.email || null,
-          }).returning();
-
-          debtorId = newDebtor?.id || null;
-        }
       }
     }
 
@@ -391,7 +371,7 @@ export async function createInvoiceFromOrderAction(
     if ((order as any).order_type === 'permanent' && (order as any).fixed_monthly_price) {
       const netAmount = Math.round(Number((order as any).fixed_monthly_price) * 100);
       items.push({
-        service_description: `Monatliche Pauschale für: ${order.title}`,
+        service_description: `Monatliche Pauschale für: ${(order as any).title || 'Auftrag'}`,
         quantity: 1,
         unit: 'Pauschale',
         unit_price_cents: netAmount,
@@ -422,10 +402,10 @@ export async function createInvoiceFromOrderAction(
         const hours = totalMinutes / 60;
         const netAmount = Math.round(hours * rate);
         items.push({
-          service_description: `Dienstleistung: ${order.title}`,
+          service_description: `Dienstleistung: ${(order as any).title || 'Auftrag'}`,
           quantity: Math.round(hours * 100) / 100,
           unit: 'h',
-          unit_price_cents: rate,
+          unit_price_cents: Number(rate),
           tax_rate: taxRate,
           sort_order: 0,
           service_date: issueDate,
